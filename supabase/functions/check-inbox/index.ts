@@ -497,11 +497,18 @@ function parseEmailFromHeader(header: string): string {
    RFC 2046 — Multipart MIME parser for RFC822.TEXT fallback
    ══════════════════════════════════════════════════════════════ */
 
-function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: string; html: string } {
+type FallbackResult = {
+  text: string;
+  html: string;
+  inlineImages: Array<{ cid: string; contentType: string; data: Uint8Array }>;
+};
+
+function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): FallbackResult {
   let text = "";
   let html = "";
+  const inlineImages: FallbackResult["inlineImages"] = [];
   const boundaryMatch = rawText.match(/boundary="?([^\s";\r\n]+)"?/i);
-  if (!boundaryMatch) return { text: "", html: "" };
+  if (!boundaryMatch) return { text: "", html: "", inlineImages: [] };
 
   const boundary = boundaryMatch[1];
   const delimiter = "--" + boundary;
@@ -521,10 +528,12 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
     const ctMatch = headerPart.match(/content-type:\s*([^;\r\n]+)/i);
     const encMatch = headerPart.match(/content-transfer-encoding:\s*(\S+)/i);
     const charsetMatch = headerPart.match(/charset="?([^"\s;]+)"?/i);
+    const cidMatch = headerPart.match(/content-id:\s*<?([^>\s\r\n]+)>?/i);
 
     const contentType = (ctMatch?.[1] || "").trim().toLowerCase();
     const encoding = (encMatch?.[1] || "7bit").trim();
     const charset = charsetMatch?.[1] || "utf-8";
+    const cid = cidMatch?.[1] || "";
 
     if (contentType.startsWith("multipart/")) {
       const nestedBoundaryMatch = headerPart.match(/boundary="?([^\s";\r\n]+)"?/i);
@@ -533,6 +542,7 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
         const nested = parseMultipartFallback(nestedBytes, bodyPart);
         if (nested.text && !text) text = nested.text;
         if (nested.html && !html) html = nested.html;
+        inlineImages.push(...nested.inlineImages);
       }
       continue;
     }
@@ -541,9 +551,18 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
       text = decodeMimePart(new TextEncoder().encode(bodyPart), encoding, charset);
     } else if (contentType === "text/html" && !html) {
       html = decodeMimePart(new TextEncoder().encode(bodyPart), encoding, charset);
+    } else if (contentType.startsWith("image/") && cid) {
+      // Inline image found via Content-ID in fallback parser
+      try {
+        const imgBytes = new TextEncoder().encode(bodyPart);
+        const decoded = encoding.toUpperCase() === "BASE64"
+          ? decodeBase64Bytes(imgBytes)
+          : imgBytes;
+        inlineImages.push({ cid, contentType, data: decoded });
+      } catch { /* skip broken inline images */ }
     }
   }
-  return { text, html };
+  return { text, html, inlineImages };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -584,8 +603,9 @@ Deno.serve(async (req) => {
     if (!imapHost || !imapUser || !imapPassword) throw new Error("IMAP credentials not configured");
 
     const { data: syncState } = await supabase
-      .from("email_sync_state").select("last_uid").eq("user_id", userId).maybeSingle();
+      .from("email_sync_state").select("last_uid, stored_uidvalidity").eq("user_id", userId).maybeSingle();
     let lastUid = syncState?.last_uid || 0;
+    const storedUidvalidity = syncState?.stored_uidvalidity || null;
 
     if (!syncState) {
       await supabase.from("email_sync_state").upsert({
@@ -606,6 +626,21 @@ Deno.serve(async (req) => {
     const inbox = await client.selectMailbox("INBOX");
     const uidvalidity = (inbox as any).uidValidity || null;
     console.log(`[check-inbox] INBOX: ${inbox.exists} msgs, UIDVALIDITY: ${uidvalidity}`);
+
+    // UIDVALIDITY change detection (RFC 3501 §2.3.1.1)
+    // If UIDVALIDITY changed, all cached UIDs are invalid — must resync from scratch
+    if (storedUidvalidity && uidvalidity && storedUidvalidity !== uidvalidity) {
+      console.warn(`[check-inbox] UIDVALIDITY changed: ${storedUidvalidity} → ${uidvalidity}. Resetting sync.`);
+      lastUid = 0;
+      await supabase.from("email_sync_state")
+        .update({ last_uid: 0, stored_uidvalidity: uidvalidity })
+        .eq("user_id", userId);
+    } else if (uidvalidity && storedUidvalidity !== uidvalidity) {
+      // First time seeing UIDVALIDITY — store it
+      await supabase.from("email_sync_state")
+        .update({ stored_uidvalidity: uidvalidity })
+        .eq("user_id", userId);
+    }
 
     // UID SEARCH
     let uids: number[] = [];
@@ -799,6 +834,25 @@ Deno.serve(async (req) => {
                 if (parsed.html) bodyHtml = parsed.html.slice(0, 100_000);
                 if (parsed.text) bodyText = parsed.text.slice(0, 50_000);
                 if (!bodyHtml && !bodyText) bodyText = textStr.slice(0, 50_000);
+
+                // Process inline images from fallback parser
+                for (const img of parsed.inlineImages) {
+                  if (img.data.length <= INLINE_DATA_URI_THRESHOLD) {
+                    let b64 = "";
+                    const CHUNK = 8192;
+                    for (let i = 0; i < img.data.length; i += CHUNK) {
+                      b64 += String.fromCharCode(...img.data.subarray(i, Math.min(i + CHUNK, img.data.length)));
+                    }
+                    b64 = btoa(b64);
+                    const dataUri = `data:${img.contentType};base64,${b64}`;
+                    attachmentRecords.push({
+                      cid: img.cid, publicUrl: dataUri,
+                      filename: `inline_${img.cid}.${img.contentType.split("/")[1] || "bin"}`,
+                      storagePath: "", contentType: img.contentType,
+                      size: img.data.length, isInline: true, isDataUri: true,
+                    });
+                  }
+                }
               }
             } catch (fallbackErr: any) {
               parseWarnings.push(`RFC822.TEXT fallback failed: ${fallbackErr.message}`);

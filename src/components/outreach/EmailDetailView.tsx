@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { User, Building2, Paperclip, FileText, Image, Download, Users, Eye, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { User, Building2, Paperclip, FileText, Image, Download, Users, Eye, Shield, ChevronDown, ChevronUp, ImageOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,6 @@ function decodeRfc2047(input: string): string {
         try { return new TextDecoder(cs).decode(bytes); }
         catch { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
       }
-      // Q encoding
       const decoded = text.replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
       const bytes = new Uint8Array(decoded.length);
@@ -51,10 +50,22 @@ function decodeRfc2047(input: string): string {
 }
 
 /**
+ * Block remote images in HTML by replacing external src/url with placeholders.
+ * Preserves data: URIs and cid: references (already resolved).
+ */
+function blockRemoteImages(html: string): string {
+  // Replace img src with external URLs
+  return html.replace(
+    /(<img[^>]*\s+src\s*=\s*["'])(https?:\/\/[^"']+)(["'][^>]*>)/gi,
+    '$1data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23e5e7eb%22/%3E%3Ctext x=%2224%22 y=%2228%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2210%22%3E🖼%3C/text%3E%3C/svg%3E$3'
+  );
+}
+
+/**
  * Vista A — Original Faithful View (iframe sandboxed, no sanitization)
  * Vista B — Safe Normalized View (DOMPurify, forced white bg)
  */
-function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe" }) {
+function EmailHtmlFrame({ html, mode, blockRemote }: { html: string; mode: "faithful" | "safe"; blockRemote: boolean }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -62,6 +73,9 @@ function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe
     if (!iframe) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
+
+    let processedHtml = html;
+    if (blockRemote) processedHtml = blockRemoteImages(processedHtml);
 
     const baseStyles = mode === "safe" ? `
       html, body {
@@ -91,11 +105,6 @@ function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe
   img, svg, video, canvas, picture {
     max-width: 100% !important; height: auto !important; display: inline-block;
   }
-  img[src^="data:"], img[src$=".svg"], img[src$=".webp"], img[src$=".bmp"],
-  img[src$=".gif"], img[src$=".png"], img[src$=".jpg"], img[src$=".jpeg"],
-  img[src$=".tiff"], img[src$=".ico"] {
-    max-width: 100% !important; height: auto !important;
-  }
   blockquote { border-left: 3px solid #d1d5db; margin: 8px 0; padding: 4px 12px; color: #6b7280; }
   pre, code { background: #f3f4f6; border-radius: 4px; padding: 2px 4px; font-size: 13px; overflow-x: auto; }
   table { border-collapse: collapse; max-width: 100%; }
@@ -103,7 +112,7 @@ function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe
   .email-wrapper { overflow-x: auto; max-width: 100%; }
 </style>
 </head>
-<body><div class="email-wrapper">${html}</div></body>
+<body><div class="email-wrapper">${processedHtml}</div></body>
 </html>`;
 
     doc.open();
@@ -122,7 +131,7 @@ function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe
     }, 100);
 
     return () => resizeObserver.disconnect();
-  }, [html, mode]);
+  }, [html, mode, blockRemote]);
 
   return (
     <iframe
@@ -135,9 +144,47 @@ function EmailHtmlFrame({ html, mode }: { html: string; mode: "faithful" | "safe
   );
 }
 
+function AttachmentThumbnail({ att, onDownload }: { att: any; onDownload: () => void }) {
+  const isImage = att.content_type?.startsWith("image/");
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isImage && att.storage_path) {
+      // Check if it's a data URI stored as path
+      if (att.storage_path.startsWith("data:")) {
+        setImgUrl(att.storage_path);
+      } else {
+        const { data } = supabase.storage.from("import-files").getPublicUrl(att.storage_path);
+        if (data?.publicUrl) setImgUrl(data.publicUrl);
+      }
+    }
+  }, [att.storage_path, isImage]);
+
+  const Icon = getAttachmentIcon(att.content_type);
+
+  return (
+    <button onClick={onDownload}
+      className="flex flex-col items-center gap-1.5 p-2 border border-border rounded-lg hover:bg-muted/50 transition-colors text-xs w-[140px]">
+      {isImage && imgUrl ? (
+        <img src={imgUrl} alt={att.filename} className="w-full h-16 object-cover rounded" />
+      ) : (
+        <div className="w-full h-16 flex items-center justify-center bg-muted/30 rounded">
+          <Icon className="w-8 h-8 text-muted-foreground" />
+        </div>
+      )}
+      <span className="truncate w-full text-center">{att.filename}</span>
+      <div className="flex items-center gap-1 text-muted-foreground">
+        {att.size_bytes && <span>{formatBytes(att.size_bytes)}</span>}
+        <Download className="w-3 h-3" />
+      </div>
+    </button>
+  );
+}
+
 export function EmailDetailView({ message, onClose }: Props) {
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
+  const [blockRemote, setBlockRemote] = useState(true);
   const [showHeaders, setShowHeaders] = useState(false);
   const displayDate = message.email_date || message.created_at;
 
@@ -146,7 +193,7 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   const sanitizedHtml = useMemo(() => {
     if (!message.body_html) return null;
-    if (viewMode === "faithful") return message.body_html; // No sanitization in faithful mode
+    if (viewMode === "faithful") return message.body_html;
     return DOMPurify.sanitize(message.body_html, {
       USE_PROFILES: { html: true },
       ADD_TAGS: ["style", "center"],
@@ -158,6 +205,12 @@ export function EmailDetailView({ message, onClose }: Props) {
   }, [message.body_html, viewMode]);
 
   const handleDownload = async (att: typeof attachments[0]) => {
+    if (att.storage_path.startsWith("data:")) {
+      // Data URI — open in new tab
+      const w = window.open();
+      if (w) { w.document.write(`<img src="${att.storage_path}" />`); }
+      return;
+    }
     const { data } = supabase.storage.from("import-files").getPublicUrl(att.storage_path);
     if (data?.publicUrl) window.open(data.publicUrl, "_blank");
   };
@@ -172,6 +225,14 @@ export function EmailDetailView({ message, onClose }: Props) {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold truncate">{decodedSubject}</h3>
           <div className="flex items-center gap-1">
+            {/* Remote images toggle */}
+            <Button
+              size="sm" variant={blockRemote ? "secondary" : "ghost"}
+              onClick={() => setBlockRemote(!blockRemote)} className="text-xs gap-1 h-7 px-2"
+              title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
+            >
+              <ImageOff className="w-3 h-3" />
+            </Button>
             {/* View mode toggle */}
             <Button
               size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"}
@@ -204,6 +265,16 @@ export function EmailDetailView({ message, onClose }: Props) {
             <span className="truncate">{message.cc_addresses}</span>
           </div>
         )}
+        {/* Remote images warning */}
+        {blockRemote && sanitizedHtml && message.body_html?.match(/https?:\/\//i) && (
+          <button
+            onClick={() => setBlockRemote(false)}
+            className="flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 transition-colors"
+          >
+            <ImageOff className="w-3 h-3" />
+            Immagini remote bloccate — clicca per caricare
+          </button>
+        )}
         {/* Expandable headers */}
         <button
           onClick={() => setShowHeaders(!showHeaders)}
@@ -216,9 +287,16 @@ export function EmailDetailView({ message, onClose }: Props) {
           <div className="text-[10px] text-muted-foreground space-y-0.5 bg-muted/30 rounded p-2 font-mono">
             <div><span className="font-semibold">Message-ID:</span> {message.message_id_external}</div>
             {message.in_reply_to && <div><span className="font-semibold">In-Reply-To:</span> {message.in_reply_to}</div>}
-            {(message as any).raw_sha256 && <div><span className="font-semibold">SHA-256:</span> {(message as any).raw_sha256}</div>}
-            {(message as any).imap_uid && <div><span className="font-semibold">IMAP UID:</span> {(message as any).imap_uid}</div>}
-            {(message as any).parse_status && <div><span className="font-semibold">Parse:</span> {(message as any).parse_status}</div>}
+            {message.raw_sha256 && <div><span className="font-semibold">SHA-256:</span> {message.raw_sha256}</div>}
+            {message.imap_uid && <div><span className="font-semibold">IMAP UID:</span> {message.imap_uid}</div>}
+            {message.uidvalidity && <div><span className="font-semibold">UIDVALIDITY:</span> {message.uidvalidity}</div>}
+            {message.imap_flags && <div><span className="font-semibold">FLAGS:</span> {message.imap_flags}</div>}
+            {message.internal_date && <div><span className="font-semibold">Internal Date:</span> {message.internal_date}</div>}
+            {message.raw_size_bytes && <div><span className="font-semibold">Size:</span> {formatBytes(message.raw_size_bytes)}</div>}
+            {message.parse_status && <div><span className="font-semibold">Parse:</span> {message.parse_status}</div>}
+            {message.parse_warnings && message.parse_warnings.length > 0 && (
+              <div><span className="font-semibold">Warnings:</span> {message.parse_warnings.join("; ")}</div>
+            )}
           </div>
         )}
         {message.source_type && message.source_type !== "unknown" && (
@@ -231,14 +309,14 @@ export function EmailDetailView({ message, onClose }: Props) {
 
       <ScrollArea className="flex-1 p-4">
         {sanitizedHtml ? (
-          <EmailHtmlFrame html={sanitizedHtml} mode={viewMode} />
+          <EmailHtmlFrame html={sanitizedHtml} mode={viewMode} blockRemote={blockRemote} />
         ) : (
-          <div className="bg-white text-gray-900 rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed">
+          <div className="bg-background text-foreground rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed border border-border">
             {message.body_text || "(corpo vuoto)"}
           </div>
         )}
 
-        {/* Regular attachments */}
+        {/* Regular attachments with thumbnails */}
         {regularAttachments.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
@@ -246,18 +324,9 @@ export function EmailDetailView({ message, onClose }: Props) {
               {regularAttachments.length} allegat{regularAttachments.length === 1 ? "o" : "i"}
             </div>
             <div className="flex flex-wrap gap-2">
-              {regularAttachments.map(att => {
-                const Icon = getAttachmentIcon(att.content_type);
-                return (
-                  <button key={att.id} onClick={() => handleDownload(att)}
-                    className="flex items-center gap-2 px-3 py-2 border border-border rounded-md hover:bg-muted/50 transition-colors text-xs max-w-[220px]">
-                    <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                    <span className="truncate">{att.filename}</span>
-                    {att.size_bytes && <span className="text-muted-foreground flex-shrink-0">{formatBytes(att.size_bytes)}</span>}
-                    <Download className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
-                  </button>
-                );
-              })}
+              {regularAttachments.map(att => (
+                <AttachmentThumbnail key={att.id} att={att} onDownload={() => handleDownload(att)} />
+              ))}
             </div>
           </div>
         )}
