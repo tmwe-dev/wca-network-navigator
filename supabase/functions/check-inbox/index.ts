@@ -398,6 +398,40 @@ async function matchSender(supabase: any, email: string) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   RFC 2047 — Encoded-Word decoder for headers (subject, names, filenames)
+   Format: =?charset?encoding?encoded_text?=
+   ══════════════════════════════════════════════════════════════ */
+
+function decodeRfc2047(input: string): string {
+  if (!input) return input;
+  // Join consecutive encoded words (RFC 2047 §6.2)
+  const joined = input.replace(/\?=\s+=\?/g, "?==?");
+  return joined.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, charset, encoding, text) => {
+    try {
+      const cs = normalizeCharset(charset);
+      if (encoding.toUpperCase() === "B") {
+        const binary = atob(text);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        try { return new TextDecoder(cs).decode(bytes); }
+        catch { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
+      }
+      // Q encoding: like QP but _ = space
+      const decoded = text
+        .replace(/_/g, " ")
+        .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+      // For Q encoding, try to handle multi-byte by encoding back to bytes
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      try { return new TextDecoder(cs).decode(bytes); }
+      catch { return decoded; }
+    } catch {
+      return text;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
    IMAP response parsing helpers
    ══════════════════════════════════════════════════════════════ */
 
@@ -407,6 +441,16 @@ function envelopeAddr(addr: any): string {
   const host = addr.host || "";
   if (mb && host) return `${mb}@${host}`.toLowerCase();
   return "";
+}
+
+function envelopeAddrName(addr: any): string {
+  if (!addr) return "";
+  return decodeRfc2047(addr.name || "") || envelopeAddr(addr);
+}
+
+function envelopeAddrList(addrs: any[]): string {
+  if (!addrs || !Array.isArray(addrs)) return "";
+  return addrs.map(a => envelopeAddr(a)).filter(Boolean).join(", ");
 }
 
 function concatBytes(chunks: Uint8Array[]): Uint8Array {
