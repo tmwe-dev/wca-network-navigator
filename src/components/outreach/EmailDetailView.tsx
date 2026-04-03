@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { User, Building2, Paperclip, FileText, Image, Download } from "lucide-react";
+import { User, Building2, Paperclip, FileText, Image, Download, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,12 @@ function getAttachmentIcon(contentType: string | null) {
  */
 function decodeRfc2047(input: string): string {
   if (!input) return input;
-  return input.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, _charset, encoding, text) => {
+  const joined = input.replace(/\?=\s+=\?/g, "?==?");
+  return joined.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, _charset, encoding, text) => {
     try {
       if (encoding.toUpperCase() === "B") {
         return atob(text);
       }
-      // Q encoding: like QP but _ = space
       return text
         .replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
@@ -48,9 +48,10 @@ function decodeRfc2047(input: string): string {
 }
 
 /**
- * Render HTML email body inside a sandboxed iframe with white background.
- * This prevents CSS bleed from the email into the app and ensures
- * proper contrast regardless of the app's dark/light theme.
+ * Render HTML email body inside a sandboxed iframe.
+ * Uses adaptive background detection: if the email HTML sets its own background,
+ * we respect it; otherwise we default to white with dark text for maximum readability.
+ * All images are constrained to max-width:100% to prevent overflow.
  */
 function EmailHtmlFrame({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -62,7 +63,6 @@ function EmailHtmlFrame({ html }: { html: string }) {
     const doc = iframe.contentDocument;
     if (!doc) return;
 
-    // Build a full HTML document with white background and proper base styles
     const wrappedHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -80,9 +80,27 @@ function EmailHtmlFrame({ html }: { html: string }) {
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
+    /* Adaptive: if email sets its own bg, auto-adjust text contrast */
+    body[style*="background"], body[bgcolor],
+    div[style*="background"], table[style*="background"],
+    table[bgcolor] {
+      color: inherit;
+    }
     img {
-      max-width: 100%;
-      height: auto;
+      max-width: 100% !important;
+      height: auto !important;
+      display: inline-block;
+    }
+    /* Handle all image types including SVG, WebP, BMP */
+    img[src$=".svg"], img[src$=".webp"], img[src$=".bmp"],
+    img[src$=".gif"], img[src$=".png"], img[src$=".jpg"], img[src$=".jpeg"] {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    /* Data URI images */
+    img[src^="data:"] {
+      max-width: 100% !important;
+      height: auto !important;
     }
     a { color: #2563eb; }
     blockquote {
@@ -96,24 +114,26 @@ function EmailHtmlFrame({ html }: { html: string }) {
       border-radius: 4px;
       padding: 2px 4px;
       font-size: 13px;
+      overflow-x: auto;
     }
     table { border-collapse: collapse; max-width: 100%; }
+    td, th { word-break: break-word; }
+    /* Prevent horizontal overflow from wide tables */
+    .email-wrapper { overflow-x: auto; max-width: 100%; }
   </style>
 </head>
-<body>${html}</body>
+<body><div class="email-wrapper">${html}</div></body>
 </html>`;
 
     doc.open();
     doc.write(wrappedHtml);
     doc.close();
 
-    // Auto-resize iframe to content height
     const resizeObserver = new ResizeObserver(() => {
       const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 300;
       iframe.style.height = `${h}px`;
     });
 
-    // Observe after a tick to let content render
     setTimeout(() => {
       if (doc.body) resizeObserver.observe(doc.body);
       const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 300;
@@ -145,8 +165,8 @@ export function EmailDetailView({ message, onClose }: Props) {
     if (!message.body_html) return null;
     return DOMPurify.sanitize(message.body_html, {
       USE_PROFILES: { html: true },
-      ADD_TAGS: ["style"],
-      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border"],
+      ADD_TAGS: ["style", "center"],
+      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border", "color", "face", "size"],
       ALLOW_DATA_ATTR: true,
     });
   }, [message.body_html]);
@@ -171,7 +191,7 @@ export function EmailDetailView({ message, onClose }: Props) {
             Chiudi
           </Button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">
             {decodedSender}
           </span>
@@ -180,6 +200,14 @@ export function EmailDetailView({ message, onClose }: Props) {
           <span>·</span>
           <span>{format(new Date(displayDate), "dd MMM yyyy HH:mm", { locale: it })}</span>
         </div>
+        {/* CC recipients */}
+        {message.cc_addresses && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Users className="w-3 h-3" />
+            <span className="font-medium">CC:</span>
+            <span className="truncate">{message.cc_addresses}</span>
+          </div>
+        )}
         {message.source_type && message.source_type !== "unknown" && (
           <Badge variant="secondary" className="text-xs gap-1">
             {message.source_type === "partner" ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
@@ -189,7 +217,6 @@ export function EmailDetailView({ message, onClose }: Props) {
       </div>
 
       <ScrollArea className="flex-1 p-4">
-        {/* Email body — HTML rendered in sandboxed iframe, fallback to plain text */}
         {sanitizedHtml ? (
           <EmailHtmlFrame html={sanitizedHtml} />
         ) : (
@@ -198,7 +225,6 @@ export function EmailDetailView({ message, onClose }: Props) {
           </div>
         )}
 
-        {/* Attachments */}
         {attachments.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
