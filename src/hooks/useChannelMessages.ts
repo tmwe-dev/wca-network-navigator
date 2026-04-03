@@ -36,15 +36,17 @@ export type ChannelMessage = {
   internal_date: string | null;
   parse_status: string | null;
   parse_warnings: string[] | null;
+  thread_id: string | null;
+  references_header: string | null;
 };
 
 const PAGE_SIZE = 50;
 
-export function useChannelMessages(channel?: string) {
+export function useChannelMessages(channel?: string, searchQuery?: string) {
   const queryClient = useQueryClient();
 
   const query = useInfiniteQuery({
-    queryKey: ["channel-messages", channel],
+    queryKey: ["channel-messages", channel, searchQuery],
     queryFn: async ({ pageParam = 0 }) => {
       let q = supabase
         .from("channel_messages")
@@ -55,6 +57,12 @@ export function useChannelMessages(channel?: string) {
 
       if (channel && channel !== "all") {
         q = q.eq("channel", channel);
+      }
+
+      // Full-text search using GIN index
+      if (searchQuery && searchQuery.trim()) {
+        const terms = searchQuery.trim().split(/\s+/).map(t => `${t}:*`).join(" & ");
+        q = q.textSearch("search_vector", terms);
       }
 
       const { data, error } = await q;
