@@ -33,7 +33,7 @@ export function CampagneTab() {
         .from("email_campaign_queue")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(300);
+        .limit(50);
       return data || [];
     },
   });

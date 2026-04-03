@@ -29,7 +29,7 @@ export function AttivitaTab() {
         .from("activities")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(300);
+        .limit(50);
       return data || [];
     },
   });
