@@ -133,22 +133,35 @@ export function useContinuousSync() {
       while (!abortRef.current) {
         batchNum++;
         const result = await callCheckInbox();
+        const hasMore = typeof result.has_more === "boolean"
+          ? result.has_more
+          : typeof result.remaining === "number"
+            ? result.remaining > 0
+            : result.total > 0;
 
-        if (result.total === 0) break;
-
-        totalDownloaded += result.total;
-        const lastMsg = result.messages?.[result.messages.length - 1];
-        setProgress(prev => ({
-          ...prev,
-          downloaded: totalDownloaded,
-          batch: batchNum,
-          lastSubject: lastMsg?.subject || "",
-          status: "syncing",
-        }));
+        if (result.total > 0) {
+          totalDownloaded += result.total;
+          const lastMsg = result.messages?.[result.messages.length - 1];
+          setProgress(prev => ({
+            ...prev,
+            downloaded: totalDownloaded,
+            batch: batchNum,
+            lastSubject: lastMsg?.subject || prev.lastSubject,
+            status: "syncing",
+          }));
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            batch: batchNum,
+            status: "syncing",
+          }));
+        }
 
         // Refresh the list so user sees new emails appearing
         queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
         queryClient.invalidateQueries({ queryKey: ["email-count"] });
+
+        if (!hasMore) break;
 
         await new Promise(r => setTimeout(r, 1000));
       }
