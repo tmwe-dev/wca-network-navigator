@@ -629,15 +629,26 @@ Deno.serve(async (req) => {
       }, { onConflict: "user_id" });
     }
 
-    const client = new ImapClient({
+    // Connect with retry (max 2 attempts for TLS/timeout)
+    let client: ImapClient;
+    const imapConfig = {
       host: imapHost, port: 993, username: imapUser, password: imapPassword,
       secure: true, connectionTimeout: 15000,
       tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
-    });
-
-    await client.connect();
-    await client.authenticate();
-    console.log("[check-inbox] Authenticated OK");
+    };
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        client = new ImapClient(imapConfig);
+        await client.connect();
+        await client.authenticate();
+        console.log(`[check-inbox] Authenticated OK (attempt ${attempt})`);
+        break;
+      } catch (connErr: any) {
+        if (attempt === 2) throw new Error(`IMAP connection failed after 2 attempts: ${connErr.message}`);
+        console.warn(`[check-inbox] Connection attempt ${attempt} failed: ${connErr.message}, retrying...`);
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
 
     const inbox = await client.selectMailbox("INBOX");
     const uidvalidity = (inbox as any).uidValidity || null;
