@@ -1001,18 +1001,24 @@ Deno.serve(async (req) => {
           let bodyText = "";
           let bodyHtml = "";
           const attachmentRecords: any[] = [];
+          const isOversized = rfc822Size > MAX_RAW_FETCH_BYTES;
 
           let parts: MimeLeafPart[] = [];
           if (bodyStructure) {
             try {
               parts = collectMimeLeafParts(bodyStructure);
               console.log(`[check-inbox] UID ${uid}: ${parts.length} MIME parts`);
+              // For oversized messages, only keep text/html body parts (skip attachments/inline images to save CPU)
+              if (isOversized) {
+                parts = parts.filter(p => p.isInlineBody);
+                console.log(`[check-inbox] UID ${uid}: oversized — keeping only ${parts.length} body parts`);
+              }
             } catch (bsErr: any) {
               parseWarnings.push(`BODYSTRUCTURE parse failed: ${bsErr.message}`);
             }
           }
 
-          if (parts.length === 0) {
+          if (parts.length === 0 && !isOversized) {
             try {
               const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
               const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
@@ -1048,6 +1054,19 @@ Deno.serve(async (req) => {
               parseWarnings.push(`RFC822.TEXT fallback failed: ${fallbackErr.message}`);
             }
             parts = [];
+          }
+
+          // For oversized messages with no body parts, add placeholder
+          if (parts.length === 0 && isOversized) {
+            const sizeMB = (rfc822Size / (1024 * 1024)).toFixed(1);
+            bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Solo oggetto e metadati sono stati salvati. Gli allegati non sono stati scaricati.`;
+            bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif">
+              <strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/>
+              <p>Questo messaggio supera il limite di ${(MAX_RAW_FETCH_BYTES / (1024*1024)).toFixed(0)} MB per il download completo.</p>
+              <p>Sono stati salvati solo: oggetto, mittente, destinatari e data.</p>
+              <p>Allegati e corpo completo non sono disponibili.</p>
+            </div>`;
+            parseWarnings.push(`oversized message (${sizeMB}MB) — body/attachments skipped`);
           }
 
           /* ─── Phase 3b: Fetch each MIME part ─── */
