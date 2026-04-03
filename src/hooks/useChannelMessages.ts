@@ -13,6 +13,8 @@ export type ChannelMessage = {
   partner_id: string | null;
   from_address: string | null;
   to_address: string | null;
+  cc_addresses: string | null;
+  bcc_addresses: string | null;
   subject: string | null;
   body_text: string | null;
   body_html: string | null;

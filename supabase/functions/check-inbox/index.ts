@@ -398,6 +398,40 @@ async function matchSender(supabase: any, email: string) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   RFC 2047 — Encoded-Word decoder for headers (subject, names, filenames)
+   Format: =?charset?encoding?encoded_text?=
+   ══════════════════════════════════════════════════════════════ */
+
+function decodeRfc2047(input: string): string {
+  if (!input) return input;
+  // Join consecutive encoded words (RFC 2047 §6.2)
+  const joined = input.replace(/\?=\s+=\?/g, "?==?");
+  return joined.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, charset, encoding, text) => {
+    try {
+      const cs = normalizeCharset(charset);
+      if (encoding.toUpperCase() === "B") {
+        const binary = atob(text);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        try { return new TextDecoder(cs).decode(bytes); }
+        catch { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
+      }
+      // Q encoding: like QP but _ = space
+      const decoded = text
+        .replace(/_/g, " ")
+        .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+      // For Q encoding, try to handle multi-byte by encoding back to bytes
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      try { return new TextDecoder(cs).decode(bytes); }
+      catch { return decoded; }
+    } catch {
+      return text;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
    IMAP response parsing helpers
    ══════════════════════════════════════════════════════════════ */
 
@@ -407,6 +441,16 @@ function envelopeAddr(addr: any): string {
   const host = addr.host || "";
   if (mb && host) return `${mb}@${host}`.toLowerCase();
   return "";
+}
+
+function envelopeAddrName(addr: any): string {
+  if (!addr) return "";
+  return decodeRfc2047(addr.name || "") || envelopeAddr(addr);
+}
+
+function envelopeAddrList(addrs: any[]): string {
+  if (!addrs || !Array.isArray(addrs)) return "";
+  return addrs.map(a => envelopeAddr(a)).filter(Boolean).join(", ");
 }
 
 function concatBytes(chunks: Uint8Array[]): Uint8Array {
@@ -656,6 +700,8 @@ Deno.serve(async (req) => {
           /* ─── Step 1: ENVELOPE + BODYSTRUCTURE (RFC 3501 §6.4.5) ─── */
           let fromAddr = "";
           let toAddr = "";
+          let ccAddresses = "";
+          let bccAddresses = "";
           let senderName = "";
           let subject = "(nessun oggetto)";
           let messageId = `uid_${uid}_${Date.now()}`;
@@ -675,9 +721,11 @@ Deno.serve(async (req) => {
             bodyStructure = envFetch?.[0]?.bodyStructure || null;
             if (env) {
               fromAddr = envelopeAddr(env.from?.[0]);
-              toAddr = envelopeAddr(env.to?.[0]);
-              senderName = env.from?.[0]?.name || fromAddr;
-              subject = env.subject || "(nessun oggetto)";
+              toAddr = envelopeAddrList(env.to);
+              ccAddresses = envelopeAddrList(env.cc);
+              bccAddresses = envelopeAddrList(env.bcc);
+              senderName = envelopeAddrName(env.from?.[0]) || fromAddr;
+              subject = decodeRfc2047(env.subject || "") || "(nessun oggetto)";
               messageId = env.messageId ? sanitizeMessageId(env.messageId) : messageId;
               date = env.date || "";
               inReplyTo = env.inReplyTo || null;
@@ -697,7 +745,7 @@ Deno.serve(async (req) => {
                 const rawFrom = parseEmailFromHeader(parsed["from"] || "");
                 if (rawFrom && rawFrom !== "@") fromAddr = rawFrom;
                 if (!toAddr || toAddr === "@") toAddr = parseEmailFromHeader(parsed["to"] || "");
-                if (subject === "(nessun oggetto)" && parsed["subject"]) subject = parsed["subject"];
+                if (subject === "(nessun oggetto)" && parsed["subject"]) subject = decodeRfc2047(parsed["subject"]);
                 if (!date && parsed["date"]) date = parsed["date"];
                 if (messageId.startsWith("uid_") && parsed["message-id"]) {
                   messageId = sanitizeMessageId(parsed["message-id"]);
@@ -928,6 +976,8 @@ Deno.serve(async (req) => {
             partner_id: match.partner_id,
             from_address: fromAddr,
             to_address: toAddr,
+            cc_addresses: ccAddresses || null,
+            bcc_addresses: bccAddresses || null,
             subject,
             body_text: bodyText,
             body_html: bodyHtml,
@@ -965,7 +1015,7 @@ Deno.serve(async (req) => {
               if (attRows.length > 0) {
                 const { error: attSaveErr } = await supabase
                   .from("email_attachments")
-                  .insert(attRows);
+                  .upsert(attRows, { onConflict: "message_id,filename" });
                 if (attSaveErr) {
                   console.warn(`[check-inbox] UID ${uid}: attachment DB save error:`, attSaveErr.message);
                 } else {

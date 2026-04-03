@@ -668,8 +668,10 @@ export type Database = {
       }
       channel_messages: {
         Row: {
+          bcc_addresses: string | null
           body_html: string | null
           body_text: string | null
+          cc_addresses: string | null
           channel: string
           created_at: string
           direction: string
@@ -688,8 +690,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
+          cc_addresses?: string | null
           channel: string
           created_at?: string
           direction: string
@@ -708,8 +712,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
+          cc_addresses?: string | null
           channel?: string
           created_at?: string
           direction?: string

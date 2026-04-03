@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   RefreshCw, Loader2, Search, Inbox, Download, Square,
 } from "lucide-react";
@@ -18,6 +18,16 @@ export function EmailInboxView() {
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSyncing && !checkInbox.isPending) {
+        checkInbox.mutate();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isSyncing, checkInbox]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return messages;
