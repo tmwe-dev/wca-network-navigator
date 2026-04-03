@@ -27,6 +27,7 @@ export default function Settings() {
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
     { value: "import-export", label: "Import/Export", icon: Download },
+    { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
