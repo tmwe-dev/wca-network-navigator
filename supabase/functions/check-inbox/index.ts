@@ -1006,7 +1006,6 @@ Deno.serve(async (req) => {
           let bodyText = "";
           let bodyHtml = "";
           const attachmentRecords: any[] = [];
-          const isOversized = rfc822Size > MAX_RAW_FETCH_BYTES;
 
           let parts: MimeLeafPart[] = [];
           if (!isOversized && bodyStructure) {
