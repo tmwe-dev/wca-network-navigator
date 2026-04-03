@@ -439,7 +439,7 @@ function extractLiteralBytesFromResponse(lines: any[]): Uint8Array {
     if (!literalStarted) continue;
     if (/^\* \d+ FETCH/.test(line)) continue;
     if (line.trim() === ")" || /^\S+ OK/.test(line)) continue;
-    chunks.push(encoder.encode(line + "\n"));
+    chunks.push(encoder.encode(line + "\r\n"));
   }
   return concatBytes(chunks);
 }
