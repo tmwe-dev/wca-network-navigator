@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,13 +35,17 @@ export function EmailInboxView() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0); // reset page on search change
+    }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: messages = [], isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useChannelMessages("email", debouncedSearch);
+  const { data: messages = [], isLoading, pageSize } = useChannelMessages("email", debouncedSearch, page);
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
@@ -55,6 +61,8 @@ export function EmailInboxView() {
     [inbound, selectedId],
   );
   const showSyncPanel = isSyncing || progress.status === "done" || progress.status === "error";
+  const hasNextPage = messages.length === pageSize;
+  const hasPrevPage = page > 0;
 
   useEffect(() => {
     if (inbound.length === 0) {
@@ -134,7 +142,7 @@ export function EmailInboxView() {
             </div>
             <div className="flex items-center gap-1.5">
               <Mail className="h-3 w-3" />
-              <span><strong className="text-foreground">{inbound.length}</strong> visualizzate</span>
+              <span>pag. <strong className="text-foreground">{page + 1}</strong> · <strong className="text-foreground">{inbound.length}</strong> visualizzate</span>
             </div>
           </div>
         </div>
@@ -182,7 +190,7 @@ export function EmailInboxView() {
 
             {progress.lastSubject && (
               <div className="truncate rounded bg-background/60 px-2 py-1 text-xs text-muted-foreground">
-                📄 Ultima: <span className="italic">“{progress.lastSubject.slice(0, 80)}{progress.lastSubject.length > 80 ? "..." : ""}”</span>
+                📄 Ultima: <span className="italic">"{progress.lastSubject.slice(0, 80)}{progress.lastSubject.length > 80 ? "..." : ""}"</span>
               </div>
             )}
 
@@ -207,9 +215,34 @@ export function EmailInboxView() {
             messages={inbound}
             selectedId={selectedId}
             onSelect={handleSelect}
-            onLoadMore={() => fetchNextPage()}
-            hasMore={hasNextPage && !isFetchingNextPage}
           />
+        )}
+
+        {/* Pagination controls */}
+        {!isLoading && inbound.length > 0 && (
+          <div className="flex flex-shrink-0 items-center justify-between border-t border-border bg-muted/30 px-3 py-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!hasPrevPage}
+              onClick={() => setPage(p => p - 1)}
+              className="gap-1 text-xs"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Precedente
+            </Button>
+            <span className="text-xs text-muted-foreground">Pagina {page + 1}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!hasNextPage}
+              onClick={() => setPage(p => p + 1)}
+              className="gap-1 text-xs"
+            >
+              Successiva
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         )}
       </div>
 

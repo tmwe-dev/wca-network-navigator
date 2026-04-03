@@ -41,21 +41,35 @@ export function useDownloadedEmailsFeed() {
 
       return ((data || []) as DownloadedEmailRow[]).map(mapRowToDownloadedEmail);
     },
+    staleTime: 10_000,
   });
 
+  // Realtime: prepend new row directly into cache instead of full re-fetch
   useEffect(() => {
     const channel = supabase
       .channel("downloaded-emails-feed")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "channel_messages",
           filter: "channel=eq.email",
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["downloaded-emails-feed"] });
+        (payload) => {
+          const row = payload.new as any;
+          const newEmail = mapRowToDownloadedEmail({
+            id: row.id,
+            subject: row.subject,
+            from_address: row.from_address,
+            email_date: row.email_date,
+            created_at: row.created_at,
+          });
+          queryClient.setQueryData<DownloadedEmail[]>(["downloaded-emails-feed"], (old) => {
+            if (!old) return [newEmail];
+            if (old.some(e => e.id === newEmail.id)) return old;
+            return [newEmail, ...old].slice(0, FEED_LIMIT);
+          });
           queryClient.invalidateQueries({ queryKey: ["email-count"] });
         },
       )
