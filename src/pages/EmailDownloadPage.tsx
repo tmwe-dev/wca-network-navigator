@@ -108,7 +108,7 @@ export default function EmailDownloadPage() {
             {isDone && (
               <div className="flex items-center gap-1.5 text-xs text-primary mr-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Completato — {progress.downloaded} email in {formatElapsed(progress.elapsedSeconds)}
+                Completato — {progress.downloaded} email{progress.skipped > 0 ? `, ${progress.skipped} saltate` : ""} in {formatElapsed(progress.elapsedSeconds)}
               </div>
             )}
             {isError && (
