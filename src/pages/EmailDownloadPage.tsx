@@ -95,6 +95,14 @@ export default function EmailDownloadPage() {
                 {formatElapsed(progress.elapsedSeconds)}
                 <span className="text-primary font-bold ml-2">{progress.downloaded}</span>
                 <span>scaricate</span>
+                {progress.skipped > 0 && (
+                  <>
+                    <span className="text-muted-foreground/60 ml-1">{progress.skipped} saltate</span>
+                  </>
+                )}
+                {progress.remaining > 0 && (
+                  <span className="text-muted-foreground/60 ml-1">({progress.remaining} rimanenti)</span>
+                )}
               </div>
             )}
             {isDone && (
