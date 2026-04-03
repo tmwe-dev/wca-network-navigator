@@ -187,9 +187,8 @@ async function syncLiCookieToServer() {
 
 // ── Verify LinkedIn session ──
 async function verifyLinkedInSession() {
-  var tab = await safeTabCreate({ url: "https://www.linkedin.com/feed/", active: false });
+  var tab = await getLinkedInTab("https://www.linkedin.com/feed/");
   try {
-    await waitForTabLoad(tab.id, 20000);
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: checkLinkedInSession,
@@ -201,8 +200,6 @@ async function verifyLinkedInSession() {
     return sessionResult || { authenticated: false, reason: "no_result" };
   } catch (err) {
     return { authenticated: false, reason: "error: " + err.message };
-  } finally {
-    safeTabRemove(tab.id)
   }
 }
 
