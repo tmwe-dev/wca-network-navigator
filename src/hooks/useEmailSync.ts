@@ -188,7 +188,7 @@ export function useContinuousSync() {
 
         if (!hasMore) break;
 
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 100));
       }
 
       setProgress(prev => ({
