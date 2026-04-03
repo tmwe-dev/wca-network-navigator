@@ -234,6 +234,11 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
 }
 
+/** Sanitize messageId for use as storage path segment */
+function sanitizeMessageId(mid: string): string {
+  return mid.replace(/[<>]/g, "").replace(/[@\/\\:*?"|\x00-\x1F]/g, "_").slice(0, 120) || "unknown";
+}
+
 /**
  * RFC 2046 — Recursively walk the BODYSTRUCTURE tree and collect leaf parts
  * with their IMAP section numbers.
