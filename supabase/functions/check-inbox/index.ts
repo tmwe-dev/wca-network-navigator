@@ -1172,7 +1172,7 @@ Deno.serve(async (req) => {
                       const { data: urlData } = supabaseAdmin.storage
                         .from("import-files").getPublicUrl(storagePath);
                       attachmentRecords.push({
-                        cid: part.contentId, publicUrl: urlData?.publicUrl || "",
+                        cid: effectiveCid, publicUrl: urlData?.publicUrl || "",
                         filename, storagePath, contentType, size: decoded.length,
                         isInline: true,
                       });
