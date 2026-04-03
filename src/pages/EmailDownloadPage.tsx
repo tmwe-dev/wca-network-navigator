@@ -211,9 +211,7 @@ export default function EmailDownloadPage() {
                         "animate-fade-in"
                       )}
                     >
-                      <span className="text-[10px] text-muted-foreground/50 font-mono mt-1 w-5 text-right flex-shrink-0">
-                        {idx + 1}
-                      </span>
+                      <CompanyLogo email={email.from} name={brand} size={24} className="mt-0.5 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-[11px] font-bold text-primary truncate leading-tight">
                           {brand}
