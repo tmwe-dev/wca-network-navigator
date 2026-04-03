@@ -465,6 +465,47 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
     return true;
   }
 
+  if (msg.action === "diagnosticDom") {
+    (async function() {
+      try {
+        var r = await getOrCreateWaTab();
+        await sleep(r.reused ? 1000 : 4000);
+        var results = await chrome.scripting.executeScript({
+          target: { tabId: r.tab.id },
+          func: function() {
+            var diag = {};
+            diag.url = location.href;
+            diag.title = document.title;
+            diag.hasQR = !!document.querySelector('canvas[aria-label], [data-testid="qrcode"]');
+            diag.hasSide = !!document.querySelector("#side");
+            diag.hasPaneSide = !!document.querySelector("#pane-side");
+            diag.hasChatlist = !!document.querySelector('[data-testid="chatlist"]');
+            diag.cellFrames = document.querySelectorAll('[data-testid="cell-frame-container"]').length;
+            diag.listItems = document.querySelectorAll('#pane-side [role="listitem"]').length;
+            diag.tabIndexItems = 0;
+            var pane = document.querySelector("#pane-side") || document.querySelector('[data-testid="chatlist"]');
+            if (pane) diag.tabIndexItems = pane.querySelectorAll('[tabindex="-1"]').length;
+            diag.unreadBadges = document.querySelectorAll('[data-testid="icon-unread-count"]').length;
+            // Sample first chat structure
+            var first = document.querySelector('[data-testid="cell-frame-container"]') || (pane && pane.querySelector('[tabindex="-1"]'));
+            if (first) {
+              diag.firstChatHTML = first.outerHTML.slice(0, 1000);
+              var titleEl = first.querySelector('span[title]');
+              diag.firstTitle = titleEl ? titleEl.getAttribute("title") : null;
+            }
+            diag.bodyChildCount = document.body.children.length;
+            diag.appDiv = !!document.querySelector("#app");
+            return { success: true, diagnostic: diag };
+          }
+        });
+        sendResponse(results?.[0]?.result || { success: false, error: "no result" });
+      } catch(e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
+    return true;
+  }
+
   if (msg.action === "readThread") {
     if (!msg.contact) { sendResponse({ success: false, error: "contact richiesto" }); return false; }
     readChatThread(msg.contact, msg.maxMessages || 50).then(sendResponse);

@@ -121,6 +121,7 @@ const App = () => (
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
+                  <Route path="/test-extensions" element={<TestExtensions />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
