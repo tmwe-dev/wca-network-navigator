@@ -40,7 +40,7 @@ export default function EmailDownloadPage() {
   const [emails, setEmails] = useState<DownloadedEmail[]>(() => bgSyncGetEmailHistory());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(bgSyncIsRunning);
-  const listEndRef = useRef<HTMLDivElement>(null);
+  const listTopRef = useRef<HTMLDivElement>(null);
   const resetSync = useResetSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);
 
@@ -55,11 +55,11 @@ export default function EmailDownloadPage() {
     return () => { unsub1(); unsub2(); };
   }, []);
 
-  // Auto-scroll list & auto-select latest
+  // Auto-scroll list to top & auto-select latest
   useEffect(() => {
     if (emails.length > 0) {
       setSelectedIdx(emails.length - 1);
-      listEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [emails.length]);
 
@@ -73,9 +73,10 @@ export default function EmailDownloadPage() {
   const isRunning = progress.status === "syncing";
   const isDone = progress.status === "done";
   const isError = progress.status === "error";
+  const renderedEmails = emails.map((email, originalIdx) => ({ email, originalIdx })).reverse();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border p-4">
         <div className="flex items-center justify-between">
@@ -135,9 +136,9 @@ export default function EmailDownloadPage() {
       </div>
 
       {/* Main canvas: left list + right preview */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left: Matrix-style email list */}
-        <div className="w-[300px] flex-shrink-0 border-r border-border bg-[hsl(var(--background))] flex flex-col">
+        <div className="w-[300px] flex-shrink-0 min-h-0 border-r border-border bg-background flex flex-col overflow-hidden">
           {emails.length === 0 && !isRunning ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center space-y-2">
@@ -146,18 +147,19 @@ export default function EmailDownloadPage() {
               </div>
             </div>
           ) : (
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-1">
-                {emails.map((email, idx) => {
+                <div ref={listTopRef} />
+                {renderedEmails.map(({ email, originalIdx }) => {
                   const { brand } = extractSenderBrand(email.from);
                   return (
                     <div
                       key={email.id}
-                      onClick={() => setSelectedIdx(idx)}
+                      onClick={() => setSelectedIdx(originalIdx)}
                       className={cn(
                         "flex items-start gap-2 px-3 py-2 rounded cursor-pointer transition-all duration-150 group",
                         "hover:bg-accent/50",
-                        selectedIdx === idx
+                        selectedIdx === originalIdx
                           ? "bg-primary/10 border-l-2 border-primary"
                           : "border-l-2 border-transparent",
                         "animate-fade-in"
@@ -178,7 +180,6 @@ export default function EmailDownloadPage() {
                     </div>
                   );
                 })}
-                <div ref={listEndRef} />
                 {isRunning && (
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-primary animate-pulse">
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -197,7 +198,7 @@ export default function EmailDownloadPage() {
         </div>
 
         {/* Right: Email preview — pinned header + scrollable body */}
-        <div className="flex-1 min-w-0 bg-muted/20 flex flex-col overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-0 bg-muted/20 flex flex-col overflow-hidden">
           {selectedEmail ? (
             <EmailSlide email={selectedEmail} key={selectedEmail.id} />
           ) : (
@@ -248,7 +249,7 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
   const htmlContent = fullHtml || email.bodyHtml || `<p style="padding:20px;color:#999;">Caricamento...</p>`;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* Pinned header */}
       <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3 flex items-center gap-3">
         <CompanyLogo email={email.from} name={brand} size={36} className="flex-shrink-0" />
@@ -261,7 +262,7 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
         </div>
       </div>
       {/* Scrollable email body */}
-      <div className="flex-1 overflow-y-auto bg-white">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-background">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
