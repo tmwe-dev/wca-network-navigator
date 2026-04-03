@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2 } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import ContentManager from "@/components/settings/ContentManager";
@@ -9,6 +9,7 @@ import { ImportExportSettings } from "@/components/settings/ImportExportSettings
 import { RASettings } from "@/components/settings/RASettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
+import OperatorsSettings from "@/pages/OperatorsSettings";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -27,6 +28,7 @@ export default function Settings() {
     { value: "import-export", label: "Import/Export", icon: Download },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
+    { value: "operatori", label: "Operatori", icon: Users },
   ];
 
   return (
@@ -68,6 +70,9 @@ export default function Settings() {
             <div className="float-panel p-5">
               <SubscriptionPanel />
             </div>
+          )}
+          {tab === "operatori" && (
+            <OperatorsSettings />
           )}
         </div>
       </div>
