@@ -6,6 +6,7 @@ import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock,
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailCount } from "@/hooks/useEmailCount";
