@@ -7,6 +7,7 @@ import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 import { ContactRecordDrawer } from "@/components/contact-drawer/ContactRecordDrawer";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
