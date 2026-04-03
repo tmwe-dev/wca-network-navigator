@@ -76,6 +76,11 @@ export default function Settings() {
           {tab === "operatori" && (
             <OperatorsSettings />
           )}
+          {tab === "download-email" && (
+            <div className="h-full -m-4">
+              <EmailDownloadPage />
+            </div>
+          )}
         </div>
       </div>
     </div>
