@@ -172,33 +172,25 @@ export function EmailInboxView() {
           </div>
         )}
 
-        <ScrollArea className="flex-1 min-h-0">
-          {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : inbound.length === 0 ? (
-            <div className="flex h-32 flex-col items-center justify-center gap-2 px-4 text-muted-foreground">
-              <Inbox className="h-8 w-8" />
-              <p className="text-sm">Nessuna email in arrivo</p>
-              <p className="text-center text-xs">Clicca “Scarica Tutto” per verificare nuove email</p>
-            </div>
-          ) : (
-            <EmailMessageList
-              messages={inbound}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              onLoadMore={() => fetchNextPage()}
-              hasMore={hasNextPage && !isFetchingNextPage}
-            />
-          )}
-
-          {isFetchingNextPage && (
-            <div className="flex justify-center p-2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </ScrollArea>
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : inbound.length === 0 ? (
+          <div className="flex h-32 flex-col items-center justify-center gap-2 px-4 text-muted-foreground">
+            <Inbox className="h-8 w-8" />
+            <p className="text-sm">Nessuna email in arrivo</p>
+            <p className="text-center text-xs">Clicca "Scarica Tutto" per verificare nuove email</p>
+          </div>
+        ) : (
+          <EmailMessageList
+            messages={inbound}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onLoadMore={() => fetchNextPage()}
+            hasMore={hasNextPage && !isFetchingNextPage}
+          />
+        )}
       </div>
 
       {selectedMsg && <EmailDetailView message={selectedMsg} onClose={() => setSelectedId(null)} />}
