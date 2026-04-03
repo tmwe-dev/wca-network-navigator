@@ -81,6 +81,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <BackgroundSyncIndicator />
         <BrowserRouter>
           <ConnectionBanner />
           <RuntimeDiagnosticPanel />
