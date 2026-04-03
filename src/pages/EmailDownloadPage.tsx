@@ -184,7 +184,7 @@ export default function EmailDownloadPage() {
       {/* Main canvas: left list + right preview */}
       <div className="flex-1 flex min-h-0">
         {/* Left: Matrix-style email list */}
-        <div className="w-[380px] flex-shrink-0 border-r border-border bg-[hsl(var(--background))] flex flex-col">
+        <div className="w-[300px] flex-shrink-0 border-r border-border bg-[hsl(var(--background))] flex flex-col">
           {emails.length === 0 && !isRunning ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center space-y-2">
