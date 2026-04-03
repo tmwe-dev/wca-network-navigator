@@ -37,6 +37,8 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
     ` : `
       html, body {
         margin: 0; padding: 8px;
+        background: #ffffff;
+        color: #1a1a1a;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 14px; line-height: 1.5;
         word-wrap: break-word; overflow-wrap: break-word;
