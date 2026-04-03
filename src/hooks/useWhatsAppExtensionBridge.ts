@@ -6,12 +6,16 @@ type WaExtensionResponse = {
   version?: string;
   authenticated?: boolean;
   reason?: string;
+  method?: string;
+  messages?: any[];
+  scanned?: number;
 };
 
 export function useWhatsAppExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const configSentRef = useRef(false);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
@@ -35,6 +39,36 @@ export function useWhatsAppExtensionBridge() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  // Send Supabase config to extension so it can call AI edge function
+  const sendConfig = useCallback(async () => {
+    if (configSentRef.current) return;
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    if (!supabaseUrl || !anonKey) return;
+
+    // Get auth token if available
+    let authToken = "";
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      authToken = data.session?.access_token || "";
+    } catch (_) {}
+
+    const requestId = `wa_setConfig_${Date.now()}`;
+    window.postMessage({
+      direction: "from-webapp-wa",
+      action: "setConfig",
+      requestId,
+      supabaseUrl,
+      anonKey,
+      authToken,
+    }, window.location.origin);
+    
+    configSentRef.current = true;
+  }, []);
+
   useEffect(() => {
     const doPing = () => {
       window.postMessage({
@@ -48,6 +82,13 @@ export function useWhatsAppExtensionBridge() {
     pollRef.current = setInterval(doPing, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
+
+  // Send config when extension becomes available
+  useEffect(() => {
+    if (isAvailable && !configSentRef.current) {
+      sendConfig();
+    }
+  }, [isAvailable, sendConfig]);
 
   const sendMsg = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<WaExtensionResponse> => {
@@ -81,13 +122,13 @@ export function useWhatsAppExtensionBridge() {
   );
 
   const readUnread = useCallback(
-    () => sendMsg("readUnread", {}, 30000),
+    () => sendMsg("readUnread", {}, 45000),
     [sendMsg]
   );
 
   const readThread = useCallback(
     (contact: string, maxMessages = 50) =>
-      sendMsg("readThread", { contact, maxMessages }, 45000),
+      sendMsg("readThread", { contact, maxMessages }, 60000),
     [sendMsg]
   );
 
