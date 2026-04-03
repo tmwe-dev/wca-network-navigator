@@ -205,7 +205,7 @@ async function verifySession() {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open — no cleanup needed
     return results?.[0]?.result || { success: false, authenticated: false, reason: "no_result" };
   } catch (err) {
     return { success: false, error: err.message };
