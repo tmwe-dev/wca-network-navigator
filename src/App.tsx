@@ -101,6 +101,7 @@ const App = () => (
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/operators" element={<OperatorsSettings />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
 
                    {/* ── Report Aziende (hidden, from Settings) ── */}
