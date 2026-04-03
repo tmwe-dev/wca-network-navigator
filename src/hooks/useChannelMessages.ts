@@ -1,10 +1,10 @@
 /**
- * Core channel messages query hook with infinite scroll and realtime.
+ * Core channel messages query hook with classic pagination and realtime.
  */
 
-import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 export type ChannelMessage = {
   id: string;
@@ -73,24 +73,23 @@ const MESSAGE_LIST_SELECT = [
   "references_header",
 ].join(", ");
 
-export function useChannelMessages(channel?: string, searchQuery?: string) {
+export function useChannelMessages(channel?: string, searchQuery?: string, page = 0) {
   const queryClient = useQueryClient();
 
-  const query = useInfiniteQuery({
-    queryKey: ["channel-messages", channel, searchQuery],
-    queryFn: async ({ pageParam = 0 }) => {
+  const query = useQuery({
+    queryKey: ["channel-messages", channel, searchQuery, page],
+    queryFn: async () => {
       let q = supabase
         .from("channel_messages")
         .select(MESSAGE_LIST_SELECT)
         .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
-        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (channel && channel !== "all") {
         q = q.eq("channel", channel);
       }
 
-      // Full-text search using GIN index
       if (searchQuery && searchQuery.trim()) {
         const terms = searchQuery.trim().split(/\s+/).map(t => `${t}:*`).join(" & ");
         q = q.textSearch("search_vector", terms);
@@ -100,30 +99,37 @@ export function useChannelMessages(channel?: string, searchQuery?: string) {
       if (error) throw error;
       return ((data || []) as unknown) as ChannelMessage[];
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      return lastPage.length === PAGE_SIZE ? lastPageParam + 1 : undefined;
-    },
+    staleTime: 30_000,
   });
 
-  // Realtime subscription
+  // Realtime: prepend new row to page 0 cache instead of full invalidation
   useEffect(() => {
     const sub = supabase
       .channel("channel_messages_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "channel_messages" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "channel_messages" }, (payload) => {
+        const newRow = payload.new as ChannelMessage;
+        // Only update page 0 of matching channel
+        const baseKey = ["channel-messages", channel, searchQuery, 0];
+        queryClient.setQueryData<ChannelMessage[]>(baseKey, (old) => {
+          if (!old) return old;
+          // Don't add duplicates
+          if (old.some(m => m.id === newRow.id)) return old;
+          // Prepend and cap at PAGE_SIZE
+          return [newRow, ...old].slice(0, PAGE_SIZE);
+        });
+        // Also bump the email count
+        queryClient.invalidateQueries({ queryKey: ["email-count"] });
       })
       .subscribe();
 
     return () => { supabase.removeChannel(sub); };
-  }, [queryClient]);
-
-  const messages = query.data?.pages.flat() ?? [];
+  }, [queryClient, channel, searchQuery]);
 
   return {
     ...query,
-    data: messages,
+    data: query.data ?? [],
     isLoading: query.isLoading,
+    pageSize: PAGE_SIZE,
   };
 }
 

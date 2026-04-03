@@ -13,8 +13,6 @@ type Props = {
   messages: ChannelMessage[];
   selectedId: string | null;
   onSelect: (msg: ChannelMessage) => void;
-  onLoadMore?: () => void;
-  hasMore?: boolean;
 };
 
 const ROW_HEIGHT = 72;
@@ -28,11 +26,11 @@ function formatListDate(value: string): string {
   return format(date, "dd/MM HH:mm", { locale: it });
 }
 
-export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, hasMore }: Props) {
+export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
-    count: messages.length + (hasMore ? 1 : 0),
+    count: messages.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
@@ -42,27 +40,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
     <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          // "Load more" button at the end
-          if (virtualRow.index >= messages.length) {
-            return (
-              <button
-                key="load-more"
-                onClick={onLoadMore}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-                className="flex items-center justify-center text-xs font-medium text-primary hover:bg-muted/50"
-              >
-                Carica altre email...
-              </button>
-            );
-          }
-
           const msg = messages[virtualRow.index];
           const isUnread = !msg.read_at;
           const isSelected = msg.id === selectedId;
