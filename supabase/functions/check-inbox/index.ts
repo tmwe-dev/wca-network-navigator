@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import { ImapClient, decodeAttachment } from "jsr:@workingdevshero/deno-imap";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -201,29 +201,49 @@ function envelopeAddr(addr: any): string {
   return "";
 }
 
-/* ── Helper: parse raw IMAP FETCH response to extract literal content ── */
-function extractLiteralFromResponse(lines: any[]): string {
-  let result = "";
+/* ── Helper: parse raw IMAP FETCH response to extract literal bytes ── */
+function concatBytes(chunks: Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+function extractLiteralBytesFromResponse(lines: any[]): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  const encoder = new TextEncoder();
+  let literalStarted = false;
 
   for (const line of lines) {
     if (line instanceof Uint8Array) {
-      result += new TextDecoder().decode(line);
+      literalStarted = true;
+      chunks.push(line);
       continue;
     }
-    if (typeof line === "string") {
-      // Check for literal start: {1234}
-      const litMatch = line.match(/\{(\d+)\}\s*$/);
-      if (litMatch) {
-        continue;
-      }
-      if (line.trim() === ")" || line.match(/^\S+ OK/)) {
-        // end of response
-      } else if (!line.match(/^\* \d+ FETCH/)) {
-        result += line + "\n";
-      }
+
+    if (typeof line !== "string") continue;
+
+    if (/\{\d+\}\s*$/.test(line)) {
+      literalStarted = true;
+      continue;
     }
+
+    if (!literalStarted) continue;
+    if (/^\* \d+ FETCH/.test(line)) continue;
+    if (line.trim() === ")" || /^\S+ OK/.test(line)) continue;
+
+    chunks.push(encoder.encode(line + "\n"));
   }
-  return result.trim();
+
+  return concatBytes(chunks);
+}
+
+function extractLiteralTextFromResponse(lines: any[]): string {
+  return new TextDecoder().decode(extractLiteralBytesFromResponse(lines)).trim();
 }
 
 /* ── Helper: parse raw header fields from IMAP response ── */
@@ -265,43 +285,106 @@ function parseEmailFromHeader(header: string): string {
   return "";
 }
 
-/* ── Helper: check if content is raw MIME multipart (not a real body) ── */
-function isMultipartContainer(content: string): boolean {
-  if (!content) return false;
-  const first500 = content.slice(0, 500);
-  // Starts with a MIME boundary
-  if (first500.match(/^--[A-Za-z0-9_\-]+/)) return true;
-  // Contains structured MIME headers at the start
-  if (first500.match(/^Content-Type:\s*(?:multipart|text)\//im) && first500.match(/^Content-Transfer-Encoding:/im)) return true;
-  return false;
+function normalizeCharset(charset?: string | null): string {
+  const value = (charset || "utf-8").trim().toLowerCase();
+  if (value === "utf8") return "utf-8";
+  if (value === "us-ascii") return "ascii";
+  return value;
 }
 
-/* ── Helper: find text sections from bodyStructure ── */
-function findTextSections(bs: any, path: string = ""): { textSection: string; htmlSection: string } {
-  let textSection = "";
-  let htmlSection = "";
-  
-  if (!bs) return { textSection, htmlSection };
-  
-  // If it's a leaf node with type/subtype
-  if (bs.type && bs.subtype) {
-    const t = bs.type.toLowerCase();
-    const s = bs.subtype.toLowerCase();
-    if (t === "text" && s === "plain" && !textSection) textSection = path || "1";
-    if (t === "text" && s === "html" && !htmlSection) htmlSection = path || "1";
+function decodeTextPart(data: Uint8Array, encoding: string, charset?: string | null): string {
+  const decoded = decodeAttachment(data, encoding || "7BIT");
+  try {
+    return new TextDecoder(normalizeCharset(charset)).decode(decoded).trim();
+  } catch {
+    return new TextDecoder().decode(decoded).trim();
   }
-  
-  // If it has childNodes (multipart)
-  if (bs.childNodes && Array.isArray(bs.childNodes)) {
-    for (let i = 0; i < bs.childNodes.length; i++) {
-      const childPath = path ? `${path}.${i + 1}` : `${i + 1}`;
-      const child = findTextSections(bs.childNodes[i], childPath);
-      if (!textSection && child.textSection) textSection = child.textSection;
-      if (!htmlSection && child.htmlSection) htmlSection = child.htmlSection;
+}
+
+function getPartParameter(params: Record<string, string> | undefined, key: string): string {
+  if (!params) return "";
+  const found = Object.entries(params).find(([k]) => k.toLowerCase() === key.toLowerCase());
+  return found?.[1] || "";
+}
+
+function getPartFilename(part: any): string {
+  return (
+    getPartParameter(part?.dispositionParameters, "filename") ||
+    getPartParameter(part?.dispositionParameters, "filename*") ||
+    getPartParameter(part?.parameters, "name") ||
+    getPartParameter(part?.parameters, "name*") ||
+    ""
+  );
+}
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
+}
+
+type MimeLeafPart = {
+  section: string;
+  type: string;
+  subtype: string;
+  encoding: string;
+  charset: string;
+  dispositionType: string;
+  filename: string;
+  size: number;
+  isAttachment: boolean;
+};
+
+function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
+  if (!part) return [];
+
+  if (Array.isArray(part.childParts) && part.childParts.length > 0) {
+    return part.childParts.flatMap((child: any, index: number) =>
+      collectMimeLeafParts(child, path ? `${path}.${index + 1}` : `${index + 1}`)
+    );
+  }
+
+  const type = (part.type || "").toLowerCase();
+  const subtype = (part.subtype || "").toLowerCase();
+  const dispositionType = (part.dispositionType || "").toLowerCase();
+  const filename = getPartFilename(part);
+  const charset = getPartParameter(part.parameters, "charset") || "utf-8";
+  const section = path || "1";
+
+  if (type === "message" && subtype === "rfc822") {
+    const isAttachedMessage = dispositionType === "attachment" || !!filename;
+    if (isAttachedMessage || !part.messageBodyStructure) {
+      return [{
+        section,
+        type,
+        subtype,
+        encoding: part.encoding || "7BIT",
+        charset,
+        dispositionType,
+        filename: filename || `message-${section}.eml`,
+        size: part.size || 0,
+        isAttachment: true,
+      }];
     }
+
+    return collectMimeLeafParts(part.messageBodyStructure, section);
   }
-  
-  return { textSection, htmlSection };
+
+  const isRenderableBody =
+    type === "text" &&
+    (subtype === "plain" || subtype === "html") &&
+    dispositionType !== "attachment" &&
+    !filename;
+
+  return [{
+    section,
+    type,
+    subtype,
+    encoding: part.encoding || "7BIT",
+    charset,
+    dispositionType,
+    filename,
+    size: part.size || 0,
+    isAttachment: !isRenderableBody,
+  }];
 }
 
 /* ── BATCH SIZE ── */
