@@ -104,20 +104,23 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
 
   // Realtime: prepend new row to page 0 cache instead of full invalidation
   useEffect(() => {
+    const filterStr = channel && channel !== "all" ? `channel=eq.${channel}` : undefined;
     const sub = supabase
-      .channel("channel_messages_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "channel_messages" }, (payload) => {
+      .channel(`channel_messages_rt_${channel || "all"}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "channel_messages",
+        ...(filterStr ? { filter: filterStr } : {}),
+      }, (payload) => {
         const newRow = payload.new as ChannelMessage;
         // Only update page 0 of matching channel
         const baseKey = ["channel-messages", channel, searchQuery, 0];
         queryClient.setQueryData<ChannelMessage[]>(baseKey, (old) => {
           if (!old) return old;
-          // Don't add duplicates
           if (old.some(m => m.id === newRow.id)) return old;
-          // Prepend and cap at PAGE_SIZE
           return [newRow, ...old].slice(0, PAGE_SIZE);
         });
-        // Also bump the email count
         queryClient.invalidateQueries({ queryKey: ["email-count"] });
       })
       .subscribe();
