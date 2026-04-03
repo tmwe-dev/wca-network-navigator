@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
+  Zap, Eye, Radio,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
-import { useWhatsAppAutoSync } from "@/hooks/useWhatsAppAutoSync";
+import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 
 type ChatThread = {
   contact: string;
@@ -19,13 +20,24 @@ type ChatThread = {
   messages: ChannelMessage[];
 };
 
+const LEVEL_CONFIG = {
+  0: { label: "Idle", color: "bg-muted text-muted-foreground", icon: Eye, desc: "Scan ogni ~75s" },
+  3: { label: "Alert", color: "bg-yellow-500/20 text-yellow-700", icon: Zap, desc: "Scan ogni ~15s" },
+  6: { label: "Live", color: "bg-green-500/20 text-green-700", icon: Radio, desc: "Scan ogni ~4s" },
+} as const;
+
 export function WhatsAppInboxView() {
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
 
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
   const markAsRead = useMarkAsRead();
-  const { autoEnabled, toggle, isReading, isAvailable, readInbox } = useWhatsAppAutoSync(60_000);
+  const {
+    level, enabled, toggle, isReading, isAvailable, focusedChat, focusOn, readNow,
+  } = useWhatsAppAdaptiveSync();
+
+  const levelCfg = LEVEL_CONFIG[level];
+  const LevelIcon = levelCfg.icon;
 
   // Group messages by contact
   const threads = useMemo(() => {
@@ -67,6 +79,8 @@ export function WhatsAppInboxView() {
 
   const handleSelectThread = (thread: ChatThread) => {
     setSelectedContact(thread.contact);
+    // Focus the adaptive sync on this contact
+    focusOn(thread.contact);
     thread.messages.forEach(msg => {
       if (msg.direction === "inbound" && !msg.read_at) {
         markAsRead.mutate(msg.id);
@@ -87,7 +101,7 @@ export function WhatsAppInboxView() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => readInbox()}
+              onClick={() => readNow()}
               disabled={isReading || !isAvailable}
               className="gap-1.5"
             >
@@ -99,23 +113,41 @@ export function WhatsAppInboxView() {
               Leggi ora
             </Button>
 
-            {/* Auto-polling toggle */}
+            {/* Adaptive sync toggle */}
             <Button
               size="sm"
-              variant={autoEnabled ? "default" : "outline"}
+              variant={enabled ? "default" : "outline"}
               onClick={toggle}
               disabled={!isAvailable}
               className="gap-1.5"
             >
-              {autoEnabled ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              {autoEnabled ? "Auto ON" : "Auto OFF"}
+              {enabled ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {enabled ? "Auto ON" : "Auto OFF"}
             </Button>
 
             <Badge variant={isAvailable ? "default" : "destructive"} className="text-[10px] gap-1 h-5">
               {isAvailable ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {isAvailable ? "Connesso" : "Offline"}
             </Badge>
+
+            {/* Attention level indicator */}
+            {enabled && (
+              <Badge className={cn("text-[10px] gap-1 h-5 border-0", levelCfg.color)}>
+                <LevelIcon className={cn("w-3 h-3", level === 6 && "animate-pulse")} />
+                {levelCfg.label}
+              </Badge>
+            )}
           </div>
+
+          {/* Focused chat indicator */}
+          {focusedChat && enabled && (
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <Radio className="w-3 h-3 text-green-500" />
+              <span>Focus: <strong>{focusedChat}</strong></span>
+              <span className="text-muted-foreground/50">· {levelCfg.desc}</span>
+            </div>
+          )}
+
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
@@ -147,6 +179,7 @@ export function WhatsAppInboxView() {
             <div className="divide-y divide-border">
               {filteredThreads.map(thread => {
                 const isSelected = thread.contact === selectedContact;
+                const isFocused = thread.contact === focusedChat;
                 return (
                   <button
                     key={thread.contact}
@@ -154,12 +187,20 @@ export function WhatsAppInboxView() {
                     className={cn(
                       "w-full text-left p-3 hover:bg-muted/50 transition-colors",
                       isSelected && "bg-muted",
-                      thread.unreadCount > 0 && "bg-primary/5"
+                      thread.unreadCount > 0 && "bg-primary/5",
+                      isFocused && enabled && "ring-1 ring-green-500/30"
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                        <MessageCircle className="w-4 h-4 text-green-600" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                        isFocused && enabled ? "bg-green-500/30" : "bg-green-500/20"
+                      )}>
+                        {isFocused && enabled ? (
+                          <Radio className="w-4 h-4 text-green-600 animate-pulse" />
+                        ) : (
+                          <MessageCircle className="w-4 h-4 text-green-600" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
@@ -197,7 +238,14 @@ export function WhatsAppInboxView() {
               <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
                 <MessageCircle className="w-4 h-4 text-green-600" />
               </div>
-              <span className="text-sm font-medium">{selectedThread.contact}</span>
+              <div>
+                <span className="text-sm font-medium">{selectedThread.contact}</span>
+                {focusedChat === selectedThread.contact && enabled && (
+                  <p className="text-[10px] text-green-600 flex items-center gap-1">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" /> Monitoraggio attivo
+                  </p>
+                )}
+              </div>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setSelectedContact(null)} className="text-xs">
               Chiudi
