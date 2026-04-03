@@ -483,6 +483,76 @@ function parseEmailFromHeader(header: string): string {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   RFC 2046 — Multipart MIME parser for RFC822.TEXT fallback
+   When BODYSTRUCTURE fails, we get raw multipart content.
+   This parses boundaries and extracts text/plain + text/html parts.
+   ══════════════════════════════════════════════════════════════ */
+
+function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: string; html: string } {
+  let text = "";
+  let html = "";
+
+  // Find boundary in content
+  const boundaryMatch = rawText.match(/boundary="?([^\s";\r\n]+)"?/i);
+  if (!boundaryMatch) {
+    // Not multipart — check if it looks like raw QP/text and decode
+    return { text: "", html: "" };
+  }
+
+  const boundary = boundaryMatch[1];
+  const delimiter = "--" + boundary;
+
+  // Split by boundary
+  const rawStr = rawText;
+  const sections = rawStr.split(delimiter);
+
+  for (const section of sections) {
+    if (!section || section.startsWith("--") || section.trim().length < 10) continue;
+
+    // Parse section headers
+    const headerEnd = section.indexOf("\r\n\r\n");
+    const headerEndAlt = section.indexOf("\n\n");
+    const splitPos = headerEnd >= 0 ? headerEnd : headerEndAlt;
+    if (splitPos < 0) continue;
+
+    const headerPart = section.slice(0, splitPos);
+    const bodyStart = headerEnd >= 0 ? splitPos + 4 : splitPos + 2;
+    const bodyPart = section.slice(bodyStart);
+
+    // Parse content-type and encoding from section headers
+    const ctMatch = headerPart.match(/content-type:\s*([^;\r\n]+)/i);
+    const encMatch = headerPart.match(/content-transfer-encoding:\s*(\S+)/i);
+    const charsetMatch = headerPart.match(/charset="?([^"\s;]+)"?/i);
+
+    const contentType = (ctMatch?.[1] || "").trim().toLowerCase();
+    const encoding = (encMatch?.[1] || "7bit").trim();
+    const charset = charsetMatch?.[1] || "utf-8";
+
+    // Check for nested multipart (e.g., multipart/alternative inside multipart/mixed)
+    if (contentType.startsWith("multipart/")) {
+      const nestedBoundaryMatch = headerPart.match(/boundary="?([^\s";\r\n]+)"?/i);
+      if (nestedBoundaryMatch) {
+        const nestedBytes = new TextEncoder().encode(bodyPart);
+        const nested = parseMultipartFallback(nestedBytes, bodyPart);
+        if (nested.text && !text) text = nested.text;
+        if (nested.html && !html) html = nested.html;
+      }
+      continue;
+    }
+
+    if (contentType === "text/plain" && !text) {
+      const bodyBytes = new TextEncoder().encode(bodyPart);
+      text = decodeMimePart(bodyBytes, encoding, charset);
+    } else if (contentType === "text/html" && !html) {
+      const bodyBytes = new TextEncoder().encode(bodyPart);
+      html = decodeMimePart(bodyBytes, encoding, charset);
+    }
+  }
+
+  return { text, html };
+}
+
+/* ══════════════════════════════════════════════════════════════
    BATCH SIZE — 1 email per invocation
    ══════════════════════════════════════════════════════════════ */
 const BATCH_SIZE = 1;
