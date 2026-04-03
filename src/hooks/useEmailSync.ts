@@ -66,6 +66,7 @@ export function useCheckInbox() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
       queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: ["email-count"] });
       if (data.total > 0) {
         toast.success(`📬 ${data.total} email scaricate (${data.matched} con contatto)`);
       } else {
@@ -78,11 +79,30 @@ export function useCheckInbox() {
   });
 }
 
+export interface SyncProgress {
+  downloaded: number;
+  batch: number;
+  lastSubject: string;
+  status: "idle" | "syncing" | "done" | "error";
+  errorMessage?: string;
+  startedAt?: number;
+  elapsedSeconds: number;
+}
+
+const INITIAL_PROGRESS: SyncProgress = {
+  downloaded: 0,
+  batch: 0,
+  lastSubject: "",
+  status: "idle",
+  elapsedSeconds: 0,
+};
+
 export function useContinuousSync() {
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [progress, setProgress] = useState({ downloaded: 0, batch: 0, lastSubject: "" });
+  const [progress, setProgress] = useState<SyncProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startSync = useCallback(async () => {
     if (isSyncing) return;
@@ -90,8 +110,24 @@ export function useContinuousSync() {
     abortRef.current = false;
     let totalDownloaded = 0;
     let batchNum = 0;
+    const startedAt = Date.now();
 
-    const toastId = toast.loading("📬 Sincronizzazione completa in corso...", { duration: Infinity });
+    // Elapsed timer
+    timerRef.current = setInterval(() => {
+      setProgress(prev => ({
+        ...prev,
+        elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000),
+      }));
+    }, 1000);
+
+    setProgress({
+      downloaded: 0,
+      batch: 0,
+      lastSubject: "",
+      status: "syncing",
+      startedAt,
+      elapsedSeconds: 0,
+    });
 
     try {
       while (!abortRef.current) {
@@ -102,33 +138,47 @@ export function useContinuousSync() {
 
         totalDownloaded += result.total;
         const lastMsg = result.messages?.[result.messages.length - 1];
-        setProgress({
+        setProgress(prev => ({
+          ...prev,
           downloaded: totalDownloaded,
           batch: batchNum,
           lastSubject: lastMsg?.subject || "",
-        });
+          status: "syncing",
+        }));
 
-        toast.loading(
-          `📬 Blocco ${batchNum}: ${result.total} email | Totale: ${totalDownloaded}`,
-          { id: toastId, duration: Infinity }
-        );
-
+        // Refresh the list so user sees new emails appearing
         queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-        await new Promise(r => setTimeout(r, 1500));
+        queryClient.invalidateQueries({ queryKey: ["email-count"] });
+
+        await new Promise(r => setTimeout(r, 1000));
       }
+
+      setProgress(prev => ({
+        ...prev,
+        status: "done",
+        downloaded: totalDownloaded,
+        batch: batchNum,
+      }));
 
       toast.success(
         totalDownloaded > 0
           ? `✅ Sync completa! ${totalDownloaded} email scaricate in ${batchNum} blocchi`
           : "✅ Posta già aggiornata",
-        { id: toastId, duration: 5000 }
+        { duration: 5000 }
       );
     } catch (err: any) {
-      toast.error(`❌ Errore al blocco ${batchNum}: ${err.message}`, { id: toastId, duration: 8000 });
+      setProgress(prev => ({
+        ...prev,
+        status: "error",
+        errorMessage: err.message,
+      }));
+      toast.error(`❌ Errore al blocco ${batchNum}: ${err.message}`, { duration: 8000 });
     } finally {
+      if (timerRef.current) clearInterval(timerRef.current);
       setIsSyncing(false);
       queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
       queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: ["email-count"] });
     }
   }, [isSyncing, queryClient]);
 

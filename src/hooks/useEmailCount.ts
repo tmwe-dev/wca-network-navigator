@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useEmailCount(enabled: boolean) {
+/**
+ * Always returns the total email count from database.
+ * When isSyncing=true, polls every 3s for live updates.
+ */
+export function useEmailCount(isSyncing = false) {
   return useQuery({
     queryKey: ["email-count"],
     queryFn: async () => {
@@ -12,7 +16,6 @@ export function useEmailCount(enabled: boolean) {
       if (error) throw error;
       return count ?? 0;
     },
-    enabled,
-    refetchInterval: enabled ? 3000 : false,
+    refetchInterval: isSyncing ? 3000 : 30000,
   });
 }
