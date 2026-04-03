@@ -542,7 +542,7 @@ Deno.serve(async (req) => {
               toAddr = envelopeAddr(env.to?.[0]);
               senderName = env.from?.[0]?.name || fromAddr;
               subject = env.subject || "(nessun oggetto)";
-              messageId = env.messageId || messageId;
+              messageId = env.messageId ? sanitizeMessageId(env.messageId) : messageId;
               date = env.date || "";
               inReplyTo = env.inReplyTo || null;
             }
