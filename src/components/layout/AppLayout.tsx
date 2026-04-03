@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
+import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { Button } from "@/components/ui/button";
