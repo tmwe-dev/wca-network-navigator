@@ -32,6 +32,20 @@ export function EmailDetailView({ message, onClose }: Props) {
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
   const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
 
+  // Build CID map from inline attachments
+  const cidMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const att of attachments) {
+      if (att.is_inline && att.content_id && att.storage_path) {
+        const url = att.storage_path.startsWith("data:")
+          ? att.storage_path
+          : supabase.storage.from("import-files").getPublicUrl(att.storage_path).data?.publicUrl || "";
+        if (url) map[att.content_id] = url;
+      }
+    }
+    return map;
+  }, [attachments]);
+
   const sanitizedHtml = useMemo(() => {
     if (!message.body_html) return null;
     if (viewMode === "faithful") return message.body_html;
