@@ -1035,8 +1035,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Clear warnings for next message
-          parseWarnings.length = 0;
+          // parseWarnings is now per-message (declared inside the loop), no need to clear
 
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
