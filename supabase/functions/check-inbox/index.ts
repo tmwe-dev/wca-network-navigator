@@ -310,7 +310,8 @@ function sanitizeFilename(filename: string): string {
 }
 
 function sanitizeMessageId(mid: string): string {
-  return mid.replace(/[<>]/g, "").replace(/[@\/\\:*?"|\x00-\x1F]/g, "_").slice(0, 120) || "unknown";
+  // Only strip angle brackets — preserve @ and other RFC 5322 valid chars for deduplication
+  return mid.replace(/[<>]/g, "").trim().slice(0, 250) || "unknown";
 }
 
 function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
