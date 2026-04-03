@@ -1357,6 +1357,7 @@ export type Database = {
           imap_user: string
           last_sync_at: string | null
           last_uid: number
+          stored_uidvalidity: number | null
           updated_at: string
           user_id: string
         }
@@ -1367,6 +1368,7 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          stored_uidvalidity?: number | null
           updated_at?: string
           user_id: string
         }
@@ -1377,6 +1379,7 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          stored_uidvalidity?: number | null
           updated_at?: string
           user_id?: string
         }
