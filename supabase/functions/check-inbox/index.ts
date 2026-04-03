@@ -671,15 +671,23 @@ Deno.serve(async (req) => {
             try {
               const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
               const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
-              const rawText = extractLiteralTextFromResponse(rfc822Response);
+              const rawBytes = extractLiteralBytesFromResponse(rfc822Response);
+              const rawText = new TextDecoder("utf-8", { fatal: false }).decode(rawBytes);
+
               if (rawText && rawText.length > 5) {
-                bodyText = rawText.slice(0, 50_000);
-                console.log(`[check-inbox] UID ${uid}: used RFC822.TEXT fallback (${bodyText.length}c)`);
+                // Check if this is multipart — parse MIME boundaries
+                const parsed = parseMultipartFallback(rawBytes, rawText);
+                if (parsed.html) bodyHtml = parsed.html.slice(0, 100_000);
+                if (parsed.text) bodyText = parsed.text.slice(0, 50_000);
+                if (!bodyHtml && !bodyText) {
+                  // Not multipart or parsing failed — use raw text
+                  bodyText = rawText.slice(0, 50_000);
+                }
+                console.log(`[check-inbox] UID ${uid}: RFC822.TEXT fallback text=${bodyText.length}c html=${bodyHtml.length}c`);
               }
             } catch (fallbackErr: any) {
               console.warn(`[check-inbox] UID ${uid}: RFC822.TEXT fallback failed:`, fallbackErr.message);
             }
-            // Still add a dummy part to skip the loop below
             parts = [];
           }
 
