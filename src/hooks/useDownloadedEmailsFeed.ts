@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
 
-const FEED_LIMIT = 200;
+const FEED_LIMIT = 50;
 
 type DownloadedEmailRow = {
   id: string;
