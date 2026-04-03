@@ -1,9 +1,20 @@
 /**
  * Background email sync singleton — survives page navigation.
  * Downloads one email at a time with minimal delay.
+ * Emits per-email data for the live download viewer.
  */
 
 import { supabase } from "@/integrations/supabase/client";
+
+export interface DownloadedEmail {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;
+  bodyHtml?: string;
+  bodyText?: string;
+  timestamp: number; // when downloaded
+}
 
 export interface BgSyncProgress {
   downloaded: number;
@@ -15,7 +26,8 @@ export interface BgSyncProgress {
   elapsedSeconds: number;
 }
 
-type Listener = (p: BgSyncProgress) => void;
+type ProgressListener = (p: BgSyncProgress) => void;
+type EmailListener = (e: DownloadedEmail) => void;
 
 const INITIAL: BgSyncProgress = {
   downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
@@ -25,16 +37,34 @@ let _progress: BgSyncProgress = { ...INITIAL };
 let _running = false;
 let _abort = false;
 let _timer: ReturnType<typeof setInterval> | null = null;
-const _listeners = new Set<Listener>();
+const _progressListeners = new Set<ProgressListener>();
+const _emailListeners = new Set<EmailListener>();
+let _emailHistory: DownloadedEmail[] = [];
 
-function notify() {
-  _listeners.forEach(fn => fn({ ..._progress }));
+function notifyProgress() {
+  _progressListeners.forEach(fn => fn({ ..._progress }));
 }
 
-export function bgSyncSubscribe(fn: Listener): () => void {
-  _listeners.add(fn);
-  fn({ ..._progress }); // immediate state
-  return () => { _listeners.delete(fn); };
+function notifyEmail(e: DownloadedEmail) {
+  _emailHistory.push(e);
+  // Keep max 500 in memory
+  if (_emailHistory.length > 500) _emailHistory = _emailHistory.slice(-500);
+  _emailListeners.forEach(fn => fn(e));
+}
+
+export function bgSyncSubscribe(fn: ProgressListener): () => void {
+  _progressListeners.add(fn);
+  fn({ ..._progress });
+  return () => { _progressListeners.delete(fn); };
+}
+
+export function bgSyncSubscribeEmails(fn: EmailListener): () => void {
+  _emailListeners.add(fn);
+  return () => { _emailListeners.delete(fn); };
+}
+
+export function bgSyncGetEmailHistory(): DownloadedEmail[] {
+  return [..._emailHistory];
 }
 
 export function bgSyncGetProgress(): BgSyncProgress {
@@ -73,6 +103,7 @@ export async function bgSyncStart() {
   if (_running) return;
   _running = true;
   _abort = false;
+  _emailHistory = [];
 
   let totalDownloaded = 0;
   let batchNum = 0;
@@ -80,11 +111,11 @@ export async function bgSyncStart() {
 
   _timer = setInterval(() => {
     _progress = { ..._progress, elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) };
-    notify();
+    notifyProgress();
   }, 1000);
 
   _progress = { downloaded: 0, batch: 0, lastSubject: "", status: "syncing", startedAt, elapsedSeconds: 0 };
-  notify();
+  notifyProgress();
 
   try {
     let consecutiveErrors = 0;
@@ -109,7 +140,7 @@ export async function bgSyncStart() {
           ..._progress, batch: batchNum,
           lastSubject: `⚠️ Errore temporaneo, riprovo... (${consecutiveErrors}/${MAX_RETRIES})`,
         };
-        notify();
+        notifyProgress();
         await new Promise(r => setTimeout(r, 2000 * consecutiveErrors));
         continue;
       }
@@ -122,7 +153,22 @@ export async function bgSyncStart() {
 
       if (result.total > 0) {
         totalDownloaded += result.total;
-        const lastMsg = result.messages?.[result.messages.length - 1];
+
+        // Emit each downloaded email for live viewer
+        const msgs = result.messages || [];
+        for (const msg of msgs) {
+          notifyEmail({
+            id: msg.id || `batch-${batchNum}-${Math.random().toString(36).slice(2)}`,
+            subject: msg.subject || "(senza oggetto)",
+            from: msg.from_address || msg.from || "",
+            date: msg.email_date || msg.date || new Date().toISOString(),
+            bodyHtml: msg.body_html || undefined,
+            bodyText: msg.body_text || undefined,
+            timestamp: Date.now(),
+          });
+        }
+
+        const lastMsg = msgs[msgs.length - 1];
         _progress = {
           ..._progress,
           downloaded: totalDownloaded,
@@ -133,7 +179,7 @@ export async function bgSyncStart() {
       } else {
         _progress = { ..._progress, batch: batchNum, status: "syncing" };
       }
-      notify();
+      notifyProgress();
 
       if (!hasMore) break;
 
@@ -142,10 +188,10 @@ export async function bgSyncStart() {
     }
 
     _progress = { ..._progress, status: "done", downloaded: totalDownloaded, batch: batchNum };
-    notify();
+    notifyProgress();
   } catch (err: any) {
     _progress = { ..._progress, status: "error", errorMessage: err.message };
-    notify();
+    notifyProgress();
   } finally {
     if (_timer) clearInterval(_timer);
     _timer = null;
@@ -159,5 +205,6 @@ export function bgSyncStop() {
 
 export function bgSyncReset() {
   _progress = { ...INITIAL };
-  notify();
+  _emailHistory = [];
+  notifyProgress();
 }
