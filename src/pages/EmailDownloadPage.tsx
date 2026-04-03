@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 import { cn } from "@/lib/utils";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailCount } from "@/hooks/useEmailCount";
@@ -208,50 +209,19 @@ export default function EmailDownloadPage() {
 
 /** Email preview rendered as a slide/card */
 function EmailSlide({ email }: { email: DownloadedEmail }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (!iframeRef.current) return;
-    const doc = iframeRef.current.contentDocument;
-    if (!doc) return;
-
-    const html = email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${escapeHtml(email.bodyText || "(nessun contenuto)")}</pre>`;
-
-    doc.open();
-    doc.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-  body { margin: 0; padding: 16px; font-family: -apple-system, sans-serif; font-size: 13px; color: #222; background: #fff; overflow: auto; }
-  img { max-width: 100%; height: auto; }
-  table { max-width: 100% !important; }
-  * { max-width: 100% !important; box-sizing: border-box; }
-</style></head><body>${html}</body></html>`);
-    doc.close();
-  }, [email]);
+  const htmlContent = email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
 
   return (
     <div className="w-full max-w-3xl animate-scale-in">
-      {/* Slide header */}
-      <div className="bg-card border border-border rounded-t-lg px-4 py-3 flex items-center justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-foreground truncate">{email.subject}</div>
-          <div className="text-xs text-muted-foreground truncate mt-0.5">
-            Da: {email.from} — {formatTime(email.date)}
-          </div>
+      <div className="bg-card border border-border rounded-t-lg px-4 py-3">
+        <div className="text-sm font-semibold text-foreground truncate">{email.subject}</div>
+        <div className="text-xs text-muted-foreground truncate mt-0.5">
+          Da: {email.from} — {formatTime(email.date)}
         </div>
       </div>
-      {/* Slide body — iframe */}
       <div className="border border-t-0 border-border rounded-b-lg overflow-hidden bg-white" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>
-        <iframe
-          ref={iframeRef}
-          title="Email preview"
-          sandbox="allow-same-origin"
-          className="w-full h-full border-0"
-        />
+        <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} />
       </div>
     </div>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
