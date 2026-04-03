@@ -154,11 +154,13 @@ async function getConfig() {
   }
 }
 
-// ── DOM-based fallback: read unread from sidebar ──
+// ── DOM-based fallback: read sidebar chats ──
+// Always extracts the last VERIFY_COUNT chats (unread or not) for rolling verification
 async function readUnreadDOM(tabId) {
   var results = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     func: function() {
+      var VERIFY_COUNT = 5;
       var qr = document.querySelector('canvas[aria-label], [data-testid="qrcode"]');
       if (qr) return { success: false, error: "QR code visibile - accedi a WhatsApp Web" };
       var messages = [];
@@ -168,7 +170,9 @@ async function readUnreadDOM(tabId) {
         var pane = document.querySelector("#pane-side") || document.querySelector('[data-testid="chatlist"]');
         if (pane) chatItems = pane.querySelectorAll('[tabindex="-1"]');
       }
+      var processed = 0;
       for (var chat of chatItems) {
+        // Check unread badge
         var badge = chat.querySelector('[data-testid="icon-unread-count"]') ||
           chat.querySelector('span[aria-label*="non lett"]') ||
           chat.querySelector('span[aria-label*="unread"]');
@@ -184,7 +188,10 @@ async function readUnreadDOM(tabId) {
             }
           }
         }
-        if (count === 0) continue;
+        // Always extract the first VERIFY_COUNT chats for rolling verification
+        var isVerify = processed < VERIFY_COUNT;
+        if (count === 0 && !isVerify) continue;
+
         var titleEl = chat.querySelector('[data-testid="cell-frame-title"] span[title]') ||
           chat.querySelector('span[title][dir="auto"]') || chat.querySelector('span[title]');
         var lastMsgEl = chat.querySelector('[data-testid="last-msg-status"]') ||
@@ -196,7 +203,9 @@ async function readUnreadDOM(tabId) {
           lastMessage: lastMsgEl?.textContent?.trim() || "",
           time: timeEl?.textContent?.trim() || new Date().toISOString(),
           unreadCount: count,
+          isVerify: isVerify && count === 0,
         });
+        processed++;
       }
       return { success: true, messages: messages, scanned: chatItems.length };
     },
