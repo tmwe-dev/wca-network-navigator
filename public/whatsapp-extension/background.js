@@ -106,28 +106,26 @@ async function waitForLoad(tabId, timeoutMs = 30000) {
 }
 
 // ── Find existing WhatsApp Web tab or create one ──
+// The tab is NEVER closed — it stays open for fast re-use.
 
 async function getOrCreateWaTab() {
-  // Look for an already-open WA tab to avoid opening many tabs
+  // Look for an already-open WA tab
   try {
     const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
     if (tabs.length > 0) {
       const tab = tabs[0];
-      // Make sure it's loaded
       if (tab.status === "complete") return { tab, reused: true };
       await waitForLoad(tab.id, 15000);
       return { tab, reused: true };
     }
   } catch (_) {}
 
-  // No existing tab — create one
+  // No existing tab — create one (it will stay open permanently)
   const tab = await safeCreateTab(WA_BASE, false);
   const loaded = await waitForLoad(tab.id, 30000);
   if (!loaded) {
-    await safeRemoveTab(tab.id);
     throw new Error("WhatsApp Web non ha caricato in tempo");
   }
-  // Extra wait for SPA to render
   await sleep(4000);
   return { tab, reused: false };
 }
@@ -207,7 +205,7 @@ async function verifySession() {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open — no cleanup needed
     return results?.[0]?.result || { success: false, authenticated: false, reason: "no_result" };
   } catch (err) {
     return { success: false, error: err.message };
@@ -309,7 +307,7 @@ async function readUnreadMessages() {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open
     const result = results?.[0]?.result;
     return result || { success: false, error: "Nessun risultato dallo script" };
   } catch (err) {
@@ -400,7 +398,7 @@ async function readChatThread(contactName, maxMessages = 50) {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open
     return results?.[0]?.result || { success: false, error: "Nessun risultato" };
   } catch (err) {
     return { success: false, error: err.message };
