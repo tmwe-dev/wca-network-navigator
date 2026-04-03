@@ -130,9 +130,34 @@ export function useContinuousSync() {
     });
 
     try {
+      let consecutiveErrors = 0;
+      const MAX_RETRIES = 3;
+
       while (!abortRef.current) {
         batchNum++;
-        const result = await callCheckInbox();
+        let result: any;
+
+        try {
+          result = await callCheckInbox();
+          consecutiveErrors = 0; // Reset on success
+        } catch (batchErr: any) {
+          consecutiveErrors++;
+          console.warn(`[sync] Batch ${batchNum} error (${consecutiveErrors}/${MAX_RETRIES}): ${batchErr.message}`);
+
+          if (consecutiveErrors >= MAX_RETRIES) {
+            throw batchErr; // Give up after MAX_RETRIES consecutive failures
+          }
+
+          // Wait longer before retry (exponential backoff)
+          setProgress(prev => ({
+            ...prev,
+            batch: batchNum,
+            lastSubject: `⚠️ Errore temporaneo, riprovo... (${consecutiveErrors}/${MAX_RETRIES})`,
+          }));
+          await new Promise(r => setTimeout(r, 3000 * consecutiveErrors));
+          continue;
+        }
+
         const hasMore = typeof result.has_more === "boolean"
           ? result.has_more
           : typeof result.remaining === "number"
