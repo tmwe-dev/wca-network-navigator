@@ -6,7 +6,9 @@
 var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
 var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
-// ── Safe tab create/remove with retry for "cannot be edited" errors ──
+// ── Persistent LinkedIn tab — reused across all operations ──
+var _liTabId = null;
+
 async function safeTabCreate(options, maxRetries) {
   maxRetries = maxRetries || 3;
   for (var attempt = 0; attempt < maxRetries; attempt++) {
@@ -23,7 +25,32 @@ async function safeTabCreate(options, maxRetries) {
 }
 
 async function safeTabRemove(tabId) {
+  // Never remove the persistent LinkedIn tab
+  if (tabId === _liTabId) return;
   try { await chrome.tabs.remove(tabId); } catch (e) {}
+}
+
+// Get or create a single persistent LinkedIn tab, navigate it to `url`
+async function getLinkedInTab(url) {
+  // Check if existing tab is still alive
+  if (_liTabId !== null) {
+    try {
+      var existing = await chrome.tabs.get(_liTabId);
+      if (existing) {
+        // Navigate existing tab to new URL
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForTabLoad(_liTabId, 20000);
+        return { id: _liTabId };
+      }
+    } catch (_) {
+      _liTabId = null; // tab was closed by user
+    }
+  }
+  // Create new persistent tab
+  var tab = await safeTabCreate({ url: url, active: false });
+  _liTabId = tab.id;
+  await waitForTabLoad(tab.id, 20000);
+  return tab;
 }
 
 // ── Wait for tab to finish loading ──
@@ -160,9 +187,8 @@ async function syncLiCookieToServer() {
 
 // ── Verify LinkedIn session ──
 async function verifyLinkedInSession() {
-  var tab = await safeTabCreate({ url: "https://www.linkedin.com/feed/", active: false });
+  var tab = await getLinkedInTab("https://www.linkedin.com/feed/");
   try {
-    await waitForTabLoad(tab.id, 20000);
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: checkLinkedInSession,
@@ -174,8 +200,6 @@ async function verifyLinkedInSession() {
     return sessionResult || { authenticated: false, reason: "no_result" };
   } catch (err) {
     return { authenticated: false, reason: "error: " + err.message };
-  } finally {
-    safeTabRemove(tab.id)
   }
 }
 
@@ -463,10 +487,11 @@ async function autoLoginLinkedIn() {
     throw new Error("Credenziali LinkedIn non configurate.");
   }
 
-  var tab = await safeTabCreate({ url: "https://www.linkedin.com/", active: true });
+  var tab = await getLinkedInTab("https://www.linkedin.com/");
+  // Make it active for login flow (user may need to solve CAPTCHA)
+  try { await chrome.tabs.update(tab.id, { active: true }); } catch(_) {}
 
   try {
-    await waitForTabLoad(tab.id, 25000);
 
     var initialStateRes = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -476,7 +501,6 @@ async function autoLoginLinkedIn() {
 
     if (initialState && initialState.authenticated) {
       var syncInitial = await syncLiCookieToServer();
-      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -492,7 +516,6 @@ async function autoLoginLinkedIn() {
     });
     var prep = prepRes[0] && prepRes[0].result;
     if (!prep || !prep.success) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -513,7 +536,6 @@ async function autoLoginLinkedIn() {
 
     if (readyState && readyState.authenticated) {
       var syncReady = await syncLiCookieToServer();
-      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -525,14 +547,11 @@ async function autoLoginLinkedIn() {
 
     if (readyState && readyState.hasGoogleButton && !readyState.hasLoginForm) {
       var googleFlow = await pollForLinkedInAuthCompletion(tab.id, 180000, { sawGoogle: true });
-      if (googleFlow.success || !googleFlow.tabStillOpen) {
-        safeTabRemove(tab.id)
-      }
+      // Tab stays open
       return googleFlow;
     }
 
     if (!readyState || !readyState.hasLoginForm) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -549,7 +568,6 @@ async function autoLoginLinkedIn() {
     });
     var formResult = injRes[0] && injRes[0].result;
     if (!formResult || !formResult.success) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -561,12 +579,9 @@ async function autoLoginLinkedIn() {
     await waitForTabLoad(tab.id, 30000);
 
     var completion = await pollForLinkedInAuthCompletion(tab.id, 180000);
-    if (completion.success || !completion.tabStillOpen) {
-      safeTabRemove(tab.id)
-    }
+    // Tab stays open
     return completion;
   } catch (err) {
-    safeTabRemove(tab.id)
     return {
       success: false,
       authenticated: false,
@@ -618,9 +633,8 @@ async function sendLinkedInMessage(profileUrl, message) {
   // If it's a profile URL, open the overlay messaging
   if (!/\/messaging\//.test(messagingUrl)) {
     // Open profile first to trigger the message button
-    var tab = await safeTabCreate({ url: messagingUrl, active: false });
+    var tab = await getLinkedInTab(messagingUrl);
     try {
-      await waitForTabLoad(tab.id, 20000);
 
       // Click the "Message" button on the profile
       var clickRes = await chrome.scripting.executeScript({
@@ -637,7 +651,6 @@ async function sendLinkedInMessage(profileUrl, message) {
 
       var clickResult = clickRes[0] && clickRes[0].result;
       if (!clickResult || !clickResult.success) {
-        safeTabRemove(tab.id)
         return { success: false, error: (clickResult && clickResult.error) || "Bottone messaggio non trovato" };
       }
 
@@ -652,10 +665,8 @@ async function sendLinkedInMessage(profileUrl, message) {
       });
       var typeResult = typeRes[0] && typeRes[0].result;
 
-      safeTabRemove(tab.id)
       return typeResult || { success: false, error: "Nessun risultato" };
     } catch (err) {
-      safeTabRemove(tab.id)
       return { success: false, error: err.message };
     }
   }
@@ -750,9 +761,8 @@ function addConnectionNote(noteText) {
 async function sendConnectionRequest(profileUrl, note) {
   if (!profileUrl) return { success: false, error: "URL profilo mancante" };
 
-  var tab = await safeTabCreate({ url: profileUrl.replace(/\/$/, ""), active: false });
+  var tab = await getLinkedInTab(profileUrl.replace(/\/$/, ""));
   try {
-    await waitForTabLoad(tab.id, 20000);
 
     // Click Connect button
     var clickRes = await chrome.scripting.executeScript({
@@ -762,7 +772,6 @@ async function sendConnectionRequest(profileUrl, note) {
     var clickResult = clickRes[0] && clickRes[0].result;
 
     if (!clickResult || !clickResult.success) {
-      safeTabRemove(tab.id)
       return { success: false, error: (clickResult && clickResult.error) || "Bottone Connect non trovato" };
     }
 
@@ -777,7 +786,6 @@ async function sendConnectionRequest(profileUrl, note) {
         args: [note],
       });
       var noteResult = noteRes[0] && noteRes[0].result;
-      safeTabRemove(tab.id)
       return {
         success: !!(noteResult && noteResult.success),
         method: "connect_with_note",
@@ -799,7 +807,6 @@ async function sendConnectionRequest(profileUrl, note) {
         },
       });
       var sendResult = sendRes[0] && sendRes[0].result;
-      safeTabRemove(tab.id)
       return {
         success: !!(sendResult && sendResult.success),
         method: "connect_without_note",
@@ -807,7 +814,6 @@ async function sendConnectionRequest(profileUrl, note) {
       };
     }
   } catch (err) {
-    safeTabRemove(tab.id)
     return { success: false, error: err.message };
   }
 }
@@ -816,9 +822,8 @@ async function sendConnectionRequest(profileUrl, note) {
 async function extractProfileByUrl(url) {
   if (!url) return { success: false, error: "URL mancante" };
 
-  var tab = await safeTabCreate({ url: url, active: false });
+  var tab = await getLinkedInTab(url);
   try {
-    await waitForTabLoad(tab.id, 20000);
 
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -828,8 +833,6 @@ async function extractProfileByUrl(url) {
     return { success: true, profile: profileData || {} };
   } catch (err) {
     return { success: false, error: err.message };
-  } finally {
-    safeTabRemove(tab.id)
   }
 }
 
@@ -839,9 +842,8 @@ async function searchLinkedInProfile(query) {
 
   // Build a LinkedIn people search URL
   var searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
-  var tab = await safeTabCreate({ url: searchUrl, active: false });
+  var tab = await getLinkedInTab(searchUrl);
   try {
-    await waitForTabLoad(tab.id, 20000);
 
     // Extract the first result from search
     var results = await chrome.scripting.executeScript({
@@ -897,8 +899,6 @@ async function searchLinkedInProfile(query) {
     return { success: false, error: "Nessun profilo trovato per: " + query };
   } catch (err) {
     return { success: false, error: err.message };
-  } finally {
-    safeTabRemove(tab.id)
   }
 }
 
