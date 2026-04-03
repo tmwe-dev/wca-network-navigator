@@ -1,52 +1,55 @@
 
+# Piano: Sistema Multi-Operatore con Identità Intercambiabile
 
-# Piano: Barra di Progresso Download Email in Tempo Reale
+## Concetto
+Tutti gli utenti vedono gli stessi dati. La differenza è CHI sta comunicando: ogni operatore ha le proprie credenziali di invio (email IMAP/SMTP, WhatsApp, LinkedIn). Un dropdown nell'header permette di "impersonare" un altro operatore.
 
-## Problema
-Quando si preme "Scarica Tutto", l'unico feedback è un toast in basso che si aggiorna. L'utente non vede:
-- Quante email sono già in database
-- Il progresso in tempo reale nella UI principale
-- L'ultima email scaricata
+## Fase 1: Database — Tabella `operators`
 
-## Soluzione
+Nuova tabella `operators` che contiene:
+- `user_id` → collegamento all'utente Supabase Auth
+- `name`, `email`, `avatar_url` → dati visibili
+- `imap_host`, `imap_user`, `imap_password` (cifrata) → credenziali email
+- `smtp_host`, `smtp_user`, `smtp_password` → per invio
+- `whatsapp_phone` → numero WhatsApp associato
+- `linkedin_profile_url` → profilo LinkedIn
+- `is_admin` → può invitare altri operatori
+- `invited_by`, `invited_at` → tracciabilità inviti
 
-Aggiungere una **barra di stato sync** visibile sopra la lista email durante il download, con contatori live e lista che si aggiorna in tempo reale.
+## Fase 2: Sistema Inviti
 
-### 1. Barra di progresso sync nell'EmailInboxView
-Quando `isSyncing` è true, mostrare un pannello fisso tra toolbar e lista con:
-- **Contatore totale**: "📬 42 email scaricate" (dal `progress.downloaded`)
-- **Blocco corrente**: "Blocco 7..." (dal `progress.batch`)
-- **Ultimo soggetto**: troncato, l'ultima email scaricata
-- **Contatore DB**: numero totale email in database (da `messages.length` o query count separata)
-- **Barra animata** (indeterminata, visto che non sappiamo il totale)
+- L'admin inserisce nome + email del nuovo operatore
+- Il sistema invia un invito tramite Supabase Auth (`inviteUserByEmail` via Edge Function)
+- L'utente invitato imposta la password al primo accesso
+- Al primo login, il profilo operatore viene creato automaticamente
 
-### 2. Hook useEmailCount
-Nuovo hook leggero che fa `SELECT count(*) FROM channel_messages WHERE channel='email'` con polling ogni 3s durante il sync, per mostrare il contatore DB reale.
+## Fase 3: Dropdown Operatore nell'Header
 
-### 3. Realtime già attivo
-Il realtime subscription su `channel_messages` (INSERT) già invalida la query, quindi le email appaiono nella lista man mano. Ma il `PAGE_SIZE=50` e l'ordinamento fanno sì che le nuove appaiano in cima — questo già funziona.
+- Hook `useOperators()` carica la lista operatori
+- Hook `useActiveOperator()` gestisce l'operatore corrente (default = utente loggato)
+- Context `ActiveOperatorProvider` distribuisce l'operatore attivo a tutta l'app
+- Il dropdown mostra nome + avatar di ogni operatore
 
-### 4. Lista che si aggiorna live
-La query `useChannelMessages` viene già invalidata ad ogni batch nel loop sync. Le email dovrebbero già apparire. Verificheremo che il realtime INSERT trigger funzioni correttamente.
+## Fase 4: Integrazione con il sistema email
 
-### File da modificare
-- **`src/components/outreach/EmailInboxView.tsx`**: aggiungere pannello progresso sync tra toolbar e ScrollArea
-- **`src/hooks/useEmailSync.ts`**: esporre `progress` più ricco (aggiungere `totalInDb`)
-- **Nuovo `src/hooks/useEmailCount.ts`**: hook con polling count per il contatore DB totale
+- La Edge Function `check-inbox` legge le credenziali IMAP dalla tabella `operators` invece che dai secrets globali
+- L'invio email (cockpit) usa SMTP dell'operatore attivo
+- Il `channel_messages` aggiunge colonna `operator_id` per sapere chi ha inviato/ricevuto
 
-### Risultato visivo
-```text
-┌─────────────────────────────────────────┐
-│ [Nuove] [Stop (42)] [Reset] [🔍 Cerca] │
-├─────────────────────────────────────────┤
-│ 📬 Sincronizzazione in corso...         │
-│ ██████████░░░░░░  42 scaricate          │
-│ 📊 156 email in database                │
-│ 📄 "Re: Quotation for shipment..."      │
-├─────────────────────────────────────────┤
-│ ✉ Email 1 (appare in tempo reale)      │
-│ ✉ Email 2                              │
-│ ...                                     │
-└─────────────────────────────────────────┘
-```
+## Fase 5: Pagina Impostazioni Operatori
 
+- Nuova rotta `/settings/operators`
+- Lista operatori con stato (attivo/invitato/disabilitato)
+- Form per invitare nuovo operatore
+- Form per configurare credenziali di ogni operatore
+- Solo admin può invitare e modificare altri
+
+## Sicurezza
+- Le password IMAP/SMTP sono cifrate nel DB (mai esposte al frontend)
+- RLS: tutti gli utenti autenticati possono leggere gli operatori (dati condivisi), ma solo l'admin può modificare
+- Le credenziali sensibili sono accessibili solo via Edge Function (service role)
+
+## Cosa NON cambia
+- I dati (partners, contatti, email scaricate) restano condivisi e visibili a tutti
+- La struttura delle tabelle esistenti non viene toccata
+- Il sistema di categorie/prompt appena creato funziona normalmente

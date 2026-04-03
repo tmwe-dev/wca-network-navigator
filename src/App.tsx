@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
+import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 import { ContactRecordDrawer } from "@/components/contact-drawer/ContactRecordDrawer";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -45,6 +46,7 @@ const EmailComposer = lazy(() => import("./pages/EmailComposer"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Settings = lazy(() => import("./pages/Settings"));
+const OperatorsSettings = lazy(() => import("./pages/OperatorsSettings"));
 
 // ── Legacy pages kept alive for direct access / deep links ──
 const Global = lazy(() => import("./pages/Global"));
@@ -75,6 +77,7 @@ const App = () => (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ContactDrawerProvider>
+      <ActiveOperatorProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -100,6 +103,7 @@ const App = () => (
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/operators" element={<OperatorsSettings />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
 
                    {/* ── Report Aziende (hidden, from Settings) ── */}
@@ -139,6 +143,7 @@ const App = () => (
         </BrowserRouter>
         <ContactRecordDrawer />
       </TooltipProvider>
+      </ActiveOperatorProvider>
       </ContactDrawerProvider>
     </QueryClientProvider>
   </GlobalErrorBoundary>
