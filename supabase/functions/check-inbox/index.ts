@@ -234,6 +234,11 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
 }
 
+/** Sanitize messageId for use as storage path segment */
+function sanitizeMessageId(mid: string): string {
+  return mid.replace(/[<>]/g, "").replace(/[@\/\\:*?"|\x00-\x1F]/g, "_").slice(0, 120) || "unknown";
+}
+
 /**
  * RFC 2046 — Recursively walk the BODYSTRUCTURE tree and collect leaf parts
  * with their IMAP section numbers.
@@ -537,7 +542,7 @@ Deno.serve(async (req) => {
               toAddr = envelopeAddr(env.to?.[0]);
               senderName = env.from?.[0]?.name || fromAddr;
               subject = env.subject || "(nessun oggetto)";
-              messageId = env.messageId || messageId;
+              messageId = env.messageId ? sanitizeMessageId(env.messageId) : messageId;
               date = env.date || "";
               inReplyTo = env.inReplyTo || null;
             }
@@ -559,7 +564,7 @@ Deno.serve(async (req) => {
                 if (subject === "(nessun oggetto)" && parsed["subject"]) subject = parsed["subject"];
                 if (!date && parsed["date"]) date = parsed["date"];
                 if (messageId.startsWith("uid_") && parsed["message-id"]) {
-                  messageId = parsed["message-id"].replace(/[<>]/g, "");
+                  messageId = sanitizeMessageId(parsed["message-id"]);
                 }
                 if (!inReplyTo && parsed["in-reply-to"]) {
                   inReplyTo = parsed["in-reply-to"].replace(/[<>]/g, "");
@@ -595,11 +600,21 @@ Deno.serve(async (req) => {
             }
           }
 
-          // If BODYSTRUCTURE gave us nothing, try basic sections as last resort
+          // If BODYSTRUCTURE gave us nothing, try fetching RFC822.TEXT as fallback
           if (parts.length === 0) {
-            parts = [
-              { section: "1", type: "text", subtype: "plain", encoding: "7BIT", charset: "utf-8", contentId: "", dispositionType: "", filename: "", size: 0, isInlineBody: true, isInlineImage: false, isAttachment: false },
-            ];
+            try {
+              const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
+              const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
+              const rawText = extractLiteralTextFromResponse(rfc822Response);
+              if (rawText && rawText.length > 5) {
+                bodyText = rawText.slice(0, 50_000);
+                console.log(`[check-inbox] UID ${uid}: used RFC822.TEXT fallback (${bodyText.length}c)`);
+              }
+            } catch (fallbackErr: any) {
+              console.warn(`[check-inbox] UID ${uid}: RFC822.TEXT fallback failed:`, fallbackErr.message);
+            }
+            // Still add a dummy part to skip the loop below
+            parts = [];
           }
 
           /* ─── Step 3: Fetch each part with proper decoding (RFC 2045) ─── */
@@ -751,6 +766,15 @@ Deno.serve(async (req) => {
           const match = await matchSender(supabase, fromAddr);
 
           /* ─── Step 6: Save message (checkpoint) ─── */
+          // Parse email_date from envelope date string
+          let emailDate: string | null = null;
+          if (date) {
+            try {
+              const parsed = new Date(date);
+              if (!isNaN(parsed.getTime())) emailDate = parsed.toISOString();
+            } catch { /* ignore */ }
+          }
+
           const msgData = {
             user_id: userId,
             channel: "email",
@@ -765,6 +789,7 @@ Deno.serve(async (req) => {
             body_html: bodyHtml,
             message_id_external: messageId,
             in_reply_to: inReplyTo,
+            email_date: emailDate,
             raw_payload: { uid, date, sender_name: match.name || senderName },
           };
 

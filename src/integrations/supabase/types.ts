@@ -673,6 +673,7 @@ export type Database = {
           channel: string
           created_at: string
           direction: string
+          email_date: string | null
           from_address: string | null
           id: string
           in_reply_to: string | null
@@ -692,6 +693,7 @@ export type Database = {
           channel: string
           created_at?: string
           direction: string
+          email_date?: string | null
           from_address?: string | null
           id?: string
           in_reply_to?: string | null
@@ -711,6 +713,7 @@ export type Database = {
           channel?: string
           created_at?: string
           direction?: string
+          email_date?: string | null
           from_address?: string | null
           id?: string
           in_reply_to?: string | null

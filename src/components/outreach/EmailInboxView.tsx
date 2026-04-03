@@ -1,21 +1,20 @@
 import { useState, useMemo } from "react";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import {
-  Mail, RefreshCw, Loader2, Search, Inbox, User, Building2, Download, Square,
+  RefreshCw, Loader2, Search, Inbox, Download, Square,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { EmailMessageList } from "./EmailMessageList";
+import { EmailDetailView } from "./EmailDetailView";
 
 export function EmailInboxView() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: messages = [], isLoading } = useChannelMessages("email");
+  const { data: messages = [], isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useChannelMessages("email");
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
@@ -107,57 +106,20 @@ export function EmailInboxView() {
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2 px-4">
               <Inbox className="w-8 h-8" />
               <p className="text-sm">Nessuna email in arrivo</p>
-              <p className="text-xs text-center">Clicca "Scarica Posta" per verificare nuove email</p>
+              <p className="text-xs text-center">Clicca "Scarica Tutto" per verificare nuove email</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {inbound.map(msg => {
-                const isUnread = !msg.read_at;
-                const isSelected = msg.id === selectedId;
-                const senderName = msg.raw_payload?.sender_name || msg.from_address || "Sconosciuto";
-
-                return (
-                  <button
-                    key={msg.id}
-                    onClick={() => handleSelect(msg)}
-                    className={cn(
-                      "w-full text-left p-3 hover:bg-muted/50 transition-colors",
-                      isSelected && "bg-muted",
-                      isUnread && "bg-primary/5"
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className={cn("text-sm truncate", isUnread ? "font-semibold" : "font-normal")}>
-                            {senderName}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {format(new Date(msg.created_at), "dd/MM HH:mm", { locale: it })}
-                          </span>
-                        </div>
-                        <p className={cn("text-xs truncate", isUnread ? "text-foreground" : "text-muted-foreground")}>
-                          {msg.subject || "(nessun oggetto)"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                          {msg.body_text?.slice(0, 80)}
-                        </p>
-                      </div>
-                      {isUnread && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
-                    </div>
-                    {msg.source_type && msg.source_type !== "unknown" && (
-                      <div className="mt-1 ml-6">
-                        <Badge variant="outline" className="text-[9px] h-4 gap-0.5">
-                          {msg.source_type === "partner" && <Building2 className="w-2.5 h-2.5" />}
-                          {msg.source_type === "partner_contact" && <User className="w-2.5 h-2.5" />}
-                          {msg.source_type.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+            <EmailMessageList
+              messages={inbound}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              onLoadMore={() => fetchNextPage()}
+              hasMore={hasNextPage && !isFetchingNextPage}
+            />
+          )}
+          {isFetchingNextPage && (
+            <div className="flex justify-center p-2">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             </div>
           )}
         </ScrollArea>
@@ -165,38 +127,10 @@ export function EmailInboxView() {
 
       {/* Right: message detail */}
       {selectedMsg && (
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-shrink-0 p-4 border-b border-border space-y-1">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold truncate">
-                {selectedMsg.subject || "(nessun oggetto)"}
-              </h3>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)} className="text-xs">
-                Chiudi
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {selectedMsg.raw_payload?.sender_name || selectedMsg.from_address}
-              </span>
-              <span>→</span>
-              <span>{selectedMsg.to_address}</span>
-              <span>·</span>
-              <span>{format(new Date(selectedMsg.created_at), "dd MMM yyyy HH:mm", { locale: it })}</span>
-            </div>
-            {selectedMsg.source_type && selectedMsg.source_type !== "unknown" && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                {selectedMsg.source_type === "partner" ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                Associato: {selectedMsg.raw_payload?.sender_name}
-              </Badge>
-            )}
-          </div>
-          <ScrollArea className="flex-1 p-4">
-            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
-              {selectedMsg.body_text || "(corpo vuoto)"}
-            </div>
-          </ScrollArea>
-        </div>
+        <EmailDetailView
+          message={selectedMsg}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </div>
   );
