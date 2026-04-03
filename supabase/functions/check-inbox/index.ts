@@ -834,6 +834,25 @@ Deno.serve(async (req) => {
                 if (parsed.html) bodyHtml = parsed.html.slice(0, 100_000);
                 if (parsed.text) bodyText = parsed.text.slice(0, 50_000);
                 if (!bodyHtml && !bodyText) bodyText = textStr.slice(0, 50_000);
+
+                // Process inline images from fallback parser
+                for (const img of parsed.inlineImages) {
+                  if (img.data.length <= INLINE_DATA_URI_THRESHOLD) {
+                    let b64 = "";
+                    const CHUNK = 8192;
+                    for (let i = 0; i < img.data.length; i += CHUNK) {
+                      b64 += String.fromCharCode(...img.data.subarray(i, Math.min(i + CHUNK, img.data.length)));
+                    }
+                    b64 = btoa(b64);
+                    const dataUri = `data:${img.contentType};base64,${b64}`;
+                    attachmentRecords.push({
+                      cid: img.cid, publicUrl: dataUri,
+                      filename: `inline_${img.cid}.${img.contentType.split("/")[1] || "bin"}`,
+                      storagePath: "", contentType: img.contentType,
+                      size: img.data.length, isInline: true, isDataUri: true,
+                    });
+                  }
+                }
               }
             } catch (fallbackErr: any) {
               parseWarnings.push(`RFC822.TEXT fallback failed: ${fallbackErr.message}`);
