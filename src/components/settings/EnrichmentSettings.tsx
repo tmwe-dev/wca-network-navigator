@@ -172,7 +172,7 @@ export default function EnrichmentSettings() {
       r.domain?.toLowerCase().includes(q) ||
       r.email?.toLowerCase().includes(q)
     );
-  }, [partners, contacts, emailSenders, source, search]);
+  }, [partners, contacts, emailSenders, cockpitItems, source, search]);
 
   const stats = useMemo(() => ({
     total: allRows.length,
