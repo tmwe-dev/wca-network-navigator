@@ -671,6 +671,7 @@ export type Database = {
           bcc_addresses: string | null
           body_html: string | null
           body_text: string | null
+          category: string | null
           cc_addresses: string | null
           channel: string
           created_at: string
@@ -705,6 +706,7 @@ export type Database = {
           bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
+          category?: string | null
           cc_addresses?: string | null
           channel: string
           created_at?: string
@@ -739,6 +741,7 @@ export type Database = {
           bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
+          category?: string | null
           cc_addresses?: string | null
           channel?: string
           created_at?: string
@@ -1183,6 +1186,50 @@ export type Database = {
         }
         Relationships: []
       }
+      email_address_rules: {
+        Row: {
+          category: string | null
+          created_at: string
+          display_name: string | null
+          email_address: string
+          id: string
+          notes: string | null
+          prompt_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          display_name?: string | null
+          email_address: string
+          id?: string
+          notes?: string | null
+          prompt_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          display_name?: string | null
+          email_address?: string
+          id?: string
+          notes?: string | null
+          prompt_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_address_rules_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "email_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_attachments: {
         Row: {
           content_id: string | null
@@ -1355,6 +1402,45 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
+        }
+        Relationships: []
+      }
+      email_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          instructions: string
+          is_active: boolean
+          priority: number
+          scope: string
+          scope_value: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          priority?: number
+          scope?: string
+          scope_value?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          priority?: number
+          scope?: string
+          scope_value?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
