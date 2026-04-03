@@ -45,6 +45,7 @@ const EmailComposer = lazy(() => import("./pages/EmailComposer"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Settings = lazy(() => import("./pages/Settings"));
+const OperatorsSettings = lazy(() => import("./pages/OperatorsSettings"));
 
 // ── Legacy pages kept alive for direct access / deep links ──
 const Global = lazy(() => import("./pages/Global"));
