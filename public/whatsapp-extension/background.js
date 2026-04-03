@@ -398,7 +398,7 @@ async function readChatThread(contactName, maxMessages = 50) {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open
     return results?.[0]?.result || { success: false, error: "Nessun risultato" };
   } catch (err) {
     return { success: false, error: err.message };
