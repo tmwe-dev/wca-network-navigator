@@ -600,11 +600,21 @@ Deno.serve(async (req) => {
             }
           }
 
-          // If BODYSTRUCTURE gave us nothing, try basic sections as last resort
+          // If BODYSTRUCTURE gave us nothing, try fetching RFC822.TEXT as fallback
           if (parts.length === 0) {
-            parts = [
-              { section: "1", type: "text", subtype: "plain", encoding: "7BIT", charset: "utf-8", contentId: "", dispositionType: "", filename: "", size: 0, isInlineBody: true, isInlineImage: false, isAttachment: false },
-            ];
+            try {
+              const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
+              const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
+              const rawText = extractLiteralTextFromResponse(rfc822Response);
+              if (rawText && rawText.length > 5) {
+                bodyText = rawText.slice(0, 50_000);
+                console.log(`[check-inbox] UID ${uid}: used RFC822.TEXT fallback (${bodyText.length}c)`);
+              }
+            } catch (fallbackErr: any) {
+              console.warn(`[check-inbox] UID ${uid}: RFC822.TEXT fallback failed:`, fallbackErr.message);
+            }
+            // Still add a dummy part to skip the loop below
+            parts = [];
           }
 
           /* ─── Step 3: Fetch each part with proper decoding (RFC 2045) ─── */
