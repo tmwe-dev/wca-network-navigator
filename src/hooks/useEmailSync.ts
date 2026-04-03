@@ -133,7 +133,11 @@ export function useContinuousSync() {
       while (!abortRef.current) {
         batchNum++;
         const result = await callCheckInbox();
-        const hasMore = typeof result.remaining === "number" ? result.remaining > 0 : false;
+        const hasMore = typeof result.has_more === "boolean"
+          ? result.has_more
+          : typeof result.remaining === "number"
+            ? result.remaining > 0
+            : result.total > 0;
 
         if (result.total > 0) {
           totalDownloaded += result.total;

@@ -594,6 +594,7 @@ const INLINE_DATA_URI_THRESHOLD = 100 * 1024; // 100KB — below this, use data 
 type NextUidBatch = {
   uids: number[];
   remaining: number;
+  hasMore: boolean;
 };
 
 function parseESearchMinCount(lines: any[]): { nextUid: number | null; count: number | null } {
@@ -643,13 +644,14 @@ async function getNextUidBatch(client: any, lastUid: number): Promise<NextUidBat
     const { nextUid, count } = parseESearchMinCount(esearchResponse);
 
     if (count === 0) {
-      return { uids: [], remaining: 0 };
+      return { uids: [], remaining: 0, hasMore: false };
     }
 
     if (nextUid && nextUid >= minUid) {
       return {
         uids: [nextUid],
         remaining: Math.max(0, (count ?? 1) - 1),
+        hasMore: (count ?? 0) > 1,
       };
     }
   } catch (esearchErr: any) {
@@ -666,6 +668,7 @@ async function getNextUidBatch(client: any, lastUid: number): Promise<NextUidBat
         return {
           uids: uids.slice(0, BATCH_SIZE),
           remaining: Math.max(0, uids.length - BATCH_SIZE),
+          hasMore: true,
         };
       }
     } catch (searchErr: any) {
@@ -678,13 +681,13 @@ async function getNextUidBatch(client: any, lastUid: number): Promise<NextUidBat
     const fallbackResponse = await (client as any).executeCommand(`UID SEARCH UID ${minUid}:*`);
     const nextUid = parseFirstUidSearchResponse(fallbackResponse, minUid);
     if (nextUid) {
-      return { uids: [nextUid], remaining: 0 };
+      return { uids: [nextUid], remaining: 1, hasMore: true };
     }
   } catch (fallbackErr: any) {
     console.error("[check-inbox] UID SEARCH fallback error:", fallbackErr.message);
   }
 
-  return { uids: [], remaining: 0 };
+  return { uids: [], remaining: 0, hasMore: false };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -770,10 +773,12 @@ Deno.serve(async (req) => {
     // UID SEARCH
     let uids: number[] = [];
     let remainingCount = 0;
+    let hasMore = false;
     try {
       const nextBatch = await getNextUidBatch(client, lastUid);
       uids = nextBatch.uids;
       remainingCount = nextBatch.remaining;
+      hasMore = nextBatch.hasMore;
     } catch (searchErr: any) {
       console.error("[check-inbox] UID lookup error:", searchErr.message);
     }
@@ -1243,6 +1248,7 @@ Deno.serve(async (req) => {
       unmatched: messages.length - matched,
       last_uid: maxUid,
       remaining: remainingCount,
+      has_more: hasMore,
       messages: messages.map(m => ({
         from: m.from_address,
         subject: m.subject,
