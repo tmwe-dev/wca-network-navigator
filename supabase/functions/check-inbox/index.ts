@@ -631,16 +631,42 @@ Deno.serve(async (req) => {
 
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
+        // Per-message warnings — reset for each message to prevent leaking
+        const parseWarnings: string[] = [];
+
         try {
           /* ─── Phase 1: Fetch raw RFC 5322 message (BODY.PEEK[]) ─── */
           let rawBytes: Uint8Array = new Uint8Array(0);
           let rawHash = "";
           let rawStoragePath = "";
+          let imapFlags = "";
+          let internalDate: string | null = null;
+          let rfc822Size = 0;
 
           try {
             const rawCmd = `UID FETCH ${uid} (BODY.PEEK[] FLAGS INTERNALDATE RFC822.SIZE)`;
             const rawResponse = await (client as any).executeCommand(rawCmd);
             rawBytes = extractLiteralBytesFromResponse(rawResponse);
+
+            // Extract FLAGS, INTERNALDATE, RFC822.SIZE from response lines
+            for (const line of rawResponse) {
+              if (typeof line !== "string") continue;
+              // FLAGS
+              const flagsMatch = line.match(/FLAGS\s*\(([^)]*)\)/i);
+              if (flagsMatch) imapFlags = flagsMatch[1].trim();
+              // INTERNALDATE
+              const idateMatch = line.match(/INTERNALDATE\s*"([^"]+)"/i);
+              if (idateMatch) {
+                try {
+                  const parsed = new Date(idateMatch[1]);
+                  if (!isNaN(parsed.getTime())) internalDate = parsed.toISOString();
+                } catch { /* ignore */ }
+              }
+              // RFC822.SIZE
+              const sizeMatch = line.match(/RFC822\.SIZE\s+(\d+)/i);
+              if (sizeMatch) rfc822Size = parseInt(sizeMatch[1], 10);
+            }
+            if (!rfc822Size) rfc822Size = rawBytes.length;
 
             if (rawBytes.length > 0) {
               rawHash = await sha256hex(rawBytes);
@@ -683,14 +709,6 @@ Deno.serve(async (req) => {
             parseWarnings.push(`raw fetch failed: ${rawErr.message}`);
             console.warn(`[check-inbox] UID ${uid}: raw fetch error:`, rawErr.message);
           }
-
-          // Parse FLAGS and INTERNALDATE from raw response
-          let imapFlags = "";
-          let internalDate: string | null = null;
-          let rfc822Size = rawBytes.length || 0;
-
-          // Try to extract from response lines
-          // (The raw response may contain lines like: * N FETCH (FLAGS (\Seen) INTERNALDATE "..." ...)
 
           /* ─── Phase 2: ENVELOPE + BODYSTRUCTURE ─── */
           let fromAddr = "";
