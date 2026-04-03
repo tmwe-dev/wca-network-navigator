@@ -745,7 +745,7 @@ Deno.serve(async (req) => {
                 const rawFrom = parseEmailFromHeader(parsed["from"] || "");
                 if (rawFrom && rawFrom !== "@") fromAddr = rawFrom;
                 if (!toAddr || toAddr === "@") toAddr = parseEmailFromHeader(parsed["to"] || "");
-                if (subject === "(nessun oggetto)" && parsed["subject"]) subject = parsed["subject"];
+                if (subject === "(nessun oggetto)" && parsed["subject"]) subject = decodeRfc2047(parsed["subject"]);
                 if (!date && parsed["date"]) date = parsed["date"];
                 if (messageId.startsWith("uid_") && parsed["message-id"]) {
                   messageId = sanitizeMessageId(parsed["message-id"]);
