@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -21,19 +21,32 @@ export type ChannelMessage = {
   in_reply_to: string | null;
   read_at: string | null;
   created_at: string;
+  email_date: string | null;
 };
+
+export type EmailAttachment = {
+  id: string;
+  message_id: string;
+  filename: string;
+  content_type: string | null;
+  size_bytes: number | null;
+  storage_path: string;
+};
+
+const PAGE_SIZE = 50;
 
 export function useChannelMessages(channel?: string) {
   const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ["channel-messages", channel],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       let q = supabase
         .from("channel_messages")
         .select("*")
+        .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
 
       if (channel && channel !== "all") {
         q = q.eq("channel", channel);
@@ -41,7 +54,11 @@ export function useChannelMessages(channel?: string) {
 
       const { data, error } = await q;
       if (error) throw error;
-      return data as ChannelMessage[];
+      return (data || []) as ChannelMessage[];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      return lastPage.length === PAGE_SIZE ? lastPageParam + 1 : undefined;
     },
   });
 
@@ -57,7 +74,30 @@ export function useChannelMessages(channel?: string) {
     return () => { supabase.removeChannel(sub); };
   }, [queryClient]);
 
-  return query;
+  // Flatten pages into a single array
+  const messages = query.data?.pages.flat() ?? [];
+
+  return {
+    ...query,
+    data: messages,
+    isLoading: query.isLoading,
+  };
+}
+
+export function useMessageAttachments(messageId: string | null) {
+  return useQuery({
+    queryKey: ["email-attachments", messageId],
+    queryFn: async () => {
+      if (!messageId) return [];
+      const { data, error } = await supabase
+        .from("email_attachments")
+        .select("*")
+        .eq("message_id", messageId);
+      if (error) throw error;
+      return (data || []) as EmailAttachment[];
+    },
+    enabled: !!messageId,
+  });
 }
 
 export function useUnreadCount(channel?: string) {
@@ -103,7 +143,6 @@ async function callCheckInbox(): Promise<any> {
   return await res.json();
 }
 
-/** Single-batch sync (manual, one press = one batch) */
 export function useCheckInbox() {
   const queryClient = useQueryClient();
 
@@ -124,7 +163,6 @@ export function useCheckInbox() {
   });
 }
 
-/** Continuous sync — keeps calling check-inbox until no new messages */
 export function useContinuousSync() {
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -145,10 +183,7 @@ export function useContinuousSync() {
         batchNum++;
         const result = await callCheckInbox();
 
-        if (result.total === 0) {
-          // No more new messages
-          break;
-        }
+        if (result.total === 0) break;
 
         totalDownloaded += result.total;
         const lastMsg = result.messages?.[result.messages.length - 1];
@@ -163,10 +198,7 @@ export function useContinuousSync() {
           { id: toastId, duration: Infinity }
         );
 
-        // Refresh the list periodically
         queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-
-        // Small delay between batches to avoid overwhelming
         await new Promise(r => setTimeout(r, 1500));
       }
 
