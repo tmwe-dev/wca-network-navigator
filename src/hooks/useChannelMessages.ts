@@ -97,5 +97,6 @@ export function useChannelMessages(channel?: string, searchQuery?: string) {
 }
 
 // Re-export from split modules for backward compatibility
-export { useCheckInbox, useContinuousSync, useResetSync } from "./useEmailSync";
+export { useCheckInbox, useResetSync } from "./useEmailSync";
+export { useContinuousSync } from "./useContinuousSync";
 export { useMarkAsRead, useUnreadCount, useMessageAttachments, type EmailAttachment } from "./useEmailActions";
