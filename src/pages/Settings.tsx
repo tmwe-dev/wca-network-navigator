@@ -71,6 +71,9 @@ export default function Settings() {
               <SubscriptionPanel />
             </div>
           )}
+          {tab === "operatori" && (
+            <OperatorsSettings />
+          )}
         </div>
       </div>
     </div>
