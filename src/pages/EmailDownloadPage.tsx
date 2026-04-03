@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 import { cn } from "@/lib/utils";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailCount } from "@/hooks/useEmailCount";
