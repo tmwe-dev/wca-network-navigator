@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import ContentManager from "@/components/settings/ContentManager";
@@ -11,6 +11,7 @@ import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
+import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -29,6 +30,7 @@ export default function Settings() {
     { value: "import-export", label: "Import/Export", icon: Download },
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
+    { value: "enrichment", label: "Arricchimento", icon: Image },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
   ];
@@ -79,6 +81,11 @@ export default function Settings() {
           {tab === "download-email" && (
             <div className="h-full -m-4">
               <EmailDownloadPage />
+            </div>
+          )}
+          {tab === "enrichment" && (
+            <div className="float-panel p-5">
+              <EnrichmentSettings />
             </div>
           )}
         </div>

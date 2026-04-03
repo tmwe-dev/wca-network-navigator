@@ -6,6 +6,7 @@ import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock,
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { CompanyLogo, extractDomainFromEmail } from "@/components/ui/CompanyLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useResetSync } from "@/hooks/useEmailSync";
@@ -210,9 +211,7 @@ export default function EmailDownloadPage() {
                         "animate-fade-in"
                       )}
                     >
-                      <span className="text-[10px] text-muted-foreground/50 font-mono mt-1 w-5 text-right flex-shrink-0">
-                        {idx + 1}
-                      </span>
+                      <CompanyLogo email={email.from} name={brand} size={24} className="mt-0.5 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-[11px] font-bold text-primary truncate leading-tight">
                           {brand}
@@ -299,11 +298,14 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
   return (
     <div className="flex flex-col h-full">
       {/* Pinned header */}
-      <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3">
-        <div className="text-base font-bold text-primary">{brand}</div>
-        <div className="text-sm font-semibold text-foreground truncate mt-0.5">{email.subject}</div>
-        <div className="text-xs text-muted-foreground truncate mt-0.5">
-          {detail || email.from} — {formatTime(email.date)}
+      <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3 flex items-center gap-3">
+        <CompanyLogo email={email.from} name={brand} size={36} className="flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-bold text-primary truncate">{brand}</div>
+          <div className="text-sm font-semibold text-foreground truncate mt-0.5">{email.subject}</div>
+          <div className="text-xs text-muted-foreground truncate mt-0.5">
+            {detail || email.from} — {formatTime(email.date)}
+          </div>
         </div>
       </div>
       {/* Scrollable email body */}
