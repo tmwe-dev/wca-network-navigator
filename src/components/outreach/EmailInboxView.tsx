@@ -37,19 +37,7 @@ export function EmailInboxView() {
   const resetSync = useResetSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);
 
-  const isSyncingRef = useRef(isSyncing);
-  const checkInboxRef = useRef(checkInbox);
-  isSyncingRef.current = isSyncing;
-  checkInboxRef.current = checkInbox;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isSyncingRef.current && !checkInboxRef.current.isPending) {
-        checkInboxRef.current.mutate();
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // No auto-polling — sync only on user request
 
   const inbound = messages.filter(m => m.direction === "inbound");
   const selectedMsg = selectedId ? messages.find(m => m.id === selectedId) : null;
