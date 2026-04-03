@@ -307,7 +307,7 @@ async function readUnreadMessages() {
       },
     });
 
-    if (!reused) await safeRemoveTab(tab.id);
+    // Tab stays open
     const result = results?.[0]?.result;
     return result || { success: false, error: "Nessun risultato dallo script" };
   } catch (err) {
