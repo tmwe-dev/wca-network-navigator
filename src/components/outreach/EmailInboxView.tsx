@@ -157,7 +157,7 @@ export function EmailInboxView() {
           <div className={cn(
             "flex-shrink-0 border-b border-border p-3 space-y-2 transition-all",
             progress.status === "syncing" && "bg-primary/5",
-            progress.status === "done" && "bg-green-500/5",
+            progress.status === "done" && "bg-accent/50",
             progress.status === "error" && "bg-destructive/5",
           )}>
             {/* Status header */}
@@ -171,8 +171,8 @@ export function EmailInboxView() {
                 )}
                 {progress.status === "done" && (
                   <>
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-green-600">Sincronizzazione completata</span>
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <span className="text-primary">Sincronizzazione completata</span>
                   </>
                 )}
                 {progress.status === "error" && (
