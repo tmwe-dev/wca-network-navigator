@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Building2, User } from "lucide-react";
@@ -35,6 +35,15 @@ export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
   });
+
+  // Scroll to selected item when selection changes
+  useEffect(() => {
+    if (!selectedId) return;
+    const idx = messages.findIndex((m) => m.id === selectedId);
+    if (idx >= 0) {
+      virtualizer.scrollToIndex(idx, { align: "auto" });
+    }
+  }, [selectedId, messages, virtualizer]);
 
   return (
     <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
