@@ -36,6 +36,8 @@ export type ChannelMessage = {
   internal_date: string | null;
   parse_status: string | null;
   parse_warnings: string[] | null;
+  thread_id: string | null;
+  references_header: string | null;
 };
 
 const PAGE_SIZE = 50;
