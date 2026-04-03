@@ -11,11 +11,12 @@ export function useEmailCount(isSyncing = false) {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("channel_messages")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "planned", head: true })
         .eq("channel", "email");
       if (error) throw error;
       return count ?? 0;
     },
     refetchInterval: isSyncing ? 3000 : 30000,
+    refetchOnWindowFocus: false,
   });
 }

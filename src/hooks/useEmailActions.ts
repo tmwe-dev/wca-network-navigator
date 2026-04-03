@@ -23,7 +23,7 @@ export function useMessageAttachments(messageId: string | null) {
       if (!messageId) return [];
       const { data, error } = await supabase
         .from("email_attachments")
-        .select("*")
+        .select("id, message_id, filename, content_type, size_bytes, storage_path, content_id, is_inline")
         .eq("message_id", messageId);
       if (error) throw error;
       return (data || []) as EmailAttachment[];
@@ -38,7 +38,7 @@ export function useUnreadCount(channel?: string) {
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "planned", head: true })
         .eq("direction", "inbound")
         .is("read_at", null);
       if (channel) q = q.eq("channel", channel);

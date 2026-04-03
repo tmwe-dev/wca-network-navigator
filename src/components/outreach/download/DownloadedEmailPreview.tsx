@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 import {
@@ -8,54 +8,35 @@ import {
 } from "@/components/outreach/email/emailContentNormalization";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
+import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
 
 function formatTime(iso: string): string {
-  try {
-    const date = new Date(iso);
-    return date.toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
     return "";
   }
+
+  return date.toLocaleString("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
-  const [loading, setLoading] = useState(true);
-  const [content, setContent] = useState(() =>
-    normalizeEmailContent({ bodyHtml: email.bodyHtml, bodyText: email.bodyText }),
-  );
   const { brand, detail } = extractSenderBrand(email.from);
+  const { bodyHtml, bodyText, isLoading, isError } = useEmailMessageContent(email.id, {
+    bodyHtml: email.bodyHtml,
+    bodyText: email.bodyText,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    supabase
-      .from("channel_messages")
-      .select("body_html, body_text")
-      .eq("id", email.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        setContent(
-          normalizeEmailContent({
-            bodyHtml: data?.body_html ?? email.bodyHtml,
-            bodyText: data?.body_text ?? email.bodyText,
-          }),
-        );
-        setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [email.bodyHtml, email.bodyText, email.id]);
+  const content = useMemo(
+    () => normalizeEmailContent({ bodyHtml, bodyText }),
+    [bodyHtml, bodyText],
+  );
+  const hasContent = Boolean(content.bodyHtml || content.bodyText);
 
   const htmlContent = content.bodyHtml ?? renderEmailTextAsHtml(content.bodyText);
 
@@ -74,12 +55,20 @@ export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
 
       <ScrollArea className="flex-1 min-h-0 bg-background">
         <div className="min-h-full">
-          {loading ? (
+          {isLoading && !hasContent ? (
             <div className="flex h-64 items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} />
+            <>
+              {isError && (
+                <div className="border-b border-border bg-muted/40 px-5 py-2 text-xs text-muted-foreground">
+                  <AlertCircle className="mr-1 inline h-3.5 w-3.5" />
+                  Anteprima parziale: sto mostrando il contenuto già disponibile.
+                </div>
+              )}
+              <EmailHtmlFrame html={htmlContent} mode="safe" blockRemote={false} />
+            </>
           )}
         </div>
       </ScrollArea>

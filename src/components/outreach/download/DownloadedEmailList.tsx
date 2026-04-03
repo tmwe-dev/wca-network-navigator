@@ -7,17 +7,17 @@ import type { DownloadedEmail } from "@/lib/backgroundSync";
 import { cn } from "@/lib/utils";
 
 function formatTime(iso: string): string {
-  try {
-    const date = new Date(iso);
-    return date.toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
     return "";
   }
+
+  return date.toLocaleString("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 type Props = {

@@ -19,6 +19,15 @@ type Props = {
 
 const ROW_HEIGHT = 72;
 
+function formatListDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return format(date, "dd/MM HH:mm", { locale: it });
+}
+
 export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, hasMore }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -59,12 +68,12 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
           const isSelected = msg.id === selectedId;
           const { brand } = extractSenderBrand(msg.from_address || "");
           const displayDate = msg.email_date || msg.created_at;
-          // Light preview: just first 120 chars of body_text, no heavy normalization
-          const previewText = (msg.body_text || "").slice(0, 120).replace(/\s+/g, " ").trim();
+          const secondaryLine = msg.from_address || msg.to_address || "(mittente sconosciuto)";
 
           return (
             <button
               key={msg.id}
+              type="button"
               onClick={() => onSelect(msg)}
               style={{
                 position: "absolute",
@@ -86,11 +95,11 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
                   <div className="flex items-center justify-between gap-1">
                     <span className={cn("truncate text-sm", isUnread ? "font-semibold text-primary" : "font-medium")}>{brand}</span>
                     <span className="flex-shrink-0 text-[10px] text-muted-foreground">
-                      {format(new Date(displayDate), "dd/MM HH:mm", { locale: it })}
+                      {formatListDate(displayDate)}
                     </span>
                   </div>
                   <p className={cn("truncate text-xs", isUnread ? "text-foreground" : "text-muted-foreground")}>{msg.subject || "(nessun oggetto)"}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{previewText || "(nessun contenuto)"}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{secondaryLine}</p>
                 </div>
                 {isUnread && <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />}
               </div>

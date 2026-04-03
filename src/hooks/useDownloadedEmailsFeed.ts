@@ -11,8 +11,6 @@ type DownloadedEmailRow = {
   from_address: string | null;
   email_date: string | null;
   created_at: string;
-  body_html: string | null;
-  body_text: string | null;
 };
 
 function mapRowToDownloadedEmail(row: DownloadedEmailRow): DownloadedEmail {
@@ -21,8 +19,6 @@ function mapRowToDownloadedEmail(row: DownloadedEmailRow): DownloadedEmail {
     subject: row.subject || "(senza oggetto)",
     from: row.from_address || "",
     date: row.email_date || row.created_at,
-    bodyHtml: row.body_html || undefined,
-    bodyText: row.body_text || undefined,
     timestamp: new Date(row.created_at).getTime(),
   };
 }
@@ -35,7 +31,7 @@ export function useDownloadedEmailsFeed() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("channel_messages")
-        .select("id, subject, from_address, email_date, created_at, body_html, body_text")
+        .select("id, subject, from_address, email_date, created_at")
         .eq("channel", "email")
         .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
