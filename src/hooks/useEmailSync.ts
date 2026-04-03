@@ -1,11 +1,37 @@
 /**
- * Email sync hooks: check inbox (single batch) and continuous sync (full download).
+ * Email sync hooks: check inbox (single batch), continuous sync (full download), and reset.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useCallback, useRef } from "react";
+
+/** Reset last_uid to 0 so next sync re-downloads all emails from the server */
+export function useResetSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Non autenticato");
+
+      const { error } = await supabase
+        .from("email_sync_state")
+        .update({ last_uid: 0, stored_uidvalidity: null })
+        .eq("user_id", session.user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      toast.success("🔄 Sync resettata — premi 'Scarica Tutto' per riscaricare tutta la inbox");
+    },
+    onError: (err: Error) => {
+      toast.error("Errore reset: " + err.message);
+    },
+  });
+}
 
 async function callCheckInbox(): Promise<any> {
   const { data: { session } } = await supabase.auth.getSession();

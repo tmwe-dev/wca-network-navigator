@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  RefreshCw, Loader2, Search, Inbox, Download, Square,
+  RefreshCw, Loader2, Search, Inbox, Download, Square, RotateCcw,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { useResetSync } from "@/hooks/useEmailSync";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
 
@@ -25,6 +26,7 @@ export function EmailInboxView() {
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
+  const resetSync = useResetSync();
 
   // Stable refs to avoid recreating interval on every render
   const isSyncingRef = useRef(isSyncing);
@@ -97,6 +99,21 @@ export function EmailInboxView() {
                 Scarica Tutto
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => resetSync.mutate()}
+              disabled={resetSync.isPending || isSyncing}
+              title="Reset sync — riscarica tutta la inbox"
+              className="gap-1.5"
+            >
+              {resetSync.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5" />
+              )}
+              Reset
+            </Button>
             <div className="flex-1 relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
