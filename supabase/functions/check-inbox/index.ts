@@ -165,13 +165,146 @@ function getCaCertsForHost(host: string): string[] {
   return [ACTALIS_INTERMEDIATE_CA, ACTALIS_ROOT_CA];
 }
 
-/* ── Sender matching ── */
+/* ══════════════════════════════════════════════════════════════
+   RFC 2045/2046 — Content-Transfer-Encoding & Charset
+   ══════════════════════════════════════════════════════════════ */
+
+function normalizeCharset(charset?: string | null): string {
+  const value = (charset || "utf-8").trim().toLowerCase();
+  if (value === "utf8") return "utf-8";
+  if (value === "us-ascii" || value === "ascii") return "utf-8";
+  if (value === "latin1" || value === "iso_8859-1") return "iso-8859-1";
+  if (value === "latin2" || value === "iso_8859-2") return "iso-8859-2";
+  return value;
+}
+
+/**
+ * RFC 2045 §6 — Decode Content-Transfer-Encoding then convert charset to UTF-8.
+ * Uses the library's decodeAttachment for base64/quoted-printable.
+ */
+function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?: string | null): string {
+  const enc = (encoding || "7BIT").toUpperCase();
+  // decodeAttachment handles BASE64, QUOTED-PRINTABLE, 7BIT, 8BIT
+  const decoded: Uint8Array = decodeAttachment(rawBytes, enc);
+  const cs = normalizeCharset(charset);
+  try {
+    return new TextDecoder(cs).decode(decoded);
+  } catch {
+    // Fallback to utf-8 if charset unknown
+    return new TextDecoder("utf-8", { fatal: false }).decode(decoded);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RFC 3501 §6.4.5 — BODYSTRUCTURE navigation
+   ══════════════════════════════════════════════════════════════ */
+
+type MimeLeafPart = {
+  section: string;
+  type: string;       // e.g. "text"
+  subtype: string;    // e.g. "plain", "html", "png"
+  encoding: string;   // Content-Transfer-Encoding
+  charset: string;
+  contentId: string;  // RFC 2392 — Content-ID for inline images
+  dispositionType: string;
+  filename: string;
+  size: number;
+  isInlineBody: boolean;   // text/plain or text/html meant for rendering
+  isInlineImage: boolean;  // image with Content-ID (cid:)
+  isAttachment: boolean;   // everything else
+};
+
+function getPartParameter(params: Record<string, string> | undefined, key: string): string {
+  if (!params) return "";
+  const found = Object.entries(params).find(([k]) => k.toLowerCase() === key.toLowerCase());
+  return found?.[1] || "";
+}
+
+function getPartFilename(part: any): string {
+  return (
+    getPartParameter(part?.dispositionParameters, "filename") ||
+    getPartParameter(part?.dispositionParameters, "filename*") ||
+    getPartParameter(part?.parameters, "name") ||
+    getPartParameter(part?.parameters, "name*") ||
+    ""
+  );
+}
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
+}
+
+/**
+ * RFC 2046 — Recursively walk the BODYSTRUCTURE tree and collect leaf parts
+ * with their IMAP section numbers.
+ */
+function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
+  if (!part) return [];
+
+  // Multipart container — recurse into children
+  if (Array.isArray(part.childParts) && part.childParts.length > 0) {
+    return part.childParts.flatMap((child: any, index: number) =>
+      collectMimeLeafParts(child, path ? `${path}.${index + 1}` : `${index + 1}`)
+    );
+  }
+
+  const type = (part.type || "").toLowerCase();
+  const subtype = (part.subtype || "").toLowerCase();
+  const dispositionType = (part.dispositionType || "").toLowerCase();
+  const filename = getPartFilename(part);
+  const charset = getPartParameter(part.parameters, "charset") || "utf-8";
+  const contentId = (part.id || "").replace(/[<>]/g, "");
+  const section = path || "1";
+  const encoding = (part.encoding || "7BIT").toUpperCase();
+
+  // RFC 2822 — attached message/rfc822
+  if (type === "message" && subtype === "rfc822") {
+    const isAttachedMessage = dispositionType === "attachment" || !!filename;
+    if (isAttachedMessage || !part.messageBodyStructure) {
+      return [{
+        section, type, subtype, encoding, charset, contentId, dispositionType,
+        filename: filename || `message-${section}.eml`,
+        size: part.size || 0,
+        isInlineBody: false, isInlineImage: false, isAttachment: true,
+      }];
+    }
+    return collectMimeLeafParts(part.messageBodyStructure, section);
+  }
+
+  // Classify the part
+  const isTextBody =
+    type === "text" &&
+    (subtype === "plain" || subtype === "html") &&
+    dispositionType !== "attachment" &&
+    !filename;
+
+  const isInlineImage =
+    type === "image" &&
+    !!contentId &&
+    dispositionType !== "attachment";
+
+  return [{
+    section, type, subtype, encoding, charset, contentId, dispositionType,
+    filename: filename || (isTextBody ? "" : `${type}_${subtype}.${subtype}`),
+    size: part.size || 0,
+    isInlineBody: isTextBody,
+    isInlineImage,
+    isAttachment: !isTextBody && !isInlineImage,
+  }];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Sender matching (domain fallback)
+   ══════════════════════════════════════════════════════════════ */
 
 async function matchSender(supabase: any, email: string) {
-  if (!email || email === "@" || !email.includes("@")) return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto" };
+  if (!email || email === "@" || !email.includes("@")) 
+    return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto" };
+  
   const emailLower = email.toLowerCase();
   const domain = emailLower.split("@")[1];
 
+  // Exact email match
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
@@ -181,6 +314,7 @@ async function matchSender(supabase: any, email: string) {
   const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (prospect) return { source_type: "prospect", source_id: prospect.id, partner_id: null, name: prospect.company_name };
 
+  // Domain fallback
   if (domain) {
     const domainPattern = `%@${domain}`;
     const { data: dp } = await supabase.from("partners").select("id, company_name").ilike("email", domainPattern).limit(1).maybeSingle();
@@ -192,7 +326,10 @@ async function matchSender(supabase: any, email: string) {
   return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
 
-/* ── Helper: extract email from envelope address ── */
+/* ══════════════════════════════════════════════════════════════
+   IMAP response parsing helpers
+   ══════════════════════════════════════════════════════════════ */
+
 function envelopeAddr(addr: any): string {
   if (!addr) return "";
   const mb = addr.mailbox || "";
@@ -201,7 +338,6 @@ function envelopeAddr(addr: any): string {
   return "";
 }
 
-/* ── Helper: parse raw IMAP FETCH response to extract literal bytes ── */
 function concatBytes(chunks: Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const result = new Uint8Array(total);
@@ -224,21 +360,16 @@ function extractLiteralBytesFromResponse(lines: any[]): Uint8Array {
       chunks.push(line);
       continue;
     }
-
     if (typeof line !== "string") continue;
-
     if (/\{\d+\}\s*$/.test(line)) {
       literalStarted = true;
       continue;
     }
-
     if (!literalStarted) continue;
     if (/^\* \d+ FETCH/.test(line)) continue;
     if (line.trim() === ")" || /^\S+ OK/.test(line)) continue;
-
     chunks.push(encoder.encode(line + "\n"));
   }
-
   return concatBytes(chunks);
 }
 
@@ -246,7 +377,6 @@ function extractLiteralTextFromResponse(lines: any[]): string {
   return new TextDecoder().decode(extractLiteralBytesFromResponse(lines)).trim();
 }
 
-/* ── Helper: parse raw header fields from IMAP response ── */
 function parseRawHeaders(raw: string): Record<string, string> {
   const headers: Record<string, string> = {};
   const lines = raw.replace(/\r\n/g, "\n").split("\n");
@@ -255,7 +385,6 @@ function parseRawHeaders(raw: string): Record<string, string> {
 
   for (const line of lines) {
     if (line.match(/^\s/) && currentKey) {
-      // continuation line
       currentValue += " " + line.trim();
     } else {
       if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();
@@ -273,124 +402,26 @@ function parseRawHeaders(raw: string): Record<string, string> {
   return headers;
 }
 
-/* ── Helper: extract email from raw From header ── */
 function parseEmailFromHeader(header: string): string {
   if (!header) return "";
-  // Try to extract <email@domain> first
   const angleMatch = header.match(/<([^>]+)>/);
   if (angleMatch) return angleMatch[1].toLowerCase();
-  // Otherwise treat whole thing as email if it contains @
   const trimmed = header.trim();
   if (trimmed.includes("@")) return trimmed.toLowerCase();
   return "";
 }
 
-function normalizeCharset(charset?: string | null): string {
-  const value = (charset || "utf-8").trim().toLowerCase();
-  if (value === "utf8") return "utf-8";
-  if (value === "us-ascii") return "ascii";
-  return value;
-}
-
-function decodeTextPart(data: Uint8Array, encoding: string, charset?: string | null): string {
-  const decoded = decodeAttachment(data, encoding || "7BIT");
-  try {
-    return new TextDecoder(normalizeCharset(charset)).decode(decoded).trim();
-  } catch {
-    return new TextDecoder().decode(decoded).trim();
-  }
-}
-
-function getPartParameter(params: Record<string, string> | undefined, key: string): string {
-  if (!params) return "";
-  const found = Object.entries(params).find(([k]) => k.toLowerCase() === key.toLowerCase());
-  return found?.[1] || "";
-}
-
-function getPartFilename(part: any): string {
-  return (
-    getPartParameter(part?.dispositionParameters, "filename") ||
-    getPartParameter(part?.dispositionParameters, "filename*") ||
-    getPartParameter(part?.parameters, "name") ||
-    getPartParameter(part?.parameters, "name*") ||
-    ""
-  );
-}
-
-function sanitizeFilename(filename: string): string {
-  return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
-}
-
-type MimeLeafPart = {
-  section: string;
-  type: string;
-  subtype: string;
-  encoding: string;
-  charset: string;
-  dispositionType: string;
-  filename: string;
-  size: number;
-  isAttachment: boolean;
-};
-
-function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
-  if (!part) return [];
-
-  if (Array.isArray(part.childParts) && part.childParts.length > 0) {
-    return part.childParts.flatMap((child: any, index: number) =>
-      collectMimeLeafParts(child, path ? `${path}.${index + 1}` : `${index + 1}`)
-    );
-  }
-
-  const type = (part.type || "").toLowerCase();
-  const subtype = (part.subtype || "").toLowerCase();
-  const dispositionType = (part.dispositionType || "").toLowerCase();
-  const filename = getPartFilename(part);
-  const charset = getPartParameter(part.parameters, "charset") || "utf-8";
-  const section = path || "1";
-
-  if (type === "message" && subtype === "rfc822") {
-    const isAttachedMessage = dispositionType === "attachment" || !!filename;
-    if (isAttachedMessage || !part.messageBodyStructure) {
-      return [{
-        section,
-        type,
-        subtype,
-        encoding: part.encoding || "7BIT",
-        charset,
-        dispositionType,
-        filename: filename || `message-${section}.eml`,
-        size: part.size || 0,
-        isAttachment: true,
-      }];
-    }
-
-    return collectMimeLeafParts(part.messageBodyStructure, section);
-  }
-
-  const isRenderableBody =
-    type === "text" &&
-    (subtype === "plain" || subtype === "html") &&
-    dispositionType !== "attachment" &&
-    !filename;
-
-  return [{
-    section,
-    type,
-    subtype,
-    encoding: part.encoding || "7BIT",
-    charset,
-    dispositionType,
-    filename,
-    size: part.size || 0,
-    isAttachment: !isRenderableBody,
-  }];
-}
-
-/* ── BATCH SIZE ── */
+/* ══════════════════════════════════════════════════════════════
+   BATCH SIZE — 1 email per invocation
+   ══════════════════════════════════════════════════════════════ */
 const BATCH_SIZE = 1;
 
-/* ── Main handler ── */
+/* Max attachment size to download (5MB) — skip larger ones */
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+/* ══════════════════════════════════════════════════════════════
+   Main handler
+   ══════════════════════════════════════════════════════════════ */
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -398,45 +429,50 @@ Deno.serve(async (req) => {
   try {
     // Auth
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    if (!authHeader) throw new Error("Missing Authorization header");
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const authClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-    const { data: userData, error: userError } = await authClient.auth.getUser();
-    if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    const userId = userData.user.id;
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    // IMAP credentials
-    const imapHost = Deno.env.get("IMAP_HOST") || "imaps.aruba.it";
-    const imapUser = Deno.env.get("IMAP_USER");
-    const imapPass = Deno.env.get("IMAP_PASSWORD");
-    if (!imapUser || !imapPass) {
-      return new Response(JSON.stringify({ error: "Credenziali IMAP non configurate" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) throw new Error("Unauthorized");
+    const userId = user.id;
 
-    // Sync state
-    let { data: syncState } = await supabase.from("email_sync_state").select("*").eq("user_id", userId).maybeSingle();
+    // Get IMAP credentials
+    const imapHost = Deno.env.get("IMAP_HOST") || "";
+    const imapUser = Deno.env.get("IMAP_USER") || "";
+    const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
+    if (!imapHost || !imapUser || !imapPassword) throw new Error("IMAP credentials not configured");
+
+    // Get sync state
+    const { data: syncState } = await supabase
+      .from("email_sync_state")
+      .select("last_uid")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let lastUid = syncState?.last_uid || 0;
+
+    // Ensure sync state row exists
     if (!syncState) {
-      const { data: ns } = await supabase.from("email_sync_state").insert({ user_id: userId, imap_host: imapHost, imap_user: imapUser, last_uid: 0 }).select().single();
-      syncState = ns;
+      await supabase.from("email_sync_state").upsert({
+        user_id: userId,
+        last_uid: 0,
+        imap_host: imapHost,
+        imap_user: imapUser,
+      }, { onConflict: "user_id" });
     }
-    const lastUid = syncState?.last_uid || 0;
 
-    console.log(`[check-inbox] Connecting to ${imapHost}:993...`);
-
+    // Connect to IMAP
     const client = new ImapClient({
       host: imapHost,
       port: 993,
-      tls: true,
       username: imapUser,
-      password: imapPass,
-      authMechanism: "LOGIN",
-      autoReconnect: false,
-      commandTimeout: 30000,
+      password: imapPassword,
+      secure: true,
       connectionTimeout: 15000,
       tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
     });
@@ -476,7 +512,7 @@ Deno.serve(async (req) => {
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
         try {
-          // Step 1: Fetch ENVELOPE only (NO bodyStructure — it crashes on complex emails)
+          /* ─── Step 1: ENVELOPE + BODYSTRUCTURE (RFC 3501 §6.4.5) ─── */
           let fromAddr = "";
           let toAddr = "";
           let senderName = "";
@@ -487,7 +523,6 @@ Deno.serve(async (req) => {
           let bodyStructure: any = null;
 
           try {
-            // Try fetching envelope + bodyStructure together
             const envFetch = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
@@ -510,12 +545,12 @@ Deno.serve(async (req) => {
             console.warn(`[check-inbox] Envelope/bodyStructure error UID ${uid}:`, envErr.message);
           }
 
-          // === Bug 1 Fix: Fallback to raw headers if envelope gave us nothing ===
+          /* ─── Step 1b: Fallback to raw HEADER.FIELDS (RFC 2822) ─── */
           if (!fromAddr || fromAddr === "@" || fromAddr === "sconosciuto@unknown") {
             try {
               const hdrCmd = `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO)])`;
               const hdrResponse = await (client as any).executeCommand(hdrCmd);
-              const rawHeaders = extractLiteralFromResponse(hdrResponse);
+              const rawHeaders = extractLiteralTextFromResponse(hdrResponse);
               if (rawHeaders) {
                 const parsed = parseRawHeaders(rawHeaders);
                 const rawFrom = parseEmailFromHeader(parsed["from"] || "");
@@ -529,12 +564,11 @@ Deno.serve(async (req) => {
                 if (!inReplyTo && parsed["in-reply-to"]) {
                   inReplyTo = parsed["in-reply-to"].replace(/[<>]/g, "");
                 }
-                // Try to get sender name from raw From header
                 const rawFromFull = parsed["from"] || "";
                 const nameMatch = rawFromFull.match(/^"?([^"<]+)"?\s*</);
                 if (nameMatch) senderName = nameMatch[1].trim();
                 else senderName = fromAddr;
-                console.log(`[check-inbox] UID ${uid}: raw header fallback from=${fromAddr}, subj=${subject}`);
+                console.log(`[check-inbox] UID ${uid}: raw header fallback from=${fromAddr}`);
               }
             } catch (hdrErr: any) {
               console.warn(`[check-inbox] Raw header fetch error UID ${uid}:`, hdrErr.message);
@@ -545,62 +579,178 @@ Deno.serve(async (req) => {
             fromAddr = "sconosciuto@unknown";
           }
 
-          // === Bug 2 Fix: Use bodyStructure to find correct text/html sections ===
+          /* ─── Step 2: Parse BODYSTRUCTURE into typed parts (RFC 2046) ─── */
           let bodyText = "";
           let bodyHtml = "";
+          const attachmentRecords: any[] = [];
 
-          // Determine sections to fetch from bodyStructure if available
-          let sectionsToTry: Array<{ section: string; expect: "text" | "html" | "unknown" }> = [];
-          
+          // Collect all MIME leaf parts from BODYSTRUCTURE
+          let parts: MimeLeafPart[] = [];
           if (bodyStructure) {
             try {
-              const { textSection, htmlSection } = findTextSections(bodyStructure);
-              if (htmlSection) sectionsToTry.push({ section: htmlSection, expect: "html" });
-              if (textSection) sectionsToTry.push({ section: textSection, expect: "text" });
-              console.log(`[check-inbox] UID ${uid}: bodyStructure sections text=${textSection} html=${htmlSection}`);
+              parts = collectMimeLeafParts(bodyStructure);
+              console.log(`[check-inbox] UID ${uid}: ${parts.length} MIME parts found`);
             } catch (bsErr: any) {
-              console.warn(`[check-inbox] UID ${uid}: bodyStructure parse failed, using fallback sections`);
+              console.warn(`[check-inbox] UID ${uid}: BODYSTRUCTURE parse failed:`, bsErr.message);
             }
           }
-          
-          // Fallback: try common section paths if bodyStructure didn't give us anything
-          if (sectionsToTry.length === 0) {
-            sectionsToTry = [
-              { section: "1.2", expect: "html" },
-              { section: "1.1", expect: "text" },
-              { section: "1", expect: "unknown" },
-              { section: "2", expect: "unknown" },
+
+          // If BODYSTRUCTURE gave us nothing, try basic sections as last resort
+          if (parts.length === 0) {
+            parts = [
+              { section: "1", type: "text", subtype: "plain", encoding: "7BIT", charset: "utf-8", contentId: "", dispositionType: "", filename: "", size: 0, isInlineBody: true, isInlineImage: false, isAttachment: false },
             ];
           }
 
-          for (const section of sectionsToTry) {
-            if (bodyText && bodyHtml) break; // got both, stop
+          /* ─── Step 3: Fetch each part with proper decoding (RFC 2045) ─── */
+          for (const part of parts) {
 
-            try {
-              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${section.section}])`;
-              const bodyResponse = await (client as any).executeCommand(bodyCmd);
-              const content = extractLiteralFromResponse(bodyResponse);
+            // === 3a: Inline body parts (text/plain, text/html) ===
+            if (part.isInlineBody) {
+              const target = part.subtype === "html" ? "html" : "text";
+              // Skip if we already have this type
+              if (target === "html" && bodyHtml) continue;
+              if (target === "text" && bodyText) continue;
 
-              if (content && content.length > 5 && !isMultipartContainer(content)) {
-                if (section.expect === "html" || (section.expect === "unknown" && (content.includes("<html") || content.includes("<div") || content.includes("<p>") || content.includes("<br") || content.includes("<table")))) {
-                  if (!bodyHtml) bodyHtml = content.slice(0, 100_000);
-                } else if (section.expect === "text" || section.expect === "unknown") {
-                  if (!bodyText) bodyText = content.slice(0, 50_000);
+              try {
+                const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${part.section}])`;
+                const bodyResponse = await (client as any).executeCommand(bodyCmd);
+                const rawBytes = extractLiteralBytesFromResponse(bodyResponse);
+
+                if (rawBytes.length > 5) {
+                  // RFC 2045 — Decode transfer encoding + charset
+                  const decoded = decodeMimePart(rawBytes, part.encoding, part.charset);
+
+                  if (target === "html") {
+                    bodyHtml = decoded.slice(0, 100_000);
+                  } else {
+                    bodyText = decoded.slice(0, 50_000);
+                  }
                 }
+              } catch (bodyErr: any) {
+                console.warn(`[check-inbox] UID ${uid} body section ${part.section} error:`, bodyErr.message);
               }
-            } catch (bodyErr: any) {
-              // Section doesn't exist — that's fine, try next
-              if (!bodyErr.message?.includes("parse")) {
-                console.warn(`[check-inbox] Body section ${section.section} error UID ${uid}:`, bodyErr.message);
+              continue;
+            }
+
+            // === 3b: Inline images with Content-ID (RFC 2392 — cid:) ===
+            if (part.isInlineImage && part.contentId) {
+              if (part.size > MAX_ATTACHMENT_BYTES) {
+                console.log(`[check-inbox] UID ${uid}: skipping large inline image ${part.contentId} (${part.size}B)`);
+                continue;
               }
-              // Don't break — try next section
+
+              try {
+                const imgCmd = `UID FETCH ${uid} (BODY.PEEK[${part.section}])`;
+                const imgResponse = await (client as any).executeCommand(imgCmd);
+                const rawBytes = extractLiteralBytesFromResponse(imgResponse);
+
+                if (rawBytes.length > 0) {
+                  // Decode transfer encoding (base64 for images)
+                  const decoded: Uint8Array = decodeAttachment(rawBytes, part.encoding);
+                  const contentType = `${part.type}/${part.subtype}`;
+                  const ext = part.subtype === "jpeg" ? "jpg" : part.subtype;
+                  const filename = sanitizeFilename(part.filename || `inline_${part.contentId}.${ext}`);
+                  const storagePath = `emails/${userId}/${messageId}/${filename}`;
+
+                  // Upload to Storage
+                  const { error: uploadErr } = await supabase.storage
+                    .from("import-files")
+                    .upload(storagePath, decoded, { contentType, upsert: true });
+
+                  if (!uploadErr) {
+                    const { data: urlData } = supabase.storage
+                      .from("import-files")
+                      .getPublicUrl(storagePath);
+
+                    // We'll replace cid: references in the HTML after all parts are processed
+                    attachmentRecords.push({
+                      cid: part.contentId,
+                      publicUrl: urlData?.publicUrl || "",
+                      filename,
+                      storagePath,
+                      contentType,
+                      size: decoded.length,
+                      isInline: true,
+                    });
+                  } else {
+                    console.warn(`[check-inbox] UID ${uid}: inline image upload failed:`, uploadErr.message);
+                  }
+                }
+              } catch (imgErr: any) {
+                console.warn(`[check-inbox] UID ${uid} inline image ${part.section} error:`, imgErr.message);
+              }
+              continue;
+            }
+
+            // === 3c: Attachments (PDF, DOC, XLS, images without cid, etc.) ===
+            if (part.isAttachment && part.filename) {
+              if (part.size > MAX_ATTACHMENT_BYTES) {
+                console.log(`[check-inbox] UID ${uid}: skipping large attachment ${part.filename} (${part.size}B)`);
+                // Still record metadata even if we don't download
+                attachmentRecords.push({
+                  filename: sanitizeFilename(part.filename),
+                  storagePath: "",
+                  contentType: `${part.type}/${part.subtype}`,
+                  size: part.size,
+                  isInline: false,
+                  skipped: true,
+                });
+                continue;
+              }
+
+              try {
+                const attCmd = `UID FETCH ${uid} (BODY.PEEK[${part.section}])`;
+                const attResponse = await (client as any).executeCommand(attCmd);
+                const rawBytes = extractLiteralBytesFromResponse(attResponse);
+
+                if (rawBytes.length > 0) {
+                  const decoded: Uint8Array = decodeAttachment(rawBytes, part.encoding);
+                  const contentType = `${part.type}/${part.subtype}`;
+                  const filename = sanitizeFilename(part.filename);
+                  const storagePath = `emails/${userId}/${messageId}/${filename}`;
+
+                  const { error: uploadErr } = await supabase.storage
+                    .from("import-files")
+                    .upload(storagePath, decoded, { contentType, upsert: true });
+
+                  if (!uploadErr) {
+                    attachmentRecords.push({
+                      filename,
+                      storagePath,
+                      contentType,
+                      size: decoded.length,
+                      isInline: false,
+                    });
+                  } else {
+                    console.warn(`[check-inbox] UID ${uid}: attachment upload failed:`, uploadErr.message);
+                  }
+                }
+              } catch (attErr: any) {
+                console.warn(`[check-inbox] UID ${uid} attachment ${part.section} error:`, attErr.message);
+              }
             }
           }
 
-          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, subj: ${subject}`);
+          /* ─── Step 4: Replace cid: references in HTML (RFC 2392) ─── */
+          if (bodyHtml) {
+            for (const att of attachmentRecords) {
+              if (att.isInline && att.cid && att.publicUrl) {
+                // Replace both cid:xxx and cid:xxx formats
+                bodyHtml = bodyHtml.replace(
+                  new RegExp(`cid:${att.cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
+                  att.publicUrl
+                );
+              }
+            }
+          }
 
+          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, attachments=${attachmentRecords.length}, subj: ${subject}`);
+
+          /* ─── Step 5: Match sender ─── */
           const match = await matchSender(supabase, fromAddr);
 
+          /* ─── Step 6: Save message (checkpoint) ─── */
           const msgData = {
             user_id: userId,
             channel: "email",
@@ -618,10 +768,11 @@ Deno.serve(async (req) => {
             raw_payload: { uid, date, sender_name: match.name || senderName },
           };
 
-          // Save immediately (checkpoint per message)
-          const { error: saveErr } = await supabase
+          const { data: savedMsg, error: saveErr } = await supabase
             .from("channel_messages")
-            .upsert([msgData], { onConflict: "message_id_external" });
+            .upsert([msgData], { onConflict: "message_id_external" })
+            .select("id")
+            .single();
 
           if (saveErr) {
             console.error(`[check-inbox] Save error UID ${uid}:`, saveErr.message);
@@ -629,7 +780,32 @@ Deno.serve(async (req) => {
             messages.push(msgData);
             maxUid = uid;
 
-            // Checkpoint: update last_uid after each successful save
+            // Save attachment records to email_attachments table
+            if (savedMsg?.id && attachmentRecords.length > 0) {
+              const attRows = attachmentRecords
+                .filter(a => !a.skipped && a.storagePath)
+                .map(a => ({
+                  message_id: savedMsg.id,
+                  user_id: userId,
+                  filename: a.filename,
+                  storage_path: a.storagePath,
+                  content_type: a.contentType,
+                  size_bytes: a.size,
+                }));
+
+              if (attRows.length > 0) {
+                const { error: attSaveErr } = await supabase
+                  .from("email_attachments")
+                  .insert(attRows);
+                if (attSaveErr) {
+                  console.warn(`[check-inbox] UID ${uid}: attachment DB save error:`, attSaveErr.message);
+                } else {
+                  console.log(`[check-inbox] UID ${uid}: saved ${attRows.length} attachments to DB`);
+                }
+              }
+            }
+
+            // Checkpoint: update last_uid
             await supabase
               .from("email_sync_state")
               .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
@@ -643,7 +819,7 @@ Deno.serve(async (req) => {
 
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
-          // Even on error, advance past this UID to avoid getting stuck
+          // Advance past this UID to avoid getting stuck
           if (uid > maxUid) {
             maxUid = uid;
             await supabase
