@@ -796,6 +796,7 @@ Deno.serve(async (req) => {
                 if (!date && parsed["date"]) date = parsed["date"];
                 if (messageId.startsWith("uid_") && parsed["message-id"]) messageId = sanitizeMessageId(parsed["message-id"]);
                 if (!inReplyTo && parsed["in-reply-to"]) inReplyTo = parsed["in-reply-to"].replace(/[<>]/g, "");
+                if (!referencesHeader && parsed["references"]) referencesHeader = parsed["references"];
                 const rawFromFull = parsed["from"] || "";
                 const nameMatch = rawFromFull.match(/^"?([^"<]+)"?\s*</);
                 if (nameMatch) senderName = nameMatch[1].trim();
