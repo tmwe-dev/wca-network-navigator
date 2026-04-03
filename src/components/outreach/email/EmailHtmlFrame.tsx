@@ -68,6 +68,7 @@ export function EmailHtmlFrame({ html, mode, blockRemote, cidMap }: Props) {
   img, svg, video, canvas, picture {
     max-width: 100% !important; height: auto !important; display: inline-block;
   }
+  img[src^="cid:"] { display: none !important; }
   blockquote { border-left: 3px solid #d1d5db; margin: 8px 0; padding: 4px 12px; color: #6b7280; }
   pre, code { background: #f3f4f6; border-radius: 4px; padding: 2px 4px; font-size: 13px; overflow-x: auto; }
   table { border-collapse: collapse; max-width: 100%; }
