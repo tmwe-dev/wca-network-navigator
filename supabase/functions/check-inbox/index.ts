@@ -700,6 +700,8 @@ Deno.serve(async (req) => {
           /* ─── Step 1: ENVELOPE + BODYSTRUCTURE (RFC 3501 §6.4.5) ─── */
           let fromAddr = "";
           let toAddr = "";
+          let ccAddresses = "";
+          let bccAddresses = "";
           let senderName = "";
           let subject = "(nessun oggetto)";
           let messageId = `uid_${uid}_${Date.now()}`;
@@ -719,9 +721,11 @@ Deno.serve(async (req) => {
             bodyStructure = envFetch?.[0]?.bodyStructure || null;
             if (env) {
               fromAddr = envelopeAddr(env.from?.[0]);
-              toAddr = envelopeAddr(env.to?.[0]);
-              senderName = env.from?.[0]?.name || fromAddr;
-              subject = env.subject || "(nessun oggetto)";
+              toAddr = envelopeAddrList(env.to);
+              ccAddresses = envelopeAddrList(env.cc);
+              bccAddresses = envelopeAddrList(env.bcc);
+              senderName = envelopeAddrName(env.from?.[0]) || fromAddr;
+              subject = decodeRfc2047(env.subject || "") || "(nessun oggetto)";
               messageId = env.messageId ? sanitizeMessageId(env.messageId) : messageId;
               date = env.date || "";
               inReplyTo = env.inReplyTo || null;
