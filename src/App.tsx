@@ -77,6 +77,7 @@ const App = () => (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ContactDrawerProvider>
+      <ActiveOperatorProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
