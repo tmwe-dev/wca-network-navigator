@@ -684,6 +684,7 @@ export type Database = {
           in_reply_to: string | null
           internal_date: string | null
           message_id_external: string | null
+          operator_id: string | null
           parse_status: string | null
           parse_warnings: string[] | null
           partner_id: string | null
@@ -719,6 +720,7 @@ export type Database = {
           in_reply_to?: string | null
           internal_date?: string | null
           message_id_external?: string | null
+          operator_id?: string | null
           parse_status?: string | null
           parse_warnings?: string[] | null
           partner_id?: string | null
@@ -754,6 +756,7 @@ export type Database = {
           in_reply_to?: string | null
           internal_date?: string | null
           message_id_external?: string | null
+          operator_id?: string | null
           parse_status?: string | null
           parse_warnings?: string[] | null
           partner_id?: string | null
@@ -772,7 +775,15 @@ export type Database = {
           uidvalidity?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "channel_messages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_assignments: {
         Row: {
@@ -1914,6 +1925,75 @@ export type Database = {
         }
         Relationships: []
       }
+      operators: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          imap_host: string | null
+          imap_password_encrypted: string | null
+          imap_user: string | null
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean
+          is_admin: boolean
+          linkedin_profile_url: string | null
+          name: string
+          smtp_host: string | null
+          smtp_password_encrypted: string | null
+          smtp_port: number | null
+          smtp_user: string | null
+          updated_at: string
+          user_id: string | null
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          imap_host?: string | null
+          imap_password_encrypted?: string | null
+          imap_user?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          is_admin?: boolean
+          linkedin_profile_url?: string | null
+          name: string
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          imap_host?: string | null
+          imap_password_encrypted?: string | null
+          imap_user?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          is_admin?: boolean
+          linkedin_profile_url?: string | null
+          name?: string
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp_phone?: string | null
+        }
+        Relationships: []
+      }
       outreach_queue: {
         Row: {
           attempts: number
@@ -2885,6 +2965,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: undefined
       }
+      is_operator_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"
