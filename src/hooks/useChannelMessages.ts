@@ -24,6 +24,16 @@ export type ChannelMessage = {
   read_at: string | null;
   created_at: string;
   email_date: string | null;
+  // RFC-compliant fields
+  raw_storage_path: string | null;
+  raw_sha256: string | null;
+  raw_size_bytes: number | null;
+  imap_uid: number | null;
+  uidvalidity: number | null;
+  imap_flags: string | null;
+  internal_date: string | null;
+  parse_status: string | null;
+  parse_warnings: string[] | null;
 };
 
 export type EmailAttachment = {
@@ -33,6 +43,8 @@ export type EmailAttachment = {
   content_type: string | null;
   size_bytes: number | null;
   storage_path: string;
+  content_id: string | null;
+  is_inline: boolean;
 };
 
 const PAGE_SIZE = 50;

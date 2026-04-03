@@ -678,15 +678,24 @@ export type Database = {
           email_date: string | null
           from_address: string | null
           id: string
+          imap_flags: string | null
+          imap_uid: number | null
           in_reply_to: string | null
+          internal_date: string | null
           message_id_external: string | null
+          parse_status: string | null
+          parse_warnings: string[] | null
           partner_id: string | null
           raw_payload: Json | null
+          raw_sha256: string | null
+          raw_size_bytes: number | null
+          raw_storage_path: string | null
           read_at: string | null
           source_id: string | null
           source_type: string | null
           subject: string | null
           to_address: string | null
+          uidvalidity: number | null
           user_id: string
         }
         Insert: {
@@ -700,15 +709,24 @@ export type Database = {
           email_date?: string | null
           from_address?: string | null
           id?: string
+          imap_flags?: string | null
+          imap_uid?: number | null
           in_reply_to?: string | null
+          internal_date?: string | null
           message_id_external?: string | null
+          parse_status?: string | null
+          parse_warnings?: string[] | null
           partner_id?: string | null
           raw_payload?: Json | null
+          raw_sha256?: string | null
+          raw_size_bytes?: number | null
+          raw_storage_path?: string | null
           read_at?: string | null
           source_id?: string | null
           source_type?: string | null
           subject?: string | null
           to_address?: string | null
+          uidvalidity?: number | null
           user_id: string
         }
         Update: {
@@ -722,15 +740,24 @@ export type Database = {
           email_date?: string | null
           from_address?: string | null
           id?: string
+          imap_flags?: string | null
+          imap_uid?: number | null
           in_reply_to?: string | null
+          internal_date?: string | null
           message_id_external?: string | null
+          parse_status?: string | null
+          parse_warnings?: string[] | null
           partner_id?: string | null
           raw_payload?: Json | null
+          raw_sha256?: string | null
+          raw_size_bytes?: number | null
+          raw_storage_path?: string | null
           read_at?: string | null
           source_id?: string | null
           source_type?: string | null
           subject?: string | null
           to_address?: string | null
+          uidvalidity?: number | null
           user_id?: string
         }
         Relationships: []
@@ -1149,30 +1176,36 @@ export type Database = {
       }
       email_attachments: {
         Row: {
+          content_id: string | null
           content_type: string | null
           created_at: string
           filename: string
           id: string
+          is_inline: boolean | null
           message_id: string
           size_bytes: number | null
           storage_path: string
           user_id: string
         }
         Insert: {
+          content_id?: string | null
           content_type?: string | null
           created_at?: string
           filename: string
           id?: string
+          is_inline?: boolean | null
           message_id: string
           size_bytes?: number | null
           storage_path: string
           user_id: string
         }
         Update: {
+          content_id?: string | null
           content_type?: string | null
           created_at?: string
           filename?: string
           id?: string
+          is_inline?: boolean | null
           message_id?: string
           size_bytes?: number | null
           storage_path?: string
