@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Building2, Mail, CheckCircle2, Image, Linkedin, Loader2, XCircle, StopCircle } from "lucide-react";
+import { Search, Building2, Mail, CheckCircle2, Image, Linkedin, Loader2, XCircle, StopCircle, LayoutDashboard } from "lucide-react";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { toast } from "@/hooks/use-toast";
 
