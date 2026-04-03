@@ -564,7 +564,7 @@ Deno.serve(async (req) => {
                 if (subject === "(nessun oggetto)" && parsed["subject"]) subject = parsed["subject"];
                 if (!date && parsed["date"]) date = parsed["date"];
                 if (messageId.startsWith("uid_") && parsed["message-id"]) {
-                  messageId = parsed["message-id"].replace(/[<>]/g, "");
+                  messageId = sanitizeMessageId(parsed["message-id"]);
                 }
                 if (!inReplyTo && parsed["in-reply-to"]) {
                   inReplyTo = parsed["in-reply-to"].replace(/[<>]/g, "");
