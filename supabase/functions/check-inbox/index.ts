@@ -175,22 +175,88 @@ function normalizeCharset(charset?: string | null): string {
   if (value === "us-ascii" || value === "ascii") return "utf-8";
   if (value === "latin1" || value === "iso_8859-1") return "iso-8859-1";
   if (value === "latin2" || value === "iso_8859-2") return "iso-8859-2";
+  if (value === "windows-1252" || value === "cp1252") return "windows-1252";
   return value;
 }
 
 /**
+ * RFC 2045 §6.7 — Proper Quoted-Printable decoder.
+ * Handles soft line breaks (=\r\n or =\n) and =XX hex escapes.
+ */
+function decodeQuotedPrintable(input: Uint8Array): Uint8Array {
+  const result: number[] = [];
+  let i = 0;
+  while (i < input.length) {
+    const byte = input[i];
+    if (byte === 0x3D) { // '='
+      // Soft line break: =\r\n or =\n
+      if (i + 1 < input.length && input[i + 1] === 0x0A) {
+        i += 2; continue;
+      }
+      if (i + 2 < input.length && input[i + 1] === 0x0D && input[i + 2] === 0x0A) {
+        i += 3; continue;
+      }
+      // Hex escape: =XX
+      if (i + 2 < input.length) {
+        const hi = input[i + 1];
+        const lo = input[i + 2];
+        const hex = String.fromCharCode(hi, lo);
+        const val = parseInt(hex, 16);
+        if (!isNaN(val)) {
+          result.push(val);
+          i += 3; continue;
+        }
+      }
+      // Malformed =, pass through
+      result.push(byte);
+      i++;
+    } else {
+      result.push(byte);
+      i++;
+    }
+  }
+  return new Uint8Array(result);
+}
+
+/**
+ * RFC 2045 §6.8 — Base64 decoder (using built-in atob).
+ */
+function decodeBase64Bytes(input: Uint8Array): Uint8Array {
+  // Strip whitespace and decode
+  const str = new TextDecoder("ascii").decode(input).replace(/[\r\n\s]/g, "");
+  try {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  } catch {
+    return input; // Return as-is if invalid base64
+  }
+}
+
+/**
  * RFC 2045 §6 — Decode Content-Transfer-Encoding then convert charset to UTF-8.
- * Uses the library's decodeAttachment for base64/quoted-printable.
+ * Custom implementation for text parts; uses library for binary attachments.
  */
 function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?: string | null): string {
   const enc = (encoding || "7BIT").toUpperCase();
-  // decodeAttachment handles BASE64, QUOTED-PRINTABLE, 7BIT, 8BIT
-  const decoded: Uint8Array = decodeAttachment(rawBytes, enc);
+  let decoded: Uint8Array;
+
+  switch (enc) {
+    case "QUOTED-PRINTABLE":
+      decoded = decodeQuotedPrintable(rawBytes);
+      break;
+    case "BASE64":
+      decoded = decodeBase64Bytes(rawBytes);
+      break;
+    default: // 7BIT, 8BIT, BINARY
+      decoded = rawBytes;
+  }
+
   const cs = normalizeCharset(charset);
   try {
     return new TextDecoder(cs).decode(decoded);
   } catch {
-    // Fallback to utf-8 if charset unknown
     return new TextDecoder("utf-8", { fatal: false }).decode(decoded);
   }
 }
