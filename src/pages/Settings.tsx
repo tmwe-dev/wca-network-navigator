@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import ContentManager from "@/components/settings/ContentManager";
