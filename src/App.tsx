@@ -82,8 +82,8 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BackgroundSyncIndicator />
         <BrowserRouter>
+          <BackgroundSyncIndicator />
           <ConnectionBanner />
           <RuntimeDiagnosticPanel />
           <Suspense fallback={<PageFallback />}>
