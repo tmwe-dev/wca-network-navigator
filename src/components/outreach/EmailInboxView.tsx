@@ -29,6 +29,7 @@ export function EmailInboxView() {
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
   const resetSync = useResetSync();
+  const { data: emailCount = 0 } = useEmailCount(isSyncing);
 
   // Stable refs to avoid recreating interval on every render
   const isSyncingRef = useRef(isSyncing);
