@@ -766,6 +766,15 @@ Deno.serve(async (req) => {
           const match = await matchSender(supabase, fromAddr);
 
           /* ─── Step 6: Save message (checkpoint) ─── */
+          // Parse email_date from envelope date string
+          let emailDate: string | null = null;
+          if (date) {
+            try {
+              const parsed = new Date(date);
+              if (!isNaN(parsed.getTime())) emailDate = parsed.toISOString();
+            } catch { /* ignore */ }
+          }
+
           const msgData = {
             user_id: userId,
             channel: "email",
@@ -780,6 +789,7 @@ Deno.serve(async (req) => {
             body_html: bodyHtml,
             message_id_external: messageId,
             in_reply_to: inReplyTo,
+            email_date: emailDate,
             raw_payload: { uid, date, sender_name: match.name || senderName },
           };
 
