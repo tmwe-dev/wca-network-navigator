@@ -1044,7 +1044,7 @@ Deno.serve(async (req) => {
 
           const { data: savedMsg, error: saveErr } = await supabase
             .from("channel_messages")
-            .upsert([msgData], { onConflict: "message_id_external" })
+            .upsert([msgData], { onConflict: "user_id,message_id_external" })
             .select("id")
             .single();
 
