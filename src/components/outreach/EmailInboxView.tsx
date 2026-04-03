@@ -19,6 +19,16 @@ export function EmailInboxView() {
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
 
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSyncing && !checkInbox.isPending) {
+        checkInbox.mutate();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isSyncing, checkInbox]);
+
   const filtered = useMemo(() => {
     if (!search.trim()) return messages;
     const q = search.toLowerCase();
