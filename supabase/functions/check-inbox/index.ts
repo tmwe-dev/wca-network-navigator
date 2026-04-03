@@ -755,6 +755,7 @@ Deno.serve(async (req) => {
           let messageId = `uid_${uid}_${Date.now()}`;
           let date = "";
           let inReplyTo: string | null = null;
+          let referencesHeader: string | null = null;
           let bodyStructure: any = null;
 
           try {
