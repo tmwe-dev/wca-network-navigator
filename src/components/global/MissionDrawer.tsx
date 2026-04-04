@@ -91,16 +91,28 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             <ContextSection title="Azioni Network" icon={Globe} color="text-blue-500">
               <p className="text-xs text-muted-foreground mb-2">Seleziona paesi per attivare azioni.</p>
               <div className="grid grid-cols-2 gap-1.5">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
+                  import("sonner").then(m => m.toast.info("Sync WCA avviato"));
+                }}>
                   <Database className="w-3.5 h-3.5" /> Sync WCA
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("deep-search-country"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("deep-search-country"));
+                  import("sonner").then(m => m.toast.info("Deep Search avviato"));
+                }}>
                   <Search className="w-3.5 h-3.5" /> Deep Search
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("generate-aliases"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("generate-aliases"));
+                  import("sonner").then(m => m.toast.info("Generazione alias avviata"));
+                }}>
                   <Sparkles className="w-3.5 h-3.5" /> Alias batch
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("export-partners"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("export-partners"));
+                  import("sonner").then(m => m.toast.info("Export avviato"));
+                }}>
                   <ArrowUpFromLine className="w-3.5 h-3.5" /> Export
                 </Button>
               </div>
