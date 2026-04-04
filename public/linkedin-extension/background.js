@@ -96,15 +96,46 @@ function waitForTabLoad(tabId, ms) {
 // ── Check if LinkedIn session is active (injected into page) ──
 function checkLinkedInSession() {
   try {
-    // Check for feed elements that only appear when logged in
-    var feedPresent = !!document.querySelector(".feed-shared-update-v2, .scaffold-layout, .global-nav__me");
-    var loginPage = !!document.querySelector("#username, .login__form");
+    var url = window.location.href || "";
+    var title = document.title || "";
     var bodyText = document.body.innerText || "";
-    var hasSignIn = /Sign in|Accedi|Log in/i.test(document.title);
+
+    // Logged-in UI markers across feed, messaging, profile, search, network, jobs
+    var loggedInUi = !!document.querySelector([
+      ".global-nav__me",
+      ".global-nav",
+      ".scaffold-layout",
+      ".feed-shared-update-v2",
+      ".msg-overlay-list-bubble",
+      ".msg-conversations-container",
+      "a[href*='/messaging/thread/']",
+      "button[aria-label*='Messaggio']",
+      "button[aria-label*='Message']",
+      ".search-results-container",
+      ".pv-top-card",
+      ".profile-photo-edit",
+      ".mn-connection-card",
+      ".jobs-search-results-list"
+    ].join(", "));
+
+    var hasLiCookieUi = /linkedin\.com\/(feed|messaging|in\/|search\/results|mynetwork|jobs)/i.test(url);
+    var loginPage = !!document.querySelector("#username, .login__form, input[name='session_key'], input[name='session_password']");
+    var hasSignIn = /Sign in|Accedi|Log in/i.test(title) || /sign in|accedi|log in/i.test(bodyText.slice(0, 1500));
+
+    var authenticated = (loggedInUi || hasLiCookieUi) && !loginPage && !hasSignIn;
 
     return {
-      authenticated: feedPresent && !loginPage && !hasSignIn,
-      reason: feedPresent ? "feed_present" : loginPage ? "login_page" : hasSignIn ? "sign_in_title" : "unknown",
+      authenticated: authenticated,
+      reason: authenticated
+        ? (url.includes("/messaging") ? "messaging_present"
+          : url.includes("/in/") ? "profile_present"
+          : url.includes("/search/") ? "search_present"
+          : url.includes("/mynetwork") ? "network_present"
+          : url.includes("/jobs") ? "jobs_present"
+          : "logged_in_ui_present")
+        : loginPage ? "login_page"
+        : hasSignIn ? "sign_in_title"
+        : "unknown",
     };
   } catch (e) {
     return { authenticated: false, reason: "error: " + e.message };
