@@ -174,7 +174,7 @@ export function useWhatsAppBackfill() {
                 from_address: msg.direction === "outbound" ? undefined : contact,
                 to_address: msg.direction === "outbound" ? contact : undefined,
                 body_text: msg.text,
-                message_id_external: `wa_bf_${contact}_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
+                message_id_external: buildDeterministicId("wa", contact, msg.text || "", msg.timestamp),
               });
               if (!error) saved++;
             }
