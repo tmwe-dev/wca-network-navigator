@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
+  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin, Upload,
 } from "lucide-react";
+import { ImportQuickAccessDialog } from "@/components/shared/ImportQuickAccessDialog";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { GroupStrip } from "./GroupStrip";

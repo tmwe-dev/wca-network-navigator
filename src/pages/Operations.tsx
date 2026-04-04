@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ImportQuickAccessDialog } from "@/components/shared/ImportQuickAccessDialog";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
