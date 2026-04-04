@@ -46,6 +46,7 @@ export function WhatsAppInboxView() {
   const {
     level, enabled, toggle, isReading, isAvailable, focusedChat, focusOn, readNow,
   } = useWhatsAppAdaptiveSync();
+  const { progress: bfProgress, startBackfill, stopBackfill } = useWhatsAppBackfill();
 
   const levelCfg = LEVEL_CONFIG[level];
   const LevelIcon = levelCfg.icon;
