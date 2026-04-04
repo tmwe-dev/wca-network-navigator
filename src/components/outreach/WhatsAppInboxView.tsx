@@ -246,15 +246,10 @@ export function WhatsAppInboxView() {
       </div>
 
       {/* Main area: tabs + conversation */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Horizontal tabs bar */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
-            {!showSidebar && (
-              <Button size="icon" variant="ghost" onClick={() => setActiveTab(null)} className="h-8 w-8 flex-shrink-0 ml-1">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-            )}
             {openTabs.map(contact => {
               const thread = threads.find(t => t.contact === contact);
               const isActive = contact === activeTab;
