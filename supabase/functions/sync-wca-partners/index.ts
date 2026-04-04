@@ -57,10 +57,11 @@ Deno.serve(async (req) => {
 
         try {
           // 1. Count total in external wca_profiles
-          const { count: totalCount, error: countErr } = await extSb
+          let countQuery = extSb
             .from("wca_profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("country_code", countryCode);
+            .select("*", { count: "exact", head: true });
+          if (countryCode) countQuery = countQuery.eq("country_code", countryCode);
+          const { count: totalCount, error: countErr } = await countQuery;
 
           if (countErr) {
             send({ type: "error", message: countErr.message });
