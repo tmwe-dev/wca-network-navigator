@@ -30,23 +30,44 @@ async function safeTabRemove(tabId) {
   try { await chrome.tabs.remove(tabId); } catch (e) {}
 }
 
-// Get or create a single persistent LinkedIn tab, navigate it to `url`
-async function getLinkedInTab(url) {
+// Get or create a single persistent LinkedIn tab
+// If skipNavigate=true and tab is already on linkedin.com, reuse without navigating
+async function getLinkedInTab(url, skipNavigateIfSameDomain) {
   // Check if existing tab is still alive
   if (_liTabId !== null) {
     try {
       var existing = await chrome.tabs.get(_liTabId);
       if (existing) {
+        // If tab is already on linkedin.com and we don't need a specific page, reuse as-is
+        if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url)) {
+          // Already on LinkedIn — no need to navigate
+          if (existing.status !== "complete") await waitForTabLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
         // Navigate existing tab to new URL
         await chrome.tabs.update(_liTabId, { url: url });
         await waitForTabLoad(_liTabId, 20000);
-        return { id: _liTabId };
+        return { id: _liTabId, reused: false };
       }
     } catch (_) {
       _liTabId = null; // tab was closed by user
     }
   }
-  // Create new persistent tab
+  // Also try to find any existing LinkedIn tab before creating one
+  try {
+    var existingTabs = await chrome.tabs.query({ url: "https://*.linkedin.com/*" });
+    if (existingTabs && existingTabs.length > 0) {
+      _liTabId = existingTabs[0].id;
+      if (skipNavigateIfSameDomain) {
+        if (existingTabs[0].status !== "complete") await waitForTabLoad(_liTabId, 15000);
+        return { id: _liTabId, reused: true };
+      }
+      await chrome.tabs.update(_liTabId, { url: url });
+      await waitForTabLoad(_liTabId, 20000);
+      return { id: _liTabId, reused: false };
+    }
+  } catch (_) {}
+  // Create new persistent tab (background, not active)
   var tab = await safeTabCreate({ url: url, active: false });
   _liTabId = tab.id;
   await waitForTabLoad(tab.id, 20000);
@@ -185,9 +206,16 @@ async function syncLiCookieToServer() {
 }
 
 
-// ── Verify LinkedIn session ──
+// ── Verify LinkedIn session — cookie-first, no unnecessary navigation ──
 async function verifyLinkedInSession() {
-  var tab = await getLinkedInTab("https://www.linkedin.com/feed/");
+  // Step 1: Check cookie first — if no cookie, we're definitely not logged in
+  var liAt = await getLiAtCookie();
+  if (!liAt) {
+    return { authenticated: false, reason: "no_cookie" };
+  }
+
+  // Step 2: Cookie exists — try to verify page state using existing tab (no navigation)
+  var tab = await getLinkedInTab("https://www.linkedin.com/feed/", true); // skipNavigate if already on LI
   try {
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -195,11 +223,13 @@ async function verifyLinkedInSession() {
     });
     var sessionResult = results[0] && results[0].result;
     if (sessionResult && sessionResult.authenticated) {
-      await syncLiCookieToServer();
+      // Sync cookie in background, don't block
+      syncLiCookieToServer().catch(function(){});
     }
     return sessionResult || { authenticated: false, reason: "no_result" };
   } catch (err) {
-    return { authenticated: false, reason: "error: " + err.message };
+    // Script injection failed but cookie exists — assume authenticated
+    return { authenticated: true, reason: "cookie_present_script_error", cookieLength: liAt.length };
   }
 }
 
