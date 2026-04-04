@@ -86,6 +86,8 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
         </span>
       )}
 
+      <ImportQuickAccessDialog label="Importa Partner" compact className="h-7 px-2" />
+
       {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
         <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
           <Eye className="w-3.5 h-3.5" />
