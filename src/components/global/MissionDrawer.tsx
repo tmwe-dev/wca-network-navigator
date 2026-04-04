@@ -89,13 +89,19 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           {/* ═══ CONTEXTUAL: Network ═══ */}
           {isNetwork && (
             <ContextSection title="Azioni Network" icon={Globe} color="text-blue-500">
-              <p className="text-xs text-muted-foreground">Seleziona paesi nella mappa per attivare Deep Search, generazione alias e sincronizzazione WCA.</p>
-              <div className="flex gap-2 mt-2">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))}>
+              <p className="text-xs text-muted-foreground mb-2">Seleziona paesi per attivare azioni.</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))}>
                   <Database className="w-3.5 h-3.5" /> Sync WCA
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }))}>
-                  <Search className="w-3.5 h-3.5" /> Filtri
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("deep-search-country"))}>
+                  <Search className="w-3.5 h-3.5" /> Deep Search
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("generate-aliases"))}>
+                  <Sparkles className="w-3.5 h-3.5" /> Alias batch
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("export-partners"))}>
+                  <ArrowUpFromLine className="w-3.5 h-3.5" /> Export
                 </Button>
               </div>
             </ContextSection>
@@ -104,10 +110,19 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           {/* ═══ CONTEXTUAL: CRM ═══ */}
           {isCRM && (
             <ContextSection title="Azioni CRM" icon={Users} color="text-emerald-500">
-              <p className="text-xs text-muted-foreground">Gestisci contatti, aggiorna stati lead e avvia comunicazioni.</p>
-              <div className="flex gap-2 mt-2">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }))}>
-                  <Search className="w-3.5 h-3.5" /> Filtri CRM
+              <p className="text-xs text-muted-foreground mb-2">Azioni rapide per contatti selezionati.</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-deep-search"))}>
+                  <Search className="w-3.5 h-3.5" /> Deep Search
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-linkedin-lookup"))}>
+                  <ExternalLink className="w-3.5 h-3.5" /> LinkedIn
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-send-cockpit"))}>
+                  <Rocket className="w-3.5 h-3.5" /> → Cockpit
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-export"))}>
+                  <ArrowUpFromLine className="w-3.5 h-3.5" /> Export
                 </Button>
               </div>
             </ContextSection>
@@ -116,7 +131,15 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           {/* ═══ CONTEXTUAL: Settings ═══ */}
           {isSettings && (
             <ContextSection title="Strumenti" icon={Settings} color="text-amber-500">
-              <p className="text-xs text-muted-foreground">Usa la sidebar sinistra per navigare le sezioni. Le azioni batch sono disponibili nella sezione Arricchimento.</p>
+              <p className="text-xs text-muted-foreground mb-2">Azioni batch disponibili per la sezione attiva.</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("enrichment-batch-start"))}>
+                  <Zap className="w-3.5 h-3.5" /> Avvia batch
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("enrichment-export"))}>
+                  <ArrowUpFromLine className="w-3.5 h-3.5" /> Export
+                </Button>
+              </div>
             </ContextSection>
           )}
 
