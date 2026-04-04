@@ -1,33 +1,57 @@
 
-## Architettura Polling Adattivo WhatsApp
 
-### Livelli di Attenzione
+# Piano di Refactoring: Stabilità e Fluidità dell'Applicazione
 
-| Livello | Nome | Intervallo | Cosa fa | Quando |
-|---------|------|-----------|---------|--------|
-| 0 | Idle | 60-90s | Sidebar scan (lista chat) | Nessuna attività |
-| 3 | Alert | 10-20s | Sidebar scan rapido | Nuovo messaggio rilevato |
-| 6 | Conversazione | 3-5s | Thread scan chat attiva | Risposta ricevuta in chat attiva |
+## Problema Principale
 
-### Logica di Escalation/De-escalation
+L'errore ricorrente `Failed to fetch dynamically imported module: Cockpit.tsx` è causato da:
 
-- **0 → 3**: Sidebar scan rileva nuovo messaggio non letto
-- **3 → 6**: La chat su cui ci si concentra riceve una risposta entro 30s
-- **6 → 3**: Nessuna nuova risposta per 60s nella chat attiva
-- **3 → 0**: Nessun nuovo messaggio per 3 minuti
-- **Focus singola chat**: Una sola conversazione attiva alla volta; le altre aspettano in coda
+1. **Cockpit.tsx è 651 righe** con 26 import — troppo pesante per un lazy-loaded module che viene caricato dentro un altro lazy-loaded module (Outreach → Cockpit = doppio lazy nesting)
+2. **AIDraftStudio.tsx è 892 righe** — importato da Cockpit, crea una catena di dipendenze enorme
+3. **WhatsAppInboxView.tsx (470 righe)** e **LinkedInInboxView.tsx (404 righe)** vengono caricati tutti eagerly dentro Outreach.tsx — nessun lazy loading per i tab
+4. **Outreach.tsx** carica TUTTI i componenti tab eagerly anche se l'utente ne vede uno alla volta
 
-### DOM Learning (ogni 3h)
+## Piano di Intervento (4 step)
 
-- Una chiamata AI ogni 3 ore per "imparare" la struttura DOM di WhatsApp Web
-- Il risultato (selettori CSS per sidebar, messaggi, input, badge) viene salvato in `app_settings` con chiave `wa_dom_schema`
-- Le letture successive usano i selettori cached → **zero chiamate AI per lo scraping normale**
-- Se un selettore fallisce → trigger di ri-apprendimento immediato
+### 1. Lazy-load tutti i tab di Outreach
 
-### Implementazione
+In `Outreach.tsx`, rendere lazy **ogni tab** (WhatsApp, LinkedIn, Email, Cockpit, AttivitaTab, InUscitaTab, HoldingPatternTab) così che venga caricato solo il componente del tab attivo.
 
-1. **Creare `useWhatsAppAdaptiveSync` hook** — gestisce i livelli, escalation/de-escalation, timer adattivi
-2. **Aggiungere `focusChat` al bridge** — comando per aprire e monitorare una chat specifica
-3. **Aggiungere `learnDom` al bridge** — scansione AI della struttura DOM, salva selettori
-4. **Aggiornare background.js** — supporto comandi `focusChat`, `learnDom`, `readThread` con selettori cached
-5. **Aggiornare la UI WhatsApp** — mostrare il livello corrente e la chat in focus
+```tsx
+const WhatsAppInboxView = lazy(() => import("@/components/outreach/WhatsAppInboxView"));
+const LinkedInInboxView = lazy(() => import("@/components/outreach/LinkedInInboxView"));
+const EmailInboxView = lazy(() => import("@/components/outreach/EmailInboxView"));
+// etc.
+```
+
+### 2. Spezzare Cockpit.tsx (651 → ~200 + hook)
+
+Estrarre tutta la logica (handleDrop, AI actions, drag&drop, LinkedIn lookup flow) in un hook `useCockpitLogic.ts`. Il file `Cockpit.tsx` diventa solo rendering (~200 righe).
+
+### 3. Spezzare AIDraftStudio.tsx (892 → ~300 + sotto-componenti)
+
+Estrarre in sotto-componenti:
+- `DraftPreview.tsx` — anteprima del messaggio
+- `DraftEditor.tsx` — editor del testo
+- `ScrapingProgress.tsx` — indicatore di fase scraping
+
+### 4. Migliorare il recovery da chunk failure
+
+Aggiornare `ViteChunkRecovery.tsx` per gestire meglio i retry dei lazy import con un wrapper che fa 2 tentativi prima di mostrare l'errore, evitando il reload completo della pagina.
+
+```tsx
+function lazyRetry(fn: () => Promise<any>) {
+  return lazy(() => fn().catch(() => {
+    return new Promise(resolve => setTimeout(resolve, 1500)).then(fn);
+  }));
+}
+```
+
+## Risultato Atteso
+
+- Caricamento iniziale di Outreach: solo il tab attivo (Cockpit)
+- Cockpit.tsx: da 651 a ~200 righe (logica in hook)
+- AIDraftStudio: da 892 a ~300 righe (sotto-componenti)
+- Nessun crash "Failed to fetch dynamically imported module" grazie al retry automatico
+- Navigazione tra tab fluida con fallback di caricamento
+
