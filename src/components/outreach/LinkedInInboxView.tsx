@@ -182,7 +182,10 @@ export function LinkedInInboxView() {
                 </Button>
                 <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
                   {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                  {isAvailable ? "On" : "Off"}
+                  LI
+                </Badge>
+                <Badge variant={isFireScrapeAvailable ? "default" : "secondary"} className="text-[9px] gap-0.5 h-5 px-1.5" title="FireScrape">
+                  {isFireScrapeAvailable ? "🔥" : "⭕"} FS
                 </Badge>
                 {/* Backfill */}
                 {bfProgress.status === "running" || bfProgress.status === "paused" ? (
