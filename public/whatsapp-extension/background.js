@@ -268,17 +268,105 @@ async function readUnreadMessages() {
   }
 }
 
-// ── Send a WhatsApp message ──
+// ── Send a WhatsApp message (reuses existing tab) ──
 async function sendWhatsAppMessage(phone, text) {
-  var cleanPhone = phone.replace(/[^0-9]/g, "");
-  var url = WA_BASE + "/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(text);
-  var tab;
   try {
-    tab = await safeCreateTab(url, false);
+    // First check for an existing WhatsApp Web tab
+    var existingTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+    
+    if (existingTabs.length > 0) {
+      // Reuse existing tab — search for the contact by name in the sidebar
+      var tabId = existingTabs[0].id;
+      if (existingTabs[0].status !== "complete") await waitForLoad(tabId, 10000);
+      
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: async function(contact, msg) {
+          // Helper: try searching for the contact in the sidebar
+          async function openChat(name) {
+            var searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
+              document.querySelector('#side [contenteditable="true"]') ||
+              document.querySelector('[title="Search input textbox"]') ||
+              document.querySelector('[title="Cerca o inizia una nuova chat"]') ||
+              document.querySelector('[title="Search or start new chat"]');
+            if (!searchBox) return false;
+            searchBox.focus();
+            searchBox.click();
+            document.execCommand("selectAll");
+            document.execCommand("insertText", false, name);
+            await new Promise(function(r) { setTimeout(r, 1500); });
+            // Click the first matching result
+            var results = document.querySelectorAll('[data-testid="cell-frame-container"], [data-testid="chat-cell-wrapper"]');
+            if (!results.length) results = document.querySelectorAll('#pane-side span[title]');
+            for (var i = 0; i < results.length; i++) {
+              var title = results[i].querySelector ? (results[i].querySelector('span[title]')?.getAttribute('title') || '') : (results[i].getAttribute('title') || '');
+              if (title.toLowerCase().includes(name.toLowerCase())) {
+                (results[i].closest('[data-testid="cell-frame-container"]') || results[i].closest('[data-testid="chat-cell-wrapper"]') || results[i]).click();
+                await new Promise(function(r) { setTimeout(r, 800); });
+                // Clear search
+                var clearBtn = document.querySelector('[data-testid="x-alt"]') || document.querySelector('[data-testid="search-close"]');
+                if (clearBtn) clearBtn.click();
+                return true;
+              }
+            }
+            // Clear search even if not found
+            var esc = document.querySelector('[data-testid="x-alt"]') || document.querySelector('[data-testid="search-close"]');
+            if (esc) esc.click();
+            return false;
+          }
+          
+          var opened = await openChat(contact);
+          if (!opened) {
+            // Fallback: try as phone number
+            var cleanPhone = contact.replace(/[^0-9]/g, "");
+            if (cleanPhone.length >= 6) {
+              window.location.href = "https://web.whatsapp.com/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(msg);
+              await new Promise(function(r) { setTimeout(r, 4000); });
+            } else {
+              return { success: false, error: "Contatto non trovato: " + contact };
+            }
+          }
+          
+          // Type the message if chat was found via search
+          if (opened) {
+            var inputBox = document.querySelector('[data-testid="conversation-compose-box-input"]') ||
+              document.querySelector('#main [contenteditable="true"]');
+            if (inputBox) {
+              inputBox.focus();
+              document.execCommand("insertText", false, msg);
+              await new Promise(function(r) { setTimeout(r, 300); });
+            }
+          }
+          
+          // Click send
+          var start = Date.now();
+          while (Date.now() - start < 10000) {
+            var btn = document.querySelector('span[data-icon="send"]') ||
+              document.querySelector('button[aria-label="Invia"]') ||
+              document.querySelector('button[aria-label="Send"]') ||
+              document.querySelector('[data-testid="send"]');
+            if (btn) {
+              (btn.closest("button") || btn).click();
+              await new Promise(function(r) { setTimeout(r, 1000); });
+              return { success: true };
+            }
+            await new Promise(function(r) { setTimeout(r, 500); });
+          }
+          return { success: false, error: "Pulsante invio non trovato" };
+        },
+        args: [phone, text],
+      });
+      return results?.[0]?.result || { success: false, error: "Nessun risultato" };
+    }
+    
+    // No existing tab — create one with send URL (old behavior as fallback)
+    var cleanPhone = phone.replace(/[^0-9]/g, "");
+    var url = WA_BASE + "/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(text);
+    var tab = await safeCreateTab(url, false);
     var loaded = await waitForLoad(tab.id, 30000);
     if (!loaded) { await safeRemoveTab(tab.id); return { success: false, error: "WA non caricato" }; }
     await sleep(3000);
-    var results = await chrome.scripting.executeScript({
+    var results2 = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: async function() {
         var start = Date.now();
@@ -299,12 +387,11 @@ async function sendWhatsAppMessage(phone, text) {
         return { success: false, error: "Pulsante invio non trovato" };
       },
     });
-    var result = results?.[0]?.result;
+    var result2 = results2?.[0]?.result;
     await sleep(500);
     await safeRemoveTab(tab.id);
-    return result || { success: false, error: "Nessun risultato" };
+    return result2 || { success: false, error: "Nessun risultato" };
   } catch (err) {
-    if (tab?.id) await safeRemoveTab(tab.id);
     return { success: false, error: err.message };
   }
 }
