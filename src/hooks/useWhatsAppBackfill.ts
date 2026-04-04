@@ -195,10 +195,15 @@ export function useWhatsAppBackfill() {
           }));
         }
 
-        // Human-like delay between chats
+        // Human-like delay between chats (abortable)
         const delayIdx = i % CHAT_DELAYS.length;
         const delaySec = CHAT_DELAYS[delayIdx] + randomBetween(-1, 2);
-        await sleep(delaySec * 1000);
+        const aborted = await sleepAbortable(delaySec * 1000, abortRef);
+        if (aborted) {
+          setProgress(p => ({ ...p, status: "paused", pauseReason: "Interrotto manualmente" }));
+          toast.info("Backfill interrotto");
+          return;
+        }
 
         // Long pause every N chats
         if ((i + 1) % LONG_PAUSE_EVERY === 0 && i < totalChats - 1) {
