@@ -105,8 +105,13 @@ export function useWhatsAppAdaptiveSync() {
     for (const msg of messages) {
       const contact = msg.contact || msg.from || "unknown";
       const rawTime = msg.time || msg.timestamp || "";
-      const text = msg.lastMessage || msg.text || "";
+      const rawText = msg.lastMessage || msg.text || "";
       const isVerify = msg.isVerify === true;
+
+      // Detect if message was sent by us (WhatsApp prefixes with "Tu: " etc.)
+      const { direction: detectedDir, cleanText } = detectDirection(rawText);
+      const finalDirection = msg.direction || detectedDir;
+      const text = cleanText;
 
       let timestamp: string;
       try {
@@ -114,15 +119,16 @@ export function useWhatsAppAdaptiveSync() {
         timestamp = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
       } catch { timestamp = new Date().toISOString(); }
 
-      const extId = buildExternalId(contact, rawTime || timestamp, text);
+      const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
 
       const { error, status } = await supabase
         .from("channel_messages")
         .upsert({
           user_id: sessionUserId,
           channel: "whatsapp",
-          direction: msg.direction || "inbound",
-          from_address: contact,
+          direction: finalDirection,
+          from_address: finalDirection === "outbound" ? undefined : contact,
+          to_address: finalDirection === "outbound" ? contact : undefined,
           body_text: text,
           message_id_external: extId,
           raw_payload: msg as any,
