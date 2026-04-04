@@ -257,7 +257,7 @@ export function PartnerListPanel({
               </SelectContent>
             </Select>
             <span className={cn("text-[10px] tabular-nums whitespace-nowrap ml-auto", th.dim)}>
-              {isLoading ? "..." : `${filteredPartners.length}${progressFilter ? " filtrati" : ""}`}
+              {isLoading ? "..." : `${filteredPartners.length}${totalCount > filteredPartners.length ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
             </span>
           </div>
 
