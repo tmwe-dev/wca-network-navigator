@@ -3,16 +3,18 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Zap, Eye, Radio, Send, X, PanelLeftClose, PanelLeftOpen,
+  Zap, Eye, Radio, Send, X, PanelLeftClose, PanelLeftOpen, Download, Square,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -44,6 +46,7 @@ export function WhatsAppInboxView() {
   const {
     level, enabled, toggle, isReading, isAvailable, focusedChat, focusOn, readNow,
   } = useWhatsAppAdaptiveSync();
+  const { progress: bfProgress, startBackfill, stopBackfill } = useWhatsAppBackfill();
 
   const levelCfg = LEVEL_CONFIG[level];
   const LevelIcon = levelCfg.icon;
@@ -197,7 +200,30 @@ export function WhatsAppInboxView() {
                     L{level}
                   </Badge>
                 )}
+                {/* Backfill button */}
+                {bfProgress.status === "running" || bfProgress.status === "paused" ? (
+                  <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-7 text-[11px] px-2">
+                    <Square className="w-3 h-3" /> Stop
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi persi">
+                    <Download className="w-3 h-3" /> Backfill
+                  </Button>
+                )}
               </div>
+              {/* Backfill progress bar */}
+              {(bfProgress.status === "running" || bfProgress.status === "paused") && (
+                <div className="space-y-1">
+                  <Progress value={bfProgress.totalChats > 0 ? (bfProgress.processedChats / bfProgress.totalChats) * 100 : 0} className="h-1.5" />
+                  <p className="text-[9px] text-muted-foreground truncate">
+                    {bfProgress.status === "paused" ? "⏸ " : ""}
+                    {bfProgress.currentChat || "Preparazione..."} — {bfProgress.recoveredMessages} recuperati
+                  </p>
+                </div>
+              )}
+              {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
+                <p className="text-[9px] text-green-600">✓ {bfProgress.recoveredMessages} messaggi recuperati</p>
+              )}
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca..." className="h-7 pl-7 text-xs" />
