@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
         };
 
         try {
-          // 1. Count total partners in external DB for this country
+          // 1. Count total in external wca_partners
           const { count: totalCount, error: countErr } = await extSb
-            .from("partners")
+            .from("wca_partners")
             .select("*", { count: "exact", head: true })
             .eq("country_code", countryCode);
 
@@ -88,9 +88,9 @@ Deno.serve(async (req) => {
           const totalPages = Math.ceil(totalCount / pageSize);
 
           for (let page = 0; page < totalPages; page++) {
-            // Fetch partners batch from external
+            // Fetch from external wca_partners
             const { data: extPartners, error: fetchErr } = await extSb
-              .from("partners")
+              .from("wca_partners")
               .select("*")
               .eq("country_code", countryCode)
               .order("wca_id", { ascending: true })
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
 
             if (!extPartners || extPartners.length === 0) break;
 
-            // Upsert partners locally
+            // Map wca_partners fields to local partners schema
             const partnerRows = extPartners.map((p: any) => ({
               wca_id: p.wca_id,
               company_name: p.company_name,
@@ -113,30 +113,29 @@ Deno.serve(async (req) => {
               address: p.address || null,
               phone: p.phone || null,
               fax: p.fax || null,
-              mobile: p.mobile || null,
-              emergency_phone: p.emergency_phone || null,
+              mobile: null,
+              emergency_phone: p.emergency_call || null,
               email: p.email || null,
               website: p.website || null,
-              profile_description: p.profile_description || null,
+              profile_description: p.profile_text || null,
               logo_url: p.logo_url || null,
-              raw_profile_html: p.raw_profile_html || null,
-              raw_profile_markdown: p.raw_profile_markdown || null,
-              company_alias: p.company_alias || null,
-              office_type: p.office_type || "head_office",
+              raw_profile_html: null,
+              raw_profile_markdown: null,
+              company_alias: null,
+              office_type: p.branch?.includes("Head Office") ? "head_office" : "branch",
               member_since: p.member_since || null,
-              membership_expires: p.membership_expires || null,
-              has_branches: p.has_branches || false,
+              membership_expires: p.expires || null,
+              has_branches: (p.branch_cities && p.branch_cities.length > 1) || false,
               branch_cities: p.branch_cities || [],
-              partner_type: p.partner_type || "freight_forwarder",
-              is_active: p.is_active !== false,
-              rating: p.rating || null,
-              rating_details: p.rating_details || null,
-              enrichment_data: p.enrichment_data || null,
-              enriched_at: p.enriched_at || null,
-              ai_parsed_at: p.ai_parsed_at || null,
+              partner_type: "freight_forwarder",
+              is_active: true,
+              rating: null,
+              rating_details: null,
+              enrichment_data: null,
+              enriched_at: null,
+              ai_parsed_at: null,
             }));
 
-            // Upsert using wca_id as conflict key
             const { error: upsertErr } = await localSb
               .from("partners")
               .upsert(partnerRows, { onConflict: "wca_id" });
@@ -163,19 +162,14 @@ Deno.serve(async (req) => {
               }
             }
 
-            // Fetch and sync contacts from external
+            // Extract contacts and networks from JSON arrays inside wca_partners
             for (const extP of extPartners) {
               const localId = wcaToLocalId.get(extP.wca_id);
               if (!localId) continue;
 
-              // Fetch contacts for this partner from external
-              const { data: extContacts } = await extSb
-                .from("partner_contacts")
-                .select("*")
-                .eq("partner_id", extP.id);
-
-              if (extContacts && extContacts.length > 0) {
-                // Delete existing contacts for this local partner and re-insert
+              // Contacts are in extP.contacts (JSON array)
+              const extContacts = extP.contacts || [];
+              if (extContacts.length > 0) {
                 await localSb
                   .from("partner_contacts")
                   .delete()
@@ -186,7 +180,6 @@ Deno.serve(async (req) => {
                   name: c.name || "Unknown",
                   title: c.title || null,
                   email: c.email || null,
-                  // Fallback chain: direct_phone → direct_line → phone → mobile
                   direct_phone: c.direct_phone || c.direct_line || c.phone || null,
                   mobile: c.mobile || null,
                   is_primary: c.is_primary || false,
@@ -200,13 +193,9 @@ Deno.serve(async (req) => {
                 if (!cErr) contactsSynced += contactRows.length;
               }
 
-              // Fetch networks for this partner from external
-              const { data: extNetworks } = await extSb
-                .from("partner_networks")
-                .select("*")
-                .eq("partner_id", extP.id);
-
-              if (extNetworks && extNetworks.length > 0) {
+              // Networks are in extP.networks (JSON array)
+              const extNetworks = extP.networks || [];
+              if (extNetworks.length > 0) {
                 await localSb
                   .from("partner_networks")
                   .delete()
@@ -214,9 +203,9 @@ Deno.serve(async (req) => {
 
                 const networkRows = extNetworks.map((n: any) => ({
                   partner_id: localId,
-                  network_name: n.network_name,
-                  network_id: n.network_id || null,
-                  expires: n.expires || null,
+                  network_name: typeof n === "string" ? n : (n.network_name || n.name || "Unknown"),
+                  network_id: typeof n === "object" ? (n.network_id || null) : null,
+                  expires: typeof n === "object" ? (n.expires || null) : null,
                 }));
 
                 const { error: nErr } = await localSb
