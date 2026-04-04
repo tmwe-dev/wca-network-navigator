@@ -124,16 +124,28 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             <ContextSection title="Azioni CRM" icon={Users} color="text-emerald-500">
               <p className="text-xs text-muted-foreground mb-2">Azioni rapide per contatti selezionati.</p>
               <div className="grid grid-cols-2 gap-1.5">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-deep-search"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("crm-deep-search"));
+                  import("sonner").then(m => m.toast.info("Deep Search contatti avviato"));
+                }}>
                   <Search className="w-3.5 h-3.5" /> Deep Search
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-linkedin-lookup"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("crm-linkedin-lookup"));
+                  import("sonner").then(m => m.toast.info("LinkedIn lookup avviato"));
+                }}>
                   <ExternalLink className="w-3.5 h-3.5" /> LinkedIn
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-send-cockpit"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("crm-send-cockpit"));
+                  import("sonner").then(m => m.toast.info("Inviato al Cockpit"));
+                }}>
                   <Rocket className="w-3.5 h-3.5" /> → Cockpit
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("crm-export"))}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  window.dispatchEvent(new CustomEvent("crm-export"));
+                  import("sonner").then(m => m.toast.info("Export contatti avviato"));
+                }}>
                   <ArrowUpFromLine className="w-3.5 h-3.5" /> Export
                 </Button>
               </div>

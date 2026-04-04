@@ -55,9 +55,9 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
     }
     const search = filters.search?.trim().toLowerCase();
     if (search) filtered = filtered.filter((g) => g.group_label.toLowerCase().includes(search) || g.group_key.toLowerCase().includes(search));
-    // Filter by leadStatus from global filters
-    if (gf.leadStatus && gf.leadStatus !== "all" && currentGroupBy !== "lead_status") {
-      // leadStatus filtering happens at contact level, not group level — keep all groups
+    // Filter by leadStatus from global filters (only if not grouping by status already)
+    if (gf.leadStatus && gf.leadStatus !== "all" && currentGroupBy !== "status") {
+      // leadStatus filtering happens at contact-row level, not group level
     }
     return filtered.sort((a, b) => b.contact_count - a.contact_count);
   }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.leadStatus]);
