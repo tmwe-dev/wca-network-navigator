@@ -77,6 +77,8 @@ function Terminal({ logs }: { logs: LogEntry[] }) {
 function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [sendContact, setSendContact] = useState("");
+  const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -123,20 +125,35 @@ function WhatsAppTest() {
 
     if (msgs.length === 0) {
       log("⚠️ ZERO messaggi — il selettore DOM non trova le chat!", "error");
-      log("Possibili cause:", "warn");
-      log("  1. WhatsApp Web non è aperto/loggato", "warn");
-      log("  2. I selettori CSS sono cambiati", "warn");
-      log("  3. La sidebar non è ancora renderizzata", "warn");
     }
 
+    setRunning(false);
+  };
+
+  const testSendMessage = async () => {
+    if (!sendContact.trim()) {
+      log("⚠️ Inserisci il nome del contatto WhatsApp", "warn");
+      return;
+    }
+    if (!sendText.trim()) {
+      log("⚠️ Inserisci il testo del messaggio", "warn");
+      return;
+    }
+    setRunning(true);
+    log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
+    const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
+    if (r?.success) {
+      log(`✅ Messaggio inviato con successo!`, "ok");
+      log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
+    } else {
+      log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
+    }
     setRunning(false);
   };
 
   const testRawDom = async () => {
     setRunning(true);
     log("🔍 Test DOM diretto — cerco selettori sulla pagina WA...");
-    
-    // Ask the extension to execute a diagnostic script
     const r = await sendToExtension("from-webapp-wa", "from-extension-wa", "diagnosticDom", {}, 30000);
     log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 2000)}`, r?.success ? "ok" : "error");
     setRunning(false);
@@ -151,6 +168,25 @@ function WhatsAppTest() {
         <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">🔍 Diagnostica DOM</Button>
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
       </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={sendContact}
+          onChange={(e) => setSendContact(e.target.value)}
+          placeholder="Nome contatto (es. Papa Ernesto)"
+          className="flex-1"
+        />
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={sendText}
+          onChange={(e) => setSendText(e.target.value)}
+          placeholder="Testo del messaggio"
+          className="flex-1"
+        />
+        <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+      </div>
+
       <Terminal logs={logs} />
     </div>
   );
