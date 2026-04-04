@@ -2,7 +2,8 @@
 // FireScrape — Webapp Bridge Content Script
 // Bridges postMessage from the web app to the extension's
 // background service worker (chrome.runtime.sendMessage).
-// Same pattern as LinkedIn/WhatsApp extension bridges.
+// Handles: FireScrape (from-webapp-fs), WhatsApp (from-webapp-wa),
+//          LinkedIn (from-webapp)
 // ══════════════════════════════════════════════════════════
 
 (function () {
@@ -24,28 +25,39 @@
     catch (_) { window.postMessage(payload, "*"); }
   }
 
-  function failResponse(data, error) {
+  function failResponse(direction, data, error) {
     post({
-      direction: "from-extension-fs",
+      direction: direction,
       action: data.action,
       requestId: data.requestId,
       response: { success: false, error: error },
     });
   }
 
-  function relayMessage(data) {
+  // ── FireScrape relay (from-webapp-fs → background.js) ──
+  function relayFireScrape(data) {
     if (!isExtensionAlive()) {
       alive = false;
-      failResponse(data, "Extension context invalidated — ricarica la pagina");
+      failResponse("from-extension-fs", data, "Extension context invalidated — ricarica la pagina");
       post({ direction: "from-extension-fs", action: "extensionDead" });
       return;
     }
 
-    try {
-      // Build the message for background.js using FireScrape's native actions
-      var msg = { action: data.action };
+    // Ping handled locally
+    if (data.action === "ping") {
+      alive = true;
+      post({
+        direction: "from-extension-fs",
+        action: "ping",
+        requestId: data.requestId,
+        response: { success: true, version: "3.4.0", engine: "firescrape" },
+      });
+      post({ direction: "from-extension-fs", action: "contentScriptReady" });
+      return;
+    }
 
-      // Pass through all payload fields
+    try {
+      var msg = { action: data.action };
       if (data.url) msg.url = data.url;
       if (data.query) msg.query = data.query;
       if (data.schema) msg.schema = data.schema;
@@ -64,83 +76,152 @@
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
           alive = false;
-          console.warn("[FireScrape Bridge] Extension error:", chrome.runtime.lastError.message);
-          failResponse(data, "Extension context invalidated");
+          failResponse("from-extension-fs", data, "Extension context invalidated");
           post({ direction: "from-extension-fs", action: "extensionDead" });
           return;
         }
-
         alive = true;
-
-        // Normalize response — FireScrape returns data directly, not {success: true, ...}
         var resp = response || {};
-        if (resp.error) {
-          resp.success = false;
-        } else if (resp.success === undefined) {
-          resp.success = true;
-        }
-
+        if (resp.error) resp.success = false;
+        else if (resp.success === undefined) resp.success = true;
         post({
           direction: "from-extension-fs",
           action: data.action,
           requestId: data.requestId,
           response: resp,
         });
-
         if (data.action === "ping") {
           post({ direction: "from-extension-fs", action: "contentScriptReady" });
         }
       });
     } catch (err) {
       alive = false;
-      console.warn("[FireScrape Bridge] sendMessage failed:", err.message);
-      failResponse(data, "Extension context invalidated");
+      failResponse("from-extension-fs", data, "Extension context invalidated");
       post({ direction: "from-extension-fs", action: "extensionDead" });
     }
   }
 
-  // Heartbeat
+  // ── WhatsApp relay (from-webapp-wa → background.js → wa-content.js on WhatsApp tab) ──
+  function relayWhatsApp(data) {
+    if (!isExtensionAlive()) {
+      alive = false;
+      failResponse("from-extension-wa", data, "Extension context invalidated — ricarica la pagina");
+      post({ direction: "from-extension-wa", action: "extensionDead" });
+      return;
+    }
+
+    // Ping handled locally — just check extension is alive
+    if (data.action === "ping") {
+      alive = true;
+      post({
+        direction: "from-extension-wa",
+        action: "ping",
+        requestId: data.requestId,
+        response: { success: true, version: "3.4.0" },
+      });
+      post({ direction: "from-extension-wa", action: "contentScriptReady" });
+      return;
+    }
+
+    try {
+      // Relay to background.js which will forward to WhatsApp tab
+      chrome.runtime.sendMessage(
+        { type: "wa-relay", waAction: data.action, requestId: data.requestId, payload: data },
+        function (response) {
+          if (chrome.runtime.lastError) {
+            alive = false;
+            failResponse("from-extension-wa", data, "Extension context invalidated");
+            post({ direction: "from-extension-wa", action: "extensionDead" });
+            return;
+          }
+          alive = true;
+          post({
+            direction: "from-extension-wa",
+            action: data.action,
+            requestId: data.requestId,
+            response: response || { success: false, error: "No response from WhatsApp tab" },
+          });
+        }
+      );
+    } catch (err) {
+      alive = false;
+      failResponse("from-extension-wa", data, "Extension context invalidated");
+      post({ direction: "from-extension-wa", action: "extensionDead" });
+    }
+  }
+
+  // ── LinkedIn relay (from-webapp → background.js) ──
+  function relayLinkedIn(data) {
+    if (!isExtensionAlive()) {
+      alive = false;
+      failResponse("from-extension", data, "Extension context invalidated");
+      return;
+    }
+
+    if (data.action === "ping") {
+      alive = true;
+      post({
+        direction: "from-extension",
+        action: "ping",
+        requestId: data.requestId,
+        response: { success: true, version: "3.4.0" },
+      });
+      post({ direction: "from-extension", action: "contentScriptReady" });
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage(
+        { type: "li-relay", liAction: data.action, requestId: data.requestId, payload: data },
+        function (response) {
+          if (chrome.runtime.lastError) {
+            failResponse("from-extension", data, "Extension context invalidated");
+            return;
+          }
+          alive = true;
+          post({
+            direction: "from-extension",
+            action: data.action,
+            requestId: data.requestId,
+            response: response || { success: false, error: "No response" },
+          });
+        }
+      );
+    } catch (err) {
+      failResponse("from-extension", data, "Extension context invalidated");
+    }
+  }
+
+  // ── Heartbeat ──
   setInterval(function () {
     var nowAlive = isExtensionAlive();
     if (nowAlive && !alive) {
       alive = true;
       post({ direction: "from-extension-fs", action: "contentScriptReady" });
-      console.info("[FireScrape Bridge] Extension reconnected");
+      post({ direction: "from-extension-wa", action: "contentScriptReady" });
+      post({ direction: "from-extension", action: "contentScriptReady" });
     } else if (!nowAlive && alive) {
       alive = false;
       post({ direction: "from-extension-fs", action: "extensionDead" });
-      console.warn("[FireScrape Bridge] Extension context lost");
+      post({ direction: "from-extension-wa", action: "extensionDead" });
+      post({ direction: "from-extension", action: "extensionDead" });
     }
   }, HEARTBEAT_MS);
 
+  // ── Message Router ──
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
     var data = event.data;
-    if (!data || data.direction !== "from-webapp-fs") return;
-    relayMessage(data);
+    if (!data || !data.direction) return;
+
+    if (data.direction === "from-webapp-fs") relayFireScrape(data);
+    else if (data.direction === "from-webapp-wa") relayWhatsApp(data);
+    else if (data.direction === "from-webapp") relayLinkedIn(data);
   });
 
-  // Handle ping action in background for availability check
-  // FireScrape background doesn't have a "ping" handler, so we handle it here
-  var originalRelayMessage = relayMessage;
-  relayMessage = function(data) {
-    if (data.action === "ping") {
-      // Respond directly — we know the extension is alive if we're executing
-      if (isExtensionAlive()) {
-        alive = true;
-        post({
-          direction: "from-extension-fs",
-          action: "ping",
-          requestId: data.requestId,
-          response: { success: true, version: "3.3.0", engine: "firescrape" },
-        });
-        post({ direction: "from-extension-fs", action: "contentScriptReady" });
-        return;
-      }
-    }
-    originalRelayMessage(data);
-  };
-
+  // Announce all bridges
   post({ direction: "from-extension-fs", action: "contentScriptReady" });
-  console.log("[FireScrape Bridge] Content script loaded — webapp bridge active");
+  post({ direction: "from-extension-wa", action: "contentScriptReady" });
+  post({ direction: "from-extension", action: "contentScriptReady" });
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.0 (FS + WA + LI)");
 })();

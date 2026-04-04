@@ -46,6 +46,22 @@ const RELAY = {
 // MESSAGING — handler unificati
 // ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // ── WhatsApp Relay: webapp → background → WhatsApp tab ──
+  if (msg.type === 'wa-relay') {
+    handleWaRelay(msg).then(sendResponse).catch(err =>
+      sendResponse({ success: false, error: err.message })
+    );
+    return true;
+  }
+
+  // ── LinkedIn Relay: webapp → background → LinkedIn tab ──
+  if (msg.type === 'li-relay') {
+    handleLiRelay(msg).then(sendResponse).catch(err =>
+      sendResponse({ success: false, error: err.message })
+    );
+    return true;
+  }
+
   const handlers = {
     // Scraping
     'scrape':         handleScrape,
@@ -142,7 +158,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }));
     return true;
   } else {
-    // Always respond, even for unknown actions
     sendResponse({
       error: 'Unknown action: ' + msg.action,
       code: 'UNKNOWN_ACTION',
@@ -150,6 +165,64 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return false;
   }
 });
+
+// ============================================================
+// WHATSAPP TAB RELAY
+// ============================================================
+async function handleWaRelay(msg) {
+  const tabs = await chrome.tabs.query({ url: '*://web.whatsapp.com/*' });
+  if (!tabs.length) {
+    return { success: false, error: 'WhatsApp Web non è aperto. Apri web.whatsapp.com in un tab.' };
+  }
+  const waTab = tabs[0];
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve({ success: false, error: 'WhatsApp tab timeout (60s)' });
+    }, 60000);
+    chrome.tabs.sendMessage(waTab.id, {
+      type: 'wa-command',
+      action: msg.waAction,
+      requestId: msg.requestId,
+      payload: msg.payload || {},
+    }, (response) => {
+      clearTimeout(timeout);
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      resolve(response || { success: false, error: 'No response from WA tab' });
+    });
+  });
+}
+
+// ============================================================
+// LINKEDIN TAB RELAY
+// ============================================================
+async function handleLiRelay(msg) {
+  const tabs = await chrome.tabs.query({ url: '*://www.linkedin.com/*' });
+  if (!tabs.length) {
+    return { success: false, error: 'LinkedIn non è aperto.' };
+  }
+  const liTab = tabs[0];
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve({ success: false, error: 'LinkedIn tab timeout' });
+    }, 60000);
+    chrome.tabs.sendMessage(liTab.id, {
+      type: 'li-command',
+      action: msg.liAction,
+      requestId: msg.requestId,
+      payload: msg.payload || {},
+    }, (response) => {
+      clearTimeout(timeout);
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      resolve(response || { success: false, error: 'No response from LI tab' });
+    });
+  });
+}
 
 // ============================================================
 // SERVICE WORKER LIFECYCLE — MV3 Compatible
