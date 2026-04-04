@@ -13,7 +13,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPanel";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
-
+import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 
 // ── New consolidated pages (with prefetch for high-traffic routes) ──
 const SuperHome3D = lazy(() => import("./pages/SuperHome3D"));
@@ -84,6 +84,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ViteChunkRecovery />
           <BackgroundSyncIndicator />
           <ConnectionBanner />
           <RuntimeDiagnosticPanel />
