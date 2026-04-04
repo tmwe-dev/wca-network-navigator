@@ -1,57 +1,54 @@
 
-# Piano Ristrutturazione: Sidebar Dinamiche + Allineamento CRM
 
-## Stato Attuale
-- **VerticalTabNav** (sinistra, 140px): Usata in Settings, Outreach, CRM solo come navigazione tab. NON ospita filtri/ordinamenti contestuali.
-- **FiltersDrawer** (sinistra, Sheet overlay): Filtri globali che si adattano per route, ma è un overlay, non integrato nella sidebar.
-- **MissionDrawer** (destra, Sheet overlay): Obiettivi, proposte, destinatari — overlay generico, non contestuale alla sezione.
-- **Arricchimento**: Ha i propri filtri interni (sidebar sinistra custom da 220px), ma il "LinkedIn Batch" compare sempre. Nessun bottone azione funzionante.
-- **CRM**: Grafica minimale, non allineata al Network (che ha 3 colonne: Paesi → Partner → Dettaglio).
+## Piano: Reset e Risincronizzazione Partners
 
-## Piano d'Azione
+### Contesto
 
-### FASE 1: VerticalTabNav Potenziata con Filtri Contestuali
-Estendere `VerticalTabNav` per ospitare sotto i tab anche un **filterSlot** (già previsto nel codice ma MAI usato!) che ogni pagina può popolare dinamicamente.
+Attualmente la tabella locale `partners` contiene **12.193 record** scaricati dalla tabella sbagliata (`partners` nell'esterno, che non esiste come tabella separata — i dati sono stati mappati da `wca_directory`). La fonte corretta è **`wca_partners`** nel DB esterno (2.687 record già processati dal software esterno).
 
-**Pagine da aggiornare:**
-1. **Settings**: Aggiungere filtri contestuali nel filterSlot per ogni sezione (es. Arricchimento → filtri fonte/stato dati inline)
-2. **Outreach**: Spostare filtri da FiltersDrawer al filterSlot quando pertinenti (es. Email → filtri email, Cockpit → filtri cockpit)
-3. **CRM**: Aggiungere filtri inline (Stato lead, Origine, Raggruppamento)
+### Dati da cancellare (tabella locale)
 
-### FASE 2: Fix Arricchimento
-1. **Rimuovere sidebar custom interna** — usare il filterSlot di VerticalTabNav
-2. **LinkedIn Batch contestuale** — mostrare solo quando fonte = "Contatti Importati" o "Tutti"
-3. **Aggiungere azioni batch per ogni fonte:**
-   - WCA Partner → Cerca Logo batch, Cerca LinkedIn batch
-   - Contatti Importati → LinkedIn batch (esistente), Deep Search batch
-   - Mittenti Email → Risolvi identità batch
-   - Cockpit → Arricchisci selezione
-4. **Stats contestuali** che cambiano in base ai filtri attivi
+| Tabella | Record attuali |
+|---|---|
+| `partners` | 12.193 |
+| `partner_contacts` | 7.114 |
+| `partner_networks` | 19.869 |
+| `partner_services` | 0 |
+| `partner_certifications` | 0 |
+| `partner_social_links` | 8 |
 
-### FASE 3: MissionDrawer Contestuale (Destra)
-Rendere il contenuto del MissionDrawer dinamico in base alla pagina:
-- **Network**: Azioni partner (Deep Search, Invia a Cockpit, Export)
-- **CRM/Contatti**: Azioni contatto (LinkedIn lookup, Deep Search, Interazioni)
-- **Outreach/Cockpit**: Azioni outreach (Draft email, Call, WhatsApp)
-- **Settings/Arricchimento**: Azioni batch (Avvia batch, Stop, Export risultati)
-- Sezione Destinatari sempre presente (come ora)
+### Step 1 — Svuotare tabelle locali (migrazione)
 
-### FASE 4: Allineamento Visivo CRM con Network
-1. **CRM Contatti**: Passare da layout ResizablePanel a layout 3 colonne stile Network:
-   - Colonna 1: Lista gruppi/origini (compatta, come i paesi nel Network)
-   - Colonna 2: Lista contatti (come partner list nel Network)
-   - Colonna 3: Dettaglio contatto (come partner detail nel Network)
-2. **CRM Biglietti**: Allineare cards e gruppi aziendali allo stile Network
-3. **Stili uniformi**: Stessi bordi, spaziature, header e badge tra Network e CRM
+Eseguire un `TRUNCATE CASCADE` sulle tabelle partner e dati associati:
 
-### FASE 5: Pulizia
-1. Eliminare i filtri duplicati tra FiltersDrawer e filterSlot
-2. Rendere FiltersDrawer un "filtro avanzato" per filtri secondari
-3. Rimuovere codice Arricchimento inline (220px sidebar interna)
+```sql
+TRUNCATE TABLE partner_contacts, partner_networks, partner_services, 
+  partner_certifications, partner_social_links, partners_no_contacts CASCADE;
+TRUNCATE TABLE partners CASCADE;
+```
 
-## Ordine di Esecuzione
-1. ~~Fase 2~~ **Fix Arricchimento** (priorità assoluta — niente funziona)
-2. **Fase 1** VerticalTabNav + filterSlot (infrastruttura)
-3. **Fase 4** Allineamento CRM
-4. **Fase 3** MissionDrawer contestuale
-5. **Fase 5** Pulizia finale
+Questo rimuove anche i dati di deep search, alias, etc. che sono colonne nella tabella `partners` stessa (`enrichment_data`, `company_alias`, `enriched_at`, `ai_parsed_at`).
+
+### Step 2 — Correggere la Edge Function `sync-wca-partners`
+
+Cambiare la sorgente dati da `"partners"` a **`"wca_partners"`** nel DB esterno. Questo riguarda:
+
+- **Riga 70**: conteggio — `.from("partners")` → `.from("wca_partners")`
+- **Riga 93**: fetch batch — `.from("partners")` → `.from("wca_partners")`
+- **Riga 145**: fetch contatti — `.from("partner_contacts")` → verificare se esiste nell'esterno o se i contatti sono dentro `wca_partners`
+- **Riga 164**: fetch networks — `.from("partner_networks")` → verificare se esiste nell'esterno
+
+I campi di `wca_partners` potrebbero avere una struttura diversa da `partners`, quindi dovrò verificare lo schema e rimappare di conseguenza.
+
+### Step 3 — Deploy e risincronizzazione
+
+1. Deploy della Edge Function corretta
+2. L'utente seleziona i paesi dalla UI Network e lancia il sync
+3. I dati vengono importati da `wca_partners` (2.687 record)
+
+### Dettagli tecnici
+
+- Le tabelle con `partner_id` come FK (activities, campaign_jobs, channel_messages, cockpit_queue, etc.) non vengono toccate direttamente — il TRUNCATE CASCADE gestirà le dipendenze
+- Il vincolo di unicità su `wca_id` resta attivo per futuri upsert
+- Dopo il sync, i conteggi dovrebbero corrispondere esattamente al DB esterno
+
