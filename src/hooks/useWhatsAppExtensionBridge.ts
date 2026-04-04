@@ -145,5 +145,9 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom };
+  const onSidebarChanged = useCallback((cb: () => void) => {
+    sidebarChangedCbRef.current = cb;
+  }, []);
+
+  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom, onSidebarChanged };
 }
