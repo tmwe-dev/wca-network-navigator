@@ -17,7 +17,6 @@ function jitter(base: number) {
 }
 
 function buildExternalId(contact: string, timestamp: string, text: string): string {
-  const { buildDeterministicId } = await import("@/lib/messageDedup");
   return buildDeterministicId("li", contact, text, timestamp);
 }
 
