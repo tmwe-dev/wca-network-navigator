@@ -36,7 +36,7 @@ export function LinkedInInboxView() {
 
   const { data: messages = [], isLoading } = useChannelMessages("linkedin");
   const markAsRead = useMarkAsRead();
-  const { sendMessage } = useLinkedInMessagingBridge();
+  const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
   const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
   const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
 
@@ -182,7 +182,10 @@ export function LinkedInInboxView() {
                 </Button>
                 <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
                   {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                  {isAvailable ? "On" : "Off"}
+                  LI
+                </Badge>
+                <Badge variant={isFireScrapeAvailable ? "default" : "secondary"} className="text-[9px] gap-0.5 h-5 px-1.5" title="FireScrape">
+                  {isFireScrapeAvailable ? "🔥" : "⭕"} FS
                 </Badge>
                 {/* Backfill */}
                 {bfProgress.status === "running" || bfProgress.status === "paused" ? (
