@@ -193,18 +193,9 @@ function FireScrapeTest() {
 
   const testScrapeUrl = async () => {
     setRunning(true);
-    log(`🌐 Navigazione + scrape: ${url}`);
-    // Navigate first
-    const nav = await fsMsg("agent-action", { step: { action: "navigate", url } }, 20000);
-    if (!nav?.success) {
-      log(`❌ Navigazione fallita: ${nav?.error || JSON.stringify(nav)}`, "error");
-      setRunning(false);
-      return;
-    }
-    log("✅ Pagina caricata, attendo render...", "ok");
-    await new Promise(r => setTimeout(r, 2500));
-    
-    const r = await fsMsg("scrape", { skipCache: true }, 20000);
+    log(`🌐 Scrape URL (background tab): ${url}`);
+    // Use scrape with url param — FireScrape opens a background tab automatically
+    const r = await fsMsg("scrape", { url, skipCache: true }, 30000);
     if (r?.success) {
       log(`✅ Scrape completato`, "ok");
       log(`  Titolo: ${r.metadata?.title || "?"}`, "info");
