@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 
 type LogEntry = { ts: string; msg: string; type: "info" | "ok" | "warn" | "error" };
 
@@ -80,6 +82,9 @@ function WhatsAppTest() {
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
 
+  // ✅ Usa lo STESSO hook dell'inbox WhatsApp
+  const { isAvailable, verifySession, sendWhatsApp, readUnread } = useWhatsAppExtensionBridge();
+
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
@@ -90,21 +95,22 @@ function WhatsAppTest() {
     const r = await waMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    log(`📡 Hook isAvailable: ${isAvailable}`, isAvailable ? "ok" : "warn");
     setRunning(false);
   };
 
   const testSession = async () => {
     setRunning(true);
-    log("🔑 Verifica sessione WhatsApp Web...");
-    const r = await waMsg("verifySession", {}, 30000);
+    log("🔑 Verifica sessione WhatsApp Web (via hook)...");
+    const r = await verifySession();
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
     setRunning(false);
   };
 
   const testReadUnread = async () => {
     setRunning(true);
-    log("📨 Lettura messaggi (readUnread)...");
-    const r = await waMsg("readUnread", {}, 60000);
+    log("📨 Lettura messaggi (via hook readUnread — stesso dell'Inbox)...");
+    const r = await readUnread();
     
     if (!r?.success) {
       log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
@@ -140,8 +146,8 @@ function WhatsAppTest() {
       return;
     }
     setRunning(true);
-    log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
-    const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
+    log(`📤 Invio WhatsApp a "${sendContact}" (via hook sendWhatsApp — stesso dell'Inbox)...`);
+    const r = await sendWhatsApp(sendContact, sendText);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -169,22 +175,22 @@ function WhatsAppTest() {
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio WhatsApp (stesso bridge dell'Inbox)</p>
         <Input
           value={sendContact}
           onChange={(e) => setSendContact(e.target.value)}
           placeholder="Nome contatto (es. Papa Ernesto)"
-          className="flex-1"
         />
-      </div>
-      <div className="flex gap-2">
-        <Input
-          value={sendText}
-          onChange={(e) => setSendText(e.target.value)}
-          placeholder="Testo del messaggio"
-          className="flex-1"
-        />
-        <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+        <div className="flex gap-2">
+          <Input
+            value={sendText}
+            onChange={(e) => setSendText(e.target.value)}
+            placeholder="Testo del messaggio"
+            className="flex-1"
+          />
+          <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+        </div>
       </div>
 
       <Terminal logs={logs} />
@@ -316,6 +322,9 @@ function LinkedInTest() {
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
 
+  // ✅ Usa lo STESSO hook dell'inbox LinkedIn
+  const { isAvailable, isFireScrapeAvailable, readInbox, sendMessage, diagnosticDom } = useLinkedInMessagingBridge();
+
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
@@ -326,6 +335,7 @@ function LinkedInTest() {
     const r = await liMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    log(`📡 Hook isAvailable: ${isAvailable} | FireScrape: ${isFireScrapeAvailable}`, isAvailable ? "ok" : "warn");
     setRunning(false);
   };
 
@@ -384,10 +394,10 @@ function LinkedInTest() {
 
   const testReadInbox = async () => {
     setRunning(true);
-    log("📨 Lettura inbox LinkedIn (30s timeout)...");
-    const r = await liMsg("readLinkedInInbox", {}, 35000);
+    log("📨 Lettura inbox LinkedIn (via hook readInbox — stesso dell'Inbox)...");
+    const r = await readInbox();
     if (r?.success && r?.threads?.length) {
-      log(`✅ Trovati ${r.threads.length} thread`, "ok");
+      log(`✅ Trovati ${r.threads.length} thread (source: ${r.source || "?"})`, "ok");
       r.threads.forEach((t: any) => log(`  • ${t.name}: ${t.lastMessage?.slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
@@ -405,10 +415,10 @@ function LinkedInTest() {
       return;
     }
     setRunning(true);
-    log(`📤 Invio messaggio LinkedIn...`);
+    log(`📤 Invio messaggio LinkedIn (via hook sendMessage — stesso dell'Inbox)...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    const r = await liMsg("sendMessage", { url: sendUrl, message: sendText }, 30000);
+    const r = await sendMessage(sendUrl, sendText);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -423,26 +433,22 @@ function LinkedInTest() {
 
   const testDiagnosticDom = async () => {
     setRunning(true);
-    log("🔬 Diagnostica DOM LinkedIn Messaging...");
-    const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
+    log("🔬 Diagnostica DOM LinkedIn Messaging (via hook)...");
+    const r = await diagnosticDom();
     if (r?.success) {
-      log(`📍 URL: ${r.url}`, "info");
-      log(`📄 Title: ${r.title}`, "info");
-      log(`📏 Body length: ${r.bodyLength} chars`, "info");
-      if (r.selectorResults) {
+      log(`📍 URL: ${(r as any).url}`, "info");
+      log(`📄 Title: ${(r as any).title}`, "info");
+      log(`📏 Body length: ${(r as any).bodyLength} chars`, "info");
+      if ((r as any).selectorResults) {
         log(`🎯 Selettori trovati:`, "info");
-        Object.entries(r.selectorResults).forEach(([sel, count]) => {
+        Object.entries((r as any).selectorResults).forEach(([sel, count]) => {
           const c = count as number;
           log(`  ${c > 0 ? "✅" : "❌"} ${sel}: ${c}`, c > 0 ? "ok" : "info");
         });
       }
-      if (r.messagingLinks?.length) {
-        log(`🔗 Link messaging: ${r.messagingLinks.length}`, "ok");
-        r.messagingLinks.forEach((l: string) => log(`  ${l}`, "info"));
-      }
-      if (r.liClasses?.length) {
-        log(`📋 Classi <li> (prime 15):`, "info");
-        r.liClasses.slice(0, 15).forEach((c: string) => log(`  ${c}`, "info"));
+      if ((r as any).messagingLinks?.length) {
+        log(`🔗 Link messaging: ${(r as any).messagingLinks.length}`, "ok");
+        (r as any).messagingLinks.forEach((l: string) => log(`  ${l}`, "info"));
       }
     } else {
       log(`❌ Diagnostica fallita: ${r?.error || JSON.stringify(r)}`, "error");
@@ -474,7 +480,7 @@ function LinkedInTest() {
       </div>
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
+        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio LinkedIn (stesso bridge dell'Inbox)</p>
         <Input
           value={sendUrl}
           onChange={(e) => setSendUrl(e.target.value)}
