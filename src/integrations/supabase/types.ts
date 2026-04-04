@@ -2268,6 +2268,7 @@ export type Database = {
           partner_id: string
           platform: Database["public"]["Enums"]["social_platform"]
           url: string
+          user_id: string | null
         }
         Insert: {
           contact_id?: string | null
@@ -2276,6 +2277,7 @@ export type Database = {
           partner_id: string
           platform: Database["public"]["Enums"]["social_platform"]
           url: string
+          user_id?: string | null
         }
         Update: {
           contact_id?: string | null
@@ -2284,6 +2286,7 @@ export type Database = {
           partner_id?: string
           platform?: Database["public"]["Enums"]["social_platform"]
           url?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2743,6 +2746,7 @@ export type Database = {
           status: Database["public"]["Enums"]["reminder_status"] | null
           title: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -2754,6 +2758,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["reminder_status"] | null
           title: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -2765,6 +2770,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["reminder_status"] | null
           title?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2892,6 +2898,7 @@ export type Database = {
           file_size: number
           file_url: string
           id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -2900,6 +2907,7 @@ export type Database = {
           file_size?: number
           file_url: string
           id?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -2908,6 +2916,7 @@ export type Database = {
           file_size?: number
           file_url?: string
           id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
