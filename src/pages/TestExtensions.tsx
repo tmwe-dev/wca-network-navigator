@@ -410,9 +410,6 @@ export default function TestExtensions() {
     </div>
   );
 }
-  return (
-    <div className="min-h-screen bg-background text-foreground p-6 max-w-4xl mx-auto">
-      <p className="text-muted-foreground text-sm mb-6">
         Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni.
       </p>
 
