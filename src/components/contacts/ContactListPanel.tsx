@@ -49,10 +49,18 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
   const groups = useMemo(() => {
     if (!allGroupCounts) return [];
     let filtered = allGroupCounts.filter((g) => g.group_type === currentGroupBy);
+    // If a group is selected from Column 1, only show that group
+    if (filterGroupKey && filterGroupType === currentGroupBy) {
+      filtered = filtered.filter((g) => g.group_key === filterGroupKey);
+    }
     const search = filters.search?.trim().toLowerCase();
     if (search) filtered = filtered.filter((g) => g.group_label.toLowerCase().includes(search) || g.group_key.toLowerCase().includes(search));
+    // Filter by leadStatus from global filters
+    if (gf.leadStatus && gf.leadStatus !== "all" && currentGroupBy !== "lead_status") {
+      // leadStatus filtering happens at contact level, not group level — keep all groups
+    }
     return filtered.sort((a, b) => b.contact_count - a.contact_count);
-  }, [allGroupCounts, currentGroupBy, filters.search]);
+  }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.leadStatus]);
 
   const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
 
