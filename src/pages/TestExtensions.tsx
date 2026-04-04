@@ -322,6 +322,9 @@ function LinkedInTest() {
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
 
+  // ✅ Usa lo STESSO hook dell'inbox LinkedIn
+  const { isAvailable, isFireScrapeAvailable, readInbox, sendMessage, diagnosticDom } = useLinkedInMessagingBridge();
+
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
@@ -332,6 +335,7 @@ function LinkedInTest() {
     const r = await liMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    log(`📡 Hook isAvailable: ${isAvailable} | FireScrape: ${isFireScrapeAvailable}`, isAvailable ? "ok" : "warn");
     setRunning(false);
   };
 
@@ -390,10 +394,10 @@ function LinkedInTest() {
 
   const testReadInbox = async () => {
     setRunning(true);
-    log("📨 Lettura inbox LinkedIn (30s timeout)...");
-    const r = await liMsg("readLinkedInInbox", {}, 35000);
+    log("📨 Lettura inbox LinkedIn (via hook readInbox — stesso dell'Inbox)...");
+    const r = await readInbox();
     if (r?.success && r?.threads?.length) {
-      log(`✅ Trovati ${r.threads.length} thread`, "ok");
+      log(`✅ Trovati ${r.threads.length} thread (source: ${r.source || "?"})`, "ok");
       r.threads.forEach((t: any) => log(`  • ${t.name}: ${t.lastMessage?.slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
@@ -411,10 +415,10 @@ function LinkedInTest() {
       return;
     }
     setRunning(true);
-    log(`📤 Invio messaggio LinkedIn...`);
+    log(`📤 Invio messaggio LinkedIn (via hook sendMessage — stesso dell'Inbox)...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    const r = await liMsg("sendMessage", { url: sendUrl, message: sendText }, 30000);
+    const r = await sendMessage(sendUrl, sendText);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -429,26 +433,22 @@ function LinkedInTest() {
 
   const testDiagnosticDom = async () => {
     setRunning(true);
-    log("🔬 Diagnostica DOM LinkedIn Messaging...");
-    const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
+    log("🔬 Diagnostica DOM LinkedIn Messaging (via hook)...");
+    const r = await diagnosticDom();
     if (r?.success) {
-      log(`📍 URL: ${r.url}`, "info");
-      log(`📄 Title: ${r.title}`, "info");
-      log(`📏 Body length: ${r.bodyLength} chars`, "info");
-      if (r.selectorResults) {
+      log(`📍 URL: ${(r as any).url}`, "info");
+      log(`📄 Title: ${(r as any).title}`, "info");
+      log(`📏 Body length: ${(r as any).bodyLength} chars`, "info");
+      if ((r as any).selectorResults) {
         log(`🎯 Selettori trovati:`, "info");
-        Object.entries(r.selectorResults).forEach(([sel, count]) => {
+        Object.entries((r as any).selectorResults).forEach(([sel, count]) => {
           const c = count as number;
           log(`  ${c > 0 ? "✅" : "❌"} ${sel}: ${c}`, c > 0 ? "ok" : "info");
         });
       }
-      if (r.messagingLinks?.length) {
-        log(`🔗 Link messaging: ${r.messagingLinks.length}`, "ok");
-        r.messagingLinks.forEach((l: string) => log(`  ${l}`, "info"));
-      }
-      if (r.liClasses?.length) {
-        log(`📋 Classi <li> (prime 15):`, "info");
-        r.liClasses.slice(0, 15).forEach((c: string) => log(`  ${c}`, "info"));
+      if ((r as any).messagingLinks?.length) {
+        log(`🔗 Link messaging: ${(r as any).messagingLinks.length}`, "ok");
+        (r as any).messagingLinks.forEach((l: string) => log(`  ${l}`, "info"));
       }
     } else {
       log(`❌ Diagnostica fallita: ${r?.error || JSON.stringify(r)}`, "error");
@@ -480,7 +480,7 @@ function LinkedInTest() {
       </div>
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
+        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio LinkedIn (stesso bridge dell'Inbox)</p>
         <Input
           value={sendUrl}
           onChange={(e) => setSendUrl(e.target.value)}
