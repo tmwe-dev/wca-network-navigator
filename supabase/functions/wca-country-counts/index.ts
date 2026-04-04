@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     while (true) {
       const { data, error } = await ext
-        .from("wca_partners")
+        .from("wca_profiles")
         .select("country_code")
         .not("country_code", "is", null)
         .range(offset, offset + PAGE - 1);
