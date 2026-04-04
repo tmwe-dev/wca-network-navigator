@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
               wca_id: p.wca_id,
               company_name: p.company_name,
               country_code: p.country_code,
-              country_name: p.country_name || countryCode,
+              country_name: p.country_name || p.country_code || "Unknown",
               city: p.city || "",
               address: p.address || null,
               phone: p.phone || null,
