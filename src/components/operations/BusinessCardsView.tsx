@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+type ViewMode = "compact" | "card" | "expanded";
+
 interface BcaGroup {
   key: string;
   companyName: string;
