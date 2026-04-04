@@ -35,6 +35,7 @@ export function WhatsAppInboxView() {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
