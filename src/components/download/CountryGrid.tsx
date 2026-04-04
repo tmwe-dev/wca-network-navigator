@@ -41,37 +41,9 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
 
-  const handleSync = useCallback(async () => {
-    const targets = selected.length > 0 ? selected : [];
-    if (targets.length === 0) {
-      toast.error("Seleziona almeno un paese da sincronizzare");
-      return;
-    }
-    setSyncing(true);
-    const toastId = toast.loading(`Sincronizzazione ${targets.length} paes${targets.length === 1 ? "e" : "i"}...`);
-    let totalRecords = 0;
-    let errors = 0;
-    for (const country of targets) {
-      try {
-        const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
-          body: { countryCode: country.code, refresh: true },
-        });
-        if (error) throw error;
-        totalRecords += data?.total ?? 0;
-      } catch {
-        errors++;
-      }
-    }
-    if (errors === targets.length) {
-      toast.error("Sincronizzazione fallita per tutti i paesi", { id: toastId });
-    } else {
-      toast.success(`Sync completata: ${totalRecords} record aggiornati${errors > 0 ? ` (${errors} errori)` : ""}`, { id: toastId });
-    }
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
-    queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
-    queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-    setSyncing(false);
-  }, [queryClient, selected]);
+  const handleSync = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
+  }, []);
 
   const { data: statsData, isLoading: statsLoading, isError: statsError } = useCountryStats();
   const stats = statsData?.byCountry || {};
