@@ -27,10 +27,17 @@ function jitter(base: number) {
 const DEESCALATE_6_TO_3 = 60_000;   // 60s no reply → drop from 6 to 3
 const DEESCALATE_3_TO_0 = 180_000;  // 3min no new messages → drop to 0
 
-function buildExternalId(contact: string, timestamp: string, text: string): string {
-  const safeText = (text || "").slice(0, 50).replace(/[|]/g, "_");
-  const safeContact = (contact || "unknown").replace(/[|]/g, "_");
-  return `wa_${safeContact}_${timestamp}_${safeText}`;
+// Detect outbound messages: WhatsApp sidebar prefixes your own messages with "Tu: " or "You: "
+const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: "];
+
+function detectDirection(text: string): { direction: "inbound" | "outbound"; cleanText: string } {
+  const lower = text.toLowerCase();
+  for (const prefix of OUTBOUND_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      return { direction: "outbound", cleanText: text.slice(prefix.length) };
+    }
+  }
+  return { direction: "inbound", cleanText: text };
 }
 
 export function useWhatsAppAdaptiveSync() {
