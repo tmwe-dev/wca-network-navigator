@@ -206,7 +206,7 @@ export function WhatsAppInboxView() {
                     <Square className="w-3 h-3" /> Stop
                   </Button>
                 ) : (
-                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable || bfProgress.status === "running"} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi persi">
+                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi persi">
                     <Download className="w-3 h-3" /> Backfill
                   </Button>
                 )}
