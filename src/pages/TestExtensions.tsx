@@ -410,23 +410,3 @@ export default function TestExtensions() {
     </div>
   );
 }
-        Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni.
-      </p>
-
-      <Tabs defaultValue="whatsapp" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="whatsapp">💬 WhatsApp</TabsTrigger>
-          <TabsTrigger value="firescrape">🔥 FireScrape</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="whatsapp">
-          <WhatsAppTest />
-        </TabsContent>
-
-        <TabsContent value="firescrape">
-          <FireScrapeTest />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
