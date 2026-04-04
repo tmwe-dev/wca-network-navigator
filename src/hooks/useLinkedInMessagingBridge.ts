@@ -239,73 +239,63 @@ export function useLinkedInMessagingBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // ── READ INBOX: LinkedIn ext (primary, background tab) → FireScrape (fallback) ──
+  // ── READ INBOX: LinkedIn ext navigates (background), FireScrape scrapes ──
   const readInbox = useCallback(async (): Promise<BridgeResponse> => {
-    // Strategy 1: LinkedIn extension — opens tab in background, no disruption
-    const liResult = await sendToLinkedInExt("readLinkedInInbox", {}, 30000);
-    if (liResult.success && liResult.threads && liResult.threads.length > 0) {
-      console.log("[LI Bridge] LinkedIn ext found", liResult.threads.length, "threads");
-      return { ...liResult, source: "linkedin-ext" };
-    }
-    console.warn("[LI Bridge] LinkedIn ext returned 0 threads, trying FireScrape...");
+    // Step 1: LinkedIn extension opens linkedin.com/messaging/ in a BACKGROUND tab
+    // This triggers navigation without disrupting the user
+    await sendToLinkedInExt("readLinkedInInbox", {}, 30000);
+    // The LinkedIn ext has now navigated its background tab to /messaging/
 
-    // Strategy 2: FireScrape — NOTE: this navigates the active tab!
-    // Only use if LinkedIn extension failed AND FireScrape is available
+    // Step 2: Try FireScrape to scrape the already-open LinkedIn tab
     const fsAvail = await checkFireScrape();
     if (fsAvail) {
-      console.log("[LI Bridge] Using FireScrape to read inbox (will navigate active tab)");
-      const nav = await sendToFireScrape("agent-action", {
-        step: { action: "navigate", url: "https://www.linkedin.com/messaging/" }
-      }, 25000);
-
-      if (nav?.success) {
-        await new Promise(r => setTimeout(r, 4000));
-        const scrape = await sendToFireScrape("scrape", { skipCache: true }, 20000);
-        if (scrape?.success && scrape?.markdown) {
-          console.log("[LI Bridge] FireScrape markdown length:", scrape.markdown.length);
-          const threads = parseInboxMarkdown(scrape.markdown);
-          console.log("[LI Bridge] Parsed threads from FireScrape:", threads.length);
-          if (threads.length > 0) {
-            return { success: true, threads, source: "firescrape" };
-          }
+      console.log("[LI Bridge] FireScrape scraping LinkedIn messaging tab (no navigation)...");
+      // Scrape without navigating — FireScrape reads the active/current page of the LinkedIn tab
+      const scrape = await sendToFireScrape("scrape", { 
+        skipCache: true,
+        url: "https://www.linkedin.com/messaging/"
+      }, 20000);
+      if (scrape?.success && scrape?.markdown) {
+        console.log("[LI Bridge] FireScrape markdown length:", scrape.markdown.length);
+        const threads = parseInboxMarkdown(scrape.markdown);
+        console.log("[LI Bridge] Parsed threads:", threads.length);
+        if (threads.length > 0) {
+          return { success: true, threads, source: "firescrape" };
         }
       }
     }
 
-    // Both failed
-    return liResult; // Return LinkedIn ext result (may have error info)
+    // Fallback: use LinkedIn extension's own DOM scraping result
+    console.log("[LI Bridge] Falling back to LinkedIn ext DOM scraping");
+    const liResult = await sendToLinkedInExt("readLinkedInInbox", {}, 30000);
+    return { ...liResult, source: "linkedin-ext" };
   }, []);
 
-  // ── READ THREAD: LinkedIn ext (primary) → FireScrape (fallback) ──
+  // ── READ THREAD: LinkedIn ext navigates (background), FireScrape scrapes ──
   const readThread = useCallback(async (threadUrl: string): Promise<BridgeResponse> => {
-    // Strategy 1: LinkedIn extension (background tab)
-    const liResult = await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 25000);
-    if (liResult.success && liResult.messages && liResult.messages.length > 0) {
-      return { ...liResult, source: "linkedin-ext" };
-    }
+    // Step 1: LinkedIn ext navigates background tab to thread URL
+    await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 25000);
 
-    // Strategy 2: FireScrape fallback (navigates active tab!)
+    // Step 2: FireScrape scrapes the already-open thread
     const fsAvail = await checkFireScrape();
     if (fsAvail) {
-      console.log("[LI Bridge] Using FireScrape to read thread (fallback)");
-      const nav = await sendToFireScrape("agent-action", {
-        step: { action: "navigate", url: threadUrl }
-      }, 25000);
-
-      if (nav?.success) {
-        await new Promise(r => setTimeout(r, 5000));
-        const scrape = await sendToFireScrape("scrape", { skipCache: true }, 20000);
-        if (scrape?.success && scrape?.markdown) {
-          const contactName = "";
-          const messages = parseThreadMarkdown(scrape.markdown, contactName);
-          if (messages.length > 0) {
-            return { success: true, messages, source: "firescrape" };
-          }
+      console.log("[LI Bridge] FireScrape scraping thread (no navigation)...");
+      const scrape = await sendToFireScrape("scrape", {
+        skipCache: true,
+        url: threadUrl
+      }, 20000);
+      if (scrape?.success && scrape?.markdown) {
+        const contactName = "";
+        const messages = parseThreadMarkdown(scrape.markdown, contactName);
+        if (messages.length > 0) {
+          return { success: true, messages, source: "firescrape" };
         }
       }
     }
 
-    return liResult;
+    // Fallback
+    const liResult = await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 25000);
+    return { ...liResult, source: "linkedin-ext" };
   }, []);
 
   // ── SEND MESSAGE: Always via LinkedIn extension ──
