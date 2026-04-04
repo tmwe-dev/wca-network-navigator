@@ -13,35 +13,47 @@ Deno.serve(async (req) => {
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) throw new Error("WCA_EXTERNAL_SUPABASE_KEY not set");
 
-    const ext = createClient(extUrl, extKey);
-    const results: any = { keyLength: extKey.length };
+    // Direct REST call to list tables via RPC or information_schema
+    const headers: Record<string, string> = {
+      "apikey": extKey,
+      "Authorization": `Bearer ${extKey}`,
+      "Content-Type": "application/json",
+    };
 
-    // Try fetching partners with data (not just count)
-    const { data: p1, error: e1 } = await ext.from("partners").select("id, country_code").limit(5);
-    results.partnersSample = p1;
-    results.partnersError = e1?.message || null;
+    // Try to get the OpenAPI schema which lists all tables
+    const schemaRes = await fetch(`${extUrl}/rest/v1/`, { headers });
+    const schemaText = await schemaRes.text();
+    
+    // Also try rpc
+    const rpcRes = await fetch(`${extUrl}/rest/v1/rpc/`, { headers });
+    const rpcStatus = rpcRes.status;
 
-    // Try count with range header approach
-    const { count: pc, error: e2 } = await ext.from("partners").select("id", { count: "exact", head: true });
-    results.partnersCount = pc;
-    results.countError = e2?.message || null;
+    // Try different possible table names
+    const tableNames = ["partners", "wca_partners", "members", "companies", "profiles", "contacts", "wca_members"];
+    const tableResults: Record<string, any> = {};
+    
+    for (const t of tableNames) {
+      const r = await fetch(`${extUrl}/rest/v1/${t}?limit=1`, { headers });
+      tableResults[t] = { status: r.status, ok: r.ok };
+      if (r.ok) {
+        const data = await r.json();
+        tableResults[t].sample = data;
+        // Also get count
+        const cr = await fetch(`${extUrl}/rest/v1/${t}?select=*`, { 
+          headers: { ...headers, "Prefer": "count=exact", "Range": "0-0" } 
+        });
+        tableResults[t].contentRange = cr.headers.get("content-range");
+      }
+    }
 
-    // Try contacts
-    const { data: c1, error: e3 } = await ext.from("partner_contacts").select("id").limit(3);
-    results.contactsSample = c1;
-    results.contactsError = e3?.message || null;
-
-    // Try networks
-    const { data: n1, error: e4 } = await ext.from("partner_networks").select("id").limit(3);
-    results.networksSample = n1;
-    results.networksError = e4?.message || null;
-
-    // Try a specific country count
-    const { data: itData, error: e5 } = await ext.from("partners").select("id").eq("country_code", "IT");
-    results.italyPartners = itData?.length || 0;
-    results.italyError = e5?.message || null;
-
-    return new Response(JSON.stringify(results, null, 2), { 
+    return new Response(JSON.stringify({ 
+      schemaStatus: schemaRes.status,
+      schemaLength: schemaText.length,
+      // Extract paths/definitions from OpenAPI if available
+      schemaPaths: schemaText.substring(0, 500),
+      rpcStatus,
+      tableResults 
+    }, null, 2), { 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
   } catch (e) {
