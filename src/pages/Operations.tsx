@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ImportQuickAccessDialog } from "@/components/shared/ImportQuickAccessDialog";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
@@ -85,8 +84,6 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
           <span className="font-mono">{globalStats.totalPartners}</span> partner
         </span>
       )}
-
-      <ImportQuickAccessDialog label="Importa Partner" compact className="h-7 px-2" />
 
       {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
         <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
