@@ -1023,40 +1023,139 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
+  if (message.action === "diagnosticLinkedInDom") {
+    enqueueTabOp(async function () {
+      try { var result = await diagnosticLinkedInDom(); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    });
+    return true;
+  }
+
   return false;
 });
+
+// ── Diagnostic: inspect LinkedIn messaging DOM ──
+async function diagnosticLinkedInDom() {
+  var tab = await getLinkedInTab("https://www.linkedin.com/messaging/", false);
+  await new Promise(function (r) { setTimeout(r, 5000); });
+
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: function () {
+      try {
+        var url = window.location.href;
+        var title = document.title;
+        var bodyLen = (document.body.innerText || "").length;
+
+        // Check various possible conversation list selectors
+        var selectors = [
+          "li.msg-conversation-listitem",
+          ".msg-conversations-container__convo-item-link",
+          "[data-control-name='overlay.connection_list_item']",
+          ".msg-convo-wrapper",
+          ".msg-thread",
+          "li[class*='msg-conversation']",
+          "li[class*='conversation']",
+          "[class*='messaging-list']",
+          "[class*='msg-overlay-list']",
+          "a[href*='/messaging/thread/']",
+          ".scaffold-layout__list li",
+          ".msg-conversations-container li",
+          "[data-finite-scroll-hotkey-item]",
+        ];
+
+        var found = {};
+        selectors.forEach(function (s) {
+          try { found[s] = document.querySelectorAll(s).length; } catch (e) { found[s] = -1; }
+        });
+
+        // Get first 500 chars of body for context
+        var bodySnippet = (document.body.innerText || "").substring(0, 500);
+
+        // Get all class names from li elements
+        var liClasses = [];
+        var allLi = document.querySelectorAll("li");
+        for (var i = 0; i < Math.min(allLi.length, 30); i++) {
+          if (allLi[i].className) liClasses.push(allLi[i].className.substring(0, 100));
+        }
+
+        // Get all links containing /messaging/
+        var msgLinks = [];
+        var allLinks = document.querySelectorAll("a[href*='/messaging/']");
+        for (var j = 0; j < Math.min(allLinks.length, 10); j++) {
+          msgLinks.push(allLinks[j].href);
+        }
+
+        return {
+          success: true,
+          url: url,
+          title: title,
+          bodyLength: bodyLen,
+          selectorResults: found,
+          liClasses: liClasses,
+          messagingLinks: msgLinks,
+          bodySnippet: bodySnippet,
+        };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+  });
+
+  return (results[0] && results[0].result) || { success: false, error: "Nessun risultato" };
+}
 
 // ── Read LinkedIn Messaging Inbox ──
 async function readLinkedInInbox() {
   var tab = await getLinkedInTab("https://www.linkedin.com/messaging/", false);
-  await new Promise(function (r) { setTimeout(r, 4000); });
+  await new Promise(function (r) { setTimeout(r, 5000); });
 
   var results = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: function () {
       try {
         var threads = [];
-        // Get conversation list items
-        var items = document.querySelectorAll("li.msg-conversation-listitem");
-        if (!items || items.length === 0) {
-          // Alternative selectors
-          items = document.querySelectorAll("[data-control-name='overlay.connection_list_item']");
-        }
-        if (!items || items.length === 0) {
-          items = document.querySelectorAll(".msg-conversations-container__convo-item-link");
-        }
 
-        items.forEach(function (item) {
+        // Strategy 1: Find all links to /messaging/thread/
+        var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
+        var seen = {};
+
+        threadLinks.forEach(function (link) {
           try {
-            var nameEl = item.querySelector(".msg-conversation-listitem__participant-names, .msg-conversation-card__participant-names, h3");
-            var previewEl = item.querySelector(".msg-conversation-listitem__message-snippet, .msg-conversation-card__message-snippet-body, p");
-            var linkEl = item.querySelector("a[href*='/messaging/thread/']") || item.closest("a[href*='/messaging/thread/']");
-            var unreadDot = item.querySelector(".msg-conversation-listitem__unread-count, .notification-badge");
+            var threadUrl = link.href || "";
+            if (seen[threadUrl]) return;
+            seen[threadUrl] = true;
+
+            // Walk up to find the list item container
+            var container = link.closest("li") || link.parentElement;
+            if (!container) return;
+
+            // Try multiple name selectors
+            var nameEl = container.querySelector(
+              "h3, [class*='participant-name'], [class*='conversation-name'], " +
+              "[class*='msg-conversation-listitem__participant'], span.truncate"
+            );
+            // Fallback: first heading-like element
+            if (!nameEl) {
+              var headings = container.querySelectorAll("span, h3, h4");
+              for (var i = 0; i < headings.length; i++) {
+                var t = (headings[i].textContent || "").trim();
+                if (t.length > 1 && t.length < 60 && !/^\d/.test(t)) { nameEl = headings[i]; break; }
+              }
+            }
+
+            // Try multiple preview selectors
+            var previewEl = container.querySelector(
+              "p, [class*='message-snippet'], [class*='snippet'], [class*='preview']"
+            );
+
+            var unreadEl = container.querySelector(
+              "[class*='unread'], [class*='notification-badge'], .notification-badge"
+            );
 
             var name = nameEl ? nameEl.textContent.trim() : "";
             var lastMessage = previewEl ? previewEl.textContent.trim() : "";
-            var threadUrl = linkEl ? linkEl.href : "";
-            var unread = !!unreadDot;
+            var unread = !!unreadEl;
 
             if (name) {
               threads.push({ name: name, lastMessage: lastMessage, unread: unread, threadUrl: threadUrl });
@@ -1064,7 +1163,30 @@ async function readLinkedInInbox() {
           } catch (e) {}
         });
 
-        return { success: true, threads: threads };
+        // Strategy 2: If no links found, try list items with class patterns
+        if (threads.length === 0) {
+          var items = document.querySelectorAll(
+            "li[class*='msg-conversation'], li[class*='conversation'], " +
+            "[data-finite-scroll-hotkey-item], .scaffold-layout__list li"
+          );
+          items.forEach(function (item) {
+            try {
+              var link = item.querySelector("a[href*='/messaging/']") || item.querySelector("a");
+              var nameEl = item.querySelector("h3, span[class*='name'], [class*='participant']");
+              var previewEl = item.querySelector("p, [class*='snippet']");
+
+              var name = nameEl ? nameEl.textContent.trim() : "";
+              var threadUrl = link ? link.href : "";
+              var lastMessage = previewEl ? previewEl.textContent.trim() : "";
+
+              if (name && threadUrl) {
+                threads.push({ name: name, lastMessage: lastMessage, unread: false, threadUrl: threadUrl });
+              }
+            } catch (e) {}
+          });
+        }
+
+        return { success: true, threads: threads, strategy: threads.length > 0 ? "found" : "empty" };
       } catch (e) {
         return { success: false, error: e.message };
       }
@@ -1079,34 +1201,63 @@ async function readLinkedInThread(threadUrl) {
   if (!threadUrl) return { success: false, error: "Thread URL mancante" };
 
   var tab = await getLinkedInTab(threadUrl, false);
-  await new Promise(function (r) { setTimeout(r, 5000); });
+  await new Promise(function (r) { setTimeout(r, 6000); });
 
   var results = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: function () {
       try {
         var messages = [];
-        var msgItems = document.querySelectorAll(".msg-s-message-list__event");
+
+        // Strategy 1: Standard message events
+        var msgItems = document.querySelectorAll(
+          ".msg-s-message-list__event, [class*='msg-s-event'], " +
+          "[class*='message-list-item'], [data-control-name='message_event']"
+        );
+
+        // Strategy 2: If nothing, try broader selectors
         if (!msgItems || msgItems.length === 0) {
-          msgItems = document.querySelectorAll("[data-control-name='message_event']");
+          msgItems = document.querySelectorAll(
+            ".msg-s-message-group, [class*='msg-event'], " +
+            "[class*='message-event'], li[class*='msg-']"
+          );
+        }
+
+        // Detect current user name for direction
+        var myName = "";
+        var mePhoto = document.querySelector("img.global-nav__me-photo, img[class*='global-nav__me']");
+        if (mePhoto) myName = mePhoto.getAttribute("alt") || "";
+        if (!myName) {
+          var meLink = document.querySelector(".feed-identity-module__actor-meta a, [class*='global-nav__me'] span");
+          if (meLink) myName = meLink.textContent.trim();
         }
 
         msgItems.forEach(function (item) {
           try {
-            var senderEl = item.querySelector(".msg-s-message-group__name, .msg-s-event-listitem__name");
-            var bodyEl = item.querySelector(".msg-s-event-listitem__body, .msg-s-message-list-content .msg-s-event__content p");
-            var timeEl = item.querySelector("time, .msg-s-message-group__timestamp");
+            // Sender name
+            var senderEl = item.querySelector(
+              "[class*='message-group__name'], [class*='event-listitem__name'], " +
+              "[class*='sender'], h3, span[class*='name']"
+            );
+
+            // Message body
+            var bodyEl = item.querySelector(
+              "[class*='event-listitem__body'], [class*='event__content'] p, " +
+              "[class*='message-body'], p"
+            );
+
+            // Timestamp
+            var timeEl = item.querySelector("time, [class*='timestamp'], [class*='time']");
 
             var sender = senderEl ? senderEl.textContent.trim() : "";
             var text = bodyEl ? bodyEl.textContent.trim() : "";
             var timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
 
-            // Determine direction: if sender matches the logged-in user
-            var myName = "";
-            var profileLink = document.querySelector("img.global-nav__me-photo, .feed-identity-module__actor-meta a");
-            if (profileLink) myName = profileLink.getAttribute("alt") || "";
-
-            var direction = (sender && myName && sender.toLowerCase().includes(myName.toLowerCase().split(" ")[0])) ? "outbound" : "inbound";
+            var direction = "inbound";
+            if (sender && myName) {
+              var myFirst = myName.toLowerCase().split(" ")[0];
+              if (myFirst && sender.toLowerCase().includes(myFirst)) direction = "outbound";
+            }
 
             if (text) {
               messages.push({ text: text, sender: sender, timestamp: timestamp, direction: direction });
@@ -1114,7 +1265,7 @@ async function readLinkedInThread(threadUrl) {
           } catch (e) {}
         });
 
-        return { success: true, messages: messages };
+        return { success: true, messages: messages, count: messages.length };
       } catch (e) {
         return { success: false, error: e.message };
       }
