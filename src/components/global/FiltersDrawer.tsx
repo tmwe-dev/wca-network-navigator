@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   SlidersHorizontal, Search, RotateCcw, Check, ArrowUpDown,
-  Database, Users, Shield, Mail, Layers,
+  Database, Users, Shield, Mail, Layers, Globe, UserCheck, ContactRound,
 } from "lucide-react";
 import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode } from "@/contexts/GlobalFiltersContext";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface FiltersDrawerProps {
@@ -95,7 +96,10 @@ const SORTING_FILTER_OPTIONS: { key: SortingFilterMode; label: string }[] = [
 
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const g = useGlobalFilters();
+  const location = useLocation();
   const [localSearch, setLocalSearch] = useState(g.filters.search);
+
+  const route = location.pathname;
 
   const handleApply = () => {
     g.setSearch(localSearch);
@@ -119,14 +123,20 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     g.setWorkspaceFilters(next);
   };
 
-  const route = g.currentRoute;
   const isOutreach = route === "/outreach";
+  const isNetwork = route === "/network";
+  const isCRM = route === "/crm";
+  const isSettings = route === "/settings";
   const outTab = g.filters.outreachTab;
-  const showOrigin = ["/outreach", "/crm"].includes(route) && !isOutreach;
-  const showQuality = ["/network", "/operations"].includes(route);
-  const showContacts = route === "/contacts" || route === "/crm";
+
+  const showOrigin = isCRM || (isOutreach && !["inuscita", "email", "whatsapp", "linkedin"].includes(outTab));
+  const showQuality = isNetwork;
+  const showContacts = isCRM;
   const showWorkspace = isOutreach && outTab === "workspace";
   const showSorting = isOutreach && outTab === "inuscita";
+
+  // Context-aware title
+  const contextLabel = isNetwork ? "Network" : isCRM ? "CRM" : isOutreach ? `Outreach · ${outTab}` : isSettings ? "Impostazioni" : "Globale";
 
   const activeCount = useMemo(() => {
     let c = 0;
@@ -157,7 +167,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             <div className="flex-1">
               <h3 className="text-sm font-bold text-foreground">Filtri & Ordinamento</h3>
               <p className="text-xs text-muted-foreground">
-                {showWorkspace ? "Filtri Workspace" : showSorting ? "Filtri In Uscita" : "Filtra i dati della vista corrente"}
+                {contextLabel}
               </p>
             </div>
             {activeCount > 0 && (
@@ -168,14 +178,14 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-          {/* Search */}
+          {/* Search — always */}
           {!showSorting && (
             <FilterSection title="Cerca" icon={Search}>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={localSearch} onChange={e => setLocalSearch(e.target.value)}
-                  placeholder="Cerca partner, contatto..."
+                  placeholder={isNetwork ? "Cerca partner..." : isCRM ? "Cerca contatto..." : "Cerca..."}
                   className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
                   onKeyDown={e => e.key === "Enter" && handleApply()}
                 />
@@ -197,6 +207,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
+          {/* Sort — Network, CRM, Outreach cockpit */}
           {!showWorkspace && !showSorting && (
             <FilterSection title="Ordinamento" icon={ArrowUpDown}>
               <div className="flex flex-wrap gap-2">
@@ -209,6 +220,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
+          {/* Origin — CRM, Outreach cockpit */}
           {showOrigin && (
             <FilterSection title="Origine dati" icon={Database}>
               <div className="flex flex-wrap gap-2">
@@ -228,6 +240,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
+          {/* Quality — Network */}
           {showQuality && (
             <FilterSection title="Qualità dati" icon={Shield}>
               <div className="flex flex-wrap gap-2">
@@ -240,6 +253,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
+          {/* CRM-specific filters */}
           {showContacts && (
             <>
               <FilterSection title="Raggruppa per" icon={Layers}>
@@ -274,6 +288,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
+          {/* Outreach workspace filters */}
           {showWorkspace && (
             <>
               <FilterSection title="Stato Email" icon={Mail}>
@@ -300,6 +315,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
+          {/* Outreach sorting filters */}
           {showSorting && (
             <FilterSection title="Stato coda" icon={Layers}>
               <div className="flex flex-wrap gap-2">
@@ -310,6 +326,15 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 ))}
               </div>
             </FilterSection>
+          )}
+
+          {/* Empty state when no filters for this context */}
+          {!showOrigin && !showQuality && !showContacts && !showWorkspace && !showSorting && !isNetwork && (
+            <div className="text-center py-8 text-muted-foreground">
+              <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nessun filtro specifico per questa vista</p>
+              <p className="text-xs mt-1">Usa la ricerca qui sopra</p>
+            </div>
           )}
         </div>
 

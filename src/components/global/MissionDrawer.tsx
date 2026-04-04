@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
-  Check, ExternalLink,
+  Check, ExternalLink, Globe, Sparkles, ArrowUpFromLine,
+  Settings, Database, Rocket,
 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import QualitySelector from "@/components/workspace/QualitySelector";
 import ContentSelect from "@/components/shared/ContentSelect";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 
 interface MissionDrawerProps {
   open: boolean;
@@ -26,6 +28,8 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const m = useMission();
   const fileRef = useRef<HTMLInputElement>(null);
   const [recipientSearch, setRecipientSearch] = useState("");
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   // Popup states
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
@@ -50,6 +54,15 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     setNewLink("");
   };
 
+  // Determine context
+  const isOutreach = currentPath === "/outreach";
+  const isNetwork = currentPath === "/network";
+  const isCRM = currentPath === "/crm";
+  const isSettings = currentPath === "/settings";
+
+  const contextTitle = isOutreach ? "Outreach Control" : isNetwork ? "Network Actions" : isCRM ? "CRM Actions" : isSettings ? "Strumenti Impostazioni" : "Mission Control";
+  const contextSubtitle = isOutreach ? "Email, destinatari e invio" : isNetwork ? "Deep Search e arricchimento" : isCRM ? "Contatti e comunicazione" : isSettings ? "Azioni rapide" : "Configura e vai";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
@@ -60,129 +73,127 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <Target className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Mission Control</h3>
-              <p className="text-[11px] text-muted-foreground">Configura e vai</p>
+              <h3 className="text-sm font-bold text-foreground">{contextTitle}</h3>
+              <p className="text-[11px] text-muted-foreground">{contextSubtitle}</p>
             </div>
+            {/* Context badge */}
+            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : "Globale"}
+            </span>
           </div>
         </div>
 
         {/* ── BODY ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
 
-          {/* ROW 1: Presets + Quality */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Preset buttons (≤5) or dropdown (>5) */}
-              {m.presets.length <= 5 ? (
-                <>
-                  {m.presets.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => m.loadPreset(p)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                        m.activePresetId === p.id
-                          ? "border-primary bg-primary/10 text-primary shadow-sm"
-                          : "border-border/40 bg-muted/20 text-foreground hover:border-primary/30 hover:bg-primary/5"
-                      )}
-                    >
-                      <Bookmark className="w-3 h-3 inline mr-1" />
-                      {p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name}
-                    </button>
-                  ))}
-                </>
-              ) : (
-                <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
-                  <SelectTrigger className="h-8 text-xs w-[160px]">
-                    <SelectValue placeholder="Preset..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {m.presets.map(p => (
-                      <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {/* Add preset */}
-              <button
-                onClick={() => setPresetDialogOpen(true)}
-                className="w-8 h-8 rounded-lg border border-dashed border-border/50 flex items-center justify-center hover:border-primary/40 hover:bg-primary/5 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-
-              {/* Delete active preset */}
-              {m.activePresetId && (
-                <button
-                  onClick={() => m.deletePreset(m.activePresetId!)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </button>
-              )}
-
-              {/* Quality toggle — pushed right */}
-              <div className="ml-auto">
-                <QualitySelector value={m.quality} onChange={m.setQuality} size="sm" />
+          {/* ═══ CONTEXTUAL: Network ═══ */}
+          {isNetwork && (
+            <ContextSection title="Azioni Network" icon={Globe} color="text-blue-500">
+              <p className="text-xs text-muted-foreground">Seleziona paesi nella mappa per attivare Deep Search, generazione alias e sincronizzazione WCA.</p>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))}>
+                  <Database className="w-3.5 h-3.5" /> Sync WCA
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }))}>
+                  <Search className="w-3.5 h-3.5" /> Filtri
+                </Button>
               </div>
-            </div>
-          </div>
+            </ContextSection>
+          )}
 
-          {/* ROW 2: Action icons — Goal, Proposta, Docs, Links */}
-          <div className="flex items-center gap-2">
-            {/* Goal */}
-            <ActionIcon
-              icon={Target}
-              label="Obiettivo"
-              active={!!m.goal}
-              activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined}
-              color="from-primary/25 to-primary/5"
-              iconColor="text-primary"
-              onClick={() => setGoalDialogOpen(true)}
-            />
+          {/* ═══ CONTEXTUAL: CRM ═══ */}
+          {isCRM && (
+            <ContextSection title="Azioni CRM" icon={Users} color="text-emerald-500">
+              <p className="text-xs text-muted-foreground">Gestisci contatti, aggiorna stati lead e avvia comunicazioni.</p>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }))}>
+                  <Search className="w-3.5 h-3.5" /> Filtri CRM
+                </Button>
+              </div>
+            </ContextSection>
+          )}
 
-            {/* Proposta */}
-            <ActionIcon
-              icon={FileText}
-              label="Proposta"
-              active={!!m.baseProposal}
-              activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined}
-              color="from-blue-500/25 to-blue-500/5"
-              iconColor="text-blue-500"
-              onClick={() => setProposalDialogOpen(true)}
-            />
+          {/* ═══ CONTEXTUAL: Settings ═══ */}
+          {isSettings && (
+            <ContextSection title="Strumenti" icon={Settings} color="text-amber-500">
+              <p className="text-xs text-muted-foreground">Usa la sidebar sinistra per navigare le sezioni. Le azioni batch sono disponibili nella sezione Arricchimento.</p>
+            </ContextSection>
+          )}
 
-            {/* Docs */}
-            <ActionIcon
-              icon={Paperclip}
-              label="Docs"
-              active={m.documents.length > 0}
-              count={m.documents.length}
-              color="from-amber-500/25 to-amber-500/5"
-              iconColor="text-amber-500"
-              onClick={() => setDocsDialogOpen(true)}
-            />
+          {/* ═══ ALWAYS: Mission Config (Outreach or global) ═══ */}
+          {(isOutreach || (!isNetwork && !isCRM && !isSettings)) && (
+            <>
+              {/* ROW 1: Presets + Quality */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {m.presets.length <= 5 ? (
+                    <>
+                      {m.presets.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => m.loadPreset(p)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                            m.activePresetId === p.id
+                              ? "border-primary bg-primary/10 text-primary shadow-sm"
+                              : "border-border/40 bg-muted/20 text-foreground hover:border-primary/30 hover:bg-primary/5"
+                          )}
+                        >
+                          <Bookmark className="w-3 h-3 inline mr-1" />
+                          {p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
+                      <SelectTrigger className="h-8 text-xs w-[160px]">
+                        <SelectValue placeholder="Preset..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {m.presets.map(p => (
+                          <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
 
-            {/* Links */}
-            <ActionIcon
-              icon={Link2}
-              label="Link"
-              active={m.referenceLinks.length > 0}
-              count={m.referenceLinks.length}
-              color="from-emerald-500/25 to-emerald-500/5"
-              iconColor="text-emerald-500"
-              onClick={() => setLinksDialogOpen(true)}
-            />
-          </div>
+                  <button
+                    onClick={() => setPresetDialogOpen(true)}
+                    className="w-8 h-8 rounded-lg border border-dashed border-border/50 flex items-center justify-center hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
 
-          {/* ROW 3: Recipients */}
+                  {m.activePresetId && (
+                    <button
+                      onClick={() => m.deletePreset(m.activePresetId!)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  )}
+
+                  <div className="ml-auto">
+                    <QualitySelector value={m.quality} onChange={m.setQuality} size="sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ROW 2: Action icons */}
+              <div className="flex items-center gap-2">
+                <ActionIcon icon={Target} label="Obiettivo" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
+                <ActionIcon icon={FileText} label="Proposta" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-blue-500/25 to-blue-500/5" iconColor="text-blue-500" onClick={() => setProposalDialogOpen(true)} />
+                <ActionIcon icon={Paperclip} label="Docs" active={m.documents.length > 0} count={m.documents.length} color="from-amber-500/25 to-amber-500/5" iconColor="text-amber-500" onClick={() => setDocsDialogOpen(true)} />
+                <ActionIcon icon={Link2} label="Link" active={m.referenceLinks.length > 0} count={m.referenceLinks.length} color="from-emerald-500/25 to-emerald-500/5" iconColor="text-emerald-500" onClick={() => setLinksDialogOpen(true)} />
+              </div>
+            </>
+          )}
+
+          {/* ROW 3: Recipients — always visible */}
           <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />
         </div>
 
         {/* ── DIALOGS ── */}
-
-        {/* Save Preset Dialog */}
         <Dialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
@@ -197,7 +208,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Goal Dialog */}
         <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
@@ -214,7 +224,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Proposal Dialog */}
         <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
@@ -231,7 +240,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Docs Dialog */}
         <Dialog open={docsDialogOpen} onOpenChange={setDocsDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -257,7 +265,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Links Dialog */}
         <Dialog open={linksDialogOpen} onOpenChange={setLinksDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -285,6 +292,21 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
 
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ── Context Section ── */
+function ContextSection({ title, icon: Icon, color, children }: {
+  title: string; icon: any; color: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Icon className={cn("w-4 h-4", color)} />
+        <span className="text-xs font-bold text-foreground">{title}</span>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -368,40 +390,41 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
       {search.length >= 2 && searchResults.length > 0 && (
         <div className="max-h-[160px] overflow-y-auto space-y-0.5 rounded-lg border border-border/20 p-1">
           {searchResults.map((p: any) => (
-            <button key={p.id} onClick={() => handleAdd(p)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/50 transition-colors">
+            <button
+              key={p.id}
+              onClick={() => handleAdd(p)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left"
+            >
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{p.company_name}</p>
-                <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+                <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
               </div>
               {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
-              <Plus className="w-3 h-3 text-primary shrink-0" />
+              <Plus className="w-3 h-3 text-muted-foreground shrink-0" />
             </button>
           ))}
         </div>
       )}
 
       {m.recipients.length > 0 && (
-        <div className="space-y-0.5">
-          {m.recipients.map((r, idx) => (
-            <div key={idx} className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/20 border border-border/20 group">
+        <div className="space-y-1 max-h-[200px] overflow-y-auto">
+          {m.recipients.map((r, i) => (
+            <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/15 border border-border/15 group">
+              <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{r.companyName}</p>
+                <p className="text-xs font-medium text-foreground truncate">{r.companyName}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{r.city}, {r.countryName}</p>
               </div>
-              {r.email ? <Mail className="w-3 h-3 text-emerald-500 shrink-0" /> : <span className="text-[8px] text-destructive">no email</span>}
-              <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
+              {r.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
+              {r.isEnriched && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
+              <button onClick={() => m.removeRecipient(i)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
                 <X className="w-3 h-3 text-destructive" />
               </button>
             </div>
           ))}
-          <Button variant="ghost" size="sm" className="w-full h-6 text-[10px] text-muted-foreground" onClick={m.clearRecipients}>
-            Rimuovi tutti
-          </Button>
+          <button onClick={m.clearRecipients} className="w-full text-center text-[10px] text-destructive hover:underline py-1">Rimuovi tutti</button>
         </div>
-      )}
-
-      {m.recipients.length === 0 && search.length < 2 && (
-        <p className="text-[10px] text-muted-foreground text-center py-2">Cerca e aggiungi destinatari</p>
       )}
     </div>
   );
