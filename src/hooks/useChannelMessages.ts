@@ -55,6 +55,7 @@ const MESSAGE_LIST_SELECT = [
   "cc_addresses",
   "bcc_addresses",
   "subject",
+  "body_text",
   "message_id_external",
   "in_reply_to",
   "read_at",
