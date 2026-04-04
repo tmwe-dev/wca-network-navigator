@@ -22,6 +22,20 @@ interface Props {
 
 type ChannelStatus = { li: boolean; wa: boolean; fs: boolean; ai: boolean };
 
+const STORAGE_KEY = "connection_status_cache";
+
+function loadCachedStatus(): ChannelStatus {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { li: false, wa: false, fs: false, ai: true };
+}
+
+function saveCachedStatus(s: ChannelStatus) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+}
+
 export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
@@ -29,8 +43,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
 
-  // Start everything as FALSE — no lies
-  const [status, setStatus] = useState<ChannelStatus>({ li: false, wa: false, fs: false, ai: false });
+  // Restore last known status from cache
+  const [status, setStatus] = useState<ChannelStatus>(loadCachedStatus);
   const [connecting, setConnecting] = useState(false);
   const [didAutoRun, setDidAutoRun] = useState(false);
 
