@@ -12,13 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { countryCode } = await req.json();
-    if (!countryCode) {
-      return new Response(
-        JSON.stringify({ error: "countryCode required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const body = await req.json().catch(() => ({}));
+    const countryCode = body.countryCode || null; // null = sync all
 
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
@@ -62,10 +57,11 @@ Deno.serve(async (req) => {
 
         try {
           // 1. Count total in external wca_profiles
-          const { count: totalCount, error: countErr } = await extSb
+          let countQuery = extSb
             .from("wca_profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("country_code", countryCode);
+            .select("*", { count: "exact", head: true });
+          if (countryCode) countQuery = countQuery.eq("country_code", countryCode);
+          const { count: totalCount, error: countErr } = await countQuery;
 
           if (countErr) {
             send({ type: "error", message: countErr.message });
@@ -89,10 +85,11 @@ Deno.serve(async (req) => {
 
           for (let page = 0; page < totalPages; page++) {
             // Fetch from external wca_profiles
-            const { data: extPartners, error: fetchErr } = await extSb
+            let fetchQuery = extSb
               .from("wca_profiles")
-              .select("*")
-              .eq("country_code", countryCode)
+              .select("*");
+            if (countryCode) fetchQuery = fetchQuery.eq("country_code", countryCode);
+            const { data: extPartners, error: fetchErr } = await fetchQuery
               .order("wca_id", { ascending: true })
               .range(page * pageSize, (page + 1) * pageSize - 1);
 
