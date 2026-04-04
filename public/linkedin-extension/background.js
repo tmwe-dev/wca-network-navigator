@@ -206,9 +206,16 @@ async function syncLiCookieToServer() {
 }
 
 
-// ── Verify LinkedIn session ──
+// ── Verify LinkedIn session — cookie-first, no unnecessary navigation ──
 async function verifyLinkedInSession() {
-  var tab = await getLinkedInTab("https://www.linkedin.com/feed/");
+  // Step 1: Check cookie first — if no cookie, we're definitely not logged in
+  var liAt = await getLiAtCookie();
+  if (!liAt) {
+    return { authenticated: false, reason: "no_cookie" };
+  }
+
+  // Step 2: Cookie exists — try to verify page state using existing tab (no navigation)
+  var tab = await getLinkedInTab("https://www.linkedin.com/feed/", true); // skipNavigate if already on LI
   try {
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -216,11 +223,13 @@ async function verifyLinkedInSession() {
     });
     var sessionResult = results[0] && results[0].result;
     if (sessionResult && sessionResult.authenticated) {
-      await syncLiCookieToServer();
+      // Sync cookie in background, don't block
+      syncLiCookieToServer().catch(function(){});
     }
     return sessionResult || { authenticated: false, reason: "no_result" };
   } catch (err) {
-    return { authenticated: false, reason: "error: " + err.message };
+    // Script injection failed but cookie exists — assume authenticated
+    return { authenticated: true, reason: "cookie_present_script_error", cookieLength: liAt.length };
   }
 }
 
