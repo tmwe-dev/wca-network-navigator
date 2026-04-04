@@ -192,6 +192,17 @@
     }
   }
 
+  // ── Listen for push events from background.js (WA sidebar changes) ──
+  chrome.runtime.onMessage.addListener(function (msg) {
+    if (msg.type === 'wa-push-event') {
+      post({
+        direction: 'from-extension-wa',
+        action: 'sidebarChanged',
+        timestamp: msg.timestamp,
+      });
+    }
+  });
+
   // ── Heartbeat ──
   setInterval(function () {
     var nowAlive = isExtensionAlive();
