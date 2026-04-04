@@ -79,6 +79,7 @@ function WhatsAppTest() {
   const [running, setRunning] = useState(false);
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
+  const [foundContacts, setFoundContacts] = useState<Array<{ contact: string; time?: string }>>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
