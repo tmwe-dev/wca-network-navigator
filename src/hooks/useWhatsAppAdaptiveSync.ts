@@ -40,6 +40,37 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
   return { direction: "inbound", cleanText: text };
 }
 
+function normalizeWhatsAppTimestamp(rawValue: string): string | null {
+  const value = rawValue.trim();
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  const hhmmMatch = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (hhmmMatch) {
+    const date = new Date();
+    date.setHours(Number(hhmmMatch[1]), Number(hhmmMatch[2]), 0, 0);
+    return date.toISOString();
+  }
+
+  return null;
+}
+
+function isSidebarPreviewMessage(msg: any) {
+  return Object.prototype.hasOwnProperty.call(msg, "lastMessage") ||
+    Object.prototype.hasOwnProperty.call(msg, "unreadCount");
+}
+
+function shouldSkipSidebarMessage(msg: any, text: string, rawTime: string) {
+  if (msg.isVerify === true) return true;
+  if (!isSidebarPreviewMessage(msg)) return false;
+  if (!text.trim()) return true;
+  return rawTime.trim().length === 0;
+}
+
 export function useWhatsAppAdaptiveSync() {
   const [level, setLevel] = useState<AttentionLevel>(0);
   const [isReading, setIsReading] = useState(false);
@@ -92,7 +123,6 @@ export function useWhatsAppAdaptiveSync() {
 
     deescalateTimerRef.current = setTimeout(() => {
       deescalate(targetLevel);
-      // If we dropped to 3, schedule another de-escalation to 0
       if (targetLevel === 3) scheduleDeescalation();
     }, timeout);
   }, [deescalate]);
@@ -100,25 +130,21 @@ export function useWhatsAppAdaptiveSync() {
   // ── Save messages to DB ──
   const saveMessages = useCallback(async (messages: any[], sessionUserId: string) => {
     let newCount = 0;
-    let verifyCount = 0;
 
     for (const msg of messages) {
-      const contact = msg.contact || msg.from || "unknown";
-      const rawTime = msg.time || msg.timestamp || "";
-      const rawText = msg.lastMessage || msg.text || "";
-      const isVerify = msg.isVerify === true;
+      const contact = String(msg.contact || msg.from || "").trim();
+      if (!contact) continue;
 
-      // Detect if message was sent by us (WhatsApp prefixes with "Tu: " etc.)
+      const rawTime = String(msg.time || msg.timestamp || "");
+      const rawText = String(msg.lastMessage || msg.text || "");
+      if (shouldSkipSidebarMessage(msg, rawText, rawTime)) continue;
+
       const { direction: detectedDir, cleanText } = detectDirection(rawText);
       const finalDirection = msg.direction || detectedDir;
-      const text = cleanText;
+      const text = cleanText.trim();
+      if (!text) continue;
 
-      let timestamp: string;
-      try {
-        const parsed = new Date(rawTime);
-        timestamp = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-      } catch { timestamp = new Date().toISOString(); }
-
+      const timestamp = normalizeWhatsAppTimestamp(rawTime) || new Date().toISOString();
       const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
 
       const { error, status } = await supabase
@@ -136,11 +162,10 @@ export function useWhatsAppAdaptiveSync() {
         }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
       if (!error && status === 201) {
-        if (isVerify) verifyCount++;
-        else newCount++;
+        newCount++;
       }
     }
-    return { newCount, verifyCount };
+    return { newCount };
   }, []);
 
   // ── Sidebar scan (Level 0 & 3) ──

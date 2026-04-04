@@ -114,7 +114,18 @@ export function useWhatsAppBackfill() {
         return;
       }
 
-      const chats = sidebarResult.messages || [];
+      const chats = Array.from(
+        new Map(
+          ((sidebarResult.messages || []) as Array<any>)
+            .filter(chat =>
+              typeof chat?.contact === "string" &&
+              chat.contact.trim() &&
+              chat.contact !== "Sconosciuto" &&
+              chat.isVerify !== true
+            )
+            .map(chat => [chat.contact.trim().toLowerCase(), { ...chat, contact: chat.contact.trim() }])
+        ).values()
+      );
       const totalChats = Math.min(chats.length, MAX_CHATS_PER_SESSION);
       setProgress(p => ({ ...p, totalChats }));
 
