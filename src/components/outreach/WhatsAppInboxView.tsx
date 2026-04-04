@@ -25,6 +25,25 @@ type ChatThread = {
   messages: ChannelMessage[];
 };
 
+function isSidebarGhostMessage(msg: ChannelMessage) {
+  const payload = msg.raw_payload as Record<string, unknown> | null | undefined;
+  if (!payload) return false;
+  if (payload.isVerify === true) return true;
+
+  const hasSidebarShape =
+    Object.prototype.hasOwnProperty.call(payload, "contact") ||
+    Object.prototype.hasOwnProperty.call(payload, "lastMessage") ||
+    Object.prototype.hasOwnProperty.call(payload, "unreadCount");
+
+  if (!hasSidebarShape) return false;
+
+  const payloadLastMessage = typeof payload.lastMessage === "string" ? payload.lastMessage.trim() : "";
+  const payloadText = typeof payload.text === "string" ? payload.text.trim() : "";
+  const bodyText = msg.body_text?.trim() || "";
+
+  return !bodyText && !payloadLastMessage && !payloadText;
+}
+
 const LEVEL_CONFIG = {
   0: { label: "Idle", color: "bg-muted text-muted-foreground", icon: Eye },
   3: { label: "Alert", color: "bg-yellow-500/20 text-yellow-700", icon: Zap },
@@ -53,8 +72,9 @@ export function WhatsAppInboxView() {
 
   // Group messages by contact
   const threads = useMemo(() => {
+    const visibleMessages = messages.filter(msg => !isSidebarGhostMessage(msg));
     const map = new Map<string, ChannelMessage[]>();
-    messages.forEach(msg => {
+    visibleMessages.forEach(msg => {
       const contact = msg.direction === "inbound"
         ? (msg.from_address || "Sconosciuto")
         : (msg.to_address || "Sconosciuto");

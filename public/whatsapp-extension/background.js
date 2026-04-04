@@ -449,30 +449,100 @@ async function readChatThread(contactName, maxMessages) {
       target: { tabId: r.tab.id },
       args: [contactName],
       func: async function(target) {
-        var searchBox = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]') ||
-          document.querySelector('#side [contenteditable="true"]');
-        if (!searchBox) return { success: false, error: "Search box not found" };
-        searchBox.focus();
-        searchBox.textContent = "";
-        document.execCommand("insertText", false, target);
-        await new Promise(function(r) { setTimeout(r, 1500); });
-        var chats = document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"]');
-        var clicked = false;
-        for (var c of chats) {
-          var t = c.querySelector('span[title]');
-          if (t && t.getAttribute("title").toLowerCase().includes(target.toLowerCase())) { c.click(); clicked = true; break; }
+        function getSearchBox() {
+          var candidate = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+            document.querySelector('[data-testid="chat-list-search"]') ||
+            document.querySelector('#side [contenteditable="true"]') ||
+            document.querySelector('[title="Search input textbox"]') ||
+            document.querySelector('[title="Cerca o inizia una nuova chat"]') ||
+            document.querySelector('[title="Search or start new chat"]') ||
+            document.querySelector('[role="textbox"][contenteditable="true"]');
+          if (!candidate) return null;
+          return candidate.querySelector ? (candidate.querySelector('[contenteditable="true"], input, textarea') || candidate) : candidate;
         }
-        if (!clicked) return { success: false, error: "Chat non trovata: " + target };
-        await new Promise(function(r) { setTimeout(r, 2000); });
-        // Get the conversation panel HTML for AI extraction
+
+        function clearAndType(field, value) {
+          field.focus();
+          if (typeof field.click === "function") field.click();
+          if (field.isContentEditable || field.getAttribute("contenteditable") === "true") {
+            document.execCommand("selectAll");
+            document.execCommand("delete");
+            field.textContent = "";
+            document.execCommand("insertText", false, value);
+            if ((field.textContent || "").trim() !== value) {
+              field.textContent = value;
+              field.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            return;
+          }
+          if ("value" in field) {
+            field.value = "";
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+            field.value = value;
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }
+
+        function currentChatMatches(name) {
+          var header = document.querySelector('#main header span[title]') ||
+            document.querySelector('#main header [dir="auto"]');
+          var label = header ? ((header.getAttribute("title") || header.textContent || "").trim()) : "";
+          return !!label && label.toLowerCase().includes(name.toLowerCase());
+        }
+
+        function getChatItems() {
+          return Array.from(document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"], [data-testid="chat-cell-wrapper"]'));
+        }
+
+        function getChatTitle(item) {
+          var titleEl = item.querySelector('span[title]');
+          if (titleEl) return (titleEl.getAttribute("title") || titleEl.textContent || "").trim();
+          return (item.textContent || "").trim();
+        }
+
+        async function openChatBySearch(name) {
+          if (currentChatMatches(name)) return { success: true };
+
+          var searchBox = getSearchBox();
+          if (!searchBox) return { success: false, error: "Search box not found" };
+
+          clearAndType(searchBox, name);
+          await new Promise(function(r) { setTimeout(r, 1500); });
+
+          var chats = getChatItems();
+          var clicked = false;
+          for (var c of chats) {
+            var title = getChatTitle(c);
+            if (title && title.toLowerCase().includes(name.toLowerCase())) {
+              (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
+              clicked = true;
+              break;
+            }
+          }
+
+          if (!clicked) {
+            searchBox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            await new Promise(function(r) { setTimeout(r, 1200); });
+            clicked = currentChatMatches(name);
+          }
+
+          var clearBtn = document.querySelector('[data-testid="search-input-clear"]') ||
+            document.querySelector('[data-testid="x-alt"]') ||
+            document.querySelector('[data-testid="search-close"]');
+          if (clearBtn) clearBtn.click();
+
+          if (!clicked) return { success: false, error: "Chat non trovata: " + name };
+          await new Promise(function(r) { setTimeout(r, 2000); });
+          return { success: true };
+        }
+
+        var openResult = await openChatBySearch(target);
+        if (!openResult.success) return openResult;
+
         var panel = document.querySelector('[data-testid="conversation-panel-messages"]') ||
           document.querySelector("#main [role='application']") ||
           document.querySelector("#main");
         var html = panel ? panel.outerHTML : null;
-        // Clear search
-        var clearBtn = document.querySelector('[data-testid="search-input-clear"]') ||
-          document.querySelector('[data-testid="x-alt"]');
-        if (clearBtn) clearBtn.click();
         return { success: true, html: html };
       },
     });
@@ -480,7 +550,6 @@ async function readChatThread(contactName, maxMessages) {
     var scriptResult = results?.[0]?.result;
     if (!scriptResult?.success) return scriptResult || { success: false, error: "Script error" };
 
-    // Try AI extraction for thread
     if (scriptResult.html) {
       var config = await getConfig();
       if (config.supabaseUrl && config.anonKey) {
@@ -503,7 +572,6 @@ async function readChatThread(contactName, maxMessages) {
       }
     }
 
-    // Fallback: basic DOM extraction
     var domResults = await chrome.scripting.executeScript({
       target: { tabId: r.tab.id },
       args: [contactName, maxMessages || 50],
@@ -535,30 +603,94 @@ async function backfillChat(contactName, lastKnownText, maxScrolls) {
     var r = await getOrCreateWaTab();
     await sleep(r.reused ? 1500 : 5000);
 
-    // Open the chat
     var openResult = await chrome.scripting.executeScript({
       target: { tabId: r.tab.id },
       args: [contactName],
       func: async function(target) {
-        var searchBox = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]') ||
-          document.querySelector('#side [contenteditable="true"]');
-        if (!searchBox) return { success: false, error: "Search box not found" };
-        searchBox.focus();
-        searchBox.textContent = "";
-        document.execCommand("insertText", false, target);
-        await new Promise(function(r) { setTimeout(r, 1500); });
-        var chats = document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"]');
-        var clicked = false;
-        for (var c of chats) {
-          var t = c.querySelector('span[title]');
-          if (t && t.getAttribute("title").toLowerCase().includes(target.toLowerCase())) { c.click(); clicked = true; break; }
+        function getSearchBox() {
+          var candidate = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+            document.querySelector('[data-testid="chat-list-search"]') ||
+            document.querySelector('#side [contenteditable="true"]') ||
+            document.querySelector('[title="Search input textbox"]') ||
+            document.querySelector('[title="Cerca o inizia una nuova chat"]') ||
+            document.querySelector('[title="Search or start new chat"]') ||
+            document.querySelector('[role="textbox"][contenteditable="true"]');
+          if (!candidate) return null;
+          return candidate.querySelector ? (candidate.querySelector('[contenteditable="true"], input, textarea') || candidate) : candidate;
         }
-        if (!clicked) return { success: false, error: "Chat non trovata: " + target };
-        await new Promise(function(r) { setTimeout(r, 2000); });
-        // Clear search
-        var clearBtn = document.querySelector('[data-testid="search-input-clear"]') ||
-          document.querySelector('[data-testid="x-alt"]');
-        if (clearBtn) clearBtn.click();
+
+        function clearAndType(field, value) {
+          field.focus();
+          if (typeof field.click === "function") field.click();
+          if (field.isContentEditable || field.getAttribute("contenteditable") === "true") {
+            document.execCommand("selectAll");
+            document.execCommand("delete");
+            field.textContent = "";
+            document.execCommand("insertText", false, value);
+            if ((field.textContent || "").trim() !== value) {
+              field.textContent = value;
+              field.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            return;
+          }
+          if ("value" in field) {
+            field.value = "";
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+            field.value = value;
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }
+
+        function currentChatMatches(name) {
+          var header = document.querySelector('#main header span[title]') ||
+            document.querySelector('#main header [dir="auto"]');
+          var label = header ? ((header.getAttribute("title") || header.textContent || "").trim()) : "";
+          return !!label && label.toLowerCase().includes(name.toLowerCase());
+        }
+
+        function getChatItems() {
+          return Array.from(document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"], [data-testid="chat-cell-wrapper"]'));
+        }
+
+        function getChatTitle(item) {
+          var titleEl = item.querySelector('span[title]');
+          if (titleEl) return (titleEl.getAttribute("title") || titleEl.textContent || "").trim();
+          return (item.textContent || "").trim();
+        }
+
+        if (!currentChatMatches(target)) {
+          var searchBox = getSearchBox();
+          if (!searchBox) return { success: false, error: "Search box not found" };
+
+          clearAndType(searchBox, target);
+          await new Promise(function(r) { setTimeout(r, 1500); });
+
+          var chats = getChatItems();
+          var clicked = false;
+          for (var c of chats) {
+            var title = getChatTitle(c);
+            if (title && title.toLowerCase().includes(target.toLowerCase())) {
+              (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
+              clicked = true;
+              break;
+            }
+          }
+
+          if (!clicked) {
+            searchBox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            await new Promise(function(r) { setTimeout(r, 1200); });
+            clicked = currentChatMatches(target);
+          }
+
+          var clearBtn = document.querySelector('[data-testid="search-input-clear"]') ||
+            document.querySelector('[data-testid="x-alt"]') ||
+            document.querySelector('[data-testid="search-close"]');
+          if (clearBtn) clearBtn.click();
+
+          if (!clicked) return { success: false, error: "Chat non trovata: " + target };
+          await new Promise(function(r) { setTimeout(r, 2000); });
+        }
+
         return { success: true };
       },
     });
