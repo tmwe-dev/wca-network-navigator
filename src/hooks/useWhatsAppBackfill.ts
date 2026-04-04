@@ -13,10 +13,20 @@ type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillProgress = {
   status: BackfillStatus;
   currentChat: string | null;
+  nextChat: string | null;
   processedChats: number;
   totalChats: number;
   recoveredMessages: number;
   errors: number;
+  pauseReason: string | null;
+  pauseEndsAt: number | null; // timestamp ms
+  lastError: string | null;
+};
+
+const INITIAL_PROGRESS: BackfillProgress = {
+  status: "idle", currentChat: null, nextChat: null,
+  processedChats: 0, totalChats: 0, recoveredMessages: 0, errors: 0,
+  pauseReason: null, pauseEndsAt: null, lastError: null,
 };
 
 // Human-like delay pattern (seconds)
@@ -27,9 +37,29 @@ const LONG_PAUSE_MAX = 120;
 const MAX_CHATS_PER_SESSION = 25;
 const MAX_SESSION_MINUTES = 45;
 const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_PAUSE_MS = 10 * 60 * 1000; // 10 min
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
+}
+
+function sleepWithCountdown(
+  ms: number,
+  setProgress: React.Dispatch<React.SetStateAction<BackfillProgress>>,
+  abortRef: React.MutableRefObject<boolean>
+): Promise<void> {
+  return new Promise((resolve) => {
+    const endsAt = Date.now() + ms;
+    setProgress(p => ({ ...p, pauseEndsAt: endsAt }));
+
+    const interval = setInterval(() => {
+      if (abortRef.current || Date.now() >= endsAt) {
+        clearInterval(interval);
+        setProgress(p => ({ ...p, pauseEndsAt: null }));
+        resolve();
+      }
+    }, 500);
+  });
 }
 
 function sleep(ms: number) {
@@ -37,9 +67,7 @@ function sleep(ms: number) {
 }
 
 export function useWhatsAppBackfill() {
-  const [progress, setProgress] = useState<BackfillProgress>({
-    status: "idle", currentChat: null, processedChats: 0, totalChats: 0, recoveredMessages: 0, errors: 0,
-  });
+  const [progress, setProgress] = useState<BackfillProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
   const bridge = useWhatsAppExtensionBridge();
 
@@ -47,14 +75,13 @@ export function useWhatsAppBackfill() {
     if (progress.status === "running") return;
     abortRef.current = false;
 
-    setProgress(p => ({ ...p, status: "running", processedChats: 0, recoveredMessages: 0, errors: 0 }));
+    setProgress({ ...INITIAL_PROGRESS, status: "running" });
 
     try {
-      // 1. Get user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
-      // 2. Get all WA contacts from DB with their last message
+      // Get last known messages per contact
       const { data: lastMessages } = await supabase
         .from("channel_messages")
         .select("from_address, to_address, body_text, created_at, direction")
@@ -62,7 +89,6 @@ export function useWhatsAppBackfill() {
         .order("created_at", { ascending: false })
         .limit(1000);
 
-      // Build map: contact → last known message text
       const contactLastMsg = new Map<string, string>();
       for (const msg of (lastMessages || [])) {
         const contact = msg.direction === "inbound" ? msg.from_address : msg.to_address;
@@ -71,11 +97,11 @@ export function useWhatsAppBackfill() {
         }
       }
 
-      // 3. Read current sidebar to get all active chats
+      // Read sidebar
       const sidebarResult = await bridge.readUnread();
       if (!sidebarResult.success) {
         toast.error("Impossibile leggere la sidebar WhatsApp");
-        setProgress(p => ({ ...p, status: "error" }));
+        setProgress(p => ({ ...p, status: "error", lastError: "Sidebar non leggibile" }));
         return;
       }
 
@@ -87,10 +113,9 @@ export function useWhatsAppBackfill() {
       let consecutiveErrors = 0;
       let totalRecovered = 0;
 
-      // 4. Process each chat
       for (let i = 0; i < totalChats; i++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused" }));
+          setProgress(p => ({ ...p, status: "paused", pauseReason: "Interrotto manualmente" }));
           toast.info("Backfill interrotto");
           return;
         }
@@ -103,25 +128,34 @@ export function useWhatsAppBackfill() {
 
         // Circuit breaker
         if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
-          toast.warning("Troppi errori consecutivi — pausa di sicurezza");
-          setProgress(p => ({ ...p, status: "paused" }));
-          await sleep(10 * 60 * 1000); // 10 min pause
+          const pauseMs = CIRCUIT_BREAKER_PAUSE_MS;
+          setProgress(p => ({
+            ...p,
+            status: "paused",
+            pauseReason: `${consecutiveErrors} errori consecutivi — pausa di sicurezza`,
+          }));
+          toast.warning(`Pausa di sicurezza: riprendo tra ${Math.round(pauseMs / 60000)} min`);
+          await sleepWithCountdown(pauseMs, setProgress, abortRef);
+          if (abortRef.current) return;
           consecutiveErrors = 0;
-          setProgress(p => ({ ...p, status: "running" }));
+          setProgress(p => ({ ...p, status: "running", pauseReason: null }));
         }
 
         const chat = chats[i];
         const contact = chat.contact;
-        setProgress(p => ({ ...p, currentChat: contact, processedChats: i }));
+        const nextContact = i + 1 < totalChats ? chats[i + 1].contact : null;
+        setProgress(p => ({
+          ...p,
+          currentChat: contact,
+          nextChat: nextContact,
+          processedChats: i,
+        }));
 
         try {
           const lastKnown = contactLastMsg.get(contact) || "";
-
-          // Send backfill command to extension
           const result = await bridge.backfillChat(contact, lastKnown, 30);
 
           if (result.success && result.messages?.length) {
-            // Save new messages to DB
             let saved = 0;
             for (const msg of result.messages) {
               const { error } = await supabase.from("channel_messages").insert({
@@ -137,16 +171,20 @@ export function useWhatsAppBackfill() {
             }
             totalRecovered += saved;
             consecutiveErrors = 0;
-            setProgress(p => ({ ...p, recoveredMessages: totalRecovered }));
+            setProgress(p => ({ ...p, recoveredMessages: totalRecovered, lastError: null }));
           } else if (!result.success) {
             consecutiveErrors++;
-            setProgress(p => ({ ...p, errors: p.errors + 1 }));
+            const errMsg = result.error || "Errore lettura chat";
+            setProgress(p => ({ ...p, errors: p.errors + 1, lastError: `${contact}: ${errMsg}` }));
           } else {
-            consecutiveErrors = 0; // No messages but no error = chat is up to date
+            consecutiveErrors = 0;
           }
-        } catch {
+        } catch (err: any) {
           consecutiveErrors++;
-          setProgress(p => ({ ...p, errors: p.errors + 1 }));
+          setProgress(p => ({
+            ...p, errors: p.errors + 1,
+            lastError: `${contact}: ${err?.message || "Errore sconosciuto"}`,
+          }));
         }
 
         // Human-like delay between chats
@@ -157,18 +195,24 @@ export function useWhatsAppBackfill() {
         // Long pause every N chats
         if ((i + 1) % LONG_PAUSE_EVERY === 0 && i < totalChats - 1) {
           const pauseSec = randomBetween(LONG_PAUSE_MIN, LONG_PAUSE_MAX);
-          setProgress(p => ({ ...p, status: "paused", currentChat: `Pausa ${Math.round(pauseSec)}s...` }));
-          await sleep(pauseSec * 1000);
-          setProgress(p => ({ ...p, status: "running" }));
+          setProgress(p => ({
+            ...p,
+            status: "paused",
+            pauseReason: `Pausa anti-detection (ogni ${LONG_PAUSE_EVERY} chat)`,
+          }));
+          await sleepWithCountdown(pauseSec * 1000, setProgress, abortRef);
+          if (abortRef.current) return;
+          setProgress(p => ({ ...p, status: "running", pauseReason: null }));
         }
       }
 
       setProgress(p => ({
-        ...p, status: "done", currentChat: null, processedChats: totalChats,
+        ...p, status: "done", currentChat: null, nextChat: null,
+        processedChats: totalChats, pauseReason: null, pauseEndsAt: null,
       }));
       toast.success(`Backfill completato: ${totalRecovered} messaggi recuperati da ${totalChats} chat`);
     } catch (err: any) {
-      setProgress(p => ({ ...p, status: "error" }));
+      setProgress(p => ({ ...p, status: "error", lastError: err.message }));
       toast.error(`Errore backfill: ${err.message}`);
     }
   }, [progress.status, bridge]);
