@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
-import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
+import { useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
