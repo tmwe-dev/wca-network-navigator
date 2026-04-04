@@ -16,9 +16,8 @@ function jitter(base: number) {
 }
 
 function buildExternalId(contact: string, timestamp: string, text: string): string {
-  const safeText = (text || "").slice(0, 50).replace(/[|]/g, "_");
-  const safeContact = (contact || "unknown").replace(/[|]/g, "_");
-  return `li_${safeContact}_${timestamp}_${safeText}`;
+  const { buildDeterministicId } = await import("@/lib/messageDedup");
+  return buildDeterministicId("li", contact, text, timestamp);
 }
 
 export function useLinkedInSync() {

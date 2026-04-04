@@ -80,7 +80,7 @@ export function useLinkedInBackfill() {
         if (threadResult.success && threadResult.messages?.length) {
           let saved = 0;
           for (const msg of threadResult.messages) {
-            const extId = `li_bf_${thread.name}_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`;
+            const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
             const { error } = await supabase.from("channel_messages").insert({
               user_id: user.id,
               channel: "linkedin",
