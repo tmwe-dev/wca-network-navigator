@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
         };
 
         try {
-          // 1. Count total in external wca_partners
+          // 1. Count total in external wca_profiles
           const { count: totalCount, error: countErr } = await extSb
-            .from("wca_partners")
+            .from("wca_profiles")
             .select("*", { count: "exact", head: true })
             .eq("country_code", countryCode);
 
@@ -88,9 +88,9 @@ Deno.serve(async (req) => {
           const totalPages = Math.ceil(totalCount / pageSize);
 
           for (let page = 0; page < totalPages; page++) {
-            // Fetch from external wca_partners
+            // Fetch from external wca_profiles
             const { data: extPartners, error: fetchErr } = await extSb
-              .from("wca_partners")
+              .from("wca_profiles")
               .select("*")
               .eq("country_code", countryCode)
               .order("wca_id", { ascending: true })
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
 
             if (!extPartners || extPartners.length === 0) break;
 
-            // Map wca_partners fields to local partners schema
+            // Map wca_profiles fields to local partners schema
             const partnerRows = extPartners.map((p: any) => ({
               wca_id: p.wca_id,
               company_name: p.company_name,
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
               }
             }
 
-            // Extract contacts and networks from JSON arrays inside wca_partners
+            // Extract contacts and networks from JSON arrays inside wca_profiles
             for (const extP of extPartners) {
               const localId = wcaToLocalId.get(extP.wca_id);
               if (!localId) continue;
