@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare } from "lucide-react";
+import { Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, LayoutList, LayoutGrid, Rows3, Mail, Phone } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useBusinessCards, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useSendToCockpit } from "@/hooks/useCockpitContacts";
@@ -11,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+type ViewMode = "compact" | "card" | "expanded";
 
 interface BcaGroup {
   key: string;
@@ -69,6 +72,7 @@ export function BusinessCardsView() {
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   const handleSync = async () => {
     setSyncing(true);
@@ -174,9 +178,23 @@ export function BusinessCardsView() {
             <Button size="sm" className="h-7 text-xs gap-1.5 bg-violet-500/15 text-violet-500 border border-violet-500/30 hover:bg-violet-500/25" variant="outline" onClick={handleBcaDeepSearch}><Brain className="w-3 h-3" /> Deep Search</Button>
           </div>
         )}
-        <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
-          <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <TooltipProvider delayDuration={200}>
+            {([["compact", LayoutList, "Compatta"], ["card", LayoutGrid, "Griglia"], ["expanded", Rows3, "Espansa"]] as const).map(([mode, Icon, label]) => (
+              <Tooltip key={mode}>
+                <TooltipTrigger asChild>
+                  <button onClick={() => setViewMode(mode)} className={cn("p-1.5 rounded-md transition-all", viewMode === mode ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40")}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
+          <Button size="sm" className="h-7 text-xs gap-1.5 ml-1" variant="outline" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+          </Button>
+        </div>
       </div>
 
       <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
@@ -212,25 +230,74 @@ export function BusinessCardsView() {
                     {group.cards.every(c => selectedBca.has(c.id)) ? "Deseleziona" : "Seleziona"}
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 p-3">
-                  {group.cards.map(card => {
-                    const isSelected = selectedBca.has(card.id);
-                    return (
-                      <div key={card.id} className={cn("relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm", isSelected ? "border-amber-500/40 bg-amber-500/[0.06] shadow-[0_0_8px_rgba(245,158,11,0.1)]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
-                        <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3.5 h-3.5" /></div>
-                        <div className="space-y-1.5 pr-6">
-                          <div className="text-xs font-semibold text-foreground truncate">{card.contact_name || "—"}</div>
-                          {card.position && <div className="text-[10px] text-muted-foreground truncate">{card.position}</div>}
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {card.email && <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono truncate max-w-[150px]">{card.email}</span>}
-                            {(card.phone || card.mobile) && <span className="text-[9px] px-1.5 py-0.5 rounded bg-success/10 text-success font-mono">{card.mobile || card.phone}</span>}
+                {viewMode === "compact" ? (
+                  <div className="divide-y divide-border/20">
+                    {group.cards.map(card => {
+                      const isSelected = selectedBca.has(card.id);
+                      return (
+                        <div key={card.id} className={cn("flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-amber-500/[0.06]" : "hover:bg-muted/20")} onClick={() => toggleBca(card.id)}>
+                          <Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3 h-3" />
+                          <span className="text-xs font-medium text-foreground truncate flex-1">{card.contact_name || "—"}</span>
+                          {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {card.email && (
+                              <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Mail className="w-3 h-3 text-primary/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.email}</TooltipContent></Tooltip></TooltipProvider>
+                            )}
+                            {(card.phone || card.mobile) && (
+                              <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Phone className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
+                            )}
                           </div>
-                          {card.event_name && <div className="text-[9px] text-muted-foreground/60 truncate mt-1">📍 {card.event_name}</div>}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : viewMode === "expanded" ? (
+                  <div className="space-y-2 p-3">
+                    {group.cards.map(card => {
+                      const isSelected = selectedBca.has(card.id);
+                      return (
+                        <div key={card.id} className={cn("relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-amber-500/40 bg-amber-500/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
+                          <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3.5 h-3.5" /></div>
+                          <div className="space-y-2 pr-6">
+                            <div className="text-sm font-semibold text-foreground">{card.contact_name || "—"}</div>
+                            {card.position && <div className="text-xs text-muted-foreground">{card.position}</div>}
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {card.email && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-mono">{card.email}</span>}
+                              {(card.phone || card.mobile) && <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono">{card.mobile || card.phone}</span>}
+                            </div>
+                            {card.event_name && <div className="text-[10px] text-muted-foreground/60 mt-1">📍 {card.event_name}</div>}
+                            {card.location && <div className="text-[10px] text-muted-foreground/60">📌 {card.location}</div>}
+                            {card.notes && <div className="text-[10px] text-muted-foreground/50 italic mt-1">{card.notes}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 p-3">
+                    {group.cards.map(card => {
+                      const isSelected = selectedBca.has(card.id);
+                      return (
+                        <div key={card.id} className={cn("relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm", isSelected ? "border-amber-500/40 bg-amber-500/[0.06] shadow-[0_0_8px_rgba(245,158,11,0.1)]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
+                          <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3.5 h-3.5" /></div>
+                          <div className="space-y-1.5 pr-6">
+                            <div className="text-xs font-semibold text-foreground truncate">{card.contact_name || "—"}</div>
+                            {card.position && <div className="text-[10px] text-muted-foreground truncate">{card.position}</div>}
+                            <div className="flex items-center gap-1 mt-1">
+                              {card.email && (
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Mail className="w-3 h-3 text-primary/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.email}</TooltipContent></Tooltip></TooltipProvider>
+                              )}
+                              {(card.phone || card.mobile) && (
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Phone className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
+                              )}
+                            </div>
+                            {card.event_name && <div className="text-[9px] text-muted-foreground/60 truncate mt-1">📍 {card.event_name}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
           </div>
