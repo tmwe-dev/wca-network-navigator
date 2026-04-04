@@ -13,47 +13,35 @@ Deno.serve(async (req) => {
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) throw new Error("WCA_EXTERNAL_SUPABASE_KEY not set");
 
-    // Direct REST call to list tables via RPC or information_schema
     const headers: Record<string, string> = {
       "apikey": extKey,
       "Authorization": `Bearer ${extKey}`,
       "Content-Type": "application/json",
     };
 
-    // Try to get the OpenAPI schema which lists all tables
+    // Get the OpenAPI spec to extract all table names
     const schemaRes = await fetch(`${extUrl}/rest/v1/`, { headers });
-    const schemaText = await schemaRes.text();
+    const schema = await schemaRes.json();
     
-    // Also try rpc
-    const rpcRes = await fetch(`${extUrl}/rest/v1/rpc/`, { headers });
-    const rpcStatus = rpcRes.status;
+    const tableNames = Object.keys(schema.paths || {})
+      .filter(p => p !== "/")
+      .map(p => p.replace("/", ""));
 
-    // Try different possible table names
-    const tableNames = ["partners", "wca_partners", "members", "companies", "profiles", "contacts", "wca_members"];
-    const tableResults: Record<string, any> = {};
-    
+    // Get counts for each table
+    const tableCounts: Record<string, number | string> = {};
     for (const t of tableNames) {
-      const r = await fetch(`${extUrl}/rest/v1/${t}?limit=1`, { headers });
-      tableResults[t] = { status: r.status, ok: r.ok };
-      if (r.ok) {
-        const data = await r.json();
-        tableResults[t].sample = data;
-        // Also get count
-        const cr = await fetch(`${extUrl}/rest/v1/${t}?select=*`, { 
+      try {
+        const r = await fetch(`${extUrl}/rest/v1/${t}?select=*`, { 
           headers: { ...headers, "Prefer": "count=exact", "Range": "0-0" } 
         });
-        tableResults[t].contentRange = cr.headers.get("content-range");
+        const range = r.headers.get("content-range");
+        tableCounts[t] = range || `status:${r.status}`;
+      } catch {
+        tableCounts[t] = "error";
       }
     }
 
-    return new Response(JSON.stringify({ 
-      schemaStatus: schemaRes.status,
-      schemaLength: schemaText.length,
-      // Extract paths/definitions from OpenAPI if available
-      schemaPaths: schemaText.substring(0, 500),
-      rpcStatus,
-      tableResults 
-    }, null, 2), { 
+    return new Response(JSON.stringify({ tables: tableNames, counts: tableCounts }, null, 2), { 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
   } catch (e) {
