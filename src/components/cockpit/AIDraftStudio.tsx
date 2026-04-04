@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
-// ContentPicker removed — now uses sidebar
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState, DraftChannel, ScrapingPhase } from "@/pages/Cockpit";
@@ -13,6 +12,8 @@ import DOMPurify from "dompurify";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
+import { TypewriterText } from "./TypewriterText";
+import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
