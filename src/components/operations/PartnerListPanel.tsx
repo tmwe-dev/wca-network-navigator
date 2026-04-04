@@ -70,10 +70,31 @@ export function PartnerListPanel({
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
 
-  const { data: partners, isLoading } = usePartners({
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePartnersPaginated({
     countries: countryCodes,
     search: search.length >= 5 ? search : undefined,
   });
+
+  const partners = useMemo(() => {
+    if (!paginatedData) return [];
+    return paginatedData.pages.flatMap(p => p.partners);
+  }, [paginatedData]);
+
+  const totalCount = paginatedData?.pages[0]?.total || 0;
+
+  // Infinite scroll sentinel
+  const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
+  useEffect(() => {
+    if (loadMoreInView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const toggleFavorite = useToggleFavorite();
 
