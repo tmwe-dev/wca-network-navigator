@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Send, ChevronRight, Trophy } from "lucide-react";
+import { Send, ChevronRight, Trophy, Loader2 } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -19,9 +19,12 @@ interface Props {
   onEmailClick: (target: { email: string; name: string; company: string; partnerId: string }) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  loadMoreRef?: React.RefObject<HTMLDivElement>;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
-export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick, selectedIds, onToggleSelect }: Props) {
+export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick, selectedIds, onToggleSelect, loadMoreRef, hasNextPage, isFetchingNextPage }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -146,6 +149,17 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
           );
         })}
       </div>
+      {/* Infinite scroll sentinel */}
+      {loadMoreRef && (
+        <div ref={loadMoreRef as any} className="h-10 flex items-center justify-center">
+          {isFetchingNextPage && (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          )}
+          {!isFetchingNextPage && hasNextPage && (
+            <span className="text-[10px] text-muted-foreground">Scorri per caricare altri...</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
