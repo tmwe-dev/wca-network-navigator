@@ -126,6 +126,8 @@ function WhatsAppTest() {
 
     if (msgs.length === 0) {
       log("⚠️ ZERO messaggi — il selettore DOM non trova le chat!", "error");
+    } else {
+      setFoundContacts(msgs.map((m: any) => ({ contact: m.contact, time: m.time })));
     }
 
     setRunning(false);
