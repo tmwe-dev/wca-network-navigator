@@ -189,31 +189,80 @@ export default function Operations() {
       toast.warning("Seleziona almeno un paese per sincronizzare");
       return;
     }
-    const toastId = toast.loading(`Sincronizzazione WCA per ${selectedCountries.map(c => c.name).join(", ")}...`);
+
+    const toastId = toast.loading("Verifica paesi disponibili nel DB esterno...");
+
     try {
+      // Step 1: Fetch available countries from external DB
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sessione scaduta, effettua il login");
+
+      const countResp = await fetch(`${supabaseUrl}/functions/v1/wca-country-counts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: "{}",
+      });
+
+      if (!countResp.ok) throw new Error(`Verifica paesi fallita: HTTP ${countResp.status}`);
+      const { countries: availableCountries } = await countResp.json() as { countries: Record<string, number> };
+
+      // Filter to only countries that have data
+      const countriesToSync = selectedCountries.filter(c => availableCountries[c.code] && availableCountries[c.code] > 0);
+      const skippedCount = selectedCountries.length - countriesToSync.length;
+
+      if (countriesToSync.length === 0) {
+        toast.warning(
+          `Nessun dato disponibile per i ${selectedCountries.length} paesi selezionati.\n` +
+          `Paesi con dati: ${Object.keys(availableCountries).join(", ")}`,
+          { id: toastId, duration: 6000 }
+        );
+        return;
+      }
+
+      const totalExtPartners = countriesToSync.reduce((sum, c) => sum + (availableCountries[c.code] || 0), 0);
+      toast.loading(
+        `🚀 Sincronizzazione ${countriesToSync.length} paesi (${totalExtPartners} partner)` +
+        (skippedCount > 0 ? `\n⏭️ ${skippedCount} paesi saltati (nessun dato)` : ""),
+        { id: toastId }
+      );
+
+      // Step 2: Sync each country
       let grandTotal = { partners: 0, contacts: 0, networks: 0 };
-      for (let ci = 0; ci < selectedCountries.length; ci++) {
-        const country = selectedCountries[ci];
-        const countryLabel = selectedCountries.length > 1
-          ? `[${ci + 1}/${selectedCountries.length}] ${country.name}`
+      for (let ci = 0; ci < countriesToSync.length; ci++) {
+        const country = countriesToSync[ci];
+        const extCount = availableCountries[country.code] || 0;
+        const countryLabel = countriesToSync.length > 1
+          ? `[${ci + 1}/${countriesToSync.length}] ${country.name}`
           : country.name;
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const { data: { session } } = await supabase.auth.getSession();
+        toast.loading(
+          `${countryLabel}: avvio sync (${extCount} partner)...`,
+          { id: toastId }
+        );
+
         const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token}`,
+            "Authorization": `Bearer ${session.access_token}`,
             "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ countryCode: country.code }),
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          console.error(`Sync ${country.code} failed: HTTP ${response.status}`);
+          toast.loading(`⚠️ ${countryLabel}: errore HTTP ${response.status}`, { id: toastId });
+          continue;
+        }
 
         const reader = response.body?.getReader();
-        if (!reader) throw new Error("No stream");
+        if (!reader) continue;
 
         const decoder = new TextDecoder();
         let buffer = "";
@@ -248,7 +297,7 @@ export default function Operations() {
                 grandTotal.partners += evt.synced || 0;
                 grandTotal.contacts += evt.contacts || 0;
                 grandTotal.networks += evt.networks || 0;
-                if (ci < selectedCountries.length - 1) {
+                if (ci < countriesToSync.length - 1) {
                   toast.loading(
                     `✅ ${country.name}: ${evt.synced} partner sincronizzati\nProssimo paese...`,
                     { id: toastId }
@@ -256,22 +305,21 @@ export default function Operations() {
                 }
               } else if (evt.type === "error") {
                 console.error("Sync SSE error:", evt.message);
-                toast.loading(
-                  `⚠️ ${countryLabel}: ${evt.message}`,
-                  { id: toastId }
-                );
+                toast.loading(`⚠️ ${countryLabel}: ${evt.message}`, { id: toastId });
               }
             } catch {}
           }
         }
       }
       toast.success(
-        `Sincronizzazione completata!\n` +
-        `👥 ${grandTotal.partners} partner · 📇 ${grandTotal.contacts} contatti · 🌐 ${grandTotal.networks} network`,
+        `✅ Sincronizzazione completata!\n` +
+        `👥 ${grandTotal.partners} partner · 📇 ${grandTotal.contacts} contatti · 🌐 ${grandTotal.networks} network` +
+        (skippedCount > 0 ? `\n⏭️ ${skippedCount} paesi saltati` : ""),
         { id: toastId, duration: 8000 }
       );
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
     } catch (e: any) {
       toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
     }
