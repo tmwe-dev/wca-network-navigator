@@ -1,57 +1,57 @@
 
+# Piano Ristrutturazione: Sidebar Dinamiche + Allineamento CRM
 
-# Piano di Refactoring: Stabilità e Fluidità dell'Applicazione
+## Stato Attuale
+- **VerticalTabNav** (sinistra, 140px): Usata in Settings, Outreach, CRM solo come navigazione tab. NON ospita filtri/ordinamenti contestuali.
+- **FiltersDrawer** (sinistra, Sheet overlay): Filtri globali che si adattano per route, ma è un overlay, non integrato nella sidebar.
+- **MissionDrawer** (destra, Sheet overlay): Obiettivi, proposte, destinatari — overlay generico, non contestuale alla sezione.
+- **Arricchimento**: Ha i propri filtri interni (sidebar sinistra custom da 220px), ma il "LinkedIn Batch" compare sempre. Nessun bottone azione funzionante.
+- **CRM**: Grafica minimale, non allineata al Network (che ha 3 colonne: Paesi → Partner → Dettaglio).
 
-## Problema Principale
+## Piano d'Azione
 
-L'errore ricorrente `Failed to fetch dynamically imported module: Cockpit.tsx` è causato da:
+### FASE 1: VerticalTabNav Potenziata con Filtri Contestuali
+Estendere `VerticalTabNav` per ospitare sotto i tab anche un **filterSlot** (già previsto nel codice ma MAI usato!) che ogni pagina può popolare dinamicamente.
 
-1. **Cockpit.tsx è 651 righe** con 26 import — troppo pesante per un lazy-loaded module che viene caricato dentro un altro lazy-loaded module (Outreach → Cockpit = doppio lazy nesting)
-2. **AIDraftStudio.tsx è 892 righe** — importato da Cockpit, crea una catena di dipendenze enorme
-3. **WhatsAppInboxView.tsx (470 righe)** e **LinkedInInboxView.tsx (404 righe)** vengono caricati tutti eagerly dentro Outreach.tsx — nessun lazy loading per i tab
-4. **Outreach.tsx** carica TUTTI i componenti tab eagerly anche se l'utente ne vede uno alla volta
+**Pagine da aggiornare:**
+1. **Settings**: Aggiungere filtri contestuali nel filterSlot per ogni sezione (es. Arricchimento → filtri fonte/stato dati inline)
+2. **Outreach**: Spostare filtri da FiltersDrawer al filterSlot quando pertinenti (es. Email → filtri email, Cockpit → filtri cockpit)
+3. **CRM**: Aggiungere filtri inline (Stato lead, Origine, Raggruppamento)
 
-## Piano di Intervento (4 step)
+### FASE 2: Fix Arricchimento
+1. **Rimuovere sidebar custom interna** — usare il filterSlot di VerticalTabNav
+2. **LinkedIn Batch contestuale** — mostrare solo quando fonte = "Contatti Importati" o "Tutti"
+3. **Aggiungere azioni batch per ogni fonte:**
+   - WCA Partner → Cerca Logo batch, Cerca LinkedIn batch
+   - Contatti Importati → LinkedIn batch (esistente), Deep Search batch
+   - Mittenti Email → Risolvi identità batch
+   - Cockpit → Arricchisci selezione
+4. **Stats contestuali** che cambiano in base ai filtri attivi
 
-### 1. Lazy-load tutti i tab di Outreach
+### FASE 3: MissionDrawer Contestuale (Destra)
+Rendere il contenuto del MissionDrawer dinamico in base alla pagina:
+- **Network**: Azioni partner (Deep Search, Invia a Cockpit, Export)
+- **CRM/Contatti**: Azioni contatto (LinkedIn lookup, Deep Search, Interazioni)
+- **Outreach/Cockpit**: Azioni outreach (Draft email, Call, WhatsApp)
+- **Settings/Arricchimento**: Azioni batch (Avvia batch, Stop, Export risultati)
+- Sezione Destinatari sempre presente (come ora)
 
-In `Outreach.tsx`, rendere lazy **ogni tab** (WhatsApp, LinkedIn, Email, Cockpit, AttivitaTab, InUscitaTab, HoldingPatternTab) così che venga caricato solo il componente del tab attivo.
+### FASE 4: Allineamento Visivo CRM con Network
+1. **CRM Contatti**: Passare da layout ResizablePanel a layout 3 colonne stile Network:
+   - Colonna 1: Lista gruppi/origini (compatta, come i paesi nel Network)
+   - Colonna 2: Lista contatti (come partner list nel Network)
+   - Colonna 3: Dettaglio contatto (come partner detail nel Network)
+2. **CRM Biglietti**: Allineare cards e gruppi aziendali allo stile Network
+3. **Stili uniformi**: Stessi bordi, spaziature, header e badge tra Network e CRM
 
-```tsx
-const WhatsAppInboxView = lazy(() => import("@/components/outreach/WhatsAppInboxView"));
-const LinkedInInboxView = lazy(() => import("@/components/outreach/LinkedInInboxView"));
-const EmailInboxView = lazy(() => import("@/components/outreach/EmailInboxView"));
-// etc.
-```
+### FASE 5: Pulizia
+1. Eliminare i filtri duplicati tra FiltersDrawer e filterSlot
+2. Rendere FiltersDrawer un "filtro avanzato" per filtri secondari
+3. Rimuovere codice Arricchimento inline (220px sidebar interna)
 
-### 2. Spezzare Cockpit.tsx (651 → ~200 + hook)
-
-Estrarre tutta la logica (handleDrop, AI actions, drag&drop, LinkedIn lookup flow) in un hook `useCockpitLogic.ts`. Il file `Cockpit.tsx` diventa solo rendering (~200 righe).
-
-### 3. Spezzare AIDraftStudio.tsx (892 → ~300 + sotto-componenti)
-
-Estrarre in sotto-componenti:
-- `DraftPreview.tsx` — anteprima del messaggio
-- `DraftEditor.tsx` — editor del testo
-- `ScrapingProgress.tsx` — indicatore di fase scraping
-
-### 4. Migliorare il recovery da chunk failure
-
-Aggiornare `ViteChunkRecovery.tsx` per gestire meglio i retry dei lazy import con un wrapper che fa 2 tentativi prima di mostrare l'errore, evitando il reload completo della pagina.
-
-```tsx
-function lazyRetry(fn: () => Promise<any>) {
-  return lazy(() => fn().catch(() => {
-    return new Promise(resolve => setTimeout(resolve, 1500)).then(fn);
-  }));
-}
-```
-
-## Risultato Atteso
-
-- Caricamento iniziale di Outreach: solo il tab attivo (Cockpit)
-- Cockpit.tsx: da 651 a ~200 righe (logica in hook)
-- AIDraftStudio: da 892 a ~300 righe (sotto-componenti)
-- Nessun crash "Failed to fetch dynamically imported module" grazie al retry automatico
-- Navigazione tra tab fluida con fallback di caricamento
-
+## Ordine di Esecuzione
+1. ~~Fase 2~~ **Fix Arricchimento** (priorità assoluta — niente funziona)
+2. **Fase 1** VerticalTabNav + filterSlot (infrastruttura)
+3. **Fase 4** Allineamento CRM
+4. **Fase 3** MissionDrawer contestuale
+5. **Fase 5** Pulizia finale
