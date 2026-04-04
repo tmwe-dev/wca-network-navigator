@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 // ── Attention Levels ──
@@ -26,10 +27,17 @@ function jitter(base: number) {
 const DEESCALATE_6_TO_3 = 60_000;   // 60s no reply → drop from 6 to 3
 const DEESCALATE_3_TO_0 = 180_000;  // 3min no new messages → drop to 0
 
-function buildExternalId(contact: string, timestamp: string, text: string): string {
-  const safeText = (text || "").slice(0, 50).replace(/[|]/g, "_");
-  const safeContact = (contact || "unknown").replace(/[|]/g, "_");
-  return `wa_${safeContact}_${timestamp}_${safeText}`;
+// Detect outbound messages: WhatsApp sidebar prefixes your own messages with "Tu: " or "You: "
+const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: "];
+
+function detectDirection(text: string): { direction: "inbound" | "outbound"; cleanText: string } {
+  const lower = text.toLowerCase();
+  for (const prefix of OUTBOUND_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      return { direction: "outbound", cleanText: text.slice(prefix.length) };
+    }
+  }
+  return { direction: "inbound", cleanText: text };
 }
 
 export function useWhatsAppAdaptiveSync() {
@@ -97,8 +105,13 @@ export function useWhatsAppAdaptiveSync() {
     for (const msg of messages) {
       const contact = msg.contact || msg.from || "unknown";
       const rawTime = msg.time || msg.timestamp || "";
-      const text = msg.lastMessage || msg.text || "";
+      const rawText = msg.lastMessage || msg.text || "";
       const isVerify = msg.isVerify === true;
+
+      // Detect if message was sent by us (WhatsApp prefixes with "Tu: " etc.)
+      const { direction: detectedDir, cleanText } = detectDirection(rawText);
+      const finalDirection = msg.direction || detectedDir;
+      const text = cleanText;
 
       let timestamp: string;
       try {
@@ -106,15 +119,16 @@ export function useWhatsAppAdaptiveSync() {
         timestamp = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
       } catch { timestamp = new Date().toISOString(); }
 
-      const extId = buildExternalId(contact, rawTime || timestamp, text);
+      const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
 
       const { error, status } = await supabase
         .from("channel_messages")
         .upsert({
           user_id: sessionUserId,
           channel: "whatsapp",
-          direction: msg.direction || "inbound",
-          from_address: contact,
+          direction: finalDirection,
+          from_address: finalDirection === "outbound" ? undefined : contact,
+          to_address: finalDirection === "outbound" ? contact : undefined,
           body_text: text,
           message_id_external: extId,
           raw_payload: msg as any,
