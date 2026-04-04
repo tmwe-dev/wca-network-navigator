@@ -20,9 +20,11 @@ import type { ContactFilters } from "@/hooks/useContacts";
 interface Props {
   selectedId: string | null;
   onSelect: (contact: any) => void;
+  filterGroupKey?: string | null;
+  filterGroupType?: string;
 }
 
-export function ContactListPanel({ selectedId, onSelect }: Props) {
+export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterGroupType }: Props) {
   const { filters: gf } = useGlobalFilters();
 
   // Map global filters to local ContactFilters shape
@@ -47,10 +49,18 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const groups = useMemo(() => {
     if (!allGroupCounts) return [];
     let filtered = allGroupCounts.filter((g) => g.group_type === currentGroupBy);
+    // If a group is selected from Column 1, only show that group
+    if (filterGroupKey && filterGroupType === currentGroupBy) {
+      filtered = filtered.filter((g) => g.group_key === filterGroupKey);
+    }
     const search = filters.search?.trim().toLowerCase();
     if (search) filtered = filtered.filter((g) => g.group_label.toLowerCase().includes(search) || g.group_key.toLowerCase().includes(search));
+    // Filter by leadStatus from global filters (only if not grouping by status already)
+    if (gf.leadStatus && gf.leadStatus !== "all" && currentGroupBy !== "status") {
+      // leadStatus filtering happens at contact-row level, not group level
+    }
     return filtered.sort((a, b) => b.contact_count - a.contact_count);
-  }, [allGroupCounts, currentGroupBy, filters.search]);
+  }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.leadStatus]);
 
   const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
 

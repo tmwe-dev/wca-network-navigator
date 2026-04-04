@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   SlidersHorizontal, Search, RotateCcw, Check, ArrowUpDown,
-  Database, Users, Shield, Mail, Layers, Globe, UserCheck, ContactRound,
+  Shield, Database,
 } from "lucide-react";
-import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode } from "@/contexts/GlobalFiltersContext";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -14,19 +14,6 @@ interface FiltersDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const SORT_OPTIONS = [
-  { value: "name", label: "Nome A-Z" },
-  { value: "country", label: "Paese" },
-  { value: "priority", label: "Priorità" },
-  { value: "company", label: "Azienda" },
-];
-
-const ORIGIN_OPTIONS = [
-  { value: "wca", label: "WCA", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
-  { value: "import", label: "Import", color: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" },
-  { value: "report_aziende", label: "Report Aziende", color: "bg-amber-500/15 border-amber-500/30 text-amber-400" },
-];
 
 const QUALITY_OPTIONS = [
   { value: "all", label: "Tutti" },
@@ -36,70 +23,26 @@ const QUALITY_OPTIONS = [
   { value: "no_deep_search", label: "No Deep Search" },
 ];
 
-const GROUPBY_OPTIONS = [
-  { value: "country", label: "Paese" },
-  { value: "origin", label: "Origine" },
-  { value: "lead_status", label: "Stato" },
-  { value: "import_group", label: "Gruppo Import" },
+const ORIGIN_OPTIONS = [
+  { value: "wca", label: "WCA", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
+  { value: "import", label: "Import", color: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" },
+  { value: "report_aziende", label: "Report Aziende", color: "bg-amber-500/15 border-amber-500/30 text-amber-400" },
 ];
 
-const HOLDING_OPTIONS = [
-  { value: "out", label: "Fuori circuito" },
-  { value: "in", label: "In circuito" },
-  { value: "all", label: "Tutti" },
-];
-
-const LEAD_STATUS_OPTIONS = [
-  { value: "all", label: "Tutti" },
-  { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "qualified", label: "Qualificato" },
-  { value: "converted", label: "Convertito" },
-];
-
-const WS_FILTER_SECTIONS: { label: string; icon: any; chips: { key: WorkspaceFilterKey; label: string }[] }[] = [
-  {
-    label: "Dati Contatto",
-    icon: Users,
-    chips: [
-      { key: "with_email", label: "Con email" },
-      { key: "no_email", label: "Senza email" },
-      { key: "with_contact", label: "Con contatto" },
-      { key: "no_contact", label: "Senza contatto" },
-    ],
-  },
-  {
-    label: "Arricchimento",
-    icon: Database,
-    chips: [
-      { key: "enriched", label: "Arricchito" },
-      { key: "not_enriched", label: "Non arricchito" },
-      { key: "with_alias", label: "Con alias" },
-      { key: "no_alias", label: "Senza alias" },
-    ],
-  },
-];
-
-const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string }[] = [
-  { key: "all", label: "Tutte" },
-  { key: "generated", label: "Generata" },
-  { key: "to_generate", label: "Da generare" },
-];
-
-const SORTING_FILTER_OPTIONS: { key: SortingFilterMode; label: string }[] = [
-  { key: "all", label: "Tutti" },
-  { key: "immediate", label: "⚡ Immediati" },
-  { key: "scheduled", label: "🕐 Programmati" },
-  { key: "unreviewed", label: "Da rivedere" },
-  { key: "reviewed", label: "Rivisti" },
-];
-
+/**
+ * FiltersDrawer — now serves as "advanced filters" overlay.
+ * Basic filters (search, sort, groupBy, leadStatus) are in the contextual filterSlots.
+ * This drawer shows only advanced/secondary filters not available in the sidebar.
+ */
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const g = useGlobalFilters();
   const location = useLocation();
   const [localSearch, setLocalSearch] = useState(g.filters.search);
 
   const route = location.pathname;
+  const isNetwork = route === "/network";
+  const isCRM = route === "/crm";
+  const isOutreach = route === "/outreach";
 
   const handleApply = () => {
     g.setSearch(localSearch);
@@ -117,47 +60,20 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     g.setOrigin(next);
   };
 
-  const toggleWsFilter = (key: WorkspaceFilterKey) => {
-    const next = new Set(g.filters.workspaceFilters);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    g.setWorkspaceFilters(next);
-  };
-
-  const isOutreach = route === "/outreach";
-  const isNetwork = route === "/network";
-  const isCRM = route === "/crm";
-  const isSettings = route === "/settings";
-  const outTab = g.filters.outreachTab;
-
-  const showOrigin = isCRM || (isOutreach && !["inuscita", "email", "whatsapp", "linkedin"].includes(outTab));
-  const showQuality = isNetwork;
-  const showContacts = isCRM;
-  const showWorkspace = isOutreach && outTab === "workspace";
-  const showSorting = isOutreach && outTab === "inuscita";
-
-  // Context-aware title
-  const contextLabel = isNetwork ? "Network" : isCRM ? "CRM" : isOutreach ? `Outreach · ${outTab}` : isSettings ? "Impostazioni" : "Globale";
-
   const activeCount = useMemo(() => {
     let c = 0;
-    if (g.filters.search) c++;
-    if (g.filters.sortBy !== "name") c++;
     if (g.filters.quality !== "all") c++;
     if (g.filters.origin.size < 3) c++;
-    if (g.filters.groupBy !== "country") c++;
-    if (g.filters.holdingPattern !== "out") c++;
-    if (g.filters.leadStatus !== "all") c++;
-    if (g.filters.workspaceFilters.size > 0) c++;
-    if (g.filters.emailGenFilter !== "all") c++;
-    if (g.filters.workspaceCountries.size > 0) c++;
-    if (g.filters.sortingFilter !== "all") c++;
-    if (g.filters.sortingSearch) c++;
     return c;
   }, [g.filters]);
 
+  // Only show advanced filters — basic ones are in filterSlots
+  const showQuality = isNetwork;
+  const showOrigin = isNetwork || isCRM || isOutreach;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[640px] sm:max-w-[660px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="left" className="w-[90vw] sm:w-[400px] sm:max-w-[420px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
           <div className="flex items-center gap-3">
@@ -165,9 +81,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
               <SlidersHorizontal className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-foreground">Filtri & Ordinamento</h3>
+              <h3 className="text-sm font-bold text-foreground">Filtri Avanzati</h3>
               <p className="text-xs text-muted-foreground">
-                {contextLabel}
+                Filtri secondari non presenti nella sidebar
               </p>
             </div>
             {activeCount > 0 && (
@@ -178,41 +94,25 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-          {/* Search — always */}
-          {!showSorting && (
-            <FilterSection title="Cerca" icon={Search}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={localSearch} onChange={e => setLocalSearch(e.target.value)}
-                  placeholder={isNetwork ? "Cerca partner..." : isCRM ? "Cerca contatto..." : "Cerca..."}
-                  className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
-                  onKeyDown={e => e.key === "Enter" && handleApply()}
-                />
-              </div>
-            </FilterSection>
-          )}
+          {/* Search */}
+          <FilterSection title="Cerca avanzata" icon={Search}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={localSearch} onChange={e => setLocalSearch(e.target.value)}
+                placeholder="Ricerca globale..."
+                className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
+                onKeyDown={e => e.key === "Enter" && handleApply()}
+              />
+            </div>
+          </FilterSection>
 
-          {showSorting && (
-            <FilterSection title="Cerca" icon={Search}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={g.filters.sortingSearch}
-                  onChange={e => g.setSortingSearch(e.target.value)}
-                  placeholder="Cerca azienda o contatto..."
-                  className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
-                />
-              </div>
-            </FilterSection>
-          )}
-
-          {/* Sort — Network, CRM, Outreach cockpit */}
-          {!showWorkspace && !showSorting && (
-            <FilterSection title="Ordinamento" icon={ArrowUpDown}>
+          {/* Quality — Network only */}
+          {showQuality && (
+            <FilterSection title="Qualità dati" icon={Shield}>
               <div className="flex flex-wrap gap-2">
-                {SORT_OPTIONS.map(opt => (
-                  <ChipButton key={opt.value} active={g.filters.sortBy === opt.value} onClick={() => g.setSortBy(opt.value)}>
+                {QUALITY_OPTIONS.map(opt => (
+                  <ChipButton key={opt.value} active={g.filters.quality === opt.value} onClick={() => g.setQuality(opt.value)}>
                     {opt.label}
                   </ChipButton>
                 ))}
@@ -220,7 +120,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
-          {/* Origin — CRM, Outreach cockpit */}
+          {/* Origin */}
           {showOrigin && (
             <FilterSection title="Origine dati" icon={Database}>
               <div className="flex flex-wrap gap-2">
@@ -240,100 +140,12 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
-          {/* Quality — Network */}
-          {showQuality && (
-            <FilterSection title="Qualità dati" icon={Shield}>
-              <div className="flex flex-wrap gap-2">
-                {QUALITY_OPTIONS.map(opt => (
-                  <ChipButton key={opt.value} active={g.filters.quality === opt.value} onClick={() => g.setQuality(opt.value)}>
-                    {opt.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </FilterSection>
-          )}
-
-          {/* CRM-specific filters */}
-          {showContacts && (
-            <>
-              <FilterSection title="Raggruppa per" icon={Layers}>
-                <div className="flex flex-wrap gap-2">
-                  {GROUPBY_OPTIONS.map(opt => (
-                    <ChipButton key={opt.value} active={g.filters.groupBy === opt.value} onClick={() => g.setGroupBy(opt.value)}>
-                      {opt.label}
-                    </ChipButton>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Circuito attesa" icon={ArrowUpDown}>
-                <div className="flex flex-wrap gap-2">
-                  {HOLDING_OPTIONS.map(opt => (
-                    <ChipButton key={opt.value} active={g.filters.holdingPattern === opt.value} onClick={() => g.setHoldingPattern(opt.value)}>
-                      {opt.label}
-                    </ChipButton>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Stato lead" icon={Users}>
-                <div className="flex flex-wrap gap-2">
-                  {LEAD_STATUS_OPTIONS.map(opt => (
-                    <ChipButton key={opt.value} active={g.filters.leadStatus === opt.value} onClick={() => g.setLeadStatus(opt.value)}>
-                      {opt.label}
-                    </ChipButton>
-                  ))}
-                </div>
-              </FilterSection>
-            </>
-          )}
-
-          {/* Outreach workspace filters */}
-          {showWorkspace && (
-            <>
-              <FilterSection title="Stato Email" icon={Mail}>
-                <div className="flex flex-wrap gap-2">
-                  {EMAIL_GEN_OPTIONS.map(opt => (
-                    <ChipButton key={opt.key} active={g.filters.emailGenFilter === opt.key} onClick={() => g.setEmailGenFilter(opt.key)}>
-                      {opt.label}
-                    </ChipButton>
-                  ))}
-                </div>
-              </FilterSection>
-
-              {WS_FILTER_SECTIONS.map(section => (
-                <FilterSection key={section.label} title={section.label} icon={section.icon}>
-                  <div className="flex flex-wrap gap-2">
-                    {section.chips.map(chip => (
-                      <ChipButton key={chip.key} active={g.filters.workspaceFilters.has(chip.key)} onClick={() => toggleWsFilter(chip.key)}>
-                        {chip.label}
-                      </ChipButton>
-                    ))}
-                  </div>
-                </FilterSection>
-              ))}
-            </>
-          )}
-
-          {/* Outreach sorting filters */}
-          {showSorting && (
-            <FilterSection title="Stato coda" icon={Layers}>
-              <div className="flex flex-wrap gap-2">
-                {SORTING_FILTER_OPTIONS.map(opt => (
-                  <ChipButton key={opt.key} active={g.filters.sortingFilter === opt.key} onClick={() => g.setSortingFilter(opt.key)}>
-                    {opt.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </FilterSection>
-          )}
-
-          {/* Empty state when no filters for this context */}
-          {!showOrigin && !showQuality && !showContacts && !showWorkspace && !showSorting && !isNetwork && (
+          {/* Info when no advanced filters available */}
+          {!showQuality && !showOrigin && (
             <div className="text-center py-8 text-muted-foreground">
               <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nessun filtro specifico per questa vista</p>
-              <p className="text-xs mt-1">Usa la ricerca qui sopra</p>
+              <p className="text-sm">Tutti i filtri sono nella sidebar sinistra</p>
+              <p className="text-xs mt-1">Nessun filtro avanzato per questa vista</p>
             </div>
           )}
         </div>
