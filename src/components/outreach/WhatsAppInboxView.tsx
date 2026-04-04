@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Zap, Eye, Radio,
+  Zap, Eye, Radio, Send,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type ChatThread = {
   contact: string;
@@ -29,9 +32,13 @@ const LEVEL_CONFIG = {
 export function WhatsAppInboxView() {
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
   const markAsRead = useMarkAsRead();
+  const { sendWhatsApp } = useWhatsAppExtensionBridge();
   const {
     level, enabled, toggle, isReading, isAvailable, focusedChat, focusOn, readNow,
   } = useWhatsAppAdaptiveSync();
@@ -77,15 +84,64 @@ export function WhatsAppInboxView() {
 
   const selectedThread = selectedContact ? threads.find(t => t.contact === selectedContact) : null;
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (selectedThread) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedThread?.messages.length]);
+
   const handleSelectThread = (thread: ChatThread) => {
     setSelectedContact(thread.contact);
-    // Focus the adaptive sync on this contact
     focusOn(thread.contact);
     thread.messages.forEach(msg => {
       if (msg.direction === "inbound" && !msg.read_at) {
         markAsRead.mutate(msg.id);
       }
     });
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !selectedContact || isSending) return;
+    const text = replyText.trim();
+    setIsSending(true);
+    setReplyText("");
+
+    try {
+      const result = await sendWhatsApp(selectedContact, text);
+      if (!result.success) {
+        toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
+        setReplyText(text); // restore text on failure
+        return;
+      }
+
+      // Save outbound message to DB
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("channel_messages").insert({
+          user_id: user.id,
+          channel: "whatsapp",
+          direction: "outbound",
+          to_address: selectedContact,
+          body_text: text,
+          message_id_external: `wa_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        });
+      }
+
+      toast.success("Messaggio inviato");
+    } catch (err: any) {
+      toast.error(`Errore: ${err.message}`);
+      setReplyText(text);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendReply();
+    }
   };
 
   return (
@@ -97,7 +153,6 @@ export function WhatsAppInboxView() {
       )}>
         <div className="flex-shrink-0 p-3 space-y-2 border-b border-border">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* On-demand */}
             <Button
               size="sm"
               variant="outline"
@@ -113,7 +168,6 @@ export function WhatsAppInboxView() {
               Leggi ora
             </Button>
 
-            {/* Adaptive sync toggle */}
             <Button
               size="sm"
               variant={enabled ? "default" : "outline"}
@@ -130,7 +184,6 @@ export function WhatsAppInboxView() {
               {isAvailable ? "Connesso" : "Offline"}
             </Badge>
 
-            {/* Attention level indicator */}
             {enabled && (
               <Badge className={cn("text-[10px] gap-1 h-5 border-0", levelCfg.color)}>
                 <LevelIcon className={cn("w-3 h-3", level === 6 && "animate-pulse")} />
@@ -139,7 +192,6 @@ export function WhatsAppInboxView() {
             )}
           </div>
 
-          {/* Focused chat indicator */}
           {focusedChat && enabled && (
             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <Radio className="w-3 h-3 text-green-500" />
@@ -275,8 +327,35 @@ export function WhatsAppInboxView() {
                   </div>
                 );
               })}
+              <div ref={chatEndRef} />
             </div>
           </ScrollArea>
+
+          {/* Reply input */}
+          <div className="flex-shrink-0 p-3 border-t border-border bg-background">
+            <div className="flex items-center gap-2 max-w-lg mx-auto">
+              <Input
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Scrivi un messaggio..."
+                className="flex-1 text-sm"
+                disabled={isSending || !isAvailable}
+              />
+              <Button
+                size="icon"
+                onClick={handleSendReply}
+                disabled={!replyText.trim() || isSending || !isAvailable}
+                className="bg-green-500 hover:bg-green-600 text-white h-9 w-9"
+              >
+                {isSending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
