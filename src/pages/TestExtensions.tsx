@@ -412,7 +412,6 @@ export default function TestExtensions() {
 }
   return (
     <div className="min-h-screen bg-background text-foreground p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1">🧪 Test Estensioni — WhatsApp + FireScrape</h1>
       <p className="text-muted-foreground text-sm mb-6">
         Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni.
       </p>
