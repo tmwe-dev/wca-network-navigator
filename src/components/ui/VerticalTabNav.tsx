@@ -18,9 +18,9 @@ interface VerticalTabNavProps {
 
 export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTabNavProps) {
   return (
-    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20">
+    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 overflow-y-auto">
       {/* Tab buttons */}
-      <div className="py-1">
+      <div className="py-1 flex-shrink-0">
         {tabs.map((tab) => {
           const active = value === tab.value;
           const Icon = tab.icon;
