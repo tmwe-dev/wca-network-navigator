@@ -20,6 +20,8 @@ import type { ContactFilters } from "@/hooks/useContacts";
 interface Props {
   selectedId: string | null;
   onSelect: (contact: any) => void;
+  filterGroupKey?: string | null;
+  filterGroupType?: string;
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
