@@ -185,51 +185,12 @@ export default function Operations() {
 
   // Listen for sync-wca-trigger from global header button
   const handleSyncWca = useCallback(async () => {
-    if (selectedCountries.length === 0) {
-      toast.warning("Seleziona almeno un paese per sincronizzare");
-      return;
-    }
-
-    const toastId = toast.loading("Verifica paesi disponibili nel DB esterno...");
+    const toastId = toast.loading("🚀 Avvio sincronizzazione globale...");
 
     try {
-      // Step 1: Fetch available countries from external DB
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("Sessione scaduta, effettua il login");
-
-      const countResp = await fetch(`${supabaseUrl}/functions/v1/wca-country-counts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: "{}",
-      });
-
-      if (!countResp.ok) throw new Error(`Verifica paesi fallita: HTTP ${countResp.status}`);
-      const { countries: availableCountries } = await countResp.json() as { countries: Record<string, number> };
-
-      // Filter to only countries that have data
-      const countriesToSync = selectedCountries.filter(c => availableCountries[c.code] && availableCountries[c.code] > 0);
-      const skippedCount = selectedCountries.length - countriesToSync.length;
-
-      if (countriesToSync.length === 0) {
-        toast.warning(
-          `Nessun dato disponibile per i ${selectedCountries.length} paesi selezionati.\n` +
-          `Paesi con dati: ${Object.keys(availableCountries).join(", ")}`,
-          { id: toastId, duration: 6000 }
-        );
-        return;
-      }
-
-      const totalExtPartners = countriesToSync.reduce((sum, c) => sum + (availableCountries[c.code] || 0), 0);
-      toast.loading(
-        `🚀 Sincronizzazione ${countriesToSync.length} paesi (${totalExtPartners} partner)` +
-        (skippedCount > 0 ? `\n⏭️ ${skippedCount} paesi saltati (nessun dato)` : ""),
-        { id: toastId }
-      );
 
       // Step 2: Sync each country
       let grandTotal = { partners: 0, contacts: 0, networks: 0 };
