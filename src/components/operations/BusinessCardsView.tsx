@@ -72,6 +72,7 @@ export function BusinessCardsView() {
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   const handleSync = async () => {
     setSyncing(true);
