@@ -42,11 +42,9 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
   const queryClient = useQueryClient();
 
   const handleSync = useCallback(async () => {
-    const targets = selected.length > 0 ? selected : [];
-    if (targets.length === 0) {
-      toast.error("Seleziona almeno un paese da sincronizzare");
-      return;
-    }
+    // Trigger global sync (no country selection needed)
+    window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
+    return;
     setSyncing(true);
     const toastId = toast.loading(`Sincronizzazione ${targets.length} paes${targets.length === 1 ? "e" : "i"}...`);
     let totalRecords = 0;
