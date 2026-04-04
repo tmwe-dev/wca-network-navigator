@@ -3,16 +3,18 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Zap, Eye, Radio, Send, X, PanelLeftClose, PanelLeftOpen,
+  Zap, Eye, Radio, Send, X, PanelLeftClose, PanelLeftOpen, Download, Square,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
