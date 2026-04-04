@@ -79,6 +79,7 @@ function WhatsAppTest() {
   const [running, setRunning] = useState(false);
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
+  const [foundContacts, setFoundContacts] = useState<Array<{ contact: string; time?: string }>>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -125,6 +126,8 @@ function WhatsAppTest() {
 
     if (msgs.length === 0) {
       log("⚠️ ZERO messaggi — il selettore DOM non trova le chat!", "error");
+    } else {
+      setFoundContacts(msgs.map((m: any) => ({ contact: m.contact, time: m.time })));
     }
 
     setRunning(false);
@@ -170,12 +173,25 @@ function WhatsAppTest() {
       </div>
 
       <div className="flex gap-2">
-        <Input
-          value={sendContact}
-          onChange={(e) => setSendContact(e.target.value)}
-          placeholder="Nome contatto (es. Papa Ernesto)"
-          className="flex-1"
-        />
+        {foundContacts.length > 0 ? (
+          <select
+            value={sendContact}
+            onChange={(e) => setSendContact(e.target.value)}
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">— Seleziona contatto —</option>
+            {foundContacts.map((c, i) => (
+              <option key={i} value={c.contact}>{c.contact}{c.time ? ` (${c.time})` : ""}</option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            value={sendContact}
+            onChange={(e) => setSendContact(e.target.value)}
+            placeholder="Nome contatto (prima fai 📨 Leggi Messaggi)"
+            className="flex-1"
+          />
+        )}
       </div>
       <div className="flex gap-2">
         <Input
@@ -315,6 +331,7 @@ function LinkedInTest() {
   const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
+  const [foundThreads, setFoundThreads] = useState<Array<{ name: string; threadUrl?: string }>>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -389,6 +406,7 @@ function LinkedInTest() {
     if (r?.success && r?.threads?.length) {
       log(`✅ Trovati ${r.threads.length} thread`, "ok");
       r.threads.forEach((t: any) => log(`  • ${t.name}: ${t.lastMessage?.slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
+      setFoundThreads(r.threads.map((t: any) => ({ name: t.name, threadUrl: t.threadUrl })));
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
     }
@@ -475,12 +493,25 @@ function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
-        <Input
-          value={sendUrl}
-          onChange={(e) => setSendUrl(e.target.value)}
-          placeholder="URL profilo destinatario (es. https://www.linkedin.com/in/mario-rossi)"
-          className="text-sm"
-        />
+        {foundThreads.length > 0 ? (
+          <select
+            value={sendUrl}
+            onChange={(e) => setSendUrl(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">— Seleziona contatto —</option>
+            {foundThreads.map((t, i) => (
+              <option key={i} value={t.threadUrl || ""}>{t.name}{t.threadUrl ? "" : " (no URL)"}</option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            value={sendUrl}
+            onChange={(e) => setSendUrl(e.target.value)}
+            placeholder="URL profilo (prima fai 📨 Leggi Inbox)"
+            className="text-sm"
+          />
+        )}
         <div className="flex gap-2">
           <Input
             value={sendText}
