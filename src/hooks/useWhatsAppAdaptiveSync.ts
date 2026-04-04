@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 // ── Attention Levels ──
