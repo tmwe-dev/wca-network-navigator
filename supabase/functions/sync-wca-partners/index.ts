@@ -12,13 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { countryCode } = await req.json();
-    if (!countryCode) {
-      return new Response(
-        JSON.stringify({ error: "countryCode required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const body = await req.json().catch(() => ({}));
+    const countryCode = body.countryCode || null; // null = sync all
 
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
