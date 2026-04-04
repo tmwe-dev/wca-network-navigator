@@ -1,11 +1,12 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle, Linkedin } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
 import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
 import { EmailInboxView } from "@/components/outreach/EmailInboxView";
 import { WhatsAppInboxView } from "@/components/outreach/WhatsAppInboxView";
+import { LinkedInInboxView } from "@/components/outreach/LinkedInInboxView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -21,6 +22,7 @@ export default function Outreach() {
   const { setOutreachTab } = useGlobalFilters();
   const { data: emailUnread = 0 } = useUnreadCount("email");
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
+  const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
@@ -31,6 +33,7 @@ export default function Outreach() {
     { value: "circuito", label: "Circuito", icon: Plane },
     { value: "email", label: "Email", icon: Mail, badge: emailUnread },
     { value: "whatsapp", label: "WhatsApp", icon: MessageCircle, badge: waUnread },
+    { value: "linkedin", label: "LinkedIn", icon: Linkedin, badge: liUnread },
   ];
 
   return (
@@ -49,6 +52,7 @@ export default function Outreach() {
         {tab === "circuito" && <HoldingPatternTab />}
         {tab === "email" && <EmailInboxView />}
         {tab === "whatsapp" && <WhatsAppInboxView />}
+        {tab === "linkedin" && <LinkedInInboxView />}
       </div>
       </div>
     </div>
