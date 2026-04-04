@@ -45,6 +45,9 @@ const waMsg = (action: string, payload = {}, timeout = 60000) =>
 const fsMsg = (action: string, payload = {}, timeout = 30000) =>
   sendToExtension("from-webapp-fs", "from-extension-fs", action, payload, timeout);
 
+const liMsg = (action: string, payload = {}, timeout = 30000) =>
+  sendToExtension("from-webapp-li", "from-extension-li", action, payload, timeout);
+
 // ━━━━━━━━━━━━ Terminal Component ━━━━━━━━━━━━
 function Terminal({ logs }: { logs: LogEntry[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
