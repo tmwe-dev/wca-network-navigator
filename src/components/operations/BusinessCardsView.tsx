@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare } from "lucide-react";
+import { Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, LayoutList, LayoutGrid, Rows3, Mail, Phone } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useBusinessCards, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useSendToCockpit } from "@/hooks/useCockpitContacts";
