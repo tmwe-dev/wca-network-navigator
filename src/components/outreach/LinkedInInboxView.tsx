@@ -109,12 +109,22 @@ export function LinkedInInboxView() {
   const handleSendReply = async () => {
     if (!replyText.trim() || !activeTab || isSending) return;
     const text = replyText.trim();
+
+    // Extract threadUrl from messages — the extension needs a URL, not a name
+    const threadUrl = activeThread?.messages
+      ?.map(m => m.thread_id)
+      .find(tid => tid && tid.startsWith("http"));
+
+    if (!threadUrl) {
+      toast.error("URL thread LinkedIn non trovato. Riprova dopo una sincronizzazione.");
+      return;
+    }
+
     setIsSending(true);
     setReplyText("");
     try {
-      // For LinkedIn we need a profile URL — try to find it from message metadata
-      // For now, use the contact name as identifier
-      const result = await sendMessage(activeTab, text);
+      // Use the same approach as TestExtensions: direct postMessage to extension
+      const result = await sendMessage(threadUrl, text);
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
@@ -128,6 +138,7 @@ export function LinkedInInboxView() {
           direction: "outbound",
           to_address: activeTab,
           body_text: text,
+          thread_id: threadUrl,
           message_id_external: `li_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         });
       }
