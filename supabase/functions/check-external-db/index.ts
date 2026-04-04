@@ -14,26 +14,39 @@ Deno.serve(async (req) => {
     if (!extKey) throw new Error("WCA_EXTERNAL_SUPABASE_KEY not set");
 
     const ext = createClient(extUrl, extKey);
+    const results: any = { keyLength: extKey.length };
 
-    // Count partners
-    const { count: partnerCount } = await ext.from("partners").select("*", { count: "exact", head: true });
+    // Try fetching partners with data (not just count)
+    const { data: p1, error: e1 } = await ext.from("partners").select("id, country_code").limit(5);
+    results.partnersSample = p1;
+    results.partnersError = e1?.message || null;
 
-    // Count contacts
-    const { count: contactCount } = await ext.from("partner_contacts").select("*", { count: "exact", head: true });
+    // Try count with range header approach
+    const { count: pc, error: e2 } = await ext.from("partners").select("id", { count: "exact", head: true });
+    results.partnersCount = pc;
+    results.countError = e2?.message || null;
 
-    // Count networks  
-    const { count: networkCount } = await ext.from("partner_networks").select("*", { count: "exact", head: true });
+    // Try contacts
+    const { data: c1, error: e3 } = await ext.from("partner_contacts").select("id").limit(3);
+    results.contactsSample = c1;
+    results.contactsError = e3?.message || null;
 
-    // Top countries
-    const { data: sample } = await ext.from("partners").select("country_code").limit(10000);
-    const cc: Record<string, number> = {};
-    sample?.forEach((r: any) => { cc[r.country_code] = (cc[r.country_code] || 0) + 1; });
-    const topCountries = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    // Try networks
+    const { data: n1, error: e4 } = await ext.from("partner_networks").select("id").limit(3);
+    results.networksSample = n1;
+    results.networksError = e4?.message || null;
 
-    return new Response(JSON.stringify({
-      external: { partners: partnerCount, contacts: contactCount, networks: networkCount, countries: Object.keys(cc).length, topCountries },
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Try a specific country count
+    const { data: itData, error: e5 } = await ext.from("partners").select("id").eq("country_code", "IT");
+    results.italyPartners = itData?.length || 0;
+    results.italyError = e5?.message || null;
+
+    return new Response(JSON.stringify(results, null, 2), { 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: e.message }), { 
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
 });
