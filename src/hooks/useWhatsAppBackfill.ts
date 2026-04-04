@@ -118,11 +118,7 @@ export function useWhatsAppBackfill() {
           const lastKnown = contactLastMsg.get(contact) || "";
 
           // Send backfill command to extension
-          const result = await bridge.sendMsg(
-            "backfillChat",
-            { contact, lastKnownText: lastKnown, maxScrolls: 30 },
-            120000
-          );
+          const result = await bridge.backfillChat(contact, lastKnown, 30);
 
           if (result.success && result.messages?.length) {
             // Save new messages to DB
