@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Zap, Eye, Radio, Send, X, ChevronLeft,
+  Zap, Eye, Radio, Send, X,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -148,15 +148,10 @@ export function WhatsAppInboxView() {
     }
   };
 
-  const showSidebar = !activeTab;
-
   return (
-    <div className="flex h-full bg-background">
-      {/* Sidebar: contact list */}
-      <div className={cn(
-        "flex flex-col border-r border-border bg-background transition-all",
-        showSidebar ? "w-[320px] min-w-[320px]" : "w-0 min-w-0 overflow-hidden"
-      )}>
+    <div className="flex h-full bg-background overflow-hidden">
+      {/* Sidebar: contact list — always visible */}
+      <div className="flex flex-col border-r border-border bg-background w-[280px] min-w-[280px] shrink-0">
         {/* Header controls */}
         <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -251,15 +246,10 @@ export function WhatsAppInboxView() {
       </div>
 
       {/* Main area: tabs + conversation */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Horizontal tabs bar */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
-            {!showSidebar && (
-              <Button size="icon" variant="ghost" onClick={() => setActiveTab(null)} className="h-8 w-8 flex-shrink-0 ml-1">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-            )}
             {openTabs.map(contact => {
               const thread = threads.find(t => t.contact === contact);
               const isActive = contact === activeTab;
@@ -296,7 +286,7 @@ export function WhatsAppInboxView() {
 
         {/* Chat content */}
         {activeThread ? (
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Chat header */}
             <div className="flex-shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-background">
               <div className="flex items-center gap-2">
