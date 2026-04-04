@@ -24,7 +24,7 @@ interface Props {
   filterGroupType?: string;
 }
 
-export function ContactListPanel({ selectedId, onSelect }: Props) {
+export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterGroupType }: Props) {
   const { filters: gf } = useGlobalFilters();
 
   // Map global filters to local ContactFilters shape
