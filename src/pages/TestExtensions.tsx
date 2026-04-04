@@ -406,6 +406,7 @@ function LinkedInTest() {
     if (r?.success && r?.threads?.length) {
       log(`✅ Trovati ${r.threads.length} thread`, "ok");
       r.threads.forEach((t: any) => log(`  • ${t.name}: ${t.lastMessage?.slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
+      setFoundThreads(r.threads.map((t: any) => ({ name: t.name, threadUrl: t.threadUrl })));
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
     }
