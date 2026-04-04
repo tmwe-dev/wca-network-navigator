@@ -314,6 +314,9 @@ export function PartnerListPanel({
           onEmailClick={(target) => setEmailTarget(target)}
           selectedIds={selectedIds}
           onToggleSelect={togglePartnerSelect}
+          loadMoreRef={loadMoreRef}
+          hasNextPage={!!hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
         />
       </div>
       {emailTarget && (
