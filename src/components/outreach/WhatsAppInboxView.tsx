@@ -148,15 +148,10 @@ export function WhatsAppInboxView() {
     }
   };
 
-  const showSidebar = !activeTab;
-
   return (
-    <div className="flex h-full bg-background">
-      {/* Sidebar: contact list */}
-      <div className={cn(
-        "flex flex-col border-r border-border bg-background transition-all",
-        showSidebar ? "w-[320px] min-w-[320px]" : "w-0 min-w-0 overflow-hidden"
-      )}>
+    <div className="flex h-full bg-background overflow-hidden">
+      {/* Sidebar: contact list — always visible */}
+      <div className="flex flex-col border-r border-border bg-background w-[280px] min-w-[280px] shrink-0">
         {/* Header controls */}
         <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
           <div className="flex items-center gap-1.5 flex-wrap">
