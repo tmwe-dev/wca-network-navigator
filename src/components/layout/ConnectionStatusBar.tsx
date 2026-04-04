@@ -130,6 +130,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     const newStatus: ChannelStatus = { li: liOk, wa: waOk, fs: fsOk, ai: aiOk };
     setStatus(newStatus);
+    saveCachedStatus(newStatus);
 
     // Persist real state
     try {
