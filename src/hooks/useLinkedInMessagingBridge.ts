@@ -81,5 +81,9 @@ export function useLinkedInMessagingBridge() {
     return sendToExtension("sendMessage", { url: profileUrl, message: text }, 20000);
   }, []);
 
-  return { isAvailable, readInbox, readThread, sendMessage };
+  const diagnosticDom = useCallback(async (): Promise<BridgeResponse> => {
+    return sendToExtension("diagnosticLinkedInDom", {}, 30000);
+  }, []);
+
+  return { isAvailable, readInbox, readThread, sendMessage, diagnosticDom };
 }
