@@ -69,6 +69,7 @@ export function useLinkedInSync() {
           from_address: thread.name,
           body_text: thread.lastMessage,
           message_id_external: extId,
+          thread_id: thread.threadUrl || null,
         });
         if (!error) newMsgs++;
         else if (error.code === "23505") dupes++;
