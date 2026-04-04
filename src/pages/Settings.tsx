@@ -11,13 +11,25 @@ import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
-import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
+import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
   const [tab, setTab] = useState("generale");
+
+  // Enrichment filter state — lifted here to pass into VerticalTabNav filterSlot
+  const [enrSource, setEnrSource] = useState<SourceFilter>("all");
+  const [enrFilter, setEnrFilter] = useState<EnrichFilter>("all");
+  const [enrSearch, setEnrSearch] = useState("");
+  const [enrSortField, setEnrSortField] = useState<SortField>("name");
+  const [enrSortDir, setEnrSortDir] = useState<SortDir>("asc");
+
+  const toggleEnrSort = (field: SortField) => {
+    if (enrSortField === field) setEnrSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setEnrSortField(field); setEnrSortDir("asc"); }
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -36,9 +48,24 @@ export default function Settings() {
     { value: "operatori", label: "Operatori", icon: Users },
   ];
 
+  // Dynamic filterSlot based on active tab
+  const filterSlot = tab === "enrichment" ? (
+    <EnrichmentFilters
+      search={enrSearch}
+      onSearchChange={setEnrSearch}
+      source={enrSource}
+      onSourceChange={setEnrSource}
+      enrichFilter={enrFilter}
+      onEnrichFilterChange={setEnrFilter}
+      sortField={enrSortField}
+      sortDir={enrSortDir}
+      onToggleSort={toggleEnrSort}
+    />
+  ) : undefined;
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
+      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} filterSlot={filterSlot} />
       <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
         {tab === "download-email" ? (
           <EmailDownloadPage />
@@ -81,9 +108,13 @@ export default function Settings() {
             )}
             {tab === "operatori" && <OperatorsSettings />}
             {tab === "enrichment" && (
-              <div className="float-panel p-5">
-                <EnrichmentSettings />
-              </div>
+              <EnrichmentSettings
+                source={enrSource}
+                enrichFilter={enrFilter}
+                sortField={enrSortField}
+                sortDir={enrSortDir}
+                search={enrSearch}
+              />
             )}
           </div>
         )}
