@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,8 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
+import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
+import { useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -69,10 +71,31 @@ export function PartnerListPanel({
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
 
-  const { data: partners, isLoading } = usePartners({
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePartnersPaginated({
     countries: countryCodes,
     search: search.length >= 5 ? search : undefined,
   });
+
+  const partners = useMemo(() => {
+    if (!paginatedData) return [];
+    return paginatedData.pages.flatMap(p => p.partners);
+  }, [paginatedData]);
+
+  const totalCount = paginatedData?.pages[0]?.total || 0;
+
+  // Infinite scroll sentinel
+  const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
+  useEffect(() => {
+    if (loadMoreInView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const toggleFavorite = useToggleFavorite();
 
@@ -234,7 +257,7 @@ export function PartnerListPanel({
               </SelectContent>
             </Select>
             <span className={cn("text-[10px] tabular-nums whitespace-nowrap ml-auto", th.dim)}>
-              {isLoading ? "..." : `${filteredPartners.length}${progressFilter ? " filtrati" : ""}`}
+              {isLoading ? "..." : `${filteredPartners.length}${totalCount > filteredPartners.length ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
             </span>
           </div>
 
@@ -291,6 +314,9 @@ export function PartnerListPanel({
           onEmailClick={(target) => setEmailTarget(target)}
           selectedIds={selectedIds}
           onToggleSelect={togglePartnerSelect}
+          loadMoreRef={loadMoreRef}
+          hasNextPage={!!hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
         />
       </div>
       {emailTarget && (
