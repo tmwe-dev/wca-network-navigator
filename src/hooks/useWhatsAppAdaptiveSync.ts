@@ -244,6 +244,18 @@ export function useWhatsAppAdaptiveSync() {
     };
   }, [enabled, isAvailable, level, tick]);
 
+  // ── MutationObserver push: instant scan on sidebar change ──
+  useEffect(() => {
+    if (!enabled || !isAvailable) return;
+    onSidebarChanged(() => {
+      // Sidebar changed → immediate scan (no waiting for next poll)
+      if (!readingRef.current) {
+        sidebarScan();
+      }
+    });
+    return () => onSidebarChanged(() => {});
+  }, [enabled, isAvailable, onSidebarChanged, sidebarScan]);
+
   // Cleanup de-escalation timer
   useEffect(() => {
     return () => {
