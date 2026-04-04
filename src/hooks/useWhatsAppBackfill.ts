@@ -6,6 +6,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
