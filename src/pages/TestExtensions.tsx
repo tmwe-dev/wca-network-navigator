@@ -173,12 +173,25 @@ function WhatsAppTest() {
       </div>
 
       <div className="flex gap-2">
-        <Input
-          value={sendContact}
-          onChange={(e) => setSendContact(e.target.value)}
-          placeholder="Nome contatto (es. Papa Ernesto)"
-          className="flex-1"
-        />
+        {foundContacts.length > 0 ? (
+          <select
+            value={sendContact}
+            onChange={(e) => setSendContact(e.target.value)}
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">— Seleziona contatto —</option>
+            {foundContacts.map((c, i) => (
+              <option key={i} value={c.contact}>{c.contact}{c.time ? ` (${c.time})` : ""}</option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            value={sendContact}
+            onChange={(e) => setSendContact(e.target.value)}
+            placeholder="Nome contatto (prima fai 📨 Leggi Messaggi)"
+            className="flex-1"
+          />
+        )}
       </div>
       <div className="flex gap-2">
         <Input
