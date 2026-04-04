@@ -281,8 +281,135 @@ function FireScrapeTest() {
   );
 }
 
+// ━━━━━━━━━━━━ LinkedIn Tab ━━━━━━━━━━━━
+function LinkedInTest() {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [running, setRunning] = useState(false);
+  const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
+
+  const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
+    setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
+  }, []);
+
+  const testPing = async () => {
+    setRunning(true);
+    log("🔌 Ping estensione LinkedIn...");
+    const r = await liMsg("ping", {}, 5000);
+    if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
+    else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    setRunning(false);
+  };
+
+  const testSession = async () => {
+    setRunning(true);
+    log("🔑 Verifica sessione LinkedIn...");
+    const r = await liMsg("verifySession", {}, 30000);
+    log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
+    setRunning(false);
+  };
+
+  const testSyncCookie = async () => {
+    setRunning(true);
+    log("🍪 Sync cookie li_at...");
+    const r = await liMsg("syncCookie", {}, 15000);
+    log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
+    setRunning(false);
+  };
+
+  const testAutoLogin = async () => {
+    setRunning(true);
+    log("🔐 Auto-login LinkedIn...");
+    const r = await liMsg("autoLogin", {}, 60000);
+    log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
+    setRunning(false);
+  };
+
+  const testExtractProfile = async () => {
+    if (!profileUrl || profileUrl === "https://www.linkedin.com/in/") {
+      log("⚠️ Inserisci un URL profilo valido", "warn");
+      return;
+    }
+    setRunning(true);
+    log(`👤 Estrazione profilo: ${profileUrl}`);
+    const r = await liMsg("extractProfile", { url: profileUrl }, 30000);
+    if (r?.success && r?.profile) {
+      log(`✅ Profilo trovato`, "ok");
+      log(`  Nome: ${r.profile.name || "?"}`, "info");
+      log(`  Headline: ${r.profile.headline || "?"}`, "info");
+      log(`  Location: ${r.profile.location || "?"}`, "info");
+      log(`  URL: ${r.profile.profileUrl || "?"}`, "info");
+    } else {
+      log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
+    }
+    setRunning(false);
+  };
+
+  const testSearchProfile = async () => {
+    setRunning(true);
+    const query = "Mario Rossi CEO";
+    log(`🔎 Ricerca profilo: "${query}"`);
+    const r = await liMsg("searchProfile", { query }, 30000);
+    log(`Risultato: ${JSON.stringify(r, null, 2).slice(0, 1000)}`, r?.success ? "ok" : "error");
+    setRunning(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
+        <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
+        <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
+        <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
+        <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
+        <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={profileUrl}
+          onChange={(e) => setProfileUrl(e.target.value)}
+          placeholder="https://www.linkedin.com/in/nome-profilo"
+          className="flex-1"
+        />
+        <Button onClick={testExtractProfile} disabled={running} size="sm">👤 Estrai Profilo</Button>
+      </div>
+
+      <Terminal logs={logs} />
+    </div>
+  );
+}
+
 // ━━━━━━━━━━━━ Main Page ━━━━━━━━━━━━
 export default function TestExtensions() {
+  return (
+    <div className="min-h-screen bg-background text-foreground p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-1">🧪 Test Estensioni — WhatsApp + LinkedIn + FireScrape</h1>
+      <p className="text-muted-foreground text-sm mb-6">
+        Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni.
+      </p>
+
+      <Tabs defaultValue="whatsapp" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="whatsapp">💬 WhatsApp</TabsTrigger>
+          <TabsTrigger value="linkedin">💼 LinkedIn</TabsTrigger>
+          <TabsTrigger value="firescrape">🔥 FireScrape</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="whatsapp">
+          <WhatsAppTest />
+        </TabsContent>
+
+        <TabsContent value="linkedin">
+          <LinkedInTest />
+        </TabsContent>
+
+        <TabsContent value="firescrape">
+          <FireScrapeTest />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-background text-foreground p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">🧪 Test Estensioni — WhatsApp + FireScrape</h1>
