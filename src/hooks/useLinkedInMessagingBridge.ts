@@ -239,45 +239,55 @@ export function useLinkedInMessagingBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // ── READ INBOX: FireScrape (primary) → LinkedIn ext (fallback) ──
+  // ── READ INBOX: LinkedIn ext (primary, background tab) → FireScrape (fallback) ──
   const readInbox = useCallback(async (): Promise<BridgeResponse> => {
-    // Strategy 1: FireScrape
+    // Strategy 1: LinkedIn extension — opens tab in background, no disruption
+    const liResult = await sendToLinkedInExt("readLinkedInInbox", {}, 30000);
+    if (liResult.success && liResult.threads && liResult.threads.length > 0) {
+      console.log("[LI Bridge] LinkedIn ext found", liResult.threads.length, "threads");
+      return { ...liResult, source: "linkedin-ext" };
+    }
+    console.warn("[LI Bridge] LinkedIn ext returned 0 threads, trying FireScrape...");
+
+    // Strategy 2: FireScrape — NOTE: this navigates the active tab!
+    // Only use if LinkedIn extension failed AND FireScrape is available
     const fsAvail = await checkFireScrape();
     if (fsAvail) {
-      console.log("[LI Bridge] Using FireScrape to read inbox");
-      // Navigate to LinkedIn messaging
+      console.log("[LI Bridge] Using FireScrape to read inbox (will navigate active tab)");
       const nav = await sendToFireScrape("agent-action", {
         step: { action: "navigate", url: "https://www.linkedin.com/messaging/" }
       }, 25000);
 
       if (nav?.success) {
-        // Wait for page to render
         await new Promise(r => setTimeout(r, 4000));
-        // Scrape the page
         const scrape = await sendToFireScrape("scrape", { skipCache: true }, 20000);
         if (scrape?.success && scrape?.markdown) {
           console.log("[LI Bridge] FireScrape markdown length:", scrape.markdown.length);
           const threads = parseInboxMarkdown(scrape.markdown);
-          console.log("[LI Bridge] Parsed threads:", threads.length);
+          console.log("[LI Bridge] Parsed threads from FireScrape:", threads.length);
           if (threads.length > 0) {
             return { success: true, threads, source: "firescrape" };
           }
         }
       }
-      console.warn("[LI Bridge] FireScrape failed, falling back to LinkedIn extension");
     }
 
-    // Strategy 2: LinkedIn extension (fallback)
-    return sendToLinkedInExt("readLinkedInInbox", {}, 30000);
+    // Both failed
+    return liResult; // Return LinkedIn ext result (may have error info)
   }, []);
 
-  // ── READ THREAD: FireScrape (primary) → LinkedIn ext (fallback) ──
+  // ── READ THREAD: LinkedIn ext (primary) → FireScrape (fallback) ──
   const readThread = useCallback(async (threadUrl: string): Promise<BridgeResponse> => {
-    const contactName = ""; // Will be filled from context
+    // Strategy 1: LinkedIn extension (background tab)
+    const liResult = await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 25000);
+    if (liResult.success && liResult.messages && liResult.messages.length > 0) {
+      return { ...liResult, source: "linkedin-ext" };
+    }
 
+    // Strategy 2: FireScrape fallback (navigates active tab!)
     const fsAvail = await checkFireScrape();
     if (fsAvail) {
-      console.log("[LI Bridge] Using FireScrape to read thread:", threadUrl);
+      console.log("[LI Bridge] Using FireScrape to read thread (fallback)");
       const nav = await sendToFireScrape("agent-action", {
         step: { action: "navigate", url: threadUrl }
       }, 25000);
@@ -286,16 +296,16 @@ export function useLinkedInMessagingBridge() {
         await new Promise(r => setTimeout(r, 5000));
         const scrape = await sendToFireScrape("scrape", { skipCache: true }, 20000);
         if (scrape?.success && scrape?.markdown) {
+          const contactName = "";
           const messages = parseThreadMarkdown(scrape.markdown, contactName);
           if (messages.length > 0) {
             return { success: true, messages, source: "firescrape" };
           }
         }
       }
-      console.warn("[LI Bridge] FireScrape thread read failed, falling back");
     }
 
-    return sendToLinkedInExt("readLinkedInThread", { threadUrl }, 20000);
+    return liResult;
   }, []);
 
   // ── SEND MESSAGE: Always via LinkedIn extension ──
