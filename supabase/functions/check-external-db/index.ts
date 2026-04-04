@@ -19,6 +19,21 @@ Deno.serve(async (req) => {
       "Content-Type": "application/json",
     };
 
+    const queryTable = new URL(req.url).searchParams.get("table");
+    let bodyTable: string | null = null;
+    if (req.method !== "GET") {
+      const rawBody = await req.text();
+      if (rawBody) {
+        try {
+          const parsedBody = JSON.parse(rawBody);
+          if (typeof parsedBody?.table === "string") bodyTable = parsedBody.table;
+        } catch {
+          bodyTable = null;
+        }
+      }
+    }
+    const targetTable = queryTable || bodyTable;
+
     // Get the OpenAPI spec to extract all table names
     const schemaRes = await fetch(`${extUrl}/rest/v1/`, { headers });
     const schema = await schemaRes.json();
@@ -41,7 +56,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ tables: tableNames, counts: tableCounts }, null, 2), { 
+    let tableDetails: Record<string, unknown> | null = null;
+    if (targetTable && tableNames.includes(targetTable)) {
+      const sampleRes = await fetch(`${extUrl}/rest/v1/${targetTable}?select=*&limit=1`, { headers });
+      const sampleRows = sampleRes.ok ? await sampleRes.json() : [];
+      const sampleRow = Array.isArray(sampleRows) && sampleRows.length > 0 ? sampleRows[0] : null;
+
+      const openApiPath = schema.paths?.[`/${targetTable}`]?.get;
+      const responseSchema = openApiPath?.responses?.["200"]?.content?.["application/json"]?.schema;
+      const itemSchema = responseSchema?.items || null;
+
+      tableDetails = {
+        table: targetTable,
+        columns: itemSchema?.properties ? Object.keys(itemSchema.properties) : (sampleRow ? Object.keys(sampleRow) : []),
+        sampleRow,
+      };
+    }
+
+    return new Response(JSON.stringify({ tables: tableNames, counts: tableCounts, tableDetails }, null, 2), { 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
   } catch (e) {
