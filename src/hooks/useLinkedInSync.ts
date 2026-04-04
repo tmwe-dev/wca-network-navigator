@@ -7,6 +7,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
