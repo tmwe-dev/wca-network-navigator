@@ -19,7 +19,20 @@ Deno.serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    const targetTable = new URL(req.url).searchParams.get("table");
+    const queryTable = new URL(req.url).searchParams.get("table");
+    let bodyTable: string | null = null;
+    if (req.method !== "GET") {
+      const rawBody = await req.text();
+      if (rawBody) {
+        try {
+          const parsedBody = JSON.parse(rawBody);
+          if (typeof parsedBody?.table === "string") bodyTable = parsedBody.table;
+        } catch {
+          bodyTable = null;
+        }
+      }
+    }
+    const targetTable = queryTable || bodyTable;
 
     // Get the OpenAPI spec to extract all table names
     const schemaRes = await fetch(`${extUrl}/rest/v1/`, { headers });
