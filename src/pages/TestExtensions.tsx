@@ -82,6 +82,9 @@ function WhatsAppTest() {
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
 
+  // ✅ Usa lo STESSO hook dell'inbox WhatsApp
+  const { isAvailable, verifySession, sendWhatsApp, readUnread } = useWhatsAppExtensionBridge();
+
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
@@ -92,21 +95,22 @@ function WhatsAppTest() {
     const r = await waMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    log(`📡 Hook isAvailable: ${isAvailable}`, isAvailable ? "ok" : "warn");
     setRunning(false);
   };
 
   const testSession = async () => {
     setRunning(true);
-    log("🔑 Verifica sessione WhatsApp Web...");
-    const r = await waMsg("verifySession", {}, 30000);
+    log("🔑 Verifica sessione WhatsApp Web (via hook)...");
+    const r = await verifySession();
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
     setRunning(false);
   };
 
   const testReadUnread = async () => {
     setRunning(true);
-    log("📨 Lettura messaggi (readUnread)...");
-    const r = await waMsg("readUnread", {}, 60000);
+    log("📨 Lettura messaggi (via hook readUnread — stesso dell'Inbox)...");
+    const r = await readUnread();
     
     if (!r?.success) {
       log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
@@ -142,8 +146,8 @@ function WhatsAppTest() {
       return;
     }
     setRunning(true);
-    log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
-    const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
+    log(`📤 Invio WhatsApp a "${sendContact}" (via hook sendWhatsApp — stesso dell'Inbox)...`);
+    const r = await sendWhatsApp(sendContact, sendText);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -171,22 +175,22 @@ function WhatsAppTest() {
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">📤 Test Invio WhatsApp (stesso bridge dell'Inbox)</p>
         <Input
           value={sendContact}
           onChange={(e) => setSendContact(e.target.value)}
           placeholder="Nome contatto (es. Papa Ernesto)"
-          className="flex-1"
         />
-      </div>
-      <div className="flex gap-2">
-        <Input
-          value={sendText}
-          onChange={(e) => setSendText(e.target.value)}
-          placeholder="Testo del messaggio"
-          className="flex-1"
-        />
-        <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+        <div className="flex gap-2">
+          <Input
+            value={sendText}
+            onChange={(e) => setSendText(e.target.value)}
+            placeholder="Testo del messaggio"
+            className="flex-1"
+          />
+          <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+        </div>
       </div>
 
       <Terminal logs={logs} />
