@@ -441,6 +441,116 @@ async function readChatThread(contactName, maxMessages) {
   }
 }
 
+// ── Backfill: scroll a chat backwards to collect missed messages ──
+async function backfillChat(contactName, lastKnownText, maxScrolls) {
+  var MAX_SCROLLS = maxScrolls || 30;
+  try {
+    var r = await getOrCreateWaTab();
+    await sleep(r.reused ? 1500 : 5000);
+
+    // Open the chat
+    var openResult = await chrome.scripting.executeScript({
+      target: { tabId: r.tab.id },
+      args: [contactName],
+      func: async function(target) {
+        var searchBox = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+          document.querySelector('#side [contenteditable="true"]');
+        if (!searchBox) return { success: false, error: "Search box not found" };
+        searchBox.focus();
+        searchBox.textContent = "";
+        document.execCommand("insertText", false, target);
+        await new Promise(function(r) { setTimeout(r, 1500); });
+        var chats = document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"]');
+        var clicked = false;
+        for (var c of chats) {
+          var t = c.querySelector('span[title]');
+          if (t && t.getAttribute("title").toLowerCase().includes(target.toLowerCase())) { c.click(); clicked = true; break; }
+        }
+        if (!clicked) return { success: false, error: "Chat non trovata: " + target };
+        await new Promise(function(r) { setTimeout(r, 2000); });
+        // Clear search
+        var clearBtn = document.querySelector('[data-testid="search-input-clear"]') ||
+          document.querySelector('[data-testid="x-alt"]');
+        if (clearBtn) clearBtn.click();
+        return { success: true };
+      },
+    });
+
+    var openRes = openResult?.[0]?.result;
+    if (!openRes?.success) return openRes || { success: false, error: "Open failed" };
+
+    // Scroll up and collect messages
+    var allMessages = [];
+    var foundLast = false;
+    var scrollDelays = [1, 2, 1.5, 3, 1, 2.5, 2, 1, 3, 1.5];
+
+    for (var scrollIdx = 0; scrollIdx < MAX_SCROLLS && !foundLast; scrollIdx++) {
+      var scrollResult = await chrome.scripting.executeScript({
+        target: { tabId: r.tab.id },
+        args: [contactName, lastKnownText || ""],
+        func: function(contact, lastText) {
+          var panel = document.querySelector('[data-testid="conversation-panel-messages"]') ||
+            document.querySelector('#main [role="application"]') ||
+            document.querySelector("#main");
+          if (!panel) return { success: false, error: "Panel not found" };
+
+          // Scroll up
+          var scrollContainer = panel.closest('[data-testid="conversation-panel-body"]') || panel.parentElement;
+          if (scrollContainer) scrollContainer.scrollTop = 0;
+
+          var msgEls = document.querySelectorAll('[data-testid="msg-container"]');
+          var msgs = [];
+          var hitLast = false;
+          for (var el of msgEls) {
+            var isOut = el.querySelector('[data-testid="msg-dblcheck"]') !== null || el.querySelector('[data-testid="msg-check"]') !== null;
+            var textEl = el.querySelector('[data-testid="balloon-text"] span, .selectable-text span');
+            var text = textEl?.textContent?.trim() || "";
+            if (!text) continue;
+
+            // Check if we hit the last known message
+            if (lastText && text === lastText) { hitLast = true; break; }
+
+            var timeEl = el.querySelector('[data-testid="msg-meta"] span');
+            msgs.push({
+              direction: isOut ? "outbound" : "inbound",
+              text: text,
+              timestamp: timeEl?.textContent?.trim() || "",
+              contact: isOut ? "me" : contact,
+            });
+          }
+          return { success: true, messages: msgs, foundLast: hitLast, totalInDom: msgEls.length };
+        },
+      });
+
+      var res = scrollResult?.[0]?.result;
+      if (!res?.success) break;
+      
+      if (res.messages?.length) {
+        for (var m of res.messages) {
+          var isDup = allMessages.some(function(existing) { return existing.text === m.text && existing.timestamp === m.timestamp; });
+          if (!isDup) allMessages.push(m);
+        }
+      }
+      
+      if (res.foundLast) { foundLast = true; break; }
+
+      // Human-like delay between scrolls
+      var delay = scrollDelays[scrollIdx % scrollDelays.length] * 1000;
+      await sleep(delay);
+    }
+
+    return {
+      success: true,
+      messages: allMessages,
+      contact: contactName,
+      foundLast: foundLast,
+      scrollCount: scrollIdx,
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 // ── Lifecycle: re-inject bridge after install/update/startup ──
 chrome.runtime.onInstalled.addListener(function() { syncBridgeAcrossOpenTabs().catch(function(){}); });
 chrome.runtime.onStartup.addListener(function() { syncBridgeAcrossOpenTabs().catch(function(){}); });
