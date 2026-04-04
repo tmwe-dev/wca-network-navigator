@@ -353,6 +353,51 @@ function LinkedInTest() {
     setRunning(false);
   };
 
+  const testReadInbox = async () => {
+    setRunning(true);
+    log("📨 Lettura inbox LinkedIn (30s timeout)...");
+    const r = await liMsg("readLinkedInInbox", {}, 35000);
+    if (r?.success && r?.threads?.length) {
+      log(`✅ Trovati ${r.threads.length} thread`, "ok");
+      r.threads.forEach((t: any) => log(`  • ${t.name}: ${t.lastMessage?.slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
+    } else {
+      log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
+    }
+    setRunning(false);
+  };
+
+  const testDiagnosticDom = async () => {
+    setRunning(true);
+    log("🔬 Diagnostica DOM LinkedIn Messaging...");
+    const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
+    if (r?.success) {
+      log(`📍 URL: ${r.url}`, "info");
+      log(`📄 Title: ${r.title}`, "info");
+      log(`📏 Body length: ${r.bodyLength} chars`, "info");
+      if (r.selectorResults) {
+        log(`🎯 Selettori trovati:`, "info");
+        Object.entries(r.selectorResults).forEach(([sel, count]) => {
+          const c = count as number;
+          log(`  ${c > 0 ? "✅" : "❌"} ${sel}: ${c}`, c > 0 ? "ok" : "info");
+        });
+      }
+      if (r.messagingLinks?.length) {
+        log(`🔗 Link messaging: ${r.messagingLinks.length}`, "ok");
+        r.messagingLinks.forEach((l: string) => log(`  ${l}`, "info"));
+      }
+      if (r.liClasses?.length) {
+        log(`📋 Classi <li> (prime 15):`, "info");
+        r.liClasses.slice(0, 15).forEach((c: string) => log(`  ${c}`, "info"));
+      }
+      if (r.bodySnippet) {
+        log(`📝 Body snippet: ${r.bodySnippet.slice(0, 200)}`, "info");
+      }
+    } else {
+      log(`❌ Diagnostica fallita: ${r?.error || JSON.stringify(r)}`, "error");
+    }
+    setRunning(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -361,6 +406,8 @@ function LinkedInTest() {
         <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
         <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
         <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
+        <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
+        <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
       </div>
 
