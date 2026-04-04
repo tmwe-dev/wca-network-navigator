@@ -191,7 +191,13 @@ export default function Operations() {
     }
     const toastId = toast.loading(`Sincronizzazione WCA per ${selectedCountries.map(c => c.name).join(", ")}...`);
     try {
-      for (const country of selectedCountries) {
+      let grandTotal = { partners: 0, contacts: 0, networks: 0 };
+      for (let ci = 0; ci < selectedCountries.length; ci++) {
+        const country = selectedCountries[ci];
+        const countryLabel = selectedCountries.length > 1
+          ? `[${ci + 1}/${selectedCountries.length}] ${country.name}`
+          : country.name;
+
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const { data: { session } } = await supabase.auth.getSession();
         const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
@@ -224,23 +230,46 @@ export default function Operations() {
             if (!line.startsWith("data: ")) continue;
             try {
               const evt = JSON.parse(line.slice(6));
-              if (evt.type === "progress") {
+              if (evt.type === "start") {
                 toast.loading(
-                  `${country.name}: ${evt.synced}/${evt.total} partner, ${evt.contacts} contatti`,
+                  `${countryLabel}: trovati ${evt.total} partner da sincronizzare...`,
+                  { id: toastId }
+                );
+              } else if (evt.type === "progress") {
+                const pct = evt.total > 0 ? Math.round((evt.synced / evt.total) * 100) : 0;
+                const bar = "█".repeat(Math.floor(pct / 5)) + "░".repeat(20 - Math.floor(pct / 5));
+                toast.loading(
+                  `${countryLabel}: ${bar} ${pct}%\n` +
+                  `👥 ${evt.synced}/${evt.total} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network` +
+                  (evt.totalPages > 1 ? `\n📦 Pagina ${evt.page}/${evt.totalPages}` : ""),
                   { id: toastId }
                 );
               } else if (evt.type === "complete") {
-                toast.success(
-                  `${country.name}: ${evt.synced} partner, ${evt.contacts} contatti, ${evt.networks} network sincronizzati`,
-                  { id: toastId }
-                );
+                grandTotal.partners += evt.synced || 0;
+                grandTotal.contacts += evt.contacts || 0;
+                grandTotal.networks += evt.networks || 0;
+                if (ci < selectedCountries.length - 1) {
+                  toast.loading(
+                    `✅ ${country.name}: ${evt.synced} partner sincronizzati\nProssimo paese...`,
+                    { id: toastId }
+                  );
+                }
               } else if (evt.type === "error") {
                 console.error("Sync SSE error:", evt.message);
+                toast.loading(
+                  `⚠️ ${countryLabel}: ${evt.message}`,
+                  { id: toastId }
+                );
               }
             } catch {}
           }
         }
       }
+      toast.success(
+        `Sincronizzazione completata!\n` +
+        `👥 ${grandTotal.partners} partner · 📇 ${grandTotal.contacts} contatti · 🌐 ${grandTotal.networks} network`,
+        { id: toastId, duration: 8000 }
+      );
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     } catch (e: any) {
