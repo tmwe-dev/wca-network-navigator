@@ -10,7 +10,6 @@ import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { toast } from "sonner";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
-const JITTER_FACTOR = 0.2; // ±20%
 
 function jitter(base: number) {
   return base * (0.8 + Math.random() * 0.4);
@@ -32,17 +31,35 @@ export function useLinkedInSync() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enabledRef = useRef(false);
 
-  const doSync = useCallback(async () => {
-    if (!enabledRef.current || !isAvailable) return;
+  // Core sync logic — separated from guard so readNow can bypass enabled check
+  const performSync = useCallback(async () => {
+    if (!isAvailable) {
+      toast.error("Estensione LinkedIn non disponibile");
+      return;
+    }
     setIsReading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast.error("Non autenticato");
+        return;
+      }
 
       const result = await readInbox();
-      if (!result.success || !result.threads?.length) return;
+      console.log("[LI Sync] readInbox result:", JSON.stringify(result).slice(0, 500));
+
+      if (!result.success) {
+        toast.error(`Lettura LinkedIn fallita: ${result.error || "errore sconosciuto"}`);
+        return;
+      }
+
+      if (!result.threads?.length) {
+        toast.info("Nessun thread LinkedIn trovato nell'inbox");
+        return;
+      }
 
       let newMsgs = 0;
+      let dupes = 0;
       for (const thread of result.threads) {
         if (!thread.lastMessage || !thread.name) continue;
         const extId = buildExternalId(thread.name, new Date().toISOString(), thread.lastMessage);
@@ -55,42 +72,59 @@ export function useLinkedInSync() {
           message_id_external: extId,
         });
         if (!error) newMsgs++;
+        else if (error.code === "23505") dupes++;
+        else console.warn("[LI Sync] insert error:", error.message);
       }
 
       if (newMsgs > 0) {
         queryClient.invalidateQueries({ queryKey: ["channel-messages", "linkedin"] });
+        toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
+      } else if (dupes > 0) {
+        toast.info("Messaggi LinkedIn già sincronizzati");
+      } else {
+        toast.info(`${result.threads.length} thread letti, nessun nuovo messaggio`);
       }
       setLastSyncAt(Date.now());
     } catch (err: any) {
       console.warn("[LI Sync]", err.message);
+      toast.error(`Errore sync: ${err.message}`);
     } finally {
       setIsReading(false);
-      scheduleNext();
     }
   }, [isAvailable, readInbox, queryClient]);
+
+  // Auto-sync (only when enabled)
+  const doAutoSync = useCallback(async () => {
+    if (!enabledRef.current) return;
+    await performSync();
+    scheduleNext();
+  }, [performSync]);
 
   const scheduleNext = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!enabledRef.current) return;
-    timerRef.current = setTimeout(doSync, jitter(SYNC_INTERVAL));
-  }, [doSync]);
+    timerRef.current = setTimeout(doAutoSync, jitter(SYNC_INTERVAL));
+  }, [doAutoSync]);
 
   const toggle = useCallback(() => {
     setEnabled(prev => {
       const next = !prev;
       enabledRef.current = next;
       if (next) {
-        doSync();
+        doAutoSync();
+        toast.success("Sync LinkedIn attivato (ogni 30 min)");
       } else {
         if (timerRef.current) clearTimeout(timerRef.current);
+        toast.info("Sync LinkedIn disattivato");
       }
       return next;
     });
-  }, [doSync]);
+  }, [doAutoSync]);
 
+  // readNow works regardless of enabled state
   const readNow = useCallback(() => {
-    doSync();
-  }, [doSync]);
+    performSync();
+  }, [performSync]);
 
   useEffect(() => {
     return () => {
