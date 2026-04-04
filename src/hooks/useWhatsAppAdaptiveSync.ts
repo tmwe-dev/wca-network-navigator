@@ -38,7 +38,7 @@ export function useWhatsAppAdaptiveSync() {
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
 
-  const { isAvailable, readUnread, readThread } = useWhatsAppExtensionBridge();
+  const { isAvailable, readUnread, readThread, onSidebarChanged } = useWhatsAppExtensionBridge();
   const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
