@@ -46,7 +46,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   // Restore last known status from cache
   const [status, setStatus] = useState<ChannelStatus>(loadCachedStatus);
   const [connecting, setConnecting] = useState(false);
-  const [didAutoRun, setDidAutoRun] = useState(false);
+  
 
   // Live extension detection — only for Partner Connect (no session needed)
   useEffect(() => {
