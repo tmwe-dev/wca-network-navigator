@@ -178,9 +178,23 @@ export function BusinessCardsView() {
             <Button size="sm" className="h-7 text-xs gap-1.5 bg-violet-500/15 text-violet-500 border border-violet-500/30 hover:bg-violet-500/25" variant="outline" onClick={handleBcaDeepSearch}><Brain className="w-3 h-3" /> Deep Search</Button>
           </div>
         )}
-        <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
-          <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <TooltipProvider delayDuration={200}>
+            {([["compact", LayoutList, "Compatta"], ["card", LayoutGrid, "Griglia"], ["expanded", Rows3, "Espansa"]] as const).map(([mode, Icon, label]) => (
+              <Tooltip key={mode}>
+                <TooltipTrigger asChild>
+                  <button onClick={() => setViewMode(mode)} className={cn("p-1.5 rounded-md transition-all", viewMode === mode ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40")}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
+          <Button size="sm" className="h-7 text-xs gap-1.5 ml-1" variant="outline" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+          </Button>
+        </div>
       </div>
 
       <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
