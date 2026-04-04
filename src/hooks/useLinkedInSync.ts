@@ -7,6 +7,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -16,9 +17,7 @@ function jitter(base: number) {
 }
 
 function buildExternalId(contact: string, timestamp: string, text: string): string {
-  const safeText = (text || "").slice(0, 50).replace(/[|]/g, "_");
-  const safeContact = (contact || "unknown").replace(/[|]/g, "_");
-  return `li_${safeContact}_${timestamp}_${safeText}`;
+  return buildDeterministicId("li", contact, text, timestamp);
 }
 
 export function useLinkedInSync() {

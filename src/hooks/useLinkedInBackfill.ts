@@ -5,6 +5,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
+import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
@@ -80,7 +81,7 @@ export function useLinkedInBackfill() {
         if (threadResult.success && threadResult.messages?.length) {
           let saved = 0;
           for (const msg of threadResult.messages) {
-            const extId = `li_bf_${thread.name}_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`;
+            const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
             const { error } = await supabase.from("channel_messages").insert({
               user_id: user.id,
               channel: "linkedin",
