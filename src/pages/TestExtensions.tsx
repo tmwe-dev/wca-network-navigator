@@ -493,12 +493,25 @@ function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
-        <Input
-          value={sendUrl}
-          onChange={(e) => setSendUrl(e.target.value)}
-          placeholder="URL profilo destinatario (es. https://www.linkedin.com/in/mario-rossi)"
-          className="text-sm"
-        />
+        {foundThreads.length > 0 ? (
+          <select
+            value={sendUrl}
+            onChange={(e) => setSendUrl(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">— Seleziona contatto —</option>
+            {foundThreads.map((t, i) => (
+              <option key={i} value={t.threadUrl || ""}>{t.name}{t.threadUrl ? "" : " (no URL)"}</option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            value={sendUrl}
+            onChange={(e) => setSendUrl(e.target.value)}
+            placeholder="URL profilo (prima fai 📨 Leggi Inbox)"
+            className="text-sm"
+          />
+        )}
         <div className="flex gap-2">
           <Input
             value={sendText}
