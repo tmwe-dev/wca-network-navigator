@@ -145,9 +145,15 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
+  const backfillChat = useCallback(
+    (contact: string, lastKnownText: string, maxScrolls = 30) =>
+      sendMsg("backfillChat", { contact, lastKnownText, maxScrolls }, 120000),
+    [sendMsg]
+  );
+
   const onSidebarChanged = useCallback((cb: () => void) => {
     sidebarChangedCbRef.current = cb;
   }, []);
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom, onSidebarChanged };
+  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
 }
