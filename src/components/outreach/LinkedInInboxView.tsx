@@ -36,7 +36,7 @@ export function LinkedInInboxView() {
 
   const { data: messages = [], isLoading } = useChannelMessages("linkedin");
   const markAsRead = useMarkAsRead();
-  const { sendMessage } = useLinkedInMessagingBridge();
+  const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
   const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
   const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
 
