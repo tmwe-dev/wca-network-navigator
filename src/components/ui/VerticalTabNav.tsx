@@ -39,7 +39,12 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTa
               {active && (
                 <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-primary" />
               )}
-              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className={cn(
+                "flex items-center justify-center rounded-md p-0.5",
+                tab.badge != null && Number(tab.badge) > 0 && "bg-destructive/15 text-destructive"
+              )}>
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+              </span>
               <span className="truncate">{tab.label}</span>
               {tab.badge != null && Number(tab.badge) > 0 && (
                 <span className="ml-auto bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
