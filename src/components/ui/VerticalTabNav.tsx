@@ -18,7 +18,7 @@ interface VerticalTabNavProps {
 
 export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTabNavProps) {
   return (
-    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 overflow-y-auto">
+    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 overflow-hidden">
       {/* Tab buttons */}
       <div className="py-1 flex-shrink-0">
         {tabs.map((tab) => {
@@ -56,9 +56,9 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTa
         })}
       </div>
 
-      {/* Filter slot */}
+      {/* Dynamic filter slot — scrollable below tabs */}
       {filterSlot && (
-        <div className="mt-auto border-t border-border/40 p-2 space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto border-t border-border/40 p-2">
           {filterSlot}
         </div>
       )}
