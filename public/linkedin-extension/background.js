@@ -1007,8 +1007,122 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
+  if (message.action === "readLinkedInInbox") {
+    enqueueTabOp(async function () {
+      try { var result = await readLinkedInInbox(); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    });
+    return true;
+  }
+
+  if (message.action === "readLinkedInThread") {
+    enqueueTabOp(async function () {
+      try { var result = await readLinkedInThread(message.threadUrl); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    });
+    return true;
+  }
+
   return false;
 });
+
+// ── Read LinkedIn Messaging Inbox ──
+async function readLinkedInInbox() {
+  var tab = await getLinkedInTab("https://www.linkedin.com/messaging/", false);
+  await new Promise(function (r) { setTimeout(r, 4000); });
+
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: function () {
+      try {
+        var threads = [];
+        // Get conversation list items
+        var items = document.querySelectorAll("li.msg-conversation-listitem");
+        if (!items || items.length === 0) {
+          // Alternative selectors
+          items = document.querySelectorAll("[data-control-name='overlay.connection_list_item']");
+        }
+        if (!items || items.length === 0) {
+          items = document.querySelectorAll(".msg-conversations-container__convo-item-link");
+        }
+
+        items.forEach(function (item) {
+          try {
+            var nameEl = item.querySelector(".msg-conversation-listitem__participant-names, .msg-conversation-card__participant-names, h3");
+            var previewEl = item.querySelector(".msg-conversation-listitem__message-snippet, .msg-conversation-card__message-snippet-body, p");
+            var linkEl = item.querySelector("a[href*='/messaging/thread/']") || item.closest("a[href*='/messaging/thread/']");
+            var unreadDot = item.querySelector(".msg-conversation-listitem__unread-count, .notification-badge");
+
+            var name = nameEl ? nameEl.textContent.trim() : "";
+            var lastMessage = previewEl ? previewEl.textContent.trim() : "";
+            var threadUrl = linkEl ? linkEl.href : "";
+            var unread = !!unreadDot;
+
+            if (name) {
+              threads.push({ name: name, lastMessage: lastMessage, unread: unread, threadUrl: threadUrl });
+            }
+          } catch (e) {}
+        });
+
+        return { success: true, threads: threads };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+  });
+
+  return (results[0] && results[0].result) || { success: false, error: "Nessun risultato" };
+}
+
+// ── Read a specific LinkedIn thread ──
+async function readLinkedInThread(threadUrl) {
+  if (!threadUrl) return { success: false, error: "Thread URL mancante" };
+
+  var tab = await getLinkedInTab(threadUrl, false);
+  await new Promise(function (r) { setTimeout(r, 5000); });
+
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: function () {
+      try {
+        var messages = [];
+        var msgItems = document.querySelectorAll(".msg-s-message-list__event");
+        if (!msgItems || msgItems.length === 0) {
+          msgItems = document.querySelectorAll("[data-control-name='message_event']");
+        }
+
+        msgItems.forEach(function (item) {
+          try {
+            var senderEl = item.querySelector(".msg-s-message-group__name, .msg-s-event-listitem__name");
+            var bodyEl = item.querySelector(".msg-s-event-listitem__body, .msg-s-message-list-content .msg-s-event__content p");
+            var timeEl = item.querySelector("time, .msg-s-message-group__timestamp");
+
+            var sender = senderEl ? senderEl.textContent.trim() : "";
+            var text = bodyEl ? bodyEl.textContent.trim() : "";
+            var timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
+
+            // Determine direction: if sender matches the logged-in user
+            var myName = "";
+            var profileLink = document.querySelector("img.global-nav__me-photo, .feed-identity-module__actor-meta a");
+            if (profileLink) myName = profileLink.getAttribute("alt") || "";
+
+            var direction = (sender && myName && sender.toLowerCase().includes(myName.toLowerCase().split(" ")[0])) ? "outbound" : "inbound";
+
+            if (text) {
+              messages.push({ text: text, sender: sender, timestamp: timestamp, direction: direction });
+            }
+          } catch (e) {}
+        });
+
+        return { success: true, messages: messages };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+  });
+
+  return (results[0] && results[0].result) || { success: false, error: "Nessun risultato" };
+}
 
 // ── On install: sync cookie if already logged in ──
 chrome.runtime.onInstalled.addListener(async function () {
