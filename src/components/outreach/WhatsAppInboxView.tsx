@@ -200,7 +200,30 @@ export function WhatsAppInboxView() {
                     L{level}
                   </Badge>
                 )}
+                {/* Backfill button */}
+                {bfProgress.status === "running" || bfProgress.status === "paused" ? (
+                  <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-7 text-[11px] px-2">
+                    <Square className="w-3 h-3" /> Stop
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable || bfProgress.status === "running"} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi persi">
+                    <Download className="w-3 h-3" /> Backfill
+                  </Button>
+                )}
               </div>
+              {/* Backfill progress bar */}
+              {(bfProgress.status === "running" || bfProgress.status === "paused") && (
+                <div className="space-y-1">
+                  <Progress value={bfProgress.totalChats > 0 ? (bfProgress.processedChats / bfProgress.totalChats) * 100 : 0} className="h-1.5" />
+                  <p className="text-[9px] text-muted-foreground truncate">
+                    {bfProgress.status === "paused" ? "⏸ " : ""}
+                    {bfProgress.currentChat || "Preparazione..."} — {bfProgress.recoveredMessages} recuperati
+                  </p>
+                </div>
+              )}
+              {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
+                <p className="text-[9px] text-green-600">✓ {bfProgress.recoveredMessages} messaggi recuperati</p>
+              )}
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca..." className="h-7 pl-7 text-xs" />
