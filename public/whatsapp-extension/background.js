@@ -645,6 +645,12 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
     return true;
   }
 
+  if (msg.action === "backfillChat") {
+    if (!msg.contact) { sendResponse({ success: false, error: "contact richiesto" }); return false; }
+    backfillChat(msg.contact, msg.lastKnownText || "", msg.maxScrolls || 30).then(sendResponse);
+    return true;
+  }
+
   sendResponse({ success: false, error: "Azione sconosciuta: " + msg.action });
   return false;
 });
