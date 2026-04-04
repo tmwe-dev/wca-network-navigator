@@ -192,92 +192,64 @@ export default function Operations() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("Sessione scaduta, effettua il login");
 
-      // Step 2: Sync each country
-      let grandTotal = { partners: 0, contacts: 0, networks: 0 };
-      for (let ci = 0; ci < countriesToSync.length; ci++) {
-        const country = countriesToSync[ci];
-        const extCount = availableCountries[country.code] || 0;
-        const countryLabel = countriesToSync.length > 1
-          ? `[${ci + 1}/${countriesToSync.length}] ${country.name}`
-          : country.name;
+      // Global sync - all countries at once
+      const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      });
 
-        toast.loading(
-          `${countryLabel}: avvio sync (${extCount} partner)...`,
-          { id: toastId }
-        );
+      if (!response.ok) throw new Error(`Sync fallito: HTTP ${response.status}`);
 
-        const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`,
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ countryCode: country.code }),
-        });
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Stream non disponibile");
 
-        if (!response.ok) {
-          console.error(`Sync ${country.code} failed: HTTP ${response.status}`);
-          toast.loading(`⚠️ ${countryLabel}: errore HTTP ${response.status}`, { id: toastId });
-          continue;
-        }
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-        const reader = response.body?.getReader();
-        if (!reader) continue;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-        const decoder = new TextDecoder();
-        let buffer = "";
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const evt = JSON.parse(line.slice(6));
-              if (evt.type === "start") {
-                toast.loading(
-                  `${countryLabel}: trovati ${evt.total} partner da sincronizzare...`,
-                  { id: toastId }
-                );
-              } else if (evt.type === "progress") {
-                const pct = evt.total > 0 ? Math.round((evt.synced / evt.total) * 100) : 0;
-                const bar = "█".repeat(Math.floor(pct / 5)) + "░".repeat(20 - Math.floor(pct / 5));
-                toast.loading(
-                  `${countryLabel}: ${bar} ${pct}%\n` +
-                  `👥 ${evt.synced}/${evt.total} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network` +
-                  (evt.totalPages > 1 ? `\n📦 Pagina ${evt.page}/${evt.totalPages}` : ""),
-                  { id: toastId }
-                );
-              } else if (evt.type === "complete") {
-                grandTotal.partners += evt.synced || 0;
-                grandTotal.contacts += evt.contacts || 0;
-                grandTotal.networks += evt.networks || 0;
-                if (ci < countriesToSync.length - 1) {
-                  toast.loading(
-                    `✅ ${country.name}: ${evt.synced} partner sincronizzati\nProssimo paese...`,
-                    { id: toastId }
-                  );
-                }
-              } else if (evt.type === "error") {
-                console.error("Sync SSE error:", evt.message);
-                toast.loading(`⚠️ ${countryLabel}: ${evt.message}`, { id: toastId });
-              }
-            } catch {}
-          }
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.type === "start") {
+              toast.loading(
+                `🔍 Trovati ${evt.total} partner da sincronizzare...`,
+                { id: toastId }
+              );
+            } else if (evt.type === "progress") {
+              const pct = evt.total > 0 ? Math.round((evt.synced / evt.total) * 100) : 0;
+              const bar = "█".repeat(Math.floor(pct / 5)) + "░".repeat(20 - Math.floor(pct / 5));
+              toast.loading(
+                `${bar} ${pct}%\n` +
+                `👥 ${evt.synced}/${evt.total} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network` +
+                (evt.totalPages > 1 ? `\n📦 Pagina ${evt.page}/${evt.totalPages}` : ""),
+                { id: toastId }
+              );
+            } else if (evt.type === "complete") {
+              toast.success(
+                `✅ Sincronizzazione completata!\n` +
+                `👥 ${evt.synced} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network`,
+                { id: toastId, duration: 8000 }
+              );
+            } else if (evt.type === "error") {
+              console.error("Sync SSE error:", evt.message);
+              toast.loading(`⚠️ ${evt.message}`, { id: toastId });
+            }
+          } catch {}
         }
       }
-      toast.success(
-        `✅ Sincronizzazione completata!\n` +
-        `👥 ${grandTotal.partners} partner · 📇 ${grandTotal.contacts} contatti · 🌐 ${grandTotal.networks} network` +
-        (skippedCount > 0 ? `\n⏭️ ${skippedCount} paesi saltati` : ""),
-        { id: toastId, duration: 8000 }
-      );
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       queryClient.invalidateQueries({ queryKey: ["partner-stats"] });

@@ -85,10 +85,11 @@ Deno.serve(async (req) => {
 
           for (let page = 0; page < totalPages; page++) {
             // Fetch from external wca_profiles
-            const { data: extPartners, error: fetchErr } = await extSb
+            let fetchQuery = extSb
               .from("wca_profiles")
-              .select("*")
-              .eq("country_code", countryCode)
+              .select("*");
+            if (countryCode) fetchQuery = fetchQuery.eq("country_code", countryCode);
+            const { data: extPartners, error: fetchErr } = await fetchQuery
               .order("wca_id", { ascending: true })
               .range(page * pageSize, (page + 1) * pageSize - 1);
 
