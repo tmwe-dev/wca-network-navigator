@@ -140,7 +140,7 @@ export function WhatsAppInboxView() {
           direction: "outbound",
           to_address: activeTab,
           body_text: text,
-          message_id_external: `wa_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          message_id_external: `wa_out_${activeTab}_${Date.now()}`,
         });
       }
       toast.success("Inviato ✓");
