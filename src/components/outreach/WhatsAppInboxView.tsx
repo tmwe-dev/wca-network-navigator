@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Zap, Eye, Radio, Send, X,
+  Zap, Eye, Radio, Send, X, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
