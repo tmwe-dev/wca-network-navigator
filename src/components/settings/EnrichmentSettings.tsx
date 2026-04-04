@@ -2,25 +2,20 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanyLogo, extractDomainFromEmail, isPersonalEmail } from "@/components/ui/CompanyLogo";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
-  Search, Building2, Mail, CheckCircle2, Image, Linkedin, Loader2,
-  XCircle, StopCircle, LayoutDashboard, SortAsc, SortDesc, Filter,
-  Globe, ImageOff, LinkIcon, Users,
+  Building2, Mail, CheckCircle2, Linkedin, Search, LayoutDashboard, Image,
 } from "lucide-react";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { toast } from "@/hooks/use-toast";
+import { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "./enrichment/EnrichmentFilters";
+import { EnrichmentBatchActions } from "./enrichment/EnrichmentBatchActions";
 
-type SourceFilter = "all" | "wca" | "contacts" | "email" | "cockpit";
-type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
-type SortField = "name" | "domain" | "source";
-type SortDir = "asc" | "desc";
+export { EnrichmentFilters };
+export type { SourceFilter, EnrichFilter, SortField, SortDir };
 
-interface EnrichedRow {
+export interface EnrichedRow {
   id: string;
   name: string;
   domain: string | null;
@@ -32,23 +27,13 @@ interface EnrichedRow {
   country?: string;
 }
 
-const SOURCE_OPTIONS: { value: SourceFilter; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "Tutte le fonti", icon: <Users className="w-4 h-4" /> },
-  { value: "wca", label: "WCA Partner", icon: <Building2 className="w-4 h-4" /> },
-  { value: "contacts", label: "Contatti Importati", icon: <Search className="w-4 h-4" /> },
-  { value: "email", label: "Mittenti Email", icon: <Mail className="w-4 h-4" /> },
-  { value: "cockpit", label: "Cockpit", icon: <LayoutDashboard className="w-4 h-4" /> },
-];
-
-const ENRICH_OPTIONS: { value: EnrichFilter; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "Tutti", icon: <Filter className="w-4 h-4" /> },
-  { value: "with-logo", label: "Con logo", icon: <CheckCircle2 className="w-4 h-4" /> },
-  { value: "no-logo", label: "Senza logo", icon: <ImageOff className="w-4 h-4" /> },
-  { value: "with-linkedin", label: "Con LinkedIn", icon: <Linkedin className="w-4 h-4" /> },
-  { value: "no-linkedin", label: "Senza LinkedIn", icon: <XCircle className="w-4 h-4" /> },
-  { value: "with-domain", label: "Con dominio", icon: <Globe className="w-4 h-4" /> },
-  { value: "no-domain", label: "Senza dominio", icon: <LinkIcon className="w-4 h-4" /> },
-];
+interface EnrichmentContentProps {
+  source: SourceFilter;
+  enrichFilter: EnrichFilter;
+  sortField: SortField;
+  sortDir: SortDir;
+  search: string;
+}
 
 export default function EnrichmentSettings() {
   const [source, setSource] = useState<SourceFilter>("all");
@@ -57,6 +42,11 @@ export default function EnrichmentSettings() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const linkedInLookup = useLinkedInLookup();
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  };
 
   // Fetch partners
   const { data: partners = [] } = useQuery({
@@ -68,19 +58,14 @@ export default function EnrichmentSettings() {
         .order("company_name")
         .limit(1000);
       return (data || []).map((p): EnrichedRow => ({
-        id: p.id,
-        name: p.company_name,
+        id: p.id, name: p.company_name,
         domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
-        source: "wca",
-        hasLogo: !!p.logo_url,
-        hasLinkedin: false,
-        email: p.email || undefined,
-        country: p.country_code || undefined,
+        source: "wca", hasLogo: !!p.logo_url, hasLinkedin: false,
+        email: p.email || undefined, country: p.country_code || undefined,
       }));
     },
   });
 
-  // Fetch imported contacts
   const { data: contacts = [], refetch: refetchContacts } = useQuery({
     queryKey: ["enrichment-contacts"],
     queryFn: async () => {
@@ -93,20 +78,15 @@ export default function EnrichmentSettings() {
         const ed = (c.enrichment_data as Record<string, any>) || {};
         const liUrl = ed.linkedin_profile_url || ed.linkedin_url || ed.social_links?.linkedin || null;
         return {
-          id: c.id,
-          name: c.name || c.company_name || c.email || "?",
+          id: c.id, name: c.name || c.company_name || c.email || "?",
           domain: extractDomainFromEmail(c.email || ""),
-          source: "contacts",
-          hasLogo: false,
-          hasLinkedin: !!liUrl,
-          linkedinUrl: liUrl || undefined,
-          email: c.email || undefined,
+          source: "contacts", hasLogo: false, hasLinkedin: !!liUrl,
+          linkedinUrl: liUrl || undefined, email: c.email || undefined,
         };
       });
     },
   });
 
-  // Fetch email senders
   const { data: emailSenders = [] } = useQuery({
     queryKey: ["enrichment-email-senders"],
     queryFn: async () => {
@@ -125,16 +105,11 @@ export default function EnrichmentSettings() {
       return Array.from(domainMap.values()).map((s): EnrichedRow => ({
         id: `email-${s.domain}`,
         name: s.domain.split(".")[0].replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        domain: s.domain,
-        source: "email",
-        hasLogo: false,
-        hasLinkedin: false,
-        email: s.from,
+        domain: s.domain, source: "email", hasLogo: false, hasLinkedin: false, email: s.from,
       }));
     },
   });
 
-  // Fetch cockpit queue items
   const { data: cockpitItems = [] } = useQuery({
     queryKey: ["enrichment-cockpit"],
     queryFn: async () => {
@@ -166,25 +141,17 @@ export default function EnrichmentSettings() {
     },
   });
 
-  // Filtered + sorted rows
+  // Filtered + sorted
   const allRows = useMemo(() => {
     let rows: EnrichedRow[] = [];
     if (source === "all" || source === "wca") rows.push(...partners);
     if (source === "all" || source === "contacts") rows.push(...contacts);
     if (source === "all" || source === "email") rows.push(...emailSenders);
     if (source === "all" || source === "cockpit") rows.push(...cockpitItems);
-
-    // Search
     if (search) {
       const q = search.toLowerCase();
-      rows = rows.filter(r =>
-        r.name.toLowerCase().includes(q) ||
-        r.domain?.toLowerCase().includes(q) ||
-        r.email?.toLowerCase().includes(q)
-      );
+      rows = rows.filter(r => r.name.toLowerCase().includes(q) || r.domain?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q));
     }
-
-    // Enrich filter
     switch (enrichFilter) {
       case "with-logo": rows = rows.filter(r => r.hasLogo); break;
       case "no-logo": rows = rows.filter(r => !r.hasLogo); break;
@@ -193,8 +160,6 @@ export default function EnrichmentSettings() {
       case "with-domain": rows = rows.filter(r => !!r.domain); break;
       case "no-domain": rows = rows.filter(r => !r.domain); break;
     }
-
-    // Sort
     rows.sort((a, b) => {
       let cmp = 0;
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
@@ -202,7 +167,6 @@ export default function EnrichmentSettings() {
       else if (sortField === "source") cmp = a.source.localeCompare(b.source);
       return sortDir === "desc" ? -cmp : cmp;
     });
-
     return rows;
   }, [partners, contacts, emailSenders, cockpitItems, source, search, enrichFilter, sortField, sortDir]);
 
@@ -213,7 +177,6 @@ export default function EnrichmentSettings() {
     withLinkedin: allRows.filter(r => r.hasLinkedin).length,
   }), [allRows]);
 
-  // LinkedIn batch
   const handleLinkedInBatch = async () => {
     const contactsWithout = contacts.filter(c => !c.hasLinkedin);
     if (!contactsWithout.length) {
@@ -226,15 +189,6 @@ export default function EnrichmentSettings() {
     }
     await linkedInLookup.lookupBatch(contactsWithout.map(c => c.id));
     refetchContacts();
-  };
-
-  const prog = linkedInLookup.progress;
-  const isRunning = prog.status === "running";
-  const isDone = prog.status === "done" || prog.status === "aborted";
-
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
   };
 
   const sourceLabel = (s: string) => {
@@ -257,163 +211,103 @@ export default function EnrichmentSettings() {
     }
   };
 
+  // Expose filters for parent (Settings.tsx) to render in sidebar
+  const filtersElement = (
+    <EnrichmentFilters
+      search={search}
+      onSearchChange={setSearch}
+      source={source}
+      onSourceChange={setSource}
+      enrichFilter={enrichFilter}
+      onEnrichFilterChange={setEnrichFilter}
+      sortField={sortField}
+      sortDir={sortDir}
+      onToggleSort={toggleSort}
+    />
+  );
+
+  return (
+    <EnrichmentContent
+      stats={stats}
+      allRows={allRows}
+      source={source}
+      contactsWithoutLinkedin={contacts.filter(c => !c.hasLinkedin).length}
+      partnersWithoutLogo={partners.filter(p => !p.hasLogo).length}
+      isExtensionAvailable={linkedInLookup.isAvailable}
+      onLinkedInBatch={handleLinkedInBatch}
+      onAbort={linkedInLookup.abort}
+      progress={linkedInLookup.progress}
+      sourceLabel={sourceLabel}
+      sourceIcon={sourceIcon}
+      filtersElement={filtersElement}
+    />
+  );
+}
+
+// Also export a hook-like pattern for Settings to get the filters
+export function useEnrichmentState() {
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [enrichFilter, setEnrichFilter] = useState<EnrichFilter>("all");
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  };
+
+  return { source, setSource, enrichFilter, setEnrichFilter, search, setSearch, sortField, sortDir, toggleSort };
+}
+
+function EnrichmentContent({
+  stats, allRows, source, contactsWithoutLinkedin, partnersWithoutLogo,
+  isExtensionAvailable, onLinkedInBatch, onAbort, progress,
+  sourceLabel, sourceIcon, filtersElement,
+}: {
+  stats: { total: number; withLogo: number; withDomain: number; withLinkedin: number };
+  allRows: EnrichedRow[];
+  source: SourceFilter;
+  contactsWithoutLinkedin: number;
+  partnersWithoutLogo: number;
+  isExtensionAvailable: boolean;
+  onLinkedInBatch: () => void;
+  onAbort: () => void;
+  progress: any;
+  sourceLabel: (s: string) => string;
+  sourceIcon: (s: string) => React.ReactNode;
+  filtersElement: React.ReactNode;
+}) {
   return (
     <div className="flex gap-4 h-full">
-      {/* LEFT SIDEBAR — Filters */}
-      <div className="w-[220px] flex-shrink-0 space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Image className="w-5 h-5 text-primary" />
-            Arricchimento
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Filtri e ordinamenti
-          </p>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Cerca..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8 h-9 text-sm"
-          />
-        </div>
-
-        {/* Source filter */}
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Fonte</div>
-          <div className="space-y-1">
-            {SOURCE_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setSource(opt.value)}
-                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
-                  source === opt.value
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                }`}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Enrichment status filter */}
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Stato Dati</div>
-          <div className="space-y-1">
-            {ENRICH_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setEnrichFilter(opt.value)}
-                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
-                  enrichFilter === opt.value
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                }`}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sort */}
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ordina per</div>
-          <div className="space-y-1">
-            {([
-              { field: "name" as SortField, label: "Nome" },
-              { field: "domain" as SortField, label: "Dominio" },
-              { field: "source" as SortField, label: "Fonte" },
-            ]).map(opt => (
-              <button
-                key={opt.field}
-                onClick={() => toggleSort(opt.field)}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm transition-colors ${
-                  sortField === opt.field
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                }`}
-              >
-                {opt.label}
-                {sortField === opt.field && (
-                  sortDir === "asc" ? <SortAsc className="w-3.5 h-3.5" /> : <SortDesc className="w-3.5 h-3.5" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Sidebar filters inline — will be moved to VerticalTabNav filterSlot */}
+      <div className="w-[200px] flex-shrink-0 overflow-y-auto py-2 border-r border-border/30 pr-3">
+        {filtersElement}
       </div>
 
-      {/* RIGHT CONTENT */}
+      {/* Main content */}
       <div className="flex-1 min-w-0 space-y-3">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
-          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-            <div className="text-xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-[10px] text-muted-foreground">Totali</div>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-            <div className="text-xl font-bold text-primary">{stats.withDomain}</div>
-            <div className="text-[10px] text-muted-foreground">Con dominio</div>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-            <div className="text-xl font-bold text-primary">{stats.withLinkedin}</div>
-            <div className="text-[10px] text-muted-foreground">Con LinkedIn</div>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-            <div className="text-xl font-bold text-primary">{stats.withLogo}</div>
-            <div className="text-[10px] text-muted-foreground">Con logo</div>
-          </div>
+          <StatCard label="Totali" value={stats.total} />
+          <StatCard label="Con dominio" value={stats.withDomain} highlight />
+          <StatCard label="Con LinkedIn" value={stats.withLinkedin} highlight />
+          <StatCard label="Con logo" value={stats.withLogo} highlight />
         </div>
 
-        {/* LinkedIn Batch */}
-        <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Linkedin className="w-4 h-4 text-primary" />
-              <div>
-                <div className="text-sm font-semibold text-foreground">LinkedIn Batch</div>
-                <div className="text-xs text-muted-foreground">
-                  {contacts.filter(c => !c.hasLinkedin).length} senza profilo
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {isRunning && (
-                <Button variant="outline" size="sm" onClick={linkedInLookup.abort}>
-                  <StopCircle className="w-4 h-4 mr-1" /> Stop
-                </Button>
-              )}
-              <Button size="sm" onClick={handleLinkedInBatch} disabled={isRunning || !contacts.filter(c => !c.hasLinkedin).length}>
-                {isRunning ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Cercando...</> : <><Search className="w-4 h-4 mr-1" /> Cerca</>}
-              </Button>
-            </div>
-          </div>
-          {(isRunning || isDone) && (
-            <div className="space-y-1.5">
-              <Progress value={prog.total > 0 ? (prog.current / prog.total) * 100 : 0} className="h-1.5" />
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{prog.current}/{prog.total}{prog.currentName && isRunning && <span className="ml-2 text-foreground">{prog.currentName}</span>}</span>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> {prog.found}</span>
-                  <span className="flex items-center gap-1"><XCircle className="w-3 h-3 text-destructive" /> {prog.notFound}</span>
-                </div>
-              </div>
-              {isDone && <div className="text-xs font-medium text-green-600">✅ Completato — {prog.found} trovati</div>}
-            </div>
-          )}
-        </div>
+        {/* Batch Actions — contextual */}
+        <EnrichmentBatchActions
+          source={source}
+          contactsWithoutLinkedin={contactsWithoutLinkedin}
+          partnersWithoutLogo={partnersWithoutLogo}
+          isExtensionAvailable={isExtensionAvailable}
+          onLinkedInBatch={onLinkedInBatch}
+          onAbort={onAbort}
+          progress={progress}
+        />
 
         {/* List */}
-        <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px] border border-border rounded-lg">
+        <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px] border border-border rounded-lg">
           <div className="divide-y divide-border">
             {allRows.map(row => (
               <div key={row.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors">
@@ -452,10 +346,19 @@ export default function EnrichmentSettings() {
           </div>
         </ScrollArea>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[10px] text-muted-foreground">
           Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect
         </p>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
+  return (
+    <div className="bg-muted/50 rounded-lg p-2.5 text-center">
+      <div className={`text-xl font-bold ${highlight ? "text-primary" : "text-foreground"}`}>{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
     </div>
   );
 }
