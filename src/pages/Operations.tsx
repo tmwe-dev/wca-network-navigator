@@ -289,6 +289,7 @@ export default function Operations() {
                 onToggle={handleCountryClick}
                 onRemove={handleRemoveCountry}
                 filterMode={filterMode}
+                directoryStats={dirData}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
                 compact={hasSelection || isMobile}
