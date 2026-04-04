@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,22 +14,22 @@ import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPanel";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
+import { lazyRetry } from "@/lib/lazyRetry";
 
-// ── New consolidated pages (with prefetch for high-traffic routes) ──
-const SuperHome3D = lazy(() => import("./pages/SuperHome3D"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const NetworkPage = lazy(() => import("./pages/Network"));
-const CRM = lazy(() => import("./pages/CRM"));
-const Outreach = lazy(() => import("./pages/Outreach"));
-const Agenda = lazy(() => import("./pages/Agenda"));
-const Agents = lazy(() => import("./pages/Agents"));
-const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
+// ── All routes use lazyRetry for automatic chunk recovery ──
+const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
+const NetworkPage = lazyRetry(() => import("./pages/Network"));
+const CRM = lazyRetry(() => import("./pages/CRM"));
+const Outreach = lazyRetry(() => import("./pages/Outreach"));
+const Agenda = lazyRetry(() => import("./pages/Agenda"));
+const Agents = lazyRetry(() => import("./pages/Agents"));
+const AgentChatHub = lazyRetry(() => import("./pages/AgentChatHub"));
 
-// ── Report Aziende (RA) module (hidden, accessible from Settings) ──
-const RADashboard = lazy(() => import("./pages/RADashboard"));
-const RAExplorer = lazy(() => import("./pages/RAExplorer"));
-const RAScrapingEngine = lazy(() => import("./pages/RAScrapingEngine"));
-const RACompanyDetail = lazy(() => import("./pages/RACompanyDetail"));
+const RADashboard = lazyRetry(() => import("./pages/RADashboard"));
+const RAExplorer = lazyRetry(() => import("./pages/RAExplorer"));
+const RAScrapingEngine = lazyRetry(() => import("./pages/RAScrapingEngine"));
+const RACompanyDetail = lazyRetry(() => import("./pages/RACompanyDetail"));
 
 // Prefetch high-traffic routes after initial load
 if (typeof window !== "undefined") {
@@ -42,24 +42,22 @@ if (typeof window !== "undefined") {
   }, { once: true });
 }
 
-// ── Standalone pages ──
-const EmailComposer = lazy(() => import("./pages/EmailComposer"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-const Settings = lazy(() => import("./pages/Settings"));
-const OperatorsSettings = lazy(() => import("./pages/OperatorsSettings"));
+const EmailComposer = lazyRetry(() => import("./pages/EmailComposer"));
+const Auth = lazyRetry(() => import("./pages/Auth"));
+const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
+const Settings = lazyRetry(() => import("./pages/Settings"));
+const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
 
-// ── Legacy pages kept alive for direct access / deep links ──
-const Global = lazy(() => import("./pages/Global"));
-const Campaigns = lazy(() => import("./pages/Campaigns"));
-const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
-const TestDownload = lazy(() => import("./pages/TestDownload"));
-const TestLinkedInSearch = lazy(() => import("./pages/TestLinkedInSearch"));
-const TestExtensions = lazy(() => import("./pages/TestExtensions"));
-const Diagnostics = lazy(() => import("./pages/Diagnostics"));
-const SystemMap = lazy(() => import("./pages/SystemMap"));
-const Guida = lazy(() => import("./pages/Guida"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const Global = lazyRetry(() => import("./pages/Global"));
+const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
+const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
+const TestDownload = lazyRetry(() => import("./pages/TestDownload"));
+const TestLinkedInSearch = lazyRetry(() => import("./pages/TestLinkedInSearch"));
+const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
+const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
+const SystemMap = lazyRetry(() => import("./pages/SystemMap"));
+const Guida = lazyRetry(() => import("./pages/Guida"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

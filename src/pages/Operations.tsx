@@ -19,9 +19,7 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useBusinessCards, useBusinessCardPartnerMatches, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
-import { useSendToCockpit } from "@/hooks/useCockpitContacts";
-import { Checkbox } from "@/components/ui/checkbox";
+import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
