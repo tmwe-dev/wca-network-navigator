@@ -151,99 +151,124 @@ export function WhatsAppInboxView() {
 
   return (
     <div className="flex h-full bg-background overflow-hidden">
-      {/* Sidebar: contact list — always visible */}
-      <div className="flex flex-col border-r border-border bg-background w-[280px] min-w-[280px] shrink-0">
-        {/* Header controls */}
-        <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">
-              {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-              Leggi
+      {/* Sidebar: collapsible contact list */}
+      <div className={cn(
+        "flex flex-col border-r border-border bg-background shrink-0 transition-all duration-200",
+        sidebarOpen ? "w-[280px] min-w-[280px]" : "w-[48px] min-w-[48px]"
+      )}>
+        {/* Collapsed: just WA icon + toggle */}
+        {!sidebarOpen ? (
+          <div className="flex flex-col items-center pt-2 gap-2">
+            <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti">
+              <PanelLeftOpen className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2">
-              {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-              {enabled ? "ON" : "OFF"}
-            </Button>
-            <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
-              {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-              {isAvailable ? "On" : "Off"}
-            </Badge>
-            {enabled && (
-              <Badge className={cn("text-[9px] gap-0.5 h-5 px-1.5 border-0", levelCfg.color)}>
-                <LevelIcon className="w-2.5 h-2.5" />
-                L{level}
-              </Badge>
+            <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 text-green-600" />
+            </div>
+            {threads.some(t => t.unreadCount > 0) && (
+              <span className="bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
+                {threads.reduce((s, t) => s + t.unreadCount, 0)}
+              </span>
             )}
           </div>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca..." className="h-7 pl-7 text-xs" />
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* Header controls */}
+            <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista">
+                  <PanelLeftClose className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">
+                  {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                  Leggi
+                </Button>
+                <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2">
+                  {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  {enabled ? "ON" : "OFF"}
+                </Button>
+                <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
+                  {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                  {isAvailable ? "On" : "Off"}
+                </Badge>
+                {enabled && (
+                  <Badge className={cn("text-[9px] gap-0.5 h-5 px-1.5 border-0", levelCfg.color)}>
+                    <LevelIcon className="w-2.5 h-2.5" />
+                    L{level}
+                  </Badge>
+                )}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca..." className="h-7 pl-7 text-xs" />
+              </div>
+            </div>
 
-        {/* Contact list */}
-        <ScrollArea className="flex-1">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredThreads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2 px-4">
-              <MessageCircle className="w-8 h-8" />
-              <p className="text-xs text-center">Nessuna conversazione</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {filteredThreads.map(thread => {
-                const isOpen = openTabs.includes(thread.contact);
-                const isFocused = thread.contact === focusedChat;
-                return (
-                  <button
-                    key={thread.contact}
-                    onClick={() => openChat(thread.contact)}
-                    className={cn(
-                      "w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors",
-                      isOpen && "bg-primary/5",
-                      thread.unreadCount > 0 && !isOpen && "bg-accent/30",
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0",
-                        isFocused && enabled ? "bg-green-500/30" : "bg-green-500/15"
-                      )}>
-                        {isFocused && enabled ? (
-                          <Radio className="w-4 h-4 text-green-600 animate-pulse" />
-                        ) : (
-                          <MessageCircle className="w-4 h-4 text-green-600" />
+            {/* Contact list */}
+            <ScrollArea className="flex-1">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredThreads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2 px-4">
+                  <MessageCircle className="w-8 h-8" />
+                  <p className="text-xs text-center">Nessuna conversazione</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {filteredThreads.map(thread => {
+                    const isOpen = openTabs.includes(thread.contact);
+                    const isFocused = thread.contact === focusedChat;
+                    return (
+                      <button
+                        key={thread.contact}
+                        onClick={() => openChat(thread.contact)}
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors",
+                          isOpen && "bg-primary/5",
+                          thread.unreadCount > 0 && !isOpen && "bg-accent/30",
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className={cn("text-sm truncate", thread.unreadCount > 0 ? "font-semibold" : "")}>
-                            {thread.contact}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {format(new Date(thread.lastMessage.created_at), "HH:mm", { locale: it })}
-                          </span>
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0",
+                            isFocused && enabled ? "bg-green-500/30" : "bg-green-500/15"
+                          )}>
+                            {isFocused && enabled ? (
+                              <Radio className="w-4 h-4 text-green-600 animate-pulse" />
+                            ) : (
+                              <MessageCircle className="w-4 h-4 text-green-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={cn("text-sm truncate", thread.unreadCount > 0 ? "font-semibold" : "")}>
+                                {thread.contact}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                {format(new Date(thread.lastMessage.created_at), "HH:mm", { locale: it })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {thread.lastMessage.direction === "outbound" && "Tu: "}
+                              {thread.lastMessage.body_text?.slice(0, 50) || "(media)"}
+                            </p>
+                          </div>
+                          {thread.unreadCount > 0 && (
+                            <span className="bg-green-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0">
+                              {thread.unreadCount}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {thread.lastMessage.direction === "outbound" && "Tu: "}
-                          {thread.lastMessage.body_text?.slice(0, 50) || "(media)"}
-                        </p>
-                      </div>
-                      {thread.unreadCount > 0 && (
-                        <span className="bg-green-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0">
-                          {thread.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </ScrollArea>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </>
+        )}
       </div>
 
       {/* Main area: tabs + conversation */}
