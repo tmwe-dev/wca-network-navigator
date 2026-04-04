@@ -38,7 +38,7 @@ export function useWhatsAppAdaptiveSync() {
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
 
-  const { isAvailable, readUnread, readThread } = useWhatsAppExtensionBridge();
+  const { isAvailable, readUnread, readThread, onSidebarChanged } = useWhatsAppExtensionBridge();
   const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
@@ -243,6 +243,18 @@ export function useWhatsAppAdaptiveSync() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [enabled, isAvailable, level, tick]);
+
+  // ── MutationObserver push: instant scan on sidebar change ──
+  useEffect(() => {
+    if (!enabled || !isAvailable) return;
+    onSidebarChanged(() => {
+      // Sidebar changed → immediate scan (no waiting for next poll)
+      if (!readingRef.current) {
+        sidebarScan();
+      }
+    });
+    return () => onSidebarChanged(() => {});
+  }, [enabled, isAvailable, onSidebarChanged, sidebarScan]);
 
   // Cleanup de-escalation timer
   useEffect(() => {

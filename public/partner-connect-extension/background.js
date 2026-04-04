@@ -54,6 +54,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // ── WhatsApp sidebar changed: WA tab → background → all webapp tabs ──
+  if (msg.type === 'wa-sidebar-changed') {
+    // Forward to all non-WhatsApp tabs (our webapp)
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        if (tab.id && tab.url && !tab.url.includes('web.whatsapp.com')) {
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'wa-push-event',
+            event: 'sidebar-changed',
+            timestamp: msg.timestamp,
+          }).catch(() => {});
+        }
+      }
+    });
+    sendResponse({ success: true });
+    return false;
+  }
+
   // ── LinkedIn Relay: webapp → background → LinkedIn tab ──
   if (msg.type === 'li-relay') {
     handleLiRelay(msg).then(sendResponse).catch(err =>

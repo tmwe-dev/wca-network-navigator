@@ -299,6 +299,73 @@
     return true; // async response
   });
 
+  // ── MutationObserver: watch sidebar for changes (event-driven, zero polling cost) ──
+  let observer = null;
+  let observerDebounce = null;
+  let lastSidebarHash = '';
+
+  function hashSidebar() {
+    const items = queryAllSafe('[data-testid="cell-frame-container"]');
+    if (!items.length) return '';
+    let h = '';
+    for (const item of items.slice(0, 20)) {
+      const badge = item.querySelector('[data-testid="icon-unread-count"]');
+      const lastMsg = item.querySelector('[data-testid="last-msg-status"]') ||
+                      item.querySelector('[data-testid="cell-frame-secondary"] span');
+      h += (badge?.textContent || '0') + '|' + (lastMsg?.textContent || '').slice(0, 30) + ';';
+    }
+    return h;
+  }
+
+  function startObserver() {
+    if (observer) return;
+    const sidebar = querySafe('#pane-side') || querySafe('[data-testid="chat-list"]');
+    if (!sidebar) {
+      // Retry in 5s if sidebar not yet loaded
+      setTimeout(startObserver, 5000);
+      return;
+    }
+
+    lastSidebarHash = hashSidebar();
+
+    observer = new MutationObserver(() => {
+      if (observerDebounce) clearTimeout(observerDebounce);
+      observerDebounce = setTimeout(() => {
+        const newHash = hashSidebar();
+        if (newHash && newHash !== lastSidebarHash) {
+          lastSidebarHash = newHash;
+          // Notify background.js → webapp that sidebar changed
+          try {
+            chrome.runtime.sendMessage({
+              type: 'wa-sidebar-changed',
+              timestamp: Date.now(),
+            });
+          } catch (_) {}
+        }
+      }, 800); // debounce 800ms to avoid spam
+    });
+
+    observer.observe(sidebar, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    console.log('[WA Bridge] MutationObserver active on sidebar');
+  }
+
+  // Start observer when DOM is ready
+  if (isLoggedIn()) {
+    startObserver();
+  } else {
+    // Wait for login, check every 3s
+    const loginCheck = setInterval(() => {
+      if (isLoggedIn()) {
+        clearInterval(loginCheck);
+        startObserver();
+      }
+    }, 3000);
+  }
+
   // ── Heartbeat ──
   setInterval(function () {
     const nowAlive = isExtensionAlive();
@@ -311,5 +378,5 @@
     }
   }, HEARTBEAT_MS);
 
-  console.log('[WA Bridge] WhatsApp content script loaded — v3.4.0');
+  console.log('[WA Bridge] WhatsApp content script loaded — v3.5.0 (MutationObserver)');
 })();
