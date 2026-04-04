@@ -16,6 +16,7 @@ export function useWhatsAppExtensionBridge() {
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
+  const sidebarChangedCbRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
@@ -27,6 +28,12 @@ export function useWhatsAppExtensionBridge() {
       if (data.action === "extensionDead") { setIsAvailable(false); return; }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
       if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
+
+      // Push event from MutationObserver
+      if (data.action === "sidebarChanged") {
+        sidebarChangedCbRef.current?.();
+        return;
+      }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
