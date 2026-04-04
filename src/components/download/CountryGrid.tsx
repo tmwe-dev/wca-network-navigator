@@ -25,7 +25,7 @@ interface CountryGridProps {
   onToggle: (code: string, name: string) => void;
   onRemove: (code: string) => void;
   filterMode: FilterKey;
-  
+  directoryStats?: Record<string, { count: number; verified: boolean }>;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
   compact?: boolean;
@@ -33,7 +33,7 @@ interface CountryGridProps {
 
 type SortKey = "name" | "partners";
 
-export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact = false }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode, directoryStats, compact = false }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -68,22 +68,24 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
       toast.success(`Sync completata: ${totalRecords} record aggiornati${errors > 0 ? ` (${errors} errori)` : ""}`, { id: toastId });
     }
     queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
     queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     setSyncing(false);
   }, [queryClient, selected]);
 
-  const { data: statsData } = useCountryStats();
+  const { data: statsData, isLoading: statsLoading, isError: statsError } = useCountryStats();
   const stats = statsData?.byCountry || {};
-
+  const hasPartnerStats = Object.keys(stats).length > 0;
+  const hasDirectoryStats = !!directoryStats && Object.keys(directoryStats).length > 0;
   const selectedCodes = new Set(selected.map(c => c.code));
 
-  // Only show countries that have partners or are currently selected
-  const countriesWithPartners = WCA_COUNTRIES.filter(c => {
-    const s = stats[c.code];
-    return (s && s.total_partners > 0) || selectedCodes.has(c.code);
-  });
+  const countriesWithPartners = (hasPartnerStats
+    ? WCA_COUNTRIES.filter(c => (stats[c.code]?.total_partners || 0) > 0 || selectedCodes.has(c.code))
+    : hasDirectoryStats
+      ? WCA_COUNTRIES.filter(c => (directoryStats?.[c.code]?.count || 0) > 0 || selectedCodes.has(c.code))
+      : WCA_COUNTRIES
+  );
 
-  // Counts for filter labels
   let noProfileCount = 0, noEmailCount = 0, noPhoneCount = 0, noDeepCount = 0;
   countriesWithPartners.forEach(c => {
     const s = stats[c.code];
@@ -97,6 +99,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
   const filtered = countriesWithPartners.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
+    if (!hasPartnerStats) return true;
     const s = stats[c.code];
     if (!s || s.total_partners === 0) return selectedCodes.has(c.code);
     if (filterMode === "no_profile") return s.without_profile > 0;
@@ -106,7 +109,9 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
-    return (stats[b.code]?.total_partners || 0) - (stats[a.code]?.total_partners || 0);
+    if (hasPartnerStats) return (stats[b.code]?.total_partners || 0) - (stats[a.code]?.total_partners || 0);
+    if (hasDirectoryStats) return (directoryStats?.[b.code]?.count || 0) - (directoryStats?.[a.code]?.count || 0);
+    return a.name.localeCompare(b.name);
   });
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCodes.has(c.code));
@@ -120,13 +125,12 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
   const sortLabel = (key: SortKey) => {
     switch (key) {
       case "name": return "Nome A-Z";
-      case "partners": return "N° Partner";
+      case "partners": return hasPartnerStats ? "N° Partner" : hasDirectoryStats ? "N° Directory" : "Nome A-Z";
     }
   };
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden gap-1.5">
-      {/* ═══ TOOLBAR ═══ */}
       <div className="flex-shrink-0 space-y-1.5">
         <div className="flex items-center gap-1.5">
           <Popover>
@@ -174,8 +178,6 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
           </button>
         </div>
 
-
-        {/* Selected flags */}
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
             {selected.map(c => (
@@ -195,9 +197,18 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
             ))}
           </div>
         )}
+
+        {!hasPartnerStats && (
+          <div className="px-1 text-[10px] text-muted-foreground">
+            {statsLoading
+              ? "Carico statistiche partner… puoi già selezionare un paese."
+              : statsError
+                ? "Statistiche partner non disponibili: uso la lista paesi di fallback."
+                : "Statistiche partner non ancora disponibili: puoi comunque selezionare un paese."}
+          </div>
+        )}
       </div>
 
-      {/* ═══ COUNTRY LIST ═══ */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-1 pr-1">
           {filtered.map(c => (
@@ -205,18 +216,21 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
               key={c.code}
               country={c}
               stats={stats}
+              fallbackCount={directoryStats?.[c.code]?.count || 0}
+              hasPartnerStats={hasPartnerStats}
               isSelected={selectedCodes.has(c.code)}
               onToggle={onToggle}
               isDark={isDark}
             />
           ))}
           {filtered.length === 0 && (
-            <div className={`text-center py-8 text-sm ${th.dim}`}>Nessun paese trovato</div>
+            <div className={`text-center py-8 text-sm ${th.dim}`}>
+              {search ? "Nessun paese corrisponde alla ricerca" : "Nessun paese disponibile"}
+            </div>
           )}
         </div>
       </div>
 
-      {/* ═══ SYNC BUTTON ═══ */}
       <div className="flex-shrink-0 pt-1.5">
         <Button
           size="sm"
@@ -238,26 +252,29 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
   );
 }
 
-/* ═══ COUNTRY CARD ═══ */
-function CountryCard({ country, stats, isSelected, onToggle, isDark }: {
+function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
   stats: Record<string, any>;
+  fallbackCount: number;
+  hasPartnerStats: boolean;
   isSelected: boolean;
   onToggle: (code: string, name: string) => void;
   isDark: boolean;
 }) {
   const s = stats[country.code];
-  const pCount = s?.total_partners || 0;
+  const pCount = hasPartnerStats ? (s?.total_partners || 0) : fallbackCount;
   const withEmail = s?.with_email || 0;
   const withPhone = s?.with_phone || 0;
   const withProfile = s?.with_profile || 0;
   const noProfile = s?.without_profile || 0;
 
-  // Quality dot: green = all have profile+email, amber = partial, red = many missing
   let dotColor: string, tooltip: string;
   if (pCount === 0) {
     dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
     tooltip = "Nessun partner";
+  } else if (!hasPartnerStats) {
+    dotColor = isDark ? "bg-sky-400" : "bg-sky-500";
+    tooltip = `${pCount} record disponibili per questo paese`;
   } else if (noProfile === 0 && withEmail === pCount) {
     dotColor = "bg-emerald-500";
     tooltip = `${pCount} partner — tutti completi`;
@@ -286,7 +303,9 @@ function CountryCard({ country, stats, isSelected, onToggle, isDark }: {
           <p className={`text-[11px] font-semibold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
           {pCount > 0 && (
             <p className={`text-[9px] font-mono mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              {pCount} <Mail className="inline w-2.5 h-2.5 -mt-px" />{withEmail} <Phone className="inline w-2.5 h-2.5 -mt-px" />{withPhone}
+              {hasPartnerStats
+                ? <>{pCount} <Mail className="inline w-2.5 h-2.5 -mt-px" />{withEmail} <Phone className="inline w-2.5 h-2.5 -mt-px" />{withPhone}</>
+                : <>{pCount} disponibili</>}
             </p>
           )}
         </div>
