@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 
 type LogEntry = { ts: string; msg: string; type: "info" | "ok" | "warn" | "error" };
 
