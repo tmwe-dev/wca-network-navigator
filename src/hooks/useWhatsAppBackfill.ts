@@ -62,8 +62,16 @@ function sleepWithCountdown(
   });
 }
 
-function sleep(ms: number) {
-  return new Promise(r => setTimeout(r, ms));
+function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (abortRef.current || Date.now() - start >= ms) {
+        clearInterval(interval);
+        resolve(abortRef.current);
+      }
+    }, 250);
+  });
 }
 
 export function useWhatsAppBackfill() {
