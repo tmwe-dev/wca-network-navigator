@@ -331,6 +331,7 @@ function LinkedInTest() {
   const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
+  const [foundThreads, setFoundThreads] = useState<Array<{ name: string; threadUrl?: string }>>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
