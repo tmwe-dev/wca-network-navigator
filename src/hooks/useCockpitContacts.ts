@@ -289,8 +289,8 @@ export function useCockpitContacts() {
           || icEd.social_links?.linkedin
           || "";
         // contact_profiles is an OBJECT keyed by ID, not an array
-        if (!icLinkedin && enrich.contact_profiles && typeof enrich.contact_profiles === "object") {
-          const profiles = Object.values(enrich.contact_profiles) as any[];
+        if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
+          const profiles = Object.values(icEd.contact_profiles) as any[];
           const found = profiles.find((cp: any) => cp.linkedin_url);
           if (found) icLinkedin = found.linkedin_url;
         }
