@@ -14,11 +14,13 @@ type Quality = "fast" | "standard" | "premium";
 async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel): Promise<{ text: string; sections: string[] }> {
   const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
   
-  // Select categories based on channel context
-  const categories = ["identita", "vendita"];
-  if (channel === "email") categories.push("email_modelli");
-  if (quality !== "fast") categories.push("negoziazione");
-  if (quality === "premium") categories.push("psicologia");
+  // Select categories based on channel — using ACTUAL DB categories
+  const categories = ["regole_sistema", "filosofia"];
+  if (channel === "email") categories.push("struttura_email", "hook", "cold_outreach");
+  if (channel === "linkedin") categories.push("cold_outreach", "tono");
+  if (channel === "whatsapp") categories.push("tono", "frasi_modello");
+  if (quality !== "fast") categories.push("negoziazione", "chris_voss", "dati_partner");
+  if (quality === "premium") categories.push("arsenale", "persuasione", "obiezioni", "chiusura", "followup", "errori");
   
   const { data: entries } = await supabase
     .from("kb_entries")

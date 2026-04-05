@@ -13,7 +13,7 @@ async function fetchKbEntriesForImprove(supabase: any): Promise<{ text: string; 
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
     .eq("is_active", true)
-    .in("category", ["vendita", "negoziazione", "email_modelli", "psicologia"])
+    .in("category", ["regole_sistema", "struttura_email", "chris_voss", "negoziazione", "hook", "persuasione", "tono", "errori"])
     .gte("priority", 6)
     .order("priority", { ascending: false })
     .order("sort_order")

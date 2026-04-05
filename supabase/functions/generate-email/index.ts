@@ -367,12 +367,14 @@ serve(async (req) => {
     let activity: any = null;
 
     if (standalone) {
-      // ── STANDALONE MODE: no activity needed, generate from goal/settings only ──
+      // ── STANDALONE MODE: detect language from recipient_countries ──
+      // Extract first country code from recipient_countries string (e.g. "DE, FR" → "DE")
+      const firstCountry = (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
       partner = {
         id: null,
         company_name: "Destinatario generico",
         company_alias: null,
-        country_code: "IT",
+        country_code: firstCountry.toUpperCase().trim(),
         country_name: recipient_countries || "Vari",
         city: "",
         email: null,
