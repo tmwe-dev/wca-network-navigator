@@ -29,11 +29,11 @@ async function fetchKbEntriesStrategic(
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
   
-  // Build category filter based on context
+  // Build category filter based on context — using ACTUAL DB categories
   const categories: string[] = [];
   
-  // Always include identity for any quality
-  categories.push("identita");
+  // Always include core identity/rules
+  categories.push("regole_sistema", "filosofia");
   
   // Add context-specific categories
   if (context.kb_categories?.length) {
@@ -42,33 +42,35 @@ async function fetchKbEntriesStrategic(
     // Fallback: derive from email category
     switch (context.emailCategory) {
       case "primo_contatto":
-        categories.push("vendita", "email_modelli");
+        categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
         break;
       case "follow_up":
-        categories.push("vendita", "negoziazione", "email_modelli");
+        categories.push("followup", "chris_voss", "struttura_email");
         break;
       case "richiesta":
-        categories.push("vendita");
+        categories.push("struttura_email", "dati_partner");
         break;
       case "proposta_servizi":
-        categories.push("vendita", "negoziazione", "email_modelli");
+        categories.push("negoziazione", "struttura_email", "chiusura", "dati_partner");
         break;
       case "partnership":
-        categories.push("vendita", "negoziazione");
+        categories.push("negoziazione", "chris_voss", "dati_partner");
         break;
       default:
-        categories.push("vendita");
+        categories.push("struttura_email", "hook");
     }
   }
   
-  // For follow-ups without response, add negotiation techniques
+  // For follow-ups without response, add re-engagement techniques
   if (context.isFollowUp) {
-    if (!categories.includes("negoziazione")) categories.push("negoziazione");
+    ["chris_voss", "followup", "obiezioni"].forEach(c => {
+      if (!categories.includes(c)) categories.push(c);
+    });
   }
   
-  // For premium, add everything
+  // For premium, add full arsenal
   if (quality === "premium") {
-    ["vendita", "negoziazione", "email_modelli", "psicologia"].forEach(c => {
+    ["negoziazione", "chris_voss", "arsenale", "persuasione", "tono", "frasi_modello", "obiezioni", "chiusura", "errori"].forEach(c => {
       if (!categories.includes(c)) categories.push(c);
     });
   }
@@ -365,12 +367,14 @@ serve(async (req) => {
     let activity: any = null;
 
     if (standalone) {
-      // ── STANDALONE MODE: no activity needed, generate from goal/settings only ──
+      // ── STANDALONE MODE: detect language from recipient_countries ──
+      // Extract first country code from recipient_countries string (e.g. "DE, FR" → "DE")
+      const firstCountry = (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
       partner = {
         id: null,
         company_name: "Destinatario generico",
         company_alias: null,
-        country_code: "IT",
+        country_code: firstCountry.toUpperCase().trim(),
         country_name: recipient_countries || "Vari",
         city: "",
         email: null,
@@ -793,7 +797,7 @@ ${strategicAdvisor}
 2. PERSONALIZZAZIONE: Usa i dati del destinatario per personalizzare. Se hai dati dal profilo, dal sito, dalla deep search — USALI come leva.
 3. ALIAS: Usa SEMPRE l'alias/nome breve nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Se il nome sembra un ruolo/titolo → usa "Gentile responsabile" o equivalente.
 4. CONCISIONE: L'email deve essere pronta per l'invio, non un template. Massimo 10-15 righe per il corpo.
-5. NESSUNA INVENZIONE: Non inventare informazioni non presenti nei dati forniti.
+5. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA: NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni, statistiche o fatti. Se i dati sono insufficienti, scrivi in modo generico ma VERO. Ogni affermazione DEVE essere supportata dai dati forniti.
 6. NETWORK: Se ci sono network condivisi, usali come punto di connessione.
 7. CTA: Ogni email DEVE avere una call-to-action chiara. Domande aperte > domande chiuse.`;
 
