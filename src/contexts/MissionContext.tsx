@@ -13,6 +13,7 @@ export interface SelectedRecipient {
   email: string | null;
   city: string;
   countryName: string;
+  countryCode?: string;
   isEnriched: boolean;
 }
 
