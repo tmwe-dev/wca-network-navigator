@@ -18,12 +18,10 @@ import { lazyRetry } from "@/lib/lazyRetry";
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
-const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
 const CRM = lazyRetry(() => import("./pages/CRM"));
 const Outreach = lazyRetry(() => import("./pages/Outreach"));
 const Agenda = lazyRetry(() => import("./pages/Agenda"));
-const Agents = lazyRetry(() => import("./pages/Agents"));
 const AgentChatHub = lazyRetry(() => import("./pages/AgentChatHub"));
 
 const RADashboard = lazyRetry(() => import("./pages/RADashboard"));
@@ -48,20 +46,14 @@ const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
 const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
 
-const Global = lazyRetry(() => import("./pages/Global"));
 const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
 const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
 const TestDownload = lazyRetry(() => import("./pages/TestDownload"));
 const TestLinkedInSearch = lazyRetry(() => import("./pages/TestLinkedInSearch"));
 const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
 const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
-const SystemMap = lazyRetry(() => import("./pages/SystemMap"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
-
-const PrototypeA = lazyRetry(() => import("./pages/PrototypeA"));
-const PrototypeB = lazyRetry(() => import("./pages/PrototypeB"));
-const PrototypeC = lazyRetry(() => import("./pages/PrototypeC"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,12 +93,10 @@ const App = () => (
                 <Route element={<AppLayout />}>
                   {/* ── 5 consolidated environments ── */}
                   <Route path="/" element={<SuperHome3D />} />
-                  <Route path="/dashboard-legacy" element={<Dashboard />} />
                   <Route path="/network" element={<NetworkPage />} />
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
-                  <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/settings/operators" element={<OperatorsSettings />} />
@@ -118,19 +108,14 @@ const App = () => (
                    <Route path="/ra/scraping" element={<RAScrapingEngine />} />
                    <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
-                   {/* ── Legacy pages kept alive ── */}
-                   <Route path="/global" element={<Global />} />
+                   {/* ── Utility pages ── */}
                   <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
                   <Route path="/test-extensions" element={<TestExtensions />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
-                  <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
-                  <Route path="/prototype-a" element={<PrototypeA />} />
-                  <Route path="/prototype-b" element={<PrototypeB />} />
-                  <Route path="/prototype-c" element={<PrototypeC />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />
@@ -145,6 +130,13 @@ const App = () => (
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                   <Route path="/hub" element={<Navigate to="/agenda" replace />} />
                   <Route path="/acquisizione" element={<Navigate to="/network" replace />} />
+                  <Route path="/dashboard-legacy" element={<Navigate to="/" replace />} />
+                  <Route path="/agents" element={<Navigate to="/" replace />} />
+                  <Route path="/global" element={<Navigate to="/" replace />} />
+                  <Route path="/system-map" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-a" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-b" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-c" element={<Navigate to="/" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

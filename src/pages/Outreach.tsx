@@ -3,7 +3,6 @@ import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle, Linkedin
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { OutreachFilterSlot } from "@/components/filters/OutreachFilterSlot";
 import { lazyRetry } from "@/lib/lazyRetry";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
@@ -37,12 +36,10 @@ export default function Outreach() {
     { value: "linkedin", label: "LinkedIn", icon: Linkedin, badge: liUnread },
   ];
 
-  const filterSlot = <OutreachFilterSlot tab={tab} />;
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} filterSlot={filterSlot} />
+        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">
           <Suspense fallback={<TabFallback />}>
             {tab === "cockpit" && <Cockpit />}

@@ -1,7 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { UserCheck, ContactRound } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { CRMFilterSlot } from "@/components/filters/CRMFilterSlot";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -18,12 +17,10 @@ export default function CRM() {
     { value: "biglietti", label: "Biglietti", icon: ContactRound },
   ];
 
-  const filterSlot = tab === "contatti" ? <CRMFilterSlot /> : undefined;
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} filterSlot={filterSlot} />
+        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">
           {tab === "contatti" && (
             <Suspense fallback={<TabFallback />}>

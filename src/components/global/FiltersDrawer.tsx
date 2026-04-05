@@ -197,6 +197,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const isOutreach = route === "/outreach";
   const isNetwork = route === "/network";
   const isCRM = route === "/crm";
+  const isAgenda = route === "/agenda";
 
   // Detect outreach sub-tab
   const outreachTab = g.filters.outreachTab;
@@ -225,7 +226,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   }, [contacts, isCockpit]);
 
   // Context title
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : "Globale";
 
   // Active filter count
   const activeCount = useMemo(() => {
@@ -618,8 +619,36 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
+          {/* ═══ AGENDA ═══ */}
+          {isAgenda && (
+            <>
+              <FilterSection icon={Search} label="Cerca">
+                <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca attività, evento..." className="h-8 text-xs bg-muted/30 border-border/40" />
+              </FilterSection>
+              <FilterSection icon={ListTodo} label="Tipo">
+                <ChipGroup>
+                  {[{ value: "all", label: "Tutti" }, { value: "reminder", label: "Promemoria" }, { value: "activity", label: "Attività" }, { value: "followup", label: "Follow-up" }].map(o => (
+                    <Chip key={o.value} active={g.filters.attivitaStatus === o.value} onClick={() => g.setAttivitaStatus(o.value)}>{o.label}</Chip>
+                  ))}
+                </ChipGroup>
+              </FilterSection>
+              <FilterSection icon={Zap} label="Priorità">
+                <ChipGroup>
+                  {ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.attivitaPriority === o.value} onClick={() => g.setAttivitaPriority(o.value)}>{o.label}</Chip>)}
+                </ChipGroup>
+              </FilterSection>
+              <FilterSection icon={ArrowUpDown} label="Ordina">
+                <ChipGroup>
+                  {[{ value: "date_desc", label: "Più recenti" }, { value: "date_asc", label: "Più vecchi" }, { value: "priority", label: "Priorità" }].map(o => (
+                    <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
+                  ))}
+                </ChipGroup>
+              </FilterSection>
+            </>
+          )}
+
           {/* Fallback for pages without specific filters */}
-          {!isOutreach && !isNetwork && !isCRM && (
+          {!isOutreach && !isNetwork && !isCRM && !isAgenda && (
             <div className="text-center py-8 text-muted-foreground">
               <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nessun filtro per questa sezione</p>
