@@ -610,9 +610,10 @@ REGOLA ASSOLUTA: ${recipientName ? `Rivolgiti SEMPRE alla persona (${recipientNa
       }
     }
 
-    // Sales KB — slice based on quality
+    // Sales KB — use granular kb_entries first, fallback to legacy monolithic
+    const kbEntriesText = await fetchKbEntries(supabase, quality);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = getKBSlice(fullSalesKB, quality);
+    const salesKBSlice = kbEntriesText || getKBSliceLegacy(fullSalesKB, quality);
 
     const senderContext = `
 MITTENTE (TU):
