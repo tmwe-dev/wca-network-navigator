@@ -82,15 +82,18 @@ export function useSeedKbFromLegacy() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check if already seeded
       const { count } = await supabase
         .from("kb_entries")
         .select("id", { count: "exact", head: true });
       if ((count || 0) > 0) throw new Error("KB già popolata. Elimina le schede esistenti prima di re-importare.");
 
       const entries = getDefaultKbEntries(user.id);
-      const { error } = await supabase.from("kb_entries").insert(entries as any);
-      if (error) throw error;
+      // Insert in batches of 10 to avoid payload limits
+      for (let i = 0; i < entries.length; i += 10) {
+        const batch = entries.slice(i, i + 10);
+        const { error } = await supabase.from("kb_entries").insert(batch as any);
+        if (error) throw error;
+      }
       return entries.length;
     },
     onSuccess: (count) => {
@@ -101,128 +104,468 @@ export function useSeedKbFromLegacy() {
   });
 }
 
-function getDefaultKbEntries(userId: string) {
-  const entries: Array<Omit<KbEntry, "id" | "created_at" | "updated_at">> = [
-    {
-      user_id: userId, category: "regole_sistema", chapter: "Regole AI", title: "Regole generali per generazione email",
-      content: `1. Mai menzionare il prezzo per primo: il valore si comunica sempre prima del costo.\n2. Mai criticare i competitor direttamente: usa domande che fanno emergere i limiti.\n3. Mai forzare la vendita: la pressione è sempre sostituita da logica e valore.\n4. Mai usare un tono generico: ogni email deve sembrare scritta per quel destinatario.\n5. Sempre chiudere con un'azione: ogni email contiene UNA SOLA CTA chiara.\n6. Brevità con sostanza: email concise ma dense di valore.\n7. Personalizza con almeno 3 campi del partner.`,
-      tags: ["regole", "email", "sistema", "base"], priority: 10, sort_order: 0, is_active: true,
-    },
-    {
-      user_id: userId, category: "filosofia", chapter: "Filosofia Venditore", title: "Identità e personalità del venditore",
-      content: `Il venditore non è un semplice commerciale. È un consulente d'elite che combina competenza logistica, intelligenza emotiva e determinazione.\n\nNon vende servizi: costruisce partnership.\nNon insegue clienti: li seleziona.\nNon parla di prezzo: parla di valore.\n\nPersonalità: calmo, riflessivo, analitico. Fiducia radicata in preparazione maniacale. Ogni parola pesa, ogni frase costruisce fiducia.`,
-      tags: ["filosofia", "identità", "vendita", "tono"], priority: 8, sort_order: 1, is_active: true,
-    },
-    {
-      user_id: userId, category: "filosofia", chapter: "Filosofia Venditore", title: "Le 5 missioni fondamentali",
-      content: `1. Guida strategica: ogni interazione parte dalla realtà del cliente e arriva alla soluzione.\n2. Ascolto profondo: ogni frase del cliente è un indizio.\n3. Focus assoluto: non cambiare argomento, salvo per smascherare un problema nascosto.\n4. Valore prima del prezzo: il prezzo si discute solo dopo che il valore è stato dimostrato.\n5. Creare il bisogno: il cliente deve sentire il BISOGNO di lavorare con te.`,
-      tags: ["filosofia", "missioni", "vendita"], priority: 8, sort_order: 2, is_active: true,
-    },
-    {
-      user_id: userId, category: "negoziazione", chapter: "10 Comandamenti", title: "I 10 comandamenti della negoziazione",
-      content: `1. Porta al NO consapevole: "È contrario a...?" — il "no" fa sentire il cliente al sicuro.\n2. Smaschera la decision fatigue: offri max 2 opzioni, mai elenchi infiniti.\n3. Controllo emotivo: mai rispondere d'impulso.\n4. Controllo negoziale: porta con logica il cliente a comprendere il valore.\n5. Ascolta prima, guida dopo.\n6. Non vendere, orienta: proponi soluzioni, non prodotti.\n7. Concretezza: dati reali, tempistiche precise.\n8. Anticipa le obiezioni proattivamente.\n9. Crea coinvolgimento: poni domande, invita a rispondere.\n10. Valore prima del prezzo — sempre.`,
-      tags: ["negoziazione", "comandamenti", "regole"], priority: 9, sort_order: 3, is_active: true,
-    },
-    {
-      user_id: userId, category: "chris_voss", chapter: "Chris Voss — Black Swan", title: "VOSS-01: Domande orientate al NO",
-      content: `Le persone possono dire "no" anche con decision fatigue. Il "no" richiede meno energia del "sì" e fa sentire il cliente in controllo.\n\nSostituisci "Le farebbe piacere...?" con:\n- "È contrario a...?"\n- "La metto in difficoltà se...?"\n- "Sarebbe un problema se...?"\n\nEsempio: "Ha qualcosa in contrario a ricevere una breve panoramica delle soluzioni che stiamo offrendo ad aziende del vostro settore?"`,
-      tags: ["chris_voss", "no", "domande", "tecnica"], priority: 9, sort_order: 4, is_active: true,
-    },
-    {
-      user_id: userId, category: "chris_voss", chapter: "Chris Voss — Black Swan", title: "VOSS-02: Riattivazione post-ghosting",
-      content: `Quando il cliente sparisce, la domanda "Ha rinunciato a X?" riattiva la conversazione il 99% delle volte. Il cliente non vuole ammettere di aver rinunciato.\n\nEsempio email: "Ha rinunciato all'idea di ottimizzare la gestione delle spedizioni, oppure è semplicemente una questione di tempistica?"`,
-      tags: ["chris_voss", "ghosting", "riattivazione", "tecnica"], priority: 9, sort_order: 5, is_active: true,
-    },
-    {
-      user_id: userId, category: "chris_voss", chapter: "Chris Voss — Black Swan", title: "VOSS-03: Gestione prezzo",
-      content: `Se il cliente tratta sul prezzo, il problema non è il prezzo ma il valore percepito. Non tagliare mai il prezzo. Concentrati sul valore.\n\nRegola: "Se stai negoziando sul prezzo, stai parlando della cosa sbagliata."\n\nIn email: proponi un'analisi comparativa dei costi totali (supplementi, tempo, errori) anziché fare sconti.`,
-      tags: ["chris_voss", "prezzo", "valore", "tecnica"], priority: 9, sort_order: 6, is_active: true,
-    },
-    {
-      user_id: userId, category: "chris_voss", chapter: "Chris Voss — Black Swan", title: "VOSS-04: Labeling e Mirroring",
-      content: `Labeling: Dai un nome all'emozione dell'altro → "Sembra che la sua preoccupazione principale sia..."\n\nMirroring: Riprendi le esatte parole che il cliente ha usato nella sua risposta.\n\nEsempio: "Dalla sua risposta sembra che il tema principale sia la continuità del servizio e l'affidabilità nei momenti critici."`,
-      tags: ["chris_voss", "labeling", "mirroring", "tecnica"], priority: 8, sort_order: 7, is_active: true,
-    },
-    {
-      user_id: userId, category: "chris_voss", chapter: "Chris Voss — Black Swan", title: "VOSS-05: Forced Empathy",
-      content: `Quando il cliente chiede qualcosa di irragionevole, in email si traduce in:\n\n"Mi aiuti a capire come potremmo rendere possibile ciò mantenendo la qualità che meritate."`,
-      tags: ["chris_voss", "empatia", "tecnica"], priority: 7, sort_order: 8, is_active: true,
-    },
-    {
-      user_id: userId, category: "struttura_email", chapter: "Struttura Email", title: "La regola delle 5 righe (primo contatto)",
-      content: `Un'email di primo contatto deve essere leggibile in 30 secondi:\n\n- Riga 1: Hook — perché gli stai scrivendo\n- Riga 2-3: Value proposition — cosa fai e perché è rilevante per LUI\n- Riga 4: Social proof — metrica, cliente, certificazione\n- Riga 5: CTA — un'azione sola, semplice, a basso impegno\n\nLunghezze:\n- Primo contatto: 80-120 parole (mai oltre 150)\n- Follow-up: 50-80 parole\n- Proposta dettagliata: max 200 parole con bullet points`,
-      tags: ["struttura", "email", "primo_contatto", "lunghezza"], priority: 9, sort_order: 9, is_active: true,
-    },
-    {
-      user_id: userId, category: "struttura_email", chapter: "Struttura Email", title: "Struttura dettagliata email",
-      content: `1. Saluto: breve, personale. "Dear [Nome]," — mai "Dear Sir/Madam"\n2. Hook di apertura (1 frase): collega te al destinatario\n3. Contesto (1-2 frasi): chi sei, cosa fai, perché è rilevante\n4. Valore specifico (2-3 frasi): cosa puoi fare per lui concretamente\n5. Prova (1 frase): dato, certificazione, volume, referenza\n6. CTA (1 frase): proposta chiara e a basso impegno\n7. Chiusura: cordiale, professionale`,
-      tags: ["struttura", "email", "template"], priority: 8, sort_order: 10, is_active: true,
-    },
-    {
-      user_id: userId, category: "hook", chapter: "Tecniche di Apertura", title: "Hook per network condiviso",
-      content: `- "As fellow [WCA/FIATA] members, I wanted to reach out..."\n- "I noticed we're both part of [network] and I believe we could complement each other on [rotta/servizio]..."\n- "Our shared [network] membership made me look into your company..."`,
-      tags: ["hook", "apertura", "network", "email"], priority: 7, sort_order: 11, is_active: true,
-    },
-    {
-      user_id: userId, category: "hook", chapter: "Tecniche di Apertura", title: "Hook per geografia e complimento",
-      content: `Per riferimento geografico:\n- "We're expanding our coverage in [country/region] and your company stood out..."\n- "Looking at the growing trade lane between [A] and [B], I see a natural fit..."\n\nPer complimento specifico:\n- "I was impressed by your [certificazione/servizio/presenza]..."\n- "Your expertise in [dangerous goods/project cargo] caught my attention..."`,
-      tags: ["hook", "apertura", "geografia", "complimento"], priority: 7, sort_order: 12, is_active: true,
-    },
-    {
-      user_id: userId, category: "hook", chapter: "Tecniche di Apertura", title: "Hook stile TMWE (selezione mirata)",
-      content: `- "Mi permetto di contattarla perché abbiamo selezionato la vostra azienda tra quelle che, per tipologia e reputazione, rappresentano il profilo ideale..."\n- "Ho notato che [riferimento specifico] e mi sono chiesto se..."\n- "Non le scrivo per proporle un servizio generico. Le scrivo perché..."\n\nREGOLA: Mai iniziare con "I am writing to..." o "Let me introduce myself". Inizia dal destinatario o dal contesto condiviso.`,
-      tags: ["hook", "apertura", "tmwe", "selezione"], priority: 8, sort_order: 13, is_active: true,
-    },
-    {
-      user_id: userId, category: "dati_partner", chapter: "Uso Dati Partner", title: "Come personalizzare con i dati del partner",
-      content: `| Campo | Come usarlo |\n|-------|-------------|\n| company_name | Sempre nel saluto e nel corpo |\n| contact name | Nel "Dear [Nome]" |\n| contact title/role | Adatta il tono (CEO → strategico, Ops → pratico) |\n| country/city | Riferimento geografico nell'hook |\n| network_name | Hook primario |\n| services | Collega i tuoi servizi ai loro |\n| rating | Se alto, menziona la reputazione |\n| enrichment_data | Dimostra che hai studiato l'azienda |\n\nRegole: usa almeno 3 campi, mai inventare dati, priorità: network > paese > servizi > rating.`,
-      tags: ["personalizzazione", "dati", "partner", "email"], priority: 8, sort_order: 14, is_active: true,
-    },
-    {
-      user_id: userId, category: "cold_outreach", chapter: "Cold Outreach", title: "Principi cold email",
-      content: `- Non è spam: è una selezione. Hai scelto questa azienda con cura. Dimostralo.\n- Personalizzazione obbligatoria: almeno 1 elemento specifico.\n- Brevità: max 150 parole.\n- Una sola CTA a basso impegno.\n- Approccio anti-ansia: comunica valore, non urgenza.\n\nStruttura:\n1. Motivo del contatto (personalizzazione)\n2. Problema/Opportunità (valore)\n3. Soluzione sintetica (beneficio)\n4. CTA orientata al NO (azione)`,
-      tags: ["cold", "outreach", "primo_contatto", "struttura"], priority: 8, sort_order: 15, is_active: true,
-    },
-    {
-      user_id: userId, category: "arsenale", chapter: "Arsenale Strategico", title: "I costi occulti dei competitor",
-      content: `Leve argomentative per differenziarsi:\n\n- Supplementi nascosti: fatture diverse dal listino, coefficienti volumetrici peggiorativi\n- Costo tempo: ore perse in verifiche fatture, ricalcolo riaddebiti\n- Costo caos: più corrieri = magazzino confuso, comunicazione frammentata\n- Assistenza inefficace: i grandi operatori non offrono supporto reale\n\nCome usarli in email (domande, non accuse):\n"Molti clienti, analizzando i costi complessivi, hanno scoperto che il costo reale era molto diverso dal listino..."`,
-      tags: ["arsenale", "competitor", "costi", "differenziazione"], priority: 7, sort_order: 16, is_active: true,
-    },
-    {
-      user_id: userId, category: "obiezioni", chapter: "Gestione Obiezioni", title: "Risposte alle obiezioni comuni",
-      content: `"Costa troppo": Riformula sui costi totali. "Molti clienti scoprono che i costi totali si riducono significativamente. Le propongo un confronto concreto."\n\n"Abbiamo già un fornitore": "Ottimo. Ci hanno scelto non per sostituirli, ma per aggiungere un livello di controllo e risparmio."\n\n"Non è il momento": "Le invio un breve riepilogo di 2 minuti. Quando sarà il momento, avrà già tutto sotto mano."\n\n"Mi mandi una mail": "Con piacere. Potrebbe indicarmi il nome del responsabile? Preferisco qualcosa di mirato."`,
-      tags: ["obiezioni", "prezzo", "fornitore", "tempo"], priority: 9, sort_order: 17, is_active: true,
-    },
-    {
-      user_id: userId, category: "chiusura", chapter: "Tecniche di Chiusura", title: "5 modelli di chiusura",
-      content: `Morbida: "Ha qualcosa in contrario nel programmare il primo test?"\n\nUrgenza Elegante: "Per mantenere alta la qualità, il numero di nuovi account che possiamo acquisire è limitato."\n\nResponsabilizza: "Di norma è il cliente a inseguire questo tipo di opportunità."\n\nEmotiva: "Dal momento in cui diventasse nostro cliente, le sue spedizioni sarebbero promesse da mantenere."\n\nRiformulazione: "Abbiamo parlato di riduzione costi, aumento produttività e maggior controllo. Direi che valga la pena iniziare."`,
-      tags: ["chiusura", "closing", "tecniche"], priority: 8, sort_order: 18, is_active: true,
-    },
-    {
-      user_id: userId, category: "followup", chapter: "Protocollo Follow-up", title: "Sequenza email e regole follow-up",
-      content: `Tempistica:\n- Email riepilogativa lo stesso giorno\n- Secondo contatto 3-5 giorni\n- Terzo 10-14 giorni\n\nSequenza:\n- EMAIL 1 (Giorno 0): Presentazione + hook + CTA leggera\n- EMAIL 2 (Giorno 3-5): Contenuto di valore aggiunto\n- EMAIL 3 (Giorno 10-14): CTA diretta con proposta concreta\n- EMAIL 4 (Giorno 21+, solo se ghost): Riattivazione Voss\n\nRegole: mai ripetere la stessa email, cambia angolo, mantieni brevità (50-80 parole), tono consultivo.`,
-      tags: ["followup", "sequenza", "tempistica"], priority: 8, sort_order: 19, is_active: true,
-    },
-    {
-      user_id: userId, category: "tono", chapter: "Adattamento Tono", title: "Adattamento per ruolo e geografia",
-      content: `Per ruolo:\n- CEO/Owner: formale, focus partnership strategica\n- Operations Manager: pratico, focus efficienza\n- Sales/BizDev: dinamico, focus vantaggi reciproci\n\nPer area geografica:\n- Far East: formale, rispetto gerarchia, longevità\n- Middle East/India: relazione personale, referenze locali\n- Europa: diretto, professionale, efficienza\n- Americas (USA): orientato risultati; LATAM: più caloroso\n- Africa: rispettoso, sensibile a sfide logistiche locali`,
-      tags: ["tono", "adattamento", "ruolo", "geografia"], priority: 7, sort_order: 20, is_active: true,
-    },
-    {
-      user_id: userId, category: "persuasione", chapter: "Adattamento Tono", title: "Tecniche di persuasione B2B",
-      content: `Social Proof:\n- "We handle over [X] shipments monthly from/to [paese]"\n- "We've been [network] members since [anno], with a [X]/5 rating"\n\nReciprocità:\n- "Happy to share our route analysis with no obligation"\n\nUrgenza appropriata (mai artificiale):\n- "With the peak season approaching, now is the ideal time to align"\n- "New regulations effective [date] make it important to have a prepared partner"`,
-      tags: ["persuasione", "social_proof", "reciprocità", "urgenza"], priority: 7, sort_order: 21, is_active: true,
-    },
-    {
-      user_id: userId, category: "frasi_modello", chapter: "Libreria Frasi", title: "CTA e frasi di chiusura",
-      content: `CTA (NO-oriented):\n- "Ha qualcosa in contrario a ricevere una breve panoramica?"\n- "Le sembrerebbe fuori luogo dedicarmi 5 minuti?"\n- "Would you be open to a 15-minute call next week?"\n\nChiusure:\n- "Resto a disposizione. Il nostro obiettivo è la sua tranquillità operativa."\n- "I look forward to exploring how we can support each other."\n\nOggetto Email (max 6-8 parole, mai tutto maiuscolo):\n- "[Network] member — [servizio] in [paese]"\n- "[Nome Azienda] – una domanda sulla vostra logistica"`,
-      tags: ["cta", "chiusura", "frasi", "oggetto"], priority: 7, sort_order: 22, is_active: true,
-    },
-    {
-      user_id: userId, category: "errori", chapter: "Libreria Frasi", title: "Errori da evitare nelle email",
-      content: `1. Genericità: "We are a leading logistics company" — tutti lo dicono, sii specifico.\n2. Email troppo lunghe: max 150 parole al primo contatto.\n3. Promesse vaghe: "Best service" → dati concreti.\n4. Focus su di te: il 70% deve parlare del destinatario.\n5. Tono supplicante: "I would really appreciate..." → sii propositivo.\n6. Multiple CTA: una sola azione per email.\n7. Nessuna personalizzazione: se l'email potrebbe andare a chiunque, è sbagliata.\n8. Follow-up identici.\n9. Allegati al primo contatto: mai.`,
-      tags: ["errori", "regole", "email"], priority: 8, sort_order: 23, is_active: true,
-    },
+type KbSeed = Omit<KbEntry, "id" | "created_at" | "updated_at">;
+function e(userId: string, cat: string, ch: string, title: string, content: string, tags: string[], priority: number, sort: number): KbSeed {
+  return { user_id: userId, category: cat, chapter: ch, title, content, tags, priority, sort_order: sort, is_active: true };
+}
+
+function getDefaultKbEntries(userId: string): KbSeed[] {
+  return [
+    // ═══════════════════════════════════════════════════
+    // SEZ. 1 — REGOLE SISTEMA
+    // ═══════════════════════════════════════════════════
+    e(userId, "regole_sistema", "Regole AI", "7 Regole inviolabili per email AI",
+`1. Mai menzionare il prezzo per primo: il valore si comunica sempre prima del costo.
+2. Mai criticare i competitor direttamente: usa domande che fanno emergere i limiti.
+3. Mai forzare la vendita: la pressione è sostituita da logica e valore.
+4. Mai usare un tono generico: ogni email deve sembrare scritta per quel destinatario.
+5. Sempre chiudere con un'azione: ogni email contiene UNA SOLA CTA chiara.
+6. Brevità con sostanza: email concise ma dense di valore.
+7. Personalizza con almeno 3 campi del partner.`,
+      ["regole", "email", "sistema", "inviolabili"], 10, 0),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 2 — FILOSOFIA VENDITORE
+    // ═══════════════════════════════════════════════════
+    e(userId, "filosofia", "Filosofia Venditore", "Identità e personalità del venditore",
+`Il venditore non è un semplice commerciale. È un consulente d'elite che combina competenza logistica, intelligenza emotiva e determinazione.
+
+Non vende servizi: costruisce partnership.
+Non insegue clienti: li seleziona.
+Non parla di prezzo: parla di valore.
+
+Personalità: calmo, riflessivo, analitico. Fiducia radicata in preparazione maniacale.`,
+      ["filosofia", "identità", "vendita", "tono"], 8, 1),
+
+    e(userId, "filosofia", "Filosofia Venditore", "Le 5 Missioni Fondamentali",
+`1. GUIDA STRATEGICA: Ogni interazione parte dalla realtà del cliente e arriva alla soluzione. Non si vende: si guida.
+2. ASCOLTO PROFONDO: Ogni frase del cliente è un indizio. Il venditore è un detective del business.
+3. FOCUS ASSOLUTO: Non cambiare argomento, salvo per smascherare un problema nascosto.
+4. VALORE PRIMA DEL PREZZO: Il prezzo si discute solo dopo che il valore è stato dimostrato. Mai prima.
+5. CREARE IL BISOGNO: Il cliente deve sentire il BISOGNO di lavorare con te e considerare insostituibile il supporto.`,
+      ["filosofia", "missioni", "vendita", "5_missioni"], 9, 2),
+
+    e(userId, "filosofia", "Filosofia Venditore", "Approccio Anti-Ansia",
+`Presentati con calma, sapendo di offrire valore assoluto.
+Il tuo approccio è quello del consulente che ha selezionato con cura l'azienda da contattare.
+Conferma sempre che le scelte passate del cliente sono state intelligenti.
+Non fai telemarketing: offri valore, consulenza, risparmio, modernità.`,
+      ["filosofia", "anti-ansia", "approccio", "calma"], 7, 3),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 3 — 10 COMANDAMENTI NEGOZIAZIONE
+    // ═══════════════════════════════════════════════════
+    e(userId, "negoziazione", "10 Comandamenti", "Comandamenti 1-5 della negoziazione",
+`1. PORTA AL NO CONSAPEVOLE: "È contrario a...?" — il "no" fa sentire il cliente al sicuro.
+2. SMASCHERA LA DECISION FATIGUE: offri max 2 opzioni, mai elenchi infiniti.
+3. CONTROLLO EMOTIVO: mai rispondere d'impulso. Anche con rifiuto brusco, rispondi con calma.
+4. CONTROLLO NEGOZIALE: porta con logica il cliente a comprendere il valore.
+5. ASCOLTA PRIMA, GUIDA DOPO: nelle risposte, dimostra di aver compreso prima di proporre.`,
+      ["negoziazione", "comandamenti", "1-5"], 9, 4),
+
+    e(userId, "negoziazione", "10 Comandamenti", "Comandamenti 6-10 della negoziazione",
+`6. NON VENDERE, ORIENTA: proponi soluzioni, non prodotti.
+7. CONCRETEZZA: dati reali, tempistiche precise, esempi verificabili. Niente frasi vaghe.
+8. ANTICIPA LE OBIEZIONI: affronta proattivamente i dubbi comuni prima che vengano sollevati.
+9. CREA COINVOLGIMENTO: poni domande, invita a rispondere, coinvolgi attivamente.
+10. VALORE PRIMA DEL PREZZO — SEMPRE: mai menzionare costi senza aver comunicato il valore.`,
+      ["negoziazione", "comandamenti", "6-10"], 9, 5),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 4 — CHRIS VOSS
+    // ═══════════════════════════════════════════════════
+    e(userId, "chris_voss", "Chris Voss — Black Swan", "VOSS-01: Domande orientate al NO",
+`Le persone possono dire "no" anche con decision fatigue. Il "no" richiede meno energia e fa sentire in controllo.
+
+Sostituisci "Le farebbe piacere...?" con:
+• "È contrario a...?"
+• "La metto in difficoltà se...?"
+• "Sarebbe un problema se...?"
+
+Esempio: "Ha qualcosa in contrario a ricevere una breve panoramica delle soluzioni che stiamo offrendo ad aziende del vostro settore?"`,
+      ["chris_voss", "no", "domande", "tecnica"], 9, 6),
+
+    e(userId, "chris_voss", "Chris Voss — Black Swan", "VOSS-02: Riattivazione post-ghosting",
+`Quando il cliente sparisce, la domanda "Ha rinunciato a X?" riattiva la conversazione il 99% delle volte.
+Il cliente non vuole ammettere di aver rinunciato.
+
+Esempio email: "Ha rinunciato all'idea di ottimizzare la gestione delle spedizioni, oppure è semplicemente una questione di tempistica?"
+
+Regola: usare solo dopo 21+ giorni di silenzio.`,
+      ["chris_voss", "ghosting", "riattivazione"], 9, 7),
+
+    e(userId, "chris_voss", "Chris Voss — Black Swan", "VOSS-03: Gestione prezzo",
+`Se il cliente tratta sul prezzo, il problema NON è il prezzo ma il valore percepito.
+Non tagliare mai il prezzo. Concentrati sul valore, migliora il servizio, sovra-consegna.
+
+Regola: "Se stai negoziando sul prezzo, stai parlando della cosa sbagliata."
+
+In email: proponi un'analisi comparativa dei costi totali (supplementi, tempo, errori) anziché fare sconti.`,
+      ["chris_voss", "prezzo", "valore"], 9, 8),
+
+    e(userId, "chris_voss", "Chris Voss — Black Swan", "VOSS-04: Labeling e Mirroring",
+`LABELING: Dai un nome all'emozione dell'altro.
+→ "Sembra che la sua preoccupazione principale sia..."
+
+MIRRORING: Riprendi le esatte parole che il cliente ha usato nella sua risposta.
+
+Esempio: "Dalla sua risposta sembra che il tema principale sia la continuità del servizio e l'affidabilità nei momenti critici."
+
+Regola: usa labeling per validare, mirroring per approfondire.`,
+      ["chris_voss", "labeling", "mirroring"], 8, 9),
+
+    e(userId, "chris_voss", "Chris Voss — Black Swan", "VOSS-05: Forced Empathy",
+`Quando il cliente chiede qualcosa di irragionevole, non rifiutare e non cedere.
+
+In email si traduce in:
+"Mi aiuti a capire come potremmo rendere possibile ciò mantenendo la qualità che meritate."
+
+Questa tecnica riporta la responsabilità al cliente senza creare conflitto.`,
+      ["chris_voss", "empatia", "irragionevole"], 7, 10),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 5 — STRUTTURA EMAIL
+    // ═══════════════════════════════════════════════════
+    e(userId, "struttura_email", "Struttura Email", "La regola delle 5 righe (primo contatto)",
+`Un'email di primo contatto deve essere leggibile in 30 secondi:
+
+• Riga 1: HOOK — perché gli stai scrivendo (network, riferimento, dato di mercato)
+• Riga 2-3: VALUE PROPOSITION — cosa fai e perché è rilevante per LUI
+• Riga 4: SOCIAL PROOF — una metrica, un cliente, una certificazione
+• Riga 5: CTA — un'azione sola, semplice, a basso impegno`,
+      ["struttura", "email", "5_righe", "primo_contatto"], 9, 11),
+
+    e(userId, "struttura_email", "Struttura Email", "Struttura dettagliata in 7 passi",
+`1. SALUTO: breve, personale. "Dear [Nome]," — mai "Dear Sir/Madam"
+2. HOOK DI APERTURA (1 frase): collega te al destinatario
+3. CONTESTO (1-2 frasi): chi sei, cosa fai, perché è rilevante
+4. VALORE SPECIFICO (2-3 frasi): cosa puoi fare per lui concretamente
+5. PROVA (1 frase): dato, certificazione, volume, referenza
+6. CTA (1 frase): proposta chiara e a basso impegno
+7. CHIUSURA: cordiale, professionale`,
+      ["struttura", "email", "7_passi", "template"], 8, 12),
+
+    e(userId, "struttura_email", "Struttura Email", "Lunghezze email per tipo",
+`PRIMO CONTATTO: 80-120 parole (mai oltre 150). Il prospect non ti conosce.
+FOLLOW-UP: 50-80 parole. Breve, nuovo angolo, nuova info.
+PROPOSTA DETTAGLIATA: max 200 parole con bullet points.
+
+Regola: se puoi togliere una frase senza perdere significato, toglila.
+Ogni parola deve giustificare la sua presenza.`,
+      ["struttura", "lunghezza", "parole", "regole"], 7, 13),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 6 — HOOK / APERTURA
+    // ═══════════════════════════════════════════════════
+    e(userId, "hook", "Tecniche di Apertura", "Hook per network condiviso",
+`• "As fellow [WCA/FIATA] members, I wanted to reach out..."
+• "I noticed we're both part of [network] and I believe we could complement each other on [rotta]..."
+• "Our shared [network] membership made me look into your company..."
+
+Questo è l'hook più forte quando si condivide un network. Usalo SEMPRE come priorità.`,
+      ["hook", "apertura", "network"], 7, 14),
+
+    e(userId, "hook", "Tecniche di Apertura", "Hook per geografia e complimento",
+`GEOGRAFIA:
+• "We're expanding our coverage in [country] and your company stood out..."
+• "Looking at the growing trade lane between [A] and [B], I see a natural fit..."
+
+COMPLIMENTO SPECIFICO:
+• "I was impressed by your [certificazione/servizio/presenza]..."
+• "Your expertise in [dangerous goods/project cargo] caught my attention..."`,
+      ["hook", "apertura", "geografia", "complimento"], 7, 15),
+
+    e(userId, "hook", "Tecniche di Apertura", "Hook per dato di mercato",
+`• "With [trade lane] volumes up X% this year, having a reliable partner in [country] is critical..."
+• "The [e-commerce/pharma/automotive] sector in [region] is growing fast..."
+
+Usa dati reali e verificabili. Mai inventare percentuali.
+Collega il dato alla rilevanza per il destinatario.`,
+      ["hook", "apertura", "dato_mercato", "settore"], 7, 16),
+
+    e(userId, "hook", "Tecniche di Apertura", "Hook stile TMWE (selezione mirata)",
+`• "Mi permetto di contattarla perché abbiamo selezionato la vostra azienda tra quelle che rappresentano il profilo ideale..."
+• "Ho notato che [riferimento specifico] e mi sono chiesto se..."
+• "Non le scrivo per proporle un servizio generico. Le scrivo perché..."
+
+REGOLA: Mai iniziare con "I am writing to..." o "Let me introduce myself".
+Inizia SEMPRE dal destinatario o dal contesto condiviso.`,
+      ["hook", "apertura", "tmwe", "selezione"], 8, 17),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 7 — DATI PARTNER
+    // ═══════════════════════════════════════════════════
+    e(userId, "dati_partner", "Uso Dati Partner", "Campi disponibili e come usarli",
+`| Campo | Come usarlo |
+|-------|-------------|
+| company_name | Sempre nel saluto e nel corpo |
+| contact name | Nel "Dear [Nome]" |
+| contact title/role | Adatta tono (CEO→strategico, Ops→pratico) |
+| country/city | Riferimento geografico nell'hook |
+| network_name | Hook primario |
+| services | Collega i tuoi servizi ai loro |
+| rating | Se alto, menziona la reputazione |
+| enrichment_data | Dimostra che hai studiato l'azienda |`,
+      ["personalizzazione", "dati", "partner", "campi"], 8, 18),
+
+    e(userId, "dati_partner", "Uso Dati Partner", "Regole di personalizzazione",
+`1. Usa ALMENO 3 CAMPI in ogni email per renderla unica.
+2. Mai inventare dati — se un campo è vuoto, omettilo.
+3. Collega i dati alla tua proposta — non elencarli, integrali nel discorso.
+4. Priorità: network condiviso > paese/città > servizi > rating > profilo.
+
+Esempio: company="Global Express", country="Germany", network="WCA", services=["air","ocean"]
+→ "As fellow WCA members, I was pleased to see Global Express's reputation in Germany. With your air and ocean expertise, I see a natural synergy on the Italy–Germany corridor."`,
+      ["personalizzazione", "regole", "esempio", "integrazione"], 8, 19),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 8 — COLD OUTREACH
+    // ═══════════════════════════════════════════════════
+    e(userId, "cold_outreach", "Cold Outreach", "Principi cold email",
+`• Non è spam: è una selezione. Hai scelto questa azienda con cura. Dimostralo.
+• Personalizzazione obbligatoria: almeno 1 elemento specifico dell'azienda.
+• Brevità: max 150 parole. Il prospect non ti conosce.
+• Una sola CTA a basso impegno.
+• Approccio anti-ansia: comunica valore, non urgenza.`,
+      ["cold", "outreach", "principi", "regole"], 8, 20),
+
+    e(userId, "cold_outreach", "Cold Outreach", "Struttura Cold Email in 4 righe",
+`1. MOTIVO DEL CONTATTO: Perché ho scelto la vostra azienda (personalizzazione)
+2. PROBLEMA/OPPORTUNITÀ: Un punto debole del settore che conosci (valore)
+3. SOLUZIONE SINTETICA: Come lo risolvi concretamente (beneficio)
+4. CTA ORIENTATA AL NO: Domanda che invita al "no" (azione)
+
+Questa è la struttura più efficace per il primo contatto freddo.`,
+      ["cold", "outreach", "struttura", "4_righe"], 8, 21),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 9 — ARSENALE STRATEGICO
+    // ═══════════════════════════════════════════════════
+    e(userId, "arsenale", "Arsenale Strategico", "I costi occulti dei competitor",
+`SUPPLEMENTI NASCOSTI: fatture diverse dal listino, coefficienti volumetrici peggiorativi.
+COSTO TEMPO: ore perse in verifiche fatture, ricalcolo riaddebiti.
+COSTO CAOS: più corrieri = magazzino confuso, comunicazione frammentata.
+ASSISTENZA INEFFICACE: i grandi operatori non offrono supporto reale.
+
+Come usarli in email (DOMANDE, non accuse):
+"Molti clienti, analizzando i costi complessivi, hanno scoperto che il costo reale era molto diverso dal listino..."`,
+      ["arsenale", "competitor", "costi_occulti", "differenziazione"], 7, 22),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 10 — OBIEZIONI
+    // ═══════════════════════════════════════════════════
+    e(userId, "obiezioni", "Gestione Obiezioni", "Obiezione: Costa troppo",
+`Riformula sui costi totali, non sul prezzo unitario.
+
+Risposta: "Capisco l'attenzione al costo. Molti clienti scoprono che i costi totali — supplementi, tempo, errori — si riducono significativamente con il nostro sistema. Le propongo un confronto concreto: analizziamo insieme i costi attuali?"
+
+Regola: MAI fare sconti. Sposta la conversazione sul valore totale.`,
+      ["obiezioni", "prezzo", "costo", "riformulazione"], 9, 23),
+
+    e(userId, "obiezioni", "Gestione Obiezioni", "Obiezione: Abbiamo già un fornitore",
+`Non attaccare il fornitore attuale. Valorizza la scelta passata.
+
+Risposta: "Ottimo, vuol dire che la logistica è un tema importante per voi. Ci hanno scelto non per sostituire fornitori, ma per aggiungere un livello di controllo e risparmio. Ha qualcosa in contrario a valutare un confronto?"
+
+Regola: posizionati come complemento, non sostituto.`,
+      ["obiezioni", "fornitore", "competitor"], 9, 24),
+
+    e(userId, "obiezioni", "Gestione Obiezioni", "Obiezione: Non è il momento / Mi mandi una mail",
+`"NON È IL MOMENTO":
+→ "Capisco. Le invio un breve riepilogo di 2 minuti. Quando sarà il momento, avrà già tutto. Le sembra ragionevole?"
+
+"MI MANDI UNA MAIL":
+→ "Con piacere. Potrebbe indicarmi il nome del responsabile? Preferisco qualcosa di mirato piuttosto che generico."
+
+Regola: trasforma il rinvio in un'azione concreta.`,
+      ["obiezioni", "tempo", "rinvio", "mail"], 8, 25),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 11 — CHIUSURA
+    // ═══════════════════════════════════════════════════
+    e(userId, "chiusura", "Tecniche di Chiusura", "5 modelli di chiusura",
+`MORBIDA: "Ha qualcosa in contrario nel programmare il primo test?"
+URGENZA ELEGANTE: "Il numero di nuovi account che possiamo acquisire è limitato."
+RESPONSABILIZZA: "Di norma è il cliente a inseguire questo tipo di opportunità."
+EMOTIVA: "Dal momento in cui diventasse nostro cliente, le sue spedizioni sarebbero promesse da mantenere."
+RIFORMULAZIONE: "Abbiamo parlato di riduzione costi, produttività e controllo. Direi che valga la pena iniziare."`,
+      ["chiusura", "closing", "5_modelli"], 8, 26),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 12 — PROTOCOLLO VENDITA 5 FASI
+    // ═══════════════════════════════════════════════════
+    e(userId, "followup", "Protocollo Vendita 5 Fasi", "Fase 1-2: Connessione e Scoperta",
+`FASE 1 — CONNESSIONE (Email 1):
+• Obiettivo: aprire il dialogo
+• Tono: cordiale, curioso, non invasivo
+• Contenuto: hook + breve presentazione + CTA leggera
+• NON includere: tariffe, listini, proposte dettagliate
+
+FASE 2 — SCOPERTA (Email 2):
+• Obiettivo: capire i bisogni del partner
+• Tono: consulenziale, interessato
+• Contenuto: domande mirate su rotte, volumi, problemi
+• Riferimento alla prima email + dato personalizzato in più`,
+      ["followup", "fase_1", "fase_2", "connessione", "scoperta"], 8, 27),
+
+    e(userId, "followup", "Protocollo Vendita 5 Fasi", "Fase 3-5: Proposta, Obiezioni, Chiusura",
+`FASE 3 — PROPOSTA (Email 3):
+• Proposta su misura con bullet points, metrica, differenziatore
+• Tono professionale, concreto
+
+FASE 4 — GESTIONE OBIEZIONI (Email 4):
+• Risposta all'obiezione specifica + social proof
+• Tono empatico, rassicurante
+
+FASE 5 — CHIUSURA (Email 5):
+• Riepilogo valore + CTA concreta
+• Tono diretto, propositivo`,
+      ["followup", "fase_3", "fase_4", "fase_5", "proposta", "chiusura"], 8, 28),
+
+    e(userId, "followup", "Protocollo Vendita 5 Fasi", "Sequenza email e tempistiche",
+`TEMPISTICA:
+• Giorno 0: Presentazione + hook + CTA leggera
+• Giorno 3-5: Contenuto di valore aggiunto (dato mercato, caso studio)
+• Giorno 10-14: CTA diretta con proposta concreta
+• Giorno 21+ (solo se ghost): Riattivazione con tecnica Voss
+
+REGOLE:
+1. MAI ripetere la stessa email
+2. Cambia angolo ad ogni tentativo
+3. Mantieni brevità (50-80 parole)
+4. Tono consultivo, mai accusatorio
+5. Ogni email aggiunge qualcosa di nuovo`,
+      ["followup", "sequenza", "tempistica", "regole"], 8, 29),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 13 — TONO E PERSUASIONE
+    // ═══════════════════════════════════════════════════
+    e(userId, "tono", "Adattamento Tono", "Adattamento per ruolo destinatario",
+`CEO / OWNER:
+• Tono formale ma non rigido. Focus: partnership strategica, crescita.
+• CTA: "Exploring a strategic partnership"
+
+OPERATIONS MANAGER:
+• Tono pratico, diretto. Focus: efficienza, affidabilità, problem solving.
+• CTA: "Discussing specific routes"
+
+SALES / BUSINESS DEVELOPMENT:
+• Tono dinamico, reciproco. Focus: vantaggi reciproci, volumi.
+• CTA: "Exchange of rate cards"`,
+      ["tono", "adattamento", "ruolo", "destinatario"], 7, 30),
+
+    e(userId, "tono", "Adattamento Tono", "Adattamento per area geografica",
+`FAR EAST: formale, rispetto gerarchia, menziona longevità e stabilità.
+MIDDLE EAST & INDIA: relazione personale, referenze nella regione.
+EUROPA: diretto, professionale, focus efficienza e qualità.
+AMERICAS — USA: diretto, orientato risultati. LATAM: più caloroso, importanza relazione.
+AFRICA: rispettoso, professionale, sensibilità sfide logistiche locali.
+
+Regola: adatta SEMPRE il tono alla cultura del destinatario.`,
+      ["tono", "adattamento", "geografia", "cultura"], 7, 31),
+
+    e(userId, "persuasione", "Persuasione B2B", "Social Proof, Reciprocità, Urgenza",
+`SOCIAL PROOF:
+• "We handle over [X] shipments monthly from/to [paese]"
+• "We've been [network] members since [anno], with a [X]/5 rating"
+
+RECIPROCITÀ:
+• "Happy to share our route analysis with no obligation"
+
+URGENZA APPROPRIATA (mai artificiale):
+• "With the peak season approaching, now is the ideal time to align"
+• "New regulations effective [date] make it important to have a prepared partner"`,
+      ["persuasione", "social_proof", "reciprocità", "urgenza"], 7, 32),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 14 — LIBRERIA FRASI MODELLO
+    // ═══════════════════════════════════════════════════
+    e(userId, "frasi_modello", "Libreria Frasi", "Frasi di apertura e valore",
+`APERTURA:
+• "Mi permetto di contattarla perché abbiamo selezionato la vostra azienda..."
+• "Le scrivo brevemente perché credo che possiate trarre un vantaggio concreto..."
+• "Non le scrivo per proporle un servizio generico. Le scrivo perché..."
+
+COMUNICARE VALORE:
+• "Molti clienti con esigenze simili preferiscono la nostra soluzione perché..."
+• "Il nostro sistema permette di prenotare in pochi secondi, senza email."
+• "Controlliamo ogni spedizione proattivamente, con aggiornamenti prima che ce li chiedano."`,
+      ["frasi", "apertura", "valore", "modello"], 7, 33),
+
+    e(userId, "frasi_modello", "Libreria Frasi", "Frasi di empatia e fiducia",
+`• "Capisco perfettamente la sua preoccupazione."
+• "Molti clienti avevano il suo stesso dubbio prima di iniziare con noi."
+• "Mi occupo personalmente di questa richiesta."
+• "We treat every shipment as if it were our own."
+• "Our approach is simple: communicate before you need to ask."
+
+Regola: l'empatia non è debolezza, è intelligenza strategica.`,
+      ["frasi", "empatia", "fiducia", "modello"], 7, 34),
+
+    e(userId, "frasi_modello", "Libreria Frasi", "CTA e chiusure email",
+`CTA (NO-oriented):
+• "Ha qualcosa in contrario a ricevere una breve panoramica?"
+• "Le sembrerebbe fuori luogo dedicarmi 5 minuti?"
+• "Would you be open to a 15-minute call next week?"
+
+CHIUSURE:
+• "Resto a disposizione. Il nostro obiettivo è la sua tranquillità operativa."
+• "I look forward to exploring how we can support each other."
+
+OGGETTO EMAIL (max 6-8 parole, mai MAIUSCOLO):
+• "[Network] member — [servizio] in [paese]"
+• "[Nome Azienda] – una domanda sulla vostra logistica"`,
+      ["frasi", "cta", "chiusura", "oggetto"], 7, 35),
+
+    e(userId, "errori", "Errori da Evitare", "8 errori fatali nelle email",
+`1. GENERICITÀ: "We are a leading company" → Tutti lo dicono. Sii specifico.
+2. EMAIL TROPPO LUNGHE: Max 150 parole al primo contatto.
+3. PROMESSE VAGHE: "Best service" / "Competitive rates" → Dati concreti.
+4. FOCUS SU DI TE: il 70% dell'email deve parlare del destinatario.
+5. TONO SUPPLICANTE: "I would really appreciate..." → Sii propositivo.
+6. MULTIPLE CTA: Una sola azione per email.
+7. NESSUNA PERSONALIZZAZIONE: Se l'email va bene per chiunque, è sbagliata.
+8. ALLEGATI AL PRIMO CONTATTO: mai. Red flag per filtri spam.`,
+      ["errori", "regole", "evitare", "spam"], 8, 36),
+
+    // ═══════════════════════════════════════════════════
+    // SEZ. 14b — EMAIL MODELLO
+    // ═══════════════════════════════════════════════════
+    e(userId, "frasi_modello", "Email Modello", "Modello 1: Primo contatto (EN, ~100 parole)",
+`Subject: WCA member — ocean freight partnership, Italy–[Country]
+
+Dear [Contact Name],
+
+As fellow WCA members, I came across [Company Name] and was impressed by your [services/reputation].
+
+We are [Your Company], based in [City], Italy, specializing in [services] with strong coverage across the Mediterranean and Europe. I believe there's a natural synergy, particularly on the [Country]–Italy trade lane.
+
+We currently handle [X] shipments monthly on this corridor with [differentiator].
+
+Would you be open to a brief call next week to explore how we could support each other?`,
+      ["email_modello", "primo_contatto", "inglese", "template"], 7, 37),
+
+    e(userId, "frasi_modello", "Email Modello", "Modello 2-3: Follow-up e Proposta (EN)",
+`FOLLOW-UP (~70 parole):
+Subject: Re: WCA member — a quick update on [trade lane]
+"Following up — we've recently expanded our [service] capacity on the [A]–[B] route. This could be relevant for [Company]'s operations. Happy to share details."
+
+PROPOSTA OPERATIVA (~150 parole):
+Subject: [Company] + [Your Company] — service overview
+Include bullet points con:
+• Ocean FCL, Air freight, Customs, Warehousing
+• Differenziatori: tracking proattivo, punto di contatto dedicato
+• CTA: "Shall I prepare a spot rate for a specific route?"`,
+      ["email_modello", "followup", "proposta", "template"], 7, 38),
+
+    e(userId, "frasi_modello", "Email Modello", "Modello 4-5: Riattivazione e Sconto (IT)",
+`RIATTIVAZIONE GHOSTING:
+Oggetto: Ha rinunciato a ottimizzare le spedizioni?
+"Mi rendo conto che i tempi stretti possono aver reso difficile approfondire. Ha rinunciato all'idea di ottimizzare la gestione, oppure è una questione di tempistica?"
+
+RISPOSTA A RICHIESTA SCONTO:
+Oggetto: Re: Richiesta condizioni
+"Comprendo l'attenzione al budget. Molti clienti, analizzando i costi complessivi, hanno scoperto che lavorare con noi ha rappresentato un risparmio netto. Le propongo un'analisi comparativa gratuita."`,
+      ["email_modello", "riattivazione", "sconto", "italiano"], 7, 39),
   ];
-  return entries;
 }
