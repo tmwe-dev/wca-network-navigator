@@ -227,7 +227,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   }, [contacts, isCockpit]);
 
   // Context title
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : "Globale";
 
   // Active filter count
   const activeCount = useMemo(() => {
