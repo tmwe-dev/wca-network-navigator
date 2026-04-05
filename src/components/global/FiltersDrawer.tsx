@@ -3,16 +3,20 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SlidersHorizontal, Search, RotateCcw, Check, ArrowUpDown,
   Shield, Database, Filter, Layers, Users, Sparkles, Wifi,
   Plane, Mail, Phone, MessageCircle, Linkedin, Tag,
-  ListTodo, Clock, CheckCircle2, AlertTriangle, Zap,
+  ListTodo, Clock, CheckCircle2, AlertTriangle, Zap, Globe, RefreshCw,
 } from "lucide-react";
 import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode, type CockpitChannelFilter, type CockpitQualityFilter } from "@/contexts/GlobalFiltersContext";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
+import { useCountryStats } from "@/hooks/useCountryStats";
+import { getCountryFlag } from "@/lib/countries";
+import { WCA_COUNTRIES } from "@/data/wcaCountries";
 
 interface FiltersDrawerProps {
   open: boolean;
