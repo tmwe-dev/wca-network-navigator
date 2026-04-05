@@ -76,9 +76,9 @@ serve(async (req) => {
       contextParts.push(`## Pagina Corrente: ${pageContext}`);
     }
 
-    // Fetch daily plan and recent memories
+    // Fetch daily plan, recent memories, and KB entries
     if (userId) {
-      const [dailyPlan, memories] = await Promise.all([
+      const [dailyPlan, memories, kbEntries] = await Promise.all([
         supabase
           .from("ai_daily_plans")
           .select("*")
@@ -90,6 +90,13 @@ serve(async (req) => {
           .select("content, tags, created_at")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("kb_entries")
+          .select("title, content, category, tags")
+          .eq("is_active", true)
+          .gte("priority", 7)
+          .order("priority", { ascending: false })
           .limit(10),
       ]);
 
@@ -104,6 +111,13 @@ serve(async (req) => {
           .map((m: any) => `[${m.tags?.join(", ") || "gen"}] ${m.content}`)
           .join("\n");
         contextParts.push(`## Memorie Recenti\n${memStr}`);
+      }
+
+      if (kbEntries.data && kbEntries.data.length > 0) {
+        const kbStr = kbEntries.data
+          .map((e: any) => `### ${e.title} [${e.tags?.join(", ") || e.category}]\n${e.content}`)
+          .join("\n\n");
+        contextParts.push(`## Knowledge Base\n${kbStr}`);
       }
     }
 

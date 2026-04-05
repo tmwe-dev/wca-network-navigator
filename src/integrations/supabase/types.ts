@@ -1830,6 +1830,51 @@ export type Database = {
           },
         ]
       }
+      kb_entries: {
+        Row: {
+          category: string
+          chapter: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          priority: number
+          sort_order: number
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          chapter?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          sort_order?: number
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          chapter?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          sort_order?: number
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       linkedin_flow_items: {
         Row: {
           company_name: string | null
@@ -1973,6 +2018,54 @@ export type Database = {
           notes?: string | null
           sample_tested_at?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      operative_prompts: {
+        Row: {
+          context: string
+          created_at: string
+          criteria: string
+          examples: string
+          id: string
+          is_active: boolean
+          name: string
+          objective: string
+          priority: number
+          procedure: string
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: string
+          created_at?: string
+          criteria?: string
+          examples?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          objective?: string
+          priority?: number
+          procedure?: string
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          criteria?: string
+          examples?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          objective?: string
+          priority?: number
+          procedure?: string
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
