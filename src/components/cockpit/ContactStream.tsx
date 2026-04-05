@@ -58,12 +58,11 @@ export function ContactStream({
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
-  const [hideWorked, setHideWorked] = useState(false);
-  const { workedIds } = useWorkedToday();
+  const [hideHolding, setHideHolding] = useState(true);
   const { filters: gf } = useGlobalFilters();
 
-  const isContactWorked = (c: CockpitContact) => {
-    return workedIds.has(c.partnerId || c.sourceId);
+  const isInHolding = (c: CockpitContact) => {
+    return !!c.leadStatus && c.leadStatus !== "new";
   };
 
   const filteredContacts = useMemo(() => {
