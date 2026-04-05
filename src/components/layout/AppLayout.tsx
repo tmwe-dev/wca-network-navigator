@@ -102,34 +102,24 @@ export function AppLayout() {
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         {/* Visual tab triggers — follow drawer edges */}
-        <button
+        <DrawerTab
+          side="left"
+          isOpen={filtersOpen}
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            left: filtersOpen ? "min(92vw, 620px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri filtri"
-        >
-          <SlidersHorizontal className="w-4 h-4 text-purple-300" />
-        </button>
-        <button
+          icon={<SlidersHorizontal className="w-4 h-4 text-purple-300" />}
+          label="Apri filtri"
+        />
+        <DrawerTab
+          side="right"
+          isOpen={missionOpen}
           onClick={() => setMissionOpen(true)}
           onMouseEnter={() => handleEdgeEnter("right")}
           onMouseLeave={() => handleEdgeLeave("right")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            right: missionOpen ? "min(90vw, 700px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri Mission"
-        >
-          <Target className="w-4 h-4 text-purple-300" />
-        </button>
+          icon={<Target className="w-4 h-4 text-purple-300" />}
+          label="Apri Mission"
+        />
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
