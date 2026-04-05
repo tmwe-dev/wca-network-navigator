@@ -409,8 +409,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         {/* BCA */}
         {tab === "bca" && shouldSearch && (
           <div className="space-y-0.5">
-            {bcaCards.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {bcaCards.map(c => (
+            {filteredBca.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredBca.map(c => (
               <button
                 key={c.id}
                 onClick={() => handleSelectBca(c)}
