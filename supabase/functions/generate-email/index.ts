@@ -477,7 +477,7 @@ serve(async (req) => {
 
     // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
     let cachedEnrichmentContext = "";
-    if (isPartnerSource && activity.partner_id) {
+    if (isPartnerSource && activity?.partner_id) {
       const { data: partnerEd } = await supabase
         .from("partners")
         .select("enrichment_data")
