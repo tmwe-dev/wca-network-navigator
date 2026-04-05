@@ -380,7 +380,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
           )}
         </div>
       </div>
-      <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
+      
     </ThemeCtx.Provider>
   );
 }
