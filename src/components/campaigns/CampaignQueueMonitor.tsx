@@ -74,6 +74,11 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose }: Campaign
 
         {/* Controls */}
         <div className="flex gap-2">
+          {(isCompleted || isCancelled) && onClose && (
+            <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> Chiudi monitor
+            </Button>
+          )}
           {(queueStatus === "idle" || isPaused) && !isCompleted && !isCancelled && (
             <Button size="sm" onClick={() => startProcessing(draftId)} disabled={processing || stats.pending === 0}>
               <Play className="w-4 h-4 mr-1" />
