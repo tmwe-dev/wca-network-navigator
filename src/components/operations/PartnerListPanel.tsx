@@ -79,7 +79,7 @@ export function PartnerListPanel({
     isFetchingNextPage,
   } = usePartnersPaginated({
     countries: countryCodes,
-    search: search.length >= 5 ? search : undefined,
+    search: search.length >= 2 ? search : undefined,
   });
 
   const partners = useMemo(() => {
