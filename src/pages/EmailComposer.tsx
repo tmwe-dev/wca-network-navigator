@@ -49,6 +49,12 @@ export default function EmailComposer() {
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Mini-dialog for unknown email
+  const [unknownEmailDialog, setUnknownEmailDialog] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [manualContactName, setManualContactName] = useState("");
+  const [manualCompanyName, setManualCompanyName] = useState("");
+
   const enqueueCampaign = useEnqueueCampaign();
   const { processing, startProcessing } = useProcessQueue();
   const saveDraft = useSaveEmailDraft();
@@ -56,22 +62,96 @@ export default function EmailComposer() {
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
 
-  const addManualEmail = () => {
+  const lookupEmailInDB = async (email: string) => {
+    // Check partners
+    const { data: partner } = await supabase
+      .from("partners")
+      .select("id, company_name, company_alias, country_code, city, email")
+      .ilike("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (partner) return { found: true, companyName: partner.company_alias || partner.company_name, contactName: "", countryCode: partner.country_code || "", city: partner.city || "", partnerId: partner.id };
+
+    // Check partner_contacts
+    const { data: pc } = await supabase
+      .from("partner_contacts")
+      .select("partner_id, full_name, contact_alias, email, partners(company_name, company_alias, country_code, city)")
+      .ilike("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (pc) {
+      const p = pc.partners as any;
+      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: pc.contact_alias || pc.full_name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
+    }
+
+    // Check imported_contacts
+    const { data: ic } = await supabase
+      .from("imported_contacts")
+      .select("company_name, company_alias, name, contact_alias, country")
+      .ilike("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (ic) return { found: true, companyName: ic.company_alias || ic.company_name || "", contactName: ic.contact_alias || ic.name || "", countryCode: ic.country || "", city: "", partnerId: "" };
+
+    // Check business_cards
+    const { data: bc } = await supabase
+      .from("business_cards")
+      .select("company_name, contact_name, location, matched_partner_id")
+      .ilike("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (bc) return { found: true, companyName: bc.company_name || "", contactName: bc.contact_name || "", countryCode: "", city: bc.location || "", partnerId: bc.matched_partner_id || "" };
+
+    return { found: false, companyName: "", contactName: "", countryCode: "", city: "", partnerId: "" };
+  };
+
+  const addManualEmail = async () => {
     const email = manualEmail.trim().toLowerCase();
     if (!email) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error("Email non valida"); return; }
     if (recipients.some(r => r.email?.toLowerCase() === email)) { toast.error("Destinatario già presente"); setManualEmail(""); return; }
+
+    const result = await lookupEmailInDB(email);
+    if (result.found) {
+      addRecipient({
+        partnerId: result.partnerId || crypto.randomUUID(),
+        companyName: result.companyName,
+        email,
+        contactName: result.contactName || email.split("@")[0],
+        countryCode: result.countryCode,
+        countryName: "",
+        city: result.city,
+        isEnriched: true,
+      });
+      toast.success(`✅ Trovato: ${result.companyName || result.contactName}`);
+      setManualEmail("");
+    } else {
+      // Not found — show dialog
+      setPendingEmail(email);
+      setManualContactName("");
+      setManualCompanyName(email.split("@")[1]?.split(".")[0] || "");
+      setUnknownEmailDialog(true);
+    }
+  };
+
+  const confirmUnknownEmail = () => {
+    if (!manualContactName.trim() || !manualCompanyName.trim()) {
+      toast.error("Nome e azienda sono obbligatori");
+      return;
+    }
     addRecipient({
       partnerId: crypto.randomUUID(),
-      companyName: email.split("@")[1] || "",
-      email,
-      contactName: email.split("@")[0] || "",
+      companyName: manualCompanyName.trim(),
+      email: pendingEmail,
+      contactName: manualContactName.trim(),
       countryCode: "",
       countryName: "",
       city: "",
       isEnriched: false,
     });
     setManualEmail("");
+    setUnknownEmailDialog(false);
+    toast.info("Destinatario aggiunto manualmente");
   };
 
   const escapeHtml = (str: string) =>
