@@ -135,7 +135,7 @@ export function EmailComposerContactPicker() {
     });
   };
 
-  const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, c: typeof partnerContacts[0]) => {
+  const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, countryCode: string | undefined, c: typeof partnerContacts[0]) => {
     if (isSelected(partnerId, c.id)) return;
     addRecipient({
       partnerId,
@@ -147,6 +147,7 @@ export function EmailComposerContactPicker() {
       email: c.email,
       city: "",
       countryName: "",
+      countryCode: countryCode || undefined,
       isEnriched: !!c.email,
     });
   };
