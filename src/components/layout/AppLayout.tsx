@@ -102,24 +102,24 @@ export function AppLayout() {
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         {/* Visual tab triggers — follow drawer edges */}
-        <DrawerTab
+        <FollowDrawerTab
           side="left"
           isOpen={filtersOpen}
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          icon={<SlidersHorizontal className="w-4 h-4 text-purple-300" />}
-          label="Apri filtri"
-        />
-        <DrawerTab
+        >
+          <SlidersHorizontal className="w-4 h-4 text-purple-300" />
+        </FollowDrawerTab>
+        <FollowDrawerTab
           side="right"
           isOpen={missionOpen}
           onClick={() => setMissionOpen(true)}
           onMouseEnter={() => handleEdgeEnter("right")}
           onMouseLeave={() => handleEdgeLeave("right")}
-          icon={<Target className="w-4 h-4 text-purple-300" />}
-          label="Apri Mission"
-        />
+        >
+          <Target className="w-4 h-4 text-purple-300" />
+        </FollowDrawerTab>
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
