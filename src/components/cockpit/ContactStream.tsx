@@ -114,7 +114,7 @@ export function ContactStream({
     else if (sortBy === "country") result.sort((a, b) => a.country.localeCompare(b.country));
     else result.sort((a, b) => b.priority - a.priority);
     return result;
-  }, [searchQuery, filters, contacts, hideWorked, workedIds, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
+  }, [searchQuery, filters, contacts, hideHolding, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
 
   // Get selected contacts for bulk actions
   const selectedContacts = useMemo(() =>
