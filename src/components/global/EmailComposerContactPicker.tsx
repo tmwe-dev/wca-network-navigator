@@ -386,8 +386,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         {/* Imported contacts */}
         {tab === "contacts" && shouldSearch && (
           <div className="space-y-0.5">
-            {contacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {contacts.map(c => (
+            {filteredContacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredContacts.map(c => (
               <button
                 key={c.id}
                 onClick={() => handleSelectImported(c)}
