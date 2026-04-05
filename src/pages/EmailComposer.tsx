@@ -29,7 +29,7 @@ const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{countr
 interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
-  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient } = useMission();
+  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = useMission();
 
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -37,6 +37,7 @@ export default function EmailComposer() {
   const [emailLinks, setEmailLinks] = useState<LinkItem[]>([]);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
 
   const [sending, setSending] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
