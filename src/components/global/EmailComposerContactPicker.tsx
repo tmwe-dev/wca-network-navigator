@@ -41,8 +41,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const { addRecipient, recipients, removeRecipient, clearRecipients } = useMission();
   const contactsListRef = useRef<HTMLDivElement>(null);
 
-  // Trigger search: 3 chars OR country selected
+  // shouldSearch is only used for UI hints, not to gate data
   const shouldSearch = search.length >= 3 || !!selectedCountry;
+  const hasFilter = shouldSearch; // alias for clarity
 
   // ── Country stats — use RPC or aggregation to get REAL counts (no 1000 limit) ──
   const { data: countryStats = [] } = useQuery({
@@ -411,7 +412,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
       {/* ── Main: Left country strip + Right results ── */}
       <div className="flex-1 flex min-h-0 gap-2">
         {/* Left: vertical country strip — wider */}
-        <div className="flex-shrink-0 w-[68px] flex flex-col min-h-0">
+        <div className="flex-shrink-0 w-[80px] flex flex-col min-h-0">
           <div className="flex items-center justify-center mb-1">
             <button
               onClick={() => setCountrySort(s => s === "count" ? "name" : "count")}
@@ -444,9 +445,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                       : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                   )}
                 >
-                  <span className="text-xl leading-none">{c.flag}</span>
-                  <span className="tabular-nums font-bold text-[10px]">{c.count}</span>
-                  <span className="truncate w-full text-center text-[8px] leading-tight">{c.name}</span>
+                   <span className="text-2xl leading-none">{c.flag}</span>
+                    <span className="tabular-nums font-bold text-[11px]">{c.count}</span>
+                    <span className="truncate w-full text-center text-[9px] leading-tight">{c.name}</span>
                 </button>
               ))}
             </div>
@@ -457,14 +458,15 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         <div className="flex-1 flex flex-col min-h-0 min-w-0 relative" ref={contactsListRef}>
           <ScrollArea className="flex-1 min-h-0">
             <div className="rounded-lg bg-muted/15 border border-border/20 p-1.5 min-h-[120px]">
-              {!shouldSearch && (
+              {/* Show hint only when no data and no filter */}
+              {!shouldSearch && tab === "partners" && filteredPartners.length === 0 && (
                 <p className="text-[10px] text-muted-foreground text-center py-4">
                   Seleziona un paese o digita almeno 3 caratteri
                 </p>
               )}
 
               {/* ═══ Partners ═══ */}
-              {tab === "partners" && shouldSearch && (
+              {tab === "partners" && (filteredPartners.length > 0 || shouldSearch) && (
                 <div className="space-y-1.5">
                   {filteredPartners.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
                   {filteredPartners.map(p => (
@@ -547,7 +549,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               )}
 
               {/* ═══ Imported contacts — grouped by company ═══ */}
-              {tab === "contacts" && shouldSearch && (
+              {tab === "contacts" && (
                 <div className="space-y-1.5">
                   {filteredContacts.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
                   {groupedContacts.map(([companyName, members]) => (
@@ -640,7 +642,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               )}
 
               {/* ═══ BCA ═══ */}
-              {tab === "bca" && shouldSearch && (
+              {tab === "bca" && (
                 <div className="space-y-1.5">
                   {filteredBca.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
                   {filteredBca.map(c => (
