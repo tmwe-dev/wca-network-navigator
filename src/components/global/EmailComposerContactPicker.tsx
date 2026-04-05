@@ -549,7 +549,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               )}
 
               {/* ═══ Imported contacts — grouped by company ═══ */}
-              {tab === "contacts" && shouldSearch && (
+              {tab === "contacts" && (
                 <div className="space-y-1.5">
                   {filteredContacts.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
                   {groupedContacts.map(([companyName, members]) => (
