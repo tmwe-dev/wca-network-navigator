@@ -247,7 +247,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
     } catch (e: any) {
       toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
     }
-  }, [selectedCountries, queryClient]);
+  }, [queryClient]);
 
   useEffect(() => {
     window.addEventListener("sync-wca-trigger", handleSyncWca);
