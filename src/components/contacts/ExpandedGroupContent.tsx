@@ -7,6 +7,7 @@ import { ContactCard } from "./ContactCard";
 import { sortContacts, type SortKey } from "./contactHelpers";
 import { useContactsByGroup } from "@/hooks/useContactGroups";
 import { useSelection } from "@/hooks/useSelection";
+import { useContactInteractions } from "@/hooks/useContacts";
 
 interface ExpandedGroupContentProps {
   groupType: string;
