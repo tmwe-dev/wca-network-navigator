@@ -92,7 +92,7 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
             </Button>
           )}
           {!isCompleted && !isCancelled && stats.total > 0 && (
-            <Button size="sm" variant="destructive" onClick={() => cancelProcessing(draftId)} disabled={isCancelled}>
+            <Button size="sm" variant="destructive" onClick={() => { cancelProcessing(draftId); onStatusChange?.("cancelled"); }} disabled={isCancelled}>
               <XCircle className="w-4 h-4 mr-1" /> Annulla
             </Button>
           )}
