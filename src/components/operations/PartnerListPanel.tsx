@@ -68,8 +68,7 @@ export function PartnerListPanel({
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [hideWorked, setHideWorked] = useState(false);
-  const { workedIds } = useWorkedToday();
+  const [hideHolding, setHideHolding] = useState(true);
 
   const {
     data: paginatedData,
