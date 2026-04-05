@@ -1,24 +1,15 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Search, Phone, Mail, ChevronRight, Loader2,
-  FileText, Trophy, Wand2, Send, Telescope, Building2, UserCircle,
-  Zap, RefreshCw, CheckCircle2,
-  Inbox, LayoutGrid, EyeOff, Plane,
+  Search, Telescope, Inbox, LayoutGrid, Plane,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -26,12 +17,9 @@ import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { t } from "@/components/download/theme";
-
-import { MiniStars } from "@/components/partners/shared/MiniStars";
-import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
 
@@ -57,17 +45,18 @@ export function PartnerListPanel({
   directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
-  const th = t(isDark);
+  const g = useGlobalFilters();
   const navigate = useNavigate();
-  const countryCode = countryCodes[0] || "";
-  const countryName = countryNames[0] || "";
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   type ProgressFilterKey = "deep" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hideHolding, setHideHolding] = useState(true);
+
+  const activeSearch = g.filters.networkSearch.trim();
+  const activeSort = g.filters.networkSort;
+  const activeQuality = g.filters.networkQuality;
+  const hasSelectedCountries = countryCodes.length > 0;
 
   const {
     data: paginatedData,
@@ -77,15 +66,13 @@ export function PartnerListPanel({
     isFetchingNextPage,
   } = usePartnersPaginated({
     countries: countryCodes,
-    search: search.length >= 2 ? search : undefined,
+    search: activeSearch.length >= 2 ? activeSearch : undefined,
   });
 
   const partners = useMemo(() => {
     if (!paginatedData) return [];
     return paginatedData.pages.flatMap(p => p.partners);
   }, [paginatedData]);
-
-  const totalCount = paginatedData?.pages[0]?.total || 0;
 
   // Infinite scroll sentinel
   const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
@@ -98,6 +85,19 @@ export function PartnerListPanel({
   const toggleFavorite = useToggleFavorite();
 
   const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
+  const totalCount = stats.total;
+  const currentSortLabel = useMemo(() => {
+    switch (activeSort) {
+      case "rating": return "Rating";
+      case "contacts": return "Contatti";
+      default: return "Nome";
+    }
+  }, [activeSort]);
+  const headerTitle = useMemo(() => {
+    if (countryCodes.length === 0) return "Tutti i paesi";
+    if (countryCodes.length === 1) return countryNames[0] || countryCodes[0];
+    return `${countryCodes.length} paesi`;
+  }, [countryCodes, countryNames]);
 
   // ── Filtered & sorted partners ──
   const holdingCount = useMemo(() => {
@@ -106,25 +106,45 @@ export function PartnerListPanel({
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];
+
+    if (activeQuality === "with_email") {
+      list = list.filter((p: any) => !!p.email || (p.partner_contacts || []).some((c: any) => c.email));
+    }
+    if (activeQuality === "with_phone") {
+      list = list.filter((p: any) => !!p.phone || !!p.mobile || (p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile));
+    }
+    if (activeQuality === "with_profile") {
+      list = list.filter((p: any) => !!p.raw_profile_html);
+    }
+    if (activeQuality === "no_email") {
+      list = list.filter((p: any) => !p.email && !(p.partner_contacts || []).some((c: any) => c.email));
+    }
+    if (activeQuality === "no_contacts") {
+      list = list.filter((p: any) => !Array.isArray(p.partner_contacts) || p.partner_contacts.length === 0);
+    }
+
     if (hideHolding) {
       list = list.filter((p: any) => !p.lead_status || p.lead_status === "new");
     }
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
     }
+
     const sorted = [...list];
-    switch (sortBy) {
-      case "name_asc": return sorted.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
-      case "rating_desc": return sorted.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0));
-      case "contacts_desc": return sorted.sort((a: any, b: any) => {
+    switch (activeSort) {
+      case "rating":
+        return sorted.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0));
+      case "contacts":
+        return sorted.sort((a: any, b: any) => {
         const qa = getPartnerContactQuality(a.partner_contacts);
         const qb = getPartnerContactQuality(b.partner_contacts);
         const order: Record<string, number> = { complete: 0, partial: 1, missing: 2 };
-        return (order[qa] || 2) - (order[qb] || 2);
-      });
-      default: return sorted;
+          return ((order[qa] || 2) - (order[qb] || 2)) || a.company_name.localeCompare(b.company_name);
+        });
+      default:
+        return sorted.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
     }
-  }, [partners, progressFilter, sortBy, hideHolding]);
+  }, [partners, progressFilter, activeSort, activeQuality, hideHolding]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -212,14 +232,20 @@ export function PartnerListPanel({
           {/* ROW 1: Country + count + deep search filter */}
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              {countryCodes.slice(0, 5).map(cc => (
-                <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
-              ))}
-              {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>+{countryCodes.length - 5}</span>}
+              {hasSelectedCountries ? (
+                <>
+                  {countryCodes.slice(0, 5).map(cc => (
+                    <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
+                  ))}
+                  {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>+{countryCodes.length - 5}</span>}
+                </>
+              ) : (
+                <span className="text-lg leading-none">🌍</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-sm font-bold truncate text-foreground">
-                {countryCodes.length === 1 ? countryName : `${countryCodes.length} paesi`}
+                {headerTitle}
               </h2>
               <span className="text-[10px] font-mono text-muted-foreground">
                 {stats.total} partner
@@ -229,37 +255,24 @@ export function PartnerListPanel({
             <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
           </div>
 
-          {/* ROW 2: Search (icon+popover) + sort + count */}
-          <div className="flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-foreground">
-                  <Search className="w-3.5 h-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-64 p-2">
-                <Input
-                  placeholder="Cerca partner (min 5 car.)..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoFocus
-                  className="h-8 text-xs"
-                />
-              </PopoverContent>
-            </Popover>
-            {search && (
-              <span className="text-[10px] text-primary truncate max-w-[120px]">"{search}"</span>
+          {/* ROW 2: Active filters summary */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {activeSearch && (
+              <span className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                <Search className="h-3 w-3" />
+                <span className="truncate">{activeSearch}</span>
+              </span>
             )}
-            <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-              <SelectTrigger className={`w-[100px] h-7 rounded-lg text-[11px] ${th.selTrigger}`}><SelectValue /></SelectTrigger>
-              <SelectContent className={th.selContent}>
-                <SelectItem value="name_asc" className="text-xs">Nome A-Z</SelectItem>
-                <SelectItem value="rating_desc" className="text-xs">Rating ↓</SelectItem>
-                <SelectItem value="contacts_desc" className="text-xs">Contatti ↓</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className={cn("text-[10px] tabular-nums whitespace-nowrap ml-auto", th.dim)}>
-              {isLoading ? "..." : `${filteredPartners.length}${totalCount > filteredPartners.length ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
+            <span className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
+              Ordine: {currentSortLabel}
+            </span>
+            {activeQuality !== "all" && (
+              <span className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                Filtro attivo
+              </span>
+            )}
+            <span className="ml-auto text-[10px] tabular-nums whitespace-nowrap text-muted-foreground">
+              {isLoading ? "..." : `${filteredPartners.length}${totalCount > 0 ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
             </span>
           </div>
 
