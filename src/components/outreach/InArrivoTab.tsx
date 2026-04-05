@@ -14,7 +14,7 @@ const LinkedInInboxView = lazyRetry(() =>
   import("@/components/outreach/LinkedInInboxView").then(m => ({ default: m.LinkedInInboxView }))
 );
 
-type Channel = "all" | "email" | "whatsapp" | "linkedin";
+type Channel = "email" | "whatsapp" | "linkedin";
 
 const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "email" | "whatsapp" | "linkedin" }[] = [
   { value: "email", label: "Email", icon: Mail, channel: "email" },
