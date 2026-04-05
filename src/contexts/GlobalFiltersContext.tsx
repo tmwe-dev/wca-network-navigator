@@ -67,6 +67,8 @@ interface GlobalFiltersCtxValue {
   setNetworkSearch: (s: string) => void;
   setNetworkQuality: (s: string) => void;
   setNetworkSort: (s: string) => void;
+  setNetworkSelectedCountries: (c: Set<string>) => void;
+  setNetworkDirectoryOnly: (v: boolean) => void;
   setEmailCategory: (s: string) => void;
   setEmailSort: (s: string) => void;
   setCrmOrigin: (o: Set<string>) => void;
