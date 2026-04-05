@@ -30,6 +30,7 @@ interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
   const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = useMission();
+  const [manualEmail, setManualEmail] = useState("");
 
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -37,7 +38,6 @@ export default function EmailComposer() {
   const [emailLinks, setEmailLinks] = useState<LinkItem[]>([]);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [manualEmail, setManualEmail] = useState("");
 
   const [sending, setSending] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
@@ -58,24 +58,17 @@ export default function EmailComposer() {
   const addManualEmail = () => {
     const email = manualEmail.trim().toLowerCase();
     if (!email) return;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email) || email.length > 255) {
-      toast.error("Indirizzo email non valido");
-      return;
-    }
-    if (recipients.some(r => r.email === email)) {
-      toast.error("Destinatario già presente");
-      setManualEmail("");
-      return;
-    }
-    const domain = email.split("@")[1] || "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error("Email non valida"); return; }
+    if (recipients.some(r => r.email?.toLowerCase() === email)) { toast.error("Destinatario già presente"); setManualEmail(""); return; }
     addRecipient({
-      partnerId: `manual-${Date.now()}`,
-      companyName: domain,
+      partnerId: crypto.randomUUID(),
+      companyName: email.split("@")[1] || "",
       email,
-      city: "",
+      contactName: email.split("@")[0] || "",
+      countryCode: "",
       countryName: "",
-      isEnriched: true,
+      city: "",
+      isEnriched: false,
     });
     setManualEmail("");
   };
@@ -229,9 +222,9 @@ export default function EmailComposer() {
 
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0 p-4 pb-0 max-w-3xl mx-auto w-full">
-          {/* Recipients bar + manual email input */}
+          {/* Recipients bar with manual email input */}
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-            <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             {recipients.map((r, i) => (
               <Badge key={i} variant="secondary" className="gap-1 pl-1.5 pr-1 py-0.5 text-[11px] font-normal">
                 <span className="text-sm leading-none">{getCountryFlag(r.countryCode || "")}</span>
@@ -248,16 +241,11 @@ export default function EmailComposer() {
             <input
               type="email"
               value={manualEmail}
-              onChange={e => setManualEmail(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter" || e.key === ",") {
-                  e.preventDefault();
-                  addManualEmail();
-                }
-              }}
+              onChange={(e) => setManualEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addManualEmail(); } }}
               onBlur={() => { if (manualEmail.trim()) addManualEmail(); }}
-              placeholder={recipients.length === 0 ? "Aggiungi destinatario email..." : "Aggiungi..."}
-              className="flex-1 min-w-[160px] h-7 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none border-none"
+              placeholder={recipients.length === 0 ? "Digita email o usa il picker a sinistra..." : "Aggiungi email..."}
+              className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 h-6"
             />
           </div>
 
