@@ -1,35 +1,50 @@
 
-# Riorganizzazione Outreach — 5 sezioni chiare
 
-## Struttura attuale (7 tab)
-Cockpit · In Uscita · Attività · Circuito · Email · WhatsApp · LinkedIn
+# Potenziamento Email Composer Contact Picker
 
-## Nuova struttura (5 tab)
+## Problemi Attuali
 
-| Tab | Icona | Contenuto |
-|-----|-------|-----------|
-| **Cockpit** | 🚀 | Workspace di generazione outbound (invariato) |
-| **In Arrivo** | 📥 | Inbox unificata: Email + WhatsApp + LinkedIn ricevuti, con sotto-filtri per canale e badge conteggio totale non letti |
-| **In Uscita** | ↑ | Messaggi programmati/inviati: diretti + campagne. Stato invio, scheduling |
-| **Attività** | ✅ | Log storico: cosa è stato fatto (telefonate, email inviate, note). Timeline cronologica |
-| **Circuito** | ✈️ | Aziende in follow-up: stato/livello, timeline interazioni, risposte ricevute, data ultimo contatto |
+1. **Scroll non funziona** — Il componente usa `space-y-3` dentro un div senza altezza fissa; lo `ScrollArea` copre solo la lista risultati ma l'intero contenuto (paesi + selezionati + tabs + risultati) non scorre
+2. **Contatti (imported_contacts) mostrati piatti** — non raggruppati per azienda come i Partner
+3. **Nessun filtro per origine** nella tab Contatti
+4. **Nessun "Seleziona tutti"** per aggiungere in blocco i risultati filtrati
+5. **Nessun contatore visibile** degli elementi attualmente visualizzati
 
-## Cosa cambia
+## Piano
 
-**Eliminati come tab separati:** Email, WhatsApp, LinkedIn → diventano sotto-filtri dentro "In Arrivo"
+### 1. Fix scroll globale del picker
+Wrappare l'intero contenuto del picker in uno `ScrollArea` con `h-full` che rispetti l'altezza del drawer. La sezione paesi e selezionati restano sticky in alto, il resto scorre.
 
-**In Arrivo** (nuovo):
-- Header con 3 chip-filtro: Email (badge) · WhatsApp (badge) · LinkedIn (badge) + "Tutti"
-- Sotto: lista messaggi ricevuti in ordine cronologico, raggruppabili per mittente/partner
-- Click su messaggio → dettaglio a destra (come l'attuale EmailInboxView)
-- Il badge sulla tab mostra la somma totale dei non letti
+### 2. Raggruppare Contatti per azienda (come Partner)
+Nella tab "Contatti", raggruppare i risultati di `imported_contacts` per `company_name`:
+- Mostrare la riga azienda con chevron espandibile
+- Sotto, i singoli contatti con nome, ruolo, email icon
+- Stessa UX dei Partner (expand/collapse)
 
-**Opzione collassabile:** La sezione "In Arrivo" potrebbe avere un toggle per minimizzarsi in una barra compatta con solo i badge, per dare più spazio al Cockpit
+### 3. Aggiungere filtro Origine nella tab Contatti
+- Dropdown/chip-bar sopra la search con le origini disponibili (WCA, Import, Report Aziende, ecc.)
+- Filtra la query Supabase con `.eq("origin", selectedOrigin)`
+- Applicabile anche a BCA se pertinente
 
-## File coinvolti
+### 4. Bottone "Seleziona tutti" + contatore
+- Sotto la search bar, riga con:
+  - **Contatore**: "23 risultati" (numero elementi filtrati visibili)
+  - **"Seleziona tutti"**: aggiunge tutti i risultati filtrati correnti ai recipients
+  - **"Deseleziona tutti"**: rimuove quelli della lista corrente
+- Il contatore dei selezionati totali è già visibile nella sezione "Selezionati (N)"
+
+### 5. Ordinamento per ogni tab
+Aggiungere un selettore di ordinamento per tab:
+- **Partner**: Nome A-Z, Paese, Rating
+- **Contatti**: Nome, Azienda, Origine, Paese
+- **BCA**: Nome, Azienda, Location
+
+## File da modificare
 
 | File | Azione |
 |------|--------|
-| `src/pages/Outreach.tsx` | Ridurre a 5 tab, aggiungere "In Arrivo" con badge somma |
-| `src/components/outreach/InArrivoTab.tsx` | **Nuovo**: inbox unificata con sotto-filtri canale |
-| `src/components/outreach/InArrivoTab.tsx` | Riusa EmailInboxView, WhatsAppInboxView, LinkedInInboxView come sotto-viste |
+| `EmailComposerContactPicker.tsx` | Riscrittura layout scroll, raggruppamento contatti, filtri origine, seleziona tutti, ordinamento |
+
+## Risultato
+Sidebar completamente scrollabile, contatti raggruppati per azienda, filtri per origine, selezione in blocco con contatore, ordinamento per colonna. Diventa il template riutilizzabile per altre sezioni.
+
