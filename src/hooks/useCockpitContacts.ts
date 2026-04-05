@@ -144,7 +144,7 @@ export function useCockpitContacts() {
       const uniquePartnerIds = [...new Set(partnerIds)];
       let partnersMap: Record<string, any> = {};
       if (uniquePartnerIds.length > 0) {
-        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at").in("id", uniquePartnerIds);
+        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since").in("id", uniquePartnerIds);
         for (const p of pData || []) partnersMap[p.id] = p;
       }
 
