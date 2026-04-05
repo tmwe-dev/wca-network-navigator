@@ -20,7 +20,10 @@ const ACTIVITY_ICONS: Record<string, any> = {
 };
 
 export function AttivitaTab() {
-  const [filter, setFilter] = useState<StatusFilter>("all");
+  const { filters: gf } = useGlobalFilters();
+  const filter = (gf.attivitaStatus || "all") as StatusFilter;
+  const priorityFilter = gf.attivitaPriority || "all";
+  const searchTerm = gf.search || "";
 
   const { data: activities, isLoading } = useQuery({
     queryKey: ["activities-outreach"],

@@ -95,8 +95,10 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
   );
 }
 
-export default function Operations() {
-  const [networkView, setNetworkView] = useState<"partners" | "bca">("partners");
+export default function Operations({ activeView }: { activeView?: "partners" | "bca" }) {
+  const [internalView, setInternalView] = useState<"partners" | "bca">("partners");
+  const networkView = activeView ?? internalView;
+  const setNetworkView = activeView ? (() => {}) as any : setInternalView;
   const [isDark, setIsDark] = useState(() => {
     const s = localStorage.getItem("dl_theme");
     return s !== null ? s === "dark" : true;
