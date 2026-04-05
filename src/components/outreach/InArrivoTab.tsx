@@ -23,7 +23,7 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "em
 ];
 
 export function InArrivoTab() {
-  const [channel, setChannel] = useState<Channel>("all");
+  const [channel, setChannel] = useState<Channel>("email");
   const { data: emailUnread = 0 } = useUnreadCount("email");
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
