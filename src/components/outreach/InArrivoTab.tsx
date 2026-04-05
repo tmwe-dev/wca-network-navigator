@@ -16,8 +16,7 @@ const LinkedInInboxView = lazyRetry(() =>
 
 type Channel = "all" | "email" | "whatsapp" | "linkedin";
 
-const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel?: "email" | "whatsapp" | "linkedin" }[] = [
-  { value: "all", label: "Tutti", icon: Inbox },
+const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "email" | "whatsapp" | "linkedin" }[] = [
   { value: "email", label: "Email", icon: Mail, channel: "email" },
   { value: "whatsapp", label: "WhatsApp", icon: MessageCircle, channel: "whatsapp" },
   { value: "linkedin", label: "LinkedIn", icon: Linkedin, channel: "linkedin" },
