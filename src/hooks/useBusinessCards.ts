@@ -25,6 +25,7 @@ export interface BusinessCard {
   tags: string[];
   created_at: string;
   raw_data: any;
+  lead_status: string;
 }
 
 /** Returns a Set of partner_ids that have at least one matched business card */
@@ -76,7 +77,7 @@ export function useBusinessCards(filters?: { event_name?: string; match_status?:
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
-        .select("*, partner:matched_partner_id(id, company_name, logo_url, company_alias, enrichment_data, country_code)")
+        .select("*, partner:matched_partner_id(id, company_name, logo_url, company_alias, enrichment_data, country_code, lead_status)")
         .order("created_at", { ascending: false });
       if (filters?.event_name) q = q.ilike("event_name", `%${filters.event_name}%`);
       if (filters?.match_status) q = q.eq("match_status", filters.match_status);
