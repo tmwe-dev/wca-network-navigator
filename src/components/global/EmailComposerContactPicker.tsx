@@ -436,26 +436,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           </ScrollArea>
         </div>
 
-        {/* Right: tabs + results */}
+        {/* Right: results */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
-          {/* Tabs row */}
-          <div className="flex gap-1 mb-1.5 flex-shrink-0">
-            {TABS.map(t => (
-              <button
-                key={t.value}
-                onClick={() => { setTab(t.value); setSearch(""); setExpandedPartner(null); setExpandedCompany(null); }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border",
-                  tab === t.value
-                    ? "bg-primary/15 border-primary/30 text-primary"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40"
-                )}
-              >
-                <t.icon className="w-3 h-3" />
-                {t.label}
-              </button>
-            ))}
-          </div>
 
           {/* Results area */}
           <ScrollArea className="flex-1 min-h-0">
