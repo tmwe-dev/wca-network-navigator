@@ -148,9 +148,9 @@ export default function EmailComposer() {
       if (draftError) throw draftError;
       const draftId = (savedDraft as any).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
-        partner_id: r.partnerId, email: r.email!, name: r.companyName,
-        subject: subject.replace(/\{\{company_name\}\}/g, r.companyName).replace(/\{\{contact_name\}\}/g, r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
-        html: buildFinalHtml(htmlBody, r, r.contactName || ""),
+        partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
+        subject: subject.replace(/\{\{company_name\}\}/g, r.companyAlias || r.companyName).replace(/\{\{contact_name\}\}/g, r.contactAlias || r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
+        html: buildFinalHtml(htmlBody, r, r.contactAlias || r.contactName || ""),
       }));
       await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);
