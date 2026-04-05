@@ -47,14 +47,15 @@ export function EmailComposerContactPicker() {
 
   // Partners search
   const { data: partners = [] } = useQuery({
-    queryKey: ["picker-partners", search],
+    queryKey: ["picker-partners", search, selectedCountry],
     enabled: tab === "partners" && shouldSearch,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("partners")
-        .select("id, company_name, country_code, city")
-        .ilike("company_name", `%${search}%`)
-        .limit(30);
+        .select("id, company_name, country_code, city");
+      if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
+      if (selectedCountry) q = q.eq("country_code", selectedCountry);
+      const { data } = await q.order("company_name").limit(50);
       return data || [];
     },
   });
