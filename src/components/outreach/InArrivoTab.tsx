@@ -68,7 +68,6 @@ export function InArrivoTab() {
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<div className="h-full animate-pulse bg-muted/20 rounded-lg" />}>
-          {channel === "all" && <EmailInboxView />}
           {channel === "email" && <EmailInboxView />}
           {channel === "whatsapp" && <WhatsAppInboxView />}
           {channel === "linkedin" && <LinkedInInboxView />}
