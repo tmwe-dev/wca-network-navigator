@@ -32,6 +32,8 @@ export interface GlobalFilterState {
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
+  networkSelectedCountries: Set<string>;
+  networkDirectoryOnly: boolean;
   // Email
   emailCategory: string;
   emailSort: string;
