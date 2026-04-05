@@ -9,25 +9,145 @@ const corsHeaders = {
 
 type Quality = "fast" | "standard" | "premium";
 
-/** Fetch granular KB entries from db, filtered by quality tier */
-async function fetchKbEntries(supabase: any, quality: Quality): Promise<string> {
-  const minPriority = quality === "fast" ? 9 : quality === "standard" ? 6 : 1;
-  const limit = quality === "fast" ? 5 : quality === "standard" ? 15 : 50;
-
+/**
+ * STRATEGIC ADVISOR — Intelligent KB Selection
+ * 
+ * Instead of dumping all KB entries, this selects entries contextually based on:
+ * 1. The email type/category (primo_contatto → identita + vendita cards)
+ * 2. Quality tier (fast=essentials only, premium=full arsenal)
+ * 3. Interaction history (follow-up with no response → ghosting recovery techniques)
+ */
+async function fetchKbEntriesStrategic(
+  supabase: any, 
+  quality: Quality,
+  context: {
+    emailCategory?: string;
+    hasInteractionHistory?: boolean;
+    isFollowUp?: boolean;
+    kb_categories?: string[];
+  }
+): Promise<{ text: string; sections_used: string[] }> {
+  const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
+  
+  // Build category filter based on context
+  const categories: string[] = [];
+  
+  // Always include identity for any quality
+  categories.push("identita");
+  
+  // Add context-specific categories
+  if (context.kb_categories?.length) {
+    categories.push(...context.kb_categories);
+  } else {
+    // Fallback: derive from email category
+    switch (context.emailCategory) {
+      case "primo_contatto":
+        categories.push("vendita", "email_modelli");
+        break;
+      case "follow_up":
+        categories.push("vendita", "negoziazione", "email_modelli");
+        break;
+      case "richiesta":
+        categories.push("vendita");
+        break;
+      case "proposta_servizi":
+        categories.push("vendita", "negoziazione", "email_modelli");
+        break;
+      case "partnership":
+        categories.push("vendita", "negoziazione");
+        break;
+      default:
+        categories.push("vendita");
+    }
+  }
+  
+  // For follow-ups without response, add negotiation techniques
+  if (context.isFollowUp) {
+    if (!categories.includes("negoziazione")) categories.push("negoziazione");
+  }
+  
+  // For premium, add everything
+  if (quality === "premium") {
+    ["vendita", "negoziazione", "email_modelli", "psicologia"].forEach(c => {
+      if (!categories.includes(c)) categories.push(c);
+    });
+  }
+  
+  const uniqueCategories = [...new Set(categories)];
+  
   const { data: entries } = await supabase
     .from("kb_entries")
-    .select("title, content, category, tags")
+    .select("title, content, category, chapter, tags")
     .eq("is_active", true)
-    .gte("priority", minPriority)
+    .in("category", uniqueCategories)
     .order("priority", { ascending: false })
     .order("sort_order")
     .limit(limit);
 
-  if (!entries || entries.length === 0) return "";
+  if (!entries || entries.length === 0) return { text: "", sections_used: [] };
 
-  return entries
-    .map((e: any) => `### ${e.title} [${e.tags?.join(", ") || e.category}]\n${e.content}`)
+  const sectionsUsed = [...new Set(entries.map((e: any) => e.category))];
+  
+  const text = entries
+    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
     .join("\n\n---\n\n");
+
+  return { text, sections_used: sectionsUsed };
+}
+
+/** Build the Strategic Advisor instructions based on context */
+function buildStrategicAdvisor(context: {
+  emailCategory?: string;
+  hasHistory?: boolean;
+  followUpCount?: number;
+  hasEnrichmentData?: boolean;
+}): string {
+  const parts: string[] = [];
+  
+  parts.push(`
+# STRATEGIC ADVISOR — Istruzioni di Intelligenza Autonoma
+
+Sei un advisor strategico, non un semplice generatore di testo. Hai accesso a una Knowledge Base di tecniche di vendita, negoziazione e comunicazione B2B. DEVI usarla attivamente.
+
+## Come usare la Knowledge Base:
+1. LEGGI le tecniche fornite e SELEZIONA quelle più appropriate per il contesto
+2. APPLICA almeno 2 tecniche per email (es. Label + Domanda Calibrata)
+3. ADATTA la tecnica al destinatario specifico — non usarla in modo meccanico
+4. Se hai dati dal profilo del destinatario, USA quei dati come leva per le tecniche
+
+## Regole di autonomia:
+- Se i dati sul destinatario sono ricchi → personalizza profondamente, usa tecniche avanzate
+- Se i dati sono scarsi → resta generico ma professionale, usa tecniche universali (Label, Mirroring)
+- Se c'è storia di interazioni → ANALIZZALA e NON ripetere approcci già usati
+- Se è un follow-up senza risposta → usa tecniche di re-engagement (domanda "no", last attempt)`);
+
+  if (context.hasHistory) {
+    parts.push(`
+## ATTENZIONE — Storia interazioni disponibile:
+Hai accesso alla storia delle interazioni precedenti. DEVI:
+1. Leggere cosa è stato già detto/proposto
+2. NON ripetere lo stesso messaggio
+3. Evolvere l'approccio: ogni comunicazione deve portare VALORE NUOVO`);
+  }
+
+  if (context.followUpCount && context.followUpCount >= 2) {
+    parts.push(`
+## FOLLOW-UP AVANZATO (${context.followUpCount}° tentativo):
+Usa la tecnica del "No strategico": formula una domanda che permetta al destinatario di dire NO senza chiudere la porta.
+Es: "Ha rinunciato all'idea di [obiettivo]?" — questo provoca una risposta correttiva.
+Se è il 3°+ tentativo, considera la tecnica "last attempt".`);
+  }
+
+  if (!context.hasEnrichmentData) {
+    parts.push(`
+## DATI LIMITATI:
+Non hai molte informazioni sul destinatario. In questo caso:
+- NON inventare dettagli, presentazioni, eventi o fatti
+- Usa tecniche universali: Label generico, domanda aperta, reciprocità
+- Focalizza sul VALUE del mittente piuttosto che sulla personalizzazione`);
+  }
+
+  return parts.join("\n");
 }
 
 /** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
