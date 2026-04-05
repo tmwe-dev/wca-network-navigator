@@ -200,7 +200,7 @@ export function KnowledgeBaseManager() {
                     </div>
                   </CardHeader>
                   <CardContent className="py-0 pb-2 px-3">
-                    <p className="text-[11px] text-muted-foreground line-clamp-3 whitespace-pre-line">{entry.content}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-6 whitespace-pre-line">{entry.content}</p>
                   </CardContent>
                 </Card>
               ))}
