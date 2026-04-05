@@ -32,6 +32,8 @@ export interface GlobalFilterState {
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
+  networkSelectedCountries: Set<string>;
+  networkDirectoryOnly: boolean;
   // Email
   emailCategory: string;
   emailSort: string;
@@ -65,6 +67,8 @@ interface GlobalFiltersCtxValue {
   setNetworkSearch: (s: string) => void;
   setNetworkQuality: (s: string) => void;
   setNetworkSort: (s: string) => void;
+  setNetworkSelectedCountries: (c: Set<string>) => void;
+  setNetworkDirectoryOnly: (v: boolean) => void;
   setEmailCategory: (s: string) => void;
   setEmailSort: (s: string) => void;
   setCrmOrigin: (o: Set<string>) => void;
@@ -97,6 +101,8 @@ const defaults: GlobalFilterState = {
   networkSearch: "",
   networkQuality: "all",
   networkSort: "name",
+  networkSelectedCountries: new Set<string>(),
+  networkDirectoryOnly: false,
   emailCategory: "all",
   emailSort: "date_desc",
   crmOrigin: new Set(["wca", "import", "report_aziende"]),
@@ -122,6 +128,7 @@ function cloneDefaults(): GlobalFilterState {
     cockpitChannels: new Set(),
     cockpitQuality: new Set(),
     crmOrigin: new Set(defaults.crmOrigin),
+    networkSelectedCountries: new Set(),
   };
 }
 
@@ -151,6 +158,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setNetworkSearch = useCallback((s: string) => setFilters(p => ({ ...p, networkSearch: s })), []);
   const setNetworkQuality = useCallback((s: string) => setFilters(p => ({ ...p, networkQuality: s })), []);
   const setNetworkSort = useCallback((s: string) => setFilters(p => ({ ...p, networkSort: s })), []);
+  const setNetworkSelectedCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, networkSelectedCountries: c })), []);
+  const setNetworkDirectoryOnly = useCallback((v: boolean) => setFilters(p => ({ ...p, networkDirectoryOnly: v })), []);
   const setEmailCategory = useCallback((s: string) => setFilters(p => ({ ...p, emailCategory: s })), []);
   const setEmailSort = useCallback((s: string) => setFilters(p => ({ ...p, emailSort: s })), []);
   const setCrmOrigin = useCallback((o: Set<string>) => setFilters(p => ({ ...p, crmOrigin: o })), []);
@@ -165,7 +174,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       setSortingFilter, setSortingSearch,
       setCockpitCountries, setCockpitChannels, setCockpitQuality, setCockpitStatus,
       setAttivitaStatus, setAttivitaPriority,
-      setNetworkSearch, setNetworkQuality, setNetworkSort,
+      setNetworkSearch, setNetworkQuality, setNetworkSort, setNetworkSelectedCountries, setNetworkDirectoryOnly,
       setEmailCategory, setEmailSort,
       setCrmOrigin, setCrmQuality, setCrmChannel,
       resetFilters, currentRoute: location.pathname,
