@@ -24,49 +24,27 @@ import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
-/** Tab that follows the actual drawer edge by measuring the DOM */
-function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, children }: {
-  side: "left" | "right"; isOpen: boolean;
+/** Tab that follows the drawer edge using known CSS widths */
+function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, children, isEmailComposer }: {
+  side: "left" | "right"; isOpen: boolean; isEmailComposer?: boolean;
   onClick: () => void; onMouseEnter: () => void; onMouseLeave: () => void;
   children: React.ReactNode;
 }) {
-  const [offset, setOffset] = useState(0);
-
-  useEffect(() => {
-    if (!isOpen) { setOffset(0); return; }
-    // Find the actual SheetContent element for this side
-    const findDrawer = () => {
-      const selector = side === "left"
-        ? '[data-side="left"][class*="SheetContent"], [class*="sheet"][class*="left"], div[class*="fixed"][class*="left-0"][class*="border-r"]'
-        : '[data-side="right"][class*="SheetContent"], [class*="sheet"][class*="right"], div[class*="fixed"][class*="right-0"][class*="border-l"]';
-      // Radix Sheet uses data-state="open" on the content
-      const allSheets = document.querySelectorAll('[role="dialog"]');
-      for (const el of allSheets) {
-        const rect = el.getBoundingClientRect();
-        if (side === "left" && rect.left >= -1 && rect.left < window.innerWidth / 2) {
-          return rect.width;
-        }
-        if (side === "right" && rect.right <= window.innerWidth + 1 && rect.right > window.innerWidth / 2) {
-          return rect.width;
-        }
-      }
-      return 0;
-    };
-    // Small delay to let animation start
-    const raf = requestAnimationFrame(() => {
-      const w = findDrawer();
-      if (w > 0) setOffset(w);
-    });
-    const timer = setTimeout(() => {
-      const w = findDrawer();
-      if (w > 0) setOffset(w);
-    }, 350);
-    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
-  }, [isOpen, side]);
+  // Mirror the exact Tailwind widths from FiltersDrawer / MissionDrawer
+  const getOpenOffset = (): string => {
+    if (!isOpen) return "0px";
+    if (side === "left") {
+      // FiltersDrawer: isEmailComposer ? "w-[92vw] sm:w-[560px]" : "w-[90vw] sm:w-[400px]"
+      if (isEmailComposer) return "min(92vw, 560px)";
+      return "min(90vw, 400px)";
+    }
+    // MissionDrawer: "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px]"
+    return "min(90vw, 520px)";
+  };
 
   const posStyle: React.CSSProperties = side === "left"
-    ? { left: isOpen ? offset : 0 }
-    : { right: isOpen ? offset : 0 };
+    ? { left: getOpenOffset() }
+    : { right: getOpenOffset() };
 
   return (
     <button
