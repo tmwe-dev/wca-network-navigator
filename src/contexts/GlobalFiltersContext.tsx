@@ -173,7 +173,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       setSortingFilter, setSortingSearch,
       setCockpitCountries, setCockpitChannels, setCockpitQuality, setCockpitStatus,
       setAttivitaStatus, setAttivitaPriority,
-      setNetworkSearch, setNetworkQuality, setNetworkSort,
+      setNetworkSearch, setNetworkQuality, setNetworkSort, setNetworkSelectedCountries, setNetworkDirectoryOnly,
       setEmailCategory, setEmailSort,
       setCrmOrigin, setCrmQuality, setCrmChannel,
       resetFilters, currentRoute: location.pathname,
