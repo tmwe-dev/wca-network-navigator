@@ -30,21 +30,35 @@ function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, ch
   onClick: () => void; onMouseEnter: () => void; onMouseLeave: () => void;
   children: React.ReactNode;
 }) {
-  // Mirror the exact Tailwind widths from FiltersDrawer / MissionDrawer
-  const getOpenOffset = (): string => {
-    if (!isOpen) return "0px";
-    if (side === "left") {
-      // FiltersDrawer: isEmailComposer ? "w-[92vw] sm:w-[560px]" : "w-[90vw] sm:w-[400px]"
-      if (isEmailComposer) return "min(92vw, 560px)";
-      return "min(90vw, 400px)";
-    }
-    // MissionDrawer: "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px]"
-    return "min(90vw, 520px)";
-  };
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen) { setOffset(0); return; }
+    const compute = () => {
+      const vw = window.innerWidth;
+      if (side === "left") {
+        // FiltersDrawer: isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]"
+        if (isEmailComposer) {
+          setOffset(vw >= 640 ? Math.min(560, 620) : Math.min(vw * 0.92, vw));
+        } else {
+          setOffset(vw >= 640 ? Math.min(400, 420) : Math.min(vw * 0.90, vw));
+        }
+      } else {
+        // MissionDrawer: "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px]"
+        if (vw >= 1024) setOffset(Math.min(680, 700));
+        else if (vw >= 768) setOffset(Math.min(600, 700));
+        else if (vw >= 640) setOffset(Math.min(520, 700));
+        else setOffset(Math.min(vw * 0.90, vw));
+      }
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [isOpen, side, isEmailComposer]);
 
   const posStyle: React.CSSProperties = side === "left"
-    ? { left: getOpenOffset() }
-    : { right: getOpenOffset() };
+    ? { left: offset }
+    : { right: offset };
 
   return (
     <button
