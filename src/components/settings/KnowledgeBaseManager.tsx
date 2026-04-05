@@ -25,7 +25,7 @@ export function KnowledgeBaseManager() {
   useEffect(() => {
     if (settings) {
       setCompanyKB(settings.ai_knowledge_base || "");
-      setSalesKB(settings.ai_sales_knowledge_base || "");
+      setSalesKB(settings.ai_sales_knowledge_base || DEFAULT_SALES_KNOWLEDGE_BASE);
     }
   }, [settings]);
 
