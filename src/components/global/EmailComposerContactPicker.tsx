@@ -637,6 +637,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               ))}
             </div>
           )}
+          </div>{/* end tinted results area */}
         </div>
       </ScrollArea>
     </div>
