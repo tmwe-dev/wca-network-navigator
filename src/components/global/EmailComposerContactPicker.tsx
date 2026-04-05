@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
-import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown } from "lucide-react";
+import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,7 @@ const TABS: { value: PickerTab; label: string; icon: typeof Users }[] = [
   { value: "bca", label: "BCA", icon: CreditCard },
 ];
 
-export function EmailComposerContactPicker() {
+export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => void }) {
   const [tab, setTab] = useState<PickerTab>("partners");
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
@@ -396,6 +397,16 @@ export function EmailComposerContactPicker() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Confirm button */}
+      {recipients.length > 0 && onConfirm && (
+        <div className="pt-3 border-t border-border mt-2">
+          <Button onClick={onConfirm} className="w-full gap-2" size="sm">
+            <Check className="w-4 h-4" />
+            Conferma {recipients.length} destinatar{recipients.length === 1 ? "io" : "i"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
