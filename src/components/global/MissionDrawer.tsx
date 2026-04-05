@@ -484,3 +484,127 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
     </div>
   );
 }
+
+/* ── AI Quick Input Section ── */
+function AiQuickSection() {
+  const [aiInput, setAiInput] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!aiInput.trim() || loading) return;
+    setLoading(true);
+    setAiResponse("");
+    try {
+      const { data } = await supabase.functions.invoke("ai-assistant", {
+        body: { messages: [{ role: "user", content: aiInput }], context: { currentPage: window.location.pathname } },
+      });
+      setAiResponse(data?.reply || data?.message || "Nessuna risposta");
+    } catch {
+      setAiResponse("Errore nella comunicazione AI");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-2">
+      <div className="flex items-center gap-2">
+        <Brain className="w-4 h-4 text-primary" />
+        <span className="text-xs font-bold text-foreground">AI Rapida</span>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("toggle-intelliflow"))}
+          className="ml-auto text-[10px] text-primary hover:underline flex items-center gap-1"
+        >
+          <Play className="w-3 h-3" /> IntelliFlow
+        </button>
+      </div>
+      <div className="flex gap-1.5">
+        <Input
+          value={aiInput}
+          onChange={e => setAiInput(e.target.value)}
+          placeholder="Chiedi qualcosa..."
+          className="h-8 text-xs bg-background/50 border-border/40 flex-1"
+          onKeyDown={e => e.key === "Enter" && handleSend()}
+        />
+        <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={handleSend} disabled={loading || !aiInput.trim()}>
+          {loading ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+        </Button>
+      </div>
+      {aiResponse && (
+        <div className="text-[11px] text-foreground bg-primary/5 rounded-lg p-2 border border-primary/10 max-h-[120px] overflow-y-auto">
+          {aiResponse}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Activity Summary Section ── */
+function ActivitySummarySection() {
+  const { data: activities = [], isLoading } = useTodayActivities();
+
+  const { data: pendingCount } = useQuery({
+    queryKey: ["pending-activities-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("activities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+      return count || 0;
+    },
+    staleTime: 30_000,
+  });
+
+  const { data: inProgressCount } = useQuery({
+    queryKey: ["in-progress-activities-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("activities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "in_progress");
+      return count || 0;
+    },
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-2">
+      <div className="flex items-center gap-2">
+        <ListTodo className="w-4 h-4 text-amber-500" />
+        <span className="text-xs font-bold text-foreground">Piano Lavori</span>
+      </div>
+
+      {/* Counters */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p className="text-lg font-bold text-amber-500">{pendingCount ?? "—"}</p>
+          <p className="text-[9px] text-muted-foreground">Da fare</p>
+        </div>
+        <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <p className="text-lg font-bold text-blue-500">{inProgressCount ?? "—"}</p>
+          <p className="text-[9px] text-muted-foreground">In corso</p>
+        </div>
+        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <p className="text-lg font-bold text-emerald-500">{activities.length}</p>
+          <p className="text-[9px] text-muted-foreground">Oggi</p>
+        </div>
+      </div>
+
+      {/* Recent completed */}
+      {activities.length > 0 && (
+        <div className="space-y-1 max-h-[100px] overflow-y-auto">
+          {activities.slice(0, 4).map(a => (
+            <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/20">
+              <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+              <span className="text-[10px] text-foreground truncate flex-1">{a.contactName}</span>
+              <span className="text-[9px] text-muted-foreground shrink-0">{a.activityType}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isLoading && <p className="text-[10px] text-muted-foreground text-center py-2">Caricamento...</p>}
+    </div>
+  );
+}
