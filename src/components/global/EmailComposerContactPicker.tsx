@@ -618,7 +618,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
           {/* BCA */}
           {tab === "bca" && shouldSearch && (
-            <div className="space-y-0.5">
+            <div className="space-y-1.5 p-0.5">
               {filteredBca.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
               {filteredBca.map(c => (
                 <button
@@ -626,19 +626,24 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                   onClick={() => handleSelectBca(c)}
                   disabled={isSelected(c.matched_partner_id || c.id)}
                   className={cn(
-                    "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded-lg text-xs transition-all",
-                    isSelected(c.matched_partner_id || c.id) ? "opacity-50 bg-muted/20" : "hover:bg-muted/40"
+                    "w-full text-left rounded-lg border border-border/40 bg-card px-2.5 py-2 text-xs transition-all",
+                    isSelected(c.matched_partner_id || c.id) ? "opacity-50" : "hover:bg-muted/40"
                   )}
                 >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="flex-1 text-left truncate font-medium">{c.contact_name || c.company_name}</span>
-                    {c.location && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{c.location}</Badge>}
-                    {c.email && <Mail className="w-3 h-3 text-primary/60" />}
-                    {isSelected(c.matched_partner_id || c.id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-foreground truncate">{c.company_name || c.contact_name || "—"}</div>
+                      {c.contact_name && c.company_name && (
+                        <div className="text-[11px] text-foreground/80 truncate">{c.contact_name}</div>
+                      )}
+                      {c.position && <div className="text-[10px] text-muted-foreground truncate">{c.position}</div>}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
+                      {c.location && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{c.location}</Badge>}
+                      {c.email && <Mail className="w-3 h-3 text-primary/60" />}
+                      {isSelected(c.matched_partner_id || c.id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
+                    </div>
                   </div>
-                  {c.company_name && c.contact_name && (
-                    <span className="text-[10px] text-muted-foreground">{c.company_name}</span>
-                  )}
                 </button>
               ))}
             </div>
