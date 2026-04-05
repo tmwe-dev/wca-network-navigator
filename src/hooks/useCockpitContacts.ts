@@ -206,6 +206,7 @@ export function useCockpitContacts() {
         const pc = pcMap[sid];
         if (!pc) continue;
         const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        const pMeta = extractPartnerMeta(partner);
         result.push({
           id: `pc-${pc.id}`,
           queueId: item.id,
@@ -229,6 +230,7 @@ export function useCockpitContacts() {
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
           enrichmentData: partner?.enrichment_data || undefined,
+          ...pMeta,
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
