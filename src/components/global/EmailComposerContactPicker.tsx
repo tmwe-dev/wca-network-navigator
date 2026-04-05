@@ -163,6 +163,41 @@ export function EmailComposerContactPicker() {
 
   return (
     <div className="space-y-3">
+      {/* Country flag carousel */}
+      <div>
+        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
+          <Globe className="w-3 h-3" /> Paesi
+        </label>
+        <div
+          ref={scrollRef}
+          className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin"
+          style={{ scrollbarWidth: "thin" }}
+        >
+          {selectedCountry && (
+            <button
+              onClick={() => setSelectedCountry(null)}
+              className="flex-shrink-0 px-2 py-1 rounded-md text-[10px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10"
+            >
+              ✕ Tutti
+            </button>
+          )}
+          {countryStats.map(c => (
+            <button
+              key={c.code}
+              onClick={() => setSelectedCountry(selectedCountry === c.code ? null : c.code)}
+              className={cn(
+                "flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-medium transition-all border",
+                selectedCountry === c.code
+                  ? "bg-primary/15 border-primary/30 text-primary"
+                  : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              )}
+            >
+              <span className="text-sm">{c.flag}</span>
+              <span className="tabular-nums">{c.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {/* Selected recipients */}
       {recipients.length > 0 && (
         <div>
