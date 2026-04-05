@@ -279,66 +279,37 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
             "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
             isMobile ? "flex flex-col" : "flex"
           )}>
-            {/* COL 1: Country Grid */}
-            <div className={cn(
-              "flex-shrink-0 min-h-0 overflow-hidden flex flex-col gap-2 transition-all duration-200",
-              isMobile
-                ? (hasSelection ? "max-h-[35vh]" : "")
-                : (hasDetailOpen ? "w-[220px]" : "w-[280px]")
-            )}>
-              <CountryGrid
-                selected={selectedCountries}
-                onToggle={handleCountryClick}
-                onRemove={handleRemoveCountry}
-                filterMode={filterMode}
-                directoryStats={dirData}
-                directoryOnly={directoryOnly}
-                onDirectoryOnlyChange={setDirectoryOnly}
-                compact={hasSelection || isMobile}
-              />
-            </div>
-
-            {/* COL 2: Partner List */}
+            {/* COL 1: Partner List */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
-            {hasSelection ? (
-              <>
-                <div className={cn(
-                  "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
-                  "bg-card/50 backdrop-blur-sm border-border"
-                )}>
-                  <PartnerListPanel
-                    countryCodes={activeCountryCodes}
-                    countryNames={activeCountryNames}
-                    isDark={isDark}
-                    onDeepSearch={handleDeepSearch}
-                    onGenerateAliases={handleGenerateAliases}
-                    deepSearchRunning={deepSearch.running}
-                    aliasGenerating={aliasGenerating}
-                    directoryOnly={directoryOnly}
-                    onDirectoryOnlyChange={setDirectoryOnly}
-                    onSelectPartner={setSelectedPartnerId}
-                    selectedPartnerId={selectedPartnerId}
-                  />
+              <div className={cn(
+                "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
+                "bg-card/50 backdrop-blur-sm border-border"
+              )}>
+                <PartnerListPanel
+                  countryCodes={activeCountryCodes}
+                  countryNames={activeCountryNames}
+                  isDark={isDark}
+                  onDeepSearch={handleDeepSearch}
+                  onGenerateAliases={handleGenerateAliases}
+                  deepSearchRunning={deepSearch.running}
+                  aliasGenerating={aliasGenerating}
+                  directoryOnly={directoryOnly}
+                  onDirectoryOnlyChange={(v: boolean) => {}}
+                  onSelectPartner={setSelectedPartnerId}
+                  selectedPartnerId={selectedPartnerId}
+                />
 
-                  {/* Deep Search Canvas overlay */}
-                  <DeepSearchCanvas
-                    open={deepSearch.canvasOpen}
-                    onClose={() => deepSearch.setCanvasOpen(false)}
-                    onStop={handleStopDeepSearch}
-                    current={deepSearch.current}
-                    results={deepSearch.results}
-                    running={deepSearch.running}
-                    isDark={isDark}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
-                <Globe className="w-10 h-10 text-muted-foreground/20 mb-3" />
-                <p className="text-sm text-muted-foreground/60 font-medium">Seleziona un paese per vedere i partner</p>
-                <p className="text-xs text-muted-foreground/40 mt-1">Clicca su uno o più paesi dall'elenco a sinistra</p>
+                {/* Deep Search Canvas overlay */}
+                <DeepSearchCanvas
+                  open={deepSearch.canvasOpen}
+                  onClose={() => deepSearch.setCanvasOpen(false)}
+                  onStop={handleStopDeepSearch}
+                  current={deepSearch.current}
+                  results={deepSearch.results}
+                  running={deepSearch.running}
+                  isDark={isDark}
+                />
               </div>
-            )}
             </div>
 
             {/* COL 3: Partner Detail */}
