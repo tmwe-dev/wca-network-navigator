@@ -11,6 +11,7 @@ import type { QueueStats } from "@/hooks/useEmailCampaignQueue";
 interface CampaignQueueMonitorProps {
   draftId: string;
   queueStatus: string;
+  onClose?: () => void;
 }
 
 export function CampaignQueueMonitor({ draftId, queueStatus }: CampaignQueueMonitorProps) {
