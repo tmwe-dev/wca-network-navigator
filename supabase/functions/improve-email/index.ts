@@ -57,7 +57,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { subject, html_body, recipient_count, recipient_countries } = await req.json();
+    const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb } = await req.json();
     if (!html_body) throw new Error("html_body is required");
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
