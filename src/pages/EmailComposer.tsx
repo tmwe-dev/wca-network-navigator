@@ -401,6 +401,7 @@ export default function EmailComposer() {
                 draftId={activeDraftId}
                 queueStatus={activeQueueStatus}
                 onClose={() => { setActiveDraftId(null); setActiveQueueStatus("idle"); }}
+                onStatusChange={(s) => setActiveQueueStatus(s)}
               />
             ) : (
               <div className="flex items-center gap-2">
