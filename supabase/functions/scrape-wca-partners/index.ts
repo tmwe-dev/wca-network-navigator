@@ -642,7 +642,9 @@ async function getDirectAuthCookies(supabase: any, userId: string | null): Promi
   }
   const { data: creds } = await supabase.from('user_wca_credentials').select('wca_username, wca_password').eq('user_id', userId).maybeSingle()
   if (!creds?.wca_username) return null
-  const result = await ssoLoginDirect(creds.wca_username, creds.wca_password)
+  const { data: decryptedPw } = await supabase.rpc('decrypt_wca_password', { p_encrypted: creds.wca_password })
+  if (!decryptedPw) return null
+  const result = await ssoLoginDirect(creds.wca_username, decryptedPw)
   if (!result.success || !result.cookies) return null
   const val = JSON.stringify({ cookies: result.cookies, savedAt: new Date().toISOString() })
   const { data: ex } = await supabase.from('app_settings').select('id').eq('key', 'wca_direct_cookie').maybeSingle()

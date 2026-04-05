@@ -49,11 +49,12 @@ export default function Onboarding() {
         .eq("user_id", userId);
       if (profileErr) throw profileErr;
 
-      // Save WCA credentials if provided
+      // Save WCA credentials if provided (encrypt password server-side)
       if (wcaUsername && wcaPassword) {
+        const { data: encryptedPw } = await supabase.rpc("encrypt_wca_password", { p_password: wcaPassword });
         const { error: wcaErr } = await supabase
           .from("user_wca_credentials")
-          .upsert({ user_id: userId, wca_username: wcaUsername, wca_password: wcaPassword }, { onConflict: "user_id" });
+          .upsert({ user_id: userId, wca_username: wcaUsername, wca_password: encryptedPw }, { onConflict: "user_id" });
         if (wcaErr) throw wcaErr;
       }
 

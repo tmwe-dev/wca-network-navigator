@@ -2869,7 +2869,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
-          wca_password: string
+          wca_password: string | null
           wca_username: string
         }
         Insert: {
@@ -2877,7 +2877,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
-          wca_password: string
+          wca_password?: string | null
           wca_username: string
         }
         Update: {
@@ -2885,7 +2885,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
-          wca_password?: string
+          wca_password?: string | null
           wca_username?: string
         }
         Relationships: []
@@ -2961,6 +2961,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
       deduct_credits: {
         Args: {
           p_amount: number
@@ -2973,6 +2974,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      encrypt_wca_password: { Args: { p_password: string }; Returns: string }
       get_contact_filter_options: {
         Args: never
         Returns: {

@@ -44,9 +44,11 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (userCreds?.wca_username && userCreds?.wca_password) {
+      // Decrypt the password using the server-side helper
+      const { data: decrypted } = await supabase.rpc('decrypt_wca_password', { p_encrypted: userCreds.wca_password })
       return new Response(JSON.stringify({
         username: userCreds.wca_username,
-        password: userCreds.wca_password,
+        password: decrypted || '',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
