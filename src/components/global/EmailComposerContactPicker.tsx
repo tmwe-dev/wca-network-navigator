@@ -117,6 +117,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         .select("id, company_name, company_alias, country_code, city, lead_status");
       if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
       if (selectedCountry) q = q.eq("country_code", selectedCountry);
+      q = q.eq("is_active", true);
       const { data } = await q.order("company_name").limit(200);
       return data || [];
     },
