@@ -29,7 +29,8 @@ const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{countr
 interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
-  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient } = useMission();
+  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = useMission();
+  const [manualEmail, setManualEmail] = useState("");
 
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
