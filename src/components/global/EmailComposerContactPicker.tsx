@@ -270,19 +270,19 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
   return (
     <div className="flex flex-col h-full">
-      {/* Sticky header: selected + confirm */}
-      {recipients.length > 0 && (
-        <div className="flex-shrink-0 pb-2 border-b border-border/30 mb-2">
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
-            </label>
-            {onConfirm && (
-              <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
-                <Check className="w-3 h-3" /> Conferma {recipients.length}
-              </Button>
-            )}
-          </div>
+      {/* Fixed-height header: selected + confirm — always visible */}
+      <div className="flex-shrink-0 h-[88px] pb-2 border-b border-border/30 mb-2">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
+          </label>
+          {onConfirm && recipients.length > 0 && (
+            <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
+              <Check className="w-3 h-3" /> Conferma {recipients.length}
+            </Button>
+          )}
+        </div>
+        {recipients.length > 0 ? (
           <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto">
             {recipients.map((r, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
@@ -295,8 +295,10 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               </span>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-[10px] text-muted-foreground/50 italic pt-2">Nessun destinatario selezionato</p>
+        )}
+      </div>
 
       {/* Scrollable content */}
       <ScrollArea className="flex-1 min-h-0">
