@@ -10,16 +10,40 @@ const corsHeaders = {
 type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 type Quality = "fast" | "standard" | "premium";
 
-/** Extract sections from KB using <!-- SECTION:N --> markers */
+/** Contextual KB injection for outreach */
+async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel): Promise<{ text: string; sections: string[] }> {
+  const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
+  
+  // Select categories based on channel context
+  const categories = ["identita", "vendita"];
+  if (channel === "email") categories.push("email_modelli");
+  if (quality !== "fast") categories.push("negoziazione");
+  if (quality === "premium") categories.push("psicologia");
+  
+  const { data: entries } = await supabase
+    .from("kb_entries")
+    .select("title, content, category, chapter, tags")
+    .eq("is_active", true)
+    .in("category", categories)
+    .order("priority", { ascending: false })
+    .order("sort_order")
+    .limit(limit);
+
+  if (!entries || entries.length === 0) return { text: "", sections: [] };
+
+  const sections = [...new Set(entries.map((e: any) => e.category))];
+  const text = entries
+    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
+    .join("\n\n---\n\n");
+
+  return { text, sections };
+}
+
+/** Legacy fallback */
 function getKBSlice(fullKB: string, quality: Quality): string {
   if (!fullKB) return "";
-  const sectionMap: Record<Quality, number[]> = {
-    fast: [1, 5],
-    standard: [1, 2, 3, 4, 5, 6, 7, 8],
-    premium: [],
-  };
   if (quality === "premium") return fullKB;
-  const allowedSections = sectionMap[quality];
+  const allowedSections = quality === "fast" ? [1, 5] : [1, 2, 3, 4, 5, 6, 7, 8];
   const sectionRegex = /<!-- SECTION:(\d+) -->/g;
   const markers: { index: number; section: number }[] = [];
   let match;
@@ -426,9 +450,10 @@ serve(async (req) => {
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
-    // Sales KB
+    // Sales KB — contextual injection from kb_entries
+    const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = getKBSlice(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
     // Language detection
     const detected = detectLanguage(country_code);
@@ -446,9 +471,9 @@ MITTENTE (TU):
 - Settore: ${settings.ai_sector || "freight_forwarding"}
 - Network: ${settings.ai_networks || "N/A"}
 
-KNOWLEDGE BASE:
+KNOWLEDGE BASE AZIENDALE:
 ${settings.ai_knowledge_base || "Non configurata"}
-${salesKBSlice ? `\nSALES TECHNIQUES:\n${salesKBSlice}\n` : ""}
+${salesKBSlice ? `\n# ARSENAL STRATEGICO (${kbResult.sections.join(", ") || "legacy"}):\nApplica queste tecniche nel messaggio.\n\n${salesKBSlice}\n` : ""}
 STILE:
 - Tono: ${settings.ai_tone || "professionale"}
 `;
@@ -473,7 +498,15 @@ ${intelligence.enrichment_snippet}
       : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-    const systemPrompt = `Sei un esperto copywriter B2B nel settore logistica e freight forwarding internazionale.
+    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
+NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione dalla Knowledge Base.
+
+# STRATEGIA AUTONOMA
+- LEGGI le tecniche dalla KB e SELEZIONA quelle più appropriate per questo contesto
+- APPLICA almeno 1-2 tecniche nel messaggio (Label, Mirroring, domanda calibrata, urgenza soft...)
+- Se hai dati dal DB sul destinatario → personalizza profondamente
+- Se non hai dati → resta professionale, usa tecniche universali
+- NON inventare MAI informazioni non presenti nei dati forniti
 
 CANALE: ${ch.toUpperCase()}
 ${channelInstructions}
@@ -486,7 +519,8 @@ REGOLE CRITICHE:
 5. Usa i network condivisi come punto di connessione se esistono nei dati
 6. CRITICO: Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
 7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
-8. Se non hai dati specifici sul destinatario, scrivi un messaggio generico ma professionale`;
+8. Ogni messaggio DEVE avere una CTA chiara — domande aperte > domande chiuse
+9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
@@ -495,7 +529,7 @@ GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
 
-Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
+Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
     const model = getModel(quality);
 
@@ -584,8 +618,8 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
       sender_company: senderCompanyAlias || "(non configurato)",
       sender_role: settings.ai_contact_role || "(non configurato)",
       kb_loaded: !!settings.ai_knowledge_base,
-      sales_kb_loaded: !!fullSalesKB,
-      sales_kb_sections: quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8",
+      sales_kb_loaded: !!kbResult.text || !!fullSalesKB,
+      sales_kb_sections: kbResult.sections.join(", ") || (quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8"),
       goal_used: goal || "(default)",
       proposal_used: base_proposal || "(default)",
       tokens_input: result.usage?.prompt_tokens || 0,

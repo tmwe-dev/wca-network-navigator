@@ -7,22 +7,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Fetch granular KB entries from db for improvement context */
-async function fetchKbEntriesForImprove(supabase: any): Promise<string> {
+/** Fetch KB entries optimized for email improvement — focus on style and techniques */
+async function fetchKbEntriesForImprove(supabase: any): Promise<{ text: string; sections: string[] }> {
   const { data: entries } = await supabase
     .from("kb_entries")
-    .select("title, content, category, tags")
+    .select("title, content, category, chapter, tags")
     .eq("is_active", true)
-    .gte("priority", 7)
+    .in("category", ["vendita", "negoziazione", "email_modelli", "psicologia"])
+    .gte("priority", 6)
     .order("priority", { ascending: false })
     .order("sort_order")
-    .limit(12);
+    .limit(15);
 
-  if (!entries || entries.length === 0) return "";
+  if (!entries || entries.length === 0) return { text: "", sections: [] };
 
-  return entries
-    .map((e: any) => `### ${e.title}\n${e.content}`)
-    .join("\n\n---\n\n");
+  const sections = [...new Set(entries.map((e: any) => e.category))];
+  return {
+    text: entries.map((e: any) => `### ${e.title}\n${e.content}`).join("\n\n---\n\n"),
+    sections,
+  };
 }
 
 /** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
@@ -92,13 +95,20 @@ serve(async (req) => {
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
 
     // Use granular kb_entries first, fallback to legacy monolithic
-    const kbEntriesText = await fetchKbEntriesForImprove(supabase);
+    const kbResult = await fetchKbEntriesForImprove(supabase);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbEntriesText || getKBSliceLegacy(fullSalesKB);
+    const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB);
 
-    const systemPrompt = `Sei un esperto copywriter e consulente di vendita B2B nel settore della logistica internazionale e del freight forwarding.
+    const systemPrompt = `Sei un esperto copywriter, stratega di vendita B2B e consulente di comunicazione nel settore della logistica internazionale e del freight forwarding.
 
 Il tuo compito è MIGLIORARE un'email scritta manualmente dall'utente. NON riscriverla da zero — mantieni il messaggio, lo stile e l'intento dell'autore.
+
+## Come migliorare:
+1. ANALIZZA l'email e identifica punti deboli (hook mancante, CTA assente, tono piatto, struttura confusa)
+2. APPLICA tecniche dalla KB: Label, Mirroring, domande calibrate, urgenza soft — dove appropriato
+3. RAFFORZA la call-to-action: se manca, aggiungine una. Se è debole, rendila specifica.
+4. MIGLIORA l'hook iniziale: la prima riga deve catturare l'attenzione
+5. TAGLIA il superfluo: ogni riga deve avere uno scopo
 
 PROFILO MITTENTE:
 - Nome: ${senderAlias}
@@ -108,18 +118,18 @@ PROFILO MITTENTE:
 - Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
 ${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
-${use_kb !== false && salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
+${use_kb !== false && salesKBSlice ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${kbResult.sections.join(", ")}):\nApplica queste tecniche dove migliorano l'email.\n\n${salesKBSlice}\n` : ""}
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
 
 REGOLE DI MIGLIORAMENTO:
 1. Mantieni la STESSA lingua dell'email originale
 2. Mantieni lo STESSO tono e stile dell'autore — non cambiare la personalità
-3. Migliora: chiarezza, impatto, struttura, scelta delle parole, call-to-action
-4. Applica le tecniche di vendita dalla KB dove appropriato (urgenza soft, value proposition, ecc.)
+3. Migliora: hook iniziale, struttura, scelta parole, CTA, impatto commerciale
+4. Applica le tecniche dalla KB dove NATURALE (non forzare)
 5. Correggi errori grammaticali e di punteggiatura
 6. Mantieni le variabili template ({{company_name}}, {{contact_name}}, ecc.) INTATTE
-7. NON allungare inutilmente — l'email deve rimanere concisa
-8. Se l'email ha un oggetto, miglora anche quello
+7. NON allungare inutilmente — l'email deve rimanere concisa (max 10-15 righe)
+8. Se l'email ha un oggetto, miglora anche quello con più impatto
 9. L'output DEVE essere HTML valido per email (usa <p>, <br/>, <strong>, <em>, <ul>, <li>)
 10. NON aggiungere firma — viene gestita separatamente
 

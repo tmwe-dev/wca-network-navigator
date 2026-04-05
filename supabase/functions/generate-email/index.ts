@@ -9,25 +9,145 @@ const corsHeaders = {
 
 type Quality = "fast" | "standard" | "premium";
 
-/** Fetch granular KB entries from db, filtered by quality tier */
-async function fetchKbEntries(supabase: any, quality: Quality): Promise<string> {
-  const minPriority = quality === "fast" ? 9 : quality === "standard" ? 6 : 1;
-  const limit = quality === "fast" ? 5 : quality === "standard" ? 15 : 50;
-
+/**
+ * STRATEGIC ADVISOR — Intelligent KB Selection
+ * 
+ * Instead of dumping all KB entries, this selects entries contextually based on:
+ * 1. The email type/category (primo_contatto → identita + vendita cards)
+ * 2. Quality tier (fast=essentials only, premium=full arsenal)
+ * 3. Interaction history (follow-up with no response → ghosting recovery techniques)
+ */
+async function fetchKbEntriesStrategic(
+  supabase: any, 
+  quality: Quality,
+  context: {
+    emailCategory?: string;
+    hasInteractionHistory?: boolean;
+    isFollowUp?: boolean;
+    kb_categories?: string[];
+  }
+): Promise<{ text: string; sections_used: string[] }> {
+  const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
+  
+  // Build category filter based on context
+  const categories: string[] = [];
+  
+  // Always include identity for any quality
+  categories.push("identita");
+  
+  // Add context-specific categories
+  if (context.kb_categories?.length) {
+    categories.push(...context.kb_categories);
+  } else {
+    // Fallback: derive from email category
+    switch (context.emailCategory) {
+      case "primo_contatto":
+        categories.push("vendita", "email_modelli");
+        break;
+      case "follow_up":
+        categories.push("vendita", "negoziazione", "email_modelli");
+        break;
+      case "richiesta":
+        categories.push("vendita");
+        break;
+      case "proposta_servizi":
+        categories.push("vendita", "negoziazione", "email_modelli");
+        break;
+      case "partnership":
+        categories.push("vendita", "negoziazione");
+        break;
+      default:
+        categories.push("vendita");
+    }
+  }
+  
+  // For follow-ups without response, add negotiation techniques
+  if (context.isFollowUp) {
+    if (!categories.includes("negoziazione")) categories.push("negoziazione");
+  }
+  
+  // For premium, add everything
+  if (quality === "premium") {
+    ["vendita", "negoziazione", "email_modelli", "psicologia"].forEach(c => {
+      if (!categories.includes(c)) categories.push(c);
+    });
+  }
+  
+  const uniqueCategories = [...new Set(categories)];
+  
   const { data: entries } = await supabase
     .from("kb_entries")
-    .select("title, content, category, tags")
+    .select("title, content, category, chapter, tags")
     .eq("is_active", true)
-    .gte("priority", minPriority)
+    .in("category", uniqueCategories)
     .order("priority", { ascending: false })
     .order("sort_order")
     .limit(limit);
 
-  if (!entries || entries.length === 0) return "";
+  if (!entries || entries.length === 0) return { text: "", sections_used: [] };
 
-  return entries
-    .map((e: any) => `### ${e.title} [${e.tags?.join(", ") || e.category}]\n${e.content}`)
+  const sectionsUsed = [...new Set(entries.map((e: any) => e.category))];
+  
+  const text = entries
+    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
     .join("\n\n---\n\n");
+
+  return { text, sections_used: sectionsUsed };
+}
+
+/** Build the Strategic Advisor instructions based on context */
+function buildStrategicAdvisor(context: {
+  emailCategory?: string;
+  hasHistory?: boolean;
+  followUpCount?: number;
+  hasEnrichmentData?: boolean;
+}): string {
+  const parts: string[] = [];
+  
+  parts.push(`
+# STRATEGIC ADVISOR — Istruzioni di Intelligenza Autonoma
+
+Sei un advisor strategico, non un semplice generatore di testo. Hai accesso a una Knowledge Base di tecniche di vendita, negoziazione e comunicazione B2B. DEVI usarla attivamente.
+
+## Come usare la Knowledge Base:
+1. LEGGI le tecniche fornite e SELEZIONA quelle più appropriate per il contesto
+2. APPLICA almeno 2 tecniche per email (es. Label + Domanda Calibrata)
+3. ADATTA la tecnica al destinatario specifico — non usarla in modo meccanico
+4. Se hai dati dal profilo del destinatario, USA quei dati come leva per le tecniche
+
+## Regole di autonomia:
+- Se i dati sul destinatario sono ricchi → personalizza profondamente, usa tecniche avanzate
+- Se i dati sono scarsi → resta generico ma professionale, usa tecniche universali (Label, Mirroring)
+- Se c'è storia di interazioni → ANALIZZALA e NON ripetere approcci già usati
+- Se è un follow-up senza risposta → usa tecniche di re-engagement (domanda "no", last attempt)`);
+
+  if (context.hasHistory) {
+    parts.push(`
+## ATTENZIONE — Storia interazioni disponibile:
+Hai accesso alla storia delle interazioni precedenti. DEVI:
+1. Leggere cosa è stato già detto/proposto
+2. NON ripetere lo stesso messaggio
+3. Evolvere l'approccio: ogni comunicazione deve portare VALORE NUOVO`);
+  }
+
+  if (context.followUpCount && context.followUpCount >= 2) {
+    parts.push(`
+## FOLLOW-UP AVANZATO (${context.followUpCount}° tentativo):
+Usa la tecnica del "No strategico": formula una domanda che permetta al destinatario di dire NO senza chiudere la porta.
+Es: "Ha rinunciato all'idea di [obiettivo]?" — questo provoca una risposta correttiva.
+Se è il 3°+ tentativo, considera la tecnica "last attempt".`);
+  }
+
+  if (!context.hasEnrichmentData) {
+    parts.push(`
+## DATI LIMITATI:
+Non hai molte informazioni sul destinatario. In questo caso:
+- NON inventare dettagli, presentazioni, eventi o fatti
+- Usa tecniche universali: Label generico, domanda aperta, reciprocità
+- Focalizza sul VALUE del mittente piuttosto che sulla personalizzazione`);
+  }
+
+  return parts.join("\n");
 }
 
 /** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
@@ -610,10 +730,25 @@ REGOLA ASSOLUTA: ${recipientName ? `Rivolgiti SEMPRE alla persona (${recipientNa
       }
     }
 
-    // Sales KB — use granular kb_entries first, fallback to legacy monolithic
-    const kbEntriesText = await fetchKbEntries(supabase, quality);
+    // Sales KB — Strategic contextual injection
+    const emailCategory = oracle_type || "primo_contatto";
+    const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
+    const kbResult = await fetchKbEntriesStrategic(supabase, quality, {
+      emailCategory,
+      hasInteractionHistory: !!historyContext,
+      isFollowUp: emailCategory === "follow_up" || prevActCount > 0,
+      kb_categories: undefined, // Will use emailCategory fallback
+    });
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbEntriesText || getKBSliceLegacy(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB, quality);
+
+    // Build Strategic Advisor instructions
+    const strategicAdvisor = buildStrategicAdvisor({
+      emailCategory,
+      hasHistory: !!historyContext,
+      followUpCount: prevActCount,
+      hasEnrichmentData: !!cachedEnrichmentContext,
+    });
 
     const senderContext = `
 MITTENTE (TU):
@@ -625,9 +760,9 @@ ${quality !== "fast" ? `- Telefono: ${settings.ai_phone_signature || "N/A"}` : "
 - Settore: ${settings.ai_sector || "freight_forwarding"}
 - Network: ${settings.ai_networks || "N/A"}
 
-KNOWLEDGE BASE:
+KNOWLEDGE BASE AZIENDALE:
 ${use_kb !== false ? (settings.ai_knowledge_base || "Non configurata") : "(Knowledge Base disattivata dall'utente)"}
-${use_kb !== false && salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
+${use_kb !== false && salesKBSlice ? `\n# ARSENAL STRATEGICO (${kbResult.sections_used.join(", ") || "legacy"}):\nLeggi ATTENTAMENTE queste tecniche e APPLICALE nel messaggio.\n\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
 - Tono: ${oracle_tone || settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}
@@ -639,25 +774,28 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
     const detected = detectLanguage(partner.country_code);
     const effectiveLanguage = language || detected.language;
 
-    const systemPrompt = `Sei un esperto copywriter di email B2B nel settore della logistica e del freight forwarding internazionale. Scrivi email professionali, personalizzate e convincenti.
+    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
+NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione.
 
-REGOLE CRITICHE:
-1. Scrivi INTERAMENTE in ${effectiveLanguage} — oggetto (Subject:), saluto, corpo e chiusura devono essere TUTTI in ${effectiveLanguage}. Lingua scelta dal paese del destinatario (${partner.country_code} → ${detected.languageLabel}).
-2. L'email deve essere specifica per il destinatario — usa i dati del profilo per personalizzare
-3. Mantieni il tono indicato dal profilo del mittente
-4. NON INCLUDERE una firma — la firma viene aggiunta automaticamente dal sistema
-5. Non inventare informazioni — usa solo i dati forniti
-6. L'email deve essere pronta per l'invio, non un template generico
-7. Usa i network condivisi come punto di connessione se esistono
-8. Genera il corpo dell'email in HTML semplice: usa <p> per i paragrafi, <br> per gli a capo interni, <strong> per enfasi, <ul>/<li> per elenchi puntati. NON usare markdown. NON usare \n per gli a capo, usa i tag HTML.
-9. Includi un oggetto email nella prima riga nel formato "Subject: ..." (l'oggetto è testo puro, non HTML)
-10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email in HTML
-11. Se sono forniti documenti di riferimento o informazioni da link, usali per arricchire il contenuto
-12. Se sono disponibili profili LinkedIn, puoi menzionare la connessione professionale
-13. IMPORTANTE: Usa SEMPRE l'alias/nome breve del destinatario nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Mai usare nome e cognome completi.
-14. IMPORTANTE: Usa SEMPRE l'alias/nome breve del mittente, mai il nome completo con cognome.
-15. Il corpo dell'email deve terminare con un saluto di chiusura (es. "Best regards," o "Cordiali saluti,") seguito dal nome del mittente. NON aggiungere dettagli come ruolo, azienda, telefono, email — quelli sono nella firma automatica.
-16. CRITICO: Se il nome del destinatario sembra un ruolo/titolo aziendale (es. "Pricing & Business Development", "Operations Manager", "Import Department"), NON usarlo MAI come nome di persona nel saluto. In quel caso usa "Gentile responsabile" o equivalente.`;
+${strategicAdvisor}
+
+# ISTRUZIONI DI GENERAZIONE EMAIL
+
+## Formato output:
+- Prima riga: "Subject: ..." (testo puro, non HTML)
+- Dopo l'oggetto: corpo email in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
+- NON usare markdown nel corpo. NON usare \\n, usa tag HTML.
+- NON includere firma — viene aggiunta automaticamente dal sistema.
+- Chiudi con saluto + nome mittente, NIENT'ALTRO.
+
+## Regole critiche:
+1. LINGUA: Scrivi INTERAMENTE in ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Oggetto, saluto, corpo, chiusura — TUTTO nella stessa lingua.
+2. PERSONALIZZAZIONE: Usa i dati del destinatario per personalizzare. Se hai dati dal profilo, dal sito, dalla deep search — USALI come leva.
+3. ALIAS: Usa SEMPRE l'alias/nome breve nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Se il nome sembra un ruolo/titolo → usa "Gentile responsabile" o equivalente.
+4. CONCISIONE: L'email deve essere pronta per l'invio, non un template. Massimo 10-15 righe per il corpo.
+5. NESSUNA INVENZIONE: Non inventare informazioni non presenti nei dati forniti.
+6. NETWORK: Se ci sono network condivisi, usali come punto di connessione.
+7. CTA: Ogni email DEVE avere una call-to-action chiara. Domande aperte > domande chiuse.`;
 
     const userPrompt = `${senderContext}
 
@@ -674,7 +812,10 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
 
-Genera l'email completa con oggetto e corpo.`;
+ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
+${goal || "Nessuna istruzione specifica — genera un'email professionale basata sul goal e la proposta."}
+
+Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
     const model = getModel(quality);
 
