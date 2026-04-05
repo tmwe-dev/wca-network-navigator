@@ -213,9 +213,12 @@ export default function EmailComposer() {
       }));
       await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);
-      setActiveQueueStatus("idle");
-      startProcessing(draftId);
       setActiveQueueStatus("processing");
+      startProcessing(draftId).then(() => {
+        setActiveQueueStatus("completed");
+      }).catch(() => {
+        setActiveQueueStatus("completed");
+      });
     } catch (err) {
       console.error("Enqueue error:", err);
       toast.error("Errore nell'accodamento");
