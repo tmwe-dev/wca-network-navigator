@@ -9,7 +9,8 @@ import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 import { ThemeCtx, t } from "@/components/download/theme";
-import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
+import { type FilterKey } from "@/components/download/CountryGrid";
+import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
