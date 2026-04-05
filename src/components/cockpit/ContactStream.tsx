@@ -219,7 +219,7 @@ export function ContactStream({
               <CockpitContactCard
                 contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
                 isSelected={selectedIds.has(contact.id)}
-                isWorked={isContactWorked(contact)}
+                isWorked={isInHolding(contact)}
                 assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
                 sourceType={contact.sourceType as RecordSourceType}
                 sourceId={contact.sourceId}
