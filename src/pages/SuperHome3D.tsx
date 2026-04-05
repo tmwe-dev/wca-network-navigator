@@ -145,51 +145,6 @@ export default function SuperHome3D() {
           ))}
         </section>
 
-        {/* Prototype selector */}
-        <section className="glass-panel rounded-xl border border-primary/30 p-4">
-          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
-            <Layers className="h-3.5 w-3.5" />
-            Prototipi UI — Scegli il layout
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { route: "/prototype-a", title: "A — Focus Flow", desc: "Spotlight + 3 tab + master-detail", icon: ArrowRight },
-              { route: "/prototype-b", title: "B — Command Center", desc: "Sidebar icone + widget dashboard", icon: Layout },
-              { route: "/prototype-c", title: "C — Conversational", desc: "AI-first + pannelli proiettati", icon: MessageSquare },
-            ].map(p => (
-              <button
-                key={p.route}
-                onClick={() => navigate(p.route)}
-                className="group flex flex-col gap-2 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5"
-              >
-                <div className="flex items-center gap-2">
-                  <p.icon className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{p.title}</span>
-                </div>
-                <span className="text-[11px] text-muted-foreground">{p.desc}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* System status */}
-        {signals.length > 0 && (
-          <section className="glass-panel rounded-xl border border-border/60 p-4">
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              <Activity className="h-3.5 w-3.5 text-primary/70" />
-              Stato del sistema
-            </div>
-            <ul className="space-y-1.5">
-              {signals.map((s) => (
-                <li key={s.label} className="flex items-center gap-2 text-sm text-foreground/80">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-                  <span className="font-medium">{s.value}</span>
-                  <span className="text-muted-foreground">{s.label}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
       </ScrollArea>
     </div>
