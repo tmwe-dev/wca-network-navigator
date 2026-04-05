@@ -140,7 +140,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Imported contacts — search OR country filter ──
   const { data: contacts = [] } = useQuery({
     queryKey: ["picker-contacts", search, selectedCountry, originFilter],
-    enabled: tab === "contacts" && shouldSearch,
+    enabled: tab === "contacts",
     queryFn: async () => {
       let q = supabase
         .from("imported_contacts")
