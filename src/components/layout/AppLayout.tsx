@@ -24,7 +24,71 @@ import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
-export function AppLayout() {
+/** Tab that follows the actual drawer edge by measuring the DOM */
+function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, children }: {
+  side: "left" | "right"; isOpen: boolean;
+  onClick: () => void; onMouseEnter: () => void; onMouseLeave: () => void;
+  children: React.ReactNode;
+}) {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen) { setOffset(0); return; }
+    // Find the actual SheetContent element for this side
+    const findDrawer = () => {
+      const selector = side === "left"
+        ? '[data-side="left"][class*="SheetContent"], [class*="sheet"][class*="left"], div[class*="fixed"][class*="left-0"][class*="border-r"]'
+        : '[data-side="right"][class*="SheetContent"], [class*="sheet"][class*="right"], div[class*="fixed"][class*="right-0"][class*="border-l"]';
+      // Radix Sheet uses data-state="open" on the content
+      const allSheets = document.querySelectorAll('[role="dialog"]');
+      for (const el of allSheets) {
+        const rect = el.getBoundingClientRect();
+        if (side === "left" && rect.left >= -1 && rect.left < window.innerWidth / 2) {
+          return rect.width;
+        }
+        if (side === "right" && rect.right <= window.innerWidth + 1 && rect.right > window.innerWidth / 2) {
+          return rect.width;
+        }
+      }
+      return 0;
+    };
+    // Small delay to let animation start
+    const raf = requestAnimationFrame(() => {
+      const w = findDrawer();
+      if (w > 0) setOffset(w);
+    });
+    const timer = setTimeout(() => {
+      const w = findDrawer();
+      if (w > 0) setOffset(w);
+    }, 350);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
+  }, [isOpen, side]);
+
+  const posStyle: React.CSSProperties = side === "left"
+    ? { left: isOpen ? offset : 0 }
+    : { right: isOpen ? offset : 0 };
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={cn(
+        "fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 border transition-all duration-300 ease-out cursor-pointer",
+        side === "left" ? "rounded-r-lg border-l-0 border-purple-400/30 hover:border-purple-400/50" : "rounded-l-lg border-r-0 border-purple-400/30 hover:border-purple-400/50"
+      )}
+      style={{
+        ...posStyle,
+        background: "hsla(270, 60%, 65%, 0.25)",
+        backdropFilter: "blur(8px)",
+      }}
+      aria-label={side === "left" ? "Apri filtri" : "Apri Mission"}
+    >
+      {children}
+    </button>
+  );
+}
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
