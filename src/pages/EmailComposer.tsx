@@ -514,6 +514,32 @@ export default function EmailComposer() {
         </div>
       </div>
       </div>
+
+      {/* Unknown email mini-dialog */}
+      <Dialog open={unknownEmailDialog} onOpenChange={setUnknownEmailDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Destinatario non trovato</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            L'indirizzo <strong>{pendingEmail}</strong> non è presente nel database. Inserisci le informazioni per procedere.
+          </p>
+          <div className="space-y-3 mt-2">
+            <div>
+              <Label className="text-xs">Nome contatto *</Label>
+              <Input value={manualContactName} onChange={e => setManualContactName(e.target.value)} placeholder="Mario Rossi" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Nome azienda *</Label>
+              <Input value={manualCompanyName} onChange={e => setManualCompanyName(e.target.value)} placeholder="Acme Srl" className="h-8 text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setUnknownEmailDialog(false)}>Annulla</Button>
+            <Button size="sm" className="h-8 text-xs" onClick={confirmUnknownEmail}>Aggiungi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
