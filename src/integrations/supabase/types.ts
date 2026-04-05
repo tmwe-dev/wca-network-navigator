@@ -525,6 +525,7 @@ export type Database = {
           email: string | null
           event_name: string | null
           id: string
+          lead_status: string
           location: string | null
           match_confidence: number | null
           match_status: string
@@ -547,6 +548,7 @@ export type Database = {
           email?: string | null
           event_name?: string | null
           id?: string
+          lead_status?: string
           location?: string | null
           match_confidence?: number | null
           match_status?: string
@@ -569,6 +571,7 @@ export type Database = {
           email?: string | null
           event_name?: string | null
           id?: string
+          lead_status?: string
           location?: string | null
           match_confidence?: number | null
           match_status?: string
