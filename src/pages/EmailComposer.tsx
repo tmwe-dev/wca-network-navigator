@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
-  Send, Save, Eye, Loader2, Mail, Sparkles,
+  Send, Save, Eye, Loader2, Mail, Sparkles, Wand2,
   Paperclip, Link as LinkIcon, Plus, X, Braces,
 } from "lucide-react";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
@@ -41,6 +41,7 @@ export default function EmailComposer() {
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeQueueStatus, setActiveQueueStatus] = useState("idle");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiImproving, setAiImproving] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -116,6 +117,29 @@ export default function EmailComposer() {
     } catch (err: any) {
       toast.error("Errore generazione AI: " + (err.message || "Sconosciuto"));
     } finally { setAiGenerating(false); }
+  };
+
+  const handleAIImprove = async () => {
+    if (!htmlBody.trim()) {
+      toast.error("Scrivi prima il testo dell'email da migliorare");
+      return;
+    }
+    setAiImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-email", {
+        body: {
+          subject, html_body: htmlBody,
+          recipient_count: recipientsWithEmail.length,
+          recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
+        },
+      });
+      if (error) throw error;
+      if (data?.subject) setSubject(data.subject);
+      if (data?.body) setHtmlBody(data.body);
+      toast.success("Email migliorata con AI");
+    } catch (err: any) {
+      toast.error("Errore miglioramento: " + (err.message || "Sconosciuto"));
+    } finally { setAiImproving(false); }
   };
 
   const handleSaveDraft = async () => {
@@ -278,9 +302,15 @@ export default function EmailComposer() {
             </Button>
 
             {/* AI Generate */}
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIGenerate} disabled={aiGenerating}>
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIGenerate} disabled={aiGenerating || aiImproving}>
               {aiGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-primary" />}
               Genera AI
+            </Button>
+
+            {/* AI Improve */}
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIImprove} disabled={aiImproving || aiGenerating || !htmlBody.trim()}>
+              {aiImproving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-amber-500" />}
+              Migliora
             </Button>
           </div>
 
