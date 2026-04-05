@@ -3,7 +3,6 @@ import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle, Linkedin
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { OutreachFilterSlot } from "@/components/filters/OutreachFilterSlot";
 import { lazyRetry } from "@/lib/lazyRetry";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
