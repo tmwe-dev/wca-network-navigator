@@ -421,6 +421,7 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
     m.addRecipient({
       partnerId: p.id, companyName: p.company_name,
       email: p.email, city: p.city, countryName: p.country_name,
+      countryCode: p.country_code || undefined,
       isEnriched: !!p.enriched_at,
     });
   };
