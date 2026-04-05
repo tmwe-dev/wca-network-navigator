@@ -21,6 +21,7 @@ const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
 const CRM = lazyRetry(() => import("./pages/CRM"));
 const Outreach = lazyRetry(() => import("./pages/Outreach"));
+const Inreach = lazyRetry(() => import("./pages/Inreach"));
 const Agenda = lazyRetry(() => import("./pages/Agenda"));
 const AgentChatHub = lazyRetry(() => import("./pages/AgentChatHub"));
 
