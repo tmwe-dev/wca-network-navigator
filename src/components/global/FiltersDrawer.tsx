@@ -294,6 +294,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
       g.setNetworkSearch("");
       g.setNetworkQuality("all");
       g.setNetworkSort("name");
+      g.setNetworkSelectedCountries(new Set());
+      g.setNetworkDirectoryOnly(false);
     }
     if (isCRM) {
       g.setSearch("");
