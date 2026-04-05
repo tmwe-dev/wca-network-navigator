@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
-  Send, Save, Eye, Loader2, Mail, Sparkles,
+  Send, Save, Eye, Loader2, Mail, Sparkles, Wand2,
   Paperclip, Link as LinkIcon, Plus, X, Braces,
 } from "lucide-react";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
