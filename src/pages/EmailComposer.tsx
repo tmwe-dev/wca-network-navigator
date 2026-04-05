@@ -68,6 +68,7 @@ export default function EmailComposer() {
       countryCode: "",
       countryName: "",
       city: "",
+      isEnriched: false,
     });
     setManualEmail("");
   };
