@@ -148,6 +148,7 @@ export function AppLayout() {
         <FollowDrawerTab
           side="left"
           isOpen={filtersOpen}
+          isEmailComposer={currentPath === "/email-composer"}
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
