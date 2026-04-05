@@ -797,7 +797,7 @@ ${strategicAdvisor}
 2. PERSONALIZZAZIONE: Usa i dati del destinatario per personalizzare. Se hai dati dal profilo, dal sito, dalla deep search — USALI come leva.
 3. ALIAS: Usa SEMPRE l'alias/nome breve nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Se il nome sembra un ruolo/titolo → usa "Gentile responsabile" o equivalente.
 4. CONCISIONE: L'email deve essere pronta per l'invio, non un template. Massimo 10-15 righe per il corpo.
-5. NESSUNA INVENZIONE: Non inventare informazioni non presenti nei dati forniti.
+5. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA: NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni, statistiche o fatti. Se i dati sono insufficienti, scrivi in modo generico ma VERO. Ogni affermazione DEVE essere supportata dai dati forniti.
 6. NETWORK: Se ci sono network condivisi, usali come punto di connessione.
 7. CTA: Ogni email DEVE avere una call-to-action chiara. Domande aperte > domande chiuse.`;
 
