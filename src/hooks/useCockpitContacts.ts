@@ -30,6 +30,11 @@ export interface CockpitContact {
   isBusinessCard?: boolean;
   deepSearchAt?: string;
   enrichmentData?: any;
+  memberSince?: string;
+  memberYears?: number;
+  networks?: string[];
+  seniority?: string;
+  specialties?: string[];
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
