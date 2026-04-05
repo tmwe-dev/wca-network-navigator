@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Send, ChevronRight, Trophy, Loader2 } from "lucide-react";
+import { Send, ChevronRight, Trophy, Loader2, Plane } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
           const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
           const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
           const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
+          const inHolding = partner.lead_status && partner.lead_status !== "new";
           const years = getYearsMember(partner.member_since);
           const logoUrl = getEffectiveLogoUrl(partner);
           const flag = getCountryFlag(partner.country_code);
@@ -104,6 +105,11 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className={cn("font-bold text-xs truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
+                    {inHolding && (
+                      <span title="In circuito di attesa">
+                        <Plane className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
+                      </span>
+                    )}
                     {partner.company_alias && (
                       <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-teal-900/30 text-teal-400" : "bg-teal-100 text-teal-700")}>{partner.company_alias}</span>
                     )}

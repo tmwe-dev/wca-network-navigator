@@ -15,7 +15,7 @@ import {
   Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Telescope, Building2, UserCircle,
   Zap, RefreshCw, CheckCircle2,
-  Inbox, LayoutGrid, EyeOff,
+  Inbox, LayoutGrid, EyeOff, Plane,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,6 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
-import { useWorkedToday } from "@/hooks/useWorkedToday";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
 
@@ -68,8 +67,7 @@ export function PartnerListPanel({
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [hideWorked, setHideWorked] = useState(false);
-  const { workedIds } = useWorkedToday();
+  const [hideHolding, setHideHolding] = useState(true);
 
   const {
     data: paginatedData,
@@ -102,10 +100,14 @@ export function PartnerListPanel({
   const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
 
   // ── Filtered & sorted partners ──
+  const holdingCount = useMemo(() => {
+    return (partners || []).filter((p: any) => p.lead_status && p.lead_status !== "new").length;
+  }, [partners]);
+
   const filteredPartners = useMemo(() => {
     let list = partners || [];
-    if (hideWorked && workedIds.size > 0) {
-      list = list.filter((p: any) => !workedIds.has(p.id));
+    if (hideHolding) {
+      list = list.filter((p: any) => !p.lead_status || p.lead_status === "new");
     }
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
@@ -122,7 +124,7 @@ export function PartnerListPanel({
       });
       default: return sorted;
     }
-  }, [partners, progressFilter, sortBy, hideWorked, workedIds]);
+  }, [partners, progressFilter, sortBy, hideHolding]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -278,11 +280,11 @@ export function PartnerListPanel({
             />
           )}
 
-          {/* ROW 3: Hide worked toggle */}
+          {/* ROW 3: Hide holding pattern toggle */}
           <div className="flex items-center gap-2">
-            <Switch checked={hideWorked} onCheckedChange={setHideWorked} className="scale-75" />
-            <span className="text-[10px] text-muted-foreground">
-              <EyeOff className="w-3 h-3 inline mr-1" />Nascondi lavorati ({workedIds.size})
+            <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
             </span>
           </div>
 

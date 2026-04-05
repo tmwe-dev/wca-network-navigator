@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2 } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2, Plane } from "lucide-react";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useWorkedToday } from "@/hooks/useWorkedToday";
+
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
@@ -58,12 +58,11 @@ export function ContactStream({
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
-  const [hideWorked, setHideWorked] = useState(false);
-  const { workedIds } = useWorkedToday();
+  const [hideHolding, setHideHolding] = useState(true);
   const { filters: gf } = useGlobalFilters();
 
-  const isContactWorked = (c: CockpitContact) => {
-    return workedIds.has(c.partnerId || c.sourceId);
+  const isInHolding = (c: CockpitContact) => {
+    return !!c.leadStatus && c.leadStatus !== "new";
   };
 
   const filteredContacts = useMemo(() => {
@@ -79,8 +78,8 @@ export function ContactStream({
       if (f.type === "channel" && f.label.toLowerCase().includes("linkedin")) result = result.filter(c => c.channels.includes("linkedin"));
       if (f.type === "priority") result = result.filter(c => c.priority >= 7);
     }
-    if (hideWorked) {
-      result = result.filter(c => !isContactWorked(c));
+    if (hideHolding) {
+      result = result.filter(c => !isInHolding(c));
     }
     // Cockpit sidebar filters
     if (gf.cockpitCountries.size > 0) {
@@ -115,7 +114,7 @@ export function ContactStream({
     else if (sortBy === "country") result.sort((a, b) => a.country.localeCompare(b.country));
     else result.sort((a, b) => b.priority - a.priority);
     return result;
-  }, [searchQuery, filters, contacts, hideWorked, workedIds, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
+  }, [searchQuery, filters, contacts, hideHolding, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
 
   // Get selected contacts for bulk actions
   const selectedContacts = useMemo(() =>
@@ -162,17 +161,17 @@ export function ContactStream({
           </span>
         </div>
         <button
-          onClick={() => setHideWorked(!hideWorked)}
+          onClick={() => setHideHolding(!hideHolding)}
           className={cn(
             "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
-            hideWorked
-              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+            hideHolding
+              ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
               : "text-muted-foreground hover:text-foreground"
           )}
-          title={hideWorked ? "Mostra tutti" : "Nascondi lavorati"}
+          title={hideHolding ? "Mostra tutti" : "Nascondi in circuito"}
         >
-          {hideWorked ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-          {hideWorked ? "Tutti" : "Nascondi lavorati"}
+          <Plane className="w-3 h-3" />
+          {hideHolding ? "In circuito nascosti" : "Nascondi in circuito"}
         </button>
       </div>
 
@@ -220,7 +219,7 @@ export function ContactStream({
               <CockpitContactCard
                 contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
                 isSelected={selectedIds.has(contact.id)}
-                isWorked={isContactWorked(contact)}
+                isWorked={isInHolding(contact)}
                 assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
                 sourceType={contact.sourceType as RecordSourceType}
                 sourceId={contact.sourceId}
