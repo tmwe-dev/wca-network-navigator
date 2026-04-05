@@ -15,7 +15,7 @@ import {
   Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Telescope, Building2, UserCircle,
   Zap, RefreshCw, CheckCircle2,
-  Inbox, LayoutGrid, EyeOff,
+  Inbox, LayoutGrid, EyeOff, Plane,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
