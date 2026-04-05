@@ -208,7 +208,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search } = await req.json();
     if (!activity_id) throw new Error("activity_id is required");
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
