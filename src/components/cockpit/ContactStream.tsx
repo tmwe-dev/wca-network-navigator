@@ -175,42 +175,37 @@ export function ContactStream({
         </button>
       </div>
 
-      {/* Bulk action bar */}
-      {selectionCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="flex items-center gap-1.5 px-1 flex-wrap"
-        >
-          {/* Bulk activity actions (mark done, note, schedule) */}
-          <BulkActionMenu selectedContacts={selectedContacts} onComplete={onClear} />
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkDeepSearch}>
-            <Search className="w-3 h-3" /> Deep Search
+      {/* Bulk action bar — fixed height, horizontal scroll, never wraps */}
+      <div className={cn(
+        "h-8 flex items-center gap-1 px-1 overflow-x-auto scrollbar-none transition-opacity",
+        selectionCount > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
+        <BulkActionMenu selectedContacts={selectedContacts} onComplete={onClear} />
+        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkDeepSearch}>
+          <Search className="w-3 h-3" /> Deep Search
+        </Button>
+        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkAlias}>
+          <Sparkles className="w-3 h-3" /> Alias
+        </Button>
+        {onBulkLinkedInLookup && (
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
+            {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkAlias}>
-            <Sparkles className="w-3 h-3" /> Alias
+        )}
+        {onBatchMode && (
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-primary" onClick={onBatchMode}>
+            <Sparkles className="w-3 h-3" /> Genera
           </Button>
-          {onBulkLinkedInLookup && (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
-              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
-            </Button>
-          )}
-          {onBatchMode && (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-primary" onClick={onBatchMode}>
-              <Sparkles className="w-3 h-3" /> Genera
-            </Button>
-          )}
-          {onBulkDelete && (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-destructive hover:bg-destructive/10" onClick={onBulkDelete}>
-              <Trash2 className="w-3 h-3" /> Elimina
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 ml-auto" onClick={onClear}>
-            <X className="w-3 h-3" /> Deseleziona
+        )}
+        {onBulkDelete && (
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-destructive hover:bg-destructive/10" onClick={onBulkDelete}>
+            <Trash2 className="w-3 h-3" /> Elimina
           </Button>
-        </motion.div>
-      )}
+        )}
+        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-1.5 shrink-0 ml-auto" onClick={onClear}>
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
 
       {viewMode === "card" ? (
         <div className="space-y-2.5">
