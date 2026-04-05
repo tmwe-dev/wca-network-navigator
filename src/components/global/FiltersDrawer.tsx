@@ -17,6 +17,7 @@ import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 
 interface FiltersDrawerProps {
   open: boolean;
