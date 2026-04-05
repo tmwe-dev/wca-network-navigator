@@ -208,8 +208,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search } = await req.json();
-    if (!activity_id) throw new Error("activity_id is required");
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, recipient_count, recipient_countries } = await req.json();
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
@@ -222,8 +221,37 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    let partner: any = null;
+    let contact: any = null;
+    let contactEmail: string | null = null;
+    let sourceType = "partner";
+    let activity: any = null;
+
+    if (standalone) {
+      // ── STANDALONE MODE: no activity needed, generate from goal/settings only ──
+      partner = {
+        id: null,
+        company_name: "Destinatario generico",
+        company_alias: null,
+        country_code: "IT",
+        country_name: recipient_countries || "Vari",
+        city: "",
+        email: null,
+        phone: null,
+        website: null,
+        profile_description: null,
+        rating: null,
+        raw_profile_markdown: null,
+      };
+      contact = null;
+      contactEmail = "destinatario@email.com";
+      sourceType = "standalone";
+    } else {
+      // ── ACTIVITY MODE: original logic ──
+      if (!activity_id) throw new Error("activity_id is required");
+
     // Fetch activity
-    const { data: activity, error: actErr } = await supabase
+    const { data: actData, error: actErr } = await supabase
       .from("activities")
       .select(`
         *,
@@ -239,12 +267,12 @@ serve(async (req) => {
       .eq("id", activity_id)
       .single();
 
-    if (actErr || !activity) throw new Error("Activity not found");
+    if (actErr || !actData) throw new Error("Activity not found");
+    activity = actData;
 
-    const sourceType = activity.source_type || "partner";
-    let partner = activity.partners;
-    let contact = activity.selected_contact;
-    let contactEmail: string | null = null;
+    sourceType = activity.source_type || "partner";
+    partner = activity.partners;
+    contact = activity.selected_contact;
 
     // For contact-source activities, fetch from imported_contacts
     if (sourceType === "contact" && activity.source_id) {
@@ -338,9 +366,10 @@ serve(async (req) => {
     }
 
     if (!partner) throw new Error("Source entity not found");
+    } // end non-standalone
 
     // --- VALIDATION: partner source MUST have a selected contact ---
-    if (sourceType === "partner" && !contact) {
+    if (!standalone && sourceType === "partner" && !contact) {
       return new Response(
         JSON.stringify({
           error: "no_contact",
@@ -352,7 +381,7 @@ serve(async (req) => {
     }
 
     // --- VALIDATION: check contact has email ---
-    if (!contactEmail) {
+    if (!standalone && !contactEmail) {
       return new Response(
         JSON.stringify({
           error: "no_email",
@@ -365,7 +394,7 @@ serve(async (req) => {
     }
 
     // ── AUTO-GENERATE ALIASES IF MISSING ──
-    const needsCompanyAlias = !partner.company_alias;
+    const needsCompanyAlias = !standalone && !partner.company_alias;
     const needsContactAlias = contact && !contact.contact_alias;
 
     if (needsCompanyAlias || needsContactAlias) {
@@ -397,7 +426,7 @@ serve(async (req) => {
     }
 
     // Fetch partner networks, services, social links, settings in parallel
-    const isPartnerSource = sourceType === "partner" && activity.partner_id;
+    const isPartnerSource = !standalone && sourceType === "partner" && activity?.partner_id;
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       isPartnerSource
         ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id)
@@ -420,7 +449,7 @@ serve(async (req) => {
 
     // ─── Interaction History (batch-safe: DB only, no live scraping) ───
     let historyContext = "";
-    if (isPartnerSource && activity.partner_id) {
+    if (isPartnerSource && activity?.partner_id) {
       const [interRes, prevActRes] = await Promise.all([
         supabase
           .from("interactions")
@@ -431,7 +460,7 @@ serve(async (req) => {
         supabase
           .from("activities")
           .select("email_subject, sent_at, activity_type")
-          .eq("source_id", activity.partner_id)
+          .eq("source_id", activity!.partner_id)
           .in("status", ["completed"])
           .order("created_at", { ascending: false })
           .limit(5),
@@ -448,11 +477,11 @@ serve(async (req) => {
 
     // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
     let cachedEnrichmentContext = "";
-    if (isPartnerSource && activity.partner_id) {
+    if (isPartnerSource && activity?.partner_id) {
       const { data: partnerEd } = await supabase
         .from("partners")
         .select("enrichment_data")
-        .eq("id", activity.partner_id)
+        .eq("id", activity!.partner_id)
         .single();
       if (partnerEd?.enrichment_data) {
         const ed = partnerEd.enrichment_data as Record<string, any>;
