@@ -35,6 +35,7 @@ export interface CockpitContact {
   networks?: string[];
   seniority?: string;
   specialties?: string[];
+  leadStatus?: string;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
