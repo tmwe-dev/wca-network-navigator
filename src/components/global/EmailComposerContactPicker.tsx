@@ -97,7 +97,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     queryFn: async () => {
       const { data } = await supabase
         .from("imported_contacts")
-        .select("id, name, company_name, email, country, contact_alias, company_alias")
+        .select("id, name, company_name, email, country, contact_alias, company_alias, lead_status")
         .or(`name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`)
         .limit(30);
       return data || [];
