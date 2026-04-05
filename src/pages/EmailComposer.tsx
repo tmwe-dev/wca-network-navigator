@@ -68,9 +68,11 @@ export default function EmailComposer() {
   };
 
   const buildFinalHtml = (body: string, partner: any, contactName: string) => {
+    const companyDisplay = partner.companyAlias || partner.company_alias || partner.companyName || partner.company_name || "";
+    const contactDisplay = partner.contactAlias || partner.contact_alias || contactName || "";
     let html = body
-      .replace(/\{\{company_name\}\}/g, escapeHtml(partner.companyName || partner.company_name || ""))
-      .replace(/\{\{contact_name\}\}/g, escapeHtml(contactName || ""))
+      .replace(/\{\{company_name\}\}/g, escapeHtml(companyDisplay))
+      .replace(/\{\{contact_name\}\}/g, escapeHtml(contactDisplay))
       .replace(/\{\{city\}\}/g, escapeHtml(partner.city || ""))
       .replace(/\{\{country\}\}/g, escapeHtml(partner.countryName || partner.country_name || ""));
     const validLinks = emailLinks.filter((l) => isValidUrl(l.url));
