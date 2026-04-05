@@ -324,9 +324,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
         {/* Partners */}
         {tab === "partners" && shouldSearch && (
-          <div className="space-y-0.5">
-            {partners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {partners.map(p => (
+         <div className="space-y-0.5">
+            {filteredPartners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredPartners.map(p => (
               <div key={p.id}>
                 <button
                   onClick={() => setExpandedPartner(expandedPartner === p.id ? null : p.id)}
