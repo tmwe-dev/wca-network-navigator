@@ -14,7 +14,7 @@ interface CampaignQueueMonitorProps {
   onClose?: () => void;
 }
 
-export function CampaignQueueMonitor({ draftId, queueStatus }: CampaignQueueMonitorProps) {
+export function CampaignQueueMonitor({ draftId, queueStatus, onClose }: CampaignQueueMonitorProps) {
   const { items, stats } = useEmailCampaignQueue(draftId);
   const { processing, startProcessing, pauseProcessing, cancelProcessing } = useProcessQueue();
 
