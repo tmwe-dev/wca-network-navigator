@@ -78,8 +78,8 @@ export function ContactStream({
       if (f.type === "channel" && f.label.toLowerCase().includes("linkedin")) result = result.filter(c => c.channels.includes("linkedin"));
       if (f.type === "priority") result = result.filter(c => c.priority >= 7);
     }
-    if (hideWorked) {
-      result = result.filter(c => !isContactWorked(c));
+    if (hideHolding) {
+      result = result.filter(c => !isInHolding(c));
     }
     // Cockpit sidebar filters
     if (gf.cockpitCountries.size > 0) {
