@@ -430,6 +430,7 @@ export default function EmailComposer() {
           />
         </div>
       </div>
+      </div>
     </div>
   );
 }
