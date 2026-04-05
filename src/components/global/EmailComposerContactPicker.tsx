@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X } from "lucide-react";
+import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
 import { getCountryFlag } from "@/lib/countries";
-import type { SelectedRecipient } from "@/contexts/MissionContext";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 
 type PickerTab = "partners" | "contacts" | "bca";
+type CountrySort = "name" | "count";
 
 const TABS: { value: PickerTab; label: string; icon: typeof Users }[] = [
   { value: "partners", label: "Partner", icon: Globe },
@@ -23,6 +24,7 @@ export function EmailComposerContactPicker() {
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [countrySort, setCountrySort] = useState<CountrySort>("count");
   const { addRecipient, recipients, removeRecipient } = useMission();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -40,10 +42,21 @@ export function EmailComposerContactPicker() {
       const counts: Record<string, number> = {};
       data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
       return Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .map(([code, count]) => ({ code, count, flag: getCountryFlag(code) }));
+        .map(([code, count]) => ({
+          code,
+          count,
+          flag: getCountryFlag(code),
+          name: WCA_COUNTRIES_MAP[code]?.name || code,
+        }));
     },
   });
+
+  const sortedCountries = useMemo(() => {
+    const copy = [...countryStats];
+    if (countrySort === "name") copy.sort((a, b) => a.name.localeCompare(b.name));
+    else copy.sort((a, b) => b.count - a.count);
+    return copy;
+  }, [countryStats, countrySort]);
 
   // Partners search
   const { data: partners = [] } = useQuery({
@@ -52,7 +65,7 @@ export function EmailComposerContactPicker() {
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, country_code, city");
+        .select("id, company_name, company_alias, country_code, city");
       if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
       if (selectedCountry) q = q.eq("country_code", selectedCountry);
       const { data } = await q.order("company_name").limit(50);
@@ -67,7 +80,7 @@ export function EmailComposerContactPicker() {
     queryFn: async () => {
       const { data } = await supabase
         .from("partner_contacts")
-        .select("id, name, email, title")
+        .select("id, name, contact_alias, email, title")
         .eq("partner_id", expandedPartner!)
         .order("is_primary", { ascending: false });
       return data || [];
@@ -81,7 +94,7 @@ export function EmailComposerContactPicker() {
     queryFn: async () => {
       const { data } = await supabase
         .from("imported_contacts")
-        .select("id, name, company_name, email, country")
+        .select("id, name, company_name, email, country, contact_alias, company_alias")
         .or(`name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`)
         .limit(30);
       return data || [];
@@ -113,6 +126,7 @@ export function EmailComposerContactPicker() {
     addRecipient({
       partnerId: p.id,
       companyName: p.company_name || "",
+      companyAlias: (p as any).company_alias || undefined,
       email: null,
       city: p.city || "",
       countryName: p.country_code || "",
@@ -120,13 +134,15 @@ export function EmailComposerContactPicker() {
     });
   };
 
-  const handleSelectContact = (partnerId: string, companyName: string, c: typeof partnerContacts[0]) => {
+  const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, c: typeof partnerContacts[0]) => {
     if (isSelected(partnerId, c.id)) return;
     addRecipient({
       partnerId,
       companyName,
+      companyAlias,
       contactId: c.id,
       contactName: c.name,
+      contactAlias: (c as any).contact_alias || undefined,
       email: c.email,
       city: "",
       countryName: "",
@@ -139,7 +155,9 @@ export function EmailComposerContactPicker() {
     addRecipient({
       partnerId: c.id,
       companyName: c.company_name || "",
+      companyAlias: (c as any).company_alias || undefined,
       contactName: c.name || undefined,
+      contactAlias: (c as any).contact_alias || undefined,
       email: c.email,
       city: "",
       countryName: c.country || "",
@@ -163,51 +181,64 @@ export function EmailComposerContactPicker() {
 
   return (
     <div className="space-y-3">
-      {/* Country flag carousel */}
+      {/* Country flag carousel - bigger with names */}
       <div>
-        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
-          <Globe className="w-3 h-3" /> Paesi
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Globe className="w-3 h-3" /> Paesi
+          </label>
+          <button
+            onClick={() => setCountrySort(s => s === "count" ? "name" : "count")}
+            className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground"
+            title={countrySort === "count" ? "Ordina per nome" : "Ordina per numero"}
+          >
+            <ArrowUpDown className="w-2.5 h-2.5" />
+            {countrySort === "count" ? "N°" : "A-Z"}
+          </button>
+        </div>
         <div
           ref={scrollRef}
-          className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin"
+          className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin"
           style={{ scrollbarWidth: "thin" }}
         >
           {selectedCountry && (
             <button
               onClick={() => setSelectedCountry(null)}
-              className="flex-shrink-0 px-2 py-1 rounded-md text-[10px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10"
+              className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[9px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 min-w-[48px]"
             >
-              ✕ Tutti
+              <span className="text-base">✕</span>
+              <span>Tutti</span>
             </button>
           )}
-          {countryStats.map(c => (
+          {sortedCountries.map(c => (
             <button
               key={c.code}
               onClick={() => setSelectedCountry(selectedCountry === c.code ? null : c.code)}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-medium transition-all border",
+                "flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all border min-w-[48px]",
                 selectedCountry === c.code
                   ? "bg-primary/15 border-primary/30 text-primary"
                   : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
               )}
             >
-              <span className="text-sm">{c.flag}</span>
-              <span className="tabular-nums">{c.count}</span>
+              <span className="text-lg leading-none">{c.flag}</span>
+              <span className="tabular-nums font-bold">{c.count}</span>
+              <span className="truncate max-w-[52px] text-[8px]">{c.name}</span>
             </button>
           ))}
         </div>
       </div>
-      {/* Selected recipients */}
+
+      {/* Selected recipients at top */}
       {recipients.length > 0 && (
         <div>
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
             <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
           </label>
-          <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto">
+          <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto">
             {recipients.map((r, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
-                {r.contactName || r.companyName}
+                {r.contactAlias || r.contactName || r.companyAlias || r.companyName}
                 {r.email && <Mail className="w-2.5 h-2.5 opacity-60" />}
                 <button onClick={() => removeRecipient(i)} className="hover:text-destructive">
                   <X className="w-2.5 h-2.5" />
@@ -269,13 +300,13 @@ export function EmailComposerContactPicker() {
                     expandedPartner === p.id && "bg-muted/30"
                   )}
                 >
-                  <ChevronRight className={cn("w-3 h-3 transition-transform", expandedPartner === p.id && "rotate-90")} />
+                  <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0", expandedPartner === p.id && "rotate-90")} />
                   <span className="flex-1 text-left truncate font-medium">{p.company_name}</span>
                   {p.country_code && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{p.country_code}</Badge>}
                   {!isSelected(p.id) && (
                     <button
                       onClick={e => { e.stopPropagation(); handleSelectPartner(p); }}
-                      className="text-[9px] text-primary hover:underline"
+                      className="text-[9px] text-primary hover:underline flex-shrink-0"
                     >
                       +Azienda
                     </button>
@@ -287,20 +318,24 @@ export function EmailComposerContactPicker() {
                     {partnerContacts.map(c => (
                       <button
                         key={c.id}
-                        onClick={() => handleSelectContact(p.id, p.company_name || "", c)}
+                        onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, c)}
                         disabled={isSelected(p.id, c.id)}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1 rounded text-[11px] transition-all",
+                          "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded text-left transition-all",
                           isSelected(p.id, c.id) ? "opacity-50" : "hover:bg-primary/5"
                         )}
                       >
-                        <span className="flex-1 text-left truncate">{c.name}</span>
-                        {c.title && <span className="text-muted-foreground truncate max-w-[80px]">{c.title}</span>}
-                        {c.email && <Mail className="w-3 h-3 text-primary/60" />}
-                        {isSelected(p.id, c.id)
-                          ? <span className="text-primary text-[9px]">✓</span>
-                          : <span className="text-primary text-[9px]">+</span>
-                        }
+                        <div className="flex items-center gap-2 w-full">
+                          <span className="flex-1 truncate text-[11px] font-medium">{c.name}</span>
+                          {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0" />}
+                          {isSelected(p.id, c.id)
+                            ? <span className="text-primary text-[9px]">✓</span>
+                            : <span className="text-primary text-[9px]">+</span>
+                          }
+                        </div>
+                        {c.title && (
+                          <span className="text-[10px] text-muted-foreground pl-0">{c.title}</span>
+                        )}
                       </button>
                     ))}
                   </div>
