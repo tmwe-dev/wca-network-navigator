@@ -726,7 +726,7 @@ function NetworkFiltersSection() {
 
   // Live search for partners (like email composer picker)
   const networkSearchValue = g.filters.networkSearch;
-  useMemo(() => {
+  useEffect(() => {
     if (networkSearchValue.trim().length < 2) {
       setSearchResults([]);
       return;
@@ -734,7 +734,8 @@ function NetworkFiltersSection() {
     setSearching(true);
     const doSearch = async () => {
       try {
-        const { data } = await (await import("@/integrations/supabase/client")).supabase
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase
           .from("partners")
           .select("id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)")
           .or(`company_name.ilike.%${networkSearchValue}%,company_alias.ilike.%${networkSearchValue}%,email.ilike.%${networkSearchValue}%`)
@@ -744,7 +745,8 @@ function NetworkFiltersSection() {
       } catch { setSearchResults([]); }
       finally { setSearching(false); }
     };
-    doSearch();
+    const timer = setTimeout(doSearch, 300); // debounce
+    return () => clearTimeout(timer);
   }, [networkSearchValue]);
 
   const handleSyncWca = () => {
