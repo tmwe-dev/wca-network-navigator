@@ -10,21 +10,28 @@ import type { PartnerFilters } from "./usePartners";
 const PAGE_SIZE = 50;
 
 export function usePartnersPaginated(filters?: PartnerFilters) {
+  const hasCountryFilter = !!(filters?.countries && filters.countries.length > 0);
+
   return useInfiniteQuery({
     queryKey: ["partners-paginated", filters],
     queryFn: async ({ pageParam = 0 }) => {
       const from = pageParam * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // Only include joins when filtered to a manageable subset
+      const selectFields = hasCountryFilter
+        ? `id, company_name, company_alias, country_code, city, email, phone, mobile,
+           office_type, is_active, is_favorite, rating, member_since, wca_id,
+           raw_profile_html, enrichment_data, partner_type, lead_status,
+           partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias),
+           partner_networks (id, network_name, expires)`
+        : `id, company_name, company_alias, country_code, city, email, phone, mobile,
+           office_type, is_active, is_favorite, rating, member_since, wca_id,
+           raw_profile_html, enrichment_data, partner_type, lead_status`;
+
       let query = supabase
         .from("partners")
-        .select(`
-          id, company_name, company_alias, country_code, city, email, phone, mobile,
-          office_type, is_active, is_favorite, rating, member_since, wca_id,
-          raw_profile_html, enrichment_data, partner_type, lead_status,
-          partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias),
-          partner_networks (id, network_name, expires)
-        `, { count: "exact" })
+        .select(selectFields, hasCountryFilter ? { count: "exact" } : undefined)
         .eq("is_active", true);
 
       if (filters?.search) {
@@ -32,8 +39,8 @@ export function usePartnersPaginated(filters?: PartnerFilters) {
         if (s) query = query.ilike("company_name", `%${s}%`);
       }
 
-      if (filters?.countries && filters.countries.length > 0) {
-        query = query.in("country_code", filters.countries);
+      if (hasCountryFilter) {
+        query = query.in("country_code", filters!.countries!);
       }
 
       if (filters?.cities && filters.cities.length > 0) {
@@ -56,7 +63,7 @@ export function usePartnersPaginated(filters?: PartnerFilters) {
 
       return {
         partners: data || [],
-        total: count || 0,
+        total: count || (data?.length === PAGE_SIZE ? PAGE_SIZE + 1 : data?.length || 0),
         page: pageParam,
         hasMore: (data?.length || 0) === PAGE_SIZE,
       };
