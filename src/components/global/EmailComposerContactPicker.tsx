@@ -160,7 +160,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Business cards — search OR show all (no country filter needed) ──
   const { data: bcaCards = [] } = useQuery({
     queryKey: ["picker-bca", search, selectedCountry],
-    enabled: tab === "bca" && shouldSearch,
+    enabled: tab === "bca",
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
