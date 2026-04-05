@@ -255,9 +255,53 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
   return (
     <div className="flex flex-col h-full">
-      {/* Compact header: search + selected in one row */}
+      {/* Header: Tabs first, then selected, then search */}
       <div className="flex-shrink-0 pb-1.5 mb-1.5 border-b border-border/30 space-y-1.5">
-        {/* Row 1: Search + settings */}
+        {/* Row 1: Tabs */}
+        <div className="flex gap-1">
+          {TABS.map(t => (
+            <button
+              key={t.value}
+              onClick={() => { setTab(t.value); setSearch(""); setExpandedPartner(null); setExpandedCompany(null); }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border",
+                tab === t.value
+                  ? "bg-primary/15 border-primary/30 text-primary"
+                  : "border-border/40 text-muted-foreground hover:bg-muted/40"
+              )}
+            >
+              <t.icon className="w-3 h-3" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 2: Selected recipients — compact badges row */}
+        <div className="flex items-center gap-1.5 min-h-[22px]">
+          {recipients.length > 0 ? (
+            <>
+              <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-none min-w-0">
+                {recipients.map((r, i) => (
+                  <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-medium border border-primary/20 shrink-0 max-w-[120px]">
+                    <span className="text-[10px] leading-none">{getCountryFlag(r.countryCode || "")}</span>
+                    <span className="truncate">{r.contactAlias || r.contactName || r.companyAlias || r.companyName}</span>
+                    <button onClick={() => removeRecipient(i)} className="hover:text-destructive ml-0.5">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <Badge variant="secondary" className="text-[8px] h-4 px-1 shrink-0">{recipients.length}</Badge>
+              <Button onClick={clearRecipients} size="sm" variant="ghost" className="h-5 px-1.5 text-[9px] text-muted-foreground shrink-0">
+                <X className="w-2.5 h-2.5" />
+              </Button>
+            </>
+          ) : (
+            <span className="text-[9px] text-muted-foreground/50 italic">Nessun destinatario selezionato</span>
+          )}
+        </div>
+
+        {/* Row 3: Search + settings */}
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
@@ -344,38 +388,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               </PopoverContent>
             </Popover>
           </div>
-        </div>
-
-        {/* Row 2: Selected recipients — single compact row */}
-        <div className="flex items-center gap-1.5 min-h-[24px]">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1">
-            <UserPlus className="w-2.5 h-2.5" /> {recipients.length}
-          </span>
-          {recipients.length > 0 ? (
-            <>
-              <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-none min-w-0">
-                {recipients.map((r, i) => (
-                  <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-medium border border-primary/20 shrink-0 max-w-[120px]">
-                    <span className="text-[10px] leading-none">{getCountryFlag(r.countryCode || "")}</span>
-                    <span className="truncate">{r.contactAlias || r.contactName || r.companyAlias || r.companyName}</span>
-                    <button onClick={() => removeRecipient(i)} className="hover:text-destructive ml-0.5">
-                      <X className="w-2 h-2" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <Button onClick={clearRecipients} size="sm" variant="ghost" className="h-5 px-1.5 text-[9px] text-muted-foreground shrink-0">
-                <X className="w-2.5 h-2.5" />
-              </Button>
-              {onConfirm && (
-                <Button onClick={onConfirm} size="sm" className="h-5 px-2 text-[9px] gap-0.5 shrink-0">
-                  <Check className="w-2.5 h-2.5" /> Conferma
-                </Button>
-              )}
-            </>
-          ) : (
-            <span className="text-[9px] text-muted-foreground/50 italic">Nessun destinatario</span>
-          )}
         </div>
       </div>
 
