@@ -75,13 +75,13 @@ export default function EmailComposer() {
     // Check partner_contacts
     const { data: pc } = await supabase
       .from("partner_contacts")
-      .select("partner_id, full_name, contact_alias, email, partners(company_name, company_alias, country_code, city)")
+      .select("partner_id, name, contact_alias, email, partners(company_name, company_alias, country_code, city)")
       .ilike("email", email)
       .limit(1)
       .maybeSingle();
     if (pc) {
       const p = pc.partners as any;
-      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: pc.contact_alias || pc.full_name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
+      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: pc.contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
     }
 
     // Check imported_contacts
