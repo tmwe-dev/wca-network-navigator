@@ -16,7 +16,6 @@ import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { toast } from "@/hooks/use-toast";
 import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
@@ -28,7 +27,6 @@ const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFl
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const [missionOpen, setMissionOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -42,13 +40,13 @@ export function AppLayout() {
 
   const currentPath = location.pathname;
   
-  const isCampaignsPage = currentPath === "/campaigns";
   const isFullscreenRoute = ["/", "/network", "/crm", "/outreach", "/agenda", "/operations", "/global", "/reminders", "/settings", "/import", "/hub-operativo", "/email-composer"].includes(currentPath);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen((o) => !o); }
-      if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setAiOpen((o) => !o); }
+      // ⌘J now opens IntelliFlow (unified AI)
+      if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen((o) => !o); }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
@@ -70,7 +68,6 @@ export function AppLayout() {
         case "show_toast": toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" }); break;
         case "apply_filters": window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } })); break;
         case "start_download_job":
-          // V8 Claude Engine: notifica l'utente del job creato e naviga alla pagina Network
           if (detail.job_id) {
             toast({ title: "🤖 Job creato dall'agente", description: `Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.` });
             navigate("/network");
@@ -104,7 +101,7 @@ export function AppLayout() {
       <MissionProvider>
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {/* Visual tab triggers — only on tab hover, no edge zones */}
+        {/* Visual tab triggers */}
         <button
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
@@ -149,14 +146,14 @@ export function AppLayout() {
                 )}
 
                 <ActiveProcessIndicator />
-                <ConnectionStatusBar onAiClick={() => setAiOpen(true)} outreachQueue={outreachQueue} />
+                <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
                 <OperatorSelector />
                 <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/test-extensions")} aria-label="Test Extensions"><FlaskConical className="h-4 w-4 text-accent-foreground" /></Button></InfoTooltip>
                 <InfoTooltip content="Sincronizza WCA"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))} aria-label="Sync WCA"><RefreshCw className="h-4 w-4" /></Button></InfoTooltip>
-                <InfoTooltip content="Assistente AI"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAiOpen(true)} aria-label="AI Assistant"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
+                <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
               </div>
             </div>
             </TooltipProvider>
@@ -168,7 +165,6 @@ export function AppLayout() {
         </div>
 
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-        <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries: [], filterMode: currentPath }} />
         <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
         <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
 
