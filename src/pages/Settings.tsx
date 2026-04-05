@@ -97,9 +97,9 @@ export default function Settings() {
                 <RASettings settings={settings} updateSetting={updateSetting} />
               </div>
             )}
-            {tab === "contenuti" && (
+            {tab === "ai-prompt" && (
               <div className="float-panel p-5">
-                <ContentManager />
+                <AICommandCenter />
               </div>
             )}
             {tab === "abbonamento" && (
