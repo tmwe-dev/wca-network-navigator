@@ -90,8 +90,11 @@ serve(async (req) => {
 
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
+
+    // Use granular kb_entries first, fallback to legacy monolithic
+    const kbEntriesText = await fetchKbEntriesForImprove(supabase);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = getKBSlice(fullSalesKB);
+    const salesKBSlice = kbEntriesText || getKBSliceLegacy(fullSalesKB);
 
     const systemPrompt = `Sei un esperto copywriter e consulente di vendita B2B nel settore della logistica internazionale e del freight forwarding.
 
