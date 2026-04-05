@@ -155,6 +155,12 @@ If no unread chats found, return an empty array [].`;
       };
     }
 
+    // For learnDom, use a flat object schema instead of array
+    const isLearnDom = mode === "learnDom";
+    const toolSchema = isLearnDom
+      ? { type: "object", properties: { selectors: itemSchema }, required: ["selectors"] }
+      : { type: "object", properties: { items: { type: "array", items: itemSchema } }, required: ["items"] };
+
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -173,53 +179,15 @@ If no unread chats found, return an empty array [].`;
             {
               type: "function",
               function: {
-                name: mode === "thread" ? "extract_thread" : "extract_unread",
-                description:
-                  mode === "thread"
-                    ? "Return extracted messages from WhatsApp thread"
-                    : "Return extracted unread chats from WhatsApp sidebar",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    items: {
-                      type: "array",
-                      items:
-                        mode === "thread"
-                          ? {
-                              type: "object",
-                              properties: {
-                                direction: {
-                                  type: "string",
-                                  enum: ["inbound", "outbound"],
-                                },
-                                text: { type: "string" },
-                                timestamp: { type: "string" },
-                                contact: { type: "string" },
-                              },
-                              required: ["direction", "text"],
-                            }
-                          : {
-                              type: "object",
-                              properties: {
-                                contact: { type: "string" },
-                                lastMessage: { type: "string" },
-                                time: { type: "string" },
-                                unreadCount: { type: "number" },
-                              },
-                              required: ["contact", "lastMessage"],
-                            },
-                    },
-                  },
-                  required: ["items"],
-                },
+                name: toolName,
+                description: toolDescription,
+                parameters: toolSchema,
               },
             },
           ],
           tool_choice: {
             type: "function",
-            function: {
-              name: mode === "thread" ? "extract_thread" : "extract_unread",
-            },
+            function: { name: toolName },
           },
         }),
       }
@@ -256,7 +224,12 @@ If no unread chats found, return an empty array [].`;
     if (toolCall?.function?.arguments) {
       try {
         const parsed = JSON.parse(toolCall.function.arguments);
-        items = parsed.items || [];
+        if (isLearnDom) {
+          // For learnDom, return the selectors object as a single-item array
+          items = [parsed.selectors || parsed];
+        } else {
+          items = parsed.items || [];
+        }
       } catch {
         console.error("Failed to parse tool call arguments");
       }
@@ -268,7 +241,11 @@ If no unread chats found, return an empty array [].`;
       if (content) {
         try {
           const parsed = JSON.parse(content);
-          items = Array.isArray(parsed) ? parsed : parsed.items || [];
+          if (isLearnDom) {
+            items = [parsed.selectors || parsed];
+          } else {
+            items = Array.isArray(parsed) ? parsed : parsed.items || [];
+          }
         } catch {
           console.error("Failed to parse AI content as JSON");
         }
