@@ -43,54 +43,54 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
 
   return (
     <>
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 flex-1 min-w-0">
+          <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto scrollbar-none">
             {SOURCE_TABS.map(st => (
               <button
                 key={st.value}
                 type="button"
                 onClick={() => onSourceTabChange(st.value)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 whitespace-nowrap",
                   sourceTab === st.value
                     ? "bg-primary/15 text-primary border border-primary/30"
-                    : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40"
+                    : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
                 )}
               >
-                <st.icon className="w-3.5 h-3.5" />
+                <st.icon className="w-3 h-3" />
                 {st.label}
               </button>
             ))}
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-1 border border-dashed border-border/50"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-0.5 border border-dashed border-border/50 whitespace-nowrap"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-3 h-3" />
               Nuovo
             </button>
           </div>
-          <div className="flex items-center rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm p-0.5">
+          <div className="flex items-center rounded-md border border-border/60 bg-card/60 p-0.5">
             <button
               type="button"
               onClick={() => onViewChange("card")}
               className={cn(
-                "p-1.5 rounded-md transition-all duration-200",
-                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
+                "p-1 rounded transition-all duration-200",
+                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/70 hover:text-foreground"
               )}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               onClick={() => onViewChange("list")}
               className={cn(
-                "p-1.5 rounded-md transition-all duration-200",
-                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
+                "p-1 rounded transition-all duration-200",
+                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/70 hover:text-foreground"
               )}
             >
-              <List className="w-4 h-4" />
+              <List className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
