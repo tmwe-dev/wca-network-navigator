@@ -1,14 +1,14 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, Pencil, X } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
@@ -31,6 +31,7 @@ interface OraclePanelProps {
 }
 
 export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, generating, improving, hasBody }: OraclePanelProps) {
+  const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);
@@ -39,7 +40,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("📧");
   const [newPrompt, setNewPrompt] = useState("");
-  const [kbOpen, setKbOpen] = useState(false);
+  
 
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
@@ -221,39 +222,14 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
           </Select>
         </div>
 
-        {/* KB manager link */}
-        <Dialog open={kbOpen} onOpenChange={setKbOpen}>
-          <DialogTrigger asChild>
-            <button className="flex items-center gap-1.5 text-[10px] text-primary hover:underline">
-              <BookOpen className="w-3 h-3" /> Gestisci KB
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-sm">Knowledge Base</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 mt-2">
-              <div>
-                <label className="text-xs font-medium text-foreground/70 mb-1 block">KB Aziendale</label>
-                <Textarea
-                  defaultValue={companyKB}
-                  onBlur={e => updateSetting.mutate({ key: "ai_knowledge_base", value: e.target.value })}
-                  className="text-xs min-h-[120px]"
-                  placeholder="Informazioni sull'azienda, servizi, punti di forza..."
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground/70 mb-1 block">Tecniche di Vendita (SKB)</label>
-                <Textarea
-                  defaultValue={salesKB}
-                  onBlur={e => updateSetting.mutate({ key: "ai_sales_knowledge_base", value: e.target.value })}
-                  className="text-xs min-h-[160px]"
-                  placeholder="Tecniche di vendita, Chris Voss, regole strategiche..."
-                />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* KB manager link — navigates to Settings */}
+        <button
+          onClick={() => navigate("/settings?tab=ai-prompt")}
+          className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
+        >
+          <BookOpen className="w-3 h-3" /> Gestisci KB & Prompt
+          <ExternalLink className="w-2.5 h-2.5" />
+        </button>
       </div>
 
       {/* === ACTION BUTTONS === */}

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
-import ContentManager from "@/components/settings/ContentManager";
+import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
 import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
@@ -17,7 +18,13 @@ import { cn } from "@/lib/utils";
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const [tab, setTab] = useState("generale");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "generale");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setTab(t);
+  }, [searchParams]);
 
   // Enrichment filter state — lifted here to pass into VerticalTabNav filterSlot
   const [enrSource, setEnrSource] = useState<SourceFilter>("all");
@@ -37,7 +44,8 @@ export default function Settings() {
 
   const tabs: VerticalTab[] = [
     { value: "generale", label: "Generale", icon: SettingsIcon },
-    { value: "contenuti", label: "Contenuti", icon: BookOpen },
+    { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
+    
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
     { value: "import-export", label: "Import/Export", icon: Download },
@@ -96,9 +104,9 @@ export default function Settings() {
                 <RASettings settings={settings} updateSetting={updateSetting} />
               </div>
             )}
-            {tab === "contenuti" && (
+            {tab === "ai-prompt" && (
               <div className="float-panel p-5">
-                <ContentManager />
+                <AICommandCenter />
               </div>
             )}
             {tab === "abbonamento" && (
