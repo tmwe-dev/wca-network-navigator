@@ -130,6 +130,13 @@ const App = () => (
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                   <Route path="/hub" element={<Navigate to="/agenda" replace />} />
                   <Route path="/acquisizione" element={<Navigate to="/network" replace />} />
+                  <Route path="/dashboard-legacy" element={<Navigate to="/" replace />} />
+                  <Route path="/agents" element={<Navigate to="/" replace />} />
+                  <Route path="/global" element={<Navigate to="/" replace />} />
+                  <Route path="/system-map" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-a" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-b" element={<Navigate to="/" replace />} />
+                  <Route path="/prototype-c" element={<Navigate to="/" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
