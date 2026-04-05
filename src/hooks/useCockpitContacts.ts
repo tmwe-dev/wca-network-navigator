@@ -231,6 +231,7 @@ export function useCockpitContacts() {
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
           enrichmentData: partner?.enrichment_data || undefined,
+          leadStatus: partner?.lead_status || "new",
           ...pMeta,
         });
       } else if (st === "business_card") {
