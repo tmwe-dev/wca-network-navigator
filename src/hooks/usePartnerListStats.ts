@@ -11,7 +11,19 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
   const { data: countryStatsData } = useCountryStats();
 
   const serverStats = useMemo(() => {
-    if (!countryStatsData?.byCountry || countryCodes.length === 0) return null;
+    if (!countryStatsData) return null;
+    if (countryCodes.length === 0) {
+      return {
+        total_partners: countryStatsData.global.total,
+        with_profile: countryStatsData.global.withProfile,
+        with_deep_search: countryStatsData.global.withDeepSearch,
+        with_email: countryStatsData.global.withEmail,
+        with_phone: countryStatsData.global.withPhone,
+        with_company_alias: countryStatsData.global.withCompanyAlias,
+        with_contact_alias: countryStatsData.global.withContactAlias,
+      };
+    }
+    if (!countryStatsData.byCountry) return null;
     if (countryCodes.length === 1) return countryStatsData.byCountry[countryCodes[0]] || null;
     const agg = { total_partners: 0, with_profile: 0, with_deep_search: 0, with_email: 0, with_phone: 0, with_company_alias: 0, with_contact_alias: 0 };
     countryCodes.forEach(cc => {

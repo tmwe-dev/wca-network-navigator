@@ -3,7 +3,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SlidersHorizontal, Search, RotateCcw, Check, ArrowUpDown,
   Shield, Database, Filter, Layers, Users, Sparkles, Wifi,
@@ -122,9 +121,8 @@ const SORTING_FILTERS: { key: SortingFilterMode; label: string }[] = [
 
 const NETWORK_SORT = [
   { value: "name", label: "Nome" },
-  { value: "country", label: "Paese" },
-  { value: "contacts", label: "N° contatti" },
-  { value: "date_desc", label: "Più recenti" },
+  { value: "rating", label: "Rating" },
+  { value: "contacts", label: "Contatti" },
 ];
 
 const NETWORK_QUALITY = [
@@ -250,8 +248,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
       if (g.filters.sortingFilter !== "all") n++;
     }
     if (isNetwork) {
+      if (g.filters.networkSearch.trim()) n++;
       if (g.filters.networkQuality !== "all") n++;
       if (g.filters.networkSort !== "name") n++;
+      if (g.filters.networkSelectedCountries.size > 0) n++;
     }
     if (isCRM) {
       if (g.filters.leadStatus !== "all") n++;
@@ -691,16 +691,28 @@ function NetworkFiltersSection() {
         name: wcaCountry?.name || s.country_code,
         flag: getCountryFlag(s.country_code),
         total: s.total_partners || 0,
-        contacts: s.total_contacts || 0,
       };
     }).sort((a, b) => b.total - a.total);
   }, [statsData]);
 
+  const selectedCountries = useMemo(
+    () => countries.filter((country) => g.filters.networkSelectedCountries.has(country.code)),
+    [countries, g.filters.networkSelectedCountries]
+  );
+
   const filteredCountries = useMemo(() => {
-    if (!countrySearch) return countries;
     const q = countrySearch.toLowerCase();
-    return countries.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
-  }, [countries, countrySearch]);
+    const matches = !q
+      ? countries
+      : countries.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+
+    return [...matches].sort((a, b) => {
+      const aSelected = g.filters.networkSelectedCountries.has(a.code) ? 1 : 0;
+      const bSelected = g.filters.networkSelectedCountries.has(b.code) ? 1 : 0;
+      if (aSelected !== bSelected) return bSelected - aSelected;
+      return b.total - a.total;
+    });
+  }, [countries, countrySearch, g.filters.networkSelectedCountries]);
 
   const toggleCountry = (code: string) => {
     const next = new Set(g.filters.networkSelectedCountries);
@@ -725,21 +737,41 @@ function NetworkFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
+        <p className="mb-2 text-[10px] text-muted-foreground">
+          Clicca i paesi da includere nella lista partner.
+        </p>
+        {selectedCountries.length > 0 && (
+          <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold text-primary">Paesi attivi</span>
+              <button
+                onClick={() => g.setNetworkSelectedCountries(new Set())}
+                className="text-[10px] text-destructive hover:underline"
+              >
+                Deseleziona tutti
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {selectedCountries.map((country) => (
+                <button
+                  key={country.code}
+                  onClick={() => toggleCountry(country.code)}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary"
+                >
+                  <span>{country.flag}</span>
+                  <span>{country.code}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <Input
           value={countrySearch}
           onChange={e => setCountrySearch(e.target.value)}
           placeholder="Cerca paese..."
           className="h-7 text-xs bg-muted/30 border-border/40 mb-1.5"
         />
-        {g.filters.networkSelectedCountries.size > 0 && (
-          <button
-            onClick={() => g.setNetworkSelectedCountries(new Set())}
-            className="text-[10px] text-destructive hover:underline mb-1"
-          >
-            Deseleziona tutti
-          </button>
-        )}
-        <ScrollArea className="max-h-[240px]">
+        <div className="max-h-[280px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 p-1 pr-2">
           <div className="space-y-0.5">
             {filteredCountries.map(c => (
               <button
@@ -754,12 +786,17 @@ function NetworkFiltersSection() {
               >
                 <span className="text-base">{c.flag}</span>
                 <span className="flex-1 text-left truncate font-medium">{c.name}</span>
+                {g.filters.networkSelectedCountries.has(c.code) && <Check className="w-3 h-3 text-primary" />}
                 <Badge variant="secondary" className="text-[9px] h-4 px-1.5 tabular-nums">{c.total}</Badge>
-                <Badge variant="outline" className="text-[9px] h-4 px-1.5 tabular-nums">{c.contacts}👤</Badge>
               </button>
             ))}
+            {filteredCountries.length === 0 && (
+              <div className="px-2 py-3 text-[11px] text-muted-foreground">
+                Nessun paese trovato.
+              </div>
+            )}
           </div>
-        </ScrollArea>
+        </div>
       </FilterSection>
 
       <FilterSection icon={Sparkles} label="Qualità dati">
