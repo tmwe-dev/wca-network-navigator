@@ -474,19 +474,21 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
           {/* Partners */}
           {tab === "partners" && shouldSearch && (
-            <div className="space-y-0.5">
+            <div className="space-y-1.5 p-0.5">
               {filteredPartners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
               {filteredPartners.map(p => (
-                <div key={p.id}>
+                <div key={p.id} className="rounded-lg border border-border/40 bg-card overflow-hidden">
                   <button
                     onClick={() => setExpandedPartner(expandedPartner === p.id ? null : p.id)}
                     className={cn(
-                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all hover:bg-muted/40",
-                      expandedPartner === p.id && "bg-muted/30"
+                      "w-full flex items-center gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
+                      expandedPartner === p.id && "bg-muted/20"
                     )}
                   >
-                    <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0", expandedPartner === p.id && "rotate-90")} />
-                    <span className="flex-1 text-left truncate font-medium">{p.company_name}</span>
+                    <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", expandedPartner === p.id && "rotate-90")} />
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="font-semibold text-foreground truncate">{p.company_name}</div>
+                    </div>
                     {p.country_code && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{p.country_code}</Badge>}
                     {!isSelected(p.id) && (
                       <button
@@ -499,34 +501,34 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                     {isSelected(p.id) && <Badge className="text-[8px] h-3.5 px-1 bg-primary/20 text-primary border-0">✓</Badge>}
                   </button>
                   {expandedPartner === p.id && partnerContacts.length > 0 && (
-                    <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-primary/20 pl-2">
+                    <div className="border-t border-border/30 bg-muted/10 px-2.5 py-1 space-y-0.5">
                       {partnerContacts.map(c => (
                         <button
                           key={c.id}
                           onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, p.country_code || undefined, c)}
                           disabled={isSelected(p.id, c.id)}
                           className={cn(
-                            "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded text-left transition-all",
+                            "w-full flex items-start gap-2 px-2 py-1.5 rounded text-left transition-all",
                             isSelected(p.id, c.id) ? "opacity-50" : "hover:bg-primary/5"
                           )}
                         >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="flex-1 truncate text-[11px] font-medium">{c.name}</span>
-                            {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0" />}
-                            {isSelected(p.id, c.id)
-                              ? <span className="text-primary text-[9px]">✓</span>
-                              : <span className="text-primary text-[9px]">+</span>
-                            }
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium text-foreground truncate">{c.name}</div>
+                            {c.title && <div className="text-[10px] text-muted-foreground truncate">{c.title}</div>}
                           </div>
-                          {c.title && (
-                            <span className="text-[10px] text-muted-foreground">{c.title}</span>
-                          )}
+                          {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0 mt-0.5" />}
+                          {isSelected(p.id, c.id)
+                            ? <span className="text-primary text-[9px] mt-0.5">✓</span>
+                            : <span className="text-primary text-[9px] mt-0.5">+</span>
+                          }
                         </button>
                       ))}
                     </div>
                   )}
                   {expandedPartner === p.id && partnerContacts.length === 0 && (
-                    <p className="ml-7 text-[10px] text-muted-foreground py-1">Nessun contatto</p>
+                    <div className="border-t border-border/30 px-4 py-1.5">
+                      <p className="text-[10px] text-muted-foreground">Nessun contatto</p>
+                    </div>
                   )}
                 </div>
               ))}
