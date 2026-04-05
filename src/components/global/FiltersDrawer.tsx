@@ -639,6 +639,108 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   );
 }
 
+/* ── Network Filters with Country List ── */
+
+function NetworkFiltersSection() {
+  const g = useGlobalFilters();
+  const { data: statsData } = useCountryStats();
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const countries = useMemo(() => {
+    if (!statsData?.byCountry) return [];
+    return Object.values(statsData.byCountry).map((s: any) => {
+      const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === s.country_code);
+      return {
+        code: s.country_code,
+        name: wcaCountry?.name || s.country_code,
+        flag: getCountryFlag(s.country_code),
+        total: s.total_partners || 0,
+        contacts: s.total_contacts || 0,
+      };
+    }).sort((a, b) => b.total - a.total);
+  }, [statsData]);
+
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch) return countries;
+    const q = countrySearch.toLowerCase();
+    return countries.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+  }, [countries, countrySearch]);
+
+  const toggleCountry = (code: string) => {
+    const next = new Set(g.filters.networkSelectedCountries);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    g.setNetworkSelectedCountries(next);
+  };
+
+  const handleSyncWca = () => {
+    window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
+  };
+
+  return (
+    <>
+      <FilterSection icon={Search} label="Cerca">
+        <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
+      </FilterSection>
+
+      <FilterSection icon={ArrowUpDown} label="Ordina">
+        <ChipGroup>
+          {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
+        </ChipGroup>
+      </FilterSection>
+
+      <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
+        <Input
+          value={countrySearch}
+          onChange={e => setCountrySearch(e.target.value)}
+          placeholder="Cerca paese..."
+          className="h-7 text-xs bg-muted/30 border-border/40 mb-1.5"
+        />
+        {g.filters.networkSelectedCountries.size > 0 && (
+          <button
+            onClick={() => g.setNetworkSelectedCountries(new Set())}
+            className="text-[10px] text-destructive hover:underline mb-1"
+          >
+            Deseleziona tutti
+          </button>
+        )}
+        <ScrollArea className="max-h-[240px]">
+          <div className="space-y-0.5">
+            {filteredCountries.map(c => (
+              <button
+                key={c.code}
+                onClick={() => toggleCountry(c.code)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all",
+                  g.filters.networkSelectedCountries.has(c.code)
+                    ? "bg-primary/15 border border-primary/30 text-primary"
+                    : "hover:bg-muted/40 text-foreground"
+                )}
+              >
+                <span className="text-base">{c.flag}</span>
+                <span className="flex-1 text-left truncate font-medium">{c.name}</span>
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 tabular-nums">{c.total}</Badge>
+                <Badge variant="outline" className="text-[9px] h-4 px-1.5 tabular-nums">{c.contacts}👤</Badge>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      </FilterSection>
+
+      <FilterSection icon={Sparkles} label="Qualità dati">
+        <ChipGroup>
+          {NETWORK_QUALITY.map(o => <Chip key={o.value} active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>)}
+        </ChipGroup>
+      </FilterSection>
+
+      <FilterSection icon={RefreshCw} label="Azioni">
+        <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-2" onClick={handleSyncWca}>
+          <RefreshCw className="w-3 h-3" /> Sincronizza WCA
+        </Button>
+      </FilterSection>
+    </>
+  );
+}
+
 /* ── Sub-components ── */
 
 function FilterSection({ icon: Icon, label, children }: { icon: any; label: string; children: React.ReactNode }) {
