@@ -582,7 +582,7 @@ KNOWLEDGE BASE:
 ${settings.ai_knowledge_base || "Non configurata"}
 ${salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
-- Tono: ${settings.ai_tone || "professionale"}
+- Tono: ${oracle_tone || settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}
 ${settings.ai_style_instructions ? `- Istruzioni: ${settings.ai_style_instructions}` : ""}
 ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : ""}
