@@ -10,16 +10,40 @@ const corsHeaders = {
 type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 type Quality = "fast" | "standard" | "premium";
 
-/** Extract sections from KB using <!-- SECTION:N --> markers */
+/** Contextual KB injection for outreach */
+async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel): Promise<{ text: string; sections: string[] }> {
+  const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
+  
+  // Select categories based on channel context
+  const categories = ["identita", "vendita"];
+  if (channel === "email") categories.push("email_modelli");
+  if (quality !== "fast") categories.push("negoziazione");
+  if (quality === "premium") categories.push("psicologia");
+  
+  const { data: entries } = await supabase
+    .from("kb_entries")
+    .select("title, content, category, chapter, tags")
+    .eq("is_active", true)
+    .in("category", categories)
+    .order("priority", { ascending: false })
+    .order("sort_order")
+    .limit(limit);
+
+  if (!entries || entries.length === 0) return { text: "", sections: [] };
+
+  const sections = [...new Set(entries.map((e: any) => e.category))];
+  const text = entries
+    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
+    .join("\n\n---\n\n");
+
+  return { text, sections };
+}
+
+/** Legacy fallback */
 function getKBSlice(fullKB: string, quality: Quality): string {
   if (!fullKB) return "";
-  const sectionMap: Record<Quality, number[]> = {
-    fast: [1, 5],
-    standard: [1, 2, 3, 4, 5, 6, 7, 8],
-    premium: [],
-  };
   if (quality === "premium") return fullKB;
-  const allowedSections = sectionMap[quality];
+  const allowedSections = quality === "fast" ? [1, 5] : [1, 2, 3, 4, 5, 6, 7, 8];
   const sectionRegex = /<!-- SECTION:(\d+) -->/g;
   const markers: { index: number; section: number }[] = [];
   let match;

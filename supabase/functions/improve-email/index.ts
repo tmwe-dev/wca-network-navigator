@@ -7,22 +7,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Fetch granular KB entries from db for improvement context */
-async function fetchKbEntriesForImprove(supabase: any): Promise<string> {
+/** Fetch KB entries optimized for email improvement — focus on style and techniques */
+async function fetchKbEntriesForImprove(supabase: any): Promise<{ text: string; sections: string[] }> {
   const { data: entries } = await supabase
     .from("kb_entries")
-    .select("title, content, category, tags")
+    .select("title, content, category, chapter, tags")
     .eq("is_active", true)
-    .gte("priority", 7)
+    .in("category", ["vendita", "negoziazione", "email_modelli", "psicologia"])
+    .gte("priority", 6)
     .order("priority", { ascending: false })
     .order("sort_order")
-    .limit(12);
+    .limit(15);
 
-  if (!entries || entries.length === 0) return "";
+  if (!entries || entries.length === 0) return { text: "", sections: [] };
 
-  return entries
-    .map((e: any) => `### ${e.title}\n${e.content}`)
-    .join("\n\n---\n\n");
+  const sections = [...new Set(entries.map((e: any) => e.category))];
+  return {
+    text: entries.map((e: any) => `### ${e.title}\n${e.content}`).join("\n\n---\n\n"),
+    sections,
+  };
 }
 
 /** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
