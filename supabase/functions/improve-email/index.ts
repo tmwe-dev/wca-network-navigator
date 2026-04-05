@@ -85,7 +85,7 @@ PROFILO MITTENTE:
 - Azienda: ${senderCompany}
 - Ruolo: ${settings.ai_contact_role || "N/A"}
 - Settore: ${settings.ai_sector || "freight_forwarding"}
-- Tono preferito: ${settings.ai_tone || "professionale"}
+- Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
 ${settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
 ${salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
