@@ -255,7 +255,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
     return () => window.removeEventListener("sync-wca-trigger", handleSyncWca);
   }, [handleSyncWca]);
 
-  const hasDetailOpen = !isMobile && hasSelection;
+  const hasDetailOpen = !isMobile && selectedPartnerId;
 
   return (
     <ThemeCtx.Provider value={isDark}>
