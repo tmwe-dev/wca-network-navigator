@@ -29,11 +29,11 @@ async function fetchKbEntriesStrategic(
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
   
-  // Build category filter based on context
+  // Build category filter based on context — using ACTUAL DB categories
   const categories: string[] = [];
   
-  // Always include identity for any quality
-  categories.push("identita");
+  // Always include core identity/rules
+  categories.push("regole_sistema", "filosofia");
   
   // Add context-specific categories
   if (context.kb_categories?.length) {
@@ -42,33 +42,35 @@ async function fetchKbEntriesStrategic(
     // Fallback: derive from email category
     switch (context.emailCategory) {
       case "primo_contatto":
-        categories.push("vendita", "email_modelli");
+        categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
         break;
       case "follow_up":
-        categories.push("vendita", "negoziazione", "email_modelli");
+        categories.push("followup", "chris_voss", "struttura_email");
         break;
       case "richiesta":
-        categories.push("vendita");
+        categories.push("struttura_email", "dati_partner");
         break;
       case "proposta_servizi":
-        categories.push("vendita", "negoziazione", "email_modelli");
+        categories.push("negoziazione", "struttura_email", "chiusura", "dati_partner");
         break;
       case "partnership":
-        categories.push("vendita", "negoziazione");
+        categories.push("negoziazione", "chris_voss", "dati_partner");
         break;
       default:
-        categories.push("vendita");
+        categories.push("struttura_email", "hook");
     }
   }
   
-  // For follow-ups without response, add negotiation techniques
+  // For follow-ups without response, add re-engagement techniques
   if (context.isFollowUp) {
-    if (!categories.includes("negoziazione")) categories.push("negoziazione");
+    ["chris_voss", "followup", "obiezioni"].forEach(c => {
+      if (!categories.includes(c)) categories.push(c);
+    });
   }
   
-  // For premium, add everything
+  // For premium, add full arsenal
   if (quality === "premium") {
-    ["vendita", "negoziazione", "email_modelli", "psicologia"].forEach(c => {
+    ["negoziazione", "chris_voss", "arsenale", "persuasione", "tono", "frasi_modello", "obiezioni", "chiusura", "errori"].forEach(c => {
       if (!categories.includes(c)) categories.push(c);
     });
   }
