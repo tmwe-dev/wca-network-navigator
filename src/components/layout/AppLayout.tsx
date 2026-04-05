@@ -89,6 +89,7 @@ function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, ch
   );
 }
 
+export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
