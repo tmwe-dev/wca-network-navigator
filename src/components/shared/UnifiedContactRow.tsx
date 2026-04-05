@@ -65,6 +65,7 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors",
         "hover:bg-muted/40 border border-transparent",
+        contact.status && contact.status !== "new" && "border-l-2 border-l-muted-foreground/40",
         isActive && "bg-primary/10 border-primary/20",
         className
       )}
