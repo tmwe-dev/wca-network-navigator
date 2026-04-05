@@ -11,8 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import {
   Send, Save, Eye, Loader2, Mail, Sparkles, Wand2,
-  Paperclip, Link as LinkIcon, Plus, X, Braces,
+  Paperclip, Link as LinkIcon, Plus, X, Braces, Users,
 } from "lucide-react";
+import { getCountryFlag } from "@/lib/countries";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";

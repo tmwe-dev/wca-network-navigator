@@ -129,7 +129,8 @@ export function EmailComposerContactPicker() {
       companyAlias: (p as any).company_alias || undefined,
       email: null,
       city: p.city || "",
-      countryName: p.country_code || "",
+      countryName: WCA_COUNTRIES_MAP[p.country_code || ""]?.name || p.country_code || "",
+      countryCode: p.country_code || undefined,
       isEnriched: false,
     });
   };
