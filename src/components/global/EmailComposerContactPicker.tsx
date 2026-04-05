@@ -445,9 +445,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                       : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                   )}
                 >
-                  <span className="text-xl leading-none">{c.flag}</span>
-                  <span className="tabular-nums font-bold text-[10px]">{c.count}</span>
-                  <span className="truncate w-full text-center text-[8px] leading-tight">{c.name}</span>
+                   <span className="text-2xl leading-none">{c.flag}</span>
+                    <span className="tabular-nums font-bold text-[11px]">{c.count}</span>
+                    <span className="truncate w-full text-center text-[9px] leading-tight">{c.name}</span>
                 </button>
               ))}
             </div>
