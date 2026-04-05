@@ -381,7 +381,7 @@ serve(async (req) => {
     }
 
     // --- VALIDATION: check contact has email ---
-    if (!contactEmail) {
+    if (!standalone && !contactEmail) {
       return new Response(
         JSON.stringify({
           error: "no_email",
