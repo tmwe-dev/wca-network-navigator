@@ -157,7 +157,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setAttivitaPriority = useCallback((s: string) => setFilters(p => ({ ...p, attivitaPriority: s })), []);
   const setNetworkSearch = useCallback((s: string) => setFilters(p => ({ ...p, networkSearch: s })), []);
   const setNetworkQuality = useCallback((s: string) => setFilters(p => ({ ...p, networkQuality: s })), []);
-  const setNetworkSort = useCallback((s: string) => setFilters(p => ({ ...p, networkSort: s })), []);
+  const setNetworkSelectedCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, networkSelectedCountries: c })), []);
+  const setNetworkDirectoryOnly = useCallback((v: boolean) => setFilters(p => ({ ...p, networkDirectoryOnly: v })), []);
   const setEmailCategory = useCallback((s: string) => setFilters(p => ({ ...p, emailCategory: s })), []);
   const setEmailSort = useCallback((s: string) => setFilters(p => ({ ...p, emailSort: s })), []);
   const setCrmOrigin = useCallback((o: Set<string>) => setFilters(p => ({ ...p, crmOrigin: o })), []);
