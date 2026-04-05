@@ -68,9 +68,11 @@ export default function EmailComposer() {
   };
 
   const buildFinalHtml = (body: string, partner: any, contactName: string) => {
+    const companyDisplay = partner.companyAlias || partner.company_alias || partner.companyName || partner.company_name || "";
+    const contactDisplay = partner.contactAlias || partner.contact_alias || contactName || "";
     let html = body
-      .replace(/\{\{company_name\}\}/g, escapeHtml(partner.companyName || partner.company_name || ""))
-      .replace(/\{\{contact_name\}\}/g, escapeHtml(contactName || ""))
+      .replace(/\{\{company_name\}\}/g, escapeHtml(companyDisplay))
+      .replace(/\{\{contact_name\}\}/g, escapeHtml(contactDisplay))
       .replace(/\{\{city\}\}/g, escapeHtml(partner.city || ""))
       .replace(/\{\{country\}\}/g, escapeHtml(partner.countryName || partner.country_name || ""));
     const validLinks = emailLinks.filter((l) => isValidUrl(l.url));
@@ -146,9 +148,9 @@ export default function EmailComposer() {
       if (draftError) throw draftError;
       const draftId = (savedDraft as any).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
-        partner_id: r.partnerId, email: r.email!, name: r.companyName,
-        subject: subject.replace(/\{\{company_name\}\}/g, r.companyName).replace(/\{\{contact_name\}\}/g, r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
-        html: buildFinalHtml(htmlBody, r, r.contactName || ""),
+        partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
+        subject: subject.replace(/\{\{company_name\}\}/g, r.companyAlias || r.companyName).replace(/\{\{contact_name\}\}/g, r.contactAlias || r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
+        html: buildFinalHtml(htmlBody, r, r.contactAlias || r.contactName || ""),
       }));
       await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);

@@ -6,8 +6,10 @@ import type { EmailQuality } from "@/components/workspace/QualitySelector";
 export interface SelectedRecipient {
   partnerId: string;
   companyName: string;
+  companyAlias?: string;
   contactId?: string;
   contactName?: string;
+  contactAlias?: string;
   email: string | null;
   city: string;
   countryName: string;
