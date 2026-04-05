@@ -1,4 +1,5 @@
 
+
 # Pulizia Completa — Pagina per Pagina
 
 ## Problema Principale
@@ -8,9 +9,9 @@ I filtri sono **duplicati in 3 posti**: VerticalTabNav sidebar interna, FiltersD
 ## Pagina 1: Home (`/`)
 
 **Da rimuovere:**
-- Sezione "Prototipi UI — Scegli il layout" (3 bottoni prototipo inutili)
+- Sezione "Prototipi UI — Scegli il layout" (3 bottoni prototipo)
 - Sezione "Stato del sistema" in fondo (ridondante con le nav cards)
-- Import di `Layout`, `MessageSquare`, `Layers` non più usati
+- Import inutilizzati (`Layout`, `MessageSquare`, `Layers`)
 
 **Da tenere:** Saluto + AI Prompt, Briefing + Agenti, Job attivi, Nav cards
 
@@ -18,19 +19,18 @@ I filtri sono **duplicati in 3 posti**: VerticalTabNav sidebar interna, FiltersD
 
 ## Pagina 2: Network (`/network`)
 
-**Già pulita** nella sessione precedente. Nessuna VerticalTabNav, filtri solo nella FiltersDrawer. OK.
+Gia pulita nella sessione precedente. Nessuna VerticalTabNav, filtri solo nella FiltersDrawer.
 
 ---
 
 ## Pagina 3: Outreach (`/outreach`)
 
-**Problema grave:** `OutreachFilterSlot.tsx` (473 righe!) nella VerticalTabNav contiene gli stessi identici filtri che sono già nella FiltersDrawer per la sezione Outreach.
+**Problema grave:** `OutreachFilterSlot.tsx` (473 righe!) nella VerticalTabNav contiene gli stessi identici filtri gia presenti nella FiltersDrawer.
 
 **Azione:**
-- **Rimuovere** `OutreachFilterSlot` dalla VerticalTabNav
-- La VerticalTabNav resta SOLO come navigazione tab (Cockpit, In Uscita, Attività, Circuito, Email, WhatsApp, LinkedIn) — **senza `filterSlot`**
-- I filtri restano SOLO nella FiltersDrawer
-- Eliminare il file `src/components/filters/OutreachFilterSlot.tsx`
+- Rimuovere `filterSlot` dalla VerticalTabNav
+- La VerticalTabNav resta SOLO come navigazione tab (Cockpit, In Uscita, ecc.)
+- Eliminare il file `OutreachFilterSlot.tsx`
 
 ---
 
@@ -39,62 +39,50 @@ I filtri sono **duplicati in 3 posti**: VerticalTabNav sidebar interna, FiltersD
 **Stesso problema:** `CRMFilterSlot.tsx` (196 righe) duplica i filtri della FiltersDrawer.
 
 **Azione:**
-- Rimuovere `CRMFilterSlot` dalla VerticalTabNav
-- La VerticalTabNav resta per navigare tra "Contatti" e "Biglietti" — senza filtri
-- Eliminare il file `src/components/filters/CRMFilterSlot.tsx`
+- Rimuovere `filterSlot` dalla VerticalTabNav
+- VerticalTabNav resta per navigare tra "Contatti" e "Biglietti"
+- Eliminare il file `CRMFilterSlot.tsx`
 
 ---
 
 ## Pagina 5: Agenda (`/agenda`)
 
-**Non ha VerticalTabNav** — ha solo header con navigazione mese/settimana/giorno. Pulita. Ma manca una sezione dedicata nella FiltersDrawer.
+Non ha VerticalTabNav -- pulita. Ma manca nella FiltersDrawer.
 
-**Azione:**
-- Aggiungere sezione "Agenda" nella FiltersDrawer con: filtro tipo evento (reminder/activity), filtro priorità, filtro stato
+**Azione:** Aggiungere sezione "Agenda" nella FiltersDrawer con filtro tipo evento, priorita e stato.
 
 ---
 
 ## Pagina 6: Settings (`/settings`)
 
-**Caso diverso:** qui la VerticalTabNav serve davvero come navigazione tra 10 pannelli di configurazione. I filtri enrichment nella sidebar sono specifici di quella sotto-pagina.
-
-**Azione:** Lasciare com'è. Settings non è una pagina operativa.
+La VerticalTabNav qui serve come navigazione tra 10 pannelli. Lasciare com'e'.
 
 ---
 
 ## Pagina 7: Pagine legacy da eliminare
 
-Queste route/pagine non sono più necessarie o sono duplicate:
-
-| File | Motivo eliminazione |
-|------|-------------------|
-| `PrototypeA.tsx` | Prototipo sperimentale, mai usato |
-| `PrototypeB.tsx` | Idem |
-| `PrototypeC.tsx` | Idem |
+| File | Motivo |
+|------|--------|
+| `PrototypeA/B/C.tsx` | Prototipi sperimentali non usati |
 | `SystemMap.tsx` | Diagnostica interna |
-| `Agents.tsx` | Sostituito da AgentStatusPanel nella Home |
+| `Agents.tsx` | Sostituito da AgentStatusPanel |
 | `Dashboard.tsx` | Sostituito da SuperHome3D |
 | `HubOperativo.tsx` | Legacy |
 | `Global.tsx` | Legacy |
 
 ---
 
-## Riepilogo Modifiche
+## Riepilogo File
 
 | File | Azione |
 |------|--------|
-| `src/pages/SuperHome3D.tsx` | Rimuovere sezioni Prototipi e Stato Sistema |
-| `src/pages/Outreach.tsx` | Rimuovere `filterSlot` dalla VerticalTabNav |
-| `src/pages/CRM.tsx` | Rimuovere `filterSlot` dalla VerticalTabNav |
-| `src/components/filters/OutreachFilterSlot.tsx` | **Eliminare** |
-| `src/components/filters/CRMFilterSlot.tsx` | **Eliminare** |
-| `src/components/global/FiltersDrawer.tsx` | Aggiungere sezione Agenda |
-| `src/pages/Prototype*.tsx` | **Eliminare** (3 file) |
-| `src/pages/Dashboard.tsx` | **Eliminare** |
-| `src/pages/HubOperativo.tsx` | **Eliminare** |
-| `src/pages/Global.tsx` | **Eliminare** |
-| `src/pages/SystemMap.tsx` | **Eliminare** |
-| `src/pages/Agents.tsx` | **Eliminare** |
-| `src/App.tsx` | Rimuovere le route corrispondenti |
+| `SuperHome3D.tsx` | Rimuovere Prototipi + Stato Sistema |
+| `Outreach.tsx` | Rimuovere filterSlot |
+| `CRM.tsx` | Rimuovere filterSlot |
+| `OutreachFilterSlot.tsx` | Eliminare |
+| `CRMFilterSlot.tsx` | Eliminare |
+| `FiltersDrawer.tsx` | Aggiungere sezione Agenda |
+| 8 file legacy | Eliminare + rimuovere route da App.tsx |
 
-**Risultato:** Filtri in un unico posto (FiltersDrawer), VerticalTabNav solo per navigazione, niente più duplicazione, 8 file eliminati.
+**Risultato:** Filtri in un unico posto (FiltersDrawer), VerticalTabNav solo per navigazione, 8 file eliminati, zero duplicazione.
+
