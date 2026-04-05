@@ -12,6 +12,7 @@ interface CampaignQueueMonitorProps {
   draftId: string;
   queueStatus: string;
   onClose?: () => void;
+  onStatusChange?: (status: string) => void;
 }
 
 export function CampaignQueueMonitor({ draftId, queueStatus, onClose }: CampaignQueueMonitorProps) {
