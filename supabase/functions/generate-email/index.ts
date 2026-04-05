@@ -9,18 +9,36 @@ const corsHeaders = {
 
 type Quality = "fast" | "standard" | "premium";
 
-/** Extract sections from KB using <!-- SECTION:N --> markers */
-function getKBSlice(fullKB: string, quality: Quality): string {
+/** Fetch granular KB entries from db, filtered by quality tier */
+async function fetchKbEntries(supabase: any, quality: Quality): Promise<string> {
+  const minPriority = quality === "fast" ? 9 : quality === "standard" ? 6 : 1;
+  const limit = quality === "fast" ? 5 : quality === "standard" ? 15 : 50;
+
+  const { data: entries } = await supabase
+    .from("kb_entries")
+    .select("title, content, category, tags")
+    .eq("is_active", true)
+    .gte("priority", minPriority)
+    .order("priority", { ascending: false })
+    .order("sort_order")
+    .limit(limit);
+
+  if (!entries || entries.length === 0) return "";
+
+  return entries
+    .map((e: any) => `### ${e.title} [${e.tags?.join(", ") || e.category}]\n${e.content}`)
+    .join("\n\n---\n\n");
+}
+
+/** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
+function getKBSliceLegacy(fullKB: string, quality: Quality): string {
   if (!fullKB) return "";
-  
   const sectionMap: Record<Quality, number[]> = {
     fast: [1, 5],
     standard: [1, 2, 3, 4, 5, 6, 7, 8],
-    premium: [], // all sections
+    premium: [],
   };
-
   if (quality === "premium") return fullKB;
-
   const allowedSections = sectionMap[quality];
   const sectionRegex = /<!-- SECTION:(\d+) -->/g;
   const markers: { index: number; section: number }[] = [];
@@ -28,8 +46,7 @@ function getKBSlice(fullKB: string, quality: Quality): string {
   while ((match = sectionRegex.exec(fullKB)) !== null) {
     markers.push({ index: match.index, section: parseInt(match[1]) });
   }
-  if (markers.length === 0) return fullKB; // no markers, return all
-
+  if (markers.length === 0) return fullKB;
   const parts: string[] = [];
   for (let i = 0; i < markers.length; i++) {
     if (allowedSections.includes(markers[i].section)) {
