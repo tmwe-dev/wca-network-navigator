@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
+import { getCountryFlag } from "@/lib/countries";
 import type { SelectedRecipient } from "@/contexts/MissionContext";
 
 type PickerTab = "partners" | "contacts" | "bca";
@@ -21,9 +22,28 @@ export function EmailComposerContactPicker() {
   const [tab, setTab] = useState<PickerTab>("partners");
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const { addRecipient, recipients, removeRecipient } = useMission();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const shouldSearch = search.length >= 3;
+  const shouldSearch = search.length >= 3 || !!selectedCountry;
+
+  // Country stats
+  const { data: countryStats = [] } = useQuery({
+    queryKey: ["picker-country-stats"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("country_code")
+        .not("country_code", "is", null);
+      if (!data) return [];
+      const counts: Record<string, number> = {};
+      data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([code, count]) => ({ code, count, flag: getCountryFlag(code) }));
+    },
+  });
 
   // Partners search
   const { data: partners = [] } = useQuery({
