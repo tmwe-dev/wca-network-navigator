@@ -38,7 +38,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const [contactSort, setContactSort] = useState<ContactSort>("name");
   const [bcaSort, setBcaSort] = useState<BcaSort>("name");
   const [originFilter, setOriginFilter] = useState<string>("all");
-  const { addRecipient, recipients, removeRecipient } = useMission();
+  const { addRecipient, recipients, removeRecipient, clearRecipients } = useMission();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const shouldSearch = search.length >= 3 || !!selectedCountry;
@@ -277,10 +277,17 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
           </label>
-          {onConfirm && recipients.length > 0 && (
-            <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
-              <Check className="w-3 h-3" /> Conferma {recipients.length}
-            </Button>
+          {recipients.length > 0 && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Button onClick={clearRecipients} size="sm" variant="outline" className="h-6 gap-1 text-[10px] px-2.5">
+                <X className="w-3 h-3" /> Deseleziona tutti
+              </Button>
+              {onConfirm && (
+                <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
+                  <Check className="w-3 h-3" /> Conferma {recipients.length}
+                </Button>
+              )}
+            </div>
           )}
         </div>
         {recipients.length > 0 ? (
