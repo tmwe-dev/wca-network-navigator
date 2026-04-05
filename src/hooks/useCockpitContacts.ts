@@ -62,7 +62,27 @@ function computePriority(email?: string | null, phone?: string | null, mobile?: 
   return Math.min(p, 10);
 }
 
-function formatRelativeDate(dateStr: string | null): string {
+function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
+  if (!partner) return {};
+  const meta: any = {};
+  if (partner.member_since) {
+    meta.memberSince = partner.member_since;
+    const y = new Date().getFullYear() - new Date(partner.member_since).getFullYear();
+    if (y >= 0) meta.memberYears = y;
+  }
+  const ed = partner.enrichment_data;
+  if (ed) {
+    if (ed.company_profile?.specialties?.length) meta.specialties = ed.company_profile.specialties.slice(0, 4);
+    if (ed.contact_profile?.seniority) meta.seniority = ed.contact_profile.seniority;
+    const nets: string[] = [];
+    if (ed.networks && Array.isArray(ed.networks)) nets.push(...ed.networks);
+    if (ed.company_profile?.networks && Array.isArray(ed.company_profile.networks)) nets.push(...ed.company_profile.networks);
+    if (nets.length) meta.networks = [...new Set(nets)];
+  }
+  return meta;
+}
+
+
   if (!dateStr) return "Mai";
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (days < 1) return "Oggi";
