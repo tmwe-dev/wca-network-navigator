@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
-import ContentManager from "@/components/settings/ContentManager";
+import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
 import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
