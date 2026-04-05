@@ -460,7 +460,7 @@ serve(async (req) => {
         supabase
           .from("activities")
           .select("email_subject, sent_at, activity_type")
-          .eq("source_id", activity.partner_id)
+          .eq("source_id", activity!.partner_id)
           .in("status", ["completed"])
           .order("created_at", { ascending: false })
           .limit(5),
