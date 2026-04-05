@@ -176,15 +176,18 @@ export function AppLayout() {
         <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
         <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
 
-        <motion.button
+        <button
           onClick={() => setIntelliflowOpen(true)}
-          className="fixed bottom-6 right-14 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.1))", border: "1px solid hsl(var(--primary) / 0.2)", boxShadow: "0 0 30px hsl(var(--primary) / 0.1), 0 8px 32px -8px hsl(0 0% 0% / 0.4)" }}
-          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-          aria-label="IntelliFlow Workspace"
+          className="fixed bottom-20 z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
+          style={{
+            right: 0,
+            background: "hsla(270, 60%, 65%, 0.25)",
+            backdropFilter: "blur(8px)",
+          }}
+          aria-label="IntelliFlow AI"
         >
-          <Sparkles className="w-5 h-5 text-primary/70" />
-        </motion.button>
+          <Sparkles className="w-4 h-4 text-purple-300" />
+        </button>
 
         <Suspense fallback={null}>
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
