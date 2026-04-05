@@ -667,7 +667,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             <RotateCcw className="w-3.5 h-3.5" /> Reset ({activeCount})
           </Button>
           <Button className="flex-1 h-9 gap-2 text-xs" onClick={() => onOpenChange(false)}>
-            <Check className="w-3.5 h-3.5" /> Chiudi
+            <Check className="w-3.5 h-3.5" /> {isEmailComposer ? "Conferma" : "Chiudi"}
           </Button>
         </div>
       </SheetContent>
