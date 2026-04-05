@@ -37,6 +37,7 @@ export default function Settings() {
 
   const tabs: VerticalTab[] = [
     { value: "generale", label: "Generale", icon: SettingsIcon },
+    { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
     { value: "contenuti", label: "Contenuti", icon: BookOpen },
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
