@@ -568,23 +568,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
-          {/* ═══ NETWORK ═══ */}
           {isNetwork && (
-            <>
-              <FilterSection icon={Search} label="Cerca">
-                <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
-              </FilterSection>
-              <FilterSection icon={ArrowUpDown} label="Ordina">
-                <ChipGroup>
-                  {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Sparkles} label="Qualità dati">
-                <ChipGroup>
-                  {NETWORK_QUALITY.map(o => <Chip key={o.value} active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-            </>
+            <NetworkFiltersSection />
           )}
 
           {/* ═══ CRM ═══ */}
