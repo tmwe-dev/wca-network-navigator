@@ -56,7 +56,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             .filter((r: any) => r.country_code)
             .map((r: any) => ({
               code: r.country_code,
-              count: Number(r.partner_count || r.count || 0),
+              count: Number(r.total_partners || 0),
               flag: getCountryFlag(r.country_code),
               name: WCA_COUNTRIES_MAP[r.country_code]?.name || r.country_code,
             }));
