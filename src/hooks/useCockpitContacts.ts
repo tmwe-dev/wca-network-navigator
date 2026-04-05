@@ -299,7 +299,7 @@ export function useCockpitContacts() {
         if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
           icLinkedin = socialLinksMap[icPartnerId];
         }
-        const enrich = (ic.enrichment_data as any) || {};
+        const icEnrich = (ic.enrichment_data as any) || {};
         const icMeta: Partial<CockpitContact> = {};
         if (enrich.contact_profile?.seniority) icMeta.seniority = enrich.contact_profile.seniority;
         if (enrich.company_profile?.specialties?.length) icMeta.specialties = enrich.company_profile.specialties.slice(0, 4);
