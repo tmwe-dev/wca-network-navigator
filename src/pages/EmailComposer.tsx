@@ -29,7 +29,7 @@ const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{countr
 interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
-  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient } = useMission();
+  const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = useMission();
 
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -37,6 +37,7 @@ export default function EmailComposer() {
   const [emailLinks, setEmailLinks] = useState<LinkItem[]>([]);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
 
   const [sending, setSending] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
@@ -53,6 +54,31 @@ export default function EmailComposer() {
   const { data: templates = [] } = useEmailTemplates();
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
+
+  const addManualEmail = () => {
+    const email = manualEmail.trim().toLowerCase();
+    if (!email) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.length > 255) {
+      toast.error("Indirizzo email non valido");
+      return;
+    }
+    if (recipients.some(r => r.email === email)) {
+      toast.error("Destinatario già presente");
+      setManualEmail("");
+      return;
+    }
+    const domain = email.split("@")[1] || "";
+    addRecipient({
+      partnerId: `manual-${Date.now()}`,
+      companyName: domain,
+      email,
+      city: "",
+      countryName: "",
+      isEnriched: true,
+    });
+    setManualEmail("");
+  };
 
   const escapeHtml = (str: string) =>
     str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -203,25 +229,37 @@ export default function EmailComposer() {
 
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0 p-4 pb-0 max-w-3xl mx-auto w-full">
-          {/* Recipients bar */}
-          {recipients.length > 0 && (
-            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-              <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              {recipients.map((r, i) => (
-                <Badge key={i} variant="secondary" className="gap-1 pl-1.5 pr-1 py-0.5 text-[11px] font-normal">
-                  <span className="text-sm leading-none">{getCountryFlag(r.countryCode || "")}</span>
-                  <span className="truncate max-w-[180px]">
-                    {r.contactAlias || r.contactName
-                      ? `${r.contactAlias || r.contactName} · ${r.companyAlias || r.companyName}`
-                      : r.companyAlias || r.companyName}
-                  </span>
-                  <button onClick={() => removeRecipient(i)} className="ml-0.5 p-0.5 rounded-full hover:bg-destructive/10">
-                    <X className="w-2.5 h-2.5 text-muted-foreground hover:text-destructive" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
+          {/* Recipients bar + manual email input */}
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            {recipients.map((r, i) => (
+              <Badge key={i} variant="secondary" className="gap-1 pl-1.5 pr-1 py-0.5 text-[11px] font-normal">
+                <span className="text-sm leading-none">{getCountryFlag(r.countryCode || "")}</span>
+                <span className="truncate max-w-[180px]">
+                  {r.contactAlias || r.contactName
+                    ? `${r.contactAlias || r.contactName} · ${r.companyAlias || r.companyName}`
+                    : r.companyAlias || r.companyName}
+                </span>
+                <button onClick={() => removeRecipient(i)} className="ml-0.5 p-0.5 rounded-full hover:bg-destructive/10">
+                  <X className="w-2.5 h-2.5 text-muted-foreground hover:text-destructive" />
+                </button>
+              </Badge>
+            ))}
+            <input
+              type="email"
+              value={manualEmail}
+              onChange={e => setManualEmail(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addManualEmail();
+                }
+              }}
+              onBlur={() => { if (manualEmail.trim()) addManualEmail(); }}
+              placeholder={recipients.length === 0 ? "Aggiungi destinatario email..." : "Aggiungi..."}
+              className="flex-1 min-w-[160px] h-7 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none border-none"
+            />
+          </div>
 
           {/* Subject row */}
           <div className="flex items-center gap-2 mb-3">
