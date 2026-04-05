@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom";
 export type WorkspaceFilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
 export type EmailGenFilter = "all" | "generated" | "to_generate";
 export type SortingFilterMode = "all" | "unreviewed" | "reviewed" | "today" | "immediate" | "scheduled";
+export type CockpitChannelFilter = "with_email" | "with_linkedin" | "with_phone" | "with_whatsapp";
+export type CockpitQualityFilter = "enriched" | "not_enriched" | "with_alias" | "no_alias";
 
 export interface GlobalFilterState {
   search: string;
@@ -19,6 +21,10 @@ export interface GlobalFilterState {
   workspaceCountries: Set<string>;
   sortingFilter: SortingFilterMode;
   sortingSearch: string;
+  cockpitCountries: Set<string>;
+  cockpitChannels: Set<CockpitChannelFilter>;
+  cockpitQuality: Set<CockpitQualityFilter>;
+  cockpitStatus: string;
 }
 
 interface GlobalFiltersCtxValue {
@@ -36,6 +42,10 @@ interface GlobalFiltersCtxValue {
   setWorkspaceCountries: (c: Set<string>) => void;
   setSortingFilter: (f: SortingFilterMode) => void;
   setSortingSearch: (s: string) => void;
+  setCockpitCountries: (c: Set<string>) => void;
+  setCockpitChannels: (c: Set<CockpitChannelFilter>) => void;
+  setCockpitQuality: (c: Set<CockpitQualityFilter>) => void;
+  setCockpitStatus: (s: string) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
@@ -54,6 +64,10 @@ const defaults: GlobalFilterState = {
   workspaceCountries: new Set(),
   sortingFilter: "all",
   sortingSearch: "",
+  cockpitCountries: new Set(),
+  cockpitChannels: new Set(),
+  cockpitQuality: new Set(),
+  cockpitStatus: "all",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
@@ -65,7 +79,7 @@ export function useGlobalFilters() {
 }
 
 function cloneDefaults(): GlobalFilterState {
-  return { ...defaults, origin: new Set(defaults.origin), workspaceFilters: new Set(), workspaceCountries: new Set() };
+  return { ...defaults, origin: new Set(defaults.origin), workspaceFilters: new Set(), workspaceCountries: new Set(), cockpitCountries: new Set(), cockpitChannels: new Set(), cockpitQuality: new Set() };
 }
 
 export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
@@ -85,13 +99,19 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setWorkspaceCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, workspaceCountries: c })), []);
   const setSortingFilter = useCallback((f: SortingFilterMode) => setFilters(p => ({ ...p, sortingFilter: f })), []);
   const setSortingSearch = useCallback((s: string) => setFilters(p => ({ ...p, sortingSearch: s })), []);
+  const setCockpitCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, cockpitCountries: c })), []);
+  const setCockpitChannels = useCallback((c: Set<CockpitChannelFilter>) => setFilters(p => ({ ...p, cockpitChannels: c })), []);
+  const setCockpitQuality = useCallback((c: Set<CockpitQualityFilter>) => setFilters(p => ({ ...p, cockpitQuality: c })), []);
+  const setCockpitStatus = useCallback((s: string) => setFilters(p => ({ ...p, cockpitStatus: s })), []);
   const resetFilters = useCallback(() => setFilters(cloneDefaults()), []);
 
   return (
     <Ctx.Provider value={{
       filters, setSearch, setSortBy, setOrigin, setQuality, setGroupBy, setHoldingPattern, setLeadStatus,
       setOutreachTab, setWorkspaceFilters, setEmailGenFilter, setWorkspaceCountries,
-      setSortingFilter, setSortingSearch, resetFilters, currentRoute: location.pathname,
+      setSortingFilter, setSortingSearch,
+      setCockpitCountries, setCockpitChannels, setCockpitQuality, setCockpitStatus,
+      resetFilters, currentRoute: location.pathname,
     }}>
       {children}
     </Ctx.Provider>

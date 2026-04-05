@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { motion } from "framer-motion";
 import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2 } from "lucide-react";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
@@ -59,8 +60,8 @@ export function ContactStream({
 }: ContactStreamProps) {
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
+  const { filters: gf } = useGlobalFilters();
 
-  // Helper to check if a contact's source_id was worked today
   const isContactWorked = (c: CockpitContact) => {
     return workedIds.has(c.partnerId || c.sourceId);
   };
@@ -78,12 +79,43 @@ export function ContactStream({
       if (f.type === "channel" && f.label.toLowerCase().includes("linkedin")) result = result.filter(c => c.channels.includes("linkedin"));
       if (f.type === "priority") result = result.filter(c => c.priority >= 7);
     }
-    // Hide worked filter
     if (hideWorked) {
       result = result.filter(c => !isContactWorked(c));
     }
-    return result.sort((a, b) => b.priority - a.priority);
-  }, [searchQuery, filters, contacts, hideWorked, workedIds]);
+    // Cockpit sidebar filters
+    if (gf.cockpitCountries.size > 0) {
+      result = result.filter(c => gf.cockpitCountries.has(c.country?.toUpperCase() || "??"));
+    }
+    if (gf.cockpitChannels.size > 0) {
+      result = result.filter(c => {
+        for (const ch of gf.cockpitChannels) {
+          if (ch === "with_email" && !c.email) return false;
+          if (ch === "with_linkedin" && !c.linkedinUrl) return false;
+          if (ch === "with_phone" && !c.phone) return false;
+          if (ch === "with_whatsapp" && !c.phone) return false;
+        }
+        return true;
+      });
+    }
+    if (gf.cockpitQuality.size > 0) {
+      result = result.filter(c => {
+        for (const q of gf.cockpitQuality) {
+          if (q === "enriched" && !c.deepSearchAt) return false;
+          if (q === "not_enriched" && c.deepSearchAt) return false;
+          if (q === "with_alias" && !c.contactAlias && !c.companyAlias) return false;
+          if (q === "no_alias" && (c.contactAlias || c.companyAlias)) return false;
+        }
+        return true;
+      });
+    }
+    // Sort
+    const sortBy = gf.sortBy || "priority";
+    if (sortBy === "name") result.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === "company") result.sort((a, b) => a.company.localeCompare(b.company));
+    else if (sortBy === "country") result.sort((a, b) => a.country.localeCompare(b.country));
+    else result.sort((a, b) => b.priority - a.priority);
+    return result;
+  }, [searchQuery, filters, contacts, hideWorked, workedIds, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
 
   // Get selected contacts for bulk actions
   const selectedContacts = useMemo(() =>

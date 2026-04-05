@@ -30,6 +30,11 @@ export interface CockpitContact {
   isBusinessCard?: boolean;
   deepSearchAt?: string;
   enrichmentData?: any;
+  memberSince?: string;
+  memberYears?: number;
+  networks?: string[];
+  seniority?: string;
+  specialties?: string[];
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
@@ -55,6 +60,26 @@ function computePriority(email?: string | null, phone?: string | null, mobile?: 
   if (email) p += 3;
   if (phone || mobile) p += 2;
   return Math.min(p, 10);
+}
+
+function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
+  if (!partner) return {};
+  const meta: any = {};
+  if (partner.member_since) {
+    meta.memberSince = partner.member_since;
+    const y = new Date().getFullYear() - new Date(partner.member_since).getFullYear();
+    if (y >= 0) meta.memberYears = y;
+  }
+  const ed = partner.enrichment_data;
+  if (ed) {
+    if (ed.company_profile?.specialties?.length) meta.specialties = ed.company_profile.specialties.slice(0, 4);
+    if (ed.contact_profile?.seniority) meta.seniority = ed.contact_profile.seniority;
+    const nets: string[] = [];
+    if (ed.networks && Array.isArray(ed.networks)) nets.push(...ed.networks);
+    if (ed.company_profile?.networks && Array.isArray(ed.company_profile.networks)) nets.push(...ed.company_profile.networks);
+    if (nets.length) meta.networks = [...new Set(nets)];
+  }
+  return meta;
 }
 
 function formatRelativeDate(dateStr: string | null): string {
@@ -139,7 +164,7 @@ export function useCockpitContacts() {
       const uniquePartnerIds = [...new Set(partnerIds)];
       let partnersMap: Record<string, any> = {};
       if (uniquePartnerIds.length > 0) {
-        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at").in("id", uniquePartnerIds);
+        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since").in("id", uniquePartnerIds);
         for (const p of pData || []) partnersMap[p.id] = p;
       }
 
@@ -181,6 +206,7 @@ export function useCockpitContacts() {
         const pc = pcMap[sid];
         if (!pc) continue;
         const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        const pMeta = extractPartnerMeta(partner);
         result.push({
           id: `pc-${pc.id}`,
           queueId: item.id,
@@ -204,6 +230,7 @@ export function useCockpitContacts() {
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
           enrichmentData: partner?.enrichment_data || undefined,
+          ...pMeta,
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
@@ -256,14 +283,14 @@ export function useCockpitContacts() {
         const ic = icMap[sid];
         if (!ic) continue;
         // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
-        const enrich = (ic.enrichment_data as any) || {};
-        let icLinkedin = enrich.linkedin_profile_url  // canonical field
-          || enrich.linkedin_url                       // legacy from old lookup
-          || enrich.social_links?.linkedin             // legacy field
+        const icEd = (ic.enrichment_data as any) || {};
+        let icLinkedin = icEd.linkedin_profile_url
+          || icEd.linkedin_url
+          || icEd.social_links?.linkedin
           || "";
         // contact_profiles is an OBJECT keyed by ID, not an array
-        if (!icLinkedin && enrich.contact_profiles && typeof enrich.contact_profiles === "object") {
-          const profiles = Object.values(enrich.contact_profiles) as any[];
+        if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
+          const profiles = Object.values(icEd.contact_profiles) as any[];
           const found = profiles.find((cp: any) => cp.linkedin_url);
           if (found) icLinkedin = found.linkedin_url;
         }
@@ -272,6 +299,10 @@ export function useCockpitContacts() {
         if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
           icLinkedin = socialLinksMap[icPartnerId];
         }
+        const icEnrich = (ic.enrichment_data as any) || {};
+        const icMeta: Partial<CockpitContact> = {};
+        if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
+        if (icEnrich.company_profile?.specialties?.length) icMeta.specialties = icEnrich.company_profile.specialties.slice(0, 4);
         result.push({
           id: `ic-${ic.id}`,
           queueId: item.id,
@@ -295,6 +326,7 @@ export function useCockpitContacts() {
           companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
           enrichmentData: ic.enrichment_data || undefined,
+          ...icMeta,
         });
       }
     }
