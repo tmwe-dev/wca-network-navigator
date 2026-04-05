@@ -198,6 +198,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const isNetwork = route === "/network";
   const isCRM = route === "/crm";
   const isAgenda = route === "/agenda";
+  const isEmailComposer = route === "/email-composer";
 
   // Detect outreach sub-tab
   const outreachTab = g.filters.outreachTab;
