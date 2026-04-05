@@ -248,15 +248,23 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         </div>
       </div>
 
-      {/* Selected recipients at top */}
+      {/* Selected recipients + confirm */}
       {recipients.length > 0 && (
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
-            <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
-          </label>
-          <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
+            </label>
+            {onConfirm && (
+              <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
+                <Check className="w-3 h-3" /> Conferma
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
             {recipients.map((r, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
+                <span className="text-xs leading-none">{getCountryFlag(r.countryCode || "")}</span>
                 {r.contactAlias || r.contactName || r.companyAlias || r.companyName}
                 {r.email && <Mail className="w-2.5 h-2.5 opacity-60" />}
                 <button onClick={() => removeRecipient(i)} className="hover:text-destructive">
@@ -267,6 +275,14 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           </div>
         </div>
       )}
+
+      {/* Toggle nascondi in circuito */}
+      <div className="flex items-center justify-between py-1.5 px-1">
+        <label className="text-[10px] text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+          <Plane className="w-3 h-3" /> Nascondi in circuito
+        </label>
+        <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1">
