@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
-import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown, Check } from "lucide-react";
+import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown, Check, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [countrySort, setCountrySort] = useState<CountrySort>("count");
+  const [hideHolding, setHideHolding] = useState(true);
   const { addRecipient, recipients, removeRecipient } = useMission();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +68,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, company_alias, country_code, city");
+        .select("id, company_name, company_alias, country_code, city, lead_status");
       if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
       if (selectedCountry) q = q.eq("country_code", selectedCountry);
       const { data } = await q.order("company_name").limit(50);
@@ -95,7 +97,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     queryFn: async () => {
       const { data } = await supabase
         .from("imported_contacts")
-        .select("id, name, company_name, email, country, contact_alias, company_alias")
+        .select("id, name, company_name, email, country, contact_alias, company_alias, lead_status")
         .or(`name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`)
         .limit(30);
       return data || [];
@@ -109,12 +111,26 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     queryFn: async () => {
       const { data } = await supabase
         .from("business_cards")
-        .select("id, contact_name, company_name, email, location, matched_partner_id")
+        .select("id, contact_name, company_name, email, location, matched_partner_id, lead_status")
         .or(`contact_name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`)
         .limit(30);
       return data || [];
     },
   });
+
+  // Filter out holding pattern contacts
+  const filteredPartners = useMemo(() =>
+    hideHolding ? partners.filter(p => !p.lead_status || p.lead_status === 'new') : partners,
+    [partners, hideHolding]
+  );
+  const filteredContacts = useMemo(() =>
+    hideHolding ? contacts.filter(c => !c.lead_status || c.lead_status === 'new') : contacts,
+    [contacts, hideHolding]
+  );
+  const filteredBca = useMemo(() =>
+    hideHolding ? bcaCards.filter(c => !(c as any).lead_status || (c as any).lead_status === 'new') : bcaCards,
+    [bcaCards, hideHolding]
+  );
 
   const isSelected = (partnerId: string, contactId?: string) => {
     return recipients.some(r =>
@@ -232,15 +248,23 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         </div>
       </div>
 
-      {/* Selected recipients at top */}
+      {/* Selected recipients + confirm */}
       {recipients.length > 0 && (
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
-            <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
-          </label>
-          <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
+            </label>
+            {onConfirm && (
+              <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
+                <Check className="w-3 h-3" /> Conferma
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
             {recipients.map((r, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
+                <span className="text-xs leading-none">{getCountryFlag(r.countryCode || "")}</span>
                 {r.contactAlias || r.contactName || r.companyAlias || r.companyName}
                 {r.email && <Mail className="w-2.5 h-2.5 opacity-60" />}
                 <button onClick={() => removeRecipient(i)} className="hover:text-destructive">
@@ -251,6 +275,14 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           </div>
         </div>
       )}
+
+      {/* Toggle nascondi in circuito */}
+      <div className="flex items-center justify-between py-1.5 px-1">
+        <label className="text-[10px] text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+          <Plane className="w-3 h-3" /> Nascondi in circuito
+        </label>
+        <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1">
@@ -292,9 +324,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
         {/* Partners */}
         {tab === "partners" && shouldSearch && (
-          <div className="space-y-0.5">
-            {partners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {partners.map(p => (
+         <div className="space-y-0.5">
+            {filteredPartners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredPartners.map(p => (
               <div key={p.id}>
                 <button
                   onClick={() => setExpandedPartner(expandedPartner === p.id ? null : p.id)}
@@ -354,8 +386,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         {/* Imported contacts */}
         {tab === "contacts" && shouldSearch && (
           <div className="space-y-0.5">
-            {contacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {contacts.map(c => (
+            {filteredContacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredContacts.map(c => (
               <button
                 key={c.id}
                 onClick={() => handleSelectImported(c)}
@@ -377,8 +409,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         {/* BCA */}
         {tab === "bca" && shouldSearch && (
           <div className="space-y-0.5">
-            {bcaCards.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-            {bcaCards.map(c => (
+            {filteredBca.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+            {filteredBca.map(c => (
               <button
                 key={c.id}
                 onClick={() => handleSelectBca(c)}
@@ -397,16 +429,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           </div>
         )}
       </ScrollArea>
-
-      {/* Confirm button */}
-      {recipients.length > 0 && onConfirm && (
-        <div className="pt-3 border-t border-border mt-2">
-          <Button onClick={onConfirm} className="w-full gap-2" size="sm">
-            <Check className="w-4 h-4" />
-            Conferma {recipients.length} destinatar{recipients.length === 1 ? "io" : "i"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
