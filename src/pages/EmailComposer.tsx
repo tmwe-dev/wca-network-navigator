@@ -203,6 +203,24 @@ export default function EmailComposer() {
 
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0 p-4 pb-0 max-w-3xl mx-auto w-full">
+          {/* Recipients bar */}
+          {recipients.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+              <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              {recipients.map((r, i) => (
+                <Badge key={i} variant="secondary" className="gap-1 pl-1.5 pr-1 py-0.5 text-[11px] font-normal">
+                  <span className="text-sm leading-none">{getCountryFlag(r.countryCode || "")}</span>
+                  <span className="truncate max-w-[120px]">
+                    {r.contactAlias || r.contactName || r.companyAlias || r.companyName}
+                  </span>
+                  <button onClick={() => removeRecipient(i)} className="ml-0.5 p-0.5 rounded-full hover:bg-destructive/10">
+                    <X className="w-2.5 h-2.5 text-muted-foreground hover:text-destructive" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
           {/* Subject row */}
           <div className="flex items-center gap-2 mb-3">
             <Mail className="w-4 h-4 text-primary shrink-0" />
@@ -212,9 +230,6 @@ export default function EmailComposer() {
               placeholder="Oggetto della email..."
               className="h-9 text-sm font-medium flex-1"
             />
-            <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
-              {recipientsWithEmail.length} dest.
-            </Badge>
           </div>
 
           {/* Toolbar — right aligned above textarea */}
