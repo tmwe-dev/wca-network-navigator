@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import {
-  Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare,
+  Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, Plane,
   LayoutList, LayoutGrid, Rows3, Mail, Phone, SlidersHorizontal,
   ChevronLeft, ChevronRight, Globe, ArrowUpAZ, ArrowDownAZ, Users, Star,
 } from "lucide-react";
@@ -28,6 +28,7 @@ interface BcaGroup {
   logoUrl: string | null;
   hasDeepSearch: boolean;
   isMatched: boolean;
+  inHolding: boolean;
   partnerId: string | null;
   countryCode: string | null;
   cards: BusinessCardWithPartner[];
@@ -108,6 +109,8 @@ export function BusinessCardsView() {
     }
   };
 
+  const [hideHolding, setHideHolding] = useState(true);
+
   // Assign country to each card
   const cardsWithCountry = useMemo(() => {
     return cards.map(c => ({
@@ -168,8 +171,13 @@ export function BusinessCardsView() {
     }
     if (onlyMatched) list = list.filter(c => !!c.matched_partner_id);
     if (onlyWithEmail) list = list.filter(c => !!c.email);
+    if (hideHolding) list = list.filter(c => !c.lead_status || c.lead_status === "new");
     return list;
-  }, [cardsWithCountry, selectedCountry, search, onlyMatched, onlyWithEmail]);
+  }, [cardsWithCountry, selectedCountry, search, onlyMatched, onlyWithEmail, hideHolding]);
+
+  const holdingCount = useMemo(() => {
+    return cardsWithCountry.filter(c => c.lead_status && c.lead_status !== "new").length;
+  }, [cardsWithCountry]);
 
   // Build groups
   const groups = useMemo(() => {
@@ -184,6 +192,7 @@ export function BusinessCardsView() {
           logoUrl: partner?.logo_url || null,
           hasDeepSearch: !!partner?.enrichment_data?.deep_search_at,
           isMatched: !!card.matched_partner_id,
+          inHolding: !!(card.lead_status && card.lead_status !== "new"),
           partnerId: card.matched_partner_id || null,
           countryCode: (card as any)._country || null,
           cards: [],
@@ -314,6 +323,10 @@ export function BusinessCardsView() {
                   <span className="text-[10px] text-muted-foreground">Solo con email</span>
                   <Switch checked={onlyWithEmail} onCheckedChange={setOnlyWithEmail} className="scale-[0.65]" />
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Plane className="w-3 h-3" /> Nascondi in circuito ({holdingCount})</span>
+                  <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-[0.65]" />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -408,6 +421,7 @@ export function BusinessCardsView() {
                         <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
                         {group.isMatched && <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">WCA</Badge>}
                         {group.hasDeepSearch && <Brain className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]" />}
+                        {group.inHolding && <span title="In circuito di attesa"><Plane className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 animate-pulse" /></span>}
                       </div>
                       <span className="text-[10px] text-muted-foreground">{group.cards.length} contatt{group.cards.length === 1 ? "o" : "i"}</span>
                     </div>
