@@ -258,6 +258,29 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                 </div>
                 <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
                 <div className="text-[11px] text-muted-foreground">{contact.role}</div>
+                {/* Anagraphic meta line */}
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {contact.memberYears != null && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      {contact.memberYears}a membro
+                    </span>
+                  )}
+                  {contact.seniority && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20">
+                      {contact.seniority}
+                    </span>
+                  )}
+                  {contact.networks?.map(n => (
+                    <span key={n} className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30">
+                      {n}
+                    </span>
+                  ))}
+                  {contact.specialties && contact.specialties.length > 0 && !isExpanded && (
+                    <span className="text-[9px] text-muted-foreground/70 truncate max-w-[120px]">
+                      {contact.specialties.slice(0, 2).join(", ")}
+                    </span>
+                  )}
+                </div>
                 {/* AI headline preview */}
                 {contactHeadline && !isExpanded && (
                   <div className="flex items-center gap-1 mt-0.5">
