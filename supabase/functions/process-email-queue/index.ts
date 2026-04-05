@@ -170,14 +170,66 @@ Deno.serve(async (req) => {
           sent_at: new Date().toISOString(),
         }).eq("id", item.id);
 
-        // Log interaction
+        // ── Post-send: Activity + Holding Pattern + History ──
         if (item.partner_id) {
+          // 1. Create activity record
+          await supabase.from("activities").insert({
+            user_id: userId,
+            source_type: "partner",
+            source_id: item.partner_id,
+            partner_id: item.partner_id,
+            activity_type: "email",
+            title: `Email inviata: ${item.subject || "Senza oggetto"}`,
+            description: `Email inviata a ${item.recipient_email}`,
+            email_subject: item.subject,
+            email_body: item.html_body,
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            sent_at: new Date().toISOString(),
+            priority: "medium",
+            source_meta: {
+              company_name: item.recipient_name || item.company_name || "",
+              email: item.recipient_email,
+              country: item.country_name || "",
+            },
+          });
+
+          // 2. Put partner in holding pattern (contacted)
+          await supabase.from("partners")
+            .update({ 
+              lead_status: "contacted",
+              last_interaction_at: new Date().toISOString(),
+              interaction_count: undefined, // will be incremented below
+            })
+            .eq("id", item.partner_id)
+            .eq("lead_status", "new"); // only escalate from 'new'
+
+          // Increment interaction count
+          await supabase.rpc("increment_contact_interaction", { p_contact_id: item.partner_id }).catch(() => {});
+          // Direct increment for partners
+          const { data: partnerData } = await supabase.from("partners")
+            .select("interaction_count")
+            .eq("id", item.partner_id)
+            .single();
+          if (partnerData) {
+            await supabase.from("partners").update({
+              interaction_count: (partnerData.interaction_count || 0) + 1,
+              last_interaction_at: new Date().toISOString(),
+            }).eq("id", item.partner_id);
+          }
+
+          // 3. Log interaction in history
           await supabase.from("interactions").insert({
             partner_id: item.partner_id,
+            user_id: userId,
             interaction_type: "email",
             subject: `Email: ${item.subject}`,
             notes: item.html_body,
+            interaction_date: new Date().toISOString(),
           });
+
+          // 4. Also update matched BCA lead_status (trigger handles this via sync)
+          // The database trigger sync_partner_lead_status_to_bca already handles this
         }
 
         sentCount++;
