@@ -58,6 +58,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
           const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
           const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
           const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
+          const inHolding = partner.lead_status && partner.lead_status !== "new";
           const years = getYearsMember(partner.member_since);
           const logoUrl = getEffectiveLogoUrl(partner);
           const flag = getCountryFlag(partner.country_code);
