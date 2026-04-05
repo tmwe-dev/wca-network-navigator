@@ -41,8 +41,9 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const { addRecipient, recipients, removeRecipient, clearRecipients } = useMission();
   const contactsListRef = useRef<HTMLDivElement>(null);
 
-  // Trigger search: 3 chars OR country selected
+  // shouldSearch is only used for UI hints, not to gate data
   const shouldSearch = search.length >= 3 || !!selectedCountry;
+  const hasFilter = shouldSearch; // alias for clarity
 
   // ── Country stats — use RPC or aggregation to get REAL counts (no 1000 limit) ──
   const { data: countryStats = [] } = useQuery({
