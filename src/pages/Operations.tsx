@@ -106,11 +106,10 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
   const isMobile = useIsMobile();
 
-  const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
-  const [directoryOnly, setDirectoryOnly] = useState(false);
   const { filters } = useGlobalFilters();
   const filterMode = (filters.quality === "all" ? "all" : filters.quality) as FilterKey;
+  const directoryOnly = filters.networkDirectoryOnly;
   const [aiOpen, setAiOpen] = useState(false);
   const deepSearch = useDeepSearch();
   const [aliasGenerating, setAliasGenerating] = useState(false);
