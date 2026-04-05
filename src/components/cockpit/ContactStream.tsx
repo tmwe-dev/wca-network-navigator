@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useWorkedToday } from "@/hooks/useWorkedToday";
+
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
