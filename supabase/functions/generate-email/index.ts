@@ -449,7 +449,7 @@ serve(async (req) => {
 
     // ─── Interaction History (batch-safe: DB only, no live scraping) ───
     let historyContext = "";
-    if (isPartnerSource && activity.partner_id) {
+    if (isPartnerSource && activity?.partner_id) {
       const [interRes, prevActRes] = await Promise.all([
         supabase
           .from("interactions")
