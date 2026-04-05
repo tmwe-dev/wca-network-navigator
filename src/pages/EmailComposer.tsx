@@ -302,9 +302,15 @@ export default function EmailComposer() {
             </Button>
 
             {/* AI Generate */}
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIGenerate} disabled={aiGenerating}>
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIGenerate} disabled={aiGenerating || aiImproving}>
               {aiGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-primary" />}
               Genera AI
+            </Button>
+
+            {/* AI Improve */}
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIImprove} disabled={aiImproving || aiGenerating || !htmlBody.trim()}>
+              {aiImproving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-amber-500" />}
+              Migliora
             </Button>
           </div>
 
