@@ -96,7 +96,8 @@ const App = () => (
                   <Route path="/" element={<SuperHome3D />} />
                   <Route path="/network" element={<NetworkPage />} />
                   <Route path="/crm" element={<CRM />} />
-                  <Route path="/outreach" element={<Outreach />} />
+                   <Route path="/outreach" element={<Outreach />} />
+                   <Route path="/inreach" element={<Inreach />} />
                   <Route path="/agenda" element={<Agenda />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
