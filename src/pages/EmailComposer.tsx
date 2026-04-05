@@ -41,6 +41,7 @@ export default function EmailComposer() {
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeQueueStatus, setActiveQueueStatus] = useState("idle");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiImproving, setAiImproving] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
