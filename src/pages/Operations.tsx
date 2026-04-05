@@ -7,7 +7,7 @@ import {
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
+
 import { ThemeCtx, t } from "@/components/download/theme";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
@@ -380,7 +380,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
           )}
         </div>
       </div>
-      <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
+      
     </ThemeCtx.Provider>
   );
 }
