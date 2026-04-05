@@ -281,11 +281,11 @@ export function PartnerListPanel({
             />
           )}
 
-          {/* ROW 3: Hide worked toggle */}
+          {/* ROW 3: Hide holding pattern toggle */}
           <div className="flex items-center gap-2">
-            <Switch checked={hideWorked} onCheckedChange={setHideWorked} className="scale-75" />
-            <span className="text-[10px] text-muted-foreground">
-              <EyeOff className="w-3 h-3 inline mr-1" />Nascondi lavorati ({workedIds.size})
+            <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
             </span>
           </div>
 

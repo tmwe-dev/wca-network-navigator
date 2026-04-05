@@ -21,7 +21,7 @@ export function usePartnersPaginated(filters?: PartnerFilters) {
         .select(`
           id, company_name, company_alias, country_code, city, email, phone, mobile,
           office_type, is_active, is_favorite, rating, member_since, wca_id,
-          raw_profile_html, enrichment_data, partner_type,
+          raw_profile_html, enrichment_data, partner_type, lead_status,
           partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias),
           partner_networks (id, network_name, expires)
         `, { count: "exact" })

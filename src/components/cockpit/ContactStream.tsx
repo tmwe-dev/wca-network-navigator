@@ -161,17 +161,17 @@ export function ContactStream({
           </span>
         </div>
         <button
-          onClick={() => setHideWorked(!hideWorked)}
+          onClick={() => setHideHolding(!hideHolding)}
           className={cn(
             "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
-            hideWorked
-              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+            hideHolding
+              ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
               : "text-muted-foreground hover:text-foreground"
           )}
-          title={hideWorked ? "Mostra tutti" : "Nascondi lavorati"}
+          title={hideHolding ? "Mostra tutti" : "Nascondi in circuito"}
         >
-          {hideWorked ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-          {hideWorked ? "Tutti" : "Nascondi lavorati"}
+          <Plane className="w-3 h-3" />
+          {hideHolding ? "In circuito nascosti" : "Nascondi in circuito"}
         </button>
       </div>
 
