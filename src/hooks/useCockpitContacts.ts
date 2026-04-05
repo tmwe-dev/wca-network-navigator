@@ -82,7 +82,7 @@ function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?:
   return meta;
 }
 
-
+function formatRelativeDate(dateStr: string | null): string {
   if (!dateStr) return "Mai";
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (days < 1) return "Oggi";
