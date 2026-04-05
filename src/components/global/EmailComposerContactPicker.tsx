@@ -464,7 +464,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             </div>
           </div>
 
-          {/* Results */}
+          {/* Results area — tinted background to separate from controls */}
+          <div className="rounded-lg bg-muted/15 border border-border/20 p-1.5 min-h-[120px]">
           {!shouldSearch && (
             <p className="text-[11px] text-muted-foreground text-center py-4">
               Seleziona un paese o digita almeno 3 caratteri
