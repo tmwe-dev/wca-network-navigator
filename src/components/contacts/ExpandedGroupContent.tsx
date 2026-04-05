@@ -87,6 +87,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                   onSelect={() => onSelect(c)}
                   onToggle={() => selection.toggle(c.id)}
                   index={page * pageSize + virtualRow.index}
+                  interactions={selectedId === c.id ? activeInteractions : undefined}
                 />
               </div>
             );
