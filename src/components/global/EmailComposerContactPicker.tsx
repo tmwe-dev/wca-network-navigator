@@ -537,70 +537,74 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
 
           {/* Imported contacts — grouped by company */}
           {tab === "contacts" && shouldSearch && (
-            <div className="space-y-0.5">
+            <div className="space-y-1.5 p-0.5">
               {filteredContacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
               {groupedContacts.map(([companyName, members]) => (
-                <div key={companyName}>
+                <div key={companyName} className="rounded-lg border border-border/40 bg-card overflow-hidden">
                   {members.length === 1 ? (
-                    /* Single contact — flat row */
                     <button
                       onClick={() => handleSelectImported(members[0])}
                       disabled={isSelected(members[0].id)}
                       className={cn(
-                        "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded-lg text-xs transition-all",
-                        isSelected(members[0].id) ? "opacity-50 bg-muted/20" : "hover:bg-muted/40"
+                        "w-full text-left px-2.5 py-2 text-xs transition-all",
+                        isSelected(members[0].id) ? "opacity-50" : "hover:bg-muted/40"
                       )}
                     >
-                      <div className="flex items-center gap-2 w-full">
-                        <span className="flex-1 text-left truncate font-medium">{members[0].name || companyName}</span>
-                        {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
-                        {members[0].email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0" />}
-                        {isSelected(members[0].id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate">{companyName !== "Senza azienda" ? companyName : (members[0].name || "—")}</div>
+                          {members[0].name && companyName !== "Senza azienda" && (
+                            <div className="text-[11px] text-foreground/80 truncate">{members[0].name}</div>
+                          )}
+                          {members[0].position && (
+                            <div className="text-[10px] text-muted-foreground truncate">{members[0].position}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
+                          {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
+                          {members[0].email && <Mail className="w-3 h-3 text-primary/60" />}
+                          {isSelected(members[0].id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
+                        </div>
                       </div>
-                      {members[0].position && (
-                        <span className="text-[10px] text-muted-foreground">{members[0].position}</span>
-                      )}
-                      {members[0].name && companyName !== "Senza azienda" && (
-                        <span className="text-[10px] text-muted-foreground/70">{companyName}</span>
-                      )}
                     </button>
                   ) : (
-                    /* Multiple contacts — collapsible group */
                     <>
                       <button
                         onClick={() => setExpandedCompany(expandedCompany === companyName ? null : companyName)}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all hover:bg-muted/40",
-                          expandedCompany === companyName && "bg-muted/30"
+                          "w-full flex items-center gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
+                          expandedCompany === companyName && "bg-muted/20"
                         )}
                       >
-                        <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0", expandedCompany === companyName && "rotate-90")} />
-                        <span className="flex-1 text-left truncate font-medium">{companyName}</span>
+                        <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", expandedCompany === companyName && "rotate-90")} />
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="font-semibold text-foreground truncate">{companyName}</div>
+                        </div>
                         <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{members.length}</Badge>
                       </button>
                       {expandedCompany === companyName && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-primary/20 pl-2">
+                        <div className="border-t border-border/30 bg-muted/10 px-2.5 py-1 space-y-0.5">
                           {members.map(c => (
                             <button
                               key={c.id}
                               onClick={() => handleSelectImported(c)}
                               disabled={isSelected(c.id)}
                               className={cn(
-                                "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded text-left transition-all",
+                                "w-full text-left px-2 py-1.5 rounded transition-all",
                                 isSelected(c.id) ? "opacity-50" : "hover:bg-primary/5"
                               )}
                             >
-                              <div className="flex items-center gap-2 w-full">
-                                <span className="flex-1 truncate text-[11px] font-medium">{c.name || "—"}</span>
-                                {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0" />}
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[11px] font-medium text-foreground truncate">{c.name || "—"}</div>
+                                  {c.position && <div className="text-[10px] text-muted-foreground truncate">{c.position}</div>}
+                                </div>
+                                {c.email && <Mail className="w-3 h-3 text-primary/60 mt-0.5" />}
                                 {isSelected(c.id)
-                                  ? <span className="text-primary text-[9px]">✓</span>
-                                  : <span className="text-primary text-[9px]">+</span>
+                                  ? <span className="text-primary text-[9px] mt-0.5">✓</span>
+                                  : <span className="text-primary text-[9px] mt-0.5">+</span>
                                 }
                               </div>
-                              {c.position && (
-                                <span className="text-[10px] text-muted-foreground">{c.position}</span>
-                              )}
                             </button>
                           ))}
                         </div>
