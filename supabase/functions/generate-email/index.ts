@@ -426,7 +426,7 @@ serve(async (req) => {
     }
 
     // Fetch partner networks, services, social links, settings in parallel
-    const isPartnerSource = sourceType === "partner" && activity.partner_id;
+    const isPartnerSource = !standalone && sourceType === "partner" && activity?.partner_id;
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       isPartnerSource
         ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id)
