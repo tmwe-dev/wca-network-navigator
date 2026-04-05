@@ -68,7 +68,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, company_alias, country_code, city");
+        .select("id, company_name, company_alias, country_code, city, lead_status");
       if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
       if (selectedCountry) q = q.eq("country_code", selectedCountry);
       const { data } = await q.order("company_name").limit(50);
