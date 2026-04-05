@@ -642,7 +642,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               )}
 
               {/* ═══ BCA ═══ */}
-              {tab === "bca" && shouldSearch && (
+              {tab === "bca" && (
                 <div className="space-y-1.5">
                   {filteredBca.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
                   {filteredBca.map(c => (
