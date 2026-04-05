@@ -283,10 +283,10 @@ export function useCockpitContacts() {
         const ic = icMap[sid];
         if (!ic) continue;
         // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
-        const enrich = (ic.enrichment_data as any) || {};
-        let icLinkedin = enrich.linkedin_profile_url  // canonical field
-          || enrich.linkedin_url                       // legacy from old lookup
-          || enrich.social_links?.linkedin             // legacy field
+        const icEd = (ic.enrichment_data as any) || {};
+        let icLinkedin = icEd.linkedin_profile_url
+          || icEd.linkedin_url
+          || icEd.social_links?.linkedin
           || "";
         // contact_profiles is an OBJECT keyed by ID, not an array
         if (!icLinkedin && enrich.contact_profiles && typeof enrich.contact_profiles === "object") {
