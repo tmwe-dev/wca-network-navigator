@@ -394,7 +394,7 @@ serve(async (req) => {
     }
 
     // ── AUTO-GENERATE ALIASES IF MISSING ──
-    const needsCompanyAlias = !partner.company_alias;
+    const needsCompanyAlias = !standalone && !partner.company_alias;
     const needsContactAlias = contact && !contact.contact_alias;
 
     if (needsCompanyAlias || needsContactAlias) {
