@@ -18,12 +18,10 @@ import { lazyRetry } from "@/lib/lazyRetry";
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
-const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
 const CRM = lazyRetry(() => import("./pages/CRM"));
 const Outreach = lazyRetry(() => import("./pages/Outreach"));
 const Agenda = lazyRetry(() => import("./pages/Agenda"));
-const Agents = lazyRetry(() => import("./pages/Agents"));
 const AgentChatHub = lazyRetry(() => import("./pages/AgentChatHub"));
 
 const RADashboard = lazyRetry(() => import("./pages/RADashboard"));
