@@ -197,6 +197,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const isOutreach = route === "/outreach";
   const isNetwork = route === "/network";
   const isCRM = route === "/crm";
+  const isAgenda = route === "/agenda";
 
   // Detect outreach sub-tab
   const outreachTab = g.filters.outreachTab;
