@@ -650,7 +650,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
           )}
 
           {/* ═══ EMAIL COMPOSER — Rubrica ═══ */}
-          {isEmailComposer && <EmailComposerContactPicker />}
+          {isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
           {/* Fallback for pages without specific filters */}
           {!isOutreach && !isNetwork && !isCRM && !isAgenda && !isEmailComposer && (

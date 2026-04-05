@@ -396,6 +396,16 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
           </div>
         )}
       </ScrollArea>
+
+      {/* Confirm button */}
+      {recipients.length > 0 && onConfirm && (
+        <div className="pt-3 border-t border-border mt-2">
+          <Button onClick={onConfirm} className="w-full gap-2" size="sm">
+            <Check className="w-4 h-4" />
+            Conferma {recipients.length} destinatar{recipients.length === 1 ? "io" : "i"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
