@@ -5,7 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Menu, Sparkles, Target, Globe, Users, ArrowRight, RefreshCw, FlaskConical } from "lucide-react";
+import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, RefreshCw, FlaskConical } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
@@ -20,6 +20,7 @@ import { toast } from "@/hooks/use-toast";
 import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionDrawer } from "@/components/global/MissionDrawer";
+import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
@@ -28,6 +29,7 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const [missionOpen, setMissionOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
@@ -43,11 +45,13 @@ export function AppLayout() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen((o) => !o); }
+      // ⌘J now opens IntelliFlow (unified AI)
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen((o) => !o); }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
       if (d === "mission") setMissionOpen(true);
+      else if (d === "filters") setFiltersOpen(true);
     };
     document.addEventListener("keydown", down);
     window.addEventListener("open-drawer", drawerHandler);
@@ -75,14 +79,21 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  // Edge hover zone for Mission drawer (right)
+  // Edge hover zones
+  const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverTimerRight = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleEdgeEnter = () => {
-    hoverTimerRight.current = setTimeout(() => setMissionOpen(true), 150);
+  const handleEdgeEnter = (side: "left" | "right") => {
+    const timer = setTimeout(() => {
+      if (side === "left") setFiltersOpen(true);
+      else setMissionOpen(true);
+    }, 150);
+    if (side === "left") hoverTimerLeft.current = timer;
+    else hoverTimerRight.current = timer;
   };
-  const handleEdgeLeave = () => {
-    if (hoverTimerRight.current) clearTimeout(hoverTimerRight.current);
+  const handleEdgeLeave = (side: "left" | "right") => {
+    const t = side === "left" ? hoverTimerLeft.current : hoverTimerRight.current;
+    if (t) clearTimeout(t);
   };
 
   return (
@@ -90,11 +101,21 @@ export function AppLayout() {
       <MissionProvider>
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {/* Right edge trigger for Mission */}
+        {/* Visual tab triggers */}
+        <button
+          onClick={() => setFiltersOpen(true)}
+          onMouseEnter={() => handleEdgeEnter("left")}
+          onMouseLeave={() => handleEdgeLeave("left")}
+          className="fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
+          style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
+          aria-label="Apri filtri"
+        >
+          <SlidersHorizontal className="w-4 h-4 text-purple-300" />
+        </button>
         <button
           onClick={() => setMissionOpen(true)}
-          onMouseEnter={handleEdgeEnter}
-          onMouseLeave={handleEdgeLeave}
+          onMouseEnter={() => handleEdgeEnter("right")}
+          onMouseLeave={() => handleEdgeLeave("right")}
           className="fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
           style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
           aria-label="Apri Mission"
@@ -112,6 +133,7 @@ export function AppLayout() {
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                 <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
                 
+                {/* Area switch */}
                 {currentPath.startsWith("/network") && (
                   <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/crm")}>
                     <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
@@ -144,6 +166,7 @@ export function AppLayout() {
 
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
         <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+        <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
 
         <motion.button
           onClick={() => setIntelliflowOpen(true)}
