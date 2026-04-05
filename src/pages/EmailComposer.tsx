@@ -365,12 +365,12 @@ export default function EmailComposer() {
               </Button>
             </div>
 
-            {/* Body textarea */}
-            <Textarea
+            {/* Body editor — visual HTML + source toggle */}
+            <HtmlEmailEditor
               value={htmlBody}
-              onChange={(e) => setHtmlBody(e.target.value)}
+              onChange={setHtmlBody}
               placeholder="Scrivi il contenuto della email... Usa variabili come {{company_name}} tramite l'icona { } sopra"
-              className="flex-1 min-h-[280px] h-full text-sm bg-muted/10 resize-y border-border/40 focus:border-primary/50"
+              className="flex-1"
             />
 
             {/* Preview inline */}
