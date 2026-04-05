@@ -88,6 +88,12 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         {/* ── BODY ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
 
+          {/* ═══ AI Quick Input ═══ */}
+          <AiQuickSection />
+
+          {/* ═══ Activity Summary ═══ */}
+          <ActivitySummarySection />
+
           {/* ═══ CONTEXTUAL: Network ═══ */}
           {isNetwork && (
             <ContextSection title="Azioni Network" icon={Globe} color="text-blue-500">
