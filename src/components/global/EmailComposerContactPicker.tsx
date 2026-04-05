@@ -110,7 +110,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Partners search ──
   const { data: partners = [] } = useQuery({
     queryKey: ["picker-partners", search, selectedCountry],
-    enabled: tab === "partners" && shouldSearch,
+    enabled: tab === "partners",
     queryFn: async () => {
       let q = supabase
         .from("partners")
