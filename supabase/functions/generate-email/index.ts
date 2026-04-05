@@ -208,7 +208,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search } = await req.json();
     if (!activity_id) throw new Error("activity_id is required");
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
@@ -579,10 +579,10 @@ ${quality !== "fast" ? `- Telefono: ${settings.ai_phone_signature || "N/A"}` : "
 - Network: ${settings.ai_networks || "N/A"}
 
 KNOWLEDGE BASE:
-${settings.ai_knowledge_base || "Non configurata"}
-${salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
+${use_kb !== false ? (settings.ai_knowledge_base || "Non configurata") : "(Knowledge Base disattivata dall'utente)"}
+${use_kb !== false && salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
-- Tono: ${settings.ai_tone || "professionale"}
+- Tono: ${oracle_tone || settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}
 ${settings.ai_style_instructions ? `- Istruzioni: ${settings.ai_style_instructions}` : ""}
 ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : ""}

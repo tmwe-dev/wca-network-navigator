@@ -57,7 +57,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { subject, html_body, recipient_count, recipient_countries } = await req.json();
+    const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb } = await req.json();
     if (!html_body) throw new Error("html_body is required");
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -85,10 +85,10 @@ PROFILO MITTENTE:
 - Azienda: ${senderCompany}
 - Ruolo: ${settings.ai_contact_role || "N/A"}
 - Settore: ${settings.ai_sector || "freight_forwarding"}
-- Tono preferito: ${settings.ai_tone || "professionale"}
+- Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
-${settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
-${salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
+${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
+${use_kb !== false && salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
 
 REGOLE DI MIGLIORAMENTO:
