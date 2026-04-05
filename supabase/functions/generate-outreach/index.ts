@@ -498,7 +498,15 @@ ${intelligence.enrichment_snippet}
       : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-    const systemPrompt = `Sei un esperto copywriter B2B nel settore logistica e freight forwarding internazionale.
+    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
+NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione dalla Knowledge Base.
+
+# STRATEGIA AUTONOMA
+- LEGGI le tecniche dalla KB e SELEZIONA quelle più appropriate per questo contesto
+- APPLICA almeno 1-2 tecniche nel messaggio (Label, Mirroring, domanda calibrata, urgenza soft...)
+- Se hai dati dal DB sul destinatario → personalizza profondamente
+- Se non hai dati → resta professionale, usa tecniche universali
+- NON inventare MAI informazioni non presenti nei dati forniti
 
 CANALE: ${ch.toUpperCase()}
 ${channelInstructions}
@@ -511,7 +519,8 @@ REGOLE CRITICHE:
 5. Usa i network condivisi come punto di connessione se esistono nei dati
 6. CRITICO: Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
 7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
-8. Se non hai dati specifici sul destinatario, scrivi un messaggio generico ma professionale`;
+8. Ogni messaggio DEVE avere una CTA chiara — domande aperte > domande chiuse
+9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
@@ -520,7 +529,7 @@ GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
 
-Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
+Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
     const model = getModel(quality);
 
