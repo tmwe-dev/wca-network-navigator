@@ -59,6 +59,10 @@ const SystemMap = lazyRetry(() => import("./pages/SystemMap"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
+const PrototypeA = lazyRetry(() => import("./pages/PrototypeA"));
+const PrototypeB = lazyRetry(() => import("./pages/PrototypeB"));
+const PrototypeC = lazyRetry(() => import("./pages/PrototypeC"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
