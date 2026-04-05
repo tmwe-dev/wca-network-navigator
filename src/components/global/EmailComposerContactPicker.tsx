@@ -636,7 +636,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                       {c.contact_name && c.company_name && (
                         <div className="text-[11px] text-foreground/80 truncate">{c.contact_name}</div>
                       )}
-                      {c.position && <div className="text-[10px] text-muted-foreground truncate">{c.position}</div>}
+                      {(c as any).position && <div className="text-[10px] text-muted-foreground truncate">{(c as any).position}</div>}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
                       {c.location && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{c.location}</Badge>}
