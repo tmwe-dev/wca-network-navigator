@@ -25,6 +25,20 @@ export interface GlobalFilterState {
   cockpitChannels: Set<CockpitChannelFilter>;
   cockpitQuality: Set<CockpitQualityFilter>;
   cockpitStatus: string;
+  // Attività
+  attivitaStatus: string;
+  attivitaPriority: string;
+  // Network
+  networkSearch: string;
+  networkQuality: string;
+  networkSort: string;
+  // Email
+  emailCategory: string;
+  emailSort: string;
+  // CRM extra
+  crmOrigin: Set<string>;
+  crmQuality: string;
+  crmChannel: string;
 }
 
 interface GlobalFiltersCtxValue {
@@ -46,6 +60,16 @@ interface GlobalFiltersCtxValue {
   setCockpitChannels: (c: Set<CockpitChannelFilter>) => void;
   setCockpitQuality: (c: Set<CockpitQualityFilter>) => void;
   setCockpitStatus: (s: string) => void;
+  setAttivitaStatus: (s: string) => void;
+  setAttivitaPriority: (s: string) => void;
+  setNetworkSearch: (s: string) => void;
+  setNetworkQuality: (s: string) => void;
+  setNetworkSort: (s: string) => void;
+  setEmailCategory: (s: string) => void;
+  setEmailSort: (s: string) => void;
+  setCrmOrigin: (o: Set<string>) => void;
+  setCrmQuality: (s: string) => void;
+  setCrmChannel: (s: string) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
@@ -68,6 +92,16 @@ const defaults: GlobalFilterState = {
   cockpitChannels: new Set(),
   cockpitQuality: new Set(),
   cockpitStatus: "all",
+  attivitaStatus: "all",
+  attivitaPriority: "all",
+  networkSearch: "",
+  networkQuality: "all",
+  networkSort: "name",
+  emailCategory: "all",
+  emailSort: "date_desc",
+  crmOrigin: new Set(["wca", "import", "report_aziende"]),
+  crmQuality: "all",
+  crmChannel: "all",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
@@ -79,7 +113,16 @@ export function useGlobalFilters() {
 }
 
 function cloneDefaults(): GlobalFilterState {
-  return { ...defaults, origin: new Set(defaults.origin), workspaceFilters: new Set(), workspaceCountries: new Set(), cockpitCountries: new Set(), cockpitChannels: new Set(), cockpitQuality: new Set() };
+  return {
+    ...defaults,
+    origin: new Set(defaults.origin),
+    workspaceFilters: new Set(),
+    workspaceCountries: new Set(),
+    cockpitCountries: new Set(),
+    cockpitChannels: new Set(),
+    cockpitQuality: new Set(),
+    crmOrigin: new Set(defaults.crmOrigin),
+  };
 }
 
 export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
@@ -103,6 +146,16 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setCockpitChannels = useCallback((c: Set<CockpitChannelFilter>) => setFilters(p => ({ ...p, cockpitChannels: c })), []);
   const setCockpitQuality = useCallback((c: Set<CockpitQualityFilter>) => setFilters(p => ({ ...p, cockpitQuality: c })), []);
   const setCockpitStatus = useCallback((s: string) => setFilters(p => ({ ...p, cockpitStatus: s })), []);
+  const setAttivitaStatus = useCallback((s: string) => setFilters(p => ({ ...p, attivitaStatus: s })), []);
+  const setAttivitaPriority = useCallback((s: string) => setFilters(p => ({ ...p, attivitaPriority: s })), []);
+  const setNetworkSearch = useCallback((s: string) => setFilters(p => ({ ...p, networkSearch: s })), []);
+  const setNetworkQuality = useCallback((s: string) => setFilters(p => ({ ...p, networkQuality: s })), []);
+  const setNetworkSort = useCallback((s: string) => setFilters(p => ({ ...p, networkSort: s })), []);
+  const setEmailCategory = useCallback((s: string) => setFilters(p => ({ ...p, emailCategory: s })), []);
+  const setEmailSort = useCallback((s: string) => setFilters(p => ({ ...p, emailSort: s })), []);
+  const setCrmOrigin = useCallback((o: Set<string>) => setFilters(p => ({ ...p, crmOrigin: o })), []);
+  const setCrmQuality = useCallback((s: string) => setFilters(p => ({ ...p, crmQuality: s })), []);
+  const setCrmChannel = useCallback((s: string) => setFilters(p => ({ ...p, crmChannel: s })), []);
   const resetFilters = useCallback(() => setFilters(cloneDefaults()), []);
 
   return (
@@ -111,6 +164,10 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       setOutreachTab, setWorkspaceFilters, setEmailGenFilter, setWorkspaceCountries,
       setSortingFilter, setSortingSearch,
       setCockpitCountries, setCockpitChannels, setCockpitQuality, setCockpitStatus,
+      setAttivitaStatus, setAttivitaPriority,
+      setNetworkSearch, setNetworkQuality, setNetworkSort,
+      setEmailCategory, setEmailSort,
+      setCrmOrigin, setCrmQuality, setCrmChannel,
       resetFilters, currentRoute: location.pathname,
     }}>
       {children}
