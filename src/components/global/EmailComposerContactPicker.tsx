@@ -412,7 +412,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
       {/* ── Main: Left country strip + Right results ── */}
       <div className="flex-1 flex min-h-0 gap-2">
         {/* Left: vertical country strip — wider */}
-        <div className="flex-shrink-0 w-[68px] flex flex-col min-h-0">
+        <div className="flex-shrink-0 w-[80px] flex flex-col min-h-0">
           <div className="flex items-center justify-center mb-1">
             <button
               onClick={() => setCountrySort(s => s === "count" ? "name" : "count")}
