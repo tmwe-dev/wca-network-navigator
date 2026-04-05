@@ -87,7 +87,7 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
             </Button>
           )}
           {isActive && (
-            <Button size="sm" variant="outline" onClick={() => pauseProcessing(draftId)}>
+            <Button size="sm" variant="outline" onClick={() => { pauseProcessing(draftId); onStatusChange?.("paused"); }}>
               <Pause className="w-4 h-4 mr-1" /> Pausa
             </Button>
           )}
