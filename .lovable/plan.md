@@ -1,41 +1,55 @@
 
 
-# Fix Contact Picker — Dati non visibili
+# Fix Formattazione Email nell'Email Composer
 
-## Problema principale
+## Problema
 
-Il campo restituito dalla funzione `get_country_stats()` si chiama `total_partners`, ma il codice del picker cerca `partner_count` o `count`:
+L'Email Composer mostra il corpo della mail generata dall'AI come testo grezzo con tag HTML visibili (`<p>`, `<strong>`, `<br>`, etc.) perché usa un semplice `<Textarea>`. Il Cockpit invece renderizza correttamente l'HTML tramite `dangerouslySetInnerHTML`.
 
-```js
-// Riga 59 — SBAGLIATO
-count: Number(r.partner_count || r.count || 0)  // sempre 0!
-```
+## Analisi: Cockpit vs Email Composer
 
-Questo causa: bandiere visibili ma tutte con conteggio **0**, il che rende il picker inutilizzabile.
+| Aspetto | Cockpit | Email Composer |
+|---------|---------|---------------|
+| Edge Function | `generate-outreach` | `generate-email` |
+| Rendering | `TypewriterText` con `isHtml` + `dangerouslySetInnerHTML` | `<Textarea>` (raw text) |
+| Editing | Non editabile inline | Textarea editabile |
 
-## Secondo problema
+Le due edge function fanno cose molto simili (stessa KB, stessi alias, stessa logica lingua). La differenza critica è nel **rendering frontend**, non nel backend.
 
-Le query per Partner, Contatti e BCA richiedono `shouldSearch = true` (3+ caratteri digitati OPPURE un paese selezionato). Siccome i conteggi sono tutti 0, l'utente non ha incentivo a cliccare su un paese, e senza cliccare non vede nulla.
+## Soluzione
 
-## Correzioni
+### Principio: Riutilizzo del motore core
 
-### 1. Fix campo conteggio (riga 59 di `EmailComposerContactPicker.tsx`)
-Cambiare `r.partner_count || r.count` in `r.total_partners`:
-```js
-count: Number(r.total_partners || 0),
-```
+Non creiamo un nuovo editor — riutilizziamo il pattern del Cockpit adattandolo all'Email Composer con una modalità di editing.
 
-### 2. Mostrare risultati anche senza filtro attivo
-Rimuovere la condizione `shouldSearch` dalle query di ogni tab. Se non c'e ne ricerca ne paese selezionato, caricare i primi 200 risultati (gia limitati da `.limit(200)`). Questo permette all'utente di navigare immediatamente i dati senza dover prima digitare o selezionare un paese.
+### Implementazione: Doppia vista Edit/Preview
 
-In alternativa, caricare automaticamente i dati quando si seleziona un tab (senza richiedere 3 caratteri minimi), mantenendo il filtro paese come opzionale.
+Sostituire il `<Textarea>` con un componente a due modalità:
 
-### 3. Aggiungere `is_active` filter ai partner
-Le query partner nel picker non filtrano per `is_active`. Aggiungere `.eq("is_active", true)` per coerenza con il resto dell'app (attualmente non causa problemi perche tutti sono attivi, ma e una protezione necessaria).
+1. **Modalità Visuale (default)** — il corpo HTML viene renderizzato come nel Cockpit usando `dangerouslySetInnerHTML` con DOMPurify, all'interno di un `div[contentEditable]`. L'utente vede il testo formattato e può modificarlo direttamente.
 
-## File da modificare
+2. **Modalità Sorgente** — il `<Textarea>` attuale rimane disponibile tramite il pulsante `{ }` (già presente in toolbar) per chi vuole editare i tag HTML a mano.
 
-| File | Modifica |
-|------|----------|
-| `src/components/global/EmailComposerContactPicker.tsx` | Fix mapping `total_partners`, rimuovere gate `shouldSearch` dalle query, aggiungere filtro `is_active` |
+### Dettaglio tecnico
+
+**Nuovo componente `src/components/email/HtmlEmailEditor.tsx`:**
+- `contentEditable` div con rendering HTML via DOMPurify
+- Sincronizzazione bidirezionale: `onInput` cattura `innerHTML` e aggiorna lo stato `htmlBody`
+- Toggle Visuale/Sorgente nella toolbar esistente
+- Stili `prose` per una resa tipografica pulita
+
+**Modifica `src/pages/EmailComposer.tsx`:**
+- Sostituire il `<Textarea>` (riga 369-374) con il nuovo `HtmlEmailEditor`
+- Il toggle Preview (occhio) esistente diventa ridondante — lo manteniamo per la preview con variabili sostituite
+
+### Unificazione Edge Functions (fase 2, opzionale)
+
+Le due edge function `generate-email` e `generate-outreach` condividono ~80% del codice. Si potrebbe unificarle in una sola (`generate-outreach`) con un parametro `channel: "email"` anche dall'Email Composer. Questo evita divergenze future. Tuttavia questo è un refactor separato — il fix immediato è sul rendering.
+
+## File coinvolti
+
+| File | Azione |
+|------|--------|
+| `src/components/email/HtmlEmailEditor.tsx` | **Nuovo** — Editor HTML con contentEditable + modalità sorgente |
+| `src/pages/EmailComposer.tsx` | Sostituire Textarea con HtmlEmailEditor |
 
