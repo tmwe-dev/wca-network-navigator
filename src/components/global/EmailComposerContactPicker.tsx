@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
+import { getCountryFlag } from "@/lib/countries";
 import type { SelectedRecipient } from "@/contexts/MissionContext";
 
 type PickerTab = "partners" | "contacts" | "bca";
@@ -21,20 +22,40 @@ export function EmailComposerContactPicker() {
   const [tab, setTab] = useState<PickerTab>("partners");
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const { addRecipient, recipients, removeRecipient } = useMission();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const shouldSearch = search.length >= 3;
+  const shouldSearch = search.length >= 3 || !!selectedCountry;
 
-  // Partners search
-  const { data: partners = [] } = useQuery({
-    queryKey: ["picker-partners", search],
-    enabled: tab === "partners" && shouldSearch,
+  // Country stats
+  const { data: countryStats = [] } = useQuery({
+    queryKey: ["picker-country-stats"],
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")
-        .select("id, company_name, country_code, city")
-        .ilike("company_name", `%${search}%`)
-        .limit(30);
+        .select("country_code")
+        .not("country_code", "is", null);
+      if (!data) return [];
+      const counts: Record<string, number> = {};
+      data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([code, count]) => ({ code, count, flag: getCountryFlag(code) }));
+    },
+  });
+
+  // Partners search
+  const { data: partners = [] } = useQuery({
+    queryKey: ["picker-partners", search, selectedCountry],
+    enabled: tab === "partners" && shouldSearch,
+    queryFn: async () => {
+      let q = supabase
+        .from("partners")
+        .select("id, company_name, country_code, city");
+      if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
+      if (selectedCountry) q = q.eq("country_code", selectedCountry);
+      const { data } = await q.order("company_name").limit(50);
       return data || [];
     },
   });
@@ -142,6 +163,41 @@ export function EmailComposerContactPicker() {
 
   return (
     <div className="space-y-3">
+      {/* Country flag carousel */}
+      <div>
+        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
+          <Globe className="w-3 h-3" /> Paesi
+        </label>
+        <div
+          ref={scrollRef}
+          className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin"
+          style={{ scrollbarWidth: "thin" }}
+        >
+          {selectedCountry && (
+            <button
+              onClick={() => setSelectedCountry(null)}
+              className="flex-shrink-0 px-2 py-1 rounded-md text-[10px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10"
+            >
+              ✕ Tutti
+            </button>
+          )}
+          {countryStats.map(c => (
+            <button
+              key={c.code}
+              onClick={() => setSelectedCountry(selectedCountry === c.code ? null : c.code)}
+              className={cn(
+                "flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-medium transition-all border",
+                selectedCountry === c.code
+                  ? "bg-primary/15 border-primary/30 text-primary"
+                  : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              )}
+            >
+              <span className="text-sm">{c.flag}</span>
+              <span className="tabular-nums">{c.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {/* Selected recipients */}
       {recipients.length > 0 && (
         <div>
@@ -196,7 +252,7 @@ export function EmailComposerContactPicker() {
       <ScrollArea className="max-h-[400px]">
         {!shouldSearch && (
           <p className="text-[11px] text-muted-foreground text-center py-4">
-            Digita almeno 3 caratteri per cercare
+            Seleziona un paese o digita almeno 3 caratteri
           </p>
         )}
 
