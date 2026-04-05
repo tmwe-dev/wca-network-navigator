@@ -55,6 +55,31 @@ export default function EmailComposer() {
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
 
+  const addManualEmail = () => {
+    const email = manualEmail.trim().toLowerCase();
+    if (!email) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.length > 255) {
+      toast.error("Indirizzo email non valido");
+      return;
+    }
+    if (recipients.some(r => r.email === email)) {
+      toast.error("Destinatario già presente");
+      setManualEmail("");
+      return;
+    }
+    const domain = email.split("@")[1] || "";
+    addRecipient({
+      partnerId: `manual-${Date.now()}`,
+      companyName: domain,
+      email,
+      city: "",
+      countryName: "",
+      isEnriched: true,
+    });
+    setManualEmail("");
+  };
+
   const escapeHtml = (str: string) =>
     str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
