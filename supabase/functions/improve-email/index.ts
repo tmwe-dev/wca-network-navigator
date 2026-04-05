@@ -7,10 +7,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Extract sections from KB using <!-- SECTION:N --> markers */
-function getKBSlice(fullKB: string): string {
+/** Fetch granular KB entries from db for improvement context */
+async function fetchKbEntriesForImprove(supabase: any): Promise<string> {
+  const { data: entries } = await supabase
+    .from("kb_entries")
+    .select("title, content, category, tags")
+    .eq("is_active", true)
+    .gte("priority", 7)
+    .order("priority", { ascending: false })
+    .order("sort_order")
+    .limit(12);
+
+  if (!entries || entries.length === 0) return "";
+
+  return entries
+    .map((e: any) => `### ${e.title}\n${e.content}`)
+    .join("\n\n---\n\n");
+}
+
+/** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
+function getKBSliceLegacy(fullKB: string): string {
   if (!fullKB) return "";
-  // Use standard sections for improvement
   const allowedSections = [1, 2, 3, 4, 5, 6, 7, 8];
   const sectionRegex = /<!-- SECTION:(\d+) -->/g;
   const markers: { index: number; section: number }[] = [];
