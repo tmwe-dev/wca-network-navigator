@@ -648,8 +648,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
+          {/* ═══ EMAIL COMPOSER — Rubrica ═══ */}
+          {isEmailComposer && <EmailComposerContactPicker />}
+
           {/* Fallback for pages without specific filters */}
-          {!isOutreach && !isNetwork && !isCRM && !isAgenda && (
+          {!isOutreach && !isNetwork && !isCRM && !isAgenda && !isEmailComposer && (
             <div className="text-center py-8 text-muted-foreground">
               <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nessun filtro per questa sezione</p>
