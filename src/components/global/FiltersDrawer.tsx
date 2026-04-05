@@ -350,7 +350,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl", isEmailComposer ? "w-[90vw] sm:w-[500px] sm:max-w-[560px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]")}>
+      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl", isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]")}>
         {/* Header */}
         <div className="px-5 py-3 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
           <div className="flex items-center gap-3">
