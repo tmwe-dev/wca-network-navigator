@@ -265,6 +265,20 @@ export default function EmailComposer() {
               className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 h-6"
             />
           </div>
+
+          {/* Subject row */}
+          <div className="flex items-center gap-2 mb-3">
+            <Mail className="w-4 h-4 text-primary shrink-0" />
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Oggetto della email..."
+              className="h-9 text-sm font-medium flex-1"
+            />
+          </div>
+
+          {/* Toolbar — right aligned above textarea */}
+          <div className="flex items-center justify-end gap-1 mb-1.5">
             {/* Variables popover */}
             <Popover>
               <PopoverTrigger asChild>
