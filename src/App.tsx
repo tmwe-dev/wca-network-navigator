@@ -93,12 +93,10 @@ const App = () => (
                 <Route element={<AppLayout />}>
                   {/* ── 5 consolidated environments ── */}
                   <Route path="/" element={<SuperHome3D />} />
-                  <Route path="/dashboard-legacy" element={<Dashboard />} />
                   <Route path="/network" element={<NetworkPage />} />
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
-                  <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/settings/operators" element={<OperatorsSettings />} />
@@ -110,19 +108,14 @@ const App = () => (
                    <Route path="/ra/scraping" element={<RAScrapingEngine />} />
                    <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
-                   {/* ── Legacy pages kept alive ── */}
-                   <Route path="/global" element={<Global />} />
+                   {/* ── Utility pages ── */}
                   <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
                   <Route path="/test-extensions" element={<TestExtensions />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
-                  <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
-                  <Route path="/prototype-a" element={<PrototypeA />} />
-                  <Route path="/prototype-b" element={<PrototypeB />} />
-                  <Route path="/prototype-c" element={<PrototypeC />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />
