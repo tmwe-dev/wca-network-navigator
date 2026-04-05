@@ -450,9 +450,10 @@ serve(async (req) => {
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
-    // Sales KB
+    // Sales KB — contextual injection from kb_entries
+    const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = getKBSlice(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
     // Language detection
     const detected = detectLanguage(country_code);
@@ -470,9 +471,9 @@ MITTENTE (TU):
 - Settore: ${settings.ai_sector || "freight_forwarding"}
 - Network: ${settings.ai_networks || "N/A"}
 
-KNOWLEDGE BASE:
+KNOWLEDGE BASE AZIENDALE:
 ${settings.ai_knowledge_base || "Non configurata"}
-${salesKBSlice ? `\nSALES TECHNIQUES:\n${salesKBSlice}\n` : ""}
+${salesKBSlice ? `\n# ARSENAL STRATEGICO (${kbResult.sections.join(", ") || "legacy"}):\nApplica queste tecniche nel messaggio.\n\n${salesKBSlice}\n` : ""}
 STILE:
 - Tono: ${settings.ai_tone || "professionale"}
 `;
