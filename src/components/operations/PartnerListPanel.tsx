@@ -32,7 +32,6 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
-import { useWorkedToday } from "@/hooks/useWorkedToday";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
 
