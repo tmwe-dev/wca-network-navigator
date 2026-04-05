@@ -56,7 +56,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             .filter((r: any) => r.country_code)
             .map((r: any) => ({
               code: r.country_code,
-              count: Number(r.partner_count || r.count || 0),
+              count: Number(r.total_partners || 0),
               flag: getCountryFlag(r.country_code),
               name: WCA_COUNTRIES_MAP[r.country_code]?.name || r.country_code,
             }));
@@ -110,13 +110,14 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Partners search ──
   const { data: partners = [] } = useQuery({
     queryKey: ["picker-partners", search, selectedCountry],
-    enabled: tab === "partners" && shouldSearch,
+    enabled: tab === "partners",
     queryFn: async () => {
       let q = supabase
         .from("partners")
         .select("id, company_name, company_alias, country_code, city, lead_status");
       if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
       if (selectedCountry) q = q.eq("country_code", selectedCountry);
+      q = q.eq("is_active", true);
       const { data } = await q.order("company_name").limit(200);
       return data || [];
     },
@@ -139,7 +140,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Imported contacts — search OR country filter ──
   const { data: contacts = [] } = useQuery({
     queryKey: ["picker-contacts", search, selectedCountry, originFilter],
-    enabled: tab === "contacts" && shouldSearch,
+    enabled: tab === "contacts",
     queryFn: async () => {
       let q = supabase
         .from("imported_contacts")
@@ -159,7 +160,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   // ── Business cards — search OR show all (no country filter needed) ──
   const { data: bcaCards = [] } = useQuery({
     queryKey: ["picker-bca", search, selectedCountry],
-    enabled: tab === "bca" && shouldSearch,
+    enabled: tab === "bca",
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
