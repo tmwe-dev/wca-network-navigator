@@ -40,7 +40,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("📧");
   const [newPrompt, setNewPrompt] = useState("");
-  const [kbOpen, setKbOpen] = useState(false);
+  
 
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
