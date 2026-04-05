@@ -24,6 +24,63 @@ import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
+/** Tab that follows the drawer edge using known CSS widths */
+function FollowDrawerTab({ side, isOpen, onClick, onMouseEnter, onMouseLeave, children, isEmailComposer }: {
+  side: "left" | "right"; isOpen: boolean; isEmailComposer?: boolean;
+  onClick: () => void; onMouseEnter: () => void; onMouseLeave: () => void;
+  children: React.ReactNode;
+}) {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen) { setOffset(0); return; }
+    const compute = () => {
+      const vw = window.innerWidth;
+      if (side === "left") {
+        // FiltersDrawer: isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]"
+        if (isEmailComposer) {
+          setOffset(vw >= 640 ? Math.min(560, 620) : Math.min(vw * 0.92, vw));
+        } else {
+          setOffset(vw >= 640 ? Math.min(400, 420) : Math.min(vw * 0.90, vw));
+        }
+      } else {
+        // MissionDrawer: "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px]"
+        if (vw >= 1024) setOffset(Math.min(680, 700));
+        else if (vw >= 768) setOffset(Math.min(600, 700));
+        else if (vw >= 640) setOffset(Math.min(520, 700));
+        else setOffset(Math.min(vw * 0.90, vw));
+      }
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [isOpen, side, isEmailComposer]);
+
+  const posStyle: React.CSSProperties = side === "left"
+    ? { left: offset }
+    : { right: offset };
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={cn(
+        "fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 border transition-all duration-300 ease-out cursor-pointer",
+        side === "left" ? "rounded-r-lg border-l-0 border-purple-400/30 hover:border-purple-400/50" : "rounded-l-lg border-r-0 border-purple-400/30 hover:border-purple-400/50"
+      )}
+      style={{
+        ...posStyle,
+        background: "hsla(270, 60%, 65%, 0.25)",
+        backdropFilter: "blur(8px)",
+      }}
+      aria-label={side === "left" ? "Apri filtri" : "Apri Mission"}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -102,34 +159,25 @@ export function AppLayout() {
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         {/* Visual tab triggers — follow drawer edges */}
-        <button
+        <FollowDrawerTab
+          side="left"
+          isOpen={filtersOpen}
+          isEmailComposer={currentPath === "/email-composer"}
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            left: filtersOpen ? "min(92vw, 620px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri filtri"
         >
           <SlidersHorizontal className="w-4 h-4 text-purple-300" />
-        </button>
-        <button
+        </FollowDrawerTab>
+        <FollowDrawerTab
+          side="right"
+          isOpen={missionOpen}
           onClick={() => setMissionOpen(true)}
           onMouseEnter={() => handleEdgeEnter("right")}
           onMouseLeave={() => handleEdgeLeave("right")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            right: missionOpen ? "min(90vw, 700px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri Mission"
         >
           <Target className="w-4 h-4 text-purple-300" />
-        </button>
+        </FollowDrawerTab>
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
