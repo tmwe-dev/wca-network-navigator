@@ -517,12 +517,17 @@ REGOLE CRITICHE:
 1. Scrivi INTERAMENTE in ${effectiveLanguage} (paese destinatario: ${country_code} → ${detected.languageLabel})
 2. Personalizza il messaggio sul destinatario SOLO con dati dalla sezione INTELLIGENCE DESTINATARIO
 3. ${ch === "email" ? "NON includere firma — viene aggiunta automaticamente" : "Includi il nome del mittente alla fine"}
-4. CRITICO: Non inventare MAI informazioni, eventi, presentazioni o fatti non presenti nei dati forniti
+4. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA:
+   - NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni o fatti
+   - NON attribuire competenze o certificazioni non presenti nei dati
+   - NON inventare statistiche o percentuali
+   - Se i dati sono insufficienti, resta generico ma VERO
 5. Usa i network condivisi come punto di connessione se esistono nei dati
-6. CRITICO: Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
+6. Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
 7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
 8. Ogni messaggio DEVE avere una CTA chiara — domande aperte > domande chiuse
-9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)`;
+9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)
+10. LIMITI DI LUNGHEZZA PER CANALE: ${ch === "whatsapp" ? "MAX 100 parole" : ch === "linkedin" ? "MAX 200 parole" : ch === "sms" ? "MAX 160 caratteri" : "MAX 150 parole per primo contatto, 200 per follow-up"}`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
