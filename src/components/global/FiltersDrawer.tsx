@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 
 interface FiltersDrawerProps {
   open: boolean;
@@ -198,6 +199,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const isNetwork = route === "/network";
   const isCRM = route === "/crm";
   const isAgenda = route === "/agenda";
+  const isEmailComposer = route === "/email-composer";
 
   // Detect outreach sub-tab
   const outreachTab = g.filters.outreachTab;
@@ -226,7 +228,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   }, [contacts, isCockpit]);
 
   // Context title
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : "Globale";
 
   // Active filter count
   const activeCount = useMemo(() => {
@@ -647,8 +649,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
+          {/* ═══ EMAIL COMPOSER — Rubrica ═══ */}
+          {isEmailComposer && <EmailComposerContactPicker />}
+
           {/* Fallback for pages without specific filters */}
-          {!isOutreach && !isNetwork && !isCRM && !isAgenda && (
+          {!isOutreach && !isNetwork && !isCRM && !isAgenda && !isEmailComposer && (
             <div className="text-center py-8 text-muted-foreground">
               <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nessun filtro per questa sezione</p>
