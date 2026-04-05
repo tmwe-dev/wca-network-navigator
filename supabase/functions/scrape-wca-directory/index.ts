@@ -221,7 +221,9 @@ async function getAuthenticatedCookies(supabase: any, userId: string): Promise<{
     return null
   }
 
-  const result = await ssoLogin(creds.wca_username, creds.wca_password)
+  const { data: decryptedPw } = await supabase.rpc('decrypt_wca_password', { p_encrypted: creds.wca_password })
+  if (!decryptedPw) return null
+  const result = await ssoLogin(creds.wca_username, decryptedPw)
   if (!result.success || !result.cookies) return null
 
   await saveCookiesToCache(supabase, result.cookies, result.wcaToken)
