@@ -135,7 +135,7 @@ export function EmailComposerContactPicker() {
     });
   };
 
-  const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, c: typeof partnerContacts[0]) => {
+  const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, countryCode: string | undefined, c: typeof partnerContacts[0]) => {
     if (isSelected(partnerId, c.id)) return;
     addRecipient({
       partnerId,
@@ -147,6 +147,7 @@ export function EmailComposerContactPicker() {
       email: c.email,
       city: "",
       countryName: "",
+      countryCode: countryCode || undefined,
       isEnriched: !!c.email,
     });
   };
@@ -319,7 +320,7 @@ export function EmailComposerContactPicker() {
                     {partnerContacts.map(c => (
                       <button
                         key={c.id}
-                        onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, c)}
+                        onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, p.country_code || undefined, c)}
                         disabled={isSelected(p.id, c.id)}
                         className={cn(
                           "w-full flex flex-col gap-0.5 px-2 py-1.5 rounded text-left transition-all",
