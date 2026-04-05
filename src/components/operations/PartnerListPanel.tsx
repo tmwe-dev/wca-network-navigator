@@ -8,7 +8,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
-  Search, Telescope, Inbox, LayoutGrid, Plane,
+  Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X,
 } from "lucide-react";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
