@@ -255,22 +255,56 @@ export function PartnerListPanel({
             <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
           </div>
 
-          {/* ROW 2: Active filters summary */}
+          {/* ROW 2: Active filters summary + Reset */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {activeSearch && (
-              <span className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+              <button
+                onClick={() => g.setNetworkSearch("")}
+                className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors group"
+              >
                 <Search className="h-3 w-3" />
                 <span className="truncate">{activeSearch}</span>
-              </span>
+                <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
+            {hasSelectedCountries && (
+              <button
+                onClick={() => g.setNetworkSelectedCountries(new Set())}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors group"
+              >
+                🌍 {countryCodes.length} paesi
+                <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
+            {activeQuality !== "all" && (
+              <button
+                onClick={() => g.setNetworkQuality("all")}
+                className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 transition-colors group"
+              >
+                Filtro attivo
+                <X className="h-2.5 w-2.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
             )}
             <span className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
               Ordine: {currentSortLabel}
             </span>
-            {activeQuality !== "all" && (
-              <span className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                Filtro attivo
-              </span>
+
+            {/* Reset all filters */}
+            {(activeSearch || hasSelectedCountries || activeQuality !== "all" || activeSort !== "name") && (
+              <button
+                onClick={() => {
+                  g.setNetworkSearch("");
+                  g.setNetworkQuality("all");
+                  g.setNetworkSort("name");
+                  g.setNetworkSelectedCountries(new Set());
+                  g.setNetworkDirectoryOnly(false);
+                }}
+                className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/20 transition-colors"
+              >
+                <RotateCcw className="h-2.5 w-2.5" /> Reset
+              </button>
             )}
+
             <span className="ml-auto text-[10px] tabular-nums whitespace-nowrap text-muted-foreground">
               {isLoading ? "..." : `${filteredPartners.length}${totalCount > 0 ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
             </span>
