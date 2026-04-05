@@ -30,6 +30,11 @@ interface Contact {
   originDetail: string;
   deepSearchAt?: string;
   enrichmentData?: any;
+  memberSince?: string;
+  memberYears?: number;
+  networks?: string[];
+  seniority?: string;
+  specialties?: string[];
 }
 
 export interface EnrichmentState {
