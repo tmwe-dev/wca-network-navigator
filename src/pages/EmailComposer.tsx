@@ -119,6 +119,29 @@ export default function EmailComposer() {
     } finally { setAiGenerating(false); }
   };
 
+  const handleAIImprove = async () => {
+    if (!htmlBody.trim()) {
+      toast.error("Scrivi prima il testo dell'email da migliorare");
+      return;
+    }
+    setAiImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-email", {
+        body: {
+          subject, html_body: htmlBody,
+          recipient_count: recipientsWithEmail.length,
+          recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
+        },
+      });
+      if (error) throw error;
+      if (data?.subject) setSubject(data.subject);
+      if (data?.body) setHtmlBody(data.body);
+      toast.success("Email migliorata con AI");
+    } catch (err: any) {
+      toast.error("Errore miglioramento: " + (err.message || "Sconosciuto"));
+    } finally { setAiImproving(false); }
+  };
+
   const handleSaveDraft = async () => {
     try {
       await saveDraft.mutateAsync({
