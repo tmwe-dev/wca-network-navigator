@@ -369,7 +369,7 @@ serve(async (req) => {
     } // end non-standalone
 
     // --- VALIDATION: partner source MUST have a selected contact ---
-    if (sourceType === "partner" && !contact) {
+    if (!standalone && sourceType === "partner" && !contact) {
       return new Response(
         JSON.stringify({
           error: "no_contact",
