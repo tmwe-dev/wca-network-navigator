@@ -222,39 +222,14 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
           </Select>
         </div>
 
-        {/* KB manager link */}
-        <Dialog open={kbOpen} onOpenChange={setKbOpen}>
-          <DialogTrigger asChild>
-            <button className="flex items-center gap-1.5 text-[10px] text-primary hover:underline">
-              <BookOpen className="w-3 h-3" /> Gestisci KB
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-sm">Knowledge Base</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 mt-2">
-              <div>
-                <label className="text-xs font-medium text-foreground/70 mb-1 block">KB Aziendale</label>
-                <Textarea
-                  defaultValue={companyKB}
-                  onBlur={e => updateSetting.mutate({ key: "ai_knowledge_base", value: e.target.value })}
-                  className="text-xs min-h-[120px]"
-                  placeholder="Informazioni sull'azienda, servizi, punti di forza..."
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground/70 mb-1 block">Tecniche di Vendita (SKB)</label>
-                <Textarea
-                  defaultValue={salesKB}
-                  onBlur={e => updateSetting.mutate({ key: "ai_sales_knowledge_base", value: e.target.value })}
-                  className="text-xs min-h-[160px]"
-                  placeholder="Tecniche di vendita, Chris Voss, regole strategiche..."
-                />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* KB manager link — navigates to Settings */}
+        <button
+          onClick={() => navigate("/settings?tab=ai-prompt")}
+          className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
+        >
+          <BookOpen className="w-3 h-3" /> Gestisci KB & Prompt
+          <ExternalLink className="w-2.5 h-2.5" />
+        </button>
       </div>
 
       {/* === ACTION BUTTONS === */}
