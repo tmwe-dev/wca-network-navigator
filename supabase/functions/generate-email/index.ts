@@ -481,7 +481,7 @@ serve(async (req) => {
       const { data: partnerEd } = await supabase
         .from("partners")
         .select("enrichment_data")
-        .eq("id", activity.partner_id)
+        .eq("id", activity!.partner_id)
         .single();
       if (partnerEd?.enrichment_data) {
         const ed = partnerEd.enrichment_data as Record<string, any>;
