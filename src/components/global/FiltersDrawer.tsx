@@ -682,6 +682,10 @@ function NetworkFiltersSection() {
   const { data: statsData } = useCountryStats();
   const [countrySearch, setCountrySearch] = useState("");
 
+  // Inline search results from DB
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
   const countries = useMemo(() => {
     if (!statsData?.byCountry) return [];
     return Object.values(statsData.byCountry).map((s: any) => {
@@ -720,6 +724,29 @@ function NetworkFiltersSection() {
     g.setNetworkSelectedCountries(next);
   };
 
+  // Live search for partners (like email composer picker)
+  const networkSearchValue = g.filters.networkSearch;
+  useMemo(() => {
+    if (networkSearchValue.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    const doSearch = async () => {
+      try {
+        const { data } = await (await import("@/integrations/supabase/client")).supabase
+          .from("partners")
+          .select("id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)")
+          .or(`company_name.ilike.%${networkSearchValue}%,company_alias.ilike.%${networkSearchValue}%,email.ilike.%${networkSearchValue}%`)
+          .eq("is_active", true)
+          .limit(30);
+        setSearchResults(data || []);
+      } catch { setSearchResults([]); }
+      finally { setSearching(false); }
+    };
+    doSearch();
+  }, [networkSearchValue]);
+
   const handleSyncWca = () => {
     window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
   };
@@ -727,7 +754,51 @@ function NetworkFiltersSection() {
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        {/* Inline search results */}
+        {networkSearchValue.trim().length >= 2 && (
+          <div className="mt-2 max-h-[300px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 divide-y divide-border/20">
+            {searching ? (
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Ricerca in corso...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Nessun risultato per "{networkSearchValue}"</div>
+            ) : (
+              <>
+                <div className="px-2.5 py-1.5 bg-muted/30">
+                  <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
+                </div>
+                {searchResults.map((p: any) => (
+                  <div key={p.id} className="px-2.5 py-2 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm shrink-0">{getCountryFlag(p.country_code)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{p.company_alias || p.company_name}</p>
+                        {p.city && <p className="text-[10px] text-muted-foreground">{p.city}</p>}
+                      </div>
+                      {p.email && <span className="text-[9px] text-muted-foreground truncate max-w-[120px]">{p.email}</span>}
+                    </div>
+                    {/* Show contacts */}
+                    {Array.isArray(p.partner_contacts) && p.partner_contacts.length > 0 && (
+                      <div className="mt-1 ml-6 space-y-0.5">
+                        {p.partner_contacts.slice(0, 3).map((c: any) => (
+                          <div key={c.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <Users className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{c.contact_alias || c.name}</span>
+                            {c.title && <span className="text-[9px] opacity-60 truncate">· {c.title}</span>}
+                            {c.email && <span className="text-[9px] text-primary/70 truncate ml-auto">{c.email}</span>}
+                          </div>
+                        ))}
+                        {p.partner_contacts.length > 3 && (
+                          <span className="text-[9px] text-muted-foreground/60">+{p.partner_contacts.length - 3} altri</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </FilterSection>
 
       <FilterSection icon={ArrowUpDown} label="Ordina">
