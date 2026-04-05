@@ -7,6 +7,7 @@ import { ContactCard } from "./ContactCard";
 import { sortContacts, type SortKey } from "./contactHelpers";
 import { useContactsByGroup } from "@/hooks/useContactGroups";
 import { useSelection } from "@/hooks/useSelection";
+import { useContactInteractions } from "@/hooks/useContacts";
 
 interface ExpandedGroupContentProps {
   groupType: string;
@@ -22,6 +23,7 @@ interface ExpandedGroupContentProps {
 export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern, sortKey, searchFilter }: ExpandedGroupContentProps) {
   const [page, setPage] = useState(0);
   const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
+  const { data: activeInteractions } = useContactInteractions(selectedId);
   const rawContacts = data?.items ?? [];
 
   const filtered = useMemo(() => {
@@ -85,6 +87,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                   onSelect={() => onSelect(c)}
                   onToggle={() => selection.toggle(c.id)}
                   index={page * pageSize + virtualRow.index}
+                  interactions={selectedId === c.id ? activeInteractions : undefined}
                 />
               </div>
             );
