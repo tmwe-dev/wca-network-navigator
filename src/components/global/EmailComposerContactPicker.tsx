@@ -252,7 +252,7 @@ export function EmailComposerContactPicker() {
       <ScrollArea className="max-h-[400px]">
         {!shouldSearch && (
           <p className="text-[11px] text-muted-foreground text-center py-4">
-            Digita almeno 3 caratteri per cercare
+            Seleziona un paese o digita almeno 3 caratteri
           </p>
         )}
 
