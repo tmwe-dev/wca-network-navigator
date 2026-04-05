@@ -19,7 +19,7 @@ const TABS: { value: PickerTab; label: string; icon: typeof Users }[] = [
   { value: "bca", label: "BCA", icon: CreditCard },
 ];
 
-export function EmailComposerContactPicker() {
+export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => void }) {
   const [tab, setTab] = useState<PickerTab>("partners");
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
