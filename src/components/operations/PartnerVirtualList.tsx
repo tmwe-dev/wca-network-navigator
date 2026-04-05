@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Send, ChevronRight, Trophy, Loader2 } from "lucide-react";
+import { Send, ChevronRight, Trophy, Loader2, Plane } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
