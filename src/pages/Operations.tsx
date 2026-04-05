@@ -132,28 +132,18 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 
   const toggleFavorite = useToggleFavorite();
 
-  const activeCountryCodes = useMemo(() => selectedCountries.map(c => c.code), [selectedCountries]);
-  const activeCountryNames = useMemo(() => selectedCountries.map(c => c.name), [selectedCountries]);
-  const hasSelection = selectedCountries.length > 0;
+  // Use countries from global filters
+  const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
+  const activeCountryNames = useMemo(() => {
+    const WCA = (window as any).__WCA_COUNTRIES;
+    return activeCountryCodes.map(code => {
+      const found = WCA_COUNTRIES.find((c: any) => c.code === code);
+      return found?.name || code;
+    });
+  }, [activeCountryCodes]);
+  const hasSelection = activeCountryCodes.length > 0;
 
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
-
-  const handleCountryClick = useCallback((code: string, name: string) => {
-    setSelectedCountries(prev => {
-      const exists = prev.some(c => c.code === code);
-      const next = exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
-      if (next.length === 0) setSelectedPartnerId(null);
-      return next;
-    });
-  }, []);
-
-  const handleRemoveCountry = useCallback((code: string) => {
-    setSelectedCountries(prev => {
-      const next = prev.filter(c => c.code !== code);
-      if (next.length === 0) setSelectedPartnerId(null);
-      return next;
-    });
-  }, []);
 
   const handleDeepSearch = useCallback((partnerIds: string[]) => {
     deepSearch.start(partnerIds);
