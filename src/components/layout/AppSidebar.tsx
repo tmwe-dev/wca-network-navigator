@@ -27,6 +27,7 @@ function getNavSections(pathname: string) {
       label: "Strumenti",
       items: [
         { title: "Outreach", url: "/outreach", icon: Rocket },
+        { title: "Inreach", url: "/inreach", icon: Inbox },
         { title: "Email Composer", url: "/email-composer", icon: Mail },
         { title: "Agenda", url: "/agenda", icon: Calendar },
       ],
