@@ -351,14 +351,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             </div>
           </div>
 
-          {/* Toggle nascondi in circuito */}
-          <div className="flex items-center justify-between py-1 px-1">
-            <label className="text-[10px] text-muted-foreground flex items-center gap-1.5 cursor-pointer">
-              <Plane className="w-3 h-3" /> Nascondi in circuito
-            </label>
-            <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
-          </div>
-
           {/* Tabs */}
           <div className="flex gap-1">
             {TABS.map(t => (
@@ -378,83 +370,99 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             ))}
           </div>
 
-          {/* Search + filters row */}
-          <div className="space-y-1.5">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Cerca (min. 3 caratteri)..."
-                className="h-8 text-xs bg-muted/30 border-border/40 pl-8"
-              />
-            </div>
-
-            {/* Sorting + Origin filter */}
-            <div className="flex items-center gap-1.5">
-              {/* Sort selector */}
-              <Select
-                value={tab === "partners" ? partnerSort : tab === "contacts" ? contactSort : bcaSort}
-                onValueChange={(v) => {
-                  if (tab === "partners") setPartnerSort(v as PartnerSort);
-                  else if (tab === "contacts") setContactSort(v as ContactSort);
-                  else setBcaSort(v as BcaSort);
-                }}
-              >
-                <SelectTrigger className="h-7 text-[10px] w-[100px] bg-muted/20 border-border/30">
-                  <ArrowUpDown className="w-2.5 h-2.5 mr-1" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {tab === "partners" && <>
-                    <SelectItem value="name">Nome</SelectItem>
-                    <SelectItem value="country">Paese</SelectItem>
-                    <SelectItem value="rating">Rating</SelectItem>
-                  </>}
-                  {tab === "contacts" && <>
-                    <SelectItem value="name">Nome</SelectItem>
-                    <SelectItem value="company">Azienda</SelectItem>
-                    <SelectItem value="origin">Origine</SelectItem>
-                    <SelectItem value="country">Paese</SelectItem>
-                  </>}
-                  {tab === "bca" && <>
-                    <SelectItem value="name">Nome</SelectItem>
-                    <SelectItem value="company">Azienda</SelectItem>
-                    <SelectItem value="location">Location</SelectItem>
-                  </>}
-                </SelectContent>
-              </Select>
-
-              {/* Origin filter (contacts only) */}
-              {tab === "contacts" && originOptions.length > 0 && (
-                <Select value={originFilter} onValueChange={setOriginFilter}>
-                  <SelectTrigger className="h-7 text-[10px] flex-1 bg-muted/20 border-border/30">
-                    <Filter className="w-2.5 h-2.5 mr-1" />
-                    <SelectValue placeholder="Origine" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutte le origini</SelectItem>
-                    {originOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+          {/* Search bar with integrated settings popover */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cerca (min. 3 caratteri)..."
+              className="h-8 text-xs bg-muted/30 border-border/40 pl-8 pr-16"
+            />
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {shouldSearch && (
+                <span className="text-[9px] text-muted-foreground tabular-nums">{currentCount}</span>
               )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={cn(
+                    "p-1 rounded hover:bg-muted/60 transition-colors",
+                    (hideHolding || originFilter !== "all") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}>
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3 space-y-3" align="end" side="bottom">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ordinamento</label>
+                    <Select
+                      value={tab === "partners" ? partnerSort : tab === "contacts" ? contactSort : bcaSort}
+                      onValueChange={(v) => {
+                        if (tab === "partners") setPartnerSort(v as PartnerSort);
+                        else if (tab === "contacts") setContactSort(v as ContactSort);
+                        else setBcaSort(v as BcaSort);
+                      }}
+                    >
+                      <SelectTrigger className="h-7 text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tab === "partners" && <>
+                          <SelectItem value="name">Nome</SelectItem>
+                          <SelectItem value="country">Paese</SelectItem>
+                          <SelectItem value="rating">Rating</SelectItem>
+                        </>}
+                        {tab === "contacts" && <>
+                          <SelectItem value="name">Nome</SelectItem>
+                          <SelectItem value="company">Azienda</SelectItem>
+                          <SelectItem value="origin">Origine</SelectItem>
+                          <SelectItem value="country">Paese</SelectItem>
+                        </>}
+                        {tab === "bca" && <>
+                          <SelectItem value="name">Nome</SelectItem>
+                          <SelectItem value="company">Azienda</SelectItem>
+                          <SelectItem value="location">Location</SelectItem>
+                        </>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {tab === "contacts" && originOptions.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Origine</label>
+                      <Select value={originFilter} onValueChange={setOriginFilter}>
+                        <SelectTrigger className="h-7 text-[11px]">
+                          <SelectValue placeholder="Tutte" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tutte le origini</SelectItem>
+                          {originOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                      <Plane className="w-3 h-3" /> Nascondi in circuito
+                    </label>
+                    <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+                  </div>
+
+                  {shouldSearch && currentCount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      className="w-full h-7 text-[10px] gap-1"
+                    >
+                      <ListChecks className="w-3 h-3" /> Seleziona tutti ({currentCount})
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
-
-          {/* Results counter + select all */}
-          {shouldSearch && (
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] text-muted-foreground tabular-nums">{currentCount} risultati</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSelectAll}
-                className="h-6 text-[10px] gap-1 px-2 text-primary hover:text-primary"
-              >
-                <ListChecks className="w-3 h-3" /> Seleziona tutti
-              </Button>
-            </div>
-          )}
 
           {/* Results */}
           {!shouldSearch && (
