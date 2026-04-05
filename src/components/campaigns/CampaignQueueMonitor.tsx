@@ -11,9 +11,11 @@ import type { QueueStats } from "@/hooks/useEmailCampaignQueue";
 interface CampaignQueueMonitorProps {
   draftId: string;
   queueStatus: string;
+  onClose?: () => void;
+  onStatusChange?: (status: string) => void;
 }
 
-export function CampaignQueueMonitor({ draftId, queueStatus }: CampaignQueueMonitorProps) {
+export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusChange }: CampaignQueueMonitorProps) {
   const { items, stats } = useEmailCampaignQueue(draftId);
   const { processing, startProcessing, pauseProcessing, cancelProcessing } = useProcessQueue();
 
@@ -73,6 +75,11 @@ export function CampaignQueueMonitor({ draftId, queueStatus }: CampaignQueueMoni
 
         {/* Controls */}
         <div className="flex gap-2">
+          {(isCompleted || isCancelled) && onClose && (
+            <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> Chiudi monitor
+            </Button>
+          )}
           {(queueStatus === "idle" || isPaused) && !isCompleted && !isCancelled && (
             <Button size="sm" onClick={() => startProcessing(draftId)} disabled={processing || stats.pending === 0}>
               <Play className="w-4 h-4 mr-1" />
@@ -80,12 +87,12 @@ export function CampaignQueueMonitor({ draftId, queueStatus }: CampaignQueueMoni
             </Button>
           )}
           {isActive && (
-            <Button size="sm" variant="outline" onClick={() => pauseProcessing(draftId)}>
+            <Button size="sm" variant="outline" onClick={() => { pauseProcessing(draftId); onStatusChange?.("paused"); }}>
               <Pause className="w-4 h-4 mr-1" /> Pausa
             </Button>
           )}
           {!isCompleted && !isCancelled && stats.total > 0 && (
-            <Button size="sm" variant="destructive" onClick={() => cancelProcessing(draftId)} disabled={isCancelled}>
+            <Button size="sm" variant="destructive" onClick={() => { cancelProcessing(draftId); onStatusChange?.("cancelled"); }} disabled={isCancelled}>
               <XCircle className="w-4 h-4 mr-1" /> Annulla
             </Button>
           )}

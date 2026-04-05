@@ -213,9 +213,12 @@ export default function EmailComposer() {
       }));
       await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);
-      setActiveQueueStatus("idle");
-      startProcessing(draftId);
       setActiveQueueStatus("processing");
+      startProcessing(draftId).then(() => {
+        setActiveQueueStatus("completed");
+      }).catch(() => {
+        setActiveQueueStatus("completed");
+      });
     } catch (err) {
       console.error("Enqueue error:", err);
       toast.error("Errore nell'accodamento");
@@ -393,18 +396,22 @@ export default function EmailComposer() {
 
           {/* Bottom action bar */}
           <div className="shrink-0 border-t border-border/30 bg-muted/10 px-4 py-2.5 max-w-3xl w-full">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1.5 h-9 text-xs">
-                <Save className="w-3.5 h-3.5" /> Bozza
-              </Button>
-              <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
-                {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
-              </Button>
-            </div>
-            {activeDraftId && (
-              <div className="mt-2">
-                <CampaignQueueMonitor draftId={activeDraftId} queueStatus={activeQueueStatus} />
+            {activeDraftId ? (
+              <CampaignQueueMonitor
+                draftId={activeDraftId}
+                queueStatus={activeQueueStatus}
+                onClose={() => { setActiveDraftId(null); setActiveQueueStatus("idle"); }}
+                onStatusChange={(s) => setActiveQueueStatus(s)}
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1.5 h-9 text-xs">
+                  <Save className="w-3.5 h-3.5" /> Bozza
+                </Button>
+                <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
+                  {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
+                </Button>
               </div>
             )}
           </div>
