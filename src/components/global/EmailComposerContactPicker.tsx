@@ -118,6 +118,20 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     },
   });
 
+  // Filter out holding pattern contacts
+  const filteredPartners = useMemo(() =>
+    hideHolding ? partners.filter(p => !p.lead_status || p.lead_status === 'new') : partners,
+    [partners, hideHolding]
+  );
+  const filteredContacts = useMemo(() =>
+    hideHolding ? contacts.filter(c => !c.lead_status || c.lead_status === 'new') : contacts,
+    [contacts, hideHolding]
+  );
+  const filteredBca = useMemo(() =>
+    hideHolding ? bcaCards.filter(c => !(c as any).lead_status || (c as any).lead_status === 'new') : bcaCards,
+    [bcaCards, hideHolding]
+  );
+
   const isSelected = (partnerId: string, contactId?: string) => {
     return recipients.some(r =>
       r.partnerId === partnerId && (contactId ? r.contactId === contactId : !r.contactId)
