@@ -59,6 +59,10 @@ const SystemMap = lazyRetry(() => import("./pages/SystemMap"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
+const PrototypeA = lazyRetry(() => import("./pages/PrototypeA"));
+const PrototypeB = lazyRetry(() => import("./pages/PrototypeB"));
+const PrototypeC = lazyRetry(() => import("./pages/PrototypeC"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -124,6 +128,9 @@ const App = () => (
                   <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
+                  <Route path="/prototype-a" element={<PrototypeA />} />
+                  <Route path="/prototype-b" element={<PrototypeB />} />
+                  <Route path="/prototype-c" element={<PrototypeC />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />

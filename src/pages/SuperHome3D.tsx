@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide-react";
+import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X, Layout, MessageSquare, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
@@ -143,6 +143,33 @@ export default function SuperHome3D() {
               <div className="mt-2 text-xs font-medium text-primary/80">{statForCard(card.key)}</div>
             </button>
           ))}
+        </section>
+
+        {/* Prototype selector */}
+        <section className="glass-panel rounded-xl border border-primary/30 p-4">
+          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+            <Layers className="h-3.5 w-3.5" />
+            Prototipi UI — Scegli il layout
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { route: "/prototype-a", title: "A — Focus Flow", desc: "Spotlight + 3 tab + master-detail", icon: ArrowRight },
+              { route: "/prototype-b", title: "B — Command Center", desc: "Sidebar icone + widget dashboard", icon: Layout },
+              { route: "/prototype-c", title: "C — Conversational", desc: "AI-first + pannelli proiettati", icon: MessageSquare },
+            ].map(p => (
+              <button
+                key={p.route}
+                onClick={() => navigate(p.route)}
+                className="group flex flex-col gap-2 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5"
+              >
+                <div className="flex items-center gap-2">
+                  <p.icon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{p.title}</span>
+                </div>
+                <span className="text-[11px] text-muted-foreground">{p.desc}</span>
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* System status */}
