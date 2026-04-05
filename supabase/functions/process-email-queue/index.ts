@@ -204,16 +204,14 @@ Deno.serve(async (req) => {
             .eq("id", item.partner_id)
             .eq("lead_status", "new"); // only escalate from 'new'
 
-          // Increment interaction count
-          await supabase.rpc("increment_contact_interaction", { p_contact_id: item.partner_id }).catch(() => {});
-          // Direct increment for partners
+          // Increment interaction count for partner
           const { data: partnerData } = await supabase.from("partners")
             .select("interaction_count")
             .eq("id", item.partner_id)
             .single();
           if (partnerData) {
             await supabase.from("partners").update({
-              interaction_count: (partnerData.interaction_count || 0) + 1,
+              interaction_count: ((partnerData as any).interaction_count || 0) + 1,
               last_interaction_at: new Date().toISOString(),
             }).eq("id", item.partner_id);
           }
