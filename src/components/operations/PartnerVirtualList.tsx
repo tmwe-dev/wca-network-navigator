@@ -106,7 +106,9 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                   <div className="flex items-center gap-1.5">
                     <p className={cn("font-bold text-xs truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
                     {inHolding && (
-                      <Plane className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" title="In circuito di attesa" />
+                      <span title="In circuito di attesa">
+                        <Plane className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
+                      </span>
                     )}
                     {partner.company_alias && (
                       <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-teal-900/30 text-teal-400" : "bg-teal-100 text-teal-700")}>{partner.company_alias}</span>
