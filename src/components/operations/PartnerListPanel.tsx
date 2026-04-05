@@ -101,10 +101,14 @@ export function PartnerListPanel({
   const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
 
   // ── Filtered & sorted partners ──
+  const holdingCount = useMemo(() => {
+    return (partners || []).filter((p: any) => p.lead_status && p.lead_status !== "new").length;
+  }, [partners]);
+
   const filteredPartners = useMemo(() => {
     let list = partners || [];
-    if (hideWorked && workedIds.size > 0) {
-      list = list.filter((p: any) => !workedIds.has(p.id));
+    if (hideHolding) {
+      list = list.filter((p: any) => !p.lead_status || p.lead_status === "new");
     }
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
@@ -121,7 +125,7 @@ export function PartnerListPanel({
       });
       default: return sorted;
     }
-  }, [partners, progressFilter, sortBy, hideWorked, workedIds]);
+  }, [partners, progressFilter, sortBy, hideHolding]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
