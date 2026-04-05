@@ -46,20 +46,14 @@ const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
 const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
 
-const Global = lazyRetry(() => import("./pages/Global"));
 const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
 const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
 const TestDownload = lazyRetry(() => import("./pages/TestDownload"));
 const TestLinkedInSearch = lazyRetry(() => import("./pages/TestLinkedInSearch"));
 const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
 const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
-const SystemMap = lazyRetry(() => import("./pages/SystemMap"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
-
-const PrototypeA = lazyRetry(() => import("./pages/PrototypeA"));
-const PrototypeB = lazyRetry(() => import("./pages/PrototypeB"));
-const PrototypeC = lazyRetry(() => import("./pages/PrototypeC"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
