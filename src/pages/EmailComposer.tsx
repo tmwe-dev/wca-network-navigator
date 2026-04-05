@@ -19,6 +19,7 @@ import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQue
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useMission } from "@/contexts/MissionContext";
 import OraclePanel, { type OracleConfig } from "@/components/email/OraclePanel";
+import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 
 import { cn } from "@/lib/utils";
 
