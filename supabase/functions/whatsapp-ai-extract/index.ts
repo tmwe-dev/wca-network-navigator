@@ -56,8 +56,58 @@ serve(async (req) => {
 
     let systemPrompt: string;
     let userPrompt: string;
+    let toolName: string;
+    let toolDescription: string;
+    let itemSchema: any;
 
-    if (mode === "thread") {
+    if (mode === "learnDom") {
+      // DOM Learning mode: analyze page structure and return CSS selectors
+      systemPrompt = `You are a WhatsApp Web DOM analyst. Given a structural snapshot of WhatsApp Web's current DOM (data-testid attributes, IDs, roles, HTML samples), identify the correct CSS selectors for each UI element.
+
+Return a JSON object with these exact keys (each value is a CSS selector string):
+- sidebar: the main sidebar container (chat list panel)
+- chatList: the scrollable chat list container
+- chatItem: selector for individual chat items in the sidebar
+- chatItemAlt: alternative selector for chat items
+- chatTitle: element inside a chat item containing the contact name
+- unreadBadge: badge showing unread message count
+- lastMessage: element showing the last message preview
+- timeStamp: element showing the message time
+- searchBox: the search input/box at the top
+- conversationPanel: panel containing messages in an open chat
+- msgContainer: individual message bubbles/containers
+- msgText: text content inside a message
+- msgMeta: timestamp/meta info inside a message
+- msgOutCheck: indicator for sent messages (double check)
+- msgOutSingle: indicator for sent messages (single check)
+- qrCode: QR code element (for login detection)
+- mainHeader: header of the open chat showing contact name
+- composeBox: message input box in an open chat
+- sendButton: the send button
+- searchClear: button to clear search
+
+Prefer data-testid selectors when available. Use role, aria-label, or structural selectors as fallback.
+Return ONLY valid JSON, no markdown.`;
+      userPrompt = `Analyze this WhatsApp Web DOM snapshot and return CSS selectors:\n\n${trimmedHtml}`;
+      toolName = "map_selectors";
+      toolDescription = "Return CSS selectors for WhatsApp Web UI elements";
+      itemSchema = {
+        type: "object",
+        properties: {
+          sidebar: { type: "string" }, chatList: { type: "string" },
+          chatItem: { type: "string" }, chatItemAlt: { type: "string" },
+          chatTitle: { type: "string" }, unreadBadge: { type: "string" },
+          lastMessage: { type: "string" }, timeStamp: { type: "string" },
+          searchBox: { type: "string" }, conversationPanel: { type: "string" },
+          msgContainer: { type: "string" }, msgText: { type: "string" },
+          msgMeta: { type: "string" }, msgOutCheck: { type: "string" },
+          msgOutSingle: { type: "string" }, qrCode: { type: "string" },
+          mainHeader: { type: "string" }, composeBox: { type: "string" },
+          sendButton: { type: "string" }, searchClear: { type: "string" },
+        },
+        required: ["sidebar", "chatItem", "searchBox", "msgContainer", "composeBox"],
+      };
+    } else if (mode === "thread") {
       systemPrompt = `You are a WhatsApp Web HTML parser. Extract individual messages from a WhatsApp conversation HTML.
 Return a JSON array of messages. Each message must have:
 - "direction": "inbound" or "outbound" (outbound = messages with blue ticks or sent by me)
@@ -67,6 +117,18 @@ Return a JSON array of messages. Each message must have:
 
 Only return valid JSON array, no markdown, no explanation.`;
       userPrompt = `Extract all chat messages from this WhatsApp Web HTML:\n\n${trimmedHtml}`;
+      toolName = "extract_thread";
+      toolDescription = "Return extracted messages from WhatsApp thread";
+      itemSchema = {
+        type: "object",
+        properties: {
+          direction: { type: "string", enum: ["inbound", "outbound"] },
+          text: { type: "string" },
+          timestamp: { type: "string" },
+          contact: { type: "string" },
+        },
+        required: ["direction", "text"],
+      };
     } else {
       systemPrompt = `You are a WhatsApp Web HTML parser. Extract unread conversations from the WhatsApp sidebar HTML.
 Return a JSON array of unread chats. Each chat must have:
@@ -79,7 +141,25 @@ ONLY include chats that have an unread badge/count visible.
 Only return valid JSON array, no markdown, no explanation.
 If no unread chats found, return an empty array [].`;
       userPrompt = `Extract unread chats from this WhatsApp Web sidebar HTML:\n\n${trimmedHtml}`;
+      toolName = "extract_unread";
+      toolDescription = "Return extracted unread chats from WhatsApp sidebar";
+      itemSchema = {
+        type: "object",
+        properties: {
+          contact: { type: "string" },
+          lastMessage: { type: "string" },
+          time: { type: "string" },
+          unreadCount: { type: "number" },
+        },
+        required: ["contact", "lastMessage"],
+      };
     }
+
+    // For learnDom, use a flat object schema instead of array
+    const isLearnDom = mode === "learnDom";
+    const toolSchema = isLearnDom
+      ? { type: "object", properties: { selectors: itemSchema }, required: ["selectors"] }
+      : { type: "object", properties: { items: { type: "array", items: itemSchema } }, required: ["items"] };
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -99,53 +179,15 @@ If no unread chats found, return an empty array [].`;
             {
               type: "function",
               function: {
-                name: mode === "thread" ? "extract_thread" : "extract_unread",
-                description:
-                  mode === "thread"
-                    ? "Return extracted messages from WhatsApp thread"
-                    : "Return extracted unread chats from WhatsApp sidebar",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    items: {
-                      type: "array",
-                      items:
-                        mode === "thread"
-                          ? {
-                              type: "object",
-                              properties: {
-                                direction: {
-                                  type: "string",
-                                  enum: ["inbound", "outbound"],
-                                },
-                                text: { type: "string" },
-                                timestamp: { type: "string" },
-                                contact: { type: "string" },
-                              },
-                              required: ["direction", "text"],
-                            }
-                          : {
-                              type: "object",
-                              properties: {
-                                contact: { type: "string" },
-                                lastMessage: { type: "string" },
-                                time: { type: "string" },
-                                unreadCount: { type: "number" },
-                              },
-                              required: ["contact", "lastMessage"],
-                            },
-                    },
-                  },
-                  required: ["items"],
-                },
+                name: toolName,
+                description: toolDescription,
+                parameters: toolSchema,
               },
             },
           ],
           tool_choice: {
             type: "function",
-            function: {
-              name: mode === "thread" ? "extract_thread" : "extract_unread",
-            },
+            function: { name: toolName },
           },
         }),
       }
@@ -182,7 +224,12 @@ If no unread chats found, return an empty array [].`;
     if (toolCall?.function?.arguments) {
       try {
         const parsed = JSON.parse(toolCall.function.arguments);
-        items = parsed.items || [];
+        if (isLearnDom) {
+          // For learnDom, return the selectors object as a single-item array
+          items = [parsed.selectors || parsed];
+        } else {
+          items = parsed.items || [];
+        }
       } catch {
         console.error("Failed to parse tool call arguments");
       }
@@ -194,7 +241,11 @@ If no unread chats found, return an empty array [].`;
       if (content) {
         try {
           const parsed = JSON.parse(content);
-          items = Array.isArray(parsed) ? parsed : parsed.items || [];
+          if (isLearnDom) {
+            items = [parsed.selectors || parsed];
+          } else {
+            items = Array.isArray(parsed) ? parsed : parsed.items || [];
+          }
         } catch {
           console.error("Failed to parse AI content as JSON");
         }
