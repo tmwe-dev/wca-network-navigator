@@ -579,8 +579,8 @@ ${quality !== "fast" ? `- Telefono: ${settings.ai_phone_signature || "N/A"}` : "
 - Network: ${settings.ai_networks || "N/A"}
 
 KNOWLEDGE BASE:
-${settings.ai_knowledge_base || "Non configurata"}
-${salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
+${use_kb !== false ? (settings.ai_knowledge_base || "Non configurata") : "(Knowledge Base disattivata dall'utente)"}
+${use_kb !== false && salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
 - Tono: ${oracle_tone || settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}
