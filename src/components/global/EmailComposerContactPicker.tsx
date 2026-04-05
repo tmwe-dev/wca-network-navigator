@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from "react";
-import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown, Check, Plane, ListChecks, Filter, Settings2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, Users, Globe, CreditCard, UserPlus, ChevronRight, Mail, X, ArrowUpDown, Check, Plane, ListChecks, Settings2, MapPin } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -39,7 +39,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const [bcaSort, setBcaSort] = useState<BcaSort>("name");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const { addRecipient, recipients, removeRecipient, clearRecipients } = useMission();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const shouldSearch = search.length >= 3 || !!selectedCountry;
 
@@ -56,8 +55,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
       data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
       return Object.entries(counts)
         .map(([code, count]) => ({
-          code,
-          count,
+          code, count,
           flag: getCountryFlag(code),
           name: WCA_COUNTRIES_MAP[code]?.name || code,
         }));
@@ -187,7 +185,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
     return sorted;
   }, [bcaCards, hideHolding, bcaSort]);
 
-  // Current visible count
   const currentCount = tab === "partners" ? filteredPartners.length
     : tab === "contacts" ? filteredContacts.length
     : filteredBca.length;
@@ -215,16 +212,11 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const handleSelectContact = (partnerId: string, companyName: string, companyAlias: string | undefined, countryCode: string | undefined, c: typeof partnerContacts[0]) => {
     if (isSelected(partnerId, c.id)) return;
     addRecipient({
-      partnerId,
-      companyName,
-      companyAlias,
-      contactId: c.id,
-      contactName: c.name,
+      partnerId, companyName, companyAlias,
+      contactId: c.id, contactName: c.name,
       contactAlias: (c as any).contact_alias || undefined,
-      email: c.email,
-      city: "",
-      countryName: "",
-      countryCode: countryCode || undefined,
+      email: c.email, city: "",
+      countryName: "", countryCode: countryCode || undefined,
       isEnriched: !!c.email,
     });
   };
@@ -237,8 +229,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
       companyAlias: (c as any).company_alias || undefined,
       contactName: c.name || undefined,
       contactAlias: (c as any).contact_alias || undefined,
-      email: c.email,
-      city: "",
+      email: c.email, city: "",
       countryName: c.country || "",
       isEnriched: !!c.email,
     });
@@ -251,91 +242,165 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
       partnerId: pid,
       companyName: c.company_name || "",
       contactName: c.contact_name || undefined,
-      email: c.email,
-      city: c.location || "",
-      countryName: "",
-      isEnriched: !!c.email,
+      email: c.email, city: c.location || "",
+      countryName: "", isEnriched: !!c.email,
     });
   };
 
-  // Bulk select all visible
   const handleSelectAll = () => {
-    if (tab === "partners") {
-      filteredPartners.forEach(p => handleSelectPartner(p));
-    } else if (tab === "contacts") {
-      filteredContacts.forEach(c => handleSelectImported(c));
-    } else {
-      filteredBca.forEach(c => handleSelectBca(c));
-    }
+    if (tab === "partners") filteredPartners.forEach(p => handleSelectPartner(p));
+    else if (tab === "contacts") filteredContacts.forEach(c => handleSelectImported(c));
+    else filteredBca.forEach(c => handleSelectBca(c));
   };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Fixed-height header: selected + confirm — always visible */}
-      <div className="flex-shrink-0 h-[88px] pb-2 border-b border-border/30 mb-2">
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <UserPlus className="w-3 h-3" /> Selezionati ({recipients.length})
-          </label>
-          {recipients.length > 0 && (
-            <div className="flex items-center gap-1 shrink-0">
-              <Button onClick={clearRecipients} size="sm" variant="outline" className="h-6 gap-1 text-[10px] px-2.5">
-                <X className="w-3 h-3" /> Deseleziona tutti
+      {/* Compact header: search + selected in one row */}
+      <div className="flex-shrink-0 pb-1.5 mb-1.5 border-b border-border/30 space-y-1.5">
+        {/* Row 1: Search + settings */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cerca (min. 3 caratteri)..."
+            className="h-7 text-xs bg-muted/30 border-border/40 pl-8 pr-16"
+          />
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {shouldSearch && (
+              <span className="text-[9px] text-muted-foreground tabular-nums">{currentCount}</span>
+            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className={cn(
+                  "p-1 rounded hover:bg-muted/60 transition-colors",
+                  (hideHolding || originFilter !== "all") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}>
+                  <Settings2 className="w-3.5 h-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 space-y-3" align="end" side="bottom">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ordinamento</label>
+                  <Select
+                    value={tab === "partners" ? partnerSort : tab === "contacts" ? contactSort : bcaSort}
+                    onValueChange={(v) => {
+                      if (tab === "partners") setPartnerSort(v as PartnerSort);
+                      else if (tab === "contacts") setContactSort(v as ContactSort);
+                      else setBcaSort(v as BcaSort);
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tab === "partners" && <>
+                        <SelectItem value="name">Nome</SelectItem>
+                        <SelectItem value="country">Paese</SelectItem>
+                        <SelectItem value="rating">Rating</SelectItem>
+                      </>}
+                      {tab === "contacts" && <>
+                        <SelectItem value="name">Nome</SelectItem>
+                        <SelectItem value="company">Azienda</SelectItem>
+                        <SelectItem value="origin">Origine</SelectItem>
+                        <SelectItem value="country">Paese</SelectItem>
+                      </>}
+                      {tab === "bca" && <>
+                        <SelectItem value="name">Nome</SelectItem>
+                        <SelectItem value="company">Azienda</SelectItem>
+                        <SelectItem value="location">Location</SelectItem>
+                      </>}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {tab === "contacts" && originOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Origine</label>
+                    <Select value={originFilter} onValueChange={setOriginFilter}>
+                      <SelectTrigger className="h-7 text-[11px]">
+                        <SelectValue placeholder="Tutte" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tutte le origini</SelectItem>
+                        {originOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <Plane className="w-3 h-3" /> Nascondi in circuito
+                  </label>
+                  <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+                </div>
+
+                {shouldSearch && currentCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleSelectAll} className="w-full h-7 text-[10px] gap-1">
+                    <ListChecks className="w-3 h-3" /> Seleziona tutti ({currentCount})
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Row 2: Selected recipients — single compact row */}
+        <div className="flex items-center gap-1.5 min-h-[24px]">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1">
+            <UserPlus className="w-2.5 h-2.5" /> {recipients.length}
+          </span>
+          {recipients.length > 0 ? (
+            <>
+              <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-none min-w-0">
+                {recipients.map((r, i) => (
+                  <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-medium border border-primary/20 shrink-0 max-w-[120px]">
+                    <span className="text-[10px] leading-none">{getCountryFlag(r.countryCode || "")}</span>
+                    <span className="truncate">{r.contactAlias || r.contactName || r.companyAlias || r.companyName}</span>
+                    <button onClick={() => removeRecipient(i)} className="hover:text-destructive ml-0.5">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <Button onClick={clearRecipients} size="sm" variant="ghost" className="h-5 px-1.5 text-[9px] text-muted-foreground shrink-0">
+                <X className="w-2.5 h-2.5" />
               </Button>
               {onConfirm && (
-                <Button onClick={onConfirm} size="sm" className="h-6 gap-1 text-[10px] px-2.5">
-                  <Check className="w-3 h-3" /> Conferma {recipients.length}
+                <Button onClick={onConfirm} size="sm" className="h-5 px-2 text-[9px] gap-0.5 shrink-0">
+                  <Check className="w-2.5 h-2.5" /> Conferma
                 </Button>
               )}
-            </div>
+            </>
+          ) : (
+            <span className="text-[9px] text-muted-foreground/50 italic">Nessun destinatario</span>
           )}
         </div>
-        {recipients.length > 0 ? (
-          <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto">
-            {recipients.map((r, i) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
-                <span className="text-xs leading-none">{getCountryFlag(r.countryCode || "")}</span>
-                {r.contactAlias || r.contactName || r.companyAlias || r.companyName}
-                {r.email && <Mail className="w-2.5 h-2.5 opacity-60" />}
-                <button onClick={() => removeRecipient(i)} className="hover:text-destructive">
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[10px] text-muted-foreground/50 italic pt-2">Nessun destinatario selezionato</p>
-        )}
       </div>
 
-      {/* Scrollable content */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="space-y-3 pr-2">
-          {/* Country flag carousel */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <Globe className="w-3 h-3" /> Paesi
-              </label>
-              <button
-                onClick={() => setCountrySort(s => s === "count" ? "name" : "count")}
-                className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground"
-              >
-                <ArrowUpDown className="w-2.5 h-2.5" />
-                {countrySort === "count" ? "N°" : "A-Z"}
-              </button>
-            </div>
-            <div
-              ref={scrollRef}
-              className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin"
-              style={{ scrollbarWidth: "thin" }}
+      {/* Main content: vertical countries strip LEFT + content RIGHT */}
+      <div className="flex-1 flex min-h-0 gap-1.5">
+        {/* Left: vertical country strip */}
+        <div className="flex-shrink-0 w-[52px] flex flex-col min-h-0">
+          <div className="flex items-center justify-center mb-1">
+            <button
+              onClick={() => setCountrySort(s => s === "count" ? "name" : "count")}
+              className="flex items-center gap-0.5 text-[8px] text-muted-foreground hover:text-foreground"
+              title={countrySort === "count" ? "Ordina per nome" : "Ordina per numero"}
             >
+              <ArrowUpDown className="w-2.5 h-2.5" />
+              {countrySort === "count" ? "N°" : "AZ"}
+            </button>
+          </div>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="flex flex-col gap-1 pr-1">
               {selectedCountry && (
                 <button
                   onClick={() => setSelectedCountry(null)}
-                  className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[9px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 min-w-[48px]"
+                  className="flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[8px] font-medium border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10"
                 >
-                  <span className="text-base">✕</span>
+                  <span className="text-sm">✕</span>
                   <span>Tutti</span>
                 </button>
               )}
@@ -344,28 +409,31 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
                   key={c.code}
                   onClick={() => setSelectedCountry(selectedCountry === c.code ? null : c.code)}
                   className={cn(
-                    "flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all border min-w-[48px]",
+                    "flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[8px] font-medium transition-all border",
                     selectedCountry === c.code
                       ? "bg-primary/15 border-primary/30 text-primary"
                       : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                   )}
                 >
-                  <span className="text-lg leading-none">{c.flag}</span>
-                  <span className="tabular-nums font-bold">{c.count}</span>
-                  <span className="truncate max-w-[52px] text-[8px]">{c.name}</span>
+                  <span className="text-base leading-none">{c.flag}</span>
+                  <span className="tabular-nums font-bold text-[9px]">{c.count}</span>
+                  <span className="truncate w-full text-center text-[7px] leading-tight">{c.name}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </ScrollArea>
+        </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1">
+        {/* Right: tabs + results */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          {/* Tabs row */}
+          <div className="flex gap-1 mb-1.5 flex-shrink-0">
             {TABS.map(t => (
               <button
                 key={t.value}
                 onClick={() => { setTab(t.value); setSearch(""); setExpandedPartner(null); setExpandedCompany(null); }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all border",
+                  "flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border",
                   tab === t.value
                     ? "bg-primary/15 border-primary/30 text-primary"
                     : "border-border/40 text-muted-foreground hover:bg-muted/40"
@@ -377,287 +445,210 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
             ))}
           </div>
 
-          {/* Search bar with integrated settings popover */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cerca (min. 3 caratteri)..."
-              className="h-8 text-xs bg-muted/30 border-border/40 pl-8 pr-16"
-            />
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              {shouldSearch && (
-                <span className="text-[9px] text-muted-foreground tabular-nums">{currentCount}</span>
+          {/* Results area */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="rounded-lg bg-muted/15 border border-border/20 p-1.5 min-h-[120px]">
+              {!shouldSearch && (
+                <p className="text-[10px] text-muted-foreground text-center py-4">
+                  Seleziona un paese o digita almeno 3 caratteri
+                </p>
               )}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className={cn(
-                    "p-1 rounded hover:bg-muted/60 transition-colors",
-                    (hideHolding || originFilter !== "all") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}>
-                    <Settings2 className="w-3.5 h-3.5" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-3 space-y-3" align="end" side="bottom">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ordinamento</label>
-                    <Select
-                      value={tab === "partners" ? partnerSort : tab === "contacts" ? contactSort : bcaSort}
-                      onValueChange={(v) => {
-                        if (tab === "partners") setPartnerSort(v as PartnerSort);
-                        else if (tab === "contacts") setContactSort(v as ContactSort);
-                        else setBcaSort(v as BcaSort);
-                      }}
-                    >
-                      <SelectTrigger className="h-7 text-[11px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tab === "partners" && <>
-                          <SelectItem value="name">Nome</SelectItem>
-                          <SelectItem value="country">Paese</SelectItem>
-                          <SelectItem value="rating">Rating</SelectItem>
-                        </>}
-                        {tab === "contacts" && <>
-                          <SelectItem value="name">Nome</SelectItem>
-                          <SelectItem value="company">Azienda</SelectItem>
-                          <SelectItem value="origin">Origine</SelectItem>
-                          <SelectItem value="country">Paese</SelectItem>
-                        </>}
-                        {tab === "bca" && <>
-                          <SelectItem value="name">Nome</SelectItem>
-                          <SelectItem value="company">Azienda</SelectItem>
-                          <SelectItem value="location">Location</SelectItem>
-                        </>}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  {tab === "contacts" && originOptions.length > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Origine</label>
-                      <Select value={originFilter} onValueChange={setOriginFilter}>
-                        <SelectTrigger className="h-7 text-[11px]">
-                          <SelectValue placeholder="Tutte" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Tutte le origini</SelectItem>
-                          {originOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                      <Plane className="w-3 h-3" /> Nascondi in circuito
-                    </label>
-                    <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
-                  </div>
-
-                  {shouldSearch && currentCount > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      className="w-full h-7 text-[10px] gap-1"
-                    >
-                      <ListChecks className="w-3 h-3" /> Seleziona tutti ({currentCount})
-                    </Button>
-                  )}
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Results area — tinted background to separate from controls */}
-          <div className="rounded-lg bg-muted/15 border border-border/20 p-1.5 min-h-[120px]">
-          {!shouldSearch && (
-            <p className="text-[11px] text-muted-foreground text-center py-4">
-              Seleziona un paese o digita almeno 3 caratteri
-            </p>
-          )}
-
-          {/* Partners */}
-          {tab === "partners" && shouldSearch && (
-            <div className="space-y-1.5 p-0.5">
-              {filteredPartners.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-              {filteredPartners.map(p => (
-                <div key={p.id} className="rounded-lg border border-border/40 bg-card overflow-hidden">
-                  <button
-                    onClick={() => setExpandedPartner(expandedPartner === p.id ? null : p.id)}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
-                      expandedPartner === p.id && "bg-muted/20"
-                    )}
-                  >
-                    <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", expandedPartner === p.id && "rotate-90")} />
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="font-semibold text-foreground truncate">{p.company_name}</div>
-                    </div>
-                    {p.country_code && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{p.country_code}</Badge>}
-                    {!isSelected(p.id) && (
+              {/* Partners */}
+              {tab === "partners" && shouldSearch && (
+                <div className="space-y-1.5">
+                  {filteredPartners.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+                  {filteredPartners.map(p => (
+                    <div key={p.id} className="rounded-lg border border-border/50 bg-card overflow-hidden shadow-sm">
                       <button
-                        onClick={e => { e.stopPropagation(); handleSelectPartner(p); }}
-                        className="text-[9px] text-primary hover:underline flex-shrink-0"
-                      >
-                        +Azienda
-                      </button>
-                    )}
-                    {isSelected(p.id) && <Badge className="text-[8px] h-3.5 px-1 bg-primary/20 text-primary border-0">✓</Badge>}
-                  </button>
-                  {expandedPartner === p.id && partnerContacts.length > 0 && (
-                    <div className="border-t border-border/30 bg-muted/10 px-2.5 py-1 space-y-0.5">
-                      {partnerContacts.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, p.country_code || undefined, c)}
-                          disabled={isSelected(p.id, c.id)}
-                          className={cn(
-                            "w-full flex items-start gap-2 px-2 py-1.5 rounded text-left transition-all",
-                            isSelected(p.id, c.id) ? "opacity-50" : "hover:bg-primary/5"
-                          )}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-medium text-foreground truncate">{c.name}</div>
-                            {c.title && <div className="text-[10px] text-muted-foreground truncate">{c.title}</div>}
-                          </div>
-                          {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0 mt-0.5" />}
-                          {isSelected(p.id, c.id)
-                            ? <span className="text-primary text-[9px] mt-0.5">✓</span>
-                            : <span className="text-primary text-[9px] mt-0.5">+</span>
-                          }
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {expandedPartner === p.id && partnerContacts.length === 0 && (
-                    <div className="border-t border-border/30 px-4 py-1.5">
-                      <p className="text-[10px] text-muted-foreground">Nessun contatto</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Imported contacts — grouped by company */}
-          {tab === "contacts" && shouldSearch && (
-            <div className="space-y-1.5 p-0.5">
-              {filteredContacts.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-              {groupedContacts.map(([companyName, members]) => (
-                <div key={companyName} className="rounded-lg border border-border/40 bg-card overflow-hidden">
-                  {members.length === 1 ? (
-                    <button
-                      onClick={() => handleSelectImported(members[0])}
-                      disabled={isSelected(members[0].id)}
-                      className={cn(
-                        "w-full text-left px-2.5 py-2 text-xs transition-all",
-                        isSelected(members[0].id) ? "opacity-50" : "hover:bg-muted/40"
-                      )}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">{companyName !== "Senza azienda" ? companyName : (members[0].name || "—")}</div>
-                          {members[0].name && companyName !== "Senza azienda" && (
-                            <div className="text-[11px] text-foreground/80 truncate">{members[0].name}</div>
-                          )}
-                          {members[0].position && (
-                            <div className="text-[10px] text-muted-foreground truncate">{members[0].position}</div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
-                          {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
-                          {members[0].email && <Mail className="w-3 h-3 text-primary/60" />}
-                          {isSelected(members[0].id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
-                        </div>
-                      </div>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setExpandedCompany(expandedCompany === companyName ? null : companyName)}
+                        onClick={() => setExpandedPartner(expandedPartner === p.id ? null : p.id)}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
-                          expandedCompany === companyName && "bg-muted/20"
+                          "w-full flex items-start gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
+                          expandedPartner === p.id && "bg-muted/20"
                         )}
                       >
-                        <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", expandedCompany === companyName && "rotate-90")} />
+                        <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground mt-0.5", expandedPartner === p.id && "rotate-90")} />
                         <div className="flex-1 text-left min-w-0">
-                          <div className="font-semibold text-foreground truncate">{companyName}</div>
+                          <div className="font-semibold text-foreground truncate text-[11px]">{p.company_name}</div>
+                          {p.city && (
+                            <div className="text-[9px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                              <MapPin className="w-2.5 h-2.5" /> {p.city}
+                            </div>
+                          )}
                         </div>
-                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{members.length}</Badge>
+                        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                          {p.country_code && (
+                            <span className="text-sm leading-none" title={WCA_COUNTRIES_MAP[p.country_code]?.name || p.country_code}>
+                              {getCountryFlag(p.country_code)}
+                            </span>
+                          )}
+                          {!isSelected(p.id) ? (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleSelectPartner(p); }}
+                              className="text-[9px] text-primary hover:underline"
+                            >+</button>
+                          ) : (
+                            <Check className="w-3 h-3 text-primary" />
+                          )}
+                        </div>
                       </button>
-                      {expandedCompany === companyName && (
+                      {expandedPartner === p.id && partnerContacts.length > 0 && (
                         <div className="border-t border-border/30 bg-muted/10 px-2.5 py-1 space-y-0.5">
-                          {members.map(c => (
+                          {partnerContacts.map(c => (
                             <button
                               key={c.id}
-                              onClick={() => handleSelectImported(c)}
-                              disabled={isSelected(c.id)}
+                              onClick={() => handleSelectContact(p.id, p.company_name || "", (p as any).company_alias || undefined, p.country_code || undefined, c)}
+                              disabled={isSelected(p.id, c.id)}
                               className={cn(
-                                "w-full text-left px-2 py-1.5 rounded transition-all",
-                                isSelected(c.id) ? "opacity-50" : "hover:bg-primary/5"
+                                "w-full flex items-start gap-2 px-2 py-1.5 rounded text-left transition-all",
+                                isSelected(p.id, c.id) ? "opacity-50" : "hover:bg-primary/5"
                               )}
                             >
-                              <div className="flex items-start gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-[11px] font-medium text-foreground truncate">{c.name || "—"}</div>
-                                  {c.position && <div className="text-[10px] text-muted-foreground truncate">{c.position}</div>}
-                                </div>
-                                {c.email && <Mail className="w-3 h-3 text-primary/60 mt-0.5" />}
-                                {isSelected(c.id)
-                                  ? <span className="text-primary text-[9px] mt-0.5">✓</span>
-                                  : <span className="text-primary text-[9px] mt-0.5">+</span>
-                                }
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[10px] font-medium text-foreground truncate">{c.name}</div>
+                                {c.title && <div className="text-[9px] text-muted-foreground truncate">{c.title}</div>}
                               </div>
+                              {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0 mt-0.5" />}
+                              {isSelected(p.id, c.id)
+                                ? <Check className="w-3 h-3 text-primary mt-0.5" />
+                                : <span className="text-primary text-[9px] mt-0.5">+</span>
+                              }
                             </button>
                           ))}
                         </div>
                       )}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* BCA */}
-          {tab === "bca" && shouldSearch && (
-            <div className="space-y-1.5 p-0.5">
-              {filteredBca.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-              {filteredBca.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => handleSelectBca(c)}
-                  disabled={isSelected(c.matched_partner_id || c.id)}
-                  className={cn(
-                    "w-full text-left rounded-lg border border-border/40 bg-card px-2.5 py-2 text-xs transition-all",
-                    isSelected(c.matched_partner_id || c.id) ? "opacity-50" : "hover:bg-muted/40"
-                  )}
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-foreground truncate">{c.company_name || c.contact_name || "—"}</div>
-                      {c.contact_name && c.company_name && (
-                        <div className="text-[11px] text-foreground/80 truncate">{c.contact_name}</div>
+                      {expandedPartner === p.id && partnerContacts.length === 0 && (
+                        <div className="border-t border-border/30 px-4 py-1.5">
+                          <p className="text-[9px] text-muted-foreground">Nessun contatto</p>
+                        </div>
                       )}
-                      {(c as any).position && <div className="text-[10px] text-muted-foreground truncate">{(c as any).position}</div>}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5 shrink-0">
-                      {c.location && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{c.location}</Badge>}
-                      {c.email && <Mail className="w-3 h-3 text-primary/60" />}
-                      {isSelected(c.matched_partner_id || c.id) ? <span className="text-primary text-[9px]">✓</span> : <span className="text-primary text-[9px]">+</span>}
+                  ))}
+                </div>
+              )}
+
+              {/* Imported contacts — grouped by company */}
+              {tab === "contacts" && shouldSearch && (
+                <div className="space-y-1.5">
+                  {filteredContacts.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+                  {groupedContacts.map(([companyName, members]) => (
+                    <div key={companyName} className="rounded-lg border border-border/50 bg-card overflow-hidden shadow-sm">
+                      {members.length === 1 ? (
+                        <button
+                          onClick={() => handleSelectImported(members[0])}
+                          disabled={isSelected(members[0].id)}
+                          className={cn(
+                            "w-full text-left px-2.5 py-2 text-xs transition-all",
+                            isSelected(members[0].id) ? "opacity-50" : "hover:bg-muted/40"
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-foreground truncate text-[11px]">{companyName !== "Senza azienda" ? companyName : (members[0].name || "—")}</div>
+                              {members[0].name && companyName !== "Senza azienda" && (
+                                <div className="text-[10px] text-foreground/80 truncate">{members[0].name}</div>
+                              )}
+                              {members[0].position && (
+                                <div className="text-[9px] text-muted-foreground truncate">{members[0].position}</div>
+                              )}
+                              {members[0].country && (
+                                <div className="text-[8px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                                  <MapPin className="w-2 h-2" /> {members[0].country}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5 shrink-0">
+                              {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
+                              {members[0].email && <Mail className="w-3 h-3 text-primary/60" />}
+                              {isSelected(members[0].id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
+                            </div>
+                          </div>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setExpandedCompany(expandedCompany === companyName ? null : companyName)}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2.5 py-2 text-xs transition-all hover:bg-muted/40",
+                              expandedCompany === companyName && "bg-muted/20"
+                            )}
+                          >
+                            <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", expandedCompany === companyName && "rotate-90")} />
+                            <div className="flex-1 text-left min-w-0">
+                              <div className="font-semibold text-foreground truncate text-[11px]">{companyName}</div>
+                            </div>
+                            <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{members.length}</Badge>
+                          </button>
+                          {expandedCompany === companyName && (
+                            <div className="border-t border-border/30 bg-muted/10 px-2.5 py-1 space-y-0.5">
+                              {members.map(c => (
+                                <button
+                                  key={c.id}
+                                  onClick={() => handleSelectImported(c)}
+                                  disabled={isSelected(c.id)}
+                                  className={cn(
+                                    "w-full text-left px-2 py-1.5 rounded transition-all",
+                                    isSelected(c.id) ? "opacity-50" : "hover:bg-primary/5"
+                                  )}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[10px] font-medium text-foreground truncate">{c.name || "—"}</div>
+                                      {c.position && <div className="text-[9px] text-muted-foreground truncate">{c.position}</div>}
+                                    </div>
+                                    {c.email && <Mail className="w-3 h-3 text-primary/60 mt-0.5" />}
+                                    {isSelected(c.id) ? <Check className="w-3 h-3 text-primary mt-0.5" /> : <span className="text-primary text-[9px] mt-0.5">+</span>}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                  </div>
-                </button>
-              ))}
+                  ))}
+                </div>
+              )}
+
+              {/* BCA */}
+              {tab === "bca" && shouldSearch && (
+                <div className="space-y-1.5">
+                  {filteredBca.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+                  {filteredBca.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleSelectBca(c)}
+                      disabled={isSelected(c.matched_partner_id || c.id)}
+                      className={cn(
+                        "w-full text-left rounded-lg border border-border/50 bg-card px-2.5 py-2 text-xs transition-all shadow-sm",
+                        isSelected(c.matched_partner_id || c.id) ? "opacity-50" : "hover:bg-muted/40"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate text-[11px]">{c.company_name || c.contact_name || "—"}</div>
+                          {c.contact_name && c.company_name && (
+                            <div className="text-[10px] text-foreground/80 truncate">{c.contact_name}</div>
+                          )}
+                          {c.location && (
+                            <div className="text-[9px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                              <MapPin className="w-2 h-2" /> {c.location}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5 shrink-0">
+                          {c.email && <Mail className="w-3 h-3 text-primary/60" />}
+                          {isSelected(c.matched_partner_id || c.id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-          </div>{/* end tinted results area */}
+          </ScrollArea>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
