@@ -27,6 +27,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [countrySort, setCountrySort] = useState<CountrySort>("count");
+  const [hideHolding, setHideHolding] = useState(true);
   const { addRecipient, recipients, removeRecipient } = useMission();
   const scrollRef = useRef<HTMLDivElement>(null);
 
