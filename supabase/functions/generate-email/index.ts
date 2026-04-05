@@ -208,8 +208,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search } = await req.json();
-    if (!activity_id) throw new Error("activity_id is required");
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, recipient_count, recipient_countries } = await req.json();
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
@@ -222,8 +221,37 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    let partner: any = null;
+    let contact: any = null;
+    let contactEmail: string | null = null;
+    let sourceType = "partner";
+    let activity: any = null;
+
+    if (standalone) {
+      // ── STANDALONE MODE: no activity needed, generate from goal/settings only ──
+      partner = {
+        id: null,
+        company_name: "Destinatario generico",
+        company_alias: null,
+        country_code: "IT",
+        country_name: recipient_countries || "Vari",
+        city: "",
+        email: null,
+        phone: null,
+        website: null,
+        profile_description: null,
+        rating: null,
+        raw_profile_markdown: null,
+      };
+      contact = null;
+      contactEmail = "destinatario@email.com";
+      sourceType = "standalone";
+    } else {
+      // ── ACTIVITY MODE: original logic ──
+      if (!activity_id) throw new Error("activity_id is required");
+
     // Fetch activity
-    const { data: activity, error: actErr } = await supabase
+    const { data: actData, error: actErr } = await supabase
       .from("activities")
       .select(`
         *,
@@ -239,12 +267,12 @@ serve(async (req) => {
       .eq("id", activity_id)
       .single();
 
-    if (actErr || !activity) throw new Error("Activity not found");
+    if (actErr || !actData) throw new Error("Activity not found");
+    activity = actData;
 
-    const sourceType = activity.source_type || "partner";
-    let partner = activity.partners;
-    let contact = activity.selected_contact;
-    let contactEmail: string | null = null;
+    sourceType = activity.source_type || "partner";
+    partner = activity.partners;
+    contact = activity.selected_contact;
 
     // For contact-source activities, fetch from imported_contacts
     if (sourceType === "contact" && activity.source_id) {
@@ -338,6 +366,7 @@ serve(async (req) => {
     }
 
     if (!partner) throw new Error("Source entity not found");
+    } // end non-standalone
 
     // --- VALIDATION: partner source MUST have a selected contact ---
     if (sourceType === "partner" && !contact) {
