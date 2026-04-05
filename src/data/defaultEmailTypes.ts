@@ -6,9 +6,9 @@ export interface EmailType {
   prompt: string;
   tone: string;
   /** KB categories to prioritize for this email type */
-  kb_categories: string[];
+  kb_categories?: string[];
   /** Tactical structure instructions */
-  structure: string;
+  structure?: string;
 }
 
 export const DEFAULT_EMAIL_TYPES: EmailType[] = [
