@@ -87,8 +87,8 @@ PROFILO MITTENTE:
 - Settore: ${settings.ai_sector || "freight_forwarding"}
 - Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
-${settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
-${salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
+${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
+${use_kb !== false && salesKBSlice ? `TECNICHE DI VENDITA:\n${salesKBSlice}\n` : ""}
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
 
 REGOLE DI MIGLIORAMENTO:
