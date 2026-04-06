@@ -67,6 +67,8 @@ export function PartnerListPanel({
   } = usePartnersPaginated({
     countries: countryCodes,
     search: activeSearch.length >= 2 ? activeSearch : undefined,
+    quality: activeQuality !== "all" ? activeQuality : undefined,
+    hideHolding,
   });
 
   const partners = useMemo(() => {
