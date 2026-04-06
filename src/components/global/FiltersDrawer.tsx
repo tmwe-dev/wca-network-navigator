@@ -643,6 +643,235 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   );
 }
 
+/* ── CRM Filters with Country List (aligned to Network) ── */
+
+function CRMFiltersSection() {
+  const g = useGlobalFilters();
+  const [countrySearch, setCountrySearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Fetch contact group counts to build country list
+  const { useContactGroupCounts: useGroupCounts } = require("@/hooks/useContactGroups");
+
+  // We import inline to avoid circular — use dynamic
+  const [crmCountries, setCrmCountries] = useState<{ code: string; name: string; flag: string; total: number }[]>([]);
+
+  // Fetch countries from imported_contacts
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase
+          .from("imported_contacts")
+          .select("country")
+          .not("country", "is", null);
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        data.forEach((r: any) => {
+          const c = (r.country || "").toUpperCase().trim();
+          if (c) counts[c] = (counts[c] || 0) + 1;
+        });
+        const list = Object.entries(counts).map(([code, total]) => {
+          const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
+          return {
+            code,
+            name: wcaCountry?.name || code,
+            flag: getCountryFlag(code),
+            total,
+          };
+        }).sort((a, b) => b.total - a.total);
+        setCrmCountries(list);
+      } catch {}
+    };
+    fetchCountries();
+  }, []);
+
+  const selectedCountries = useMemo(
+    () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.code)),
+    [crmCountries, g.filters.crmSelectedCountries]
+  );
+
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.toLowerCase();
+    const matches = !q
+      ? crmCountries
+      : crmCountries.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+    return [...matches].sort((a, b) => {
+      const aS = g.filters.crmSelectedCountries.has(a.code) ? 1 : 0;
+      const bS = g.filters.crmSelectedCountries.has(b.code) ? 1 : 0;
+      if (aS !== bS) return bS - aS;
+      return b.total - a.total;
+    });
+  }, [crmCountries, countrySearch, g.filters.crmSelectedCountries]);
+
+  const toggleCountry = (code: string) => {
+    const next = new Set(g.filters.crmSelectedCountries);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    g.setCrmSelectedCountries(next);
+  };
+
+  const toggleCrmOrigin = (val: string) => {
+    const next = new Set(g.filters.crmOrigin);
+    if (next.has(val)) next.delete(val); else next.add(val);
+    g.setCrmOrigin(next);
+  };
+
+  // Inline search
+  const searchValue = g.filters.search;
+  useEffect(() => {
+    if (searchValue.trim().length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    const doSearch = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase
+          .from("imported_contacts")
+          .select("id, name, company_name, company_alias, country, email, position")
+          .or(`name.ilike.%${searchValue}%,company_name.ilike.%${searchValue}%,company_alias.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
+          .limit(30);
+        setSearchResults(data || []);
+      } catch { setSearchResults([]); }
+      finally { setSearching(false); }
+    };
+    const timer = setTimeout(doSearch, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
+  return (
+    <>
+      {/* Search with inline results */}
+      <FilterSection icon={Search} label="Cerca">
+        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Contatto, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        {searchValue.trim().length >= 2 && (
+          <div className="mt-2 max-h-[250px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 divide-y divide-border/20">
+            {searching ? (
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Ricerca in corso...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Nessun risultato per "{searchValue}"</div>
+            ) : (
+              <>
+                <div className="px-2.5 py-1.5 bg-muted/30">
+                  <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
+                </div>
+                {searchResults.map((c: any) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("crm-select-contact", { detail: { contactId: c.id } }));
+                      window.dispatchEvent(new CustomEvent("filters-drawer-close"));
+                    }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm shrink-0">{getCountryFlag(c.country)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{c.company_alias || c.company_name || "—"}</p>
+                        {c.name && <p className="text-[10px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
+                      </div>
+                      {c.email && <span className="text-[9px] text-muted-foreground truncate max-w-[110px]">{c.email}</span>}
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </FilterSection>
+
+      {/* Country list with checkboxes — identical to Network */}
+      <FilterSection icon={Globe} label={`Paesi (${g.filters.crmSelectedCountries.size > 0 ? g.filters.crmSelectedCountries.size + ' selezionati' : 'tutti'})`}>
+        <p className="mb-2 text-[10px] text-muted-foreground">Clicca i paesi da filtrare nella lista contatti.</p>
+        {selectedCountries.length > 0 && (
+          <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold text-primary">Paesi attivi</span>
+              <button onClick={() => g.setCrmSelectedCountries(new Set())} className="text-[10px] text-destructive hover:underline">Deseleziona tutti</button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {selectedCountries.map((country) => (
+                <button key={country.code} onClick={() => toggleCountry(country.code)}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                  <span>{country.flag}</span><span>{country.code}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Input value={countrySearch} onChange={e => setCountrySearch(e.target.value)} placeholder="Cerca paese..." className="h-7 text-xs bg-muted/30 border-border/40 mb-1.5" />
+        <div className="max-h-[220px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 p-1 pr-2">
+          <div className="space-y-0.5">
+            {filteredCountries.map(c => (
+              <button key={c.code} onClick={() => toggleCountry(c.code)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all",
+                  g.filters.crmSelectedCountries.has(c.code) ? "bg-primary/15 border border-primary/30 text-primary" : "hover:bg-muted/40 text-foreground"
+                )}>
+                <span className="text-base">{c.flag}</span>
+                <span className="flex-1 text-left truncate font-medium">{c.name}</span>
+                {g.filters.crmSelectedCountries.has(c.code) && <Check className="w-3 h-3 text-primary" />}
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 tabular-nums">{c.total}</Badge>
+              </button>
+            ))}
+            {filteredCountries.length === 0 && (
+              <div className="px-2 py-3 text-[11px] text-muted-foreground">Nessun paese trovato.</div>
+            )}
+          </div>
+        </div>
+      </FilterSection>
+
+      {/* Raggruppa + Origine on same row */}
+      <div className="grid grid-cols-2 gap-3">
+        <FilterSection icon={Layers} label="Raggruppa">
+          <ChipGroup>
+            {CRM_GROUPBY.map(o => <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+        <FilterSection icon={Database} label="Origine">
+          <ChipGroup>
+            {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+      </div>
+
+      {/* Ordina */}
+      <FilterSection icon={ArrowUpDown} label="Ordina">
+        <ChipGroup>
+          {CRM_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}
+        </ChipGroup>
+      </FilterSection>
+
+      {/* Stato + Circuito on same row */}
+      <div className="grid grid-cols-2 gap-3">
+        <FilterSection icon={Users} label="Stato lead">
+          <ChipGroup>
+            {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+        <FilterSection icon={Plane} label="Circuito">
+          <ChipGroup>
+            {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+      </div>
+
+      {/* Canale + Qualità on same row */}
+      <div className="grid grid-cols-2 gap-3">
+        <FilterSection icon={Wifi} label="Canale">
+          <ChipGroup>
+            {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+        <FilterSection icon={Sparkles} label="Qualità">
+          <ChipGroup>
+            {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
+          </ChipGroup>
+        </FilterSection>
+      </div>
+    </>
+  );
+}
+
 /* ── Network Filters with Country List ── */
 
 function NetworkFiltersSection() {
