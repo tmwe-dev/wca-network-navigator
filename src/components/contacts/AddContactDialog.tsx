@@ -327,9 +327,9 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
                 <Select value={country} onValueChange={setCountry}>
                   <SelectTrigger><SelectValue placeholder="Seleziona paese" /></SelectTrigger>
                   <SelectContent className="max-h-56">
-                    {COUNTRY_LIST.map(c => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {getCountryFlag(c.code)} {c.name}
+                    {COUNTRY_OPTIONS.map(code => (
+                      <SelectItem key={code} value={code}>
+                        {getCountryFlag(code)} {code}
                       </SelectItem>
                     ))}
                   </SelectContent>
