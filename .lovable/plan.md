@@ -1,48 +1,60 @@
 
 
-# Fix ordinamento Network + verifica pulsante Sincronizza WCA
+# Usare lo scraper client-side per l'enrichment dei partner
 
-## Problemi trovati
+## Problema attuale
 
-### 1. Ordinamento non funziona correttamente
-Il dropdown "Ordine: Nome/Rating/Contatti" cambia il valore di `networkSort` nel contesto, ma ci sono due problemi:
+La edge function `enrich-partner-website` fa un `fetch()` server-side grezzo e poi strappa l'HTML con regex (`replace(/<script>...`, `replace(/<[^>]+>/g, " ")`). Questo produce contenuto di pessima qualità: niente JavaScript rendering, niente SPA, blocchi anti-bot, e spesso meno di 50 caratteri utili.
 
-- **Server-side**: `usePartnersPaginated.ts` (riga 85) fa SEMPRE `.order("company_name")` ignorando il sort selezionato. Quindi quando carichi pagina 2, 3 ecc. i dati arrivano sempre ordinati per nome.
-- **"Contatti"**: il sort client-side (riga 126-131) accede a `partner_contacts` che NON viene caricato nella query paginata (nessun join). Quindi `getPartnerContactQuality` riceve `undefined` e il sort non fa nulla.
-- **"Rating"**: funziona solo client-side sulla pagina corrente, ma i dati dal server arrivano per nome — risultato inconsistente con infinite scroll.
+Abbiamo già FireScrape/Partner Connect che dal browser dell'utente può estrarre markdown pulito, renderizzato, con metadati — molto superiore.
 
-### 2. Pulsante "Sincronizza WCA" in alto a destra
-Il pulsante emette un evento `sync-wca-trigger`. Il listener per questo evento è registrato SOLO in `src/pages/Operations.tsx`. Se l'utente è sulla pagina `/network` (o qualsiasi altra pagina diversa da Operations), **nessuno ascolta l'evento** e non succede nulla.
+## Soluzione
 
-Il sync usa la edge function `sync-wca-partners` che è il sistema SSE corretto (non vecchie query). È sicuro.
+Separare le due fasi: **scraping dal client** (estensione) → **analisi AI dal server** (edge function).
 
-## Piano di intervento
+### Flusso nuovo
 
-### A. Fix ordinamento — push sort al server
-**File: `src/hooks/usePartnersPaginated.ts`**
-- Accettare un parametro `sort` nei filtri
-- Mappare il sort nella query Supabase:
-  - `"name"` → `.order("company_name")`
-  - `"rating"` → `.order("rating", { ascending: false }).order("company_name")`
-  - `"contacts"` → rimuovere questa opzione (i contatti non sono nella query) oppure sostituirla con un sort più utile come `"country"` o `"recent"` (per `member_since`)
+```text
+Client (browser utente)
+  1. FireScrape scrapeUrl(website) → markdown + metadata
+  2. Chiama edge function con { partnerId, markdown, sourceUrl }
 
-**File: `src/components/operations/PartnerListPanel.tsx`**
-- Passare `activeSort` ai filtri di `usePartnersPaginated`
-- Rimuovere il sort client-side nel `filteredPartners` useMemo (righe 121-134) — il server lo fa già
-- Aggiornare le opzioni del dropdown: sostituire "Contatti" con "Più recenti" (ordina per `member_since DESC`)
+Edge Function (enrich-partner-website)
+  3. Se riceve markdown nel body → usa quello (skip fetch)
+  4. Se NON riceve markdown → fallback al fetch server-side (compatibilità)
+  5. Analisi AI con Gemini → salva enrichment_data
+```
 
-### B. Fix Sincronizza WCA — listener globale
-**File: `src/components/layout/AppLayout.tsx`** (o nuovo hook globale)
-- Spostare il listener `sync-wca-trigger` dall'Operations page a un livello globale (AppLayout) così funziona da qualsiasi pagina
-- Copiare la logica del handler SSE da Operations.tsx in un hook riutilizzabile `useWcaSync` e usarlo sia in AppLayout che in Operations
+### Intervento 1 — Edge function: accettare markdown pre-scraped
+**File: `supabase/functions/enrich-partner-website/index.ts`**
 
-### File coinvolti
+- Aggiungere al body opzionale `markdown` e `sourceUrl`
+- Se `markdown` è presente e lungo >50 chars, saltare il blocco fetch e usare direttamente quello
+- Se non presente, mantenere il fallback fetch attuale (retrocompatibilità)
 
-| File | Intervento |
-|------|-----------|
-| `src/hooks/usePartnersPaginated.ts` | Aggiungere parametro `sort`, mappare in `.order()` |
-| `src/components/operations/PartnerListPanel.tsx` | Passare sort al hook, rimuovere sort client-side, fix opzioni dropdown |
-| `src/hooks/useWcaSync.ts` | Nuovo hook: logica sync SSE estratta da Operations |
-| `src/components/layout/AppLayout.tsx` | Registrare listener `sync-wca-trigger` globale via hook |
-| `src/pages/Operations.tsx` | Usare il nuovo hook al posto della logica inline |
+### Intervento 2 — AdvancedTools: scraping client-side prima dell'invio
+**File: `src/components/download/AdvancedTools.tsx`**
+
+- Importare `useFireScrapeExtensionBridge`
+- Nel loop `handleRun`, prima di invocare la edge function:
+  - Se FireScrape è disponibile → `scrapeUrl(website)` → passare il markdown nel body
+  - Se FireScrape non disponibile → invocare come oggi (fallback server-side)
+
+### Intervento 3 — AcquisitionPipeline: stessa logica
+**File: `src/hooks/useAcquisitionPipeline.tsx`**
+
+- Nel blocco `includeEnrich` (riga ~396), se FireScrape bridge è disponibile nel contesto, fare lo scrape client-side prima di chiamare la edge function
+- Passare `{ partnerId, markdown, sourceUrl }` nel body
+
+## File coinvolti
+
+| File | Modifica |
+|------|----------|
+| `supabase/functions/enrich-partner-website/index.ts` | Accettare `markdown` opzionale nel body, skip fetch se presente |
+| `src/components/download/AdvancedTools.tsx` | Scraping via FireScrape prima dell'invio, con fallback |
+| `src/hooks/useAcquisitionPipeline.tsx` | Stesso pattern: scrape client → invio markdown |
+
+## Risultato atteso
+
+L'AI riceve markdown di qualità reale (pagina renderizzata dal browser) invece di HTML strippato. Zero urgenza, lo scraping avviene uno alla volta con pausa tra i partner. Se l'estensione non è attiva, tutto continua a funzionare come prima con il fetch server-side.
 
