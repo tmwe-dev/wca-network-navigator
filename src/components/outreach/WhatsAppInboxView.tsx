@@ -25,6 +25,43 @@ type ChatThread = {
   messages: ChannelMessage[];
 };
 
+/** Extract a phone number from thread messages' raw_payload */
+function extractPhoneFromThread(thread: ChatThread): string | null {
+  for (const msg of thread.messages) {
+    const payload = msg.raw_payload as Record<string, unknown> | null | undefined;
+    if (!payload) continue;
+
+    // Direct phone field
+    if (typeof payload.phone === "string" && payload.phone.replace(/\D/g, "").length >= 5) {
+      return payload.phone.replace(/\D/g, "");
+    }
+
+    // JID format: 391234567890@s.whatsapp.net
+    if (typeof payload.jid === "string") {
+      const match = payload.jid.match(/^(\d{5,})@/);
+      if (match) return match[1];
+    }
+
+    // Sender field
+    if (typeof payload.sender === "string") {
+      const digits = payload.sender.replace(/\D/g, "");
+      if (digits.length >= 5) return digits;
+    }
+
+    // from_address on the message itself (inbound)
+    if (msg.direction === "inbound" && typeof msg.from_address === "string") {
+      const digits = msg.from_address.replace(/\D/g, "");
+      if (digits.length >= 5) return digits;
+    }
+  }
+
+  // Last resort: check contact name for digits
+  const contactDigits = thread.contact.replace(/\D/g, "");
+  if (contactDigits.length >= 5) return contactDigits;
+
+  return null;
+}
+
 function isSidebarGhostMessage(msg: ChannelMessage) {
   const payload = msg.raw_payload as Record<string, unknown> | null | undefined;
   if (!payload) return false;
@@ -146,7 +183,18 @@ export function WhatsAppInboxView() {
     setIsSending(true);
     setReplyText("");
     try {
-      const result = await sendWhatsApp(activeTab, text);
+      // 1. Try sending by contact name (search bar match)
+      let result = await sendWhatsApp(activeTab, text);
+
+      // 2. If failed, retry with phone number extracted from thread
+      if (!result.success && activeThread) {
+        const phone = extractPhoneFromThread(activeThread);
+        if (phone) {
+          console.log(`[WA] Retry invio con telefono: ${phone}`);
+          result = await sendWhatsApp(phone, text);
+        }
+      }
+
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
