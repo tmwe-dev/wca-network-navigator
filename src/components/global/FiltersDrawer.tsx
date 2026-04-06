@@ -508,76 +508,12 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
-          {/* ═══ OUTREACH / EMAIL INBOX ═══ */}
-          {isEmail && (
-            <>
-              <FilterSection icon={Search} label="Cerca">
-                <Input value={g.filters.sortingSearch} onChange={e => g.setSortingSearch(e.target.value)} placeholder="Cerca messaggio..." className="h-8 text-xs bg-muted/30 border-border/40" />
-              </FilterSection>
-              <FilterSection icon={Mail} label="Stato">
-                <ChipGroup>
-                  <Chip active={g.filters.sortingFilter === "all"} onClick={() => g.setSortingFilter("all")}>Tutti</Chip>
-                  <Chip active={g.filters.sortingFilter === "unreviewed"} onClick={() => g.setSortingFilter("unreviewed")}>Non letti</Chip>
-                  <Chip active={g.filters.sortingFilter === "reviewed"} onClick={() => g.setSortingFilter("reviewed")}>Letti</Chip>
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Tag} label="Categoria">
-                <ChipGroup>
-                  {EMAIL_CATEGORIES.map(o => <Chip key={o.value} active={g.filters.emailCategory === o.value} onClick={() => g.setEmailCategory(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={ArrowUpDown} label="Ordina">
-                <ChipGroup>
-                  {EMAIL_SORT.map(o => <Chip key={o.value} active={g.filters.emailSort === o.value} onClick={() => g.setEmailSort(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-            </>
-          )}
-
-          {/* ═══ OUTREACH / WHATSAPP INBOX ═══ */}
-          {isWhatsApp && (
-            <>
-              <FilterSection icon={Search} label="Cerca">
-                <Input value={g.filters.sortingSearch} onChange={e => g.setSortingSearch(e.target.value)} placeholder="Cerca messaggio..." className="h-8 text-xs bg-muted/30 border-border/40" />
-              </FilterSection>
-              <FilterSection icon={MessageCircle} label="Stato">
-                <ChipGroup>
-                  <Chip active={g.filters.sortingFilter === "all"} onClick={() => g.setSortingFilter("all")}>Tutti</Chip>
-                  <Chip active={g.filters.sortingFilter === "unreviewed"} onClick={() => g.setSortingFilter("unreviewed")}>Non letti</Chip>
-                  <Chip active={g.filters.sortingFilter === "reviewed"} onClick={() => g.setSortingFilter("reviewed")}>Letti</Chip>
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={ArrowUpDown} label="Ordina">
-                <ChipGroup>
-                  <Chip active={g.filters.sortBy === "date_desc"} onClick={() => g.setSortBy("date_desc")}>Più recenti</Chip>
-                  <Chip active={g.filters.sortBy === "date_asc"} onClick={() => g.setSortBy("date_asc")}>Più vecchi</Chip>
-                  <Chip active={g.filters.sortBy === "unread"} onClick={() => g.setSortBy("unread")}>Non letti prima</Chip>
-                </ChipGroup>
-              </FilterSection>
-            </>
-          )}
-
-          {/* ═══ OUTREACH / LINKEDIN INBOX ═══ */}
-          {isLinkedIn && (
-            <>
-              <FilterSection icon={Search} label="Cerca">
-                <Input value={g.filters.sortingSearch} onChange={e => g.setSortingSearch(e.target.value)} placeholder="Cerca messaggio..." className="h-8 text-xs bg-muted/30 border-border/40" />
-              </FilterSection>
-              <FilterSection icon={Linkedin} label="Stato">
-                <ChipGroup>
-                  <Chip active={g.filters.sortingFilter === "all"} onClick={() => g.setSortingFilter("all")}>Tutti</Chip>
-                  <Chip active={g.filters.sortingFilter === "unreviewed"} onClick={() => g.setSortingFilter("unreviewed")}>Non letti</Chip>
-                  <Chip active={g.filters.sortingFilter === "reviewed"} onClick={() => g.setSortingFilter("reviewed")}>Letti</Chip>
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={ArrowUpDown} label="Ordina">
-                <ChipGroup>
-                  <Chip active={g.filters.sortBy === "date_desc"} onClick={() => g.setSortBy("date_desc")}>Più recenti</Chip>
-                  <Chip active={g.filters.sortBy === "date_asc"} onClick={() => g.setSortBy("date_asc")}>Più vecchi</Chip>
-                  <Chip active={g.filters.sortBy === "unread"} onClick={() => g.setSortBy("unread")}>Non letti prima</Chip>
-                </ChipGroup>
-              </FilterSection>
-            </>
+          {/* ═══ OUTREACH / INBOX (Email, WhatsApp, LinkedIn) ═══ */}
+          {isInbox && (
+            <InboxFiltersSection
+              channel={isEmail ? "email" : isWhatsApp ? "whatsapp" : "linkedin"}
+              channelIcon={isEmail ? Mail : isWhatsApp ? MessageCircle : Linkedin}
+            />
           )}
 
           {isNetwork && (
