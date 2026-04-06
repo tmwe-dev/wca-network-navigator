@@ -5,6 +5,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
 import { NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useScrapingSettings, calcDelay, getPatternPause, ensureMinDuration } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
@@ -73,6 +74,7 @@ export function useAcquisitionPipeline() {
   const extensionWarningShown = useRef(false);
 
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
+  const { isAvailable: fsAvailable, scrapeUrl: fsScrapeUrl } = useFireScrapeExtensionBridge();
   const waitForExtension = useCallback(async (maxWaitMs = 10000): Promise<boolean> => {
     if (extensionAvailable) return true;
     const start = Date.now();
@@ -397,7 +399,22 @@ export function useAcquisitionPipeline() {
         parallelTasks.push(
           (async () => {
             try {
-              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: { partnerId } });
+              let enrichBody: Record<string, any> = { partnerId };
+
+              // Try client-side scraping for higher quality markdown
+              if (fsAvailable) {
+                try {
+                  let websiteUrl = (partnerData.website as string).trim();
+                  if (!websiteUrl.startsWith("http")) websiteUrl = `https://${websiteUrl}`;
+                  const scrapeResult = await fsScrapeUrl(websiteUrl);
+                  if (scrapeResult.success && scrapeResult.markdown && scrapeResult.markdown.length > 50) {
+                    enrichBody.markdown = scrapeResult.markdown;
+                    enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
+                  }
+                } catch { /* fallback to server-side fetch */ }
+              }
+
+              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
               if (enrichResult?.enrichment) {
                 const ed = enrichResult.enrichment;
                 setCanvasData((prev) =>
