@@ -27,7 +27,7 @@ export function SendEmailDialog({
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-
+  const trackActivity = useTrackActivity();
   const handleSend = async () => {
     if (!body.trim()) {
       toast.error("Scrivi un messaggio prima di inviare");
