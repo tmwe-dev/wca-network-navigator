@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useContactDrawer, type RecordSourceType } from "@/contexts/ContactDrawerContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
+import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard, Briefcase, ChevronDown, ChevronUp, Globe, Check, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ContactEnrichmentCard } from "@/components/contacts/ContactEnrichmentCard";
@@ -9,8 +9,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 interface Contact {
@@ -72,13 +70,6 @@ interface CockpitContactCardProps {
   enrichmentState?: EnrichmentState;
 }
 
-const priorityLabel = (p: number) => {
-  if (p >= 9) return "Urgente";
-  if (p >= 7) return "Alta";
-  if (p >= 5) return "Media";
-  return "Bassa";
-};
-
 const priorityColor = (p: number) => {
   if (p >= 9) return "bg-destructive/20 text-destructive border-destructive/30";
   if (p >= 7) return "bg-warning/20 text-warning border-warning/30";
@@ -111,23 +102,6 @@ const phaseLabel: Record<string, string> = {
   generating: "✨ Generazione messaggio...",
 };
 
-function getEnrichmentSummary(e: any): string[] {
-  if (!e) return [];
-  const parts: string[] = [];
-  const headline = e.contact_profile?.linkedin_title;
-  if (headline) parts.push(`💼 ${headline}`);
-  const specs = e.company_profile?.specialties;
-  if (specs?.length) parts.push(`🏢 ${specs.slice(0, 3).join(", ")}`);
-  const langs = e.contact_profile?.languages;
-  if (langs?.length) parts.push(`🌍 ${langs.join(", ")}`);
-  const seniority = e.contact_profile?.seniority;
-  if (seniority) parts.push(`📊 Seniority: ${seniority}`);
-  if (e.linkedin_url || e.linkedin_profile_url) parts.push(`🔗 LinkedIn trovato`);
-  if (e.company_website) parts.push(`🌐 Sito: ${e.company_website}`);
-  return parts;
-}
-
-// Smart channel icon with tooltip
 function SmartChannelIcons({ contact }: { contact: Contact }) {
   const hasEmail = !!contact.email;
   const hasLinkedin = !!contact.linkedinUrl;
@@ -144,17 +118,57 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
     <div className="flex items-center gap-1">
       {icons.map(({ key, Icon, active, activeClass, value }) => (
         <InfoTooltip key={key} content={active ? `${key}: ${value}` : `${key} non disponibile`}>
-          <span
-            className={cn(
-              "p-1 rounded-md transition-colors",
-              active ? activeClass : "bg-muted/30 text-muted-foreground/25"
-            )}
-          >
-            <Icon className="w-4 h-4" />
+          <span className={cn("p-1 rounded-md transition-colors", active ? activeClass : "bg-muted/30 text-muted-foreground/25")}>
+            <Icon className="w-3.5 h-3.5" />
           </span>
         </InfoTooltip>
       ))}
     </div>
+  );
+}
+
+/** Enrichment status micro-badges */
+function EnrichmentStatusRow({ contact, hasLiveLinkedin }: { contact: Contact; hasLiveLinkedin: boolean }) {
+  const e = contact.enrichmentData;
+  const hasLinkedin = hasLiveLinkedin || !!(e?.linkedin_url || e?.linkedin_profile_url || contact.linkedinUrl);
+  const hasWebsite = !!(e?.company_website);
+  const hasAI = !!contact.deepSearchAt;
+
+  // Extract logo from enrichment data
+  const websiteDomain = e?.company_website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <EnrichBadge icon={<Linkedin className="w-2.5 h-2.5" />} label="LinkedIn" done={hasLinkedin} />
+      <EnrichBadge icon={<Globe className="w-2.5 h-2.5" />} label="Sito" done={hasWebsite} />
+      <EnrichBadge icon={<Sparkles className="w-2.5 h-2.5" />} label="AI" done={hasAI} />
+      {websiteDomain && (
+        <InfoTooltip content={`Logo: ${websiteDomain}`}>
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${websiteDomain}&sz=32`}
+            alt="logo"
+            className="w-4 h-4 rounded-sm"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </InfoTooltip>
+      )}
+    </div>
+  );
+}
+
+function EnrichBadge({ icon, label, done }: { icon: React.ReactNode; label: string; done: boolean }) {
+  return (
+    <InfoTooltip content={`${label}: ${done ? "completato" : "mancante"}`}>
+      <span className={cn(
+        "flex items-center gap-0.5 text-[8px] font-medium px-1 py-0.5 rounded border",
+        done
+          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+          : "bg-muted/30 text-muted-foreground/40 border-border/20"
+      )}>
+        {icon}
+        {done ? <Check className="w-2 h-2" /> : <X className="w-2 h-2" />}
+      </span>
+    </InfoTooltip>
   );
 }
 
@@ -163,9 +177,8 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
   const { open: openDrawer } = useContactDrawer();
   const oc = originConfig[contact.origin];
   const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
-  const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
+  const hasLinkedinLive = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
   const isAiProcessed = !!contact.deepSearchAt;
-  const enrichSummary = getEnrichmentSummary(contact.enrichmentData);
   const contactHeadline = contact.enrichmentData?.contact_profile?.linkedin_title;
   const hasEnrichmentData = !!(contact.enrichmentData && (contact.enrichmentData.contact_profile || contact.enrichmentData.company_profile || contact.enrichmentData.linkedin_url || contact.enrichmentData.linkedin_profile_url));
   const hasLiveLinkedin = !!enrichmentState?.linkedinProfile;
@@ -194,7 +207,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         whileTap={isProcessing ? {} : { scale: 0.98 }}
         onClick={handleCardClick}
         className={cn(
-          "group relative rounded-xl border bg-card backdrop-blur-xl p-4 pr-8 transition-all duration-300 hover:shadow-lg overflow-hidden",
+          "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 transition-all duration-300 hover:shadow-lg overflow-hidden",
           isProcessing
             ? "border-[hsl(210,80%,55%)]/40 bg-[hsl(210,80%,55%)]/[0.03] shadow-sm shadow-[hsl(210,80%,55%)]/5 cursor-default animate-soft-pulse"
             : isWorked
@@ -205,10 +218,10 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
           !isProcessing && !isWorked && !isAiProcessed && (
             contact.origin === "bca"
               ? isSelected
-                ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10 hover:shadow-amber-500/10"
+                ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10"
                 : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
               : isSelected
-                ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10 hover:shadow-primary/5"
+                ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
                 : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
           )
         )}
@@ -223,163 +236,144 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
 
         <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-        <div className="relative flex gap-3">
-          <div className="flex flex-col items-center gap-1.5 pt-0.5">
+        <div className="relative flex gap-2.5">
+          {/* Left: checkbox + drag */}
+          <div className="flex flex-col items-center gap-1 pt-0.5">
             <Checkbox
               checked={isSelected}
               onCheckedChange={onToggleSelect}
               className="h-3.5 w-3.5"
               onClick={(e) => e.stopPropagation()}
             />
-            <GripVertical className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
+            <GripVertical className="w-3.5 h-3.5 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1.5">
+          {/* Center content */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* === SECTION 1: Identity === */}
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
                   <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
-                  <span className="text-sm">{flag}</span>
-                  {/* Expand toggle — always visible */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                    className={cn(
-                      "flex items-center gap-0.5 rounded-md p-0.5 transition-colors",
-                      hasAnyData ? "hover:bg-amber-500/10" : "hover:bg-muted/50"
-                    )}
+                    className={cn("flex items-center gap-0.5 rounded-md p-0.5 transition-colors", hasAnyData ? "hover:bg-amber-500/10" : "hover:bg-muted/50")}
                   >
-                    {hasAnyData
-                      ? <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                      : null
-                    }
                     {isExpanded ? <ChevronUp className="w-2.5 h-2.5 text-muted-foreground" /> : <ChevronDown className="w-2.5 h-2.5 text-muted-foreground" />}
                   </button>
                 </div>
                 <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
-                <div className="text-[11px] text-muted-foreground">{contact.role}</div>
-                {/* Anagraphic meta line */}
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  {contact.memberYears != null && (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                      {contact.memberYears}a membro
-                    </span>
-                  )}
-                  {contact.seniority && (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20">
-                      {contact.seniority}
-                    </span>
-                  )}
-                  {contact.networks?.map(n => (
-                    <span key={n} className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30">
-                      {n}
-                    </span>
-                  ))}
-                  {contact.specialties && contact.specialties.length > 0 && !isExpanded && (
-                    <span className="text-[9px] text-muted-foreground/70 truncate max-w-[120px]">
-                      {contact.specialties.slice(0, 2).join(", ")}
-                    </span>
-                  )}
-                </div>
-                {/* AI headline preview */}
-                {contactHeadline && !isExpanded && (
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <Briefcase className="w-2.5 h-2.5 text-amber-400/70 shrink-0" />
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">{contactHeadline}</span>
-                  </div>
-                )}
-                {isProcessing && enrichmentState?.scrapingPhase && (
-                  <div className="text-[10px] font-medium text-[hsl(210,80%,55%)] mt-0.5">
-                    {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
-                  </div>
-                )}
-                {hasLinkedin && enrichmentState?.linkedinProfile?.headline && !isExpanded && (
-                  <div className="text-[10px] text-muted-foreground/80 mt-0.5 truncate max-w-[180px]">
-                    💼 {enrichmentState.linkedinProfile.headline}
-                  </div>
-                )}
+                {contact.role && <div className="text-[11px] text-muted-foreground truncate">{contact.role}</div>}
               </div>
+
+              {/* Right badges: origin + priority + enrichment sparkles */}
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                <InfoTooltip content={`Origine: ${contact.originDetail}`}>
-                  <span
-                    className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1", oc.bg, oc.text, oc.border)}
-                  >
-                    <span className={cn("w-1.5 h-1.5 rounded-full", oc.dot)} />
-                    {oc.label}
-                  </span>
-                </InfoTooltip>
-                <InfoTooltip content={`Priorità ${contact.priority} — ${priorityLabel(contact.priority)}`}>
-                  <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
-                    P{contact.priority}
-                  </span>
-                </InfoTooltip>
-                {isWorked && (
-                  <InfoTooltip content="Contatto già lavorato oggi — attività registrata">
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border bg-emerald-500/15 text-emerald-500 border-emerald-500/30">
-                      ✓ Fatto
-                    </span>
-                  </InfoTooltip>
-                )}
-                {hasLinkedin && (
-                  <InfoTooltip content={
-                    enrichmentState?.linkedinProfile?.connectionStatus === "connected"
-                      ? "LinkedIn: connesso" : enrichmentState?.linkedinProfile?.connectionStatus === "pending"
-                      ? "LinkedIn: richiesta in attesa" : "LinkedIn: profilo trovato"
-                  }>
-                    <span className={cn(
-                      "text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1",
-                      enrichmentState?.linkedinProfile?.connectionStatus === "connected"
-                        ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
-                        : enrichmentState?.linkedinProfile?.connectionStatus === "pending"
-                        ? "bg-warning/15 text-warning border-warning/30"
-                        : "bg-[hsl(210,80%,55%)]/15 text-[hsl(210,80%,55%)] border-[hsl(210,80%,55%)]/30"
-                    )}>
-                      <Linkedin className="w-2.5 h-2.5" />
-                      {enrichmentState?.linkedinProfile?.connectionStatus === "connected" ? "✓" : enrichmentState?.linkedinProfile?.connectionStatus === "pending" ? "⏳" : "✓"}
-                    </span>
-                  </InfoTooltip>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90 mb-2">
-              <span className={cn("truncate max-w-[140px]", oc.text)}>
-                {contact.originDetail}
-              </span>
-              <span>·</span>
-              <span>{contact.language}</span>
-              <span>·</span>
-              <span>{contact.lastContact}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <SmartChannelIcons contact={contact} />
-              {assignment && (
-                <div className="flex items-center gap-1 ml-2">
-                  {(() => {
-                    const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
-                    return avatarSrc ? (
-                      <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                        <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
-                      </InfoTooltip>
-                    ) : (
-                      <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                        <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-primary/30">
-                          {assignment.agentName.charAt(0)}
-                        </span>
-                      </InfoTooltip>
-                    );
-                  })()}
-                  {assignment.managerName && (
-                    <InfoTooltip content={`Manager: ${assignment.managerName}`}>
-                      <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
-                        <Briefcase className="w-2.5 h-2.5" />
-                        <span className="truncate max-w-[40px]">{assignment.managerName.split(" ")[0]}</span>
+                <div className="flex items-center gap-1">
+                  {hasAnyData && (
+                    <InfoTooltip content="Enrichment AI completato">
+                      <span className="p-0.5 rounded bg-amber-500/10">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
                       </span>
                     </InfoTooltip>
                   )}
+                  <InfoTooltip content={`Origine: ${contact.originDetail}`}>
+                    <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1", oc.bg, oc.text, oc.border)}>
+                      <span className={cn("w-1.5 h-1.5 rounded-full", oc.dot)} />
+                      {oc.label}
+                    </span>
+                  </InfoTooltip>
                 </div>
-              )}
+                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
+                  P{contact.priority}
+                </span>
+                {isWorked && (
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border bg-emerald-500/15 text-emerald-500 border-emerald-500/30">
+                    ✓ Fatto
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Meta badges: membership, seniority, networks */}
+            {(contact.memberYears != null || contact.seniority || (contact.networks && contact.networks.length > 0)) && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {contact.memberYears != null && (
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    {contact.memberYears}a membro
+                  </span>
+                )}
+                {contact.seniority && (
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20">
+                    {contact.seniority}
+                  </span>
+                )}
+                {contact.networks?.map(n => (
+                  <span key={n} className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30">
+                    {n}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* AI headline preview (collapsed) */}
+            {contactHeadline && !isExpanded && (
+              <div className="flex items-center gap-1">
+                <Briefcase className="w-2.5 h-2.5 text-amber-400/70 shrink-0" />
+                <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{contactHeadline}</span>
+              </div>
+            )}
+
+            {/* Processing phase */}
+            {isProcessing && enrichmentState?.scrapingPhase && (
+              <div className="text-[10px] font-medium text-[hsl(210,80%,55%)]">
+                {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
+              </div>
+            )}
+
+            {/* === SECTION 2: Origin/language/date + channels === */}
+            <div className="pt-1.5 border-t border-border/20">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80 mb-1.5">
+                <span className={cn("truncate max-w-[100px]", oc.text)}>{contact.originDetail}</span>
+                <span>·</span>
+                <span>{contact.language}</span>
+                <span>·</span>
+                <span>{contact.lastContact}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <SmartChannelIcons contact={contact} />
+                {assignment && (
+                  <div className="flex items-center gap-1">
+                    {(() => {
+                      const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
+                      return avatarSrc ? (
+                        <InfoTooltip content={`Agente: ${assignment.agentName}`}>
+                          <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
+                        </InfoTooltip>
+                      ) : (
+                        <InfoTooltip content={`Agente: ${assignment.agentName}`}>
+                          <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-primary/30">
+                            {assignment.agentName.charAt(0)}
+                          </span>
+                        </InfoTooltip>
+                      );
+                    })()}
+                    {assignment.managerName && (
+                      <InfoTooltip content={`Manager: ${assignment.managerName}`}>
+                        <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
+                          <Briefcase className="w-2.5 h-2.5" />
+                          <span className="truncate max-w-[40px]">{assignment.managerName.split(" ")[0]}</span>
+                        </span>
+                      </InfoTooltip>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* === SECTION 3: Enrichment status micro-badges === */}
+            <div className="pt-1.5 border-t border-border/20">
+              <EnrichmentStatusRow contact={contact} hasLiveLinkedin={hasLiveLinkedin} />
             </div>
           </div>
         </div>
@@ -428,21 +422,11 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                   <div className="text-center py-3 space-y-2">
                     <p className="text-xs text-muted-foreground">Nessun dato AI disponibile</p>
                     <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}
-                      >
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}>
                         <Search className="w-3 h-3" /> Deep Search
                       </Button>
                       {onLinkedInLookup && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={(e) => { e.stopPropagation(); onLinkedInLookup(); }}
-                        >
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={(e) => { e.stopPropagation(); onLinkedInLookup(); }}>
                           <Linkedin className="w-3 h-3" /> LinkedIn Lookup
                         </Button>
                       )}
