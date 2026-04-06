@@ -109,6 +109,7 @@ const defaults: GlobalFilterState = {
   crmOrigin: new Set(["wca", "import", "report_aziende"]),
   crmQuality: "all",
   crmChannel: "all",
+  crmSelectedCountries: new Set<string>(),
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
