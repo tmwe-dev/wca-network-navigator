@@ -55,14 +55,14 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
     if (filterGroupKey && filterGroupType === currentGroupBy) {
       filtered = filtered.filter((g) => g.group_key === filterGroupKey);
     }
+    // Filter by selected countries from drawer (when grouping by country and multiple selected)
+    if (currentGroupBy === "country" && gf.crmSelectedCountries.size > 0 && !filterGroupKey) {
+      filtered = filtered.filter((g) => gf.crmSelectedCountries.has(g.group_key));
+    }
     const search = filters.search?.trim().toLowerCase();
     if (search) filtered = filtered.filter((g) => g.group_label.toLowerCase().includes(search) || g.group_key.toLowerCase().includes(search));
-    // Filter by leadStatus from global filters (only if not grouping by status already)
-    if (gf.leadStatus && gf.leadStatus !== "all" && currentGroupBy !== "status") {
-      // leadStatus filtering happens at contact-row level, not group level
-    }
     return filtered.sort((a, b) => b.contact_count - a.contact_count);
-  }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.leadStatus]);
+  }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.crmSelectedCountries]);
 
   const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
 
