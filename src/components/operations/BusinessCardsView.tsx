@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, Plane,
   LayoutList, LayoutGrid, Rows3, Mail, Phone, SlidersHorizontal,
   ChevronLeft, ChevronRight, Globe, ArrowUpAZ, ArrowDownAZ, Users, Star,
+  MessageCircle, Loader2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 
 type ViewMode = "compact" | "card" | "expanded";
 type SortMode = "name_asc" | "name_desc" | "contacts_desc" | "matched_first";
@@ -85,6 +88,8 @@ export function BusinessCardsView() {
   const qc = useQueryClient();
   const sendToCockpit = useSendToCockpit();
   const deepSearch = useDeepSearch();
+  const navigate = useNavigate();
+  const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);

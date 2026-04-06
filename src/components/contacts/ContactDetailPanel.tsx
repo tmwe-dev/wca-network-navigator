@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2
 } from "lucide-react";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactEnrichmentCard } from "./ContactEnrichmentCard";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
@@ -83,6 +84,38 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
     <div className="flex items-center gap-2">
       <Icon className="w-3.5 h-3.5 text-violet-400" strokeWidth={1.5} />
       <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{children}</p>
+    </div>
+  );
+}
+
+function ContactQuickActions({ contact: c }: { contact: Contact }) {
+  const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
+  const waPhone = c.mobile || c.phone;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {c.email && (
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10"
+          onClick={() => handleSendEmail({ email: c.email!, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined })}
+        >
+          <Mail className="w-3.5 h-3.5 text-violet-400" />
+          <span className="truncate max-w-[180px]">{c.email}</span>
+        </Button>
+      )}
+      {waPhone && (
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
+          disabled={waSending === c.id || !waAvailable}
+          onClick={() => handleSendWhatsApp({ phone: waPhone, contactName: c.contact_alias || c.name || undefined, companyName: c.company_name || undefined, sourceType: "contact", sourceId: c.id })}
+        >
+          {waSending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />} WhatsApp
+        </Button>
+      )}
+      {(c.phone || c.mobile) && (
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
+          <a href={`tel:${c.phone || c.mobile}`}>
+            <Phone className="w-3.5 h-3.5 text-violet-400" /> {c.phone || c.mobile}
+          </a>
+        </Button>
+      )}
     </div>
   );
 }
@@ -240,29 +273,8 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       </Section>
 
       {/* Quick actions — icon buttons */}
+      <ContactQuickActions contact={c} />
       <div className="flex flex-wrap gap-1.5">
-        {c.email && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
-            <a href={`mailto:${c.email}`}>
-              <Mail className="w-3.5 h-3.5 text-violet-400" />
-              <span className="truncate max-w-[180px]">{c.email}</span>
-            </a>
-          </Button>
-        )}
-        {whatsappUrl && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10" asChild>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-            </a>
-          </Button>
-        )}
-        {(c.phone || c.mobile) && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
-            <a href={`tel:${c.phone || c.mobile}`}>
-              <Phone className="w-3.5 h-3.5 text-violet-400" /> {c.phone || c.mobile}
-            </a>
-          </Button>
-        )}
         {needsAlias && (
           <Button
             variant="outline"

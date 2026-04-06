@@ -305,6 +305,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
 function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBack: () => void; isDark: boolean }) {
   const th = t(isDark);
+  const navigate = useNavigate();
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["prospect-contacts", prospect.id],
@@ -372,9 +373,14 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
         <Field label="Codice ATECO" value={prospect.codice_ateco ? `${prospect.codice_ateco} - ${prospect.descrizione_ateco}` : null} />
       </Section>
 
-      {/* Contatti */}
+      {/* Contatti — azioni interattive */}
       <Section title="Contatti Aziendali">
-        <Field label="Email" value={prospect.email} href={prospect.email ? `mailto:${prospect.email}` : undefined} />
+        {prospect.email && (
+          <div className="flex items-center justify-between text-xs py-1">
+            <span className={th.dim}>Email</span>
+            <button onClick={() => navigate("/email-composer", { state: { prefilledRecipient: { email: prospect.email, company: prospect.company_name } } })} className={`font-medium hover:underline ${th.body} cursor-pointer`}>{prospect.email}</button>
+          </div>
+        )}
         <Field label="PEC" value={prospect.pec} href={prospect.pec ? `mailto:${prospect.pec}` : undefined} />
         <Field label="Telefono" value={prospect.phone} href={prospect.phone ? `tel:${prospect.phone}` : undefined} />
         <Field label="Sito Web" value={prospect.website} href={prospect.website?.startsWith("http") ? prospect.website : prospect.website ? `https://${prospect.website}` : undefined} />
@@ -405,7 +411,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">
-                {c.email && <a href={`mailto:${c.email}`} className={`hover:underline ${th.body}`}>{c.email}</a>}
+                {c.email && <button onClick={(e) => { e.stopPropagation(); navigate("/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.name, company: prospect.company_name } } }); }} className={`hover:underline ${th.body} cursor-pointer`}>{c.email}</button>}
                 {c.phone && <a href={`tel:${c.phone}`} className={`hover:underline ${th.body}`}>{c.phone}</a>}
                 {c.linkedin_url && <a href={c.linkedin_url} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>LinkedIn</a>}
               </div>
