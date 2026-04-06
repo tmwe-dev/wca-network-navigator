@@ -222,7 +222,8 @@ function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: 
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const accent = getCardOriginClasses(card);
-  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const cardCountry = getCardCountryCode(card);
+  const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
   const city = card.partner?.enrichment_data?.city || card.location || "";
 
