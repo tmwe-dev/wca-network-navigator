@@ -675,6 +675,7 @@ async function searchLinkedInProfile(query) {
   if (!query) return { success: false, error: "Query mancante" };
   var searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
   var tab = await getLinkedInTab(searchUrl);
+  await new Promise(function (r) { setTimeout(r, 3000); });
   try {
     var results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -686,8 +687,20 @@ async function searchLinkedInProfile(query) {
           if (/linkedin\.com\/in\/[^/]+/.test(href) && !/\/in\/miniprofile/.test(href) && !/\/in\/ACo/.test(href)) {
             var cleanUrl = href.split("?")[0].replace(/\/$/, "");
             var container = allLinks[i].closest("li, [data-chameleon-result-urn]");
-            var nameEl = container ? container.querySelector("span[aria-hidden='true'], span[dir='ltr']") : null;
-            return { profileUrl: cleanUrl, name: nameEl ? nameEl.textContent.trim() : "", headline: "" };
+            var name = "";
+            var headline = "";
+            if (container) {
+              var nameEl = container.querySelector("span[aria-hidden='true']");
+              if (nameEl) name = nameEl.textContent.trim();
+              if (!name) { var dirEl = container.querySelector("h3 span[dir='ltr'], a span[dir='ltr'], span[dir='ltr']"); if (dirEl) name = dirEl.textContent.trim(); }
+              if (!name && allLinks[i].textContent) { var lt = allLinks[i].textContent.replace(/\s+/g," ").trim(); if (lt.length>1 && lt.length<80) name = lt; }
+              if (!name) { var h = container.querySelector("h3, h4"); if (h) name = h.textContent.replace(/\s+/g," ").trim(); }
+              var secEl = container.querySelector("div[class*='subtitle'], p[class*='summary']");
+              if (secEl) headline = secEl.textContent.replace(/\s+/g," ").trim().substring(0,200);
+              if (!headline) { var ps = container.querySelectorAll("p, div[class*='t-']"); for (var pp=0;pp<ps.length;pp++) { var pt=ps[pp].textContent.replace(/\s+/g," ").trim(); if (pt && pt!==name && pt.length>3 && pt.length<200){headline=pt;break;} } }
+            }
+            if (!name) { var al = allLinks[i].getAttribute("aria-label")||""; if (al.length>1) name = al.split(",")[0].trim(); }
+            return { profileUrl: cleanUrl, name: name, headline: headline };
           }
         }
         return null;
@@ -707,7 +720,7 @@ async function readLinkedInInbox() {
   try {
     var axResult = await AXTree.readInbox(tab.id);
     if (axResult && axResult.threads && axResult.threads.length > 0) return axResult;
-  } catch (e) { console.warn("[LI-Hybrid] AX inbox failed:", e.message); }
+  } catch (e) { console.warn("[LI-Hybrid] AX inbox failed:", e.message || e); }
 
   // Level 3: Structural fallback (link href pattern)
   try {
@@ -723,16 +736,21 @@ async function readLinkedInInbox() {
           seen[threadUrl] = true;
           var container = link.closest("li") || link.parentElement;
           if (!container) return;
-          var nameEl = container.querySelector("h3, span");
           var name = "";
-          if (nameEl) {
-            var spans = container.querySelectorAll("span, h3, h4");
-            for (var i = 0; i < spans.length; i++) {
-              var t = (spans[i].textContent || "").trim();
-              if (t.length > 1 && t.length < 60 && !/^\d/.test(t)) { name = t; break; }
-            }
+          var lastMsg = "";
+          var unread = false;
+          var h3 = container.querySelector("h3");
+          if (h3) { var h3t = h3.textContent.replace(/\s+/g," ").trim(); if (h3t.length>1 && h3t.length<80) name = h3t; }
+          if (!name) { var spans = container.querySelectorAll("span"); for (var si=0;si<spans.length;si++) { var st=(spans[si].textContent||"").trim(); if (st.length>1 && st.length<60 && !/^\d{1,2}[\/:\.]/.test(st) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(st) && !/^(passa|go to|details)/i.test(st)) { name=st; break; } } }
+          if (!name) { var img = container.querySelector("img[alt]"); if (img) { var alt=(img.getAttribute("alt")||"").trim(); if (alt.length>1 && alt.length<60 && !/photo|foto|avatar/i.test(alt)) name=alt; } }
+          var msgP = container.querySelector("p, [class*='snippet']");
+          if (msgP) lastMsg = msgP.textContent.replace(/\s+/g," ").trim().substring(0,120);
+          var badge = container.querySelector("[class*='unread'], [class*='badge']");
+          if (badge) unread = true;
+          if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) {
+            return;
           }
-          if (name) threads.push({ name: name, threadUrl: threadUrl, unread: false, lastMessage: "" });
+          threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
         });
         return { success: true, threads: threads, method: "structural_fallback" };
       },
