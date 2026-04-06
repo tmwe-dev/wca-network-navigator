@@ -120,7 +120,7 @@ function ContactQuickActions({ contact: c }: { contact: Contact }) {
   );
 }
 
-
+export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const [c, setC] = useState<Contact>(contact);
   const { data: interactions = [] } = useContactInteractions(c.id);
   const updateStatus = useUpdateLeadStatus();
