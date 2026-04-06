@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerId } = await req.json();
+    const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();
     if (!partnerId) {
       return new Response(JSON.stringify({ error: "partnerId is required" }), {
         status: 400,
