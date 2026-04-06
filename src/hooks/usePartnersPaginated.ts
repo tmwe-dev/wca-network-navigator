@@ -17,6 +17,7 @@ const PAGE_SIZE = 50;
 export interface PaginatedFilters extends PartnerFilters {
   quality?: string;
   hideHolding?: boolean;
+  sort?: string;
 }
 
 export function usePartnersPaginated(filters?: PaginatedFilters) {
@@ -81,8 +82,16 @@ export function usePartnersPaginated(filters?: PaginatedFilters) {
         query = query.is("email", null);
       }
 
+      // ── Server-side sorting ──
+      if (filters?.sort === "rating") {
+        query = query.order("rating", { ascending: false, nullsFirst: false }).order("company_name");
+      } else if (filters?.sort === "recent") {
+        query = query.order("member_since", { ascending: false, nullsFirst: false }).order("company_name");
+      } else {
+        query = query.order("company_name");
+      }
+
       const { data, error, count } = await query
-        .order("company_name")
         .range(from, to);
 
       if (error) throw error;

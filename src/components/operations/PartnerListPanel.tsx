@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
-import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +71,7 @@ export function PartnerListPanel({
     search: activeSearch.length >= 2 ? activeSearch : undefined,
     quality: activeQuality !== "all" ? activeQuality : undefined,
     hideHolding,
+    sort: activeSort,
   });
 
   const partners = useMemo(() => {
@@ -94,7 +94,7 @@ export function PartnerListPanel({
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
       case "rating": return "Rating";
-      case "contacts": return "Contatti";
+      case "recent": return "Più recenti";
       default: return "Nome";
     }
   }, [activeSort]);
@@ -112,27 +112,14 @@ export function PartnerListPanel({
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
-    // Quality and holding filters are now applied server-side in usePartnersPaginated
+    // Quality, holding and sort are now applied server-side in usePartnersPaginated
     // Only keep client-side filters that can't be pushed to SQL
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
     }
 
-    const sorted = [...list];
-    switch (activeSort) {
-      case "rating":
-        return sorted.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0));
-      case "contacts":
-        return sorted.sort((a: any, b: any) => {
-        const qa = getPartnerContactQuality(a.partner_contacts);
-        const qb = getPartnerContactQuality(b.partner_contacts);
-        const order: Record<string, number> = { complete: 0, partial: 1, missing: 2 };
-          return ((order[qa] || 2) - (order[qb] || 2)) || a.company_name.localeCompare(b.company_name);
-        });
-      default:
-        return sorted.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
-    }
-  }, [partners, progressFilter, activeSort, activeQuality, hideHolding]);
+    return list;
+  }, [partners, progressFilter]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -287,7 +274,7 @@ export function PartnerListPanel({
                 {[
                   { value: "name", label: "Nome" },
                   { value: "rating", label: "Rating" },
-                  { value: "contacts", label: "Contatti" },
+                  { value: "recent", label: "Più recenti" },
                 ].map(o => (
                   <DropdownMenuItem
                     key={o.value}
