@@ -1,19 +1,28 @@
 // ══════════════════════════════════════════════════
-// AI DOM Learning Module for LinkedIn
-// Self-healing: captures DOM snapshot → AI generates selectors → caches
+// AI DOM Learning Module for LinkedIn v3.0
+// - Composite cache key (pageType + hostname + lang)
+// - TTL + failure-based invalidation
+// - No execCommand — uses Selection API + InputEvent
 // ══════════════════════════════════════════════════
 
 var AILearn = (function () {
-  var CACHE_KEY = "li_dom_schema";
+  var CACHE_PREFIX = "li_dom_schema_";
   var CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
+  var MAX_FAILURES = 3;
   var _learning = false;
+  var _failureCount = 0;
 
-  // Get cached schema from chrome.storage.local
-  async function getCached() {
+  // ── Composite cache key ──
+  function cacheKey(pageType) {
+    return CACHE_PREFIX + (pageType || "profile");
+  }
+
+  async function getCached(pageType) {
     try {
-      var data = await chrome.storage.local.get(CACHE_KEY);
-      if (data && data[CACHE_KEY]) {
-        var schema = data[CACHE_KEY];
+      var key = cacheKey(pageType);
+      var data = await chrome.storage.local.get(key);
+      if (data && data[key]) {
+        var schema = data[key];
         if (schema.learnedAt && Date.now() - schema.learnedAt < CACHE_TTL) {
           return schema;
         }
@@ -22,26 +31,46 @@ var AILearn = (function () {
     return null;
   }
 
-  // Save schema to cache
-  async function saveSchema(schema) {
+  async function saveSchema(schema, pageType) {
     schema.learnedAt = Date.now();
+    schema.pageType = pageType || "profile";
     var obj = {};
-    obj[CACHE_KEY] = schema;
+    obj[cacheKey(pageType)] = schema;
     await chrome.storage.local.set(obj);
+    _failureCount = 0; // reset on successful learn
     return schema;
   }
 
-  // Clear cached schema (force re-learn)
-  async function clearCache() {
-    await chrome.storage.local.remove(CACHE_KEY);
+  async function clearCache(pageType) {
+    if (pageType) {
+      await chrome.storage.local.remove(cacheKey(pageType));
+    } else {
+      // Clear all schema keys
+      var keys = ["profile", "messaging", "search", "inbox"].map(function (t) { return cacheKey(t); });
+      await chrome.storage.local.remove(keys);
+    }
   }
 
-  // Capture DOM snapshot for AI analysis (injected into page)
+  // ── Record selector failure (triggers re-learn after threshold) ──
+  function recordFailure() {
+    _failureCount++;
+    if (_failureCount >= MAX_FAILURES) {
+      console.warn("[AI-Learn] " + _failureCount + " consecutive failures — invalidating cache");
+      clearCache();
+      _failureCount = 0;
+      return true; // should re-learn
+    }
+    return false;
+  }
+
+  // ── DOM snapshot capture (injected into page) ──
   function captureDomSnapshot() {
     try {
       var snapshot = {
         url: window.location.href,
         title: document.title,
+        lang: document.documentElement.lang || navigator.language || "unknown",
+        hostname: window.location.hostname,
         dataTestIds: [],
         ariaLabels: [],
         roles: [],
@@ -52,7 +81,6 @@ var AILearn = (function () {
         htmlSamples: {},
       };
 
-      // Collect data-testid attributes
       var testIds = document.querySelectorAll("[data-testid]");
       for (var i = 0; i < Math.min(testIds.length, 50); i++) {
         snapshot.dataTestIds.push({
@@ -62,7 +90,6 @@ var AILearn = (function () {
         });
       }
 
-      // Collect aria-label attributes
       var ariaEls = document.querySelectorAll("[aria-label]");
       for (var j = 0; j < Math.min(ariaEls.length, 50); j++) {
         snapshot.ariaLabels.push({
@@ -72,7 +99,6 @@ var AILearn = (function () {
         });
       }
 
-      // Collect role attributes
       var roleEls = document.querySelectorAll("[role]");
       for (var k = 0; k < Math.min(roleEls.length, 50); k++) {
         snapshot.roles.push({
@@ -83,7 +109,6 @@ var AILearn = (function () {
         });
       }
 
-      // Collect headings
       var headings = document.querySelectorAll("h1, h2, h3");
       for (var h = 0; h < Math.min(headings.length, 20); h++) {
         snapshot.headings.push({
@@ -93,7 +118,6 @@ var AILearn = (function () {
         });
       }
 
-      // Collect visible buttons
       var buttons = document.querySelectorAll("button");
       for (var b = 0; b < Math.min(buttons.length, 30); b++) {
         if (buttons[b].offsetParent === null) continue;
@@ -104,7 +128,6 @@ var AILearn = (function () {
         });
       }
 
-      // Collect textboxes / contenteditables
       var textboxes = document.querySelectorAll("[contenteditable='true'], textarea, input[type='text']");
       for (var t = 0; t < Math.min(textboxes.length, 10); t++) {
         snapshot.textboxes.push({
@@ -115,7 +138,6 @@ var AILearn = (function () {
         });
       }
 
-      // HTML samples of key areas
       var areas = {
         navBar: "nav, header, [role='banner']",
         mainContent: "main, [role='main']",
@@ -124,9 +146,7 @@ var AILearn = (function () {
       };
       for (var area in areas) {
         var el = document.querySelector(areas[area]);
-        if (el) {
-          snapshot.htmlSamples[area] = el.outerHTML.substring(0, 1500);
-        }
+        if (el) snapshot.htmlSamples[area] = el.outerHTML.substring(0, 1500);
       }
 
       return snapshot;
@@ -135,13 +155,12 @@ var AILearn = (function () {
     }
   }
 
-  // Send snapshot to AI edge function for selector generation
+  // ── AI learning call ──
   async function learnFromAI(tabId, pageType, supabaseUrl, supabaseKey) {
-    if (_learning) return await getCached();
+    if (_learning) return await getCached(pageType);
     _learning = true;
 
     try {
-      // Capture DOM snapshot
       var snapResults = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: captureDomSnapshot,
@@ -152,7 +171,6 @@ var AILearn = (function () {
         return null;
       }
 
-      // Call AI edge function
       var response = await fetch(supabaseUrl + "/functions/v1/linkedin-ai-extract", {
         method: "POST",
         headers: {
@@ -175,8 +193,8 @@ var AILearn = (function () {
 
       var data = await response.json();
       if (data.schema) {
-        var schema = await saveSchema(data.schema);
-        console.log("[AI-Learn] ✅ Selectors learned:", Object.keys(schema).length, "keys");
+        var schema = await saveSchema(data.schema, pageType);
+        console.log("[AI-Learn] ✅ Selectors learned for '" + pageType + "':", Object.keys(schema).length, "keys");
         _learning = false;
         return schema;
       }
@@ -190,7 +208,7 @@ var AILearn = (function () {
     }
   }
 
-  // Use learned selectors to extract profile
+  // ── Schema-based extraction (injected into page) ──
   function extractWithSchema(schema) {
     try {
       var result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
@@ -215,8 +233,6 @@ var AILearn = (function () {
         var photoEl = document.querySelector(schema.photoSelector);
         if (photoEl && photoEl.src) result.photoUrl = photoEl.src;
       }
-
-      // Connection status
       if (schema.connectButtonSelector) {
         var cb = document.querySelector(schema.connectButtonSelector);
         if (cb) result.connectionStatus = "not_connected";
@@ -233,7 +249,7 @@ var AILearn = (function () {
     }
   }
 
-  // Use learned selectors to type and send a message
+  // ── Type message using Selection API (no execCommand) ──
   function typeMessageWithSchema(schema, messageText) {
     try {
       var msgBox = null;
@@ -246,9 +262,25 @@ var AILearn = (function () {
       if (!msgBox) return { success: false, error: "AI-Learn: Message input not found" };
 
       msgBox.focus();
-      document.execCommand("selectAll", false, null);
-      document.execCommand("insertText", false, messageText);
-      msgBox.dispatchEvent(new Event("input", { bubbles: true }));
+
+      // Clear and insert using Selection API
+      var sel = window.getSelection();
+      if (sel) {
+        sel.selectAllChildren(msgBox);
+        sel.deleteFromDocument();
+      }
+      var textNode = document.createTextNode(messageText);
+      msgBox.appendChild(textNode);
+      // Place cursor at end
+      sel = window.getSelection();
+      if (sel) {
+        var range = document.createRange();
+        range.selectNodeContents(msgBox);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: messageText, bubbles: true }));
 
       var sendBtn = null;
       if (schema.sendButtonSelector) {
@@ -296,6 +328,7 @@ var AILearn = (function () {
     getCached: getCached,
     saveSchema: saveSchema,
     clearCache: clearCache,
+    recordFailure: recordFailure,
     captureDomSnapshot: captureDomSnapshot,
     learnFromAI: learnFromAI,
     extractWithSchema: extractWithSchema,
