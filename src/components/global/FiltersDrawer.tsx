@@ -812,6 +812,13 @@ function NetworkFiltersSection() {
         )}
       </FilterSection>
 
+  // Listen for close event from sub-components
+  useEffect(() => {
+    const handler = () => onOpenChange(false);
+    window.addEventListener("filters-drawer-close", handler);
+    return () => window.removeEventListener("filters-drawer-close", handler);
+  }, [onOpenChange]);
+
 
       <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
         <p className="mb-2 text-[10px] text-muted-foreground">
