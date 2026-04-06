@@ -651,10 +651,7 @@ function CRMFiltersSection() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Fetch contact group counts to build country list
-  const { useContactGroupCounts: useGroupCounts } = require("@/hooks/useContactGroups");
-
-  // We import inline to avoid circular — use dynamic
+  // Country list from imported_contacts
   const [crmCountries, setCrmCountries] = useState<{ code: string; name: string; flag: string; total: number }[]>([]);
 
   // Fetch countries from imported_contacts
