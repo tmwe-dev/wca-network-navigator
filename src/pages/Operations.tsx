@@ -133,6 +133,11 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 
   const toggleFavorite = useToggleFavorite();
 
+  // Reset selected partner when filters change (country, quality, search, etc.)
+  useEffect(() => {
+    setSelectedPartnerId(null);
+  }, [filters.networkSelectedCountries, filters.quality, filters.networkDirectoryOnly, filters.networkSearch]);
+
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
