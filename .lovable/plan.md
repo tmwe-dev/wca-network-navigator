@@ -1,84 +1,48 @@
 
 
-# Azioni interattive sui contatti: audit completo e allineamento
+# Fix ordinamento Network + verifica pulsante Sincronizza WCA
 
-## Analisi dello stato attuale
+## Problemi trovati
 
-Ho esaminato tutti i punti del sistema dove vengono mostrati contatti con email/telefono/WhatsApp. Ecco la situazione:
+### 1. Ordinamento non funziona correttamente
+Il dropdown "Ordine: Nome/Rating/Contatti" cambia il valore di `networkSort` nel contesto, ma ci sono due problemi:
 
-| Sezione | Email | WhatsApp | Circuito di attesa | Stato |
-|---------|-------|----------|-------------------|-------|
-| **Network → PartnerDetailCompact** | ✅ Apre Email Composer + attività | ✅ Invio via extension bridge + attività | ✅ | Completo |
-| **BCA Hub → BusinessCardDetailPanel** | ❌ Solo `mailto:` passivo | ❌ Solo link `wa.me/` esterno | ❌ Nessuna attività | Da fare |
-| **BCA View (Operations)** | ❌ Solo icone tooltip, non cliccabili | ❌ Assente | ❌ | Da fare |
-| **Contatti → ContactDetailPanel** | ❌ Solo `mailto:` passivo | ❌ Solo link `wa.me/` esterno | ❌ Nessuna attività | Da fare |
-| **Prospect → ProspectListPanel** | ❌ Solo `mailto:` passivo | ❌ Assente | ❌ | Da fare |
-| **Cockpit → AIDraftStudio** | ✅ Via `handleSend` + `handleSendWhatsApp` | ✅ Via extension bridge | ✅ | Completo |
-| **ContactRecordActions (drawer)** | ❌ Solo `mailto:` | ❌ Solo `wa.me/` esterno | ❌ | Da fare |
+- **Server-side**: `usePartnersPaginated.ts` (riga 85) fa SEMPRE `.order("company_name")` ignorando il sort selezionato. Quindi quando carichi pagina 2, 3 ecc. i dati arrivano sempre ordinati per nome.
+- **"Contatti"**: il sort client-side (riga 126-131) accede a `partner_contacts` che NON viene caricato nella query paginata (nessun join). Quindi `getPartnerContactQuality` riceve `undefined` e il sort non fa nulla.
+- **"Rating"**: funziona solo client-side sulla pagina corrente, ma i dati dal server arrivano per nome — risultato inconsistente con infinite scroll.
 
-## Problema
+### 2. Pulsante "Sincronizza WCA" in alto a destra
+Il pulsante emette un evento `sync-wca-trigger`. Il listener per questo evento è registrato SOLO in `src/pages/Operations.tsx`. Se l'utente è sulla pagina `/network` (o qualsiasi altra pagina diversa da Operations), **nessuno ascolta l'evento** e non succede nulla.
 
-5 aree su 7 usano link passivi (`mailto:`, `wa.me/`) che non passano per il sistema interno: nessuna attività creata, nessun ingresso nel circuito di attesa, nessun tracciamento.
+Il sync usa la edge function `sync-wca-partners` che è il sistema SSE corretto (non vecchie query). È sicuro.
 
 ## Piano di intervento
 
-### 1. BusinessCardDetailPanel (BCA Hub) — Priorità alta
-File: `src/components/contacts/BusinessCardsHub.tsx` (righe 320-420)
+### A. Fix ordinamento — push sort al server
+**File: `src/hooks/usePartnersPaginated.ts`**
+- Accettare un parametro `sort` nei filtri
+- Mappare il sort nella query Supabase:
+  - `"name"` → `.order("company_name")`
+  - `"rating"` → `.order("rating", { ascending: false }).order("company_name")`
+  - `"contacts"` → rimuovere questa opzione (i contatti non sono nella query) oppure sostituirla con un sort più utile come `"country"` o `"recent"` (per `member_since`)
 
-- Aggiungere `useNavigate` e `useWhatsAppExtensionBridge`
-- Sostituire il link `mailto:` con un bottone che naviga a `/email-composer` con il contatto pre-compilato (stessa logica di PartnerDetailCompact)
-- Sostituire il link telefonico del mobile con un bottone WhatsApp che usa il bridge dell'estensione
-- Dopo invio WhatsApp riuscito: creare record in tabella `activities` con tipo `whatsapp_message`
-- Aggiornare `lead_status` del biglietto a `contacted` se era `new`
+**File: `src/components/operations/PartnerListPanel.tsx`**
+- Passare `activeSort` ai filtri di `usePartnersPaginated`
+- Rimuovere il sort client-side nel `filteredPartners` useMemo (righe 121-134) — il server lo fa già
+- Aggiornare le opzioni del dropdown: sostituire "Contatti" con "Più recenti" (ordina per `member_since DESC`)
 
-### 2. ContactDetailPanel (Contatti Commerciali)
-File: `src/components/contacts/ContactDetailPanel.tsx` (righe 242-258)
+### B. Fix Sincronizza WCA — listener globale
+**File: `src/components/layout/AppLayout.tsx`** (o nuovo hook globale)
+- Spostare il listener `sync-wca-trigger` dall'Operations page a un livello globale (AppLayout) così funziona da qualsiasi pagina
+- Copiare la logica del handler SSE da Operations.tsx in un hook riutilizzabile `useWcaSync` e usarlo sia in AppLayout che in Operations
 
-- Sostituire `<a href="mailto:">` con bottone che naviga a `/email-composer`
-- Sostituire il link `wa.me/` con invio via extension bridge + creazione attività
-- Aggiornare lead_status del contatto
-
-### 3. ProspectListPanel
-File: `src/components/prospects/ProspectListPanel.tsx` (righe 375-410)
-
-- Stessa logica: email → composer, WhatsApp → bridge, creazione attività per ogni contatto del prospect
-
-### 4. ContactRecordActions (drawer contatto)
-File: `src/components/contact-drawer/ContactRecordActions.tsx`
-
-- Sostituire `mailto:` e `wa.me/` con le azioni interne (composer + bridge)
-
-### 5. BCA View (Operations) — Cards nella lista
-File: `src/components/operations/BusinessCardsView.tsx` (righe 440-500)
-
-- Rendere le icone Mail/Phone cliccabili nelle 3 view mode (compact, card, expanded)
-- Click su Mail → `/email-composer`, click su icona WhatsApp → bridge
-
-## Dettagli tecnici
-
-Pattern uniforme per ogni area:
-```text
-handleSendEmail(contact):
-  navigate("/email-composer", { state: { prefilledRecipient: { email, name, company, ... } } })
-
-handleSendWhatsApp(contact):
-  cleanPhone → sendWhatsApp(cleanPhone, "")
-  if success → supabase.from("activities").insert({ activity_type: "whatsapp_message", ... })
-  if success → update lead_status to "contacted" if "new"
-  if fail → toast.error con contesto
-```
-
-## File coinvolti
+### File coinvolti
 
 | File | Intervento |
 |------|-----------|
-| `src/components/contacts/BusinessCardsHub.tsx` | Detail panel: azioni email/WA interattive |
-| `src/components/contacts/ContactDetailPanel.tsx` | Quick actions: email/WA via sistema interno |
-| `src/components/prospects/ProspectListPanel.tsx` | Contatti prospect: email/WA interattive |
-| `src/components/contact-drawer/ContactRecordActions.tsx` | Drawer: azioni via sistema interno |
-| `src/components/operations/BusinessCardsView.tsx` | Icone cliccabili nelle card BCA |
-
-## Risultato atteso
-
-Ogni punto del sistema dove compare un'email o un numero di telefono diventa un'azione diretta che: (1) apre il composer email o invia via WhatsApp bridge, (2) crea un record attività, (3) aggiorna il lead_status per far entrare il contatto nel circuito di attesa. Comportamento identico a quello già funzionante nel Network e nel Cockpit.
+| `src/hooks/usePartnersPaginated.ts` | Aggiungere parametro `sort`, mappare in `.order()` |
+| `src/components/operations/PartnerListPanel.tsx` | Passare sort al hook, rimuovere sort client-side, fix opzioni dropdown |
+| `src/hooks/useWcaSync.ts` | Nuovo hook: logica sync SSE estratta da Operations |
+| `src/components/layout/AppLayout.tsx` | Registrare listener `sync-wca-trigger` globale via hook |
+| `src/pages/Operations.tsx` | Usare il nuovo hook al posto della logica inline |
 
