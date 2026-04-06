@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// WhatsApp Extension - Background Service Worker v4
+// WhatsApp Extension - Background Service Worker v4.1
 // Self-Healing DOM: zero hardcoded selectors
 // Discovery chain: Learned → Structural → AI
 // ══════════════════════════════════════════════
@@ -283,6 +283,24 @@ function buildDiscoveryScript() {
       document.querySelector('[role="textbox"][contenteditable="true"]') ||
       document.querySelector('[data-testid="compose-box"]')
     );
+    result.textboxCount = document.querySelectorAll('[role="textbox"], [contenteditable="true"]').length;
+
+    // ── Loading/auth shell markers ──
+    result.hasLoadingScreen = !!(
+      document.querySelector('[data-testid="intro-md-beta-logo"]') ||
+      document.querySelector('.landing-window') ||
+      document.querySelector('[data-testid="startup"]')
+    );
+    result.hasServiceWorker = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+    result.storageMarkers = [];
+    try {
+      var storageKeys = Object.keys(window.localStorage || {});
+      var authMarkerPatterns = ['last-wid', 'last-wid-md', 'remember-me', 'rememberme', 'md-opted-in'];
+      result.storageMarkers = storageKeys.filter(function(key) {
+        var lower = String(key || '').toLowerCase();
+        return authMarkerPatterns.some(function(marker) { return lower.indexOf(marker) !== -1; });
+      }).slice(0, 12);
+    } catch (_) {}
 
     // ── App loaded check ──
     result.appLoaded = !!(
@@ -334,6 +352,27 @@ function buildDiscoveryScript() {
 // ══════════════════════════════════════════════
 // VERIFY SESSION — discovery-based
 // ══════════════════════════════════════════════
+function compactDiscovery(result) {
+  if (!result) return null;
+  return {
+    url: result.url || null,
+    title: result.title || null,
+    hasQR: !!result.hasQR,
+    hasLoadingScreen: !!result.hasLoadingScreen,
+    sidebar: !!result.sidebar,
+    sidebarSelector: result.sidebarSelector || null,
+    chatItems: Number(result.chatItems || 0),
+    chatItemsMethod: result.chatItemsMethod || null,
+    hasComposeBox: !!result.hasComposeBox,
+    textboxCount: Number(result.textboxCount || 0),
+    appLoaded: !!result.appLoaded,
+    bodyChildCount: Number(result.bodyChildCount || 0),
+    dataTestIdsCount: Array.isArray(result.dataTestIds) ? result.dataTestIds.length : 0,
+    storageMarkers: Array.isArray(result.storageMarkers) ? result.storageMarkers : [],
+    hasServiceWorker: !!result.hasServiceWorker,
+  };
+}
+
 async function verifySession() {
   try {
     var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
@@ -347,67 +386,54 @@ async function verifySession() {
       await sleep(3000);
     }
 
-    for (var attempt = 0; attempt < 4; attempt++) {
-      if (attempt > 0) await sleep(2500);
+    var lastDiagnostic = null;
+
+    for (var attempt = 0; attempt < 6; attempt++) {
+      if (attempt > 0) await sleep(attempt < 2 ? 1800 : 2800);
       try {
         var results = await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          func: function() {
-            // QR code = not authenticated
-            if (document.querySelector('canvas[aria-label]') ||
-                document.querySelector('[data-testid="qrcode"]') ||
-                document.querySelector('[data-ref]'))
-              return { success: true, authenticated: false, reason: "qr_required" };
-
-            // Loading screen
-            if (document.querySelector('[data-testid="intro-md-beta-logo"]') ||
-                document.querySelector('.landing-window') ||
-                document.querySelector('[data-testid="startup"]'))
-              return { success: true, authenticated: false, reason: "loading" };
-
-            // Authenticated: look for ANY sign of chat UI
-            // Strategy 1: known containers
-            var knownSidebar = document.querySelector('#pane-side') ||
-              document.querySelector('#side') ||
-              document.querySelector('[data-testid="chatlist"]') ||
-              document.querySelector('[data-testid="chat-list"]');
-            if (knownSidebar) return { success: true, authenticated: true, method: "known-selector" };
-
-            // Strategy 2: role-based
-            var nav = document.querySelector('[role="navigation"]') ||
-              document.querySelector('nav');
-            if (nav && nav.querySelectorAll('span[title]').length >= 2)
-              return { success: true, authenticated: true, method: "role-nav" };
-
-            // Strategy 3: structural — if page has many span[title] = chat list
-            var titledSpans = document.querySelectorAll('span[title]');
-            if (titledSpans.length >= 5)
-              return { success: true, authenticated: true, method: "structural-spans" };
-
-            // Strategy 4: compose box or conversation panel present
-            if (document.querySelector('[contenteditable="true"]') &&
-                document.querySelector('[data-testid="conversation-compose-box-input"]'))
-              return { success: true, authenticated: true, method: "compose-box" };
-
-            // Strategy 5: header with user info
-            var header = document.querySelector('header');
-            if (header && header.querySelector('img[src*="pps"]'))
-              return { success: true, authenticated: true, method: "header-avatar" };
-
-            // Strategy 6: body has significant content (not just loading)
-            if (document.body.children.length > 10 &&
-                document.querySelectorAll('[data-testid]').length > 5 &&
-                !document.querySelector('.landing-window'))
-              return { success: true, authenticated: true, method: "content-heuristic" };
-
-            return null; // retry
-          },
+          func: buildDiscoveryScript(),
         });
         var result = results?.[0]?.result;
-        if (result) return result;
+        if (!result) continue;
+
+        lastDiagnostic = compactDiscovery(result);
+
+        if (result.hasQR) {
+          return { success: true, authenticated: false, reason: "qr_required", diagnostic: lastDiagnostic };
+        }
+
+        if (result.hasLoadingScreen || !result.appLoaded || result.bodyChildCount < 3) {
+          continue;
+        }
+
+        if (result.sidebar) {
+          return { success: true, authenticated: true, method: "sidebar:" + (result.sidebarSelector || "discovered"), diagnostic: lastDiagnostic };
+        }
+
+        if ((result.chatItems || 0) > 0) {
+          return { success: true, authenticated: true, method: "chat-items:" + (result.chatItemsMethod || "discovered"), diagnostic: lastDiagnostic };
+        }
+
+        if (result.hasComposeBox || (result.textboxCount || 0) > 0) {
+          return { success: true, authenticated: true, method: result.hasComposeBox ? "compose-box" : "textbox", diagnostic: lastDiagnostic };
+        }
+
+        var hasShellSignals = (
+          Array.isArray(result.dataTestIds) && result.dataTestIds.length >= 12 && result.bodyChildCount >= 10
+        ) || (
+          result.hasServiceWorker && result.bodyChildCount >= 10
+        ) || (
+          Array.isArray(result.storageMarkers) && result.storageMarkers.length > 0 && result.bodyChildCount >= 8
+        );
+
+        if (hasShellSignals && attempt >= 1) {
+          return { success: true, authenticated: true, method: "app-shell-fallback", diagnostic: lastDiagnostic };
+        }
       } catch (_) {}
     }
-    return { success: true, authenticated: false, reason: "unknown_state" };
+    return { success: true, authenticated: false, reason: "unknown_state", diagnostic: lastDiagnostic };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -1246,7 +1272,7 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
   if (msg.source !== "wa-content-bridge") return false;
 
   if (msg.action === "ping") {
-    sendResponse({ success: true, version: "4.0-selfheal" });
+    sendResponse({ success: true, version: "4.1-sessionfix" });
     return false;
   }
 
