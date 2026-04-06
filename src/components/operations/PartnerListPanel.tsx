@@ -114,14 +114,37 @@ export function PartnerListPanel({
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
-    // Quality, holding and sort are now applied server-side in usePartnersPaginated
-    // Only keep client-side filters that can't be pushed to SQL
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
     }
 
+    // Country tab filter
+    if (activeCountryTab) {
+      list = list.filter((p: any) => p.country_code === activeCountryTab);
+    }
+
     return list;
-  }, [partners, progressFilter]);
+  }, [partners, progressFilter, activeCountryTab]);
+
+  // Country tab counts for the tab bar
+  const countryTabCounts = useMemo(() => {
+    if (countryCodes.length <= 1) return [];
+    let list = partners || [];
+    if (progressFilter === "deep") {
+      list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
+    }
+    const counts: Record<string, number> = {};
+    for (const p of list as any[]) {
+      const cc = p.country_code || "??";
+      counts[cc] = (counts[cc] || 0) + 1;
+    }
+    return countryCodes.map(cc => ({ code: cc, name: countryNames[countryCodes.indexOf(cc)] || cc, count: counts[cc] || 0 }));
+  }, [countryCodes, countryNames, partners, progressFilter]);
+
+  // Reset active tab when countries change
+  useEffect(() => {
+    setActiveCountryTab(null);
+  }, [countryCodes.join(",")]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
