@@ -1,43 +1,92 @@
 
-# Tab orizzontali per gruppo nella lista partner (Network) e contatti (CRM)
 
-## Concetto
+# Allineamento strutturale CRM ↔ Network
 
-Quando l'utente seleziona più paesi nel Network o apre più gruppi nel CRM, invece di mostrare tutto in una lista mista, si aggiunge una barra di tab orizzontali scrollabile sopra la lista. Ogni tab corrisponde a un paese/gruppo e filtra la lista mostrando solo gli elementi di quel tab.
-
-## Network — `PartnerListPanel.tsx`
-
-**Quando**: `countryCodes.length > 1`
-
-Aggiungere sopra `PartnerVirtualList` una barra di tab orizzontali con:
-- Un tab per ogni paese selezionato: `🇪🇸 Spain`, `🇮🇹 Italy`, ecc.
-- Un tab "Tutti" all'inizio per mostrare la lista completa (default)
-- Tab attivo evidenziato con stile primary
-- Overflow-x scrollabile per molti paesi
-
-Stato locale `activeCountryTab: string | null` (null = tutti). Quando un tab è attivo, i partner vengono filtrati client-side per `country_code === activeCountryTab` prima di passarli a `PartnerVirtualList`.
+## Differenze attuali
 
 ```text
-[ Tutti | 🇪🇸 Spain (180) | 🇮🇹 Italy (220) | 🇵🇦 Panama (152) ]
-──────────────────────────────────────────────────
-  Partner list filtrata per il tab attivo
+NETWORK                              CRM
+─────────────────────               ─────────────────────
+Layout:                              Layout:
+  Nessun tab verticale                 VerticalTabNav (Contatti/Biglietti)
+  Lista paesi nel FiltersDrawer        GroupsSidebar come ResizablePanel col.1
+  Lista partner al centro              ContactListPanel col.2
+  Dettaglio partner col.3              ContactDetailPanel col.3
+
+Filtri (FiltersDrawer):              Filtri (FiltersDrawer):
+  Cerca con risultati inline           Cerca semplice
+  Lista paesi con checkbox             Nessuna lista paesi
+  Sync WCA button                      Raggruppa/Ordina/Origine/Stato/Circuito/Canale/Qualità
+  Nessun raggruppa/ordina inline       Tutto in FilterSection verticali
 ```
 
-## CRM — `ContactListPanel.tsx`
+**Problemi chiave**:
+1. CRM ha Contatti/Biglietti come tab verticali a sinistra → occupano spazio, incoerenti col Network che non li ha
+2. CRM ha GroupsSidebar come pannello resizable integrato → il Network usa il FiltersDrawer per i paesi
+3. I filtri CRM sono tutti impilati verticalmente nel drawer, senza separazione logica
+4. Nessuna lista paesi scrollabile nel drawer CRM come nel Network
 
-**Quando**: `groups.length > 1` (più gruppi visibili nella lista)
+## Piano di allineamento
 
-Stessa logica: barra tab orizzontali sopra la lista dei gruppi con:
-- Un tab per ogni gruppo visibile: nome del gruppo + conteggio
-- Tab "Tutti" come default
-- Stato `activeGroupTab: string | null`
-- Quando attivo, `groups.filter(g => g.group_key === activeGroupTab)` mostra solo quel gruppo
+### 1. Tab Contatti/Biglietti → orizzontali in alto
+**File**: `src/pages/CRM.tsx`
+
+Eliminare `VerticalTabNav` e sostituire con tab orizzontali nell'header della pagina (come i tab del Network "partners/bca"). I due tab ("Contatti", "Biglietti") diventano piccoli chip/button in alto, liberando lo spazio laterale sinistro.
+
+### 2. Eliminare GroupsSidebar dal layout CRM
+**File**: `src/pages/Contacts.tsx`
+
+Rimuovere il `ResizablePanel` con `GroupsSidebar` (colonna 1). La lista gruppi/paesi si sposta nel FiltersDrawer, identica alla lista paesi del Network. Il layout diventa: lista contatti | dettaglio — come il Network ha lista partner | dettaglio.
+
+### 3. Ristrutturare i filtri CRM nel FiltersDrawer
+**File**: `src/components/global/FiltersDrawer.tsx`
+
+Riorganizzare la sezione CRM seguendo la struttura del Network:
+
+```text
+┌─────────────────────────────┐
+│ 🔍 CERCA                    │  ← con risultati inline come Network
+│   [input + risultati live]  │
+├─────────────────────────────┤
+│ 🌍 PAESI (X selezionati)   │  ← lista scrollabile con checkbox
+│   [chip attivi]             │  ← identica al Network
+│   [lista paesi + conteggi]  │
+├─────────────────────────────┤
+│ ── RAGGRUPPA ── ORIGINE ──  │  ← chip orizzontali su una riga
+│ [Paese][Origine][Stato][Gr] │  ← raggruppa
+│ [WCA][Import][RA][BCA]      │  ← origine
+├─────────────────────────────┤
+│ ↕ ORDINA                    │
+│ [Nome][Paese][Azienda][Rec] │
+├─────────────────────────────┤
+│ 👤 STATO ── ✈ CIRCUITO ──  │  ← su una riga
+│ [Tutti][Nuovo][Contattato]  │
+│ [Fuori][In][Tutti]          │
+├─────────────────────────────┤
+│ 📡 CANALE ── ✨ QUALITÀ ── │
+│ [Email][Tel][LI][WA]        │
+│ [Arricchiti][Non arr.]      │
+└─────────────────────────────┘
+```
+
+Differenze dal layout attuale:
+- **Aggiungere lista paesi** con checkbox e conteggi (usa `useContactGroupCounts` filtrato per `group_type === "country"`)
+- **Cerca con risultati inline** come nel Network (query su `imported_contacts`)
+- I filtri restano gli stessi ma raggruppati più compattamente
+
+### 4. Passare il filtro paese selezionato alla ContactListPanel
+**File**: `src/pages/Contacts.tsx`, `src/components/contacts/ContactListPanel.tsx`
+
+Invece di ricevere `filterGroupKey` dalla GroupsSidebar rimossa, la ContactListPanel leggerà i paesi selezionati dal contesto globale (`crmSelectedCountries` o riutilizzando la logica `filterGroupKey` dal drawer).
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/operations/PartnerListPanel.tsx` | Aggiungere stato `activeCountryTab`, barra tab, filtro client-side su `filteredPartners` |
-| `src/components/contacts/ContactListPanel.tsx` | Aggiungere stato `activeGroupTab`, barra tab, filtro su `groups` renderizzati |
+| `src/pages/CRM.tsx` | Sostituire VerticalTabNav con tab orizzontali in alto |
+| `src/pages/Contacts.tsx` | Rimuovere GroupsSidebar e ResizablePanel col.1, semplificare layout a 2 colonne |
+| `src/components/global/FiltersDrawer.tsx` | Sezione CRM: aggiungere lista paesi con checkbox + cerca inline con risultati |
+| `src/contexts/GlobalFiltersContext.tsx` | Aggiungere `crmSelectedCountries: Set<string>` se serve (o riusare groupBy+filterGroupKey) |
 
-Nessun nuovo componente necessario — i tab sono semplici button inline con stile scrollabile. Nessuna modifica DB.
+Nessuna migrazione DB, nessun nuovo componente. La struttura risultante sarà identica al Network: filtri e paesi nel drawer a sinistra, lista al centro, dettaglio a destra.
+
