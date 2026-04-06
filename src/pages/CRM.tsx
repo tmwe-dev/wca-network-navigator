@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
-import { UserCheck, ContactRound } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -11,6 +12,7 @@ function TabFallback() {
 
 export default function CRM() {
   const [tab, setTab] = useState("contatti");
+  const [showAIMatch, setShowAIMatch] = useState(false);
 
   const tabs = [
     { value: "contatti", label: "Contatti", icon: UserCheck },
@@ -40,6 +42,14 @@ export default function CRM() {
             </button>
           );
         })}
+
+        <button
+          onClick={() => setShowAIMatch(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto bg-gradient-to-r from-violet-500/15 to-purple-500/15 text-violet-300 border border-violet-500/30 hover:from-violet-500/25 hover:to-purple-500/25 shadow-sm"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          AI Match
+        </button>
       </div>
 
       {/* Content */}
@@ -55,6 +65,8 @@ export default function CRM() {
           </Suspense>
         )}
       </div>
+
+      <AIMatchDialog open={showAIMatch} onOpenChange={setShowAIMatch} />
     </div>
   );
 }
