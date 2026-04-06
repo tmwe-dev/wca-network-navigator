@@ -55,6 +55,7 @@ export function AdvancedTools({ isDark }: { isDark: boolean }) {
 
 function EnrichSection({ isDark }: { isDark: boolean }) {
   const th = t(isDark);
+  const { isAvailable: fsAvailable, scrapeUrl } = useFireScrapeExtensionBridge();
   const [filterCountry, setFilterCountry] = useState("");
   const [filterType, setFilterType] = useState("");
   const [onlyNotEnriched, setOnlyNotEnriched] = useState(true);
