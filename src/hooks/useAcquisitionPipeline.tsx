@@ -74,6 +74,7 @@ export function useAcquisitionPipeline() {
   const extensionWarningShown = useRef(false);
 
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
+  const { isAvailable: fsAvailable, scrapeUrl: fsScrapeUrl } = useFireScrapeExtensionBridge();
   const waitForExtension = useCallback(async (maxWaitMs = 10000): Promise<boolean> => {
     if (extensionAvailable) return true;
     const start = Date.now();
