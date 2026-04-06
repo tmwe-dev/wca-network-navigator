@@ -423,7 +423,22 @@ var Actions = (function () {
               return false;
             }
 
-            var opened = await openChat(contact);
+            // Step 0: Check if the target chat is already open
+            var opened = false;
+            var currentHeader = qsDeep('#main header span[title]') ||
+              qsDeep('[data-testid="conversation-info-header-chat-title"]') ||
+              qsDeep('#main header [role="button"] span');
+            if (currentHeader) {
+              var headerTitle = (currentHeader.getAttribute('title') || currentHeader.textContent || '').trim().toLowerCase();
+              var contactClean = contact.trim().toLowerCase();
+              if (headerTitle && contactClean && (headerTitle.includes(contactClean) || contactClean.includes(headerTitle))) {
+                opened = true;
+              }
+            }
+
+            if (!opened) {
+              opened = await openChat(contact);
+            }
 
             // Retry with first name only if full name failed
             if (!opened && contact.includes(" ")) {
