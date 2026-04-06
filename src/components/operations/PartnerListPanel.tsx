@@ -72,6 +72,7 @@ export function PartnerListPanel({
     search: activeSearch.length >= 2 ? activeSearch : undefined,
     quality: activeQuality !== "all" ? activeQuality : undefined,
     hideHolding,
+    sort: activeSort,
   });
 
   const partners = useMemo(() => {
