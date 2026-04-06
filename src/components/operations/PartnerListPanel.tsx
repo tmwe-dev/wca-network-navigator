@@ -87,7 +87,7 @@ export function PartnerListPanel({
   const toggleFavorite = useToggleFavorite();
 
   const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
-  const totalCount = stats.total;
+  const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
       case "rating": return "Rating";
