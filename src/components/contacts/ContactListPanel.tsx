@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -42,6 +43,7 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const [activeGroupTab, setActiveGroupTab] = useState<string | null>(null);
   const linkedInLookup = useLinkedInLookup();
 
   const currentGroupBy = filters.groupBy || "country";
@@ -151,13 +153,45 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
         </div>
       )}
 
+      {/* ═══ GROUP TABS ═══ */}
+      {groups.length > 1 && (
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
+          <button
+            onClick={() => setActiveGroupTab(null)}
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+              activeGroupTab === null
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            )}
+          >
+            Tutti ({groups.reduce((s, g) => s + g.contact_count, 0)})
+          </button>
+          {groups.map((g) => (
+            <button
+              key={g.group_key}
+              onClick={() => setActiveGroupTab(g.group_key === activeGroupTab ? null : g.group_key)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                activeGroupTab === g.group_key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <span className="truncate max-w-[100px]">{g.group_label}</span>
+              <span className="opacity-70">({g.contact_count})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {groupsLoading ? (
           <div className="p-3 space-y-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
         ) : groups.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto trovato</p>
         ) : (
-          groups.map((group) => {
+          (activeGroupTab ? groups.filter(g => g.group_key === activeGroupTab) : groups).map((group) => {
             const isOpen = openGroups.has(group.group_key);
             const groupSelKey = `${currentGroupBy}:${group.group_key}`;
             return (

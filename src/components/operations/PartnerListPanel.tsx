@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
@@ -54,6 +54,8 @@ export function PartnerListPanel({
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hideHolding, setHideHolding] = useState(true);
+  const [activeCountryTab, setActiveCountryTab] = useState<string | null>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const activeSearch = g.filters.networkSearch.trim();
   const activeSort = g.filters.networkSort;
@@ -112,14 +114,37 @@ export function PartnerListPanel({
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
-    // Quality, holding and sort are now applied server-side in usePartnersPaginated
-    // Only keep client-side filters that can't be pushed to SQL
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
     }
 
+    // Country tab filter
+    if (activeCountryTab) {
+      list = list.filter((p: any) => p.country_code === activeCountryTab);
+    }
+
     return list;
-  }, [partners, progressFilter]);
+  }, [partners, progressFilter, activeCountryTab]);
+
+  // Country tab counts for the tab bar
+  const countryTabCounts = useMemo(() => {
+    if (countryCodes.length <= 1) return [];
+    let list = partners || [];
+    if (progressFilter === "deep") {
+      list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
+    }
+    const counts: Record<string, number> = {};
+    for (const p of list as any[]) {
+      const cc = p.country_code || "??";
+      counts[cc] = (counts[cc] || 0) + 1;
+    }
+    return countryCodes.map(cc => ({ code: cc, name: countryNames[countryCodes.indexOf(cc)] || cc, count: counts[cc] || 0 }));
+  }, [countryCodes, countryNames, partners, progressFilter]);
+
+  // Reset active tab when countries change
+  useEffect(() => {
+    setActiveCountryTab(null);
+  }, [countryCodes.join(",")]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -351,6 +376,39 @@ export function PartnerListPanel({
             </div>
           )}
         </div>
+
+        {/* ═══ COUNTRY TABS ═══ */}
+        {countryTabCounts.length > 1 && (
+          <div ref={tabsRef} className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
+            <button
+              onClick={() => setActiveCountryTab(null)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                activeCountryTab === null
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Tutti
+            </button>
+            {countryTabCounts.map(({ code, name, count }) => (
+              <button
+                key={code}
+                onClick={() => setActiveCountryTab(code === activeCountryTab ? null : code)}
+                className={cn(
+                  "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                  activeCountryTab === code
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <span>{getCountryFlag(code)}</span>
+                <span className="truncate max-w-[80px]">{name}</span>
+                <span className="opacity-70">({count})</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ═══ PARTNER LIST (Virtualized) ═══ */}
         <PartnerVirtualList
