@@ -4,7 +4,7 @@
  * Pure data module: zero side-effects, zero Chrome API calls.
  */
 
-export const VERSION = "1.0.0";
+export const VERSION = "2.0.0";
 
 /* ── Well-known IMAP providers ────────────────────────────────── */
 
