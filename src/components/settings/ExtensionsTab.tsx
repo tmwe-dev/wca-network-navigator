@@ -62,7 +62,14 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Invio automatico messaggi WhatsApp</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={downloadWhatsAppExtensionZip}>
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                await downloadWhatsAppExtensionZip();
+                toast.success("Estensione WhatsApp scaricata!");
+              } catch {
+                toast.error("File non disponibile");
+              }
+            }}>
               <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
             </Button>
           </div>

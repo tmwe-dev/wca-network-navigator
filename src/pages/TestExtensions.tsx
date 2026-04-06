@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 
 type LogEntry = { ts: string; msg: string; type: "info" | "ok" | "warn" | "error" };
 
@@ -85,17 +86,45 @@ function WhatsAppTest() {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
+  const isExpectedWaVersion = (version?: string) => version === WHATSAPP_EXTENSION_REQUIRED_VERSION;
+
+  const ensureCurrentWaExtension = async () => {
+    const ping = await waMsg("ping", {}, 5000);
+
+    if (!ping?.success) {
+      log(`❌ Estensione WhatsApp non raggiungibile: ${ping?.error || JSON.stringify(ping)}`, "error");
+      return null;
+    }
+
+    const version = ping.version || "?";
+    if (!isExpectedWaVersion(version)) {
+      log(`⚠️ Estensione WhatsApp obsoleta rilevata (v${version}). Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`, "error");
+      log("Riscarica /whatsapp-extension.zip, ricarica l'estensione in chrome://extensions e ripeti il test.", "warn");
+      return { ...ping, outdated: true };
+    }
+
+    return ping;
+  };
+
   const testPing = async () => {
     setRunning(true);
     log("🔌 Ping estensione WhatsApp...");
     const r = await waMsg("ping", {}, 5000);
-    if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
-    else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    if (r?.success) {
+      const version = r.version || "?";
+      if (isExpectedWaVersion(version)) log(`✅ Estensione attiva (v${version})`, "ok");
+      else log(`⚠️ Estensione attiva ma obsoleta (v${version}) — richiesta v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`, "error");
+    } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
     setRunning(false);
   };
 
   const testSession = async () => {
     setRunning(true);
+    const ping = await ensureCurrentWaExtension();
+    if (!ping || ping.outdated) {
+      setRunning(false);
+      return;
+    }
     log("🔑 Verifica sessione WhatsApp Web...");
     const r = await waMsg("verifySession", {}, 30000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
@@ -104,6 +133,11 @@ function WhatsAppTest() {
 
   const testReadUnread = async () => {
     setRunning(true);
+    const ping = await ensureCurrentWaExtension();
+    if (!ping || ping.outdated) {
+      setRunning(false);
+      return;
+    }
     log("📨 Lettura messaggi (readUnread)...");
     const r = await waMsg("readUnread", {}, 60000);
     
@@ -143,6 +177,11 @@ function WhatsAppTest() {
       return;
     }
     setRunning(true);
+    const ping = await ensureCurrentWaExtension();
+    if (!ping || ping.outdated) {
+      setRunning(false);
+      return;
+    }
     log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
     const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
     if (r?.success) {
@@ -156,6 +195,11 @@ function WhatsAppTest() {
 
   const testRawDom = async () => {
     setRunning(true);
+    const ping = await ensureCurrentWaExtension();
+    if (!ping || ping.outdated) {
+      setRunning(false);
+      return;
+    }
     log("🔍 Test DOM diretto — cerco selettori sulla pagina WA...");
     const r = await sendToExtension("from-webapp-wa", "from-extension-wa", "diagnosticDom", {}, 30000);
     log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 2000)}`, r?.success ? "ok" : "error");
