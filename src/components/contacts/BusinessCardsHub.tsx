@@ -198,11 +198,13 @@ function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: 
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
+  const accent = getCardOriginClasses(card);
   return (
     <div className={cn(
-      "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-muted/40 border border-transparent",
+      "relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden",
       isSelected && "bg-primary/10 border-primary/20",
     )}>
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l", accent.border)} />
       <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 shrink-0" onClick={(e) => e.stopPropagation()} />
       <span className="text-xs font-semibold text-foreground truncate w-[130px]">{card.company_name || "—"}</span>
       <span className="text-[11px] text-muted-foreground truncate w-[110px]">{card.contact_name || "—"}</span>
