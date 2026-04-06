@@ -158,9 +158,8 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
       trackActivity.mutate({
         activityType: "send_email",
         title: `${draft.companyName || "—"} — ${draft.contactName || draft.contactEmail}`,
-        sourceId: draft.partnerId || draft.contactId || crypto.randomUUID(),
-        sourceType: draft.partnerId ? "partner" : "imported_contact",
-        partnerId: draft.partnerId || undefined,
+        sourceId: draft.contactId || crypto.randomUUID(),
+        sourceType: "imported_contact",
         emailSubject: draft.subject,
         description: `Email inviata a ${draft.contactEmail}`,
       });
