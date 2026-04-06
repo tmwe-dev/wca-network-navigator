@@ -63,7 +63,7 @@ export default function EmailCanvas({
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [sending, setSending] = useState(false);
-
+  const trackActivity = useTrackActivity();
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
   const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
