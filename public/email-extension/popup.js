@@ -1,6 +1,6 @@
 /**
- * popup.js — Onboarding + Dashboard UI logic
- * ────────────────────────────────────────────
+ * popup.js — Onboarding + Dashboard + Inbox Preview
+ * ──────────────────────────────────────────────────
  */
 
 /* ── DOM refs ─────────────────────────────────────────────────── */
@@ -14,6 +14,7 @@ const dots = $$(".step-dot");
 /* ── State ────────────────────────────────────────────────────── */
 let currentStep = 0;
 let discoveredServer = null;
+let cachedEmails = [];
 
 /* ── Init ─────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", async () => {
@@ -37,6 +38,7 @@ function showDashboard() {
   screens.onboarding.classList.add("hidden");
   screens.dashboard.classList.remove("hidden");
   refreshDashboard();
+  loadInboxPreview();
 }
 
 function goToStep(n) {
@@ -56,8 +58,43 @@ function bindEvents() {
   // Step 1: Discover
   $("#btn-discover")?.addEventListener("click", handleDiscover);
 
+  // Step 1: Manual server
+  $("#btn-manual-server")?.addEventListener("click", () => {
+    const email = $("#input-email").value.trim();
+    if (!email) {
+      showStatus("discover-status", "Inserisci almeno l'email prima di procedere", "warning");
+      return;
+    }
+    // Go to step 2 with empty fields for manual input
+    $("#input-host").value = "";
+    $("#input-port").value = "993";
+    $("#input-tls").value = "true";
+    $("#server-label").textContent = "Configurazione manuale";
+    $("#discover-method").textContent = "Inserisci i dati del tuo server IMAP";
+    $("#step2-subtitle").textContent = "Inserisci manualmente i dettagli del server IMAP.";
+    goToStep(2);
+  });
+
+  // Step 1: Toggle password visibility
+  $("#btn-toggle-pw")?.addEventListener("click", () => {
+    const pw = $("#input-password");
+    const isPassword = pw.type === "password";
+    pw.type = isPassword ? "text" : "password";
+    $("#btn-toggle-pw").textContent = isPassword ? "🙈" : "👁️";
+  });
+
   // Step 2: Test connection
   $("#btn-test")?.addEventListener("click", handleTest);
+
+  // Step 2: Skip test
+  $("#btn-skip-test")?.addEventListener("click", () => {
+    const host = $("#input-host").value.trim();
+    if (!host) {
+      showStatus("test-status", "Inserisci almeno l'indirizzo del server", "warning");
+      return;
+    }
+    goToStep(3);
+  });
 
   // Step 3: Storage options
   $$(".storage-option").forEach(opt => {
@@ -74,8 +111,27 @@ function bindEvents() {
   // Dashboard: Sync
   $("#btn-sync")?.addEventListener("click", handleSync);
 
+  // Dashboard: Open side panel
+  $("#btn-open-panel")?.addEventListener("click", async () => {
+    try {
+      await send("openSidePanel");
+    } catch {
+      // Fallback: show info
+      showStatus("sync-result", "Il pannello laterale si apre dalla barra delle estensioni di Chrome", "info");
+    }
+  });
+
   // Dashboard: Settings → back to onboarding
   $("#btn-settings")?.addEventListener("click", () => showOnboarding());
+
+  // Dashboard: View all (open side panel)
+  $("#btn-view-all")?.addEventListener("click", async () => {
+    try {
+      await send("openSidePanel");
+    } catch {
+      showStatus("sync-result", "Clicca sull'icona dell'estensione nella barra per aprire il pannello", "info");
+    }
+  });
 
   // Dashboard: Reset
   $("#btn-reset")?.addEventListener("click", async () => {
@@ -98,38 +154,50 @@ async function handleDiscover() {
 
   const btn = $("#btn-discover");
   btn.disabled = true;
-  btn.textContent = "Ricerca in corso...";
+  btn.innerHTML = '<span class="spinner"></span>';
   hideStatus("discover-status");
 
   try {
     const res = await send("discover", { email });
     if (res?.success && res.server) {
       discoveredServer = res.server;
-      // Fill step 2
       $("#input-host").value = res.server.host;
       $("#input-port").value = res.server.port;
       $("#input-tls").value = String(res.server.tls !== false);
       $("#server-label").textContent = res.server.label || res.server.host;
-      $("#discover-method").textContent = `Metodo: ${res.server.method}`;
+      $("#discover-method").textContent = `Trovato con: ${friendlyMethod(res.server.method)}`;
+      $("#step2-subtitle").textContent = "Abbiamo trovato il tuo server. Verifica o modifica i dettagli.";
       goToStep(2);
     } else {
-      showStatus("discover-status", res?.error || "Server non trovato. Prova a inserire manualmente.", "warning");
-      // Still allow to proceed with manual input
-      goToStep(2);
+      showStatus("discover-status",
+        "⚠️ Server non trovato automaticamente. Puoi inserirlo manualmente.",
+        "warning"
+      );
     }
   } catch (err) {
     showStatus("discover-status", err.message, "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Trova server automaticamente";
+    btn.innerHTML = '<span class="btn-content">🔍 Trova server automaticamente</span>';
   }
+}
+
+function friendlyMethod(method) {
+  const map = {
+    "well-known": "Database provider noti",
+    "autoconfig": "Mozilla Autoconfig",
+    "mx-heuristic": "Analisi record MX",
+    "guess": "Deduzione automatica",
+    "guess-fallback": "Deduzione (fallback)",
+  };
+  return map[method] || method;
 }
 
 /* ── Step 2: Test connection ──────────────────────────────────── */
 async function handleTest() {
   const btn = $("#btn-test");
   btn.disabled = true;
-  btn.textContent = "Test in corso...";
+  btn.innerHTML = '<span class="spinner"></span> Test in corso...';
   hideStatus("test-status");
 
   const email = $("#input-email").value.trim();
@@ -138,7 +206,13 @@ async function handleTest() {
   const port = parseInt($("#input-port").value) || 993;
   const tls = $("#input-tls").value === "true";
 
-  // Save temporary config for test
+  if (!host) {
+    showStatus("test-status", "Inserisci l'indirizzo del server IMAP", "error");
+    btn.disabled = false;
+    btn.textContent = "🔌 Testa connessione";
+    return;
+  }
+
   await send("saveConfig", {
     config: {
       email, password, imapHost: host, imapPort: port, imapTls: tls,
@@ -149,17 +223,19 @@ async function handleTest() {
   try {
     const res = await send("testConnection");
     if (res?.success) {
-      showStatus("test-status", `✅ Connessione riuscita! Cartelle: ${res.folders || "—"}, Email: ${res.totalMessages || "—"}`, "success");
-      // Auto-advance after 1.5s
+      showStatus("test-status",
+        `✅ Connessione riuscita! Cartelle: ${res.folders || "—"}, Email: ${res.totalMessages || "—"}`,
+        "success"
+      );
       setTimeout(() => goToStep(3), 1500);
     } else {
-      showStatus("test-status", `❌ ${res?.error || "Connessione fallita"}`, "error");
+      showStatus("test-status", `❌ ${res?.error || "Connessione fallita. Verifica i dati inseriti."}`, "error");
     }
   } catch (err) {
     showStatus("test-status", err.message, "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Testa connessione";
+    btn.textContent = "🔌 Testa connessione";
   }
 }
 
@@ -167,7 +243,7 @@ async function handleTest() {
 async function handleFinish() {
   const btn = $("#btn-finish");
   btn.disabled = true;
-  btn.textContent = "Salvataggio...";
+  btn.innerHTML = '<span class="spinner"></span> Salvataggio...';
 
   const storageMode = document.querySelector('input[name="storage"]:checked')?.value || "local";
   const syncInterval = parseInt($("#input-sync-interval").value) || 0;
@@ -192,9 +268,8 @@ async function handleFinish() {
   });
 
   showDashboard();
-
   btn.disabled = false;
-  btn.textContent = "Completa e sincronizza";
+  btn.innerHTML = "✅ Completa e sincronizza";
 
   // Auto-sync on first setup
   handleSync();
@@ -205,7 +280,7 @@ async function handleSync() {
   const btn = $("#btn-sync");
   const label = $("#sync-label");
   btn.disabled = true;
-  label.textContent = "⏳ Sincronizzazione...";
+  label.innerHTML = '<span class="spinner"></span> Sincronizzazione...';
 
   const progress = $("#sync-progress");
   progress.classList.remove("hidden");
@@ -223,6 +298,8 @@ async function handleSync() {
         : "✅ Nessuna nuova email";
       showStatus("sync-result", msg, "success");
       $("#progress-text").textContent = "Completato!";
+      // Reload inbox preview
+      if (res.downloaded > 0) loadInboxPreview();
     } else {
       showStatus("sync-result", `❌ ${res?.error || "Sincronizzazione fallita"}`, "error");
       $("#progress-text").textContent = "Errore";
@@ -249,11 +326,10 @@ async function refreshDashboard() {
   $("#stat-total").textContent = formatNum(stats?.totalEmails || 0);
   $("#stat-syncs").textContent = formatNum(stats?.syncCount || 0);
   $("#stat-mode").textContent = config?.storageMode === "cloud" ? "☁️ Cloud" : "💾 Locale";
-  
+
   if (syncState?.lastSyncAt) {
     const d = new Date(syncState.lastSyncAt);
-    const now = Date.now();
-    const diff = now - d.getTime();
+    const diff = Date.now() - d.getTime();
     if (diff < 60000) $("#stat-last").textContent = "Ora";
     else if (diff < 3600000) $("#stat-last").textContent = `${Math.floor(diff / 60000)}m fa`;
     else if (diff < 86400000) $("#stat-last").textContent = `${Math.floor(diff / 3600000)}h fa`;
@@ -261,6 +337,39 @@ async function refreshDashboard() {
   } else {
     $("#stat-last").textContent = "Mai";
   }
+}
+
+/* ── Inbox Preview ────────────────────────────────────────────── */
+async function loadInboxPreview() {
+  const res = await send("getRecentEmails");
+  const container = $("#inbox-preview");
+  const list = $("#inbox-list");
+
+  if (!res?.success || !res.emails?.length) {
+    container.classList.add("hidden");
+    return;
+  }
+
+  cachedEmails = res.emails;
+  container.classList.remove("hidden");
+  list.innerHTML = "";
+
+  res.emails.slice(0, 5).forEach(email => {
+    const item = document.createElement("div");
+    item.className = `inbox-item${email.unread ? " unread" : ""}`;
+    item.innerHTML = `
+      <div class="mail-dot${email.unread ? "" : " read"}"></div>
+      <div class="mail-info">
+        <div class="mail-from">${escapeHtml(email.from || "Sconosciuto")}</div>
+        <div class="mail-subject">${escapeHtml(email.subject || "(senza oggetto)")}</div>
+      </div>
+      <div class="mail-date">${formatEmailDate(email.date)}</div>
+    `;
+    item.addEventListener("click", () => {
+      send("openSidePanel", { emailId: email.uid });
+    });
+    list.appendChild(item);
+  });
 }
 
 /* ── Helpers ──────────────────────────────────────────────────── */
@@ -286,9 +395,26 @@ function formatNum(n) {
   return String(n);
 }
 
+function formatEmailDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 86400000 && d.getDate() === now.getDate()) {
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (diff < 604800000) {
+    return d.toLocaleDateString("it-IT", { weekday: "short" });
+  }
+  return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 function getProxyUrl() {
-  // Read from storage or use default
-  // The proxy URL will be set during extension configuration
-  // For now, return a placeholder that will be configured
   return "https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/email-imap-proxy";
 }

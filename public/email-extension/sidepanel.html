@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email — Pannello</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div id="panel-app">
+    <!-- Header -->
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="panel-logo">📧</span>
+        <h1>Posta</h1>
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn" id="btn-panel-sync" title="Sincronizza">🔄</button>
+        <button class="panel-btn" id="btn-panel-search" title="Cerca">🔍</button>
+      </div>
+    </div>
+
+    <!-- Search bar (toggled) -->
+    <div id="search-bar" class="search-bar hidden">
+      <input type="text" id="search-input" placeholder="Cerca email..." />
+      <button class="search-clear" id="btn-clear-search">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">Tutte</button>
+        <button class="filter-tab" data-filter="unread">Non lette</button>
+        <button class="filter-tab" data-filter="flagged">Importanti</button>
+      </div>
+      <div class="email-count" id="email-count">0 email</div>
+    </div>
+
+    <!-- Content area: list + reader -->
+    <div class="panel-content">
+      <!-- Email list -->
+      <div id="email-list-container" class="email-list-container">
+        <div id="email-list" class="email-list">
+          <!-- populated dynamically -->
+        </div>
+        <div id="email-empty" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>Nessuna email ancora.</p>
+          <p class="empty-hint">Clicca 🔄 per sincronizzare.</p>
+        </div>
+        <div id="email-loading" class="loading-state hidden">
+          <div class="spinner-lg"></div>
+          <p>Caricamento email...</p>
+        </div>
+      </div>
+
+      <!-- Email reader (overlay when email selected) -->
+      <div id="email-reader" class="email-reader hidden">
+        <div class="reader-header">
+          <button class="reader-back" id="btn-back-list">← Indietro</button>
+          <div class="reader-actions">
+            <button class="panel-btn-sm" id="btn-download-eml" title="Scarica .eml">💾</button>
+            <button class="panel-btn-sm" id="btn-flag" title="Segna importante">⭐</button>
+          </div>
+        </div>
+        <div class="reader-meta">
+          <h2 id="reader-subject">—</h2>
+          <div class="reader-from-row">
+            <div class="reader-avatar" id="reader-avatar">?</div>
+            <div class="reader-from-info">
+              <div class="reader-from" id="reader-from">—</div>
+              <div class="reader-date" id="reader-date">—</div>
+            </div>
+          </div>
+          <div class="reader-to" id="reader-to"></div>
+        </div>
+        <div class="reader-body" id="reader-body">
+          <!-- email content rendered here -->
+        </div>
+        <div class="reader-attachments hidden" id="reader-attachments">
+          <h4>📎 Allegati</h4>
+          <div id="attachment-list" class="attachment-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js" type="module"></script>
+</body>
+</html>

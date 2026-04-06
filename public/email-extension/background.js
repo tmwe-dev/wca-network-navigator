@@ -1,13 +1,16 @@
 /**
- * background.js — Service Worker principale
- * ──────────────────────────────────────────
- * Thin message router + sync orchestration.
- * Modules: config, auto-discover, storage-manager, notifier
+ * background.js — Service Worker principale v2.0
+ * ──────────────────────────────────────────────
+ * Message router + sync + side panel + email cache
  */
 
 import { VERSION, DEFAULTS, ERR } from "./config.js";
 import { discoverImapServer } from "./auto-discover.js";
-import { getSyncState, updateSyncState, saveBatchLocally, uploadToCloud, getStats, updateStats } from "./storage-manager.js";
+import {
+  getSyncState, updateSyncState,
+  saveBatchLocally, uploadToCloud,
+  getStats, updateStats
+} from "./storage-manager.js";
 import { notifyNewEmails } from "./notifier.js";
 
 /* ── State ────────────────────────────────────────────────────── */
@@ -17,6 +20,7 @@ let syncing = false;
 /* ── Config helpers ───────────────────────────────────────────── */
 
 const CFG_KEY = "email_config";
+const EMAILS_KEY = "cached_emails";
 
 async function getConfig() {
   const { [CFG_KEY]: cfg } = await chrome.storage.local.get(CFG_KEY);
@@ -27,11 +31,22 @@ async function saveConfig(cfg) {
   await chrome.storage.local.set({ [CFG_KEY]: cfg });
 }
 
+async function getCachedEmails() {
+  const { [EMAILS_KEY]: emails } = await chrome.storage.local.get(EMAILS_KEY);
+  return emails || [];
+}
+
+async function setCachedEmails(emails) {
+  // Keep max 200 emails in cache (metadata + body)
+  const capped = emails.slice(0, 200);
+  await chrome.storage.local.set({ [EMAILS_KEY]: capped });
+}
+
 /* ── Message Router ───────────────────────────────────────────── */
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg?.action) return false;
-  handleMessage(msg).then(sendResponse).catch(err => 
+  handleMessage(msg).then(sendResponse).catch(err =>
     sendResponse({ success: false, error: err.message, code: err.code || "UNKNOWN" })
   );
   return true; // async
@@ -47,7 +62,6 @@ async function handleMessage(msg) {
 
     case "saveConfig": {
       await saveConfig(msg.config);
-      // Set up alarm if sync interval configured
       if (msg.config.syncInterval) {
         chrome.alarms.create("email-sync", { periodInMinutes: msg.config.syncInterval });
       }
@@ -64,19 +78,53 @@ async function handleMessage(msg) {
     case "testConnection": {
       const cfg = await getConfig();
       if (!cfg?.proxyUrl) return { success: false, code: ERR.PROXY_UNREACHABLE, error: "Proxy non configurato" };
-      const result = await testImapConnection(cfg);
-      return result;
+      return await testImapConnection(cfg);
     }
 
     case "syncNow": {
       if (syncing) return { success: false, code: ERR.SYNC_IN_PROGRESS, error: "Sincronizzazione in corso" };
-      const result = await runSync();
-      return result;
+      return await runSync();
     }
 
     case "getStatus": {
       const [syncState, stats, cfg] = await Promise.all([getSyncState(), getStats(), getConfig()]);
       return { success: true, syncState, stats, config: cfg, syncing };
+    }
+
+    case "getRecentEmails": {
+      const emails = await getCachedEmails();
+      return { success: true, emails };
+    }
+
+    case "markRead": {
+      const emails = await getCachedEmails();
+      const updated = emails.map(e => e.uid === msg.uid ? { ...e, unread: false } : e);
+      await setCachedEmails(updated);
+      return { success: true };
+    }
+
+    case "toggleFlag": {
+      const emails = await getCachedEmails();
+      const updated = emails.map(e => e.uid === msg.uid ? { ...e, flagged: msg.flagged } : e);
+      await setCachedEmails(updated);
+      return { success: true };
+    }
+
+    case "openSidePanel": {
+      try {
+        // Open side panel (requires user gesture from popup)
+        await chrome.sidePanel.setOptions({ enabled: true });
+        // If emailId passed, we'll send it after panel opens
+        if (msg.emailId) {
+          // Small delay to let panel load
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ action: "showEmail", emailId: msg.emailId });
+          }, 500);
+        }
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
     }
 
     case "resetState": {
@@ -91,7 +139,7 @@ async function handleMessage(msg) {
   }
 }
 
-/* ── Alarm handler (periodic sync) ────────────────────────────── */
+/* ── Alarm handler ────────────────────────────────────────────── */
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "email-sync" && !syncing) {
@@ -149,10 +197,39 @@ async function runSync() {
         downloaded = emails.length;
       }
 
+      // Cache emails for side panel viewing
+      const existingEmails = await getCachedEmails();
+      const existingUids = new Set(existingEmails.map(e => e.uid));
+      const newEmails = emails
+        .filter(e => !existingUids.has(e.uid))
+        .map(e => ({
+          uid: e.uid,
+          subject: e.subject || "(senza oggetto)",
+          from: e.from || "",
+          to: e.to || "",
+          date: e.date || new Date().toISOString(),
+          snippet: (e.bodyText || "").slice(0, 120),
+          bodyHtml: e.bodyHtml || null,
+          bodyText: e.bodyText || null,
+          raw: storageMode === "local" ? null : e.raw, // don't cache raw in local mode
+          unread: true,
+          flagged: false,
+          hasAttachments: !!(e.attachments?.length),
+          attachments: e.attachments || [],
+        }));
+
+      const merged = [...newEmails, ...existingEmails].slice(0, 200);
+      await setCachedEmails(merged);
+
       // Notify
       if (cfg.notificationsEnabled !== false) {
         await notifyNewEmails(emails, true);
       }
+
+      // Notify side panel of updates
+      try {
+        chrome.runtime.sendMessage({ action: "emailsUpdated" });
+      } catch { /* panel might not be open */ }
     }
 
     // Update state
@@ -162,24 +239,19 @@ async function runSync() {
       lastSyncAt: new Date().toISOString(),
     });
 
+    const prevStats = await getStats();
     const duration = Date.now() - startTime;
     await updateStats({
-      totalEmails: (await getStats()).totalEmails + downloaded,
+      totalEmails: prevStats.totalEmails + downloaded,
       lastSyncDuration: duration,
-      syncCount: (await getStats()).syncCount + 1,
-      errors: (await getStats()).errors + errors,
+      syncCount: prevStats.syncCount + 1,
+      errors: prevStats.errors + errors,
     });
 
-    return {
-      success: true,
-      downloaded,
-      errors,
-      totalInbox,
-      highestUid,
-      duration,
-    };
+    return { success: true, downloaded, errors, totalInbox, highestUid, duration };
   } catch (err) {
-    await updateStats({ errors: (await getStats()).errors + 1 });
+    const prevStats = await getStats();
+    await updateStats({ errors: prevStats.errors + 1 });
     return { success: false, error: err.message, code: err.code || ERR.DOWNLOAD_FAILED };
   } finally {
     syncing = false;
@@ -205,8 +277,7 @@ async function testImapConnection(cfg) {
       const err = await res.json().catch(() => ({ error: "Test fallito" }));
       return { success: false, error: err.error, code: ERR.AUTH_FAILED };
     }
-    const data = await res.json();
-    return { success: true, ...data };
+    return { success: true, ...(await res.json()) };
   } catch (err) {
     return { success: false, error: err.message, code: ERR.PROXY_UNREACHABLE };
   }
@@ -217,5 +288,13 @@ async function testImapConnection(cfg) {
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") {
     console.log(`[EmailClient] v${VERSION} installato`);
+    // Enable side panel
+    chrome.sidePanel?.setOptions({ enabled: true }).catch(() => {});
   }
+});
+
+/* ── Action click → open side panel ───────────────────────────── */
+chrome.action.onClicked.addListener((_tab) => {
+  // This fires only if default_popup is removed; we keep popup but
+  // this is a fallback for programmatic opening
 });

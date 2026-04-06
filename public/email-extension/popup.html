@@ -23,7 +23,9 @@
 
       <!-- Step 0: Welcome -->
       <div id="step-0" class="step active">
-        <div class="step-icon">📧</div>
+        <div class="step-icon">
+          <div class="icon-glow">📧</div>
+        </div>
         <h2>Email Client Universale</h2>
         <p class="subtitle">Scarica, sincronizza e gestisci la tua posta da qualsiasi provider IMAP.</p>
         <button class="btn primary full" id="btn-start">Inizia configurazione</button>
@@ -39,22 +41,30 @@
         </div>
         <div class="field">
           <label for="input-password">Password</label>
-          <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password" />
-          <span class="hint">Per Gmail/Yahoo usa una password per app</span>
+          <div class="input-group">
+            <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password" />
+            <button class="btn-eye" id="btn-toggle-pw" type="button" title="Mostra password">👁️</button>
+          </div>
+          <span class="hint">Per Gmail/Yahoo usa una <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="hint-link">password per app</a></span>
         </div>
         <div id="discover-status" class="status-box hidden"></div>
-        <button class="btn primary full" id="btn-discover">Trova server automaticamente</button>
+        <button class="btn primary full" id="btn-discover">
+          <span class="btn-content">🔍 Trova server automaticamente</span>
+        </button>
+        <button class="btn ghost full mt-2" id="btn-manual-server">
+          Inserisci server manualmente →
+        </button>
       </div>
 
       <!-- Step 2: Server confirm -->
       <div id="step-2" class="step">
         <h2>Server IMAP</h2>
-        <p class="subtitle">Abbiamo trovato il tuo server. Verifica o modifica i dettagli.</p>
+        <p class="subtitle" id="step2-subtitle">Abbiamo trovato il tuo server. Verifica o modifica i dettagli.</p>
         <div class="server-card">
           <div class="server-badge" id="server-label">—</div>
           <div class="field compact">
             <label>Host</label>
-            <input type="text" id="input-host" />
+            <input type="text" id="input-host" placeholder="imap.esempio.com" />
           </div>
           <div class="field-row">
             <div class="field compact">
@@ -72,7 +82,8 @@
           <div class="method-badge" id="discover-method">—</div>
         </div>
         <div id="test-status" class="status-box hidden"></div>
-        <button class="btn primary full" id="btn-test">Testa connessione</button>
+        <button class="btn primary full" id="btn-test">🔌 Testa connessione</button>
+        <button class="btn ghost full mt-2" id="btn-skip-test">Salta test e prosegui →</button>
       </div>
 
       <!-- Step 3: Storage choice -->
@@ -123,7 +134,7 @@
           </label>
         </div>
 
-        <button class="btn primary full" id="btn-finish">Completa e sincronizza</button>
+        <button class="btn primary full" id="btn-finish">✅ Completa e sincronizza</button>
       </div>
     </div>
 
@@ -131,13 +142,16 @@
     <div id="dashboard" class="screen hidden">
       <div class="dash-header">
         <div class="dash-title">
-          <span class="dash-icon">📧</span>
+          <div class="dash-avatar">📧</div>
           <div>
             <h3 id="dash-email">—</h3>
             <span class="dash-server" id="dash-server">—</span>
           </div>
         </div>
-        <button class="btn-icon" id="btn-settings" title="Impostazioni">⚙️</button>
+        <div class="dash-actions">
+          <button class="btn-icon" id="btn-open-panel" title="Apri pannello email">📬</button>
+          <button class="btn-icon" id="btn-settings" title="Impostazioni">⚙️</button>
+        </div>
       </div>
 
       <div class="stats-grid">
@@ -165,6 +179,17 @@
       </div>
 
       <div id="sync-result" class="status-box hidden"></div>
+
+      <!-- Mini inbox preview -->
+      <div id="inbox-preview" class="inbox-preview hidden">
+        <div class="inbox-header">
+          <h4>📥 Ultime email</h4>
+          <button class="btn-link" id="btn-view-all">Vedi tutte →</button>
+        </div>
+        <div id="inbox-list" class="inbox-list">
+          <!-- dynamically populated -->
+        </div>
+      </div>
 
       <button class="btn primary full" id="btn-sync">
         <span id="sync-label">🔄 Sincronizza ora</span>
