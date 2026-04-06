@@ -70,26 +70,31 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
   return (
     <div className="p-4 space-y-4">
-      {/* Back + Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className={`p-1.5 rounded-lg transition-colors ${th.back}`}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h2 className={`text-lg font-bold truncate ${th.h2}`}>
-            {partner.company_name}
-            {partner.company_alias && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 font-normal align-middle">{partner.company_alias}</span>}
-          </h2>
-          <p className={`text-sm ${th.sub}`}>
-            {getCountryFlag(partner.country_code)} {partner.city}, {partner.country_name}
-          </p>
-        </div>
-        {isBlacklisted && <Badge variant="destructive" className="text-xs">Blacklist</Badge>}
-        <div className="flex gap-1.5">
+      {/* Header: Company name full width */}
+      <div className="space-y-3">
+        <h2 className={`text-lg font-bold leading-tight ${th.h2}`}>
+          {partner.company_name}
+          {partner.company_alias && (
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 font-normal align-middle">
+              {partner.company_alias}
+            </span>
+          )}
+        </h2>
+
+        {/* Location line */}
+        <p className={`text-sm ${th.sub}`}>
+          {getCountryFlag(partner.country_code)} {partner.city}{partner.country_name ? `, ${partner.country_name}` : ""}
+        </p>
+
+        {/* Action buttons row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={onBack} className="h-7 text-xs gap-1">
+            <ArrowLeft className="w-3.5 h-3.5" /> Indietro
+          </Button>
           <Button size="sm" variant="outline" onClick={onToggleFavorite} className="h-7 text-xs">
             <Star className={cn("w-3.5 h-3.5", partner.is_favorite && "fill-amber-400 text-amber-400")} />
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDeepSearch} disabled={deepSearching} className="h-7 text-xs">
+          <Button size="sm" variant="outline" onClick={handleDeepSearch} disabled={deepSearching} className="h-7 text-xs gap-1">
             {deepSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Deep
           </Button>
@@ -100,23 +105,24 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
               </a>
             </Button>
           )}
+          {isBlacklisted && <Badge variant="destructive" className="text-xs">Blacklist</Badge>}
         </div>
-      </div>
 
-      {/* Rating + KPIs */}
-      <div className="flex items-center gap-4 flex-wrap">
-        {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
-        {years > 0 && (
-          <div className="flex items-center gap-1">
-            <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <span className={`text-sm font-bold text-amber-500`}>{years} anni WCA</span>
-          </div>
-        )}
-        {partner.membership_expires && (
-          <span className={cn("text-xs", new Date(partner.membership_expires) < new Date() ? "text-red-500" : th.dim)}>
-            Exp {format(new Date(partner.membership_expires), "MM/yy")}
-          </span>
-        )}
+        {/* Membership KPIs row */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
+          {years > 0 && (
+            <div className="flex items-center gap-1">
+              <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span className="text-sm font-bold text-amber-500">{years} anni WCA</span>
+            </div>
+          )}
+          {partner.membership_expires && (
+            <span className={cn("text-xs", new Date(partner.membership_expires) < new Date() ? "text-red-500" : th.dim)}>
+              Exp {format(new Date(partner.membership_expires), "MM/yy")}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Enrichment — top priority */}
