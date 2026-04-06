@@ -132,6 +132,7 @@ function cloneDefaults(): GlobalFilterState {
     cockpitQuality: new Set(),
     crmOrigin: new Set(defaults.crmOrigin),
     networkSelectedCountries: new Set(),
+    crmSelectedCountries: new Set(),
   };
 }
 
