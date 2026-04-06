@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
+import { useTrackActivity } from "@/hooks/useTrackActivity";
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
