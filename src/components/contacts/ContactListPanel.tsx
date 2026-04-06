@@ -1,93 +1,104 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
-import { GroupStrip } from "./GroupStrip";
-import { ExpandedGroupContent } from "./ExpandedGroupContent";
-import { useContactGroupCounts } from "@/hooks/useContactGroups";
-import { useImportGroups } from "@/hooks/useImportGroups";
+import { useContacts } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactActions } from "@/hooks/useContactActions";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import type { SortKey } from "./contactHelpers";
+import { sortContacts, type SortKey } from "./contactHelpers";
+import { ContactCard } from "./ContactCard";
 import type { ContactFilters } from "@/hooks/useContacts";
 
 interface Props {
   selectedId: string | null;
   onSelect: (contact: any) => void;
-  filterGroupKey?: string | null;
-  filterGroupType?: string;
 }
 
-export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterGroupType }: Props) {
+export function ContactListPanel({ selectedId, onSelect }: Props) {
   const { filters: gf } = useGlobalFilters();
-
-  // Map global filters to local ContactFilters shape
-  const filters: ContactFilters = useMemo(() => ({
-    groupBy: gf.groupBy as any,
-    holdingPattern: gf.holdingPattern as any,
-    search: gf.search,
-  }), [gf.groupBy, gf.holdingPattern, gf.search]);
+  const [page, setPage] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
+  const selection = useSelection([]);
+  const linkedInLookup = useLinkedInLookup();
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const sortKey = (gf.sortBy || "company") as SortKey;
 
-  const { data: allGroupCounts, isLoading: groupsLoading } = useContactGroupCounts();
-  const { data: importGroups } = useImportGroups();
-  const selection = useSelection([]);
+  // Build filters from global state
+  const queryFilters: ContactFilters = useMemo(() => {
+    const f: ContactFilters = {
+      holdingPattern: gf.holdingPattern as any,
+      search: gf.search,
+      page,
+      pageSize: 200,
+    };
+    // Countries
+    if (gf.crmSelectedCountries.size > 0) {
+      f.countries = Array.from(gf.crmSelectedCountries);
+    }
+    // Origins
+    if (gf.crmOrigin.size > 0 && gf.crmOrigin.size < 4) {
+      f.origins = Array.from(gf.crmOrigin);
+    }
+    // Lead status
+    if (gf.leadStatus && gf.leadStatus !== "all") {
+      f.leadStatus = gf.leadStatus as any;
+    }
+    // Channel
+    if (gf.crmChannel && gf.crmChannel !== "all") {
+      f.channel = gf.crmChannel;
+    }
+    // Quality
+    if (gf.crmQuality && gf.crmQuality !== "all") {
+      f.quality = gf.crmQuality;
+    }
+    return f;
+  }, [gf.holdingPattern, gf.search, gf.crmSelectedCountries, gf.crmOrigin, gf.leadStatus, gf.crmChannel, gf.crmQuality, page]);
+
+  const { data, isLoading } = useContacts(queryFilters);
+  const rawContacts = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const pageSize = data?.pageSize ?? 200;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const contacts = useMemo(() => sortContacts(rawContacts, sortKey), [rawContacts, sortKey]);
+
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
-  const [addOpen, setAddOpen] = useState(false);
-  const [activeGroupTab, setActiveGroupTab] = useState<string | null>(null);
-  const linkedInLookup = useLinkedInLookup();
-
-  const currentGroupBy = filters.groupBy || "country";
-
-  const groups = useMemo(() => {
-    if (!allGroupCounts) return [];
-    let filtered = allGroupCounts.filter((g) => g.group_type === currentGroupBy);
-    // If a group is selected from Column 1, only show that group
-    if (filterGroupKey && filterGroupType === currentGroupBy) {
-      filtered = filtered.filter((g) => g.group_key === filterGroupKey);
-    }
-    // Filter by selected countries from drawer (when grouping by country and multiple selected)
-    if (currentGroupBy === "country" && gf.crmSelectedCountries.size > 0 && !filterGroupKey) {
-      filtered = filtered.filter((g) => gf.crmSelectedCountries.has(g.group_key));
-    }
-    const search = filters.search?.trim().toLowerCase();
-    if (search) filtered = filtered.filter((g) => g.group_label.toLowerCase().includes(search) || g.group_key.toLowerCase().includes(search));
-    return filtered.sort((a, b) => b.contact_count - a.contact_count);
-  }, [allGroupCounts, currentGroupBy, filters.search, filterGroupKey, filterGroupType, gf.crmSelectedCountries]);
-
-  const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
-
   const setFiltersNoop = useCallback(() => {}, []);
   const setSortKeyNoop = useCallback(() => {}, []);
 
   const actions = useContactActions({
     selection, setFilters: setFiltersNoop as any, setSortKey: setSortKeyNoop as any,
     setOpenGroups, setSelectedGroups,
-    currentGroupBy, holdingPattern: filters.holdingPattern,
+    currentGroupBy: gf.groupBy || "country", holdingPattern: gf.holdingPattern as "out" | "in" | "all",
   });
 
-  const toggleGroup = useCallback((key: string) => {
-    setOpenGroups((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
-  }, []);
+  const virtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const isBulk = selection.count > 0;
   const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground";
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Header with count */}
+      {/* Header */}
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{totalContacts} contatti • {groups.length} gruppi</span>
+          <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
           <Tooltip><TooltipTrigger asChild>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setAddOpen(true)}>
               <UserPlus className="w-3.5 h-3.5" /> Nuovo
@@ -96,6 +107,7 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
         </div>
       </div>
 
+      {/* Bulk actions */}
       {isBulk && (
         <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -153,70 +165,55 @@ export function ContactListPanel({ selectedId, onSelect, filterGroupKey, filterG
         </div>
       )}
 
-      {/* ═══ GROUP TABS ═══ */}
-      {groups.length > 1 && (
-        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
-          <button
-            onClick={() => setActiveGroupTab(null)}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
-              activeGroupTab === null
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            )}
-          >
-            Tutti ({groups.reduce((s, g) => s + g.contact_count, 0)})
-          </button>
-          {groups.map((g) => (
-            <button
-              key={g.group_key}
-              onClick={() => setActiveGroupTab(g.group_key === activeGroupTab ? null : g.group_key)}
-              className={cn(
-                "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
-                activeGroupTab === g.group_key
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              <span className="truncate max-w-[100px]">{g.group_label}</span>
-              <span className="opacity-70">({g.contact_count})</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {groupsLoading ? (
-          <div className="p-3 space-y-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
-        ) : groups.length === 0 ? (
+      {/* Flat contact list */}
+      <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0">
+        {isLoading ? (
+          <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+        ) : contacts.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto trovato</p>
         ) : (
-          (activeGroupTab ? groups.filter(g => g.group_key === activeGroupTab) : groups).map((group) => {
-            const isOpen = openGroups.has(group.group_key);
-            const groupSelKey = `${currentGroupBy}:${group.group_key}`;
-            return (
-              <div key={group.group_key}>
-                <GroupStrip group={group} groupBy={currentGroupBy} isOpen={isOpen}
-                  onToggle={() => toggleGroup(group.group_key)}
-                  onDeepSearch={() => actions.handleGroupDeepSearch(group)}
-                  onAlias={() => actions.handleGroupAlias(group)}
-                  onLinkedInLookup={() => actions.handleGroupLinkedInLookup(group, linkedInLookup.lookupBatch)}
-                  isGroupSelected={selectedGroups.has(groupSelKey)}
-                  onToggleGroupSelect={() => actions.handleToggleGroupSelect(group)}
-                  isAliasLoading={actions.aliasLoading} isDeepSearchLoading={actions.deepSearchLoading}
-                  isLinkedInLookupLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
-                />
-                {isOpen && (
-                  <ExpandedGroupContent groupType={currentGroupBy} groupKey={group.group_key}
-                    selectedId={selectedId} onSelect={onSelect} selection={selection}
-                    holdingPattern={filters.holdingPattern} sortKey={sortKey} searchFilter={filters.search}
+          <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+            {virtualizer.getVirtualItems().map((vItem) => {
+              const c = contacts[vItem.index];
+              return (
+                <div
+                  key={c.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: vItem.size,
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
+                >
+                  <ContactCard
+                    c={c}
+                    isActive={selectedId === c.id}
+                    isSelected={selection.selectedIds.has(c.id)}
+                    onSelect={() => onSelect(c)}
+                    onToggle={() => selection.toggle(c.id)}
+                    index={vItem.index}
                   />
-                )}
-              </div>
-            );
-          })
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 px-3 py-1.5 border-t border-border/30 shrink-0">
+          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </Button>
+          <span className="text-[10px] text-muted-foreground">{page + 1} / {totalPages}</span>
+          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
 
       {addOpen && (
         <Suspense fallback={null}>
