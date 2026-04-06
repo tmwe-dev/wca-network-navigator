@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// WhatsApp Extension - Background Service Worker v4.1
+// WhatsApp Extension - Background Service Worker v4.2
 // Self-Healing DOM: zero hardcoded selectors
 // Discovery chain: Learned → Structural → AI
 // ══════════════════════════════════════════════
@@ -109,14 +109,68 @@ async function waitForLoad(tabId, timeoutMs) {
   return false;
 }
 
+function sortTabsByFreshness(tabs) {
+  return (tabs || []).slice().sort(function(a, b) {
+    var aScore = (a.active ? 1000 : 0) + (a.status === "complete" ? 100 : 0);
+    var bScore = (b.active ? 1000 : 0) + (b.status === "complete" ? 100 : 0);
+    if (bScore !== aScore) return bScore - aScore;
+    return Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0);
+  });
+}
+
+async function getBestExistingWaTab() {
+  try {
+    var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+    return sortTabsByFreshness(tabs)[0] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getLastFocusedActiveTab() {
+  try {
+    var tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    return tabs?.[0] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function activateTabTemporarily(tabId) {
+  try {
+    var previous = await getLastFocusedActiveTab();
+    if (!previous || previous.id !== tabId) {
+      await chrome.tabs.update(tabId, { active: true });
+      await sleep(900);
+      return previous && typeof previous.id === "number" ? { tabId: previous.id } : null;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function restoreTabContext(ctx) {
+  if (!ctx || typeof ctx.tabId !== "number") return;
+  try {
+    await chrome.tabs.update(ctx.tabId, { active: true });
+  } catch (_) {}
+}
+
+async function withTemporarilyVisibleTab(tabId, fn) {
+  var restoreCtx = await activateTabTemporarily(tabId);
+  try {
+    return await fn();
+  } finally {
+    await restoreTabContext(restoreCtx);
+  }
+}
+
 // ── Persistent WA tab ──
 async function getOrCreateWaTab() {
   try {
-    var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-    if (tabs.length > 0) {
-      var tab = tabs[0];
-      if (tab.status !== "complete") await waitForLoad(tab.id, 15000);
-      return { tab: tab, reused: true };
+    var existing = await getBestExistingWaTab();
+    if (existing) {
+      if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
+      return { tab: existing, reused: true };
     }
   } catch (_) {}
   var tab = await safeCreateTab(WA_BASE, false);
@@ -160,11 +214,60 @@ async function callAiExtract(html, mode, supabaseUrl, anonKey, authToken) {
 // Multi-strategy element discovery
 function buildDiscoveryScript() {
   return function() {
-    // Strategy 1: data-testid (most reliable when present)
-    function byTestId(id) { return document.querySelector('[data-testid="' + id + '"]'); }
-    // Strategy 2: role + aria
+    function scanShadowRoots(root, roots, seen) {
+      try {
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        while (walker.nextNode()) {
+          var el = walker.currentNode;
+          if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
+            seen.add(el.shadowRoot);
+            roots.push(el.shadowRoot);
+            scanShadowRoots(el.shadowRoot, roots, seen);
+          }
+        }
+      } catch (_) {}
+    }
+    var searchRootsCache = null;
+    function getSearchRoots() {
+      if (searchRootsCache) return searchRootsCache;
+      var roots = [document];
+      var seen = new Set([document]);
+      scanShadowRoots(document, roots, seen);
+      searchRootsCache = roots;
+      return roots;
+    }
+    function qsaDeep(sel) {
+      var out = [];
+      var seen = new Set();
+      for (var root of getSearchRoots()) {
+        try {
+          root.querySelectorAll(sel).forEach(function(el) {
+            if (!seen.has(el)) {
+              seen.add(el);
+              out.push(el);
+            }
+          });
+        } catch (_) {}
+      }
+      return out;
+    }
+    function qsDeep(sel) {
+      var els = qsaDeep(sel);
+      return els[0] || null;
+    }
+    function filterVisible(els) {
+      return Array.from(els || []).filter(function(el) {
+        try {
+          var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+          return !rect || rect.width > 0 || rect.height > 0;
+        } catch (_) {
+          return true;
+        }
+      });
+    }
+    function byTestId(id) { return qsDeep('[data-testid="' + id + '"]'); }
     function byRole(role, namePattern) {
-      var els = document.querySelectorAll('[role="' + role + '"]');
+      var els = qsaDeep('[role="' + role + '"]');
       if (!namePattern) return els[0] || null;
       for (var e of els) {
         var label = (e.getAttribute("aria-label") || "").toLowerCase();
@@ -172,10 +275,9 @@ function buildDiscoveryScript() {
       }
       return null;
     }
-    // Strategy 3: structural (tag + position)
     function byStructure(selectors) {
       for (var s of selectors) {
-        var el = document.querySelector(s);
+        var el = qsDeep(s);
         if (el) return el;
       }
       return null;
@@ -185,6 +287,9 @@ function buildDiscoveryScript() {
       url: location.href,
       title: document.title,
       isWhatsApp: location.hostname === "web.whatsapp.com",
+      visibilityState: document.visibilityState || null,
+      hidden: !!document.hidden,
+      shadowRootCount: Math.max(0, getSearchRoots().length - 1),
     };
 
     // ── QR detection (login check) ──
@@ -209,8 +314,8 @@ function buildDiscoveryScript() {
       { sel: '[role="navigation"]', name: 'role-nav' },
     ];
     for (var c of sidebarCandidates) {
-      var el = document.querySelector(c.sel);
-      if (el && el.children.length > 0) {
+      var el = qsDeep(c.sel);
+      if (el && ((el.children && el.children.length > 0) || (el.textContent || "").trim().length > 0)) {
         result.sidebar = true;
         result.sidebarSelector = c.name;
         result.sidebarChildCount = el.children.length;
@@ -231,7 +336,7 @@ function buildDiscoveryScript() {
     ];
     // Also try within discovered sidebar
     for (var s of chatItemStrategies) {
-      var items = document.querySelectorAll(s.sel);
+      var items = filterVisible(qsaDeep(s.sel));
       if (items.length > 0) {
         result.chatItems = items.length;
         result.chatItemsMethod = s.name;
@@ -242,10 +347,11 @@ function buildDiscoveryScript() {
     // If no items found, try broader discovery
     if (result.chatItems === 0) {
       // Look for any scrollable container with multiple similar children
-      var containers = document.querySelectorAll('[role="list"], [role="listbox"], [role="grid"]');
+      var containers = filterVisible(qsaDeep('[role="list"], [role="listbox"], [role="grid"]'));
       for (var cont of containers) {
-        if (cont.children.length >= 3) {
-          result.chatItems = cont.children.length;
+        var visibleChildren = filterVisible(Array.from(cont.children || []));
+        if (visibleChildren.length >= 3) {
+          result.chatItems = visibleChildren.length;
           result.chatItemsMethod = 'role-container-children';
           result.discoveredContainerRole = cont.getAttribute("role");
           break;
@@ -256,7 +362,7 @@ function buildDiscoveryScript() {
     // ── Deep structural discovery if still nothing ──
     if (result.chatItems === 0 && !result.hasQR) {
       // Walk DOM looking for repeating structures with titles
-      var allSpansWithTitle = document.querySelectorAll('span[title]');
+      var allSpansWithTitle = filterVisible(qsaDeep('span[title]'));
       var parentCounts = new Map();
       for (var sp of allSpansWithTitle) {
         var p = sp.parentElement?.parentElement?.parentElement;
@@ -279,17 +385,17 @@ function buildDiscoveryScript() {
     // ── Compose box detection ──
     result.hasComposeBox = !!(
       byTestId("conversation-compose-box-input") ||
-      document.querySelector('#main [contenteditable="true"]') ||
-      document.querySelector('[role="textbox"][contenteditable="true"]') ||
-      document.querySelector('[data-testid="compose-box"]')
+      qsDeep('#main [contenteditable="true"]') ||
+      qsDeep('[role="textbox"][contenteditable="true"]') ||
+      qsDeep('[data-testid="compose-box"]')
     );
-    result.textboxCount = document.querySelectorAll('[role="textbox"], [contenteditable="true"]').length;
+    result.textboxCount = qsaDeep('[role="textbox"], [contenteditable="true"]').length;
 
     // ── Loading/auth shell markers ──
     result.hasLoadingScreen = !!(
-      document.querySelector('[data-testid="intro-md-beta-logo"]') ||
-      document.querySelector('.landing-window') ||
-      document.querySelector('[data-testid="startup"]')
+      qsDeep('[data-testid="intro-md-beta-logo"]') ||
+      qsDeep('.landing-window') ||
+      qsDeep('[data-testid="startup"]')
     );
     result.hasServiceWorker = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
     result.storageMarkers = [];
@@ -304,8 +410,8 @@ function buildDiscoveryScript() {
 
     // ── App loaded check ──
     result.appLoaded = !!(
-      document.querySelector('#app') ||
-      document.querySelector('[id="app"]')
+      qsDeep('#app') ||
+      qsDeep('[id="app"]')
     );
     result.bodyChildCount = document.body ? document.body.children.length : 0;
 
@@ -314,11 +420,11 @@ function buildDiscoveryScript() {
       try {
         var firstItem;
         if (result.chatItemsMethod === 'role-container-children') {
-          var cont = document.querySelector('[role="list"], [role="listbox"], [role="grid"]');
+          var cont = qsDeep('[role="list"], [role="listbox"], [role="grid"]');
           firstItem = cont?.children[0];
         } else if (result.chatItemsMethod === 'span-title-heuristic') {
-          firstItem = document.querySelector('span[title]')?.closest('[tabindex]') ||
-            document.querySelector('span[title]')?.parentElement?.parentElement;
+          firstItem = qsDeep('span[title]')?.closest('[tabindex]') ||
+            qsDeep('span[title]')?.parentElement?.parentElement;
         } else {
           var selectorMap = {
             'cell-frame': '[data-testid="cell-frame-container"]',
@@ -328,7 +434,7 @@ function buildDiscoveryScript() {
             'role-row': '[role="row"]',
             'tabindex-row': '[tabindex="-1"][role="row"]',
           };
-          firstItem = document.querySelector(selectorMap[result.chatItemsMethod]);
+          firstItem = qsDeep(selectorMap[result.chatItemsMethod]);
         }
         if (firstItem) {
           result.firstChatHTML = firstItem.outerHTML.slice(0, 2000);
@@ -340,13 +446,59 @@ function buildDiscoveryScript() {
 
     // ── Collect data-testid inventory ──
     var testIds = new Set();
-    document.querySelectorAll('[data-testid]').forEach(function(e) {
+    qsaDeep('[data-testid]').forEach(function(e) {
       testIds.add(e.getAttribute('data-testid'));
     });
     result.dataTestIds = Array.from(testIds).slice(0, 80);
 
     return result;
   };
+}
+
+async function runDiscoveryScript(tabId) {
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: buildDiscoveryScript(),
+  });
+  return results?.[0]?.result || null;
+}
+
+function hasRenderableWaUi(result) {
+  if (!result) return false;
+  if (result.sidebar) return true;
+  if ((result.chatItems || 0) > 0) return true;
+  if (result.hasComposeBox || (result.textboxCount || 0) > 0) return true;
+  return Array.isArray(result.dataTestIds) && result.dataTestIds.length >= 6;
+}
+
+function hasShellSignals(result) {
+  if (!result) return false;
+  return (
+    Array.isArray(result.dataTestIds) && result.dataTestIds.length >= 12 && result.bodyChildCount >= 10
+  ) || (
+    result.hasServiceWorker && result.bodyChildCount >= 10
+  ) || (
+    Array.isArray(result.storageMarkers) && result.storageMarkers.length > 0 && result.bodyChildCount >= 8
+  );
+}
+
+async function waitForRenderableWaUi(tabId, maxAttempts, delayPlan) {
+  var lastResult = null;
+  for (var attempt = 0; attempt < (maxAttempts || 1); attempt++) {
+    if (attempt > 0) {
+      var delay = Array.isArray(delayPlan)
+        ? (delayPlan[Math.min(attempt - 1, delayPlan.length - 1)] || 1200)
+        : (delayPlan || 1200);
+      await sleep(delay);
+    }
+    try {
+      lastResult = await runDiscoveryScript(tabId);
+      if (lastResult && (lastResult.hasQR || hasRenderableWaUi(lastResult))) {
+        return lastResult;
+      }
+    } catch (_) {}
+  }
+  return lastResult;
 }
 
 // ══════════════════════════════════════════════
@@ -370,68 +522,52 @@ function compactDiscovery(result) {
     dataTestIdsCount: Array.isArray(result.dataTestIds) ? result.dataTestIds.length : 0,
     storageMarkers: Array.isArray(result.storageMarkers) ? result.storageMarkers : [],
     hasServiceWorker: !!result.hasServiceWorker,
+    visibilityState: result.visibilityState || null,
+    hidden: !!result.hidden,
+    shadowRootCount: Number(result.shadowRootCount || 0),
   };
 }
 
 async function verifySession() {
   try {
-    var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-    var tabId;
-    if (tabs.length > 0) {
-      tabId = tabs[0].id;
-      if (tabs[0].status !== "complete") await waitForLoad(tabId, 8000);
+    var existing = await getBestExistingWaTab();
+    var waTab;
+    if (existing) {
+      waTab = existing;
+      if (waTab.status !== "complete") await waitForLoad(waTab.id, 8000);
     } else {
       var r = await getOrCreateWaTab();
-      tabId = r.tab.id;
+      waTab = r.tab;
       await sleep(3000);
     }
 
-    var lastDiagnostic = null;
+    var result = await waitForRenderableWaUi(waTab.id, 3, [1200, 1800]);
+    var shouldHydrateVisible = !waTab.active && (!result || (!result.hasQR && !hasRenderableWaUi(result) && (hasShellSignals(result) || result.appLoaded)));
 
-    for (var attempt = 0; attempt < 6; attempt++) {
-      if (attempt > 0) await sleep(attempt < 2 ? 1800 : 2800);
-      try {
-        var results = await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          func: buildDiscoveryScript(),
-        });
-        var result = results?.[0]?.result;
-        if (!result) continue;
+    if (shouldHydrateVisible) {
+      result = await withTemporarilyVisibleTab(waTab.id, async function() {
+        return await waitForRenderableWaUi(waTab.id, 4, [900, 1400, 2000]);
+      }) || result;
+    }
 
-        lastDiagnostic = compactDiscovery(result);
-
-        if (result.hasQR) {
-          return { success: true, authenticated: false, reason: "qr_required", diagnostic: lastDiagnostic };
-        }
-
-        if (result.hasLoadingScreen || !result.appLoaded || result.bodyChildCount < 3) {
-          continue;
-        }
-
-        if (result.sidebar) {
-          return { success: true, authenticated: true, method: "sidebar:" + (result.sidebarSelector || "discovered"), diagnostic: lastDiagnostic };
-        }
-
-        if ((result.chatItems || 0) > 0) {
-          return { success: true, authenticated: true, method: "chat-items:" + (result.chatItemsMethod || "discovered"), diagnostic: lastDiagnostic };
-        }
-
-        if (result.hasComposeBox || (result.textboxCount || 0) > 0) {
-          return { success: true, authenticated: true, method: result.hasComposeBox ? "compose-box" : "textbox", diagnostic: lastDiagnostic };
-        }
-
-        var hasShellSignals = (
-          Array.isArray(result.dataTestIds) && result.dataTestIds.length >= 12 && result.bodyChildCount >= 10
-        ) || (
-          result.hasServiceWorker && result.bodyChildCount >= 10
-        ) || (
-          Array.isArray(result.storageMarkers) && result.storageMarkers.length > 0 && result.bodyChildCount >= 8
-        );
-
-        if (hasShellSignals && attempt >= 1) {
-          return { success: true, authenticated: true, method: "app-shell-fallback", diagnostic: lastDiagnostic };
-        }
-      } catch (_) {}
+    var lastDiagnostic = compactDiscovery(result);
+    if (result?.hasQR) {
+      return { success: true, authenticated: false, reason: "qr_required", diagnostic: lastDiagnostic };
+    }
+    if (result && (result.hasLoadingScreen || !result.appLoaded || result.bodyChildCount < 3)) {
+      return { success: true, authenticated: false, reason: "loading", diagnostic: lastDiagnostic };
+    }
+    if (result?.sidebar) {
+      return { success: true, authenticated: true, method: "sidebar:" + (result.sidebarSelector || "discovered"), diagnostic: lastDiagnostic };
+    }
+    if ((result?.chatItems || 0) > 0) {
+      return { success: true, authenticated: true, method: "chat-items:" + (result.chatItemsMethod || "discovered"), diagnostic: lastDiagnostic };
+    }
+    if (result?.hasComposeBox || (result?.textboxCount || 0) > 0) {
+      return { success: true, authenticated: true, method: result.hasComposeBox ? "compose-box" : "textbox", diagnostic: lastDiagnostic };
+    }
+    if (hasShellSignals(result)) {
+      return { success: true, authenticated: true, method: "app-shell-fallback", diagnostic: lastDiagnostic };
     }
     return { success: true, authenticated: false, reason: "unknown_state", diagnostic: lastDiagnostic };
   } catch (err) {
@@ -452,10 +588,74 @@ async function readUnreadDOM(tabId) {
     func: function(schema) {
       var VERIFY_COUNT = 5;
 
+      function scanShadowRoots(root, roots, seen) {
+        try {
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+          while (walker.nextNode()) {
+            var el = walker.currentNode;
+            if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
+              seen.add(el.shadowRoot);
+              roots.push(el.shadowRoot);
+              scanShadowRoots(el.shadowRoot, roots, seen);
+            }
+          }
+        } catch (_) {}
+      }
+      var globalRoots = null;
+      function getGlobalRoots() {
+        if (globalRoots) return globalRoots;
+        var roots = [document];
+        var seen = new Set([document]);
+        scanShadowRoots(document, roots, seen);
+        globalRoots = roots;
+        return roots;
+      }
+      function getNestedRoots(root) {
+        var roots = [root];
+        var seen = new Set([root]);
+        scanShadowRoots(root, roots, seen);
+        return roots;
+      }
+      function queryAllFromRoots(roots, sel) {
+        var out = [];
+        var seen = new Set();
+        for (var root of roots) {
+          try {
+            root.querySelectorAll(sel).forEach(function(el) {
+              if (!seen.has(el)) {
+                seen.add(el);
+                out.push(el);
+              }
+            });
+          } catch (_) {}
+        }
+        return out;
+      }
+      function qsaDeep(sel) { return queryAllFromRoots(getGlobalRoots(), sel); }
+      function qsDeep(sel) {
+        var els = qsaDeep(sel);
+        return els[0] || null;
+      }
+      function qsaWithin(root, sel) { return queryAllFromRoots(getNestedRoots(root), sel); }
+      function qsWithin(root, sel) {
+        var els = qsaWithin(root, sel);
+        return els[0] || null;
+      }
+      function filterVisible(els) {
+        return Array.from(els || []).filter(function(el) {
+          try {
+            var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+            return !rect || rect.width > 0 || rect.height > 0;
+          } catch (_) {
+            return true;
+          }
+        });
+      }
+
       // QR check
-      if (document.querySelector('canvas[aria-label]') ||
-          document.querySelector('[data-testid="qrcode"]') ||
-          document.querySelector('[data-ref]'))
+      if (qsDeep('canvas[aria-label]') ||
+          qsDeep('[data-testid="qrcode"]') ||
+          qsDeep('[data-ref]'))
         return { success: false, error: "QR code visibile - accedi a WhatsApp Web" };
 
       // ── Find chat items using multiple strategies ──
@@ -464,11 +664,11 @@ async function readUnreadDOM(tabId) {
 
       // Strategy 1: Use learned schema
       if (schema && schema.chatItem) {
-        chatItems = document.querySelectorAll(schema.chatItem);
+        chatItems = filterVisible(qsaDeep(schema.chatItem));
         if (chatItems.length > 0) method = "learned:" + schema.chatItem;
       }
       if (chatItems.length === 0 && schema && schema.chatItemAlt) {
-        chatItems = document.querySelectorAll(schema.chatItemAlt);
+        chatItems = filterVisible(qsaDeep(schema.chatItemAlt));
         if (chatItems.length > 0) method = "learned-alt:" + schema.chatItemAlt;
       }
 
@@ -479,7 +679,7 @@ async function readUnreadDOM(tabId) {
           'chatlist-item', 'chat-list-item',
         ];
         for (var tid of testIdPatterns) {
-          chatItems = document.querySelectorAll('[data-testid="' + tid + '"]');
+          chatItems = filterVisible(qsaDeep('[data-testid="' + tid + '"]'));
           if (chatItems.length > 0) { method = "testid:" + tid; break; }
         }
       }
@@ -492,17 +692,18 @@ async function readUnreadDOM(tabId) {
           { sel: '[role="option"]', name: 'option' },
         ];
         for (var rp of rolePatterns) {
-          chatItems = document.querySelectorAll(rp.sel);
+          chatItems = filterVisible(qsaDeep(rp.sel));
           if (chatItems.length >= 3) { method = "role:" + rp.name; break; }
         }
       }
 
       // Strategy 4: Find container with many similar children
       if (chatItems.length === 0) {
-        var containers = document.querySelectorAll('[role="list"], [role="listbox"], [role="grid"], [role="navigation"]');
+        var containers = filterVisible(qsaDeep('[role="list"], [role="listbox"], [role="grid"], [role="navigation"]'));
         for (var cont of containers) {
-          if (cont.children.length >= 3) {
-            chatItems = cont.children;
+          var visibleChildren = filterVisible(Array.from(cont.children || []));
+          if (visibleChildren.length >= 3) {
+            chatItems = visibleChildren;
             method = "container:" + cont.getAttribute("role");
             break;
           }
@@ -511,7 +712,7 @@ async function readUnreadDOM(tabId) {
 
       // Strategy 5: Heuristic — find elements with span[title] inside
       if (chatItems.length === 0) {
-        var allTitled = document.querySelectorAll('span[title]');
+        var allTitled = filterVisible(qsaDeep('span[title]'));
         var parentMap = new Map();
         for (var sp of allTitled) {
           // Walk up to find a clickable ancestor
@@ -542,13 +743,13 @@ async function readUnreadDOM(tabId) {
         var count = 0;
 
         // Badge strategy 1: data-testid
-        badge = chat.querySelector('[data-testid="icon-unread-count"]') ||
-          chat.querySelector('[data-testid="unread-count"]');
+        badge = qsWithin(chat, '[data-testid="icon-unread-count"]') ||
+          qsWithin(chat, '[data-testid="unread-count"]');
         if (badge) { count = parseInt(badge.textContent) || 1; }
 
         // Badge strategy 2: aria-label
         if (!badge) {
-          var ariaEls = chat.querySelectorAll('span[aria-label]');
+          var ariaEls = qsaWithin(chat, 'span[aria-label]');
           for (var ae of ariaEls) {
             var label = (ae.getAttribute("aria-label") || "").toLowerCase();
             if (label.includes("unread") || label.includes("non lett") || label.includes("da leggere")) {
@@ -561,7 +762,7 @@ async function readUnreadDOM(tabId) {
 
         // Badge strategy 3: colored circle with number
         if (!badge) {
-          var spans = chat.querySelectorAll('span');
+          var spans = qsaWithin(chat, 'span');
           for (var s of spans) {
             var txt = s.textContent.trim();
             if (txt && /^\d+$/.test(txt) && txt.length <= 4) {
@@ -582,22 +783,22 @@ async function readUnreadDOM(tabId) {
 
         // Find contact name - multi-strategy
         var contactName = "Sconosciuto";
-        var titleEl = chat.querySelector('span[title][dir="auto"]') ||
-          chat.querySelector('span[title]') ||
-          chat.querySelector('[data-testid="cell-frame-title"] span');
+        var titleEl = qsWithin(chat, 'span[title][dir="auto"]') ||
+          qsWithin(chat, 'span[title]') ||
+          qsWithin(chat, '[data-testid="cell-frame-title"] span');
         if (titleEl) {
           contactName = titleEl.getAttribute("title") || titleEl.textContent?.trim() || "Sconosciuto";
         }
 
         // Find last message preview
         var lastMessage = "";
-        var msgEl = chat.querySelector('[data-testid="last-msg-status"]') ||
-          chat.querySelector('[data-testid="cell-frame-secondary"] span[title]') ||
-          chat.querySelector('[data-testid="cell-frame-secondary"] span') ||
-          chat.querySelector('[data-testid="last-msg"] span');
+        var msgEl = qsWithin(chat, '[data-testid="last-msg-status"]') ||
+          qsWithin(chat, '[data-testid="cell-frame-secondary"] span[title]') ||
+          qsWithin(chat, '[data-testid="cell-frame-secondary"] span') ||
+          qsWithin(chat, '[data-testid="last-msg"] span');
         if (!msgEl) {
           // Heuristic: second span[title] or last span with substantial text
-          var allSpans = chat.querySelectorAll('span');
+          var allSpans = qsaWithin(chat, 'span');
           var candidates = [];
           for (var sp2 of allSpans) {
             var t = sp2.textContent?.trim();
@@ -611,12 +812,12 @@ async function readUnreadDOM(tabId) {
 
         // Find timestamp
         var time = new Date().toISOString();
-        var timeEl = chat.querySelector('[data-testid="cell-frame-primary-detail"]') ||
-          chat.querySelector('[data-testid="msg-time"]') ||
-          chat.querySelector('time');
+        var timeEl = qsWithin(chat, '[data-testid="cell-frame-primary-detail"]') ||
+          qsWithin(chat, '[data-testid="msg-time"]') ||
+          qsWithin(chat, 'time');
         if (!timeEl) {
           // Heuristic: small text that looks like time
-          var smallSpans = chat.querySelectorAll('span');
+          var smallSpans = qsaWithin(chat, 'span');
           for (var ss of smallSpans) {
             var st = ss.textContent?.trim();
             if (st && /^\d{1,2}[:.]\d{2}/.test(st)) { timeEl = ss; break; }
@@ -641,70 +842,78 @@ async function readUnreadDOM(tabId) {
 }
 
 // ── AI-powered readUnread ──
+async function executeReadUnreadFlow(tabId) {
+  var discovery = await waitForRenderableWaUi(tabId, 4, [700, 1100, 1600]);
+  if (discovery?.hasQR) {
+    return { success: false, error: "WhatsApp Web non connesso - scansiona il QR code" };
+  }
+
+  var config = await getConfig();
+  if (config.supabaseUrl && config.anonKey) {
+    var sidebarHtml = await grabSidebarHtml(tabId);
+    if (sidebarHtml && sidebarHtml.length > 100) {
+      console.log("[WA] Sending " + sidebarHtml.length + " chars to AI");
+      var aiResult = await callAiExtract(sidebarHtml, "sidebar", config.supabaseUrl, config.anonKey, config.authToken);
+      if (aiResult?.success && aiResult.items?.length > 0) {
+        console.log("[WA] AI extracted " + aiResult.items.length + " chats");
+        return {
+          success: true,
+          messages: aiResult.items.map(function(item) {
+            return {
+              contact: item.contact || "Sconosciuto",
+              lastMessage: item.lastMessage || "",
+              time: item.time || new Date().toISOString(),
+              unreadCount: item.unreadCount || 1,
+            };
+          }),
+          scanned: 0,
+          method: "ai",
+          diagnostic: compactDiscovery(discovery),
+        };
+      }
+      console.log("[WA] AI returned 0 items, falling back to DOM");
+    }
+  }
+
+  console.log("[WA] Using DOM discovery for readUnread");
+  var domResult = await readUnreadDOM(tabId);
+  if (domResult) {
+    domResult.method = domResult.method || "dom";
+    domResult.diagnostic = compactDiscovery(discovery);
+  }
+
+  if (domResult && domResult.messages?.length === 0 && config.supabaseUrl) {
+    console.log("[WA] DOM found 0 items, triggering learnDom...");
+    var learnResult = await learnDomSelectors(tabId);
+    if (learnResult?.success) {
+      var retryResult = await readUnreadDOM(tabId);
+      if (retryResult) {
+        retryResult.method = "dom-after-learn";
+        retryResult.diagnostic = compactDiscovery(discovery);
+      }
+      return retryResult;
+    }
+  }
+
+  return domResult;
+}
+
 async function readUnreadMessages() {
   try {
     var r = await getOrCreateWaTab();
     var tab = r.tab;
     await sleep(r.reused ? 1500 : 5000);
+    var preflight = await runDiscoveryScript(tab.id);
+    var shouldHydrateVisible = !tab.active && (!preflight || (!preflight.hasQR && !hasRenderableWaUi(preflight) && (hasShellSignals(preflight) || preflight.appLoaded)));
 
-    // Login check
-    var loginCheck = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: function() {
-        return !!(document.querySelector('canvas[aria-label]') ||
-          document.querySelector('[data-testid="qrcode"]') ||
-          document.querySelector('[data-ref]'));
-      }
-    });
-    if (loginCheck?.[0]?.result) {
-      return { success: false, error: "WhatsApp Web non connesso - scansiona il QR code" };
+    if (shouldHydrateVisible) {
+      console.log("[WA] Background shell detected, temporarily activating tab for hydration");
+      return await withTemporarilyVisibleTab(tab.id, async function() {
+        return await executeReadUnreadFlow(tab.id);
+      });
     }
 
-    // Try AI extraction first — grab HTML from broadest container
-    var config = await getConfig();
-    if (config.supabaseUrl && config.anonKey) {
-      var sidebarHtml = await grabSidebarHtml(tab.id);
-      if (sidebarHtml && sidebarHtml.length > 100) {
-        console.log("[WA] Sending " + sidebarHtml.length + " chars to AI");
-        var aiResult = await callAiExtract(sidebarHtml, "sidebar", config.supabaseUrl, config.anonKey, config.authToken);
-        if (aiResult?.success && aiResult.items?.length > 0) {
-          console.log("[WA] AI extracted " + aiResult.items.length + " chats");
-          return {
-            success: true,
-            messages: aiResult.items.map(function(item) {
-              return {
-                contact: item.contact || "Sconosciuto",
-                lastMessage: item.lastMessage || "",
-                time: item.time || new Date().toISOString(),
-                unreadCount: item.unreadCount || 1,
-              };
-            }),
-            scanned: 0,
-            method: "ai",
-          };
-        }
-        console.log("[WA] AI returned 0 items, falling back to DOM");
-      }
-    }
-
-    // DOM discovery fallback
-    console.log("[WA] Using DOM discovery for readUnread");
-    var domResult = await readUnreadDOM(tab.id);
-    if (domResult) domResult.method = domResult.method || "dom";
-
-    // If DOM also failed and we have config, try learnDom
-    if (domResult && domResult.messages?.length === 0 && config.supabaseUrl) {
-      console.log("[WA] DOM found 0 items, triggering learnDom...");
-      var learnResult = await learnDomSelectors(tab.id);
-      if (learnResult?.success) {
-        // Retry with learned selectors
-        var retryResult = await readUnreadDOM(tab.id);
-        if (retryResult) retryResult.method = "dom-after-learn";
-        return retryResult;
-      }
-    }
-
-    return domResult;
+    return await executeReadUnreadFlow(tab.id);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -715,6 +924,47 @@ async function grabSidebarHtml(tabId) {
   var results = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     func: function() {
+      function scanShadowRoots(root, roots, seen) {
+        try {
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+          while (walker.nextNode()) {
+            var el = walker.currentNode;
+            if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
+              seen.add(el.shadowRoot);
+              roots.push(el.shadowRoot);
+              scanShadowRoots(el.shadowRoot, roots, seen);
+            }
+          }
+        } catch (_) {}
+      }
+      var rootsCache = null;
+      function getRoots() {
+        if (rootsCache) return rootsCache;
+        var roots = [document];
+        var seen = new Set([document]);
+        scanShadowRoots(document, roots, seen);
+        rootsCache = roots;
+        return roots;
+      }
+      function qsaDeep(sel) {
+        var out = [];
+        var seen = new Set();
+        for (var root of getRoots()) {
+          try {
+            root.querySelectorAll(sel).forEach(function(el) {
+              if (!seen.has(el)) {
+                seen.add(el);
+                out.push(el);
+              }
+            });
+          } catch (_) {}
+        }
+        return out;
+      }
+      function qsDeep(sel) {
+        var els = qsaDeep(sel);
+        return els[0] || null;
+      }
       // Try multiple selectors for the sidebar container
       var candidates = [
         '#pane-side',
@@ -726,12 +976,12 @@ async function grabSidebarHtml(tabId) {
         '[aria-label*="elenco" i]',
       ];
       for (var sel of candidates) {
-        var el = document.querySelector(sel);
+        var el = qsDeep(sel);
         if (el && el.outerHTML.length > 100) return el.outerHTML;
       }
 
       // Fallback: find container with most span[title] descendants
-      var allContainers = document.querySelectorAll('div, nav, section, aside');
+      var allContainers = qsaDeep('div, nav, section, aside');
       var best = null, bestScore = 0;
       for (var cont of allContainers) {
         var titleCount = cont.querySelectorAll('span[title]').length;
@@ -766,11 +1016,52 @@ async function learnDomSelectors(tabId) {
     var results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       func: function() {
+        function scanShadowRoots(root, roots, seen) {
+          try {
+            var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+            while (walker.nextNode()) {
+              var el = walker.currentNode;
+              if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
+                seen.add(el.shadowRoot);
+                roots.push(el.shadowRoot);
+                scanShadowRoots(el.shadowRoot, roots, seen);
+              }
+            }
+          } catch (_) {}
+        }
+        var rootsCache = null;
+        function getRoots() {
+          if (rootsCache) return rootsCache;
+          var roots = [document];
+          var seen = new Set([document]);
+          scanShadowRoots(document, roots, seen);
+          rootsCache = roots;
+          return roots;
+        }
+        function qsaDeep(sel) {
+          var out = [];
+          var seen = new Set();
+          for (var root of getRoots()) {
+            try {
+              root.querySelectorAll(sel).forEach(function(el) {
+                if (!seen.has(el)) {
+                  seen.add(el);
+                  out.push(el);
+                }
+              });
+            } catch (_) {}
+          }
+          return out;
+        }
+        function qsDeep(sel) {
+          var els = qsaDeep(sel);
+          return els[0] || null;
+        }
         var snapshot = { timestamp: Date.now() };
 
         // Collect all data-testid values
         var testIds = [];
-        document.querySelectorAll('[data-testid]').forEach(function(e) {
+        qsaDeep('[data-testid]').forEach(function(e) {
           testIds.push({
             testId: e.getAttribute('data-testid'),
             tag: e.tagName.toLowerCase(),
@@ -782,7 +1073,7 @@ async function learnDomSelectors(tabId) {
 
         // Collect role inventory
         var roles = {};
-        document.querySelectorAll('[role]').forEach(function(e) {
+        qsaDeep('[role]').forEach(function(e) {
           var r = e.getAttribute('role');
           roles[r] = (roles[r] || 0) + 1;
         });
@@ -790,7 +1081,7 @@ async function learnDomSelectors(tabId) {
 
         // Collect aria-labels
         var labels = [];
-        document.querySelectorAll('[aria-label]').forEach(function(e) {
+        qsaDeep('[aria-label]').forEach(function(e) {
           labels.push({
             label: e.getAttribute('aria-label'),
             tag: e.tagName.toLowerCase(),
@@ -800,14 +1091,14 @@ async function learnDomSelectors(tabId) {
         snapshot.ariaLabels = labels.slice(0, 60);
 
         // Sample HTML from key areas
-        var sidebar = document.querySelector('#pane-side') ||
-          document.querySelector('#side') ||
-          document.querySelector('[data-testid="chatlist"]') ||
-          document.querySelector('[role="navigation"]');
+        var sidebar = qsDeep('#pane-side') ||
+          qsDeep('#side') ||
+          qsDeep('[data-testid="chatlist"]') ||
+          qsDeep('[role="navigation"]');
         if (sidebar) snapshot.sidebarSample = sidebar.outerHTML.slice(0, 5000);
 
-        var main = document.querySelector('#main') ||
-          document.querySelector('[data-testid="conversation-panel-messages"]');
+        var main = qsDeep('#main') ||
+          qsDeep('[data-testid="conversation-panel-messages"]');
         if (main) snapshot.mainSample = main.outerHTML.slice(0, 3000);
 
         // If no sidebar found, grab a broad sample
@@ -1238,11 +1529,14 @@ async function diagnosticDom() {
   try {
     var r = await getOrCreateWaTab();
     await sleep(r.reused ? 1000 : 4000);
-    var results = await chrome.scripting.executeScript({
-      target: { tabId: r.tab.id },
-      func: buildDiscoveryScript(),
-    });
-    return results?.[0]?.result || { success: false, error: "no result" };
+    var result = await runDiscoveryScript(r.tab.id);
+    var shouldHydrateVisible = !r.tab.active && (!result || (!result.hasQR && !hasRenderableWaUi(result) && (hasShellSignals(result) || result.appLoaded)));
+    if (shouldHydrateVisible) {
+      result = await withTemporarilyVisibleTab(r.tab.id, async function() {
+        return await waitForRenderableWaUi(r.tab.id, 4, [900, 1400, 2000]);
+      }) || result;
+    }
+    return result ? { success: true, ...result } : { success: false, error: "no result" };
   } catch (e) {
     return { success: false, error: e.message };
   }
@@ -1272,7 +1566,7 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
   if (msg.source !== "wa-content-bridge") return false;
 
   if (msg.action === "ping") {
-    sendResponse({ success: true, version: "4.1-sessionfix" });
+    sendResponse({ success: true, version: "4.2-domfocus" });
     return false;
   }
 
