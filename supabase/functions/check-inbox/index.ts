@@ -1364,8 +1364,40 @@ Deno.serve(async (req) => {
               .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
               .eq("user_id", userId);
 
+            // Auto-enter holding pattern: update lead_status to "contacted" if still "new"
             if (match.source_type === "imported_contact" && match.source_id) {
               await supabase.rpc("increment_contact_interaction", { p_contact_id: match.source_id });
+              // Escalate from "new" to "contacted"
+              await supabase.from("imported_contacts")
+                .update({ lead_status: "contacted" })
+                .eq("id", match.source_id)
+                .eq("lead_status", "new");
+            }
+            if ((match.source_type === "partner" || match.source_type === "partner_contact") && match.partner_id) {
+              // Increment partner interaction count and escalate status
+              await supabase.from("partners")
+                .update({
+                  interaction_count: undefined, // handled below
+                  last_interaction_at: new Date().toISOString(),
+                })
+                .eq("id", match.partner_id);
+              // Use raw SQL-like increment via RPC or direct update
+              const { data: partnerData } = await supabase.from("partners")
+                .select("interaction_count, lead_status")
+                .eq("id", match.partner_id)
+                .single();
+              if (partnerData) {
+                const updates: Record<string, unknown> = {
+                  interaction_count: (partnerData.interaction_count || 0) + 1,
+                  last_interaction_at: new Date().toISOString(),
+                };
+                if (partnerData.lead_status === "new") {
+                  updates.lead_status = "contacted";
+                }
+                await supabase.from("partners")
+                  .update(updates)
+                  .eq("id", match.partner_id);
+              }
             }
           }
 
