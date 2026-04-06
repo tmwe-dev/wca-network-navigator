@@ -573,9 +573,12 @@ function waitForTabLoaded(tabId, timeoutMs = 15000) {
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") {
-    console.log(`[CommHub] v${VERSION} installato`);
-    chrome.sidePanel?.setOptions({ enabled: true }).catch(() => {});
+    console.log(`[CommHub] v${VERSION} installato — Side Panel mode`);
   }
+  // Always ensure side panel opens on icon click
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  chrome.sidePanel.setOptions({ enabled: true }).catch(() => {});
 });
 
-chrome.action.onClicked.addListener(() => {});
+// Ensure side panel behavior is set on startup too
+chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true }).catch(() => {});

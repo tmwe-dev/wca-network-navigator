@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Universal Communication Hub",
-  "version": "4.0.0",
-  "description": "Email, WhatsApp e LinkedIn in un'unica estensione. Invia e ricevi messaggi su tutti i canali.",
+  "version": "5.0.0",
+  "description": "Email, WhatsApp e LinkedIn in un pannello laterale. Invia e ricevi messaggi su tutti i canali.",
   "permissions": [
     "storage",
     "notifications",
@@ -17,7 +17,6 @@
     "https://www.linkedin.com/*"
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
