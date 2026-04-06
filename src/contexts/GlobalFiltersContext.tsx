@@ -75,6 +75,7 @@ interface GlobalFiltersCtxValue {
   setCrmOrigin: (o: Set<string>) => void;
   setCrmQuality: (s: string) => void;
   setCrmChannel: (s: string) => void;
+  setCrmSelectedCountries: (c: Set<string>) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
