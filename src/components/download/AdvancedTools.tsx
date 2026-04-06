@@ -86,7 +86,22 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
       try {
         const { data: partner } = await supabase.from("partners").select("id, website").eq("id", ids[i]).single();
         if (partner?.website) {
-          await supabase.functions.invoke("enrich-partner-website", { body: { partnerId: partner.id, website: partner.website } });
+          let enrichBody: Record<string, any> = { partnerId: partner.id };
+
+          // Try client-side scraping via FireScrape for better quality
+          if (fsAvailable) {
+            try {
+              let websiteUrl = partner.website.trim();
+              if (!websiteUrl.startsWith("http")) websiteUrl = `https://${websiteUrl}`;
+              const scrapeResult = await scrapeUrl(websiteUrl);
+              if (scrapeResult.success && scrapeResult.markdown && scrapeResult.markdown.length > 50) {
+                enrichBody.markdown = scrapeResult.markdown;
+                enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
+              }
+            } catch { /* fallback to server-side fetch */ }
+          }
+
+          await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
           setResults(prev => [...prev, { id: ids[i], success: true }]);
         }
       } catch { setResults(prev => [...prev, { id: ids[i], success: false }]); }
