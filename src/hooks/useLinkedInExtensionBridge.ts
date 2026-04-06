@@ -160,5 +160,5 @@ export function useLinkedInExtensionBridge() {
     [sendMessage]
   );
 
-  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile, ensureAuthenticated };
+  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile, learnDom, ensureAuthenticated };
 }
