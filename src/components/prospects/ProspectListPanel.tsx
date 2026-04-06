@@ -305,6 +305,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
 function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBack: () => void; isDark: boolean }) {
   const th = t(isDark);
+  const navigate = useNavigate();
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["prospect-contacts", prospect.id],
