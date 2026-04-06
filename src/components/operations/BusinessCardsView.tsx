@@ -451,10 +451,10 @@ export function BusinessCardsView() {
                             {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
                             <div className="flex items-center gap-1 flex-shrink-0">
                               {card.email && (
-                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Mail className="w-3 h-3 text-primary/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.email}</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: group.companyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary/60 hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
                               )}
                               {(card.phone || card.mobile) && (
-                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Phone className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: group.companyName, sourceType: "contact", sourceId: card.id }); }} className="hover:scale-110 transition-transform"><MessageCircle className="w-3 h-3 text-emerald-500/60 hover:text-emerald-500" /></button></TooltipTrigger><TooltipContent className="text-[10px]">WhatsApp {card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
                               )}
                             </div>
                           </div>
@@ -472,8 +472,8 @@ export function BusinessCardsView() {
                               <div className="text-sm font-semibold text-foreground">{card.contact_name || "—"}</div>
                               {card.position && <div className="text-xs text-muted-foreground">{card.position}</div>}
                               <div className="flex flex-wrap gap-2 mt-1">
-                                {card.email && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-mono">{card.email}</span>}
-                                {(card.phone || card.mobile) && <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono">{card.mobile || card.phone}</span>}
+                                {card.email && <button onClick={(e) => { e.stopPropagation(); handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: group.companyName }); }} className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-mono hover:bg-primary/20 transition-colors cursor-pointer">{card.email}</button>}
+                                {(card.phone || card.mobile) && <button onClick={(e) => { e.stopPropagation(); handleSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: group.companyName, sourceType: "contact", sourceId: card.id }); }} className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono hover:bg-emerald-500/20 transition-colors cursor-pointer">{card.mobile || card.phone}</button>}
                               </div>
                               {card.event_name && <div className="text-[10px] text-muted-foreground/60 mt-1">📍 {card.event_name}</div>}
                               {card.location && <div className="text-[10px] text-muted-foreground/60">📌 {card.location}</div>}
@@ -495,10 +495,10 @@ export function BusinessCardsView() {
                               {card.position && <div className="text-[10px] text-muted-foreground truncate">{card.position}</div>}
                               <div className="flex items-center gap-1 mt-1">
                                 {card.email && (
-                                  <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Mail className="w-3 h-3 text-primary/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.email}</TooltipContent></Tooltip></TooltipProvider>
+                                  <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: group.companyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary/60 hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
                                 )}
                                 {(card.phone || card.mobile) && (
-                                  <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Phone className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
+                                  <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: group.companyName, sourceType: "contact", sourceId: card.id }); }} className="hover:scale-110 transition-transform"><MessageCircle className="w-3 h-3 text-emerald-500/60 hover:text-emerald-500" /></button></TooltipTrigger><TooltipContent className="text-[10px]">WhatsApp {card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
                                 )}
                               </div>
                               {card.event_name && <div className="text-[9px] text-muted-foreground/60 truncate mt-1">📍 {card.event_name}</div>}
