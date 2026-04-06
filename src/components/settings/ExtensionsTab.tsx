@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Zap, MessageCircle, Linkedin } from "lucide-react";
+import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
 import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 
