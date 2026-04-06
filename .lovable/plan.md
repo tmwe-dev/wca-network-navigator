@@ -1,57 +1,58 @@
 
 
-# Fix: WhatsApp reply from Inbox fails to find contact
+# Redesign chat WhatsApp nella Inbox
 
-## Root Cause
+## Problemi attuali identificati
 
-When you reply from the inbox, the system passes the **contact display name** (e.g., "Papa Ernesto") as the `phone` parameter to `sendWhatsApp`. The extension then:
-1. Searches WhatsApp Web's search bar for that name
-2. If no result title matches (case-sensitive `includes`), tries first name only
-3. If still no match, checks for digits in the string — a name has none → "Contatto non trovato"
+1. **Nessuna distinzione visiva mittente/destinatario** — Le bolle mostrano solo il testo e l'orario. Non c'è label "Tu" sui messaggi outbound né nome del contatto sugli inbound
+2. **Bolle troppo semplici** — Manca la "coda" tipica di WhatsApp, mancano le spunte di lettura (✓✓), manca il raggruppamento per data
+3. **Nessun separatore di data** — I messaggi di giorni diversi non sono separati visivamente
+4. **Header chat minimale** — Mostra solo nome e conteggio messaggi, nessuna info aggiuntiva utile
+5. **Messaggi raggruppati per `from_address`/`to_address`** — Se il sistema salva formati diversi per lo stesso contatto (es. numero vs nome), i thread possono frammentarsi
 
-The fallback `extractPhoneFromThread` also fails because `raw_payload` only stores `{contact, lastMessage, unreadCount, time}` — no phone number or JID.
+## Piano di intervento
 
-The cockpit works because it sends actual phone numbers from CRM data.
+### 1. Separatori di data tra i messaggi
+Inserire un divisore orizzontale con la data (es. "Oggi", "Ieri", "3 aprile 2026") tra gruppi di messaggi di giorni diversi, come fa WhatsApp nativo.
 
-## Solution: Two changes
+### 2. Bolle chat migliorate stile WhatsApp
+- **Outbound (Tu)**: verde scuro con angolo in basso a destra, label "Tu" in grassetto sopra il testo, doppia spunta grigia/blu
+- **Inbound**: sfondo bianco/card con angolo in basso a sinistra, nome contatto in grassetto colorato sopra il testo
+- Tail/coda CSS triangolare sulle bolle per il look WhatsApp autentico
+- Orario posizionato in basso a destra inline col testo
 
-### 1. Extension: Check if chat is already open before searching (actions.js)
+### 3. Raggruppamento consecutivo
+Messaggi consecutivi dallo stesso mittente: nascondere il nome e ridurre il margine tra bolle per un effetto "cluster" naturale.
 
-Before doing a search-bar lookup, inject a check that reads the **currently open chat header** in WhatsApp Web. If the header name matches the contact (case-insensitive, partial match), skip the search entirely and go straight to typing in the compose box.
+### 4. Indicatori di stato messaggio
+- Outbound: mostrare icona ✓ (inviato) o ✓✓ (letto, se `read_at` presente)
+- Timestamp più leggibile
 
-This covers the main use case: the user is already viewing the chat in WhatsApp Web.
+### 5. Header chat arricchito
+- Mostrare telefono se disponibile (estratto da `raw_payload`)
+- Status "online/ultimo accesso" se presente
+- Conteggio messaggi non letti nel thread
 
+### 6. Empty body handling
+- Messaggi senza `body_text`: mostrare "(📎 media)" con icona invece di "(media)" in testo piatto
+
+## File da modificare
+
+- **`src/components/outreach/WhatsAppInboxView.tsx`** — Refactor della sezione messaggi (righe 458-484): aggiungere date separators, redesign bolle, clustering, status indicators. Migliorare header chat (righe 438-456).
+
+## Dettagli tecnici
+
+Separatori data:
 ```text
-sendWhatsApp flow (updated):
-  1. Check current chat header → matches contact? → skip search, type directly
-  2. Search bar lookup by full name
-  3. Search bar lookup by first name only
-  4. If has ≥5 digits → URL fallback
-  5. Otherwise → "Contatto non trovato"
+messages.reduce → gruppi per giorno (format "yyyy-MM-dd")
+→ render: DateSeparator + bolle del giorno
 ```
 
-### 2. Inbox view: Improve name matching tolerance (WhatsAppInboxView.tsx)
-
-Before calling `sendWhatsApp`, normalize the contact name:
-- Trim whitespace
-- Remove emoji and special Unicode characters that might interfere with search matching
-
-This is a minor improvement but helps with contacts like "Polly 💃".
-
-## Files to modify
-
-- **`public/whatsapp-extension/actions.js`** — Add "current chat header check" at the start of the injected script, before the `openChat` call. Read the header from `[data-testid="conversation-info-header-chat-title"]` or `#main header span[title]`, compare with contact name (lowercase, trimmed). If match → proceed directly to compose box.
-
-- **`src/components/outreach/WhatsAppInboxView.tsx`** — Normalize `activeTab` before passing to `sendWhatsApp`: strip emoji, trim. Minor change.
-
-## Technical detail
-
-The header check in the extension script (pseudocode):
+Bolle con tail CSS (pseudo-elemento `::before`):
 ```text
-headerTitle = qsDeep('#main header span[title]')?.title
-if headerTitle and headerTitle.toLowerCase().includes(contact.toLowerCase()):
-  skip search, go straight to compose box
+outbound: triangolo bianco-verde in basso a destra
+inbound: triangolo grigio in basso a sinistra
 ```
 
-This is the most impactful fix because the user is typically already in the right chat on WhatsApp Web when replying from the inbox.
+Clustering: confronto `direction` del messaggio precedente → se uguale, margine ridotto e nessun nome.
 
