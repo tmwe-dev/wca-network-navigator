@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from "react";
+import { resolveCountryCode } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -162,6 +163,27 @@ function countryFlag(code: string | null | undefined): string {
   } catch { return ""; }
 }
 
+/* ═══ Resolve country from card data (partner → raw_data → location) ═══ */
+function getCardCountryCode(card: BusinessCardWithPartner): string | null {
+  if (card.partner?.country_code) return card.partner.country_code;
+  const rd = card.raw_data as any;
+  if (rd?.country_code) return rd.country_code;
+  if (rd?.country) {
+    const resolved = resolveCountryCode(rd.country);
+    if (resolved) return resolved;
+  }
+  if (card.location) {
+    const resolved = resolveCountryCode(card.location);
+    if (resolved) return resolved;
+    const parts = card.location.split(",").map(s => s.trim());
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const r = resolveCountryCode(parts[i]);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
 /* ═══ Status badge ═══ */
 const STATUS_COLORS: Record<string, string> = {
   matched: "bg-emerald-500/15 text-emerald-400",
@@ -195,7 +217,8 @@ function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: 
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const accent = getCardOriginClasses(card);
-  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const cardCountry = getCardCountryCode(card);
+  const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
   const city = card.partner?.enrichment_data?.city || card.location || "";
 
@@ -253,7 +276,8 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
   const accent = getCardOriginClasses(card);
-  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const cardCountry = getCardCountryCode(card);
+  const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
 
   return (
@@ -305,7 +329,8 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
   const accent = getCardOriginClasses(card);
-  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const cardCountry = getCardCountryCode(card);
+  const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
 
   return (
@@ -900,12 +925,14 @@ export default function BusinessCardsHub() {
 
         {/* Right detail panel */}
         {showPanel && detailCard && (
-          <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
+          <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 shrink-0">
               <span className="text-xs font-medium text-muted-foreground">Dettaglio</span>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCard(null)}>✕</Button>
             </div>
-            <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
+            </div>
           </div>
         )}
       </div>
