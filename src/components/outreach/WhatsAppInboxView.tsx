@@ -183,8 +183,14 @@ export function WhatsAppInboxView() {
     setIsSending(true);
     setReplyText("");
     try {
+      // Normalize contact name: strip emoji and special chars
+      const normalizedContact = activeTab
+        .replace(/[\u{1F600}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '')
+        .trim();
+      const contactToSend = normalizedContact || activeTab.trim();
+
       // 1. Try sending by contact name (search bar match)
-      let result = await sendWhatsApp(activeTab, text);
+      let result = await sendWhatsApp(contactToSend, text);
 
       // 2. If failed, retry with phone number extracted from thread
       if (!result.success && activeThread) {
