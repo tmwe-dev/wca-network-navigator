@@ -113,6 +113,7 @@ const defaults: GlobalFilterState = {
   crmQuality: "all",
   crmChannel: "all",
   crmSelectedCountries: new Set<string>(),
+  crmActiveTab: "contatti",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
