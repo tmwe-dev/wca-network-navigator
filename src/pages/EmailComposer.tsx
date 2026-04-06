@@ -32,7 +32,30 @@ interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
   const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = useMission();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [manualEmail, setManualEmail] = useState("");
+
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.prefilledRecipient) {
+      const r = state.prefilledRecipient;
+      addRecipient({
+        partnerId: r.partnerId || "",
+        companyName: r.company || r.companyName || "",
+        companyAlias: r.companyAlias,
+        contactId: r.contactId,
+        contactName: r.name || r.contactName || "",
+        contactAlias: r.contactAlias,
+        email: r.email || null,
+        city: r.city || "",
+        countryName: r.countryName || "",
+        countryCode: r.countryCode,
+        isEnriched: false,
+      });
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []);
 
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
