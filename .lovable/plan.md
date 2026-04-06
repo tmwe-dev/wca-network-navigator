@@ -1,134 +1,51 @@
 
 
-# Analisi Sidebar + Piano Centro di Comando Header
+# Matching manuale BCA + Bordo colore per origine
 
-## PARTE 1: Stato attuale delle Sidebar
+## 1. Matching manuale per biglietti "no match"
 
-### Sidebar SINISTRA (FiltersDrawer) — per sezione
+Nella card di dettaglio di un biglietto con `match_status === "unmatched"` (pannello destro di BusinessCardsHub), aggiungere un blocco "Cerca partner":
 
-```text
-SEZIONE              FILTRI PRESENTI
-─────────────────────────────────────────────────────────
-Cockpit              Cerca, Ordina, Origine, Paese, Canale, Qualità, Stato lead
-Attività             Cerca, Stato, Priorità, Ordina
-Workspace            Cerca, Stato email, Contatti
-In Uscita            Cerca, Stato coda
-Circuito             Cerca, Fase, Ordina
-Email Inbox          Cerca, Stato, Categoria, Ordina
-WhatsApp Inbox       Cerca, Stato, Ordina
-LinkedIn Inbox       Cerca, Stato, Ordina
-Network              Cerca, Paesi (checkbox), Qualità, Solo directory
-CRM                  Cerca (inline), Paesi (checkbox), Raggruppa+Origine, Ordina, Stato+Circuito, Canale+Qualità
-Agenda               Cerca, Tipo, Priorità, Ordina
-Email Composer       Rubrica contatti
-Altre pagine         Nessun filtro (fallback vuoto)
-```
+- Input di ricerca che esegue una query fuzzy su `partners` (via `ilike` su `company_name` e `company_alias`)
+- Risultati ordinati per **paese, citta, nome**
+- L'utente clicca sul partner corretto per confermarlo
+- Al click: `updateBusinessCard({ id, matched_partner_id: partner.id, match_status: "matched", match_confidence: 100 })`
+- Se nessun risultato va bene, l'utente lascia il biglietto come "unmatched"
 
-### Sidebar DESTRA (MissionDrawer) — per sezione
+Nessuna estensione PostgreSQL necessaria — si usa `ilike('%termine%')` lato client con una query Supabase standard.
 
-```text
-SEZIONE              CONTENUTO
-─────────────────────────────────────────────────────────
-SEMPRE               AI Rapida (input + risposta), Piano Lavori (contatori attività)
-Outreach (tutte)     Presets, Quality selector, Goal, Proposta, Docs, Link, Destinatari
-Network              Azioni Network: Sync WCA, Deep Search, Alias batch, Export
-CRM                  Azioni CRM: Deep Search, LinkedIn, → Cockpit, Export
-Settings             Strumenti: Avvia batch, Export
-Altre                Solo AI + Piano Lavori + Destinatari
-```
+## 2. Bordo sinistro colorato per origine nelle card BCA
 
-### Header attuale (ConnectionStatusBar)
+Applicare lo stesso pattern del Cockpit (`originAccent`) alle card del BusinessCardsHub. Ogni card avrà un bordo sinistro di 3px con gradiente colore basato sull'origine:
 
-```text
-[Menu] [CRM↔Network switch] [ActiveProcess] [⚡ 3/4 attivi ●●●○] [coda outreach]  ...  [Operatore] [Test] [+Contatto] [Sync WCA] [AI ⌘J]
-```
+- **WCA** (matched con partner WCA): `from-chart-1/60` (blu/viola)
+- **BCA** (biglietto da visita senza match): `from-amber-500/60` (ambra)
+- **Import** (importati da file): `from-chart-3/60` (verde acqua)
+- **Manual** (inseriti manualmente): `from-emerald-500/60` (verde)
 
-Mostra: LinkedIn, WhatsApp, Partner Connect, AI — solo pallini verde/rosso. Nessun contatore messaggi, nessun indicatore circuito, nessun badge notifiche.
+La logica determina l'origine dal `match_status`:
+- `matched` + `partner.id` presente → WCA
+- `unmatched` o `pending` → BCA
 
-## PARTE 2: Problemi identificati
+Si aggiunge il `div` con classe `absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l` a tutte e 3 le view (CompactRow, CardView, ExpandedView), più una sfumatura di colore leggera nel background della riga superiore della card.
 
-1. **Incoerenze tra sezioni della FilterDrawer**:
-   - WhatsApp/LinkedIn/Email inbox hanno filtri quasi identici ma duplicati 3 volte
-   - Cockpit ha "Stato lead" ma usa `cockpitStatus`, CRM usa `leadStatus` — stessi valori, variabili diverse
-   - Cerca usa `search` in alcune sezioni, `sortingSearch` in altre, `networkSearch` in Network
-   - Ordina usa `sortBy` in alcune, `emailSort` in Email, `networkSort` in Network
+## 3. Stessa logica nel CRM (CompactContactCard)
 
-2. **MissionDrawer poco contestuale**:
-   - AI Rapida e Piano Lavori sono sempre visibili ma duplicano IntelliFlow
-   - Azioni Network/CRM sono bottoni che emettono custom events — non danno feedback
-   - Destinatari sono sempre visibili anche dove non servono (Agenda, Settings)
+Le card dei contatti importati (`imported_contacts`) avranno il bordo sinistro basato sul campo `origin`:
+- `wca` → chart-1
+- `import` → chart-3
+- `bca` → amber-500
+- `manual` → emerald-500
+- `report_aziende` → chart-4
 
-3. **Header manca informazioni operative critiche**:
-   - Nessun contatore messaggi WhatsApp non letti
-   - Nessun contatore email in arrivo
-   - Nessun badge contatti nel circuito di attesa
-   - Nessun indicatore sync in corso (WCA, email)
-   - I tasti Sync WCA, Test, + Contatto sono sparsi senza logica
+Identico al Cockpit.
 
-## PARTE 3: Piano di allineamento
-
-### A. Unificare variabili di filtro nel GlobalFiltersContext
-
-Ridurre la frammentazione:
-- `search` / `sortingSearch` / `networkSearch` → ognuno resta specifico per contesto (necessario per non interferire tra sezioni) ma il **pattern** nel drawer deve essere identico
-- Estrarre i 3 inbox (Email/WA/LinkedIn) in un componente `InboxFiltersSection` condiviso dato che hanno filtri identici
-
-### B. Ristrutturare MissionDrawer
-
-- Rimuovere AI Rapida (c'è già IntelliFlow ⌘J)
-- Piano Lavori → spostare nell'header come badge (contatore attività pendenti)
-- Destinatari → visibili solo in contesti Outreach/Email Composer
-- Azioni contestuali → mantenere ma raggruppare meglio
-
-### C. Centro di Comando Header (la parte più importante)
-
-Trasformare la `ConnectionStatusBar` in un **Command Center** compatto con:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ [≡] [Area switch]  [▶ Sync ↻]  [📊 Dashboard rapida]  ... [+] [AI] │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Dove **Dashboard rapida** è un cluster di indicatori cliccabili:
-
-```text
-┌──────────────────────────────────────────────────────┐
-│ ⚡ 3/4  │ 📧 12  │ 💬 5  │ 🔗 2  │ ✈️ 38  │ 📋 3  │
-│ attivi  │ email  │  WA   │  LI   │circuito│ to-do │
-└──────────────────────────────────────────────────────┘
-```
-
-Ogni indicatore:
-- **⚡ Connessioni** (esistente) — click → verifica tutte le connessioni
-- **📧 Email** — contatore email non lette dal check-inbox — click → naviga a Inreach/Email
-- **💬 WhatsApp** — contatore messaggi WA non letti — click → naviga a Inreach/WhatsApp
-- **🔗 LinkedIn** — contatore messaggi LI non letti — click → naviga a Inreach/LinkedIn
-- **✈️ Circuito** — contatori contatti nel holding pattern — click → naviga a Outreach/Circuito
-- **📋 To-do** — attività pendenti — click → naviga a Outreach/Attività
-
-I contatori si aggiornano ogni 60s con query leggere (count only).
-
-Il tasto **Sync** unifica:
-- Sync WCA (click singolo)
-- Download email (se IMAP configurato)
-- Scan WhatsApp (se estensione attiva)
-- Indicatore animato quando qualsiasi sync è in corso
-
-### File coinvolti
+## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/layout/ConnectionStatusBar.tsx` | Espandere in CommandCenterBar con contatori messaggi, circuito, attività |
-| `src/components/layout/AppLayout.tsx` | Aggiornare riferimenti header, rimuovere tasti sparsi (Sync WCA, Test) integrandoli nel CommandCenter |
-| `src/components/global/MissionDrawer.tsx` | Rimuovere AI Rapida, condizionare Destinatari al contesto, compattare |
-| `src/components/global/FiltersDrawer.tsx` | Estrarre `InboxFiltersSection` condiviso per Email/WA/LinkedIn |
-| `src/hooks/useUnreadCounts.ts` | **Nuovo** — hook che query count non letti per email, WA, LinkedIn + circuito + attività pendenti con polling 60s |
+| `src/components/contacts/BusinessCardsHub.tsx` | Aggiungere bordo sinistro colorato alle 3 view mode + pannello ricerca manuale partner nel dettaglio |
+| `src/components/import/CompactContactCard.tsx` | Aggiungere bordo sinistro colorato per origine |
 
-### Priorità di implementazione
-
-1. **`useUnreadCounts`** — hook contatori (prerequisito per tutto)
-2. **CommandCenterBar** — sostituzione ConnectionStatusBar con tutti gli indicatori
-3. **Pulizia MissionDrawer** — rimuovere duplicati
-4. **Unificazione filtri inbox** — refactor cosmetico
+Nessuna migrazione DB, nessun nuovo file.
 
