@@ -1,76 +1,66 @@
 
-# Sincronizzazione attività, invii diretti e agenda
 
-## Problemi identificati
+# Ricostruire AddContactDialog: Ricerca come primo tab + collegare i sistemi esistenti
 
-### 1. Email inviate manualmente non creano attività
-Tre punti di invio email NON creano un record nella tabella `activities` dopo l'invio:
-- **`EmailCanvas.handleSend`** (workspace) — riga 117-131
-- **`useAIDraftActions.handleSend`** (cockpit drafts) — riga 141-163
-- **`SendEmailDialog.handleSend`** (dialog diretto da Network/BCA) — riga 30-51
+## Problemi attuali
 
-Solo `useSortingJobs.useSendJob` crea correttamente l'attività (perché aggiorna un'attività esistente da pending a completed).
-
-### 2. Invii diretti finiscono nelle Campagne
-Il tab "Invii Diretti" (`Sorting.tsx`) mostra solo le activities con `status=pending` e `email_body IS NOT NULL`. Quando l'utente invia un'email direttamente (senza passare dal workspace), non esiste un'activity corrispondente, quindi la lista è vuota. Nel frattempo, se l'email è stata inviata tramite il flusso campagne (`email_campaign_queue`), appare nella tab Campagne — che è corretto. Il problema è che gli invii manuali non hanno una traccia da nessuna parte.
-
-### 3. Agenda non aggiornata con attività del giorno
-`useTodayActivities` filtra solo `status=completed` e `created_at >= oggi`. Ma le email inviate manualmente non generano activity → l'agenda resta vuota. Inoltre, le attività WhatsApp e LinkedIn dovrebbero comparire allo stesso modo.
+1. **Tab "Ricerca" è il terzo** — deve essere il primo, l'utente parte da lì
+2. **Logo search** non usa il sistema reale (`useDeepSearchLocal.scrapeWebsite` che genera favicon da Google), fa solo una google search inutile
+3. **Deep Search** non usa `useDeepSearch()` (il context provider già attivo in AppLayout), chiama direttamente `fsBridge.scrapeUrl` + `enrich-partner-website` senza salvare nulla nel record
+4. **LinkedIn search** usa `fsBridge.googleSearch` direttamente — non usa `useDeepSearchLocal.searchLinkedInForContacts` che ha la logica cascade completa con AI validation
+5. **Google Places** usa `fsBridge.googleSearch` che richiede Partner Connect per navigare Google — funziona solo se l'estensione è installata. Non c'è alternativa
+6. **I campi nome azienda e nome contatto** sono nel tab Ricerca separati da quelli dei tab Azienda/Contatto — l'utente deve inserirli due volte
+7. **Il salvataggio** crea un `imported_contact` ma le ricerche (logo, deep search) non aggiornano quel record
 
 ## Piano di intervento
 
-### A. Creare un hook centralizzato `useTrackActivity`
-**Nuovo file**: `src/hooks/useTrackActivity.ts`
+### Ristrutturare i tab
 
-Hook riutilizzabile che:
-1. Recupera `user_id` da `supabase.auth.getUser()`
-2. Inserisce un record in `activities` con status `completed`, `completed_at = now()`, `sent_at = now()` per le email
-3. Aggiorna `lead_status` del partner/contatto importato (escalation da `new` → `contacted`)
-4. Crea un record in `interactions` o `contact_interactions`
-5. Invalida le query: `today-activities`, `all-activities`, `worked-today`, `sorting-jobs`
+Ordine nuovo: **Ricerca → Azienda → Contatto → Note**
 
-### B. Integrare il tracking in tutti i punti di invio
+Il tab **Ricerca** diventa il punto di partenza con:
+- Campo "Nome Azienda" in alto (collegato allo state `companyName` condiviso)
+- Campo "Nome Contatto" sotto (collegato a `contactName` condiviso)
+- Sotto: i 4 strumenti di ricerca (Google, LinkedIn, Logo, Deep Search)
+- I risultati della ricerca Google auto-compilano i campi degli altri tab
 
-| File | Modifica |
-|------|----------|
-| `src/components/workspace/EmailCanvas.tsx` | Dopo `send-email` OK → chiamare `trackActivity("send_email", ...)` |
-| `src/hooks/useAIDraftActions.ts` | Dopo invio OK → chiamare `trackActivity("send_email", ...)` |
-| `src/components/operations/SendEmailDialog.tsx` | Dopo invio OK → chiamare `trackActivity("send_email", ...)` |
+### Collegare i sistemi reali
 
-Ogni chiamata passa: `activity_type`, `title`, `source_id` (partner_id o contact_id), `source_type`, `email_subject`, `description`.
+| Funzione | Attuale (rotto) | Nuovo (collegato) |
+|----------|----------------|-------------------|
+| **Logo** | `fsBridge.googleSearch("logo")` → non salva nulla | Usa favicon Google `google.com/s2/favicons?domain=...&sz=128` dal website trovato, come fa `useDeepSearchLocal.scrapeWebsite` |
+| **LinkedIn** | `fsBridge.googleSearch("site:linkedin.com")` → salva solo in note | Usa `fsBridge.googleSearch` con cascade queries + AI validation via `aiCall` (stesso pattern di `useDeepSearchLocal.searchLinkedInForContacts`) → salva URL LinkedIn nel campo del record |
+| **Deep Search** | `fsBridge.scrapeUrl` → `enrich-partner-website` → risultato perso | Dopo il salvataggio del contatto, chiama `useDeepSearch().start([id])` con mode "contact" per eseguire il deep search completo del sistema |
+| **Google Search** | `fsBridge.googleSearch` — OK ma risultati mal parsati | Mantiene `fsBridge.googleSearch`, migliora il parsing: estrae indirizzo, telefono, email, website dai risultati e auto-compila i campi |
 
-### C. Separare "Invii Diretti" dalle "Campagne" nella tab In Uscita
+### Flusso utente
 
-**File**: `src/hooks/useSortingJobs.ts`
-- Aggiungere filtro `.is("campaign_batch_id", null)` alla query — così mostra solo attività NON parte di una campagna batch
+1. Apre dialog → tab Ricerca attivo
+2. Scrive nome azienda → clicca "Cerca su Google"
+3. Risultati appaiono → clicca su uno → auto-compila website, indirizzo, città, paese
+4. Logo: se c'è un website, genera automaticamente favicon URL
+5. LinkedIn: cerca con nome contatto + nome azienda
+6. Deep Search: dopo "Salva", opzionalmente avvia deep search completo sul record creato
+7. Può andare nei tab Azienda/Contatto per completare i dati mancanti
 
-Questo garantisce che nel tab "Invii Diretti" si vedano solo le email generate singolarmente (workspace/cockpit), mentre le campagne batch restano nel tab "Campagne".
+### Dettagli implementativi
 
-### D. Mostrare anche le attività completate (invii fatti) nella tab Invii Diretti
+**File**: `src/components/contacts/AddContactDialog.tsx` — riscrittura sostanziale
 
-Attualmente il sorting mostra solo `status=pending`. Aggiungere una sezione "Inviati oggi" sotto la lista pending, con le attività `status=completed` e `sent_at >= oggi` e `campaign_batch_id IS NULL`, in modo che l'utente veda lo storico degli invii diretti della giornata.
-
-### E. Agenda: includere tutte le attività del giorno
-
-**File**: `src/hooks/useTodayActivities.ts`
-- Rimuovere il filtro `.eq("status", "completed")` — mostrare tutte le attività del giorno (pending, in_progress, completed)
-- Aggiungere il campo `status` al mapping per differenziare visivamente
-
-**File**: `src/components/cockpit/TodayActivityCarousel.tsx`
-- Aggiungere icona/badge per lo status (pending = cerchio, completed = check verde)
+- Importare `useDeepSearch` da `useDeepSearchRunner`
+- Tab order: `search` → `company` → `contact` → `notes`, defaultValue `"search"`
+- Nel tab Ricerca: due Input sempre visibili (companyName, contactName) + 4 sezioni strumenti
+- **handlePlacesSearch**: resta con `fsBridge.googleSearch`, ma `applyPlacesResult` estrae meglio i dati (website dal URL, parsing indirizzo)
+- **handleLogoSearch**: se `website` è popolato, calcola `https://www.google.com/s2/favicons?domain=${domain}&sz=128` e mostra preview
+- **handleLinkedInSearch**: cascade queries come in `useDeepSearchLocal`, salva URL in uno state `linkedinUrl` mostrato nel form
+- **handleDeepSearch**: post-salvataggio, chiama `deepSearch.start([savedId], true, "contact")` per i contatti importati
+- **handleSave**: salva con `linkedin_url` e `logo_url` nel record `imported_contacts` (se i campi esistono nella tabella), altrimenti nelle note
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/hooks/useTrackActivity.ts` | Nuovo: hook centralizzato per tracciamento |
-| `src/components/workspace/EmailCanvas.tsx` | Aggiungere tracking post-invio |
-| `src/hooks/useAIDraftActions.ts` | Aggiungere tracking post-invio |
-| `src/components/operations/SendEmailDialog.tsx` | Aggiungere tracking post-invio |
-| `src/hooks/useSortingJobs.ts` | Filtrare `campaign_batch_id IS NULL` |
-| `src/hooks/useTodayActivities.ts` | Rimuovere filtro status=completed, aggiungere status |
-| `src/components/cockpit/TodayActivityCarousel.tsx` | Badge status nelle attività |
+| `src/components/contacts/AddContactDialog.tsx` | Ristrutturazione completa: tab order, collegamento sistemi reali |
 
-## Risultato atteso
+Nessun nuovo file, nessuna migrazione DB necessaria (i campi linkedin e logo vanno nelle note o in campi esistenti della tabella `imported_contacts`).
 
-Ogni email inviata (da qualsiasi punto del sistema) genera automaticamente un'attività completata, aggiorna lo status del contatto/partner, e appare immediatamente nell'agenda del giorno e nella sezione "Invii Diretti". Le campagne batch restano separate nel loro tab dedicato.
