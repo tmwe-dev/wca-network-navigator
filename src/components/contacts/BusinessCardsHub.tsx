@@ -238,11 +238,13 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
 
+  const accent = getCardOriginClasses(card);
   return (
     <div className={cn(
-      "bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
+      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
       isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
     )}>
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       {hasPhoto ? (
         <AspectRatio ratio={16 / 9}>
           <img src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" loading="lazy" />
