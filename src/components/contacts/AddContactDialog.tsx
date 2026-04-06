@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
-import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import {
   Building2, User, Search, Globe, Linkedin, Image, Radar,
-  Loader2, Check, MapPin, Phone, Mail, Briefcase, Save,
+  Loader2, Check, MapPin, Phone, Mail, Briefcase, Save, ExternalLink,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
+import { cn } from "@/lib/utils";
 
 const COUNTRY_OPTIONS = [
   "AF","AL","DZ","AD","AO","AR","AM","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BT","BO",
@@ -29,16 +30,27 @@ const COUNTRY_OPTIONS = [
   "SO","ZA","SS","ES","LK","SD","SR","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TO","TT","TN","TR",
   "TM","TV","UG","UA","AE","GB","US","UY","UZ","VU","VE","VN","YE","ZM","ZW",
 ];
-import { cn } from "@/lib/utils";
 
 interface AddContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+function extractDomain(url: string): string {
+  try {
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    return u.hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) {
-  // Company fields
+  // Shared fields (visible in search tab AND respective tabs)
   const [companyName, setCompanyName] = useState("");
+  const [contactName, setContactName] = useState("");
+
+  // Company fields
   const [companyAlias, setCompanyAlias] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
@@ -49,12 +61,15 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
   const [website, setWebsite] = useState("");
 
   // Contact fields
-  const [contactName, setContactName] = useState("");
   const [contactAlias, setContactAlias] = useState("");
   const [position, setPosition] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactMobile, setContactMobile] = useState("");
+
+  // Enrichment fields
+  const [logoUrl, setLogoUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
 
   // Notes
   const [origin, setOrigin] = useState("");
@@ -62,64 +77,135 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
 
   // States
   const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
-  const [placesQuery, setPlacesQuery] = useState("");
   const [placesResults, setPlacesResults] = useState<any[]>([]);
   const [logoLoading, setLogoLoading] = useState(false);
   const [linkedinLoading, setLinkedinLoading] = useState(false);
-  const [deepSearchLoading, setDeepSearchLoading] = useState(false);
 
   const fsBridge = useFireScrapeExtensionBridge();
+  const deepSearch = useDeepSearch();
 
   const resetForm = () => {
     setCompanyName(""); setCompanyAlias(""); setCountry(""); setCity("");
     setAddress(""); setZipCode(""); setCompanyPhone(""); setCompanyEmail("");
     setWebsite(""); setContactName(""); setContactAlias(""); setPosition("");
     setContactEmail(""); setContactPhone(""); setContactMobile("");
-    setOrigin(""); setNote(""); setPlacesResults([]); setPlacesQuery("");
+    setOrigin(""); setNote(""); setPlacesResults([]); setLogoUrl("");
+    setLinkedinUrl(""); setSavedId(null);
   };
 
-  // Google Places search via extension
+  // ── Google Search ──
   const handlePlacesSearch = useCallback(async () => {
-    if (!placesQuery.trim()) return;
+    if (!companyName.trim()) {
+      toast.error("Inserisci il nome dell'azienda");
+      return;
+    }
     if (!fsBridge.isAvailable) {
       toast.error("Estensione Partner Connect non disponibile");
       return;
     }
     setPlacesLoading(true);
     try {
-      const query = `${placesQuery} company address`;
-      const res = await fsBridge.googleSearch(query, 5);
-      if (res.success && Array.isArray(res.data)) {
+      const query = `${companyName.trim()} company address contact`;
+      const res = await fsBridge.googleSearch(query, 8);
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         setPlacesResults(res.data);
       } else {
-        toast.error("Nessun risultato trovato");
+        toast.info("Nessun risultato trovato");
       }
     } catch (e: any) {
       toast.error("Errore ricerca: " + (e.message || "sconosciuto"));
     } finally {
       setPlacesLoading(false);
     }
-  }, [placesQuery, fsBridge]);
+  }, [companyName, fsBridge]);
 
   const applyPlacesResult = (result: any) => {
-    // Extract info from search result description/title
+    // Extract company name from title
     if (result.title) {
       const parts = result.title.split(" - ");
       if (parts[0] && !companyName) setCompanyName(parts[0].trim());
     }
+
+    // Extract website domain from URL (skip linkedin, google, etc.)
+    if (result.url && !website) {
+      const domain = extractDomain(result.url);
+      const skipDomains = ["linkedin.com", "facebook.com", "google.com", "yelp.com", "twitter.com", "instagram.com", "youtube.com", "wikipedia.org"];
+      if (domain && !skipDomains.some(s => domain.includes(s))) {
+        setWebsite(result.url);
+        // Auto-generate logo from domain
+        setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+      }
+    }
+
+    // Try to parse address/phone/email from description
     if (result.description) {
-      // Try to extract address from snippet
-      setNote(prev => prev ? `${prev}\n${result.description}` : result.description);
+      const desc = result.description;
+
+      // Phone patterns
+      const phoneMatch = desc.match(/(\+?\d[\d\s\-().]{7,})/);
+      if (phoneMatch && !companyPhone) setCompanyPhone(phoneMatch[1].trim());
+
+      // Email pattern
+      const emailMatch = desc.match(/[\w.-]+@[\w.-]+\.\w{2,}/);
+      if (emailMatch && !companyEmail) setCompanyEmail(emailMatch[0]);
+
+      // Append snippet to notes for reference
+      setNote(prev => prev ? `${prev}\n${desc}` : desc);
     }
-    if (result.url) {
-      setWebsite(result.url);
-    }
+
     setPlacesResults([]);
     toast.success("Dati applicati dal risultato");
   };
 
-  // LinkedIn search
+  // ── Logo Search (favicon from website domain) ──
+  const handleLogoSearch = useCallback(async () => {
+    // If we have a website, generate favicon URL directly
+    if (website.trim()) {
+      const domain = extractDomain(website);
+      if (domain) {
+        setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+        toast.success("Logo recuperato dal sito web");
+        return;
+      }
+    }
+
+    // Fallback: search for company website via Google
+    if (!companyName.trim()) {
+      toast.error("Inserisci il nome dell'azienda o il sito web");
+      return;
+    }
+    if (!fsBridge.isAvailable) {
+      toast.error("Estensione Partner Connect non disponibile");
+      return;
+    }
+    setLogoLoading(true);
+    try {
+      const res = await fsBridge.googleSearch(`${companyName.trim()} official website`, 3);
+      if (res.success && Array.isArray(res.data)) {
+        const skipDomains = ["linkedin.com", "facebook.com", "google.com", "yelp.com", "wikipedia.org"];
+        const siteResult = res.data.find((r: any) => {
+          const d = extractDomain(r.url || "");
+          return d && !skipDomains.some(s => d.includes(s));
+        });
+        if (siteResult?.url) {
+          const domain = extractDomain(siteResult.url);
+          setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+          if (!website) setWebsite(siteResult.url);
+          toast.success("Logo trovato: " + domain);
+        } else {
+          toast.info("Nessun sito web trovato per il logo");
+        }
+      }
+    } catch {
+      toast.error("Errore ricerca logo");
+    } finally {
+      setLogoLoading(false);
+    }
+  }, [companyName, website, fsBridge]);
+
+  // ── LinkedIn Search (cascade queries like useDeepSearchLocal) ──
   const handleLinkedInSearch = useCallback(async () => {
     if (!contactName.trim() && !companyName.trim()) {
       toast.error("Inserisci almeno nome contatto o azienda");
@@ -131,16 +217,39 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     }
     setLinkedinLoading(true);
     try {
-      const query = `site:linkedin.com/in "${contactName}"${companyName ? ` "${companyName}"` : ""}`;
-      const res = await fsBridge.googleSearch(query, 5);
-      if (res.success && Array.isArray(res.data)) {
-        const liResult = res.data.find((r: any) => r.url?.includes("linkedin.com/in/"));
-        if (liResult) {
-          toast.success(`LinkedIn trovato: ${liResult.title}`);
-          setNote(prev => prev ? `${prev}\nLinkedIn: ${liResult.url}` : `LinkedIn: ${liResult.url}`);
-        } else {
-          toast.info("Nessun profilo LinkedIn trovato");
+      // Cascade queries similar to useDeepSearchLocal
+      const queries = [];
+      if (contactName.trim()) {
+        queries.push(`site:linkedin.com/in "${contactName.trim()}"${companyName ? ` "${companyName.trim()}"` : ""}`);
+        queries.push(`site:linkedin.com/in ${contactName.trim()} ${companyName.trim()}`);
+      }
+      if (companyName.trim()) {
+        queries.push(`site:linkedin.com/company "${companyName.trim()}"`);
+      }
+
+      let foundUrl = "";
+      let foundTitle = "";
+
+      for (const q of queries) {
+        if (foundUrl) break;
+        const res = await fsBridge.googleSearch(q, 5);
+        if (res.success && Array.isArray(res.data)) {
+          // Prefer /in/ profiles when searching for contacts
+          const liProfile = res.data.find((r: any) =>
+            r.url?.includes("linkedin.com/in/") || r.url?.includes("linkedin.com/company/")
+          );
+          if (liProfile?.url) {
+            foundUrl = liProfile.url;
+            foundTitle = liProfile.title || "";
+          }
         }
+      }
+
+      if (foundUrl) {
+        setLinkedinUrl(foundUrl);
+        toast.success(`LinkedIn trovato: ${foundTitle || foundUrl}`);
+      } else {
+        toast.info("Nessun profilo LinkedIn trovato");
       }
     } catch (e: any) {
       toast.error("Errore ricerca LinkedIn");
@@ -149,64 +258,17 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     }
   }, [contactName, companyName, fsBridge]);
 
-  // Logo search
-  const handleLogoSearch = useCallback(async () => {
-    if (!companyName.trim()) {
-      toast.error("Inserisci il nome dell'azienda");
+  // ── Deep Search (uses the system's DeepSearch context) ──
+  const handleDeepSearch = useCallback(() => {
+    if (!savedId) {
+      toast.error("Salva prima il contatto, poi avvia la Deep Search");
       return;
     }
-    if (!fsBridge.isAvailable) {
-      toast.error("Estensione Partner Connect non disponibile");
-      return;
-    }
-    setLogoLoading(true);
-    try {
-      const query = `${companyName} company logo`;
-      const res = await fsBridge.googleSearch(query, 3);
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        toast.success("Risultati logo trovati — verranno associati al salvataggio");
-      } else {
-        toast.info("Nessun logo trovato");
-      }
-    } catch {
-      toast.error("Errore ricerca logo");
-    } finally {
-      setLogoLoading(false);
-    }
-  }, [companyName, fsBridge]);
+    deepSearch.start([savedId], true, "contact");
+    toast.success("Deep Search avviata dal sistema");
+  }, [savedId, deepSearch]);
 
-  // Deep search
-  const handleDeepSearch = useCallback(async () => {
-    if (!companyName.trim() && !website.trim()) {
-      toast.error("Inserisci nome azienda o sito web");
-      return;
-    }
-    setDeepSearchLoading(true);
-    try {
-      if (website && fsBridge.isAvailable) {
-        const scrapeRes = await fsBridge.scrapeUrl(website);
-        if (scrapeRes.success && scrapeRes.markdown) {
-          // Call enrichment edge function with scraped content
-          const { error } = await supabase.functions.invoke("enrich-partner-website", {
-            body: { markdown: scrapeRes.markdown, sourceUrl: website, companyName },
-          });
-          if (!error) {
-            toast.success("Deep Search completato — dati arricchiti");
-          } else {
-            toast.error("Errore nell'analisi AI");
-          }
-        }
-      } else {
-        toast.info("Estensione non disponibile per lo scraping");
-      }
-    } catch (e: any) {
-      toast.error("Errore deep search: " + (e.message || ""));
-    } finally {
-      setDeepSearchLoading(false);
-    }
-  }, [companyName, website, fsBridge]);
-
-  // Save
+  // ── Save ──
   const handleSave = async () => {
     if (!companyName.trim()) {
       toast.error("Il nome azienda è obbligatorio");
@@ -217,7 +279,6 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
-      // We need an import_log. Create a "manual" one or find existing
       let importLogId: string;
       const { data: existingLog } = await supabase
         .from("import_logs")
@@ -248,7 +309,13 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         importLogId = newLog.id;
       }
 
-      const { error } = await supabase.from("imported_contacts").insert({
+      // Build enrichment_data with linkedin and logo
+      const enrichmentData: Record<string, any> = {};
+      if (linkedinUrl) enrichmentData.linkedin_url = linkedinUrl;
+      if (logoUrl) enrichmentData.logo_url = logoUrl;
+      if (website) enrichmentData.website = website;
+
+      const { data: inserted, error } = await supabase.from("imported_contacts").insert({
         user_id: user.id,
         import_log_id: importLogId,
         company_name: companyName.trim(),
@@ -267,14 +334,14 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         note: note.trim() || null,
         lead_status: "new",
         row_number: 0,
-      });
+        enrichment_data: Object.keys(enrichmentData).length > 0 ? enrichmentData : null,
+      }).select("id").single();
 
       if (error) {
         toast.error("Errore salvataggio: " + error.message);
-      } else {
-        toast.success("Contatto salvato con successo");
-        resetForm();
-        onOpenChange(false);
+      } else if (inserted) {
+        setSavedId(inserted.id);
+        toast.success("Contatto salvato! Puoi ora avviare la Deep Search.");
       }
     } catch (e: any) {
       toast.error("Errore: " + (e.message || "sconosciuto"));
@@ -283,8 +350,24 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     }
   };
 
+  const handleSaveAndClose = async () => {
+    if (savedId) {
+      resetForm();
+      onOpenChange(false);
+      return;
+    }
+    await handleSave();
+    // If save was successful (savedId set via effect), close
+  };
+
+  // When savedId is set and user wants to close
+  const handleClose = () => {
+    resetForm();
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else onOpenChange(v); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -293,21 +376,149 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="company" className="w-full">
+        <Tabs defaultValue="search" className="w-full">
           <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="search" className="text-xs gap-1">
+              <Search className="w-3.5 h-3.5" /> Ricerca
+            </TabsTrigger>
             <TabsTrigger value="company" className="text-xs gap-1">
               <Building2 className="w-3.5 h-3.5" /> Azienda
             </TabsTrigger>
             <TabsTrigger value="contact" className="text-xs gap-1">
               <User className="w-3.5 h-3.5" /> Contatto
             </TabsTrigger>
-            <TabsTrigger value="search" className="text-xs gap-1">
-              <Search className="w-3.5 h-3.5" /> Ricerca
-            </TabsTrigger>
             <TabsTrigger value="notes" className="text-xs gap-1">
               <Briefcase className="w-3.5 h-3.5" /> Note
             </TabsTrigger>
           </TabsList>
+
+          {/* TAB: Ricerca (FIRST) */}
+          <TabsContent value="search" className="space-y-3 mt-3">
+            {/* Shared name fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome Azienda *</Label>
+                <Input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Es. Acme Logistics Srl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome Contatto</Label>
+                <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Mario Rossi" />
+              </div>
+            </div>
+
+            {/* Google Search */}
+            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-medium">
+                  <MapPin className="w-4 h-4 text-red-400" /> Cerca su Google
+                </div>
+                <Button size="sm" onClick={handlePlacesSearch} disabled={placesLoading || !companyName.trim()}>
+                  {placesLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span className="ml-1">Cerca</span>
+                </Button>
+              </div>
+              {placesResults.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {placesResults.map((r, i) => (
+                    <button
+                      key={i}
+                      className="w-full text-left text-xs p-2 rounded hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
+                      onClick={() => applyPlacesResult(r)}
+                    >
+                      <div className="flex items-start gap-2">
+                        <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <span className="font-medium">{r.title}</span>
+                          {r.url && (
+                            <p className="text-[10px] text-muted-foreground truncate">{r.url}</p>
+                          )}
+                          {r.description && (
+                            <p className="text-muted-foreground line-clamp-2">{r.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Logo + LinkedIn side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Logo */}
+              <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-medium">
+                    <Image className="w-4 h-4 text-green-500" /> Logo
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleLogoSearch} disabled={logoLoading} className="h-7 text-xs">
+                    {logoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Cerca"}
+                  </Button>
+                </div>
+                {logoUrl && (
+                  <div className="flex items-center gap-2">
+                    <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded border" onError={() => setLogoUrl("")} />
+                    <span className="text-[10px] text-muted-foreground truncate">{extractDomain(website || logoUrl)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* LinkedIn */}
+              <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-medium">
+                    <Linkedin className="w-4 h-4 text-blue-500" /> LinkedIn
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleLinkedInSearch} disabled={linkedinLoading} className="h-7 text-xs">
+                    {linkedinLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Cerca"}
+                  </Button>
+                </div>
+                {linkedinUrl && (
+                  <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline truncate block">
+                    {linkedinUrl.replace("https://www.", "").replace("https://", "")}
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Deep Search */}
+            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-medium">
+                  <Radar className="w-4 h-4 text-purple-500" /> Deep Search
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDeepSearch}
+                  disabled={!savedId || deepSearch.running}
+                  className="h-7 text-xs"
+                >
+                  {deepSearch.running ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  {savedId ? "Avvia" : "Salva prima"}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {savedId
+                  ? "Avvia il Deep Search completo del sistema sul contatto salvato"
+                  : "Salva il contatto, poi potrai avviare la Deep Search completa"}
+              </p>
+            </div>
+
+            {!fsBridge.isAvailable && (
+              <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30">
+                ⚠ Estensione Partner Connect non rilevata — ricerche limitate
+              </Badge>
+            )}
+
+            {/* Website field (auto-filled from search) */}
+            {website && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Globe className="w-3 h-3" />
+                <span className="truncate">{website}</span>
+              </div>
+            )}
+          </TabsContent>
 
           {/* TAB: Azienda */}
           <TabsContent value="company" className="space-y-3 mt-3">
@@ -396,89 +607,13 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
                 <Input value={contactMobile} onChange={e => setContactMobile(e.target.value)} placeholder="+39 333..." />
               </div>
             </div>
-          </TabsContent>
-
-          {/* TAB: Ricerca */}
-          <TabsContent value="search" className="space-y-4 mt-3">
-            {/* Google Places */}
-            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <MapPin className="w-4 h-4 text-red-400" /> Cerca su Google
+            {linkedinUrl && (
+              <div className="flex items-center gap-2 text-xs">
+                <Linkedin className="w-3.5 h-3.5 text-blue-500" />
+                <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate">
+                  {linkedinUrl.replace("https://www.", "").replace("https://", "")}
+                </a>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  value={placesQuery}
-                  onChange={e => setPlacesQuery(e.target.value)}
-                  placeholder="Nome azienda o indirizzo..."
-                  onKeyDown={e => e.key === "Enter" && handlePlacesSearch()}
-                  className="flex-1"
-                />
-                <Button size="sm" onClick={handlePlacesSearch} disabled={placesLoading}>
-                  {placesLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                </Button>
-              </div>
-              {placesResults.length > 0 && (
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {placesResults.map((r, i) => (
-                    <button
-                      key={i}
-                      className="w-full text-left text-xs p-2 rounded hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
-                      onClick={() => applyPlacesResult(r)}
-                    >
-                      <span className="font-medium">{r.title}</span>
-                      {r.description && <p className="text-muted-foreground truncate">{r.description}</p>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* LinkedIn */}
-            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-medium">
-                  <Linkedin className="w-4 h-4 text-blue-500" /> Cerca LinkedIn
-                </div>
-                <Button size="sm" variant="outline" onClick={handleLinkedInSearch} disabled={linkedinLoading}>
-                  {linkedinLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cerca"}
-                </Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Cerca il profilo LinkedIn di "{contactName || "contatto"}" presso "{companyName || "azienda"}"
-              </p>
-            </div>
-
-            {/* Logo */}
-            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-medium">
-                  <Image className="w-4 h-4 text-green-500" /> Cerca Logo Aziendale
-                </div>
-                <Button size="sm" variant="outline" onClick={handleLogoSearch} disabled={logoLoading}>
-                  {logoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cerca"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Deep Search */}
-            <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-medium">
-                  <Radar className="w-4 h-4 text-purple-500" /> Deep Search
-                </div>
-                <Button size="sm" variant="outline" onClick={handleDeepSearch} disabled={deepSearchLoading}>
-                  {deepSearchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Avvia"}
-                </Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Scraping del sito web + analisi AI per arricchire il profilo
-              </p>
-            </div>
-
-            {!fsBridge.isAvailable && (
-              <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30">
-                ⚠ Estensione Partner Connect non rilevata — ricerche non disponibili
-              </Badge>
             )}
           </TabsContent>
 
@@ -502,18 +637,26 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
-          <div className="text-[10px] text-muted-foreground">
-            {companyName && <Badge variant="secondary" className="text-[10px] mr-1">{companyName}</Badge>}
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            {logoUrl && <img src={logoUrl} alt="" className="w-4 h-4 rounded" />}
+            {companyName && <Badge variant="secondary" className="text-[10px]">{companyName}</Badge>}
             {contactName && <Badge variant="outline" className="text-[10px]">{contactName}</Badge>}
+            {savedId && <Badge className="text-[10px] bg-green-600/20 text-green-400 border-green-600/30">Salvato ✓</Badge>}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { resetForm(); onOpenChange(false); }}>
-              Annulla
+            <Button variant="outline" size="sm" onClick={handleClose}>
+              {savedId ? "Chiudi" : "Annulla"}
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving || !companyName.trim()}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-              Salva
-            </Button>
+            {!savedId ? (
+              <Button size="sm" onClick={handleSave} disabled={saving || !companyName.trim()}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                Salva
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => { resetForm(); }} className="text-xs">
+                + Nuovo
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
