@@ -161,6 +161,9 @@ export function PartnerListPanel({
       if (items.length > 0) {
         const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
         if (error) { toast.error("Errore: " + error.message); return; }
+        // Store for auto-preselection in Cockpit
+        const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
+        addCockpitPreselection(items.map(i => i.source_id));
       }
       toast.success(`${partnerList.length} partner inviati a Cockpit`);
     } else {

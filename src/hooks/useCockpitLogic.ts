@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
@@ -41,6 +41,25 @@ export function useCockpitLogic() {
   }, [allContacts, sourceTab]);
 
   const selection = useSelection(contacts);
+  const preselectionDone = useRef(false);
+
+  // Auto-preselect contacts that were just sent to cockpit from Network/CRM
+  useEffect(() => {
+    if (preselectionDone.current || isLoading || contacts.length === 0) return;
+    preselectionDone.current = true;
+    import("@/lib/cockpitPreselection").then(({ consumeCockpitPreselection }) => {
+      const pendingIds = consumeCockpitPreselection();
+      if (pendingIds.length === 0) return;
+      // Match by sourceId — cockpit contacts use sourceId field
+      const matchingIds = contacts
+        .filter(c => pendingIds.includes(c.sourceId))
+        .map(c => c.id);
+      if (matchingIds.length > 0) {
+        selection.addBatch(matchingIds);
+      }
+    });
+  }, [isLoading, contacts]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();

@@ -151,6 +151,8 @@ export function usePartnerHubActions({
       if (items.length > 0) {
         const { error } = await supabase.from("cockpit_queue").upsert(items, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
         if (error) throw error;
+        const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
+        addCockpitPreselection(items.map(i => i.source_id));
       }
       toast.success(`${partnerList.length} partner inviati a Cockpit`);
       setSelectedIds(new Set());
