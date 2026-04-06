@@ -358,7 +358,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
               <SlidersHorizontal className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-foreground">Filtri & Ordinamenti</h3>
+              <h3 className="text-sm font-bold text-foreground">Filtri</h3>
               <p className="text-[11px] text-muted-foreground">{sectionTitle}</p>
             </div>
             {activeCount > 0 && (

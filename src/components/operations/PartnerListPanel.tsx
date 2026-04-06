@@ -276,9 +276,30 @@ export function PartnerListPanel({
                 <X className="h-2.5 w-2.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}
-            <span className="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
-              Ordine: {currentSortLabel}
-            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer">
+                  <ArrowUpDown className="h-2.5 w-2.5" />
+                  Ordine: {currentSortLabel}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[120px]">
+                {[
+                  { value: "name", label: "Nome" },
+                  { value: "rating", label: "Rating" },
+                  { value: "contacts", label: "Contatti" },
+                ].map(o => (
+                  <DropdownMenuItem
+                    key={o.value}
+                    onClick={() => g.setNetworkSort(o.value)}
+                    className={cn("text-xs", activeSort === o.value && "font-bold text-primary")}
+                  >
+                    {o.label}
+                    {activeSort === o.value && " ✓"}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Reset all filters */}
             {(activeSearch || hasSelectedCountries || activeQuality !== "all" || activeSort !== "name") && (
