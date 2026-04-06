@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
-  DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -14,7 +15,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   MoreVertical, CheckCircle2, StickyNote, CalendarClock,
-  Phone, Users, MoreHorizontal, CalendarIcon,
+  Phone, Users, MoreHorizontal, CalendarIcon, Mail,
+  MessageCircle, Send, Calendar as CalendarIconAlt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +39,7 @@ interface Props {
 }
 
 export function ContactActionMenu({ contact, children }: Props) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -69,7 +72,6 @@ export function ContactActionMenu({ contact, children }: Props) {
       return;
     }
 
-    // Remove from cockpit queue if completed or scheduled
     if (status === "completed" || extra.due_date) {
       await supabase.from("cockpit_queue").delete().eq("id", contact.queueId);
     }
@@ -106,6 +108,27 @@ export function ContactActionMenu({ contact, children }: Props) {
     setScheduleOpen(false);
   };
 
+  const handleSendEmail = () => {
+    navigate("/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: contact.email,
+          name: contact.name,
+          company: contact.company,
+        },
+      },
+    });
+  };
+
+  const handleSendWhatsApp = () => {
+    const phone = contact.phone?.replace(/[^0-9+]/g, "");
+    if (phone) {
+      window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
+    } else {
+      toast.info("Numero di telefono non disponibile");
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -116,30 +139,55 @@ export function ContactActionMenu({ contact, children }: Props) {
             </Button>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-52">
+          {/* Communication group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+            Comunicazione
+          </DropdownMenuLabel>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendEmail} disabled={!contact.email}>
+            <Mail className="w-4 h-4 text-primary" />
+            Invia email ora
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendWhatsApp} disabled={!contact.phone}>
+            <MessageCircle className="w-4 h-4 text-emerald-500" />
+            Invia WhatsApp
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Organization group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+            Organizza
+          </DropdownMenuLabel>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setNoteOpen(true)}>
+            <StickyNote className="w-4 h-4 text-amber-500" />
+            Aggiungi nota
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setScheduleOpen(true)}>
+            <CalendarClock className="w-4 h-4 text-blue-500" />
+            Programma contatto
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Completion group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+            Completa
+          </DropdownMenuLabel>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="gap-2 text-xs">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+            <DropdownMenuSubTrigger className="gap-2.5 text-xs px-3 py-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               Segna come svolta
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               {DONE_TYPES.map(dt => (
-                <DropdownMenuItem key={dt.type} className="gap-2 text-xs" onClick={() => handleMarkDone(dt.type)}>
-                  <dt.icon className="w-3.5 h-3.5" />
+                <DropdownMenuItem key={dt.type} className="gap-2.5 text-xs px-3 py-2" onClick={() => handleMarkDone(dt.type)}>
+                  <dt.icon className="w-4 h-4" />
                   {dt.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setNoteOpen(true)}>
-            <StickyNote className="w-3.5 h-3.5 text-amber-500" />
-            Aggiungi nota
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setScheduleOpen(true)}>
-            <CalendarClock className="w-3.5 h-3.5 text-blue-500" />
-            Programma
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -166,7 +214,7 @@ export function ContactActionMenu({ contact, children }: Props) {
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-sm">Programma — {contact.name}</DialogTitle>
+            <DialogTitle className="text-sm">Programma contatto — {contact.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Popover>
