@@ -17,6 +17,7 @@ const PAGE_SIZE = 50;
 export interface PaginatedFilters extends PartnerFilters {
   quality?: string;
   hideHolding?: boolean;
+  sort?: string;
 }
 
 export function usePartnersPaginated(filters?: PaginatedFilters) {
