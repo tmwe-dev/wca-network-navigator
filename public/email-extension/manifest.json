@@ -1,14 +1,20 @@
 {
   "manifest_version": 3,
   "name": "Universal Communication Hub",
-  "version": "3.0.0",
-  "description": "Email, WhatsApp e LinkedIn in un'unica estensione. Download locale, sync cloud, agente AI integrato.",
+  "version": "4.0.0",
+  "description": "Email, WhatsApp e LinkedIn in un'unica estensione. Invia e ricevi messaggi su tutti i canali.",
   "permissions": [
     "storage",
     "notifications",
     "alarms",
     "downloads",
-    "sidePanel"
+    "sidePanel",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://www.linkedin.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
