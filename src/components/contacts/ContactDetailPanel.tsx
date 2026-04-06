@@ -241,29 +241,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       </Section>
 
       {/* Quick actions — icon buttons */}
-      <div className="flex flex-wrap gap-1.5">
-        {c.email && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
-            <a href={`mailto:${c.email}`}>
-              <Mail className="w-3.5 h-3.5 text-violet-400" />
-              <span className="truncate max-w-[180px]">{c.email}</span>
-            </a>
-          </Button>
-        )}
-        {whatsappUrl && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10" asChild>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-            </a>
-          </Button>
-        )}
-        {(c.phone || c.mobile) && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
-            <a href={`tel:${c.phone || c.mobile}`}>
-              <Phone className="w-3.5 h-3.5 text-violet-400" /> {c.phone || c.mobile}
-            </a>
-          </Button>
-        )}
+      <QuickActions contact={c} />
         {needsAlias && (
           <Button
             variant="outline"

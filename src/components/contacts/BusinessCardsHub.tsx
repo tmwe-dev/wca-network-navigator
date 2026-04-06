@@ -320,6 +320,9 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
 
 /* ═══ Detail Side Panel ═══ */
 function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
+  const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
+  const waPhone = card.mobile || card.phone;
+
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
       {/* Header */}
@@ -351,23 +354,64 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
         </div>
       )}
 
+      {/* Quick Actions */}
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
+          <Send className="w-3 h-3" /> Azioni rapide
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {card.email && (
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start"
+              onClick={() => handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: card.company_name || undefined, partnerId: card.partner?.id })}
+            >
+              <Mail className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+              <span className="truncate">Email</span>
+            </Button>
+          )}
+          {waPhone && (
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs gap-1.5 border-emerald-500/15 hover:bg-emerald-500/10 justify-start"
+              disabled={waSending === card.id || !waAvailable}
+              onClick={() => handleSendWhatsApp({
+                phone: waPhone, contactName: card.contact_name || undefined, companyName: card.company_name || undefined,
+                sourceType: "contact", sourceId: card.id, partnerId: card.partner?.id || undefined,
+              })}
+            >
+              {waSending === card.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+              <span className="truncate">WhatsApp</span>
+            </Button>
+          )}
+          {(card.phone || card.mobile) && (
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start" asChild>
+              <a href={`tel:${card.phone || card.mobile}`}>
+                <Phone className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                <span className="truncate">Chiama</span>
+              </a>
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Contact details */}
       <div className="space-y-1.5 bg-muted/20 rounded-lg p-3 border border-border/30">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Contatti</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Dettagli contatto</p>
         {card.email && (
-          <a href={`mailto:${card.email}`} className="flex items-center gap-2 text-xs text-foreground hover:text-primary transition-colors">
-            <Mail className="w-3.5 h-3.5 text-violet-400 shrink-0" /> {card.email}
-          </a>
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Mail className="w-3.5 h-3.5 text-violet-400 shrink-0" /> <span className="truncate">{card.email}</span>
+          </div>
         )}
         {card.phone && (
-          <a href={`tel:${card.phone}`} className="flex items-center gap-2 text-xs text-foreground hover:text-primary transition-colors">
+          <div className="flex items-center gap-2 text-xs text-foreground">
             <Phone className="w-3.5 h-3.5 text-violet-400 shrink-0" /> {card.phone}
-          </a>
+          </div>
         )}
         {card.mobile && card.mobile !== card.phone && (
-          <a href={`tel:${card.mobile}`} className="flex items-center gap-2 text-xs text-foreground hover:text-primary transition-colors">
+          <div className="flex items-center gap-2 text-xs text-foreground">
             <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {card.mobile}
-          </a>
+          </div>
         )}
       </div>
 

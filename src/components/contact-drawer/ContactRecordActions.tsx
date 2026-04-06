@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle, Linkedin, Phone, Send } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Phone, Send, Loader2 } from "lucide-react";
 import type { UnifiedRecord } from "@/hooks/useContactRecord";
 import { toast } from "@/hooks/use-toast";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -12,10 +13,16 @@ interface Props {
 
 export function ContactRecordActions({ record }: Props) {
   const [liDmOpen, setLiDmOpen] = useState(false);
+  const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
 
   const handleEmail = () => {
     if (record.email) {
-      window.open(`mailto:${record.email}`, "_blank");
+      handleSendEmail({
+        email: record.email,
+        name: record.contactName || undefined,
+        company: record.companyName || undefined,
+        partnerId: record.partnerId || undefined,
+      });
     } else {
       toast({ title: "Email non disponibile", variant: "destructive" });
     }
@@ -24,8 +31,14 @@ export function ContactRecordActions({ record }: Props) {
   const handleWhatsApp = () => {
     const phone = record.mobile || record.phone;
     if (phone) {
-      const clean = phone.replace(/[^0-9+]/g, "");
-      window.open(`https://wa.me/${clean.replace("+", "")}`, "_blank");
+      handleSendWhatsApp({
+        phone,
+        contactName: record.contactName || undefined,
+        companyName: record.companyName || undefined,
+        sourceType: record.sourceType as any || "partner",
+        sourceId: record.sourceId || undefined,
+        partnerId: record.partnerId || undefined,
+      });
     } else {
       toast({ title: "Numero non disponibile", variant: "destructive" });
     }
