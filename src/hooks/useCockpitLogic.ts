@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
