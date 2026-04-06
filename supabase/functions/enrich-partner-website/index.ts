@@ -108,33 +108,38 @@ Deno.serve(async (req) => {
     }
 
     // Format URL
-    let url = partner.website.trim();
+    let url = preScrapedUrl || partner.website.trim();
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
     }
 
-    console.log(`Fetching website for ${partner.company_name}: ${url}`);
+    console.log(`Enriching ${partner.company_name}: ${url}`);
 
-    // Direct fetch website content
+    // Use pre-scraped markdown if provided, otherwise fallback to server-side fetch
     let markdown = "";
-    try {
-      const fetchResp = await fetch(url, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
-        redirect: "follow",
-      });
-      if (fetchResp.ok) {
-        const html = await fetchResp.text();
-        // Simple HTML to text extraction
-        markdown = html
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .substring(0, 15000);
+    if (preScrapedMarkdown && preScrapedMarkdown.length > 50) {
+      markdown = preScrapedMarkdown.substring(0, 15000);
+      console.log(`Using pre-scraped markdown (${markdown.length} chars)`);
+    } else {
+      // Fallback: direct fetch website content
+      try {
+        const fetchResp = await fetch(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
+          redirect: "follow",
+        });
+        if (fetchResp.ok) {
+          const html = await fetchResp.text();
+          markdown = html
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .substring(0, 15000);
+        }
+      } catch (e) {
+        console.error("Website fetch failed:", e);
       }
-    } catch (e) {
-      console.error("Website fetch failed:", e);
     }
 
     if (!markdown || markdown.length < 50) {
