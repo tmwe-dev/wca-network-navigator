@@ -11,6 +11,7 @@ export interface TodayActivity {
   completedAt: string | null;
   contactName: string;
   company: string;
+  status: string;
 }
 
 export function useTodayActivities() {
