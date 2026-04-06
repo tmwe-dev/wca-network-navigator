@@ -69,7 +69,14 @@ export function ChannelsTab({
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
               <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                <Button variant="outline" size="sm" onClick={downloadWhatsAppExtensionZip}>
+                <Button variant="outline" size="sm" onClick={async () => {
+                  try {
+                    await downloadWhatsAppExtensionZip();
+                    toast.success("Estensione WhatsApp scaricata!");
+                  } catch {
+                    toast.error("File non disponibile");
+                  }
+                }}>
                   <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
                 </Button>
                 <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
