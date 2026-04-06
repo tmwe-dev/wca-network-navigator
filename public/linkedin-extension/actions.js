@@ -1,0 +1,234 @@
+// ══════════════════════════════════════════════════
+// LinkedIn Extension — High-Level Actions Module
+// Orchestrates hybrid operations into user-facing actions
+// ══════════════════════════════════════════════════
+
+var Actions = (function () {
+
+  async function extractProfileByUrl(url) {
+    if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
+    var tab = await TabManager.getLinkedInTab(url);
+    return await HybridOps.extractProfile(tab.id);
+  }
+
+  async function sendLinkedInMessage(profileUrl, message) {
+    if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
+    if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
+    var tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    var clickResult = await HybridOps.clickMessage(tab.id);
+    if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
+    await TabManager.sleep(3000);
+    return await HybridOps.sendMessage(tab.id, message);
+  }
+
+  async function sendConnectionRequest(profileUrl, note) {
+    if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
+    var tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    var clickResult = await HybridOps.clickConnect(tab.id);
+    if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, (clickResult && clickResult.error) || "Connect button not found");
+    await TabManager.sleep(2000);
+    if (note && note.trim()) {
+      return await HybridOps.addNote(tab.id, note);
+    }
+    // Send without note
+    try {
+      var sendRes = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var btn = Array.from(document.querySelectorAll("button")).find(function (el) {
+            return /send without|invia senza|send now/i.test(el.textContent.trim());
+          }) || Array.from(document.querySelectorAll("button")).find(function (el) {
+            return /^(send|invia)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
+          });
+          if (btn) { btn.click(); return { success: true }; }
+          return { success: false, error: "Send button not found" };
+        },
+      });
+      return (sendRes[0] && sendRes[0].result) || { success: false, error: "Send failed" };
+    } catch (e) { return Config.errorResponse(Config.ERROR.CONNECT_FAILED, e.message); }
+  }
+
+  async function searchProfile(query) {
+    if (!query) return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Query mancante");
+    var searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
+    var tab = await TabManager.getLinkedInTab(searchUrl);
+    await TabManager.sleep(3000);
+    try {
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var allLinks = document.querySelectorAll("a[href*='/in/']");
+          for (var i = 0; i < allLinks.length; i++) {
+            var href = allLinks[i].href || "";
+            if (/linkedin\.com\/in\/[^/]+/.test(href) && !/\/in\/miniprofile/.test(href) && !/\/in\/ACo/.test(href)) {
+              var cleanUrl = href.split("?")[0].replace(/\/$/, "");
+              var container = allLinks[i].closest("li, [data-chameleon-result-urn]");
+              var name = "";
+              var headline = "";
+              if (container) {
+                var nameEl = container.querySelector("span[aria-hidden='true']");
+                if (nameEl) name = nameEl.textContent.trim();
+                if (!name) { var dirEl = container.querySelector("h3 span[dir='ltr'], a span[dir='ltr'], span[dir='ltr']"); if (dirEl) name = dirEl.textContent.trim(); }
+                if (!name && allLinks[i].textContent) { var lt = allLinks[i].textContent.replace(/\s+/g, " ").trim(); if (lt.length > 1 && lt.length < 80) name = lt; }
+                if (!name) { var h = container.querySelector("h3, h4"); if (h) name = h.textContent.replace(/\s+/g, " ").trim(); }
+                var secEl = container.querySelector("div[class*='subtitle'], p[class*='summary']");
+                if (secEl) headline = secEl.textContent.replace(/\s+/g, " ").trim().substring(0, 200);
+                if (!headline) { var ps = container.querySelectorAll("p, div[class*='t-']"); for (var pp = 0; pp < ps.length; pp++) { var pt = ps[pp].textContent.replace(/\s+/g, " ").trim(); if (pt && pt !== name && pt.length > 3 && pt.length < 200) { headline = pt; break; } } }
+              }
+              if (!name) { var al = allLinks[i].getAttribute("aria-label") || ""; if (al.length > 1) name = al.split(",")[0].trim(); }
+              return { profileUrl: cleanUrl, name: name, headline: headline };
+            }
+          }
+          return null;
+        },
+      });
+      var profileData = results[0] && results[0].result;
+      if (profileData && profileData.profileUrl) return Config.successResponse({ profile: profileData });
+      return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Nessun profilo trovato per: " + query);
+    } catch (err) { return Config.errorResponse(Config.ERROR.SEARCH_FAILED, err.message); }
+  }
+
+  async function readInbox() {
+    var tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    await TabManager.sleep(5000);
+
+    // Level 1: AX Tree
+    try {
+      var axResult = await AXTree.readInbox(tab.id);
+      if (axResult && axResult.threads && axResult.threads.length > 0) return axResult;
+    } catch (e) { console.warn("[LI-Hybrid] AX inbox failed:", e.message || e); }
+
+    // Level 3: Structural fallback
+    try {
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var threads = [];
+          var seen = {};
+          var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
+          threadLinks.forEach(function (link) {
+            var threadUrl = link.href || "";
+            if (seen[threadUrl]) return;
+            seen[threadUrl] = true;
+            var container = link.closest("li") || link.parentElement;
+            if (!container) return;
+            var name = "";
+            var lastMsg = "";
+            var unread = false;
+            var h3 = container.querySelector("h3");
+            if (h3) { var h3t = h3.textContent.replace(/\s+/g, " ").trim(); if (h3t.length > 1 && h3t.length < 80) name = h3t; }
+            if (!name) { var spans = container.querySelectorAll("span"); for (var si = 0; si < spans.length; si++) { var st = (spans[si].textContent || "").trim(); if (st.length > 1 && st.length < 60 && !/^\d{1,2}[\/:\.]/.test(st) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(st) && !/^(passa|go to|details)/i.test(st)) { name = st; break; } } }
+            if (!name) { var img = container.querySelector("img[alt]"); if (img) { var alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar/i.test(alt)) name = alt; } }
+            var msgP = container.querySelector("p, [class*='snippet']");
+            if (msgP) lastMsg = msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
+            var badge = container.querySelector("[class*='unread'], [class*='badge']");
+            if (badge) unread = true;
+            if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) return;
+            threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+          });
+          return { success: true, threads: threads, method: "structural_fallback" };
+        },
+      });
+      return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No inbox data");
+    } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message); }
+  }
+
+  async function readThread(threadUrl) {
+    if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
+    var tab = await TabManager.getLinkedInTab(threadUrl, false);
+    await TabManager.sleep(6000);
+
+    // Level 1: AX Tree
+    try {
+      var axResult = await AXTree.readThread(tab.id);
+      if (axResult && axResult.messages && axResult.messages.length > 0) return axResult;
+    } catch (_) {}
+
+    // Level 3: Structural fallback
+    try {
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var messages = [];
+          var items = document.querySelectorAll("li[class*='msg-'], li[class*='message'], [class*='msg-s-event']");
+          if (items.length === 0) items = document.querySelectorAll("main li, [role='main'] li");
+          items.forEach(function (item) {
+            var bodyEl = item.querySelector("p, [class*='body'], [class*='content']");
+            var senderEl = item.querySelector("h3, span[class*='name'], [class*='sender']");
+            var timeEl = item.querySelector("time, [class*='time']");
+            var text = bodyEl ? bodyEl.textContent.trim() : "";
+            var sender = senderEl ? senderEl.textContent.trim() : "";
+            var timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
+            if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
+          });
+          return { success: true, messages: messages, method: "structural_fallback" };
+        },
+      });
+      return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No thread data");
+    } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message); }
+  }
+
+  async function diagnostic() {
+    var tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    await TabManager.sleep(5000);
+
+    var axAvailable = false;
+    try { axAvailable = await AXTree.isAvailable(tab.id); } catch (_) {}
+
+    var schema = await AILearn.getCached();
+
+    var results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: function () {
+        var url = window.location.href;
+        var title = document.title;
+        var bodyLen = (document.body.innerText || "").length;
+        var hasMain = !!document.querySelector("main, [role='main']");
+        var hasNav = !!document.querySelector("nav, [role='banner'], [role='navigation']");
+        var hasTextbox = !!document.querySelector("[role='textbox'], [contenteditable='true']");
+        var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']").length;
+        var buttons = [];
+        document.querySelectorAll("button").forEach(function (b) {
+          if (b.offsetParent !== null) buttons.push(b.textContent.trim().substring(0, 40));
+        });
+        var roles = [];
+        document.querySelectorAll("[role]").forEach(function (el) {
+          var r = el.getAttribute("role");
+          if (roles.indexOf(r) === -1) roles.push(r);
+        });
+        return {
+          success: true, url: url, title: title, bodyLength: bodyLen,
+          hasMain: hasMain, hasNav: hasNav, hasTextbox: hasTextbox,
+          threadLinksCount: threadLinks, visibleButtons: buttons.slice(0, 20), uniqueRoles: roles,
+        };
+      },
+    });
+
+    var domResult = (results[0] && results[0].result) || {};
+    domResult.axTreeAvailable = axAvailable;
+    domResult.aiLearnCached = !!schema;
+    domResult.aiLearnAge = schema && schema.learnedAt ? Math.round((Date.now() - schema.learnedAt) / 60000) + " min ago" : "never";
+    return domResult;
+  }
+
+  async function learnDom(pageType) {
+    if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
+    var url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
+    var tab = await TabManager.getLinkedInTab(url, false);
+    await TabManager.sleep(4000);
+    var schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
+    if (schema) return Config.successResponse({ schema: schema, keysCount: Object.keys(schema).length });
+    return Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, "AI learning failed");
+  }
+
+  return {
+    extractProfileByUrl: extractProfileByUrl,
+    sendLinkedInMessage: sendLinkedInMessage,
+    sendConnectionRequest: sendConnectionRequest,
+    searchProfile: searchProfile,
+    readInbox: readInbox,
+    readThread: readThread,
+    diagnostic: diagnostic,
+    learnDom: learnDom,
+  };
+})();
