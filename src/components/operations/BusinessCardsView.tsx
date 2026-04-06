@@ -451,10 +451,10 @@ export function BusinessCardsView() {
                             {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
                             <div className="flex items-center gap-1 flex-shrink-0">
                               {card.email && (
-                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Mail className="w-3 h-3 text-primary/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.email}</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: group.companyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary/60 hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
                               )}
                               {(card.phone || card.mobile) && (
-                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><Phone className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger><TooltipContent className="text-[10px]">{card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); handleSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: group.companyName, sourceType: "contact", sourceId: card.id }); }} className="hover:scale-110 transition-transform"><MessageCircle className="w-3 h-3 text-emerald-500/60 hover:text-emerald-500" /></button></TooltipTrigger><TooltipContent className="text-[10px]">WhatsApp {card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
                               )}
                             </div>
                           </div>
