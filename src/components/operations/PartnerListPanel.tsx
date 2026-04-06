@@ -8,8 +8,11 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
-  Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X,
+  Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X, ArrowUpDown,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
