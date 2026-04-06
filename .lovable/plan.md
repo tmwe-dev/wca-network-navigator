@@ -1,64 +1,70 @@
 
-# AI Matching + Azioni operative + Layout migliorato per CRM (Contatti & Biglietti)
 
-## 3 blocchi di lavoro
+# Allineare struttura CRM a Network: gruppi nella sidebar, lista piatta al centro
 
-### 1. Bottone AI Matching nel tab bar CRM
+## Situazione attuale
 
-Aggiungere un terzo bottone nella barra tab di `CRM.tsx` (di fianco a Contatti e Biglietti): **"🤖 AI Match"** che apre un `Dialog` fullscreen-like.
-
-**Popup AI Match:**
-- Chiama Lovable AI (gemini-flash) passando la lista dei biglietti `unmatched` + un campione di partner dal DB
-- L'AI confronta nome azienda, paese, città, telefono, email e restituisce candidati con % di confidenza
-- UI: lista ordinata per confidenza decrescente, ogni riga mostra affiancati:
-  - **Sinistra**: dati BCA (nome, contatto, paese, città, telefono)
-  - **Destra**: dati Partner suggerito (nome, alias, paese, città)
-  - **Centro**: % confidenza con barra colorata
-- Checkbox per selezione multipla + bottone "Conferma selezionati" che fa `updateBusinessCard` in batch
-- Elaborazione in batch da 20 alla volta per non sovraccaricare
-
-### 2. Azioni operative su selezione (Contatti + Biglietti)
-
-**BusinessCardsHub** — quando `selectedIds.size > 0`, aggiungere barra azioni bulk (stesso pattern del `ContactListPanel`):
-- **Workspace** → crea attività email per i biglietti selezionati
-- **Campagna** → crea campaign_jobs
-- **Deep Search** → invoca deep-search per arricchimento
-- **LinkedIn Lookup** → cerca URL LinkedIn
-- **Email diretta** → apre composer con i selezionati
-- **WhatsApp** → invia messaggio ai selezionati con telefono
-
-**BusinessCardDetailPanel** — aggiungere sotto "Azioni rapide":
-- **→ Cockpit** (trasferisci al cockpit)
-- **→ Workspace** (crea attività email)
-- **Genera Alias**
-- **Programma follow-up** (stessa logica ContactActionMenu)
-
-### 3. Layout migliorato card BCA (CompactRow)
-
-La CompactRow attuale è troppo compressa e illeggibile. Ristrutturazione:
-
-**CompactRow → due righe:**
 ```text
-Riga 1: [checkbox] [🇮🇹] Nome Azienda                    [Match/No match] [📧] [📞]
-Riga 2:           👤 Nome Contatto · Posizione  · 📍 Città   [Evento] [Anno WCA]
+NETWORK (come deve essere)              CRM (come è ora)
+──────────────────────────              ──────────────────────────
+Sidebar SX: lista paesi con checkbox   Sidebar SX: paesi + filtri ✓ (già fatto)
+Centro: lista piatta partner           Centro: gruppi come righe espandibili (accordion)
+Destra: dettaglio partner              Destra: dettaglio contatto ✓
 ```
 
-- Allineamento fisso a sinistra per tutti gli elementi
-- Spazio minimo `py-2` invece di `py-1.5`
-- Se matched con partner WCA, mostrare anno di membership (da `partner.enrichment_data`)
-- Font size aumentato per company name (text-xs → text-sm)
+Il CRM mostra i gruppi (SCONOSCIUTA, WCA OLD, HUBSPOT, ecc.) come righe accordion espandibili nel pannello centrale. L'utente deve cliccare su un gruppo, poi sul contatto. Nel Network invece la lista è piatta e filtrata dalla sidebar.
 
-**CardGridItem e ExpandedCardItem:**
-- Aggiungere anno membership WCA se disponibile
-- Mostrare paese con bandiera emoji
-- Allineare icone di azione a destra
+## Piano
 
-### File coinvolti
+### 1. Spostare la selezione dei gruppi (origini) nella sidebar
+
+Nel `FiltersDrawer` → sezione CRM (`CRMFiltersSection`), aggiungere una lista di **origini** (come quella dei paesi) con checkbox, conteggi e ricerca. I dati vengono dal hook `useContactGroupCounts` che già restituisce i gruppi per tipo "origin". L'utente seleziona una o più origini dalla sidebar e la lista centrale si filtra.
+
+Aggiungere in `GlobalFiltersContext`:
+- `crmSelectedOrigins: Set<string>` (se non esiste già come `crmOrigin`)
+
+### 2. Trasformare ContactListPanel da accordion a lista piatta
+
+Eliminare il pattern "GroupStrip + ExpandedGroupContent" e sostituirlo con una **lista piatta di contatti** (come `PartnerVirtualList` nel Network):
+
+- Quando nessun filtro è attivo → mostra tutti i contatti paginati
+- Quando paesi/origini selezionati nella sidebar → filtra di conseguenza
+- I tab orizzontali in alto restano per segmentare per paese (come già implementato)
+- Ogni riga contatto mostra: checkbox, flag, azienda, nome contatto, email/phone icons, badge origine
+- Click sulla riga → apre dettaglio a destra (già funziona)
+
+La query usa `useContacts()` con i filtri dal `GlobalFiltersContext` (country, origin, search, holdingPattern).
+
+### 3. Applicare lo stesso pattern a BusinessCardsHub
+
+Il BusinessCardsHub ha già una lista di card, ma deve usare la sidebar per i filtri (evento, match status, paese) invece di averli inline. La struttura diventa:
+- Sidebar SX: filtri per evento, match status, paese
+- Centro: lista piatta biglietti
+- Destra: dettaglio biglietto (già esiste)
+
+### 4. Layout Contacts.tsx → identico a Operations.tsx
+
+```text
+┌──────────────────────────────────────────────┐
+│  [Contatti] [Biglietti]  [AI Match]          │  ← tab bar (CRM.tsx, invariato)
+├──────────────────────────────────────────────┤
+│                    │                          │
+│   Lista contatti   │   Dettaglio contatto     │
+│   (piatta, flat)   │   (pannello destro)      │
+│                    │                          │
+└──────────────────────────────────────────────┘
+```
+
+La sidebar SX è il `FiltersDrawer` globale (già presente), non un pannello resizable separato.
+
+## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/pages/CRM.tsx` | Aggiungere bottone "AI Match" + import Dialog |
-| `src/components/contacts/BusinessCardsHub.tsx` | Barra azioni bulk, layout CompactRow su 2 righe, azioni nel detail panel, popup AI Match |
-| `src/components/contacts/ContactCard.tsx` | Minor: verificare allineamento consistente (già buono) |
+| `src/components/contacts/ContactListPanel.tsx` | Rimuovere accordion (GroupStrip/ExpandedGroupContent), sostituire con lista piatta di contatti usando `useContacts()` filtrato |
+| `src/pages/Contacts.tsx` | Semplificare layout: rimuovere logica filterGroupKey, usare struttura 2-colonne come Operations |
+| `src/components/global/FiltersDrawer.tsx` | Sezione CRM: aggiungere lista origini con checkbox (come i paesi) |
+| `src/components/contacts/BusinessCardsHub.tsx` | Spostare filtri inline nella sidebar, mantenere lista piatta + dettaglio |
 
-Nessuna migrazione DB. L'AI matching usa Lovable AI (gemini-flash) direttamente dal client via edge function.
+Nessuna migrazione DB. Il dettaglio a destra (template) resta invariato.
+
