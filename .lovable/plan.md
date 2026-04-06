@@ -1,96 +1,174 @@
 
 
-# Centro di Comando AI — Settings Unificati per Prompt, KB, Template e Deep Search
+# Ristrutturazione Architettonica del Sistema LinkedIn — 3 Strategie Anti-Fragilità
 
-## Situazione attuale (frammentata)
+## Diagnosi del Sistema Attuale
 
-| Risorsa | Dove si trova oggi |
-|---------|-------------------|
-| KB Aziendale + Sales KB | Settings → Generale → AIProfileSettings.tsx |
-| Goal e Proposte | Settings → Contenuti → ContentManager.tsx |
-| Tipi email (Oracolo) | OraclePanel.tsx (salvati in `app_settings.email_oracle_types`) |
-| Template email | Tabella `email_templates` (gestiti in TemplateManager) |
-| Deep Search config | Nessuna UI — hardcoded nelle edge functions |
-| Prompt degli agenti | Pagina Agenti → AgentPromptEditor.tsx |
+Il sistema attuale (`background.js`, 1313 righe) usa **selettori CSS hardcoded** per ogni operazione:
 
-Il problema: **tutto è sparso in 5+ posti diversi**. L'utente non ha un punto di controllo unico.
+| Operazione | Selettori Hardcoded | Rischio Rottura |
+|---|---|---|
+| Estrazione profilo | `h1.text-heading-xlarge`, `.text-body-medium.break-words` | ALTO |
+| Invio messaggio | `div.msg-form__contenteditable`, `button.msg-form__send-button` | ALTO |
+| Richiesta collegamento | `button.pvs-profile-actions__action[aria-label*='onnect']` | ALTO |
+| Lettura inbox | `li.msg-conversation-listitem`, `a[href*='/messaging/thread/']` | MEDIO |
+| Verifica sessione | `.global-nav__me`, `.scaffold-layout` | MEDIO |
 
-## Soluzione: nuova tab "AI & Prompt" nei Settings
+**Ogni volta che LinkedIn aggiorna il DOM, tutto si rompe.** È successo con WhatsApp e succederà di nuovo con LinkedIn.
 
-Una **singola pagina** in Settings con **4 tab orizzontali** in alto:
+---
+
+## Le 3 Strategie Proposte
+
+### Strategia 1: Accessibility Tree via Chrome DevTools Protocol (CDP)
+
+**Concetto**: Invece di cercare classi CSS (che cambiano), leggere l'**Accessibility Tree** — la struttura semantica che Chrome calcola per gli screen reader. I ruoli (`button`, `textbox`, `heading`, `link`) e i nomi accessibili (`"Send"`, `"Message"`, `"Connect"`) sono **stabili per necessità legale** (WCAG compliance).
+
+**Come funziona**:
+```
+chrome.debugger.attach({ tabId }, "1.3")
+chrome.debugger.sendCommand({ tabId }, "Accessibility.getFullAXTree")
+→ Restituisce nodi con { role: "button", name: "Connect", nodeId: 42 }
+→ Clicco tramite DOM.focus + Input.dispatchKeyEvent / DOM.performSearch
+chrome.debugger.detach({ tabId })
+```
+
+**Vantaggi**:
+- LinkedIn NON PUÒ cambiare i ruoli ARIA senza violare le leggi di accessibilità (ADA, WCAG 2.1)
+- Zero dipendenza da classi CSS
+- Funziona anche se LinkedIn offusca completamente le classi
+
+**Svantaggi**:
+- `chrome.debugger` mostra un banner "estensione sta debuggando" all'utente (invasivo)
+- Richiede il permesso `"debugger"` nel manifest
+- Leggermente più lento (~200ms per query)
+
+**Affidabilità stimata: 95%** — LinkedIn dovrebbe violare le normative di accessibilità per rompere questo approccio.
+
+---
+
+### Strategia 2: AI DOM Learning (Self-Healing) — come WhatsApp
+
+**Concetto**: Già implementato per WhatsApp. L'estensione cattura uno **snapshot strutturale** della pagina (data-testid, ruoli, aria-label, classi) e lo invia a un'edge function AI che identifica i selettori corretti. I selettori vengono **cached** (TTL 3h) e rigenerati automaticamente quando falliscono.
+
+**Come funziona**:
+```
+1. Cattura snapshot DOM → { html_samples, data_testids, roles, aria_labels }
+2. Invia a edge function "linkedin-ai-extract" con schema desiderato
+3. AI restituisce: { nameSelector: "h1[class*='heading']", messageBox: "div[role='textbox']" }
+4. Cache in chrome.storage.local (TTL 3h)
+5. Se un selettore fallisce → re-learn automatico → retry
+```
+
+**Vantaggi**:
+- Nessun banner "debugger" — usa solo `chrome.scripting.executeScript`
+- Self-healing: si ripara da solo quando i selettori cambiano
+- Già testato e funzionante per WhatsApp
+
+**Svantaggi**:
+- Dipende dalla chiamata AI (costa crediti, richiede connettività)
+- Se LinkedIn cambia radicalmente la struttura (non solo classi), potrebbe fallire
+- Primo accesso più lento (~2-3s per il learning)
+
+**Affidabilità stimata: 85%** — eccellente per cambi di classi CSS, meno robusto per ristrutturazioni complete della pagina.
+
+---
+
+### Strategia 3: API Esterna (Proxycurl/Bright Data) per Dati + Estensione Minimale per Azioni
+
+**Concetto**: Separare **lettura** da **scrittura**. I dati dei profili (nome, headline, azienda, location, foto) vengono recuperati via API REST (Proxycurl ~$0.01/profilo) senza toccare il DOM. L'estensione si riduce a **sole 3 funzioni DOM**: invia messaggio, invia collegamento, verifica sessione.
+
+**Come funziona**:
+```
+LETTURA (API, zero DOM):
+  Edge Function → Proxycurl API → { name, headline, location, company, ... }
+  Nessuna navigazione, nessun selettore, nessun rischio
+
+SCRITTURA (Estensione minimale, 3 funzioni):
+  1. verifySession → cookie li_at + URL check (nessun selettore CSS)
+  2. sendMessage → Accessibility Tree per trovare textbox + send button
+  3. sendConnectionRequest → Accessibility Tree per trovare Connect button
+
+SCOPERTA PROFILO (già implementata):
+  Google Search "site:linkedin.com/in" via Partner Connect → 100% esterno
+```
+
+**Vantaggi**:
+- Superficie di attacco DOM ridotta al minimo (3 funzioni vs 10+)
+- Dati profilo sempre accurati e strutturati
+- Nessun rischio di detection per lo scraping (è un'API legittima)
+- Velocissimo (~200ms per profilo vs 5-10s di navigazione tab)
+
+**Svantaggi**:
+- Costo: ~$0.01 per profilo (100 profili = $1, 1000 = $10)
+- Non copre azioni che richiedono autenticazione utente (messaggi, richieste)
+- Richiede un account API esterno
+
+**Affidabilità stimata: 98% lettura, 90% scrittura** — la combinazione più resiliente.
+
+---
+
+## Raccomandazione: Architettura Ibrida a 3 Livelli
+
+La soluzione ottimale non è una sola strategia, ma la **combinazione intelligente** delle tre:
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│ 🧠 AI & Prompt                                      │
-├──────┬──────────┬───────────┬───────────────────────┤
-│Prompt│ KB       │ Template  │ Deep Search           │
-├──────┴──────────┴───────────┴───────────────────────┤
-│                                                      │
-│  [Contenuto della tab attiva]                        │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+│                   LIVELLO 1: API                    │
+│  Proxycurl / Bright Data per LETTURA profili        │
+│  Google Search per SCOPERTA URL LinkedIn            │
+│  → Zero DOM, zero rischio, dati strutturati         │
+├─────────────────────────────────────────────────────┤
+│              LIVELLO 2: Accessibility Tree          │
+│  chrome.debugger → AX Tree per AZIONI              │
+│  (sendMessage, sendConnection, verifySession)       │
+│  → Selettori semantici stabili (role + name)        │
+├─────────────────────────────────────────────────────┤
+│              LIVELLO 3: AI Self-Healing             │
+│  FALLBACK se AX Tree fallisce                       │
+│  AI analizza DOM → genera selettori → cache         │
+│  → Auto-ripara, già testato su WhatsApp             │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Tab 1: Prompt (Tipi Email + Goal + Proposte)
-- **Unifica** i DEFAULT_EMAIL_TYPES (Oracolo), i Goal e le Proposte (ContentManager) in un'unica griglia
-- Ogni card mostra: icona, nome, categoria (badge colorato), tono, anteprima prompt (troncato)
-- Click → Dialog di modifica con: nome, icona (emoji picker), categoria, tono, prompt completo
-- Pulsante **"Migliora con AI"** dentro il dialog: invia il prompt alla funzione `improve-email` per raffinarlo
-- Pulsante **"+ Crea nuovo"** in alto con auto-categorizzazione AI (edge function `categorize-content` già esistente)
-- Toast informativo in alto che mostra il conteggio: "12 prompt attivi · 6 goal · 4 proposte"
+**Flusso di ogni operazione**:
+1. **Profilo?** → API esterna (Livello 1). Mai toccare il DOM.
+2. **Azione (messaggio/collegamento)?** → AX Tree (Livello 2). Cerca `role:"button" name:"Send"`.
+3. **AX Tree fallisce?** → AI Self-Healing (Livello 3). Snapshot DOM → AI → nuovi selettori → retry.
 
-### Tab 2: Knowledge Base
-- Due sezioni espandibili con contatore caratteri:
-  - **KB Aziendale** (`ai_knowledge_base`) — chi siamo, servizi, certificazioni
-  - **KB Vendite / SKB** (`ai_sales_knowledge_base`) — tecniche Chris Voss, regole strategiche
-- Pulsante **"Reset default SKB"** per ripristinare la Sales KB dal file `salesKnowledgeBase.ts`
-- Pulsante **"Migliora con AI"** per ciascuna sezione: invia il contenuto a un prompt che suggerisce miglioramenti
-- Indicatore visivo: "Utilizzata da: Cockpit, Email Composer, Agenti"
+---
 
-### Tab 3: Template
-- Riutilizza il `TemplateManager` già esistente (upload file .html/.eml)
-- Aggiunge preview inline cliccando sulla card
+## Piano di Implementazione
 
-### Tab 4: Deep Search
-- Configurazione delle **opzioni di deep search per contesto**:
-  - Checkbox per ciascuna operazione: Scrape sito web, Scrape LinkedIn, Verifica WhatsApp, Analisi AI profilo
-  - Preset per contesto: Email Composer, Cockpit, Contatti, BCA
-  - Ogni contesto può avere opzioni diverse salvate in `app_settings` (key: `deep_search_config`)
-- Mostra stato dell'estensione Partner Connect (collegata/non collegata)
+### Fase 1 — Refactor Estensione con AX Tree + AI Fallback
+- Aggiungere `"debugger"` al manifest
+- Creare modulo `ax-tree.js`: funzioni per query AX Tree per ruolo/nome
+- Creare modulo `ai-learn.js`: snapshot DOM → edge function → cache selettori
+- Riscrivere `extractLinkedInProfile()` usando AX Tree (heading level 1 = nome, etc.)
+- Riscrivere `typeLinkedInMessage()` usando AX Tree (role: textbox → focus → type)
+- Riscrivere `clickConnectButton()` usando AX Tree (role: button, name: Connect/Collegati)
+- Catena di fallback: AX Tree → AI Learn → errore con diagnostica
 
-## Logica Email Composer — Verifica email manuale
+### Fase 2 — Integrazione API Esterna per Lettura
+- Creare edge function `linkedin-profile-api` che chiama Proxycurl
+- Aggiungere secret `PROXYCURL_API_KEY`
+- Modificare `extractProfileByUrl()` nel frontend: prima tenta API, poi estensione come fallback
+- Aggiornare `useCockpitLogic`, `useLinkedInFlow` per usare il nuovo endpoint
 
-Quando l'utente inserisce una mail manuale nell'Email Composer:
-1. **Ricerca automatica nel DB**: query su `partners.email`, `partner_contacts.email`, `imported_contacts.email`, `business_cards.email`
-2. Se trovato → popola automaticamente nome contatto, azienda, alias, bandiera paese
-3. Se **non trovato** → quando clicca "Genera con Oracolo", mostra un **mini-dialog** che chiede:
-   - Nome contatto (obbligatorio)
-   - Nome azienda (obbligatorio)
-   - Questi dati vengono passati all'edge function per personalizzare la mail
+### Fase 3 — Rimuovere Selettori Hardcoded
+- Eliminare TUTTI i selettori CSS hardcoded dal `background.js`
+- Mantenere solo: gestione tab, cookie, message handler
+- Test automatizzati nella pagina `/test-extensions`
 
-## Allineamento Oracolo ↔ Settings
-
-L'OraclePanel nell'Email Composer **legge** i tipi email dalla stessa sorgente unificata (`app_settings.email_oracle_types` + `DEFAULT_EMAIL_TYPES`). La modifica avviene nella nuova pagina Settings, l'Oracolo è solo un selettore rapido.
-
-Il link "Gestisci KB" nell'Oracolo → **naviga direttamente** alla tab KB della nuova pagina Settings (oppure apre la stessa dialog attuale come shortcut).
-
-## File coinvolti
-
+### File coinvolti
 | File | Azione |
-|------|--------|
-| `src/components/settings/AICommandCenter.tsx` | **Nuovo** — Componente principale con 4 tab |
-| `src/components/settings/PromptManager.tsx` | **Nuovo** — Griglia unificata prompt/goal/proposte/tipi email |
-| `src/components/settings/KnowledgeBaseManager.tsx` | **Nuovo** — Editor KB con AI improve |
-| `src/components/settings/DeepSearchConfig.tsx` | **Nuovo** — Config deep search per contesto |
-| `src/pages/Settings.tsx` | Aggiungere tab "AI & Prompt" con icona Brain, rimuovere tab "Contenuti" separata |
-| `src/pages/EmailComposer.tsx` | Aggiungere lookup email nel DB + mini-dialog info mancanti |
-| `src/components/email/OraclePanel.tsx` | Rimuovere dialog KB inline, linkare a Settings |
-| `src/data/defaultEmailTypes.ts` | Nessuna modifica (resta sorgente default) |
-
-## Ordine di implementazione
-
-1. Creare `AICommandCenter` con le 4 tab e i sotto-componenti
-2. Integrare in Settings.tsx al posto di "Contenuti"
-3. Aggiornare EmailComposer con lookup email + mini-dialog
-4. Aggiornare OraclePanel per linkare alla nuova pagina
+|---|---|
+| `public/linkedin-extension/manifest.json` | Aggiungere permesso `debugger` |
+| `public/linkedin-extension/background.js` | Refactor completo con AX Tree + AI fallback |
+| `public/linkedin-extension/ax-tree.js` | Nuovo — modulo query Accessibility Tree |
+| `public/linkedin-extension/ai-learn.js` | Nuovo — modulo AI self-healing |
+| `supabase/functions/linkedin-ai-extract/index.ts` | Nuovo — edge function per AI DOM learning |
+| `supabase/functions/linkedin-profile-api/index.ts` | Nuovo — edge function proxy per API esterna |
+| `src/hooks/useLinkedInExtensionBridge.ts` | Aggiungere azione `learnDom` |
+| `src/pages/TestExtensions.tsx` | Aggiungere test AX Tree + API |
 
