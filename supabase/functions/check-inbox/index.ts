@@ -1374,14 +1374,7 @@ Deno.serve(async (req) => {
                 .eq("lead_status", "new");
             }
             if ((match.source_type === "partner" || match.source_type === "partner_contact") && match.partner_id) {
-              // Increment partner interaction count and escalate status
-              await supabase.from("partners")
-                .update({
-                  interaction_count: undefined, // handled below
-                  last_interaction_at: new Date().toISOString(),
-                })
-                .eq("id", match.partner_id);
-              // Use raw SQL-like increment via RPC or direct update
+              // Read current values, then increment + escalate
               const { data: partnerData } = await supabase.from("partners")
                 .select("interaction_count, lead_status")
                 .eq("id", match.partner_id)
