@@ -185,16 +185,26 @@ const STATUS_LABELS: Record<string, string> = {
   matched: "Match", unmatched: "No match", pending: "Attesa",
 };
 
+/* ═══ Origin accent border ═══ */
+function getCardOriginClasses(card: BusinessCardWithPartner): { border: string; bg: string } {
+  if (card.match_status === "matched" && card.matched_partner_id) {
+    return { border: "from-chart-1/60 to-chart-1/20", bg: "bg-chart-1/5" };
+  }
+  return { border: "from-amber-500/60 to-amber-500/20", bg: "bg-amber-500/5" };
+}
+
 /* ═══ Compact List Row ═══ */
 function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
+  const accent = getCardOriginClasses(card);
   return (
     <div className={cn(
-      "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-muted/40 border border-transparent",
+      "relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden",
       isSelected && "bg-primary/10 border-primary/20",
     )}>
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l", accent.border)} />
       <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 shrink-0" onClick={(e) => e.stopPropagation()} />
       <span className="text-xs font-semibold text-foreground truncate w-[130px]">{card.company_name || "—"}</span>
       <span className="text-[11px] text-muted-foreground truncate w-[110px]">{card.contact_name || "—"}</span>
@@ -228,11 +238,13 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
 
+  const accent = getCardOriginClasses(card);
   return (
     <div className={cn(
-      "bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
+      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
       isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
     )}>
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       {hasPhoto ? (
         <AspectRatio ratio={16 / 9}>
           <img src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" loading="lazy" />
@@ -275,11 +287,13 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
 
+  const accent = getCardOriginClasses(card);
   return (
     <div className={cn(
-      "bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
+      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
       isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
     )}>
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       <div className="flex gap-3 p-3">
         <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 mt-1 shrink-0" onClick={(e) => e.stopPropagation()} />
         {hasPhoto && (
@@ -461,6 +475,92 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
         >
           <Globe className="w-3.5 h-3.5 text-violet-400" /> Cerca logo su Google
         </Button>
+      )}
+
+      {/* Manual partner matching for unmatched cards */}
+      {card.match_status !== "matched" && <ManualPartnerMatcher card={card} />}
+    </div>
+  );
+}
+
+/* ═══ Manual Partner Matcher ═══ */
+function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
+  const [searchTerm, setSearchTerm] = useState(card.company_name || "");
+  const [results, setResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const updateCard = useUpdateBusinessCard();
+
+  const doSearch = useCallback(async () => {
+    if (!searchTerm.trim()) return;
+    setSearching(true);
+    setSearched(true);
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, company_name, company_alias, country_code, country_name, city")
+        .or(`company_name.ilike.%${searchTerm.trim()}%,company_alias.ilike.%${searchTerm.trim()}%`)
+        .order("country_name")
+        .order("city")
+        .order("company_name")
+        .limit(20);
+      if (error) throw error;
+      setResults(data ?? []);
+    } catch (e: any) {
+      toast({ title: "Errore ricerca", description: e.message, variant: "destructive" });
+    } finally {
+      setSearching(false);
+    }
+  }, [searchTerm]);
+
+  const confirmMatch = useCallback(async (partnerId: string) => {
+    try {
+      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as any);
+      toast({ title: "✅ Match confermato" });
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    }
+  }, [card.id, updateCard]);
+
+  return (
+    <div className="space-y-2 bg-amber-500/5 rounded-lg p-3 border border-amber-500/15">
+      <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium flex items-center gap-1">
+        <Search className="w-3 h-3" /> Cerca partner WCA
+      </p>
+      <div className="flex gap-1.5">
+        <Input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && doSearch()}
+          placeholder="Nome azienda..."
+          className="h-7 text-xs flex-1"
+        />
+        <Button variant="outline" size="sm" className="h-7 text-[10px] px-2 shrink-0" onClick={doSearch} disabled={searching}>
+          {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+        </Button>
+      </div>
+      {searched && results.length === 0 && !searching && (
+        <p className="text-[10px] text-muted-foreground">Nessun partner trovato</p>
+      )}
+      {results.length > 0 && (
+        <div className="max-h-[200px] overflow-y-auto space-y-0.5">
+          {results.map((p) => (
+            <button
+              key={p.id}
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors group"
+              onClick={() => confirmMatch(p.id)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs shrink-0">{p.country_code ? String.fromCodePoint(...[...p.country_code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65)) : "🌍"}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{[p.city, p.country_name].filter(Boolean).join(", ")}</p>
+                </div>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 shrink-0" />
+              </div>
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
