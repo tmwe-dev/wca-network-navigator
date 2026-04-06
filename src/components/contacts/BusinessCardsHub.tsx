@@ -10,8 +10,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Upload, Camera, Handshake, Search, Loader2, ImagePlus, Building2, User, MapPin, Calendar,
   FileSpreadsheet, FileText, CheckCircle2, Mail, Phone, Eye, LayoutGrid, LayoutList, Rows3,
-  Globe, Sparkles,
+  Globe, Sparkles, MessageCircle, Send,
 } from "lucide-react";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
