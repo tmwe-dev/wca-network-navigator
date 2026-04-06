@@ -205,8 +205,9 @@ Deno.serve(async (req) => {
       });
     }
     if (!msg.imap_uid) {
-      return new Response(JSON.stringify({ error: "No IMAP UID for this message" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Not an IMAP message (e.g. outbound/manual) — nothing to sync, return success
+      return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_imap_uid" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
