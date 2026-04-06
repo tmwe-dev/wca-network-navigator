@@ -1,60 +1,41 @@
 
 
-# Usare lo scraper client-side per l'enrichment dei partner
+# Fix: destinatario non pre-compilato quando si clicca email dal Network
 
-## Problema attuale
+## Problema
 
-La edge function `enrich-partner-website` fa un `fetch()` server-side grezzo e poi strappa l'HTML con regex (`replace(/<script>...`, `replace(/<[^>]+>/g, " ")`). Questo produce contenuto di pessima qualità: niente JavaScript rendering, niente SPA, blocchi anti-bot, e spesso meno di 50 caratteri utili.
+Quando clicchi sull'email di un contatto dal Network (o da Prospects/BCA), il sistema naviga a `/email-composer` passando `prefilledRecipient` nel `location.state`. Ma **nessun componente legge mai quel dato**. Il composer usa solo `useMission().recipients`, che resta vuoto.
 
-Abbiamo già FireScrape/Partner Connect che dal browser dell'utente può estrarre markdown pulito, renderizzato, con metadati — molto superiore.
+## Intervento
 
-## Soluzione
+### File: `src/pages/EmailComposer.tsx`
 
-Separare le due fasi: **scraping dal client** (estensione) → **analisi AI dal server** (edge function).
-
-### Flusso nuovo
+Aggiungere un `useEffect` che:
+1. Legge `location.state?.prefilledRecipient` al mount
+2. Se presente, chiama `addRecipient()` con i dati mappati nel formato `SelectedRecipient`
+3. Pulisce lo state dalla history (via `navigate(location.pathname, { replace: true })`) per evitare re-inserimenti al refresh
 
 ```text
-Client (browser utente)
-  1. FireScrape scrapeUrl(website) → markdown + metadata
-  2. Chiama edge function con { partnerId, markdown, sourceUrl }
-
-Edge Function (enrich-partner-website)
-  3. Se riceve markdown nel body → usa quello (skip fetch)
-  4. Se NON riceve markdown → fallback al fetch server-side (compatibilità)
-  5. Analisi AI con Gemini → salva enrichment_data
+useEffect:
+  const state = location.state as any
+  if (state?.prefilledRecipient) {
+    const r = state.prefilledRecipient
+    addRecipient({
+      partnerId: r.partnerId || "",
+      companyName: r.company || "",
+      contactName: r.name || "",
+      email: r.email,
+      city: "", countryName: "", isEnriched: false,
+    })
+    navigate(location.pathname, { replace: true, state: {} })
+  }
 ```
 
-### Intervento 1 — Edge function: accettare markdown pre-scraped
-**File: `supabase/functions/enrich-partner-website/index.ts`**
-
-- Aggiungere al body opzionale `markdown` e `sourceUrl`
-- Se `markdown` è presente e lungo >50 chars, saltare il blocco fetch e usare direttamente quello
-- Se non presente, mantenere il fallback fetch attuale (retrocompatibilità)
-
-### Intervento 2 — AdvancedTools: scraping client-side prima dell'invio
-**File: `src/components/download/AdvancedTools.tsx`**
-
-- Importare `useFireScrapeExtensionBridge`
-- Nel loop `handleRun`, prima di invocare la edge function:
-  - Se FireScrape è disponibile → `scrapeUrl(website)` → passare il markdown nel body
-  - Se FireScrape non disponibile → invocare come oggi (fallback server-side)
-
-### Intervento 3 — AcquisitionPipeline: stessa logica
-**File: `src/hooks/useAcquisitionPipeline.tsx`**
-
-- Nel blocco `includeEnrich` (riga ~396), se FireScrape bridge è disponibile nel contesto, fare lo scrape client-side prima di chiamare la edge function
-- Passare `{ partnerId, markdown, sourceUrl }` nel body
-
-## File coinvolti
+### File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/enrich-partner-website/index.ts` | Accettare `markdown` opzionale nel body, skip fetch se presente |
-| `src/components/download/AdvancedTools.tsx` | Scraping via FireScrape prima dell'invio, con fallback |
-| `src/hooks/useAcquisitionPipeline.tsx` | Stesso pattern: scrape client → invio markdown |
+| `src/pages/EmailComposer.tsx` | Aggiungere `useLocation`, `useEffect` per leggere `prefilledRecipient` e iniettarlo nei recipients |
 
-## Risultato atteso
-
-L'AI riceve markdown di qualità reale (pagina renderizzata dal browser) invece di HTML strippato. Zero urgenza, lo scraping avviene uno alla volta con pausa tra i partner. Se l'estensione non è attiva, tutto continua a funzionare come prima con il fetch server-side.
+Nessun altro file da modificare — il dato viene già passato correttamente da Network, Prospects e BCA.
 
