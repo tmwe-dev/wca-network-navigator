@@ -133,10 +133,23 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 
   const toggleFavorite = useToggleFavorite();
 
-  // Reset selected partner when filters change (country, quality, search, etc.)
+  // Reset selected partner when filters change (country, quality, directory)
   useEffect(() => {
     setSelectedPartnerId(null);
-  }, [filters.networkSelectedCountries, filters.quality, filters.networkDirectoryOnly, filters.networkSearch]);
+  }, [filters.networkSelectedCountries, filters.quality, filters.networkDirectoryOnly]);
+
+  // Listen for partner selection from search results in FiltersDrawer
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const partnerId = (e as CustomEvent).detail?.partnerId;
+      if (partnerId) {
+        // Small delay to let the search filter update first
+        setTimeout(() => setSelectedPartnerId(partnerId), 100);
+      }
+    };
+    window.addEventListener("network-select-partner", handler);
+    return () => window.removeEventListener("network-select-partner", handler);
+  }, []);
 
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
