@@ -185,6 +185,14 @@ const STATUS_LABELS: Record<string, string> = {
   matched: "Match", unmatched: "No match", pending: "Attesa",
 };
 
+/* ═══ Origin accent border ═══ */
+function getCardOriginClasses(card: BusinessCardWithPartner): { border: string; bg: string } {
+  if (card.match_status === "matched" && card.matched_partner_id) {
+    return { border: "from-chart-1/60 to-chart-1/20", bg: "bg-chart-1/5" };
+  }
+  return { border: "from-amber-500/60 to-amber-500/20", bg: "bg-amber-500/5" };
+}
+
 /* ═══ Compact List Row ═══ */
 function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
