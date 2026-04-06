@@ -89,8 +89,16 @@ export function useContacts(filters: ContactFilters = {}) {
           );
         }
       }
-      if (filters.country) q = q.eq("country", filters.country);
-      if (filters.origin) q = q.eq("origin", filters.origin);
+      if (filters.countries && filters.countries.length > 0) {
+        q = q.in("country", filters.countries);
+      } else if (filters.country) {
+        q = q.eq("country", filters.country);
+      }
+      if (filters.origins && filters.origins.length > 0) {
+        q = q.in("origin", filters.origins);
+      } else if (filters.origin) {
+        q = q.eq("origin", filters.origin);
+      }
       if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
       if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom);
       if (filters.dateTo) q = q.lte("created_at", filters.dateTo);
@@ -99,6 +107,14 @@ export function useContacts(filters: ContactFilters = {}) {
       if (filters.hasAlias === true) q = q.not("company_alias", "is", null);
       if (filters.holdingPattern === "out") q = q.eq("interaction_count", 0);
       else if (filters.holdingPattern === "in") q = q.gt("interaction_count", 0);
+      // Channel filter
+      if (filters.channel === "with_email") q = q.not("email", "is", null);
+      else if (filters.channel === "with_phone") q = q.not("phone", "is", null);
+      // Quality filter
+      if (filters.quality === "enriched") q = q.not("deep_search_at", "is", null);
+      else if (filters.quality === "not_enriched") q = q.is("deep_search_at", null);
+      else if (filters.quality === "with_alias") q = q.not("company_alias", "is", null);
+      else if (filters.quality === "no_alias") q = q.is("company_alias", null);
 
       const from = page * pageSize;
       const to = from + pageSize - 1;
