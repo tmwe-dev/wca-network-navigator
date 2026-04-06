@@ -95,7 +95,7 @@ export function PartnerListPanel({
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
       case "rating": return "Rating";
-      case "contacts": return "Contatti";
+      case "recent": return "Più recenti";
       default: return "Nome";
     }
   }, [activeSort]);
