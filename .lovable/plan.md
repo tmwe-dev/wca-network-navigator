@@ -1,52 +1,57 @@
 
 
-# Fix: Invio WhatsApp dalla Inbox fallisce con "Contatto non trovato"
+# Fix: WhatsApp reply from Inbox fails to find contact
 
-## Problema
+## Root Cause
 
-Quando rispondi a un messaggio WhatsApp dalla inbox, il sistema passa il **nome del contatto** (es. "Jose Programmatore Cuba") alla funzione `sendWhatsApp`. L'estensione cerca quel nome nella barra di ricerca di WhatsApp Web, ma se non trova corrispondenza esatta e il nome non contiene cifre, restituisce "Contatto non trovato".
+When you reply from the inbox, the system passes the **contact display name** (e.g., "Papa Ernesto") as the `phone` parameter to `sendWhatsApp`. The extension then:
+1. Searches WhatsApp Web's search bar for that name
+2. If no result title matches (case-sensitive `includes`), tries first name only
+3. If still no match, checks for digits in the string — a name has none → "Contatto non trovato"
 
-Il fallback via URL (`web.whatsapp.com/send?phone=...`) funziona solo se la stringa contiene almeno 6 cifre — un nome come "Jose Programmatore Cuba" non ne ha nessuna.
+The fallback `extractPhoneFromThread` also fails because `raw_payload` only stores `{contact, lastMessage, unreadCount, time}` — no phone number or JID.
 
-## Soluzione
+The cockpit works because it sends actual phone numbers from CRM data.
 
-Doppia strategia di invio nel componente `WhatsAppInboxView`:
+## Solution: Two changes
 
-1. **Estrarre il numero di telefono dal `raw_payload`** dei messaggi del thread (spesso contiene un campo `phone`, `jid` o un numero nel campo `contact`)
-2. **Tentare prima con il nome** (ricerca nella chat list di WhatsApp Web)
-3. **Se fallisce, ritentare con il numero di telefono** se disponibile
-4. **Come ultimo fallback**, aprire `web.whatsapp.com/send?phone=...` se il numero e disponibile
+### 1. Extension: Check if chat is already open before searching (actions.js)
 
-## Modifiche
+Before doing a search-bar lookup, inject a check that reads the **currently open chat header** in WhatsApp Web. If the header name matches the contact (case-insensitive, partial match), skip the search entirely and go straight to typing in the compose box.
 
-### 1. `src/components/outreach/WhatsAppInboxView.tsx`
-
-- Aggiungere una funzione helper `extractPhoneFromThread(thread)` che scansiona `raw_payload` dei messaggi del thread per estrarre un numero di telefono (cerca campi `phone`, `jid`, `sender`, o pattern numerici nel campo `contact`)
-- Modificare `handleSendReply`:
-  - Prima tentativo con `sendWhatsApp(activeTab, text)` (nome contatto — cerca nella search bar)
-  - Se fallisce con "Contatto non trovato", estrarre il telefono dal thread e ritentare con `sendWhatsApp(phone, text)`
-  - Se anche il secondo tentativo fallisce, mostrare errore con suggerimento
-
-### 2. `public/whatsapp-extension/actions.js`
-
-- Migliorare la funzione `openChat`: se la ricerca per nome fallisce, provare anche a cercare con varianti del nome (solo il primo nome, senza cognome/suffissi)
-- Abbassare la soglia minima per il fallback URL da 6 a 5 cifre per essere piu tolleranti con numeri corti
-
-## Dettaglio tecnico
+This covers the main use case: the user is already viewing the chat in WhatsApp Web.
 
 ```text
-handleSendReply flow:
-  1. sendWhatsApp(contactName, text)
-     ├─ extension searches WA Web → found → send → OK
-     └─ "Contatto non trovato"
-  2. extractPhone from thread's raw_payload
-     ├─ phone found → sendWhatsApp(phone, text) → retry
-     └─ no phone → show error with context
+sendWhatsApp flow (updated):
+  1. Check current chat header → matches contact? → skip search, type directly
+  2. Search bar lookup by full name
+  3. Search bar lookup by first name only
+  4. If has ≥5 digits → URL fallback
+  5. Otherwise → "Contatto non trovato"
 ```
 
-La funzione `extractPhoneFromThread` cercherà in ordine:
-- `raw_payload.phone`
-- `raw_payload.jid` (formato `391234567890@s.whatsapp.net`)
-- `raw_payload.sender`
-- Pattern numerico nel campo `contact` stesso (se contiene cifre come "+39...")
+### 2. Inbox view: Improve name matching tolerance (WhatsAppInboxView.tsx)
+
+Before calling `sendWhatsApp`, normalize the contact name:
+- Trim whitespace
+- Remove emoji and special Unicode characters that might interfere with search matching
+
+This is a minor improvement but helps with contacts like "Polly 💃".
+
+## Files to modify
+
+- **`public/whatsapp-extension/actions.js`** — Add "current chat header check" at the start of the injected script, before the `openChat` call. Read the header from `[data-testid="conversation-info-header-chat-title"]` or `#main header span[title]`, compare with contact name (lowercase, trimmed). If match → proceed directly to compose box.
+
+- **`src/components/outreach/WhatsAppInboxView.tsx`** — Normalize `activeTab` before passing to `sendWhatsApp`: strip emoji, trim. Minor change.
+
+## Technical detail
+
+The header check in the extension script (pseudocode):
+```text
+headerTitle = qsDeep('#main header span[title]')?.title
+if headerTitle and headerTitle.toLowerCase().includes(contact.toLowerCase()):
+  skip search, go straight to compose box
+```
+
+This is the most impactful fix because the user is typically already in the right chat on WhatsApp Web when replying from the inbox.
 
