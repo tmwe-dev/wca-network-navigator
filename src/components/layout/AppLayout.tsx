@@ -12,6 +12,7 @@ import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRun
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
+import { useWcaSync } from "@/hooks/useWcaSync";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
