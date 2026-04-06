@@ -9,8 +9,7 @@ import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
   Check, ExternalLink, Globe, Sparkles, ArrowUpFromLine,
-  Settings, Database, Rocket, Brain, ListTodo, Clock,
-  CheckCircle2, AlertTriangle, Play,
+  Settings, Database, Rocket,
 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,6 @@ import ContentSelect from "@/components/shared/ContentSelect";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
-import { useTodayActivities } from "@/hooks/useTodayActivities";
 
 interface MissionDrawerProps {
   open: boolean;
@@ -33,7 +31,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Popup states
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
@@ -56,19 +53,22 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     setNewLink("");
   };
 
-  // Determine context
   const isOutreach = currentPath === "/outreach";
   const isNetwork = currentPath === "/network";
   const isCRM = currentPath === "/crm";
   const isSettings = currentPath === "/settings";
+  const isEmailComposer = currentPath === "/email-composer";
 
-  const contextTitle = isOutreach ? "Outreach Control" : isNetwork ? "Network Actions" : isCRM ? "CRM Actions" : isSettings ? "Strumenti Impostazioni" : "Mission Control";
+  // Destinatari visible only in outreach-related contexts
+  const showRecipients = isOutreach || isEmailComposer || isNetwork || isCRM;
+
+  const contextTitle = isOutreach ? "Outreach Control" : isNetwork ? "Network Actions" : isCRM ? "CRM Actions" : isSettings ? "Strumenti" : "Mission Control";
   const contextSubtitle = isOutreach ? "Email, destinatari e invio" : isNetwork ? "Deep Search e arricchimento" : isCRM ? "Contatti e comunicazione" : isSettings ? "Azioni rapide" : "Configura e vai";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
-        {/* ── HEADER ── */}
+        {/* Header */}
         <div className="px-5 py-3 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner shadow-primary/10">
@@ -78,23 +78,16 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <h3 className="text-sm font-bold text-foreground">{contextTitle}</h3>
               <p className="text-[11px] text-muted-foreground">{contextSubtitle}</p>
             </div>
-            {/* Context badge */}
             <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
               {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : "Globale"}
             </span>
           </div>
         </div>
 
-        {/* ── BODY ── */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
 
-          {/* ═══ AI Quick Input ═══ */}
-          <AiQuickSection />
-
-          {/* ═══ Activity Summary ═══ */}
-          <ActivitySummarySection />
-
-          {/* ═══ CONTEXTUAL: Network ═══ */}
+          {/* Network actions */}
           {isNetwork && (
             <ContextSection title="Azioni Network" icon={Globe} color="text-blue-500">
               <p className="text-xs text-muted-foreground mb-2">Seleziona paesi per attivare azioni.</p>
@@ -127,7 +120,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </ContextSection>
           )}
 
-          {/* ═══ CONTEXTUAL: CRM ═══ */}
+          {/* CRM actions */}
           {isCRM && (
             <ContextSection title="Azioni CRM" icon={Users} color="text-emerald-500">
               <p className="text-xs text-muted-foreground mb-2">Azioni rapide per contatti selezionati.</p>
@@ -160,10 +153,10 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </ContextSection>
           )}
 
-          {/* ═══ CONTEXTUAL: Settings ═══ */}
+          {/* Settings actions */}
           {isSettings && (
             <ContextSection title="Strumenti" icon={Settings} color="text-amber-500">
-              <p className="text-xs text-muted-foreground mb-2">Azioni batch disponibili per la sezione attiva.</p>
+              <p className="text-xs text-muted-foreground mb-2">Azioni batch disponibili.</p>
               <div className="grid grid-cols-2 gap-1.5">
                 <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent("enrichment-batch-start"))}>
                   <Zap className="w-3.5 h-3.5" /> Avvia batch
@@ -175,10 +168,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </ContextSection>
           )}
 
-          {/* ═══ ALWAYS: Mission Config (Outreach or global) ═══ */}
+          {/* Mission Config (Outreach or global) */}
           {(isOutreach || (!isNetwork && !isCRM && !isSettings)) && (
             <>
-              {/* ROW 1: Presets + Quality */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   {m.presets.length <= 5 ? (
@@ -211,30 +203,19 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
                       </SelectContent>
                     </Select>
                   )}
-
-                  <button
-                    onClick={() => setPresetDialogOpen(true)}
-                    className="w-8 h-8 rounded-lg border border-dashed border-border/50 flex items-center justify-center hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                  >
+                  <button onClick={() => setPresetDialogOpen(true)} className="w-8 h-8 rounded-lg border border-dashed border-border/50 flex items-center justify-center hover:border-primary/40 hover:bg-primary/5 transition-colors">
                     <Plus className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-
                   {m.activePresetId && (
-                    <button
-                      onClick={() => m.deletePreset(m.activePresetId!)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
-                    >
+                    <button onClick={() => m.deletePreset(m.activePresetId!)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors">
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   )}
-
                   <div className="ml-auto">
                     <QualitySelector value={m.quality} onChange={m.setQuality} size="sm" />
                   </div>
                 </div>
               </div>
-
-              {/* ROW 2: Action icons */}
               <div className="flex items-center gap-2">
                 <ActionIcon icon={Target} label="Obiettivo" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
                 <ActionIcon icon={FileText} label="Proposta" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-blue-500/25 to-blue-500/5" iconColor="text-blue-500" onClick={() => setProposalDialogOpen(true)} />
@@ -244,11 +225,11 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </>
           )}
 
-          {/* ROW 3: Recipients — always visible */}
-          <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />
+          {/* Recipients — only in outreach/email contexts */}
+          {showRecipients && <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />}
         </div>
 
-        {/* ── DIALOGS ── */}
+        {/* Dialogs */}
         <Dialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
@@ -270,12 +251,10 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <DialogDescription className="text-xs">Seleziona o scrivi il tuo obiettivo</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto space-y-3 py-2">
-              <ContentSelect type="goals" onSelect={(text) => { m.setGoal(text); }} selectedText={m.goal} placeholder="Seleziona obiettivo..." />
+              <ContentSelect type="goals" onSelect={(text) => m.setGoal(text)} selectedText={m.goal} placeholder="Seleziona obiettivo..." />
               <Textarea value={m.goal} onChange={e => m.setGoal(e.target.value)} placeholder="Descrivi l'obiettivo..." className="min-h-[100px] text-sm resize-none" />
             </div>
-            <DialogFooter>
-              <Button size="sm" onClick={() => setGoalDialogOpen(false)}>Chiudi</Button>
-            </DialogFooter>
+            <DialogFooter><Button size="sm" onClick={() => setGoalDialogOpen(false)}>Chiudi</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -286,12 +265,10 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <DialogDescription className="text-xs">Seleziona o scrivi la proposta</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto space-y-3 py-2">
-              <ContentSelect type="proposals" onSelect={(text) => { m.setBaseProposal(text); }} selectedText={m.baseProposal} placeholder="Seleziona proposta..." />
+              <ContentSelect type="proposals" onSelect={(text) => m.setBaseProposal(text)} selectedText={m.baseProposal} placeholder="Seleziona proposta..." />
               <Textarea value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)} placeholder="La proposta commerciale..." className="min-h-[100px] text-sm resize-none" />
             </div>
-            <DialogFooter>
-              <Button size="sm" onClick={() => setProposalDialogOpen(false)}>Chiudi</Button>
-            </DialogFooter>
+            <DialogFooter><Button size="sm" onClick={() => setProposalDialogOpen(false)}>Chiudi</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -344,7 +321,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </div>
           </DialogContent>
         </Dialog>
-
       </SheetContent>
     </Sheet>
   );
@@ -437,20 +413,14 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
           <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">{m.recipients.length}</span>
         )}
       </div>
-
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca azienda..." className="h-9 text-xs pl-9 border-border/40 bg-muted/10" />
       </div>
-
       {search.length >= 2 && searchResults.length > 0 && (
         <div className="max-h-[160px] overflow-y-auto space-y-0.5 rounded-lg border border-border/20 p-1">
           {searchResults.map((p: any) => (
-            <button
-              key={p.id}
-              onClick={() => handleAdd(p)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left"
-            >
+            <button key={p.id} onClick={() => handleAdd(p)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left">
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
@@ -462,7 +432,6 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
           ))}
         </div>
       )}
-
       {m.recipients.length > 0 && (
         <div className="space-y-1 max-h-[200px] overflow-y-auto">
           {m.recipients.map((r, i) => (
@@ -482,130 +451,6 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
           <button onClick={m.clearRecipients} className="w-full text-center text-[10px] text-destructive hover:underline py-1">Rimuovi tutti</button>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ── AI Quick Input Section ── */
-function AiQuickSection() {
-  const [aiInput, setAiInput] = useState("");
-  const [aiResponse, setAiResponse] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSend = async () => {
-    if (!aiInput.trim() || loading) return;
-    setLoading(true);
-    setAiResponse("");
-    try {
-      const { data } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: [{ role: "user", content: aiInput }], context: { currentPage: window.location.pathname } },
-      });
-      setAiResponse(data?.reply || data?.message || "Nessuna risposta");
-    } catch {
-      setAiResponse("Errore nella comunicazione AI");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-2">
-      <div className="flex items-center gap-2">
-        <Brain className="w-4 h-4 text-primary" />
-        <span className="text-xs font-bold text-foreground">AI Rapida</span>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent("toggle-intelliflow"))}
-          className="ml-auto text-[10px] text-primary hover:underline flex items-center gap-1"
-        >
-          <Play className="w-3 h-3" /> IntelliFlow
-        </button>
-      </div>
-      <div className="flex gap-1.5">
-        <Input
-          value={aiInput}
-          onChange={e => setAiInput(e.target.value)}
-          placeholder="Chiedi qualcosa..."
-          className="h-8 text-xs bg-background/50 border-border/40 flex-1"
-          onKeyDown={e => e.key === "Enter" && handleSend()}
-        />
-        <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={handleSend} disabled={loading || !aiInput.trim()}>
-          {loading ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-        </Button>
-      </div>
-      {aiResponse && (
-        <div className="text-[11px] text-foreground bg-primary/5 rounded-lg p-2 border border-primary/10 max-h-[120px] overflow-y-auto">
-          {aiResponse}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Activity Summary Section ── */
-function ActivitySummarySection() {
-  const { data: activities = [], isLoading } = useTodayActivities();
-
-  const { data: pendingCount } = useQuery({
-    queryKey: ["pending-activities-count"],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("activities")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
-      return count || 0;
-    },
-    staleTime: 30_000,
-  });
-
-  const { data: inProgressCount } = useQuery({
-    queryKey: ["in-progress-activities-count"],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("activities")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "in_progress");
-      return count || 0;
-    },
-    staleTime: 30_000,
-  });
-
-  return (
-    <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-2">
-      <div className="flex items-center gap-2">
-        <ListTodo className="w-4 h-4 text-amber-500" />
-        <span className="text-xs font-bold text-foreground">Piano Lavori</span>
-      </div>
-
-      {/* Counters */}
-      <div className="grid grid-cols-3 gap-1.5">
-        <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <p className="text-lg font-bold text-amber-500">{pendingCount ?? "—"}</p>
-          <p className="text-[9px] text-muted-foreground">Da fare</p>
-        </div>
-        <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <p className="text-lg font-bold text-blue-500">{inProgressCount ?? "—"}</p>
-          <p className="text-[9px] text-muted-foreground">In corso</p>
-        </div>
-        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-          <p className="text-lg font-bold text-emerald-500">{activities.length}</p>
-          <p className="text-[9px] text-muted-foreground">Oggi</p>
-        </div>
-      </div>
-
-      {/* Recent completed */}
-      {activities.length > 0 && (
-        <div className="space-y-1 max-h-[100px] overflow-y-auto">
-          {activities.slice(0, 4).map(a => (
-            <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/20">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-              <span className="text-[10px] text-foreground truncate flex-1">{a.contactName}</span>
-              <span className="text-[9px] text-muted-foreground shrink-0">{a.activityType}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {isLoading && <p className="text-[10px] text-muted-foreground text-center py-2">Caricamento...</p>}
     </div>
   );
 }
