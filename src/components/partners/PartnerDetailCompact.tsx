@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,7 +11,7 @@ import {
 import {
   Star, Phone, Mail, Globe, MapPin, Calendar,
   ChevronDown, User, Loader2, Search,
-  Trophy, FileText, ExternalLink, ArrowLeft,
+  Trophy, FileText, ExternalLink, ArrowLeft, Send,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ import { EnrichmentCard } from "@/components/partners/EnrichmentCard";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { ActivityList } from "@/components/partners/ActivityList";
 import { t } from "@/components/download/theme";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
