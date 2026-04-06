@@ -185,7 +185,6 @@ export function AppLayout() {
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
         </Suspense>
         <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
-        </Suspense>
       </div>
     <ClaudeBadge />
         </GlobalFiltersProvider>
