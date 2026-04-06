@@ -241,7 +241,8 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       </Section>
 
       {/* Quick actions — icon buttons */}
-      <QuickActions contact={c} />
+      <ContactQuickActions contact={c} />
+      <div className="flex flex-wrap gap-1.5">
         {needsAlias && (
           <Button
             variant="outline"
