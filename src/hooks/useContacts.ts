@@ -7,7 +7,9 @@ export type LeadStatus = "new" | "contacted" | "in_progress" | "negotiation" | "
 export interface ContactFilters {
   search?: string;
   country?: string;
+  countries?: string[];
   origin?: string;
+  origins?: string[];
   leadStatus?: LeadStatus;
   dateFrom?: string;
   dateTo?: string;
@@ -17,6 +19,8 @@ export interface ContactFilters {
   groupBy?: "country" | "origin" | "status" | "date";
   importLogId?: string;
   metPersonally?: boolean;
+  channel?: string;
+  quality?: string;
   page?: number;
   pageSize?: number;
 }
