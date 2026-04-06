@@ -228,6 +228,13 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   // Context title
   const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : "Globale";
 
+  // Listen for close event from sub-components (e.g. search result click)
+  useEffect(() => {
+    const handler = () => onOpenChange(false);
+    window.addEventListener("filters-drawer-close", handler);
+    return () => window.removeEventListener("filters-drawer-close", handler);
+  }, [onOpenChange]);
+
   // Active filter count
   const activeCount = useMemo(() => {
     let n = 0;
