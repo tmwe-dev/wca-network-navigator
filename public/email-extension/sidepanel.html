@@ -3,86 +3,469 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Email — Pannello</title>
+  <title>Communication Hub</title>
   <link rel="stylesheet" href="sidepanel.css" />
 </head>
 <body>
-  <div id="panel-app">
-    <!-- Header -->
-    <div class="panel-header">
-      <div class="panel-title">
-        <span class="panel-logo">📧</span>
-        <h1>Posta</h1>
-      </div>
-      <div class="panel-actions">
-        <button class="panel-btn" id="btn-panel-sync" title="Sincronizza">🔄</button>
-        <button class="panel-btn" id="btn-panel-search" title="Cerca">🔍</button>
-      </div>
-    </div>
+  <div id="app">
 
-    <!-- Search bar (toggled) -->
-    <div id="search-bar" class="search-bar hidden">
-      <input type="text" id="search-input" placeholder="Cerca email..." />
-      <button class="search-clear" id="btn-clear-search">✕</button>
-    </div>
-
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="all">Tutte</button>
-        <button class="filter-tab" data-filter="unread">Non lette</button>
-        <button class="filter-tab" data-filter="flagged">Importanti</button>
+    <!-- ══ ONBOARDING ══ -->
+    <div id="onboarding" class="screen">
+      <div class="steps-bar">
+        <div class="step-dot active" data-step="0"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="1"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="2"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="3"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="4"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="5"></div>
       </div>
-      <div class="email-count" id="email-count">0 email</div>
-    </div>
 
-    <!-- Content area: list + reader -->
-    <div class="panel-content">
-      <!-- Email list -->
-      <div id="email-list-container" class="email-list-container">
-        <div id="email-list" class="email-list">
-          <!-- populated dynamically -->
+      <!-- Step 0: Welcome -->
+      <div id="step-0" class="step active">
+        <div class="step-icon"><div class="icon-glow">🌐</div></div>
+        <h2>Communication Hub</h2>
+        <p class="subtitle">Email, WhatsApp e LinkedIn in un unico strumento. Configura tutto in pochi minuti.</p>
+        <button class="btn primary full" id="btn-start">Inizia configurazione</button>
+      </div>
+
+      <!-- Step 1: Email -->
+      <div id="step-1" class="step">
+        <div class="step-badge-row"><span class="channel-badge email">📧 Email</span><button class="btn-skip" id="skip-email">Salta →</button></div>
+        <h2>Configura Email</h2>
+        <p class="subtitle">Inserisci le credenziali per ricevere e inviare email.</p>
+        <div class="field">
+          <label for="email-addr">Email</label>
+          <input type="email" id="email-addr" placeholder="nome@esempio.com" autocomplete="email" />
         </div>
-        <div id="email-empty" class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>Nessuna email ancora.</p>
-          <p class="empty-hint">Clicca 🔄 per sincronizzare.</p>
-        </div>
-        <div id="email-loading" class="loading-state hidden">
-          <div class="spinner-lg"></div>
-          <p>Caricamento email...</p>
-        </div>
-      </div>
-
-      <!-- Email reader (overlay when email selected) -->
-      <div id="email-reader" class="email-reader hidden">
-        <div class="reader-header">
-          <button class="reader-back" id="btn-back-list">← Indietro</button>
-          <div class="reader-actions">
-            <button class="panel-btn-sm" id="btn-download-eml" title="Scarica .eml">💾</button>
-            <button class="panel-btn-sm" id="btn-flag" title="Segna importante">⭐</button>
+        <div class="field">
+          <label for="email-pw">Password</label>
+          <div class="input-group">
+            <input type="password" id="email-pw" placeholder="••••••••" autocomplete="current-password" />
+            <button class="btn-eye" id="eye-email" type="button">👁️</button>
           </div>
+          <span class="hint">Per Gmail/Yahoo usa una <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="hint-link">password per app</a></span>
         </div>
-        <div class="reader-meta">
-          <h2 id="reader-subject">—</h2>
-          <div class="reader-from-row">
-            <div class="reader-avatar" id="reader-avatar">?</div>
-            <div class="reader-from-info">
-              <div class="reader-from" id="reader-from">—</div>
-              <div class="reader-date" id="reader-date">—</div>
+        <div id="email-discover-status" class="status-box hidden"></div>
+        <button class="btn primary full" id="btn-email-discover">🔍 Trova server automaticamente</button>
+        <button class="btn ghost full mt-2" id="btn-email-manual">Inserisci server manualmente →</button>
+      </div>
+
+      <!-- Step 1b: Email Server Confirm -->
+      <div id="step-1b" class="step">
+        <div class="step-badge-row"><span class="channel-badge email">📧 Email — Server</span></div>
+        <div class="server-card">
+          <div class="server-badge" id="email-server-label">—</div>
+          <div class="section-label">Ricezione (IMAP)</div>
+          <div class="field compact">
+            <label>Host IMAP</label>
+            <input type="text" id="email-host" placeholder="imap.esempio.com" />
+          </div>
+          <div class="field-row">
+            <div class="field compact">
+              <label>Porta</label>
+              <input type="number" id="email-port" value="993" />
+            </div>
+            <div class="field compact">
+              <label>TLS</label>
+              <select id="email-tls">
+                <option value="true" selected>SSL/TLS</option>
+                <option value="false">Nessuna</option>
+              </select>
             </div>
           </div>
-          <div class="reader-to" id="reader-to"></div>
+          <div class="section-divider"></div>
+          <div class="section-label">Invio (SMTP)</div>
+          <div class="field compact">
+            <label>Host SMTP</label>
+            <input type="text" id="smtp-host" placeholder="smtp.esempio.com" />
+          </div>
+          <div class="field-row">
+            <div class="field compact">
+              <label>Porta</label>
+              <input type="number" id="smtp-port" value="587" />
+            </div>
+            <div class="field compact">
+              <label>Sicurezza</label>
+              <select id="smtp-tls">
+                <option value="starttls" selected>STARTTLS</option>
+                <option value="ssl">SSL/TLS</option>
+                <option value="none">Nessuna</option>
+              </select>
+            </div>
+          </div>
+          <div class="method-badge" id="email-discover-method">—</div>
         </div>
-        <div class="reader-body" id="reader-body">
-          <!-- email content rendered here -->
+        <div id="email-test-status" class="status-box hidden"></div>
+        <button class="btn primary full" id="btn-email-test">🔌 Testa e prosegui</button>
+        <button class="btn ghost full mt-2" id="btn-email-skip-test">Salta test →</button>
+      </div>
+
+      <!-- Step 2: WhatsApp -->
+      <div id="step-2" class="step">
+        <div class="step-badge-row"><span class="channel-badge whatsapp">💬 WhatsApp</span><button class="btn-skip" id="skip-wa">Salta →</button></div>
+        <h2>Configura WhatsApp</h2>
+        <p class="subtitle">Collega il tuo account WhatsApp Web per inviare e ricevere messaggi.</p>
+        <div class="info-card">
+          <div class="info-icon">📱</div>
+          <div class="info-text">
+            <strong>Come funziona</strong>
+            <span>L'estensione si collega a WhatsApp Web già aperto nel browser. Assicurati di avere una sessione attiva su <a href="https://web.whatsapp.com" target="_blank" class="hint-link">web.whatsapp.com</a>.</span>
+          </div>
         </div>
-        <div class="reader-attachments hidden" id="reader-attachments">
-          <h4>📎 Allegati</h4>
-          <div id="attachment-list" class="attachment-list"></div>
+        <div class="field">
+          <label for="wa-phone">Numero WhatsApp (opzionale)</label>
+          <input type="tel" id="wa-phone" placeholder="+39 333 1234567" />
+          <span class="hint">Per identificare il tuo account nei log</span>
         </div>
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="wa-notifications" checked />
+            <span>Notifiche per nuovi messaggi</span>
+          </label>
+        </div>
+        <button class="btn primary full" id="btn-wa-save">✅ Salva configurazione WhatsApp</button>
+      </div>
+
+      <!-- Step 3: LinkedIn -->
+      <div id="step-3" class="step">
+        <div class="step-badge-row"><span class="channel-badge linkedin">💼 LinkedIn</span><button class="btn-skip" id="skip-li">Salta →</button></div>
+        <h2>Configura LinkedIn</h2>
+        <p class="subtitle">Collega LinkedIn per gestire messaggi e profili direttamente.</p>
+        <div class="info-card">
+          <div class="info-icon">🔗</div>
+          <div class="info-text">
+            <strong>Come funziona</strong>
+            <span>L'estensione utilizza la tua sessione LinkedIn attiva. Accedi a <a href="https://www.linkedin.com" target="_blank" class="hint-link">linkedin.com</a> per iniziare.</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="li-profile">URL profilo LinkedIn (opzionale)</label>
+          <input type="url" id="li-profile" placeholder="https://linkedin.com/in/tuoprofilo" />
+        </div>
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="li-notifications" checked />
+            <span>Notifiche per nuovi messaggi</span>
+          </label>
+        </div>
+        <button class="btn primary full" id="btn-li-save">✅ Salva configurazione LinkedIn</button>
+      </div>
+
+      <!-- Step 4: AI Agent -->
+      <div id="step-4" class="step">
+        <div class="step-badge-row"><span class="channel-badge ai">🤖 Agente AI</span><button class="btn-skip" id="skip-ai">Salta →</button></div>
+        <h2>Configura Agente AI</h2>
+        <p class="subtitle">Aggiungi le tue chiavi API per abilitare l'assistente intelligente.</p>
+        <div class="ai-provider">
+          <div class="provider-header">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310a37f'%3E%3Cpath d='M22.28 14.62a4.73 4.73 0 0 0-.41-3.86 4.84 4.84 0 0 0-5.21-2.33A4.78 4.78 0 0 0 13.1 6a4.86 4.86 0 0 0-4.58-3.3A4.84 4.84 0 0 0 3.93 6.1a4.73 4.73 0 0 0-2.21 2.32A4.86 4.86 0 0 0 2.33 14a4.73 4.73 0 0 0 .41 3.86 4.84 4.84 0 0 0 5.21 2.33c1 .93 2.33 1.45 3.7 1.44a4.86 4.86 0 0 0 4.58-3.3 4.73 4.73 0 0 0 3.14-1.42 4.86 4.86 0 0 0 .6-4.65l2.31 2.36z'/%3E%3C/svg%3E" alt="OpenAI" class="provider-logo" />
+            <div>
+              <strong>OpenAI</strong>
+              <span class="provider-desc">GPT-4o, GPT-4, GPT-3.5</span>
+            </div>
+          </div>
+          <div class="field compact">
+            <label for="openai-key">API Key</label>
+            <div class="input-group">
+              <input type="password" id="openai-key" placeholder="sk-..." />
+              <button class="btn-eye" data-target="openai-key" type="button">👁️</button>
+            </div>
+            <span class="hint"><a href="https://platform.openai.com/api-keys" target="_blank" class="hint-link">Ottieni la tua API key →</a></span>
+          </div>
+        </div>
+        <div class="ai-provider">
+          <div class="provider-header">
+            <div class="provider-logo-text">A</div>
+            <div>
+              <strong>Anthropic</strong>
+              <span class="provider-desc">Claude 3.5 Sonnet, Claude 3 Opus</span>
+            </div>
+          </div>
+          <div class="field compact">
+            <label for="anthropic-key">API Key</label>
+            <div class="input-group">
+              <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
+              <button class="btn-eye" data-target="anthropic-key" type="button">👁️</button>
+            </div>
+            <span class="hint"><a href="https://console.anthropic.com/settings/keys" target="_blank" class="hint-link">Ottieni la tua API key →</a></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Modello predefinito</label>
+          <select id="ai-default-model">
+            <option value="gpt-4o">GPT-4o (consigliato)</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="claude-3-opus">Claude 3 Opus</option>
+          </select>
+        </div>
+        <button class="btn primary full" id="btn-ai-save">✅ Salva configurazione AI</button>
+      </div>
+
+      <!-- Step 5: Preferences & Finish -->
+      <div id="step-5" class="step">
+        <h2>Preferenze finali</h2>
+        <p class="subtitle">Personalizza il comportamento dell'hub.</p>
+        <div class="storage-options">
+          <label class="storage-option selected" data-mode="local">
+            <input type="radio" name="storage" value="local" checked />
+            <div class="option-content">
+              <div class="option-icon">💾</div>
+              <div class="option-text">
+                <strong>Scarica sul PC</strong>
+                <span>File .eml nella cartella Download</span>
+              </div>
+              <div class="badge recommended">Consigliato</div>
+            </div>
+          </label>
+          <label class="storage-option" data-mode="cloud">
+            <input type="radio" name="storage" value="cloud" />
+            <div class="option-content">
+              <div class="option-icon">☁️</div>
+              <div class="option-text">
+                <strong>Salva nel cloud</strong>
+                <span>Accessibile da qualsiasi dispositivo</span>
+              </div>
+            </div>
+          </label>
+        </div>
+        <div class="field">
+          <label>Sincronizzazione automatica</label>
+          <select id="input-sync-interval">
+            <option value="0">Manuale</option>
+            <option value="5">Ogni 5 minuti</option>
+            <option value="15" selected>Ogni 15 minuti</option>
+            <option value="30">Ogni 30 minuti</option>
+            <option value="60">Ogni ora</option>
+          </select>
+        </div>
+        <div id="config-summary" class="config-summary"></div>
+        <button class="btn primary full" id="btn-finish">🚀 Completa e avvia</button>
       </div>
     </div>
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="dashboard" class="screen hidden">
+      <!-- Channel tabs -->
+      <div class="channel-tabs">
+        <button class="channel-tab active" data-channel="email">
+          <span class="tab-icon">📧</span>
+          <span class="tab-label">Email</span>
+          <span class="tab-badge hidden" id="badge-email">0</span>
+        </button>
+        <button class="channel-tab" data-channel="whatsapp">
+          <span class="tab-icon">💬</span>
+          <span class="tab-label">WhatsApp</span>
+          <span class="tab-badge hidden" id="badge-whatsapp">0</span>
+        </button>
+        <button class="channel-tab" data-channel="linkedin">
+          <span class="tab-icon">💼</span>
+          <span class="tab-label">LinkedIn</span>
+          <span class="tab-badge hidden" id="badge-linkedin">0</span>
+        </button>
+      </div>
+
+      <!-- Header -->
+      <div class="dash-header">
+        <div class="dash-title">
+          <div class="dash-avatar" id="dash-avatar">📧</div>
+          <div>
+            <h3 id="dash-channel-name">Email</h3>
+            <span class="dash-server" id="dash-channel-info">—</span>
+          </div>
+        </div>
+        <div class="dash-actions">
+          <button class="btn-icon" id="btn-compose" title="Scrivi messaggio">✏️</button>
+          <button class="btn-icon" id="btn-settings" title="Impostazioni">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Messaggi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-syncs">0</div>
+          <div class="stat-label">Sincronizzazioni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-last">Mai</div>
+          <div class="stat-label">Ultima sync</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-sent">0</div>
+          <div class="stat-label">Inviati</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="sync-progress" class="progress-bar hidden">
+        <div class="progress-fill" id="progress-fill"></div>
+        <span class="progress-text" id="progress-text">Sincronizzazione...</span>
+      </div>
+      <div id="sync-result" class="status-box hidden"></div>
+
+      <!-- Email inbox (integrated reader) -->
+      <div id="inbox-section" class="inbox-section">
+        <!-- Search bar -->
+        <div id="search-bar" class="search-bar hidden">
+          <input type="text" id="search-input" placeholder="Cerca email..." />
+          <button class="search-clear" id="btn-clear-search">✕</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="inbox-toolbar">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">Tutte</button>
+            <button class="filter-tab" data-filter="unread">Non lette</button>
+            <button class="filter-tab" data-filter="flagged">Importanti</button>
+          </div>
+          <div class="inbox-toolbar-right">
+            <span class="email-count" id="email-count">0</span>
+            <button class="btn-icon-sm" id="btn-panel-search" title="Cerca">🔍</button>
+          </div>
+        </div>
+
+        <!-- Email list -->
+        <div id="email-list-container" class="email-list-container">
+          <div id="email-list" class="email-list"></div>
+          <div id="email-empty" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>Nessuna email ancora.</p>
+            <p class="empty-hint">Clicca 🔄 per sincronizzare.</p>
+          </div>
+          <div id="email-loading" class="loading-state hidden">
+            <div class="spinner-lg"></div>
+            <p>Caricamento email...</p>
+          </div>
+        </div>
+
+        <!-- Email reader (overlay) -->
+        <div id="email-reader" class="email-reader hidden">
+          <div class="reader-header">
+            <button class="reader-back" id="btn-back-list">← Indietro</button>
+            <div class="reader-actions">
+              <button class="panel-btn-sm" id="btn-download-eml" title="Scarica .eml">💾</button>
+              <button class="panel-btn-sm" id="btn-flag" title="Segna importante">⭐</button>
+            </div>
+          </div>
+          <div class="reader-meta">
+            <h2 id="reader-subject">—</h2>
+            <div class="reader-from-row">
+              <div class="reader-avatar" id="reader-avatar">?</div>
+              <div class="reader-from-info">
+                <div class="reader-from" id="reader-from">—</div>
+                <div class="reader-date" id="reader-date">—</div>
+              </div>
+            </div>
+            <div class="reader-to" id="reader-to"></div>
+          </div>
+          <div class="reader-body" id="reader-body"></div>
+          <div class="reader-attachments hidden" id="reader-attachments">
+            <h4>📎 Allegati</h4>
+            <div id="attachment-list" class="attachment-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channel status (for WA/LI) -->
+      <div id="channel-status" class="channel-status hidden">
+        <div class="status-indicator" id="status-indicator"></div>
+        <span id="status-text">—</span>
+      </div>
+
+      <!-- AI Agent mini-card -->
+      <div id="ai-card" class="ai-mini-card hidden">
+        <div class="ai-mini-header">
+          <span>🤖</span>
+          <strong>Agente AI</strong>
+          <span class="ai-model-badge" id="ai-model-label">—</span>
+        </div>
+        <div class="ai-mini-status" id="ai-status">Configurato</div>
+      </div>
+
+      <button class="btn primary full" id="btn-sync">
+        <span id="sync-label">🔄 Sincronizza ora</span>
+      </button>
+      <button class="btn outline full mt-2" id="btn-reset">🗑️ Reset configurazione</button>
+    </div>
+
+    <!-- ══ COMPOSE ══ -->
+    <div id="compose" class="screen hidden">
+      <div class="compose-header">
+        <button class="compose-back" id="btn-compose-back">← Indietro</button>
+        <div class="compose-channel-badge" id="compose-badge">📧 Email</div>
+      </div>
+      <h2 id="compose-title">Nuovo messaggio</h2>
+      <div class="compose-channel-selector">
+        <button class="compose-ch-btn active" data-compose-ch="email" id="compose-ch-email">📧 Email</button>
+        <button class="compose-ch-btn" data-compose-ch="whatsapp" id="compose-ch-wa">💬 WhatsApp</button>
+        <button class="compose-ch-btn" data-compose-ch="linkedin" id="compose-ch-li">💼 LinkedIn</button>
+      </div>
+      <div id="compose-email-fields" class="compose-fields">
+        <div class="field compact">
+          <label for="compose-to">Destinatario</label>
+          <input type="email" id="compose-to" placeholder="destinatario@esempio.com" />
+        </div>
+        <div class="field compact">
+          <label for="compose-cc">CC (opzionale)</label>
+          <input type="email" id="compose-cc" placeholder="cc@esempio.com" />
+        </div>
+        <div class="field compact">
+          <label for="compose-subject">Oggetto</label>
+          <input type="text" id="compose-subject" placeholder="Oggetto del messaggio" />
+        </div>
+        <div class="field compact">
+          <label for="compose-body">Messaggio</label>
+          <textarea id="compose-body" class="compose-textarea" placeholder="Scrivi il tuo messaggio..." rows="8"></textarea>
+        </div>
+      </div>
+      <div id="compose-wa-fields" class="compose-fields hidden">
+        <div class="field compact">
+          <label for="compose-wa-phone">Numero telefono</label>
+          <input type="tel" id="compose-wa-phone" placeholder="+39 333 1234567" />
+          <span class="hint">Formato internazionale con prefisso</span>
+        </div>
+        <div class="field compact">
+          <label for="compose-wa-body">Messaggio</label>
+          <textarea id="compose-wa-body" class="compose-textarea" placeholder="Scrivi il messaggio WhatsApp..." rows="6"></textarea>
+        </div>
+        <div class="wa-char-count"><span id="wa-char-count">0</span> / 4096</div>
+      </div>
+      <div id="compose-li-fields" class="compose-fields hidden">
+        <div class="field compact">
+          <label for="compose-li-recipient">Nome o URL profilo</label>
+          <input type="text" id="compose-li-recipient" placeholder="Mario Rossi o https://linkedin.com/in/..." />
+          <span class="hint">Inserisci il nome per cercare o l'URL del profilo</span>
+        </div>
+        <div class="field compact">
+          <label for="compose-li-body">Messaggio</label>
+          <textarea id="compose-li-body" class="compose-textarea" placeholder="Scrivi il messaggio LinkedIn..." rows="6"></textarea>
+        </div>
+        <div class="li-char-count"><span id="li-char-count">0</span> / 8000</div>
+      </div>
+      <div id="compose-status" class="status-box hidden"></div>
+      <button class="btn primary full" id="btn-send">
+        <span id="send-label">📤 Invia messaggio</span>
+      </button>
+    </div>
+
+    <!-- ══ QUICK COMPOSE BAR (always visible) ══ -->
+    <div id="quick-bar" class="quick-bar hidden">
+      <div class="quick-bar-inner">
+        <input type="text" id="quick-input" placeholder="Scrivi un messaggio rapido..." />
+        <button class="quick-send" id="btn-quick-send">📤</button>
+      </div>
+    </div>
+
   </div>
 
   <script src="sidepanel.js" type="module"></script>
