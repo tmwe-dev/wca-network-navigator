@@ -228,6 +228,13 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   // Context title
   const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? "CRM" : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : "Globale";
 
+  // Listen for close event from sub-components (e.g. search result click)
+  useEffect(() => {
+    const handler = () => onOpenChange(false);
+    window.addEventListener("filters-drawer-close", handler);
+    return () => window.removeEventListener("filters-drawer-close", handler);
+  }, [onOpenChange]);
+
   // Active filter count
   const activeCount = useMemo(() => {
     let n = 0;
@@ -770,7 +777,16 @@ function NetworkFiltersSection() {
                   <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
                 </div>
                 {searchResults.map((p: any) => (
-                  <div key={p.id} className="px-2.5 py-2 hover:bg-muted/30 transition-colors">
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      // Dispatch event to select partner in list, set search to exact name, close drawer
+                      window.dispatchEvent(new CustomEvent("network-select-partner", { detail: { partnerId: p.id } }));
+                      g.setNetworkSearch(p.company_name);
+                      window.dispatchEvent(new CustomEvent("filters-drawer-close"));
+                    }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer rounded-md"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="text-sm shrink-0">{getCountryFlag(p.country_code)}</span>
                       <div className="flex-1 min-w-0">
@@ -795,7 +811,7 @@ function NetworkFiltersSection() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </>
             )}
