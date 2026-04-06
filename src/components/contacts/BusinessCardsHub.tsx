@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Upload, Camera, Handshake, Search, Loader2, ImagePlus, Building2, User, MapPin, Calendar,
   FileSpreadsheet, FileText, CheckCircle2, Mail, Phone, Eye, LayoutGrid, LayoutList, Rows3,
-  Globe, Sparkles, MessageCircle, Send,
+  Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
@@ -153,26 +154,12 @@ function googleLogoSearchUrl(companyName: string) {
   return `https://www.google.com/search?q=${encodeURIComponent(companyName + " logo")}&tbm=isch`;
 }
 
-/* ═══ Contact info tooltip ═══ */
-function ContactInfoIcon({ card }: { card: BusinessCard }) {
-  const hasInfo = card.email || card.phone || card.mobile;
-  if (!hasInfo) return null;
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button className="p-1 rounded hover:bg-muted/50 transition-colors" onClick={(e) => e.stopPropagation()}>
-            <Mail className="w-3 h-3 text-muted-foreground/60" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs space-y-0.5 max-w-[250px]">
-          {card.email && <p className="truncate">✉ {card.email}</p>}
-          {card.phone && <p>📞 {card.phone}</p>}
-          {card.mobile && <p>📱 {card.mobile}</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+/* ═══ Country flag ═══ */
+function countryFlag(code: string | null | undefined): string {
+  if (!code) return "";
+  try {
+    return String.fromCodePoint(...[...code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65));
+  } catch { return ""; }
 }
 
 /* ═══ Status badge ═══ */
@@ -193,39 +180,67 @@ function getCardOriginClasses(card: BusinessCardWithPartner): { border: string; 
   return { border: "from-amber-500/60 to-amber-500/20", bg: "bg-amber-500/5" };
 }
 
-/* ═══ Compact List Row ═══ */
+/* ═══ Get WCA membership year ═══ */
+function getWcaYear(card: BusinessCardWithPartner): string | null {
+  if (!card.partner) return null;
+  const ed = card.partner.enrichment_data;
+  if (!ed) return null;
+  const year = ed?.membership_year || ed?.member_since || ed?.wca_year;
+  return year ? String(year) : null;
+}
+
+/* ═══ Compact List Row — 2 righe ═══ */
 function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const accent = getCardOriginClasses(card);
+  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const wcaYear = getWcaYear(card);
+  const city = card.partner?.enrichment_data?.city || card.location || "";
+
   return (
     <div className={cn(
-      "relative flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden",
+      "relative flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden cursor-pointer",
       isSelected && "bg-primary/10 border-primary/20",
-    )}>
+    )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l", accent.border)} />
-      <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 shrink-0" onClick={(e) => e.stopPropagation()} />
-      <span className="text-xs font-semibold text-foreground truncate w-[130px]">{card.company_name || "—"}</span>
-      <span className="text-[11px] text-muted-foreground truncate w-[110px]">{card.contact_name || "—"}</span>
-      <span className="text-[10px] text-muted-foreground/70 truncate w-[80px] hidden sm:block">{card.position || ""}</span>
-      <ContactInfoIcon card={card} />
-      <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</span>
-      <div className="flex items-center gap-0.5 ml-auto shrink-0">
-        <TooltipProvider>
-          <Tooltip><TooltipTrigger asChild>
-            <button className="p-1 rounded hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onGoogleLogo(); }}>
-              <Globe className="w-3 h-3 text-muted-foreground/60" />
-            </button>
-          </TooltipTrigger><TooltipContent side="top" className="text-xs">Cerca logo su Google</TooltipContent></Tooltip>
-        </TooltipProvider>
-        <TooltipProvider>
-          <Tooltip><TooltipTrigger asChild>
-            <button className="p-1 rounded hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onShowDetail(); }}>
-              <Eye className="w-3 h-3 text-muted-foreground/60" />
-            </button>
-          </TooltipTrigger><TooltipContent side="top" className="text-xs">Dettaglio</TooltipContent></Tooltip>
-        </TooltipProvider>
+      
+      {/* Row 1: Checkbox, Flag, Company, Status, Icons */}
+      <div className="flex items-center gap-2 min-w-0">
+        <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 shrink-0" onClick={(e) => e.stopPropagation()} />
+        {flag && <span className="text-sm shrink-0">{flag}</span>}
+        <span className="text-sm font-semibold text-foreground truncate flex-1">{card.company_name || "—"}</span>
+        <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0", sc)}>
+          {STATUS_LABELS[card.match_status] || "Attesa"}
+        </span>
+        {card.email && <Mail className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
+        {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
+      </div>
+
+      {/* Row 2: Contact name, Position, City, Event, WCA year */}
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground ml-8 min-w-0">
+        {card.contact_name && (
+          <span className="flex items-center gap-1 shrink-0">
+            <User className="w-3 h-3" />{card.contact_name}
+          </span>
+        )}
+        {card.position && <span className="truncate max-w-[120px]">{card.position}</span>}
+        {city && (
+          <span className="flex items-center gap-0.5 shrink-0">
+            <MapPin className="w-2.5 h-2.5" />{city}
+          </span>
+        )}
+        {card.event_name && (
+          <span className="flex items-center gap-0.5 truncate max-w-[120px]">
+            <Handshake className="w-2.5 h-2.5 text-violet-400" />{card.event_name}
+          </span>
+        )}
+        {wcaYear && (
+          <Badge variant="outline" className="text-[8px] h-4 px-1 border-chart-1/20 text-chart-1 shrink-0">
+            WCA {wcaYear}
+          </Badge>
+        )}
       </div>
     </div>
   );
@@ -237,13 +252,15 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
-
   const accent = getCardOriginClasses(card);
+  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const wcaYear = getWcaYear(card);
+
   return (
     <div className={cn(
-      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
+      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
       isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
-    )}>
+    )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       {hasPhoto ? (
         <AspectRatio ratio={16 / 9}>
@@ -259,21 +276,22 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
         <div className="flex items-start justify-between gap-1">
           <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 mt-0.5 shrink-0" onClick={(e) => e.stopPropagation()} />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold truncate">{card.company_name || "—"}</p>
-            <p className="text-[10px] text-muted-foreground truncate">{card.contact_name || "—"}{card.position ? ` · ${card.position}` : ""}</p>
+            <p className="text-sm font-semibold truncate flex items-center gap-1">
+              {flag && <span className="text-xs">{flag}</span>}
+              {card.company_name || "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {card.contact_name || "—"}{card.position ? ` · ${card.position}` : ""}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1 flex-wrap">
           <Badge className={cn("text-[8px] px-1 py-0", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</Badge>
-          <ContactInfoIcon card={card} />
-          <div className="ml-auto flex items-center gap-0.5">
-            <button className="p-0.5 rounded hover:bg-muted/50" onClick={onGoogleLogo} title="Cerca logo">
-              <Globe className="w-3 h-3 text-muted-foreground/50" />
-            </button>
-            <button className="p-0.5 rounded hover:bg-muted/50" onClick={onShowDetail} title="Dettaglio">
-              <Eye className="w-3 h-3 text-muted-foreground/50" />
-            </button>
-          </div>
+          {wcaYear && (
+            <Badge variant="outline" className="text-[8px] px-1 py-0 border-chart-1/20 text-chart-1">WCA {wcaYear}</Badge>
+          )}
+          {card.email && <Mail className="w-3 h-3 text-muted-foreground/40" />}
+          {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/40" />}
         </div>
       </div>
     </div>
@@ -286,13 +304,15 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
-
   const accent = getCardOriginClasses(card);
+  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const wcaYear = getWcaYear(card);
+
   return (
     <div className={cn(
-      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all",
+      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
       isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
-    )}>
+    )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       <div className="flex gap-3 p-3">
         <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 mt-1 shrink-0" onClick={(e) => e.stopPropagation()} />
@@ -304,8 +324,13 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
           </div>
         )}
         <div className="flex-1 min-w-0 space-y-1">
-          <p className="text-xs font-semibold truncate">{card.company_name || "—"}</p>
-          <p className="text-[11px] text-muted-foreground truncate">{card.contact_name || "—"}{card.position ? ` · ${card.position}` : ""}</p>
+          <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+            {flag && <span>{flag}</span>}
+            {card.company_name || "—"}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate">
+            {card.contact_name || "—"}{card.position ? ` · ${card.position}` : ""}
+          </p>
           {card.event_name && (
             <div className="flex items-center gap-1">
               <Handshake className="w-3 h-3 text-violet-400 shrink-0" />
@@ -315,7 +340,11 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
           )}
           <div className="flex items-center gap-1 flex-wrap">
             <Badge className={cn("text-[8px] px-1 py-0", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</Badge>
-            <ContactInfoIcon card={card} />
+            {wcaYear && (
+              <Badge variant="outline" className="text-[8px] px-1 py-0 border-chart-1/20 text-chart-1">WCA {wcaYear}</Badge>
+            )}
+            {card.email && <Mail className="w-3 h-3 text-muted-foreground/40" />}
+            {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/40" />}
             {card.partner && (
               <Badge variant="outline" className="text-[8px] px-1 py-0 border-emerald-500/20 text-emerald-400">
                 <Building2 className="w-2.5 h-2.5 mr-0.5" />{card.partner.company_name}
@@ -323,10 +352,59 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button className="p-1 rounded hover:bg-muted/50" onClick={onGoogleLogo} title="Cerca logo"><Globe className="w-3.5 h-3.5 text-muted-foreground/50" /></button>
-          <button className="p-1 rounded hover:bg-muted/50" onClick={onShowDetail} title="Dettaglio"><Eye className="w-3.5 h-3.5 text-muted-foreground/50" /></button>
-        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ Bulk Action Bar for BCA ═══ */
+function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhatsApp, onCockpit, onWorkspace }: {
+  count: number;
+  cards: BusinessCardWithPartner[];
+  selectedIds: Set<string>;
+  onClear: () => void;
+  onEmail: () => void;
+  onWhatsApp: () => void;
+  onCockpit: () => void;
+  onWorkspace: () => void;
+}) {
+  if (count === 0) return null;
+  const selectedCards = cards.filter(c => selectedIds.has(c.id));
+  const withEmail = selectedCards.filter(c => c.email).length;
+  const withPhone = selectedCards.filter(c => c.phone || c.mobile).length;
+
+  return (
+    <div className="px-3 py-1.5 border-b border-violet-500/15 bg-violet-500/[0.06] backdrop-blur-xl shrink-0">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-violet-300">{count} sel.</span>
+
+        {withEmail > 0 && (
+          <Button size="sm" variant="ghost" onClick={onEmail}
+            className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
+            <Mail className="w-3 h-3" /> Email ({withEmail})
+          </Button>
+        )}
+
+        {withPhone > 0 && (
+          <Button size="sm" variant="ghost" onClick={onWhatsApp}
+            className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
+            <MessageCircle className="w-3 h-3" /> WhatsApp ({withPhone})
+          </Button>
+        )}
+
+        <Button size="sm" variant="ghost" onClick={onWorkspace}
+          className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
+          <ClipboardList className="w-3 h-3" /> Workspace
+        </Button>
+
+        <Button size="sm" variant="ghost" onClick={onCockpit}
+          className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
+          <ArrowRight className="w-3 h-3" /> Cockpit
+        </Button>
+
+        <button onClick={onClear} className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
@@ -334,8 +412,42 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
 
 /* ═══ Detail Side Panel ═══ */
 function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
+  const navigate = useNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = card.mobile || card.phone;
+
+  const handleCockpit = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("cockpit_queue").insert({
+        source_id: card.id,
+        source_type: "business_card",
+        user_id: user.id,
+        partner_id: card.matched_partner_id || null,
+      } as any);
+      toast({ title: "✅ Aggiunto al Cockpit" });
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    }
+  }, [card]);
+
+  const handleWorkspace = useCallback(() => {
+    if (!card.email) {
+      toast({ title: "Email mancante", variant: "destructive" });
+      return;
+    }
+    navigate("/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: card.email,
+          name: card.contact_name || undefined,
+          company: card.company_name || undefined,
+          partnerId: card.matched_partner_id || undefined,
+        },
+      },
+    });
+  }, [card, navigate]);
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
@@ -406,6 +518,24 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
               </a>
             </Button>
           )}
+          <Button
+            variant="outline" size="sm"
+            className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start"
+            onClick={handleCockpit}
+          >
+            <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <span className="truncate">→ Cockpit</span>
+          </Button>
+          {card.email && (
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start"
+              onClick={handleWorkspace}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+              <span className="truncate">Workspace</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -442,7 +572,7 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
         </div>
       )}
 
-      {/* Holding pattern / status */}
+      {/* Status */}
       <div className="space-y-2 bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 rounded-lg p-3 border border-violet-500/10">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Stato</p>
         <Badge className={cn("text-[10px]", STATUS_COLORS[card.match_status] || STATUS_COLORS.pending)}>
@@ -551,7 +681,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
               onClick={() => confirmMatch(p.id)}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs shrink-0">{p.country_code ? String.fromCodePoint(...[...p.country_code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65)) : "🌍"}</span>
+                <span className="text-xs shrink-0">{countryFlag(p.country_code) || "🌍"}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{[p.city, p.country_name].filter(Boolean).join(", ")}</p>
@@ -569,9 +699,10 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
 /* ═══ Main Hub ═══ */
 
 export default function BusinessCardsHub() {
+  const navigate = useNavigate();
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<ViewMode>("card");
+  const [viewMode, setViewMode] = useState<ViewMode>("compact");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailCard, setDetailCard] = useState<BusinessCardWithPartner | null>(null);
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -580,6 +711,7 @@ export default function BusinessCardsHub() {
   const [metAt, setMetAt] = useState("");
   const [location, setLocation] = useState("");
 
+  const { handleSendEmail, handleSendWhatsApp, waAvailable } = useDirectContactActions();
   const { processFiles, uploading, progress } = useUploadAndParse();
   const { data: cards = [], isLoading } = useBusinessCards({
     event_name: eventFilter || undefined,
@@ -610,121 +742,173 @@ export default function BusinessCardsHub() {
     if (companyName) window.open(googleLogoSearchUrl(companyName), "_blank");
   }, []);
 
-  const handleBulkGoogleLogo = useCallback(() => {
-    const selected = cards.filter((c) => selectedIds.has(c.id) && c.company_name);
-    if (selected.length === 0) { toast({ title: "Nessuna azienda selezionata" }); return; }
-    if (selected.length > 10) { toast({ title: "Max 10 ricerche contemporanee", variant: "destructive" }); return; }
-    selected.forEach((c) => window.open(googleLogoSearchUrl(c.company_name!), "_blank"));
+  // Bulk actions
+  const handleBulkEmail = useCallback(() => {
+    const selected = cards.filter(c => selectedIds.has(c.id) && c.email);
+    if (selected.length === 0) { toast({ title: "Nessun contatto con email" }); return; }
+    if (selected.length === 1) {
+      handleSendEmail({ email: selected[0].email!, name: selected[0].contact_name || undefined, company: selected[0].company_name || undefined });
+    } else {
+      navigate("/email-composer", {
+        state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) },
+      });
+    }
+  }, [cards, selectedIds, handleSendEmail, navigate]);
+
+  const handleBulkWhatsApp = useCallback(() => {
+    const selected = cards.filter(c => selectedIds.has(c.id) && (c.phone || c.mobile));
+    if (selected.length === 0) { toast({ title: "Nessun contatto con telefono" }); return; }
+    const first = selected[0];
+    handleSendWhatsApp({
+      phone: (first.mobile || first.phone)!,
+      contactName: first.contact_name || undefined,
+      companyName: first.company_name || undefined,
+      sourceType: "contact",
+      sourceId: first.id,
+    });
+  }, [cards, selectedIds, handleSendWhatsApp]);
+
+  const handleBulkCockpit = useCallback(async () => {
+    const selected = cards.filter(c => selectedIds.has(c.id));
+    if (selected.length === 0) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const inserts = selected.map(c => ({
+        source_id: c.id,
+        source_type: "business_card",
+        user_id: user.id,
+        partner_id: c.matched_partner_id || null,
+      }));
+      await supabase.from("cockpit_queue").insert(inserts as any);
+      toast({ title: `✅ ${selected.length} aggiunti al Cockpit` });
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    }
   }, [cards, selectedIds]);
+
+  const handleBulkWorkspace = useCallback(() => {
+    const selected = cards.filter(c => selectedIds.has(c.id) && c.email);
+    if (selected.length === 0) { toast({ title: "Nessun contatto con email" }); return; }
+    navigate("/email-composer", {
+      state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) },
+    });
+  }, [cards, selectedIds, navigate]);
 
   const showPanel = !!detailCard;
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Main content */}
-      <div className={cn("flex-1 min-w-0 overflow-y-auto p-3 space-y-3", showPanel && "border-r border-border/50")}>
-        <DropZone onFiles={handleFiles} uploading={uploading} progress={progress} />
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Bulk action bar */}
+      <BCABulkActionBar
+        count={selectedIds.size}
+        cards={cards}
+        selectedIds={selectedIds}
+        onClear={() => setSelectedIds(new Set())}
+        onEmail={handleBulkEmail}
+        onWhatsApp={handleBulkWhatsApp}
+        onCockpit={handleBulkCockpit}
+        onWorkspace={handleBulkWorkspace}
+      />
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-7 w-[120px] text-[11px]"><SelectValue placeholder="Tutti" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              <SelectItem value="matched">Matchati</SelectItem>
-              <SelectItem value="unmatched">No match</SelectItem>
-              <SelectItem value="pending">Attesa</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Main content */}
+        <div className={cn("flex-1 min-w-0 overflow-y-auto p-3 space-y-3", showPanel && "border-r border-border/50")}>
+          <DropZone onFiles={handleFiles} uploading={uploading} progress={progress} />
 
-          {eventNames.length > 0 && (
-            <Select value={eventFilter} onValueChange={(v) => setEventFilter(v === "all" ? "" : v)}>
-              <SelectTrigger className="h-7 w-[140px] text-[11px]"><SelectValue placeholder="Tutti eventi" /></SelectTrigger>
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-7 w-[120px] text-[11px]"><SelectValue placeholder="Tutti" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti</SelectItem>
-                {eventNames.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                <SelectItem value="matched">Matchati</SelectItem>
+                <SelectItem value="unmatched">No match</SelectItem>
+                <SelectItem value="pending">Attesa</SelectItem>
               </SelectContent>
             </Select>
-          )}
 
-          <Badge variant="outline" className="text-[10px] h-7 px-2 border-violet-500/15">{cards.length} biglietti</Badge>
+            {eventNames.length > 0 && (
+              <Select value={eventFilter} onValueChange={(v) => setEventFilter(v === "all" ? "" : v)}>
+                <SelectTrigger className="h-7 w-[140px] text-[11px]"><SelectValue placeholder="Tutti eventi" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  {eventNames.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
 
-          {selectedIds.size > 0 && (
-            <>
-              <Badge variant="secondary" className="text-[10px] h-7 px-2">{selectedIds.size} sel.</Badge>
-              <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 border-violet-500/15" onClick={handleBulkGoogleLogo}>
-                <Globe className="w-3 h-3" /> Cerca loghi
-              </Button>
-            </>
-          )}
+            <Badge variant="outline" className="text-[10px] h-7 px-2 border-violet-500/15">{cards.length} biglietti</Badge>
 
-          <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-md p-0.5">
-            {([
-              { mode: "compact" as ViewMode, icon: LayoutList, label: "Lista" },
-              { mode: "card" as ViewMode, icon: LayoutGrid, label: "Card" },
-              { mode: "expanded" as ViewMode, icon: Rows3, label: "Espanso" },
-            ]).map(({ mode, icon: Icon, label }) => (
-              <TooltipProvider key={mode}>
-                <Tooltip><TooltipTrigger asChild>
-                  <button
-                    className={cn("p-1.5 rounded transition-colors", viewMode === mode ? "bg-background shadow-sm" : "hover:bg-muted/60")}
-                    onClick={() => setViewMode(mode)}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger><TooltipContent side="bottom" className="text-xs">{label}</TooltipContent></Tooltip>
-              </TooltipProvider>
-            ))}
+            <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-md p-0.5">
+              {([
+                { mode: "compact" as ViewMode, icon: LayoutList, label: "Lista" },
+                { mode: "card" as ViewMode, icon: LayoutGrid, label: "Card" },
+                { mode: "expanded" as ViewMode, icon: Rows3, label: "Espanso" },
+              ]).map(({ mode, icon: Icon, label }) => (
+                <TooltipProvider key={mode}>
+                  <Tooltip><TooltipTrigger asChild>
+                    <button
+                      className={cn("p-1.5 rounded transition-colors", viewMode === mode ? "bg-background shadow-sm" : "hover:bg-muted/60")}
+                      onClick={() => setViewMode(mode)}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger><TooltipContent side="bottom" className="text-xs">{label}</TooltipContent></Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
           </div>
+
+          {/* Cards */}
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-violet-400 animate-spin" /></div>
+          ) : cards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4">
+                <ImagePlus className="w-8 h-8 text-violet-400/50" />
+              </div>
+              <p className="text-sm text-muted-foreground">Nessun biglietto da visita</p>
+            </div>
+          ) : viewMode === "compact" ? (
+            <div className="space-y-0.5">
+              {cards.map((card) => (
+                <CompactRow key={card.id} card={card} isSelected={selectedIds.has(card.id)}
+                  onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
+                  onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
+              ))}
+            </div>
+          ) : viewMode === "card" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {cards.map((card) => (
+                <CardGridItem key={card.id} card={card} isSelected={selectedIds.has(card.id)}
+                  onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
+                  onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {cards.map((card) => (
+                <ExpandedCardItem key={card.id} card={card} isSelected={selectedIds.has(card.id)}
+                  onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
+                  onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Cards */}
-        {isLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-violet-400 animate-spin" /></div>
-        ) : cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4">
-              <ImagePlus className="w-8 h-8 text-violet-400/50" />
+        {/* Right detail panel */}
+        {showPanel && detailCard && (
+          <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
+              <span className="text-xs font-medium text-muted-foreground">Dettaglio</span>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCard(null)}>✕</Button>
             </div>
-            <p className="text-sm text-muted-foreground">Nessun biglietto da visita</p>
-          </div>
-        ) : viewMode === "compact" ? (
-          <div className="space-y-0.5">
-            {cards.map((card) => (
-              <CompactRow key={card.id} card={card} isSelected={selectedIds.has(card.id)}
-                onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
-                onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
-            ))}
-          </div>
-        ) : viewMode === "card" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {cards.map((card) => (
-              <CardGridItem key={card.id} card={card} isSelected={selectedIds.has(card.id)}
-                onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
-                onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {cards.map((card) => (
-              <ExpandedCardItem key={card.id} card={card} isSelected={selectedIds.has(card.id)}
-                onSelect={() => toggleSelect(card.id)} onShowDetail={() => setDetailCard(card)}
-                onGoogleLogo={() => handleGoogleLogo(card.company_name)} />
-            ))}
+            <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
           </div>
         )}
       </div>
-
-      {/* Right detail panel */}
-      {showPanel && detailCard && (
-        <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
-            <span className="text-xs font-medium text-muted-foreground">Dettaglio</span>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCard(null)}>✕</Button>
-          </div>
-          <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
-        </div>
-      )}
 
       {/* Event dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
