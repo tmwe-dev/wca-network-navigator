@@ -776,7 +776,7 @@ function NetworkFiltersSection() {
                       // Dispatch event to select partner in list, set search to exact name, close drawer
                       window.dispatchEvent(new CustomEvent("network-select-partner", { detail: { partnerId: p.id } }));
                       g.setNetworkSearch(p.company_name);
-                      onOpenChange(false);
+                      window.dispatchEvent(new CustomEvent("filters-drawer-close"));
                     }}
                     className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer rounded-md"
                   >
