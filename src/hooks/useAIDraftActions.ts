@@ -6,7 +6,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import type { DraftState } from "@/pages/Cockpit";
-
+import { useTrackActivity } from "@/hooks/useTrackActivity";
 export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftState) => void) {
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
