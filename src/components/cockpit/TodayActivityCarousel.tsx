@@ -59,6 +59,9 @@ function ActivityMini({ activity }: { activity: TodayActivity }) {
         )}>
           <Icon className="w-2.5 h-2.5" />
           <span className="max-w-[60px] truncate">{activity.contactName}</span>
+          {activity.status === "completed"
+            ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
+            : <Circle className="w-2.5 h-2.5 text-muted-foreground/50 flex-shrink-0" />}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs max-w-[200px]">
