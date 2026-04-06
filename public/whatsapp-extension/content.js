@@ -4,7 +4,7 @@
 // ══════════════════════════════════════════════
 
 (function () {
-  var HEARTBEAT_MS = 2500;
+  var HEARTBEAT_MS = 8000;
   var alive = false;
   var reconnectAttempts = 0;
 
