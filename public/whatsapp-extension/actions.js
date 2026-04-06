@@ -424,9 +424,18 @@ var Actions = (function () {
             }
 
             var opened = await openChat(contact);
+
+            // Retry with first name only if full name failed
+            if (!opened && contact.includes(" ")) {
+              var firstName = contact.split(" ")[0];
+              if (firstName.length >= 2) {
+                opened = await openChat(firstName);
+              }
+            }
+
             if (!opened) {
               var cleanPhone = contact.replace(/[^0-9]/g, "");
-              if (cleanPhone.length >= 6) {
+              if (cleanPhone.length >= 5) {
                 window.location.href = "https://web.whatsapp.com/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(msg);
                 await new Promise(function(r) { setTimeout(r, 4000); });
               } else {

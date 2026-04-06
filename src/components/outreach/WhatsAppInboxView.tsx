@@ -183,7 +183,18 @@ export function WhatsAppInboxView() {
     setIsSending(true);
     setReplyText("");
     try {
-      const result = await sendWhatsApp(activeTab, text);
+      // 1. Try sending by contact name (search bar match)
+      let result = await sendWhatsApp(activeTab, text);
+
+      // 2. If failed, retry with phone number extracted from thread
+      if (!result.success && activeThread) {
+        const phone = extractPhoneFromThread(activeThread);
+        if (phone) {
+          console.log(`[WA] Retry invio con telefono: ${phone}`);
+          result = await sendWhatsApp(phone, text);
+        }
+      }
+
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
