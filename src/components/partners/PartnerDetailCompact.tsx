@@ -200,6 +200,15 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
                 {c.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">{c.contact_alias}</span>}
                 {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">Primary</span>}
+                <div className="ml-auto">
+                  <PartnerContactActionMenu
+                    contact={c}
+                    partner={{ id: partner.id, company_name: partner.company_name }}
+                    onSendEmail={handleSendEmail}
+                    onSendWhatsApp={handleSendWhatsApp}
+                    waAvailable={waAvailable}
+                  />
+                </div>
               </div>
               {c.title && <p className={`text-xs ml-6 ${th.dim}`}>{c.title}</p>}
               <div className="space-y-0.5 ml-6 mt-1">
