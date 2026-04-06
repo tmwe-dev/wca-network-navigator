@@ -399,7 +399,22 @@ export function useAcquisitionPipeline() {
         parallelTasks.push(
           (async () => {
             try {
-              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: { partnerId } });
+              let enrichBody: Record<string, any> = { partnerId };
+
+              // Try client-side scraping for higher quality markdown
+              if (fsAvailable) {
+                try {
+                  let websiteUrl = (partnerData.website as string).trim();
+                  if (!websiteUrl.startsWith("http")) websiteUrl = `https://${websiteUrl}`;
+                  const scrapeResult = await fsScrapeUrl(websiteUrl);
+                  if (scrapeResult.success && scrapeResult.markdown && scrapeResult.markdown.length > 50) {
+                    enrichBody.markdown = scrapeResult.markdown;
+                    enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
+                  }
+                } catch { /* fallback to server-side fetch */ }
+              }
+
+              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
               if (enrichResult?.enrichment) {
                 const ed = enrichResult.enrichment;
                 setCanvasData((prev) =>
