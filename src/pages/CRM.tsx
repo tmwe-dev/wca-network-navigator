@@ -14,6 +14,11 @@ function TabFallback() {
 export default function CRM() {
   const [tab, setTab] = useState("contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
+  const { setCrmActiveTab } = useGlobalFilters();
+
+  useEffect(() => {
+    setCrmActiveTab(tab);
+  }, [tab, setCrmActiveTab]);
 
   const tabs = [
     { value: "contatti", label: "Contatti", icon: UserCheck },

@@ -930,12 +930,14 @@ export default function BusinessCardsHub() {
 
         {/* Right detail panel */}
         {showPanel && detailCard && (
-          <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
+          <div className="w-[320px] shrink-0 bg-card/50 backdrop-blur-sm flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 shrink-0">
               <span className="text-xs font-medium text-muted-foreground">Dettaglio</span>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCard(null)}>✕</Button>
             </div>
-            <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <BusinessCardDetailPanel card={detailCard} onClose={() => setDetailCard(null)} />
+            </div>
           </div>
         )}
       </div>
