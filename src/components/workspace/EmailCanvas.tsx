@@ -126,6 +126,16 @@ export default function EmailCanvas({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
+      // Track activity
+      trackActivity.mutate({
+        activityType: "send_email",
+        title: `${displayEmail.partnerName || "—"} — ${displayEmail.contactName || displayEmail.contactEmail}`,
+        sourceId: activity?.partner_id || activity?.source_id || crypto.randomUUID(),
+        sourceType: activity?.source_type === "imported_contact" ? "imported_contact" : "partner",
+        partnerId: activity?.partner_id || undefined,
+        emailSubject: displaySubject,
+        description: `Email inviata a ${displayEmail.contactEmail}`,
+      });
     } catch (err: any) {
       toast({ title: "Errore invio", description: err.message, variant: "destructive" });
     } finally { setSending(false); }

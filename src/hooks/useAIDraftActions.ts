@@ -155,6 +155,15 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${draft.contactEmail}` });
+      trackActivity.mutate({
+        activityType: "send_email",
+        title: `${draft.companyName || "—"} — ${draft.contactName || draft.contactEmail}`,
+        sourceId: draft.partnerId || draft.contactId || crypto.randomUUID(),
+        sourceType: draft.partnerId ? "partner" : "imported_contact",
+        partnerId: draft.partnerId || undefined,
+        emailSubject: draft.subject,
+        description: `Email inviata a ${draft.contactEmail}`,
+      });
     } catch (err: any) {
       toast({ title: "Errore invio", description: err.message, variant: "destructive" });
     } finally {

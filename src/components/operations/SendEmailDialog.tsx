@@ -42,6 +42,15 @@ export function SendEmailDialog({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success(`Email inviata a ${recipientEmail}`);
+      trackActivity.mutate({
+        activityType: "send_email",
+        title: `${companyName || "—"} — ${recipientName || recipientEmail}`,
+        sourceId: partnerId,
+        sourceType: "partner",
+        partnerId,
+        emailSubject: subject,
+        description: `Email inviata a ${recipientEmail}`,
+      });
       onOpenChange(false);
       setBody("");
     } catch (e: any) {
