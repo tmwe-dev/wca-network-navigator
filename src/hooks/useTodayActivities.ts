@@ -23,10 +23,10 @@ export function useTodayActivities() {
 
       const { data, error } = await supabase
         .from("activities")
-        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta")
+        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
         .gte("created_at", today.toISOString())
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
+        .in("status", ["pending", "in_progress", "completed"] as any)
+        .order("completed_at", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (error) throw error;
