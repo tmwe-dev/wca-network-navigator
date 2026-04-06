@@ -436,19 +436,32 @@ export function WhatsAppInboxView() {
         {/* Chat content */}
         {activeThread ? (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Chat header */}
-            <div className="flex-shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-background">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-green-600" />
+            {/* Chat header - enriched */}
+            <div className="flex-shrink-0 px-4 py-2.5 border-b border-border flex items-center justify-between" style={{ background: "hsl(var(--muted) / 0.3)" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <span className="text-sm font-medium">{activeThread.contact}</span>
-                  {focusedChat === activeThread.contact && enabled && (
-                    <p className="text-[10px] text-green-600 flex items-center gap-1">
-                      <Radio className="w-2.5 h-2.5 animate-pulse" /> Live
-                    </p>
-                  )}
+                  <span className="text-sm font-semibold">{activeThread.contact}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {(() => {
+                      const phone = extractPhoneFromThread(activeThread);
+                      return phone ? (
+                        <span className="text-[10px] text-muted-foreground font-mono">+{phone}</span>
+                      ) : null;
+                    })()}
+                    {focusedChat === activeThread.contact && enabled && (
+                      <span className="text-[10px] text-green-600 flex items-center gap-0.5">
+                        <Radio className="w-2.5 h-2.5 animate-pulse" /> Online
+                      </span>
+                    )}
+                    {activeThread.unreadCount > 0 && (
+                      <Badge variant="default" className="text-[9px] h-4 px-1.5 bg-green-500 hover:bg-green-500">
+                        {activeThread.unreadCount} non letti
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
               <span className="text-[10px] text-muted-foreground">
@@ -456,30 +469,103 @@ export function WhatsAppInboxView() {
               </span>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-1.5 max-w-2xl mx-auto">
-                {activeThread.messages.map(msg => {
-                  const isOut = msg.direction === "outbound";
-                  return (
-                    <div key={msg.id} className={cn("flex", isOut ? "justify-end" : "justify-start")}>
-                      <div className={cn(
-                        "max-w-[75%] rounded-lg px-3 py-1.5 text-sm shadow-sm",
-                        isOut
-                          ? "bg-green-600 text-white rounded-br-sm"
-                          : "bg-card border border-border rounded-bl-sm"
-                      )}>
-                        <p className="whitespace-pre-wrap break-words">{msg.body_text || "(media)"}</p>
-                        <p className={cn(
-                          "text-[10px] mt-0.5 text-right",
-                          isOut ? "text-green-200" : "text-muted-foreground"
-                        )}>
-                          {format(new Date(msg.created_at), "HH:mm", { locale: it })}
-                        </p>
+            {/* Messages with date separators, clustering, tails */}
+            <ScrollArea className="flex-1" style={{ background: "hsl(var(--muted) / 0.15)" }}>
+              <div className="max-w-2xl mx-auto px-4 py-3">
+                {(() => {
+                  const msgs = activeThread.messages;
+                  const elements: React.ReactNode[] = [];
+                  let lastDateStr = "";
+                  let lastDirection = "";
+
+                  msgs.forEach((msg, idx) => {
+                    const date = new Date(msg.created_at);
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const isOut = msg.direction === "outbound";
+                    const sameAsPrev = msg.direction === lastDirection;
+                    const isFirstInCluster = !sameAsPrev;
+
+                    // Date separator
+                    if (dateStr !== lastDateStr) {
+                      const label = isToday(date) ? "Oggi"
+                        : isYesterday(date) ? "Ieri"
+                        : format(date, "d MMMM yyyy", { locale: it });
+                      elements.push(
+                        <div key={`sep-${dateStr}`} className="flex items-center justify-center my-4">
+                          <span className="text-[11px] px-3 py-1 rounded-full bg-card border border-border text-muted-foreground shadow-sm font-medium">
+                            {label}
+                          </span>
+                        </div>
+                      );
+                      lastDateStr = dateStr;
+                    }
+
+                    const bodyText = msg.body_text?.trim();
+                    const hasContent = !!bodyText;
+
+                    elements.push(
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex",
+                          isOut ? "justify-end" : "justify-start",
+                          isFirstInCluster ? "mt-3" : "mt-0.5"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "relative max-w-[78%] px-3 py-1.5 text-sm shadow-sm",
+                            isOut
+                              ? "bg-green-700 text-white rounded-l-xl rounded-tr-xl"
+                              : "bg-card border border-border text-foreground rounded-r-xl rounded-tl-xl",
+                            // Tail on first message of cluster
+                            isFirstInCluster && isOut && "rounded-br-sm",
+                            isFirstInCluster && !isOut && "rounded-bl-sm",
+                            !isFirstInCluster && "rounded-xl"
+                          )}
+                        >
+                          {/* Sender label on first bubble in cluster */}
+                          {isFirstInCluster && (
+                            <p className={cn(
+                              "text-[11px] font-bold mb-0.5",
+                              isOut ? "text-green-200" : "text-green-600"
+                            )}>
+                              {isOut ? "Tu" : activeThread.contact}
+                            </p>
+                          )}
+
+                          {/* Body */}
+                          {hasContent ? (
+                            <p className="whitespace-pre-wrap break-words leading-relaxed">{bodyText}</p>
+                          ) : (
+                            <p className="flex items-center gap-1 italic opacity-70">
+                              <Paperclip className="w-3.5 h-3.5" /> Media
+                            </p>
+                          )}
+
+                          {/* Timestamp + status */}
+                          <div className={cn(
+                            "flex items-center gap-1 justify-end mt-0.5",
+                            isOut ? "text-green-300" : "text-muted-foreground"
+                          )}>
+                            <span className="text-[10px]">
+                              {format(date, "HH:mm", { locale: it })}
+                            </span>
+                            {isOut && (
+                              msg.read_at
+                                ? <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                                : <Check className="w-3 h-3" />
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+
+                    lastDirection = msg.direction;
+                  });
+
+                  return elements;
+                })()}
                 <div ref={chatEndRef} />
               </div>
             </ScrollArea>
