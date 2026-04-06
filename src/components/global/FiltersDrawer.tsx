@@ -358,7 +358,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
               <SlidersHorizontal className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-foreground">Filtri & Ordinamenti</h3>
+              <h3 className="text-sm font-bold text-foreground">Filtri</h3>
               <p className="text-[11px] text-muted-foreground">{sectionTitle}</p>
             </div>
             {activeCount > 0 && (
@@ -667,7 +667,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             <RotateCcw className="w-3.5 h-3.5" /> Reset ({activeCount})
           </Button>
           <Button className="flex-1 h-9 gap-2 text-xs" onClick={() => onOpenChange(false)}>
-            <Check className="w-3.5 h-3.5" /> {isEmailComposer ? "Conferma" : "Chiudi"}
+            <Check className="w-3.5 h-3.5" /> Conferma
           </Button>
         </div>
       </SheetContent>
@@ -803,11 +803,6 @@ function NetworkFiltersSection() {
         )}
       </FilterSection>
 
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
-        </ChipGroup>
-      </FilterSection>
 
       <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
         <p className="mb-2 text-[10px] text-muted-foreground">
