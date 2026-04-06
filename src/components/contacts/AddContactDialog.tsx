@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useCallback } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import {
   Building2, User, Search, Globe, Linkedin, Image, Radar,
-  Loader2, Check, MapPin, Phone, Mail, Briefcase, Save, ExternalLink,
+  Loader2, MapPin, Briefcase, Save, ExternalLink,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
-import { cn } from "@/lib/utils";
+import { unwrapGoogleResultUrl } from "@/lib/linkedinSearch";
 
 const COUNTRY_OPTIONS = [
   "AF","AL","DZ","AD","AO","AR","AM","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BT","BO",
@@ -30,6 +31,31 @@ const COUNTRY_OPTIONS = [
   "SO","ZA","SS","ES","LK","SD","SR","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TO","TT","TN","TR",
   "TM","TV","UG","UA","AE","GB","US","UY","UZ","VU","VE","VN","YE","ZM","ZW",
 ];
+
+const SKIP_SEARCH_DOMAINS = [
+  "linkedin.com",
+  "facebook.com",
+  "google.com",
+  "yelp.com",
+  "twitter.com",
+  "instagram.com",
+  "youtube.com",
+  "wikipedia.org",
+];
+
+const PERSONAL_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "icloud.com",
+  "libero.it",
+  "alice.it",
+  "tin.it",
+  "virgilio.it",
+  "tiscali.it",
+]);
 
 interface AddContactDialogProps {
   open: boolean;
@@ -45,12 +71,29 @@ function extractDomain(url: string): string {
   }
 }
 
+function extractDomainFromEmail(email: string): string {
+  const domain = email.split("@")[1]?.trim().toLowerCase() || "";
+  if (!domain || PERSONAL_EMAIL_DOMAINS.has(domain)) return "";
+  return domain.replace(/^www\./, "");
+}
+
+function isUsefulCompanyUrl(url?: string | null): boolean {
+  const domain = extractDomain(url || "");
+  return Boolean(domain) && !SKIP_SEARCH_DOMAINS.some((item) => domain.includes(item));
+}
+
+function getSearchResultDescription(result: any): string {
+  return result?.description?.trim?.() || result?.snippet?.trim?.() || "";
+}
+
+function buildGoogleFaviconUrl(domain: string): string {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) {
-  // Shared fields (visible in search tab AND respective tabs)
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
 
-  // Company fields
   const [companyAlias, setCompanyAlias] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
@@ -60,22 +103,18 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
   const [companyEmail, setCompanyEmail] = useState("");
   const [website, setWebsite] = useState("");
 
-  // Contact fields
   const [contactAlias, setContactAlias] = useState("");
   const [position, setPosition] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactMobile, setContactMobile] = useState("");
 
-  // Enrichment fields
   const [logoUrl, setLogoUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
 
-  // Notes
   const [origin, setOrigin] = useState("");
   const [note, setNote] = useState("");
 
-  // States
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
@@ -85,32 +124,141 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
 
   const fsBridge = useFireScrapeExtensionBridge();
   const deepSearch = useDeepSearch();
+  const linkedinLookup = useLinkedInLookup();
 
   const resetForm = () => {
-    setCompanyName(""); setCompanyAlias(""); setCountry(""); setCity("");
-    setAddress(""); setZipCode(""); setCompanyPhone(""); setCompanyEmail("");
-    setWebsite(""); setContactName(""); setContactAlias(""); setPosition("");
-    setContactEmail(""); setContactPhone(""); setContactMobile("");
-    setOrigin(""); setNote(""); setPlacesResults([]); setLogoUrl("");
-    setLinkedinUrl(""); setSavedId(null);
+    setCompanyName("");
+    setCompanyAlias("");
+    setCountry("");
+    setCity("");
+    setAddress("");
+    setZipCode("");
+    setCompanyPhone("");
+    setCompanyEmail("");
+    setWebsite("");
+    setContactName("");
+    setContactAlias("");
+    setPosition("");
+    setContactEmail("");
+    setContactPhone("");
+    setContactMobile("");
+    setOrigin("");
+    setNote("");
+    setPlacesResults([]);
+    setLogoUrl("");
+    setLinkedinUrl("");
+    setSavedId(null);
   };
 
-  // ── Google Search ──
+  const ensurePartnerConnectReady = useCallback(async () => {
+    if (fsBridge.isAvailable) return true;
+    try {
+      const ping = await fsBridge.sendMessage("ping", {}, 4000);
+      if (ping?.success) return true;
+      toast.error("Estensione Partner Connect non disponibile");
+      return false;
+    } catch {
+      toast.error("Estensione Partner Connect non disponibile");
+      return false;
+    }
+  }, [fsBridge]);
+
+  const persistSavedContact = useCallback(async (
+    fields: Record<string, any> = {},
+    enrichmentPatch: Record<string, any> = {},
+  ) => {
+    if (!savedId) return;
+
+    const payload: Record<string, any> = { ...fields };
+
+    if (Object.keys(enrichmentPatch).length > 0) {
+      const { data } = await supabase
+        .from("imported_contacts")
+        .select("enrichment_data")
+        .eq("id", savedId)
+        .maybeSingle();
+
+      const existing = (data?.enrichment_data as Record<string, any>) || {};
+      payload.enrichment_data = JSON.parse(JSON.stringify({ ...existing, ...enrichmentPatch }));
+    }
+
+    if (Object.keys(payload).length === 0) return;
+
+    const { error } = await (supabase.from("imported_contacts").update(payload) as any).eq("id", savedId);
+    if (error) console.warn("[AddContactDialog] Persist update failed", error);
+  }, [savedId]);
+
+  const applyPlacesResult = (result: any) => {
+    const persistedFields: Record<string, any> = {};
+    const enrichmentPatch: Record<string, any> = {};
+
+    if (result.title) {
+      const parts = result.title.split(" - ");
+      const resolvedCompanyName = parts[0]?.trim();
+      if (resolvedCompanyName && !companyName) {
+        setCompanyName(resolvedCompanyName);
+        persistedFields.company_name = resolvedCompanyName;
+      }
+    }
+
+    const unwrappedUrl = unwrapGoogleResultUrl(result.url) || result.url || "";
+    if (unwrappedUrl && !website && isUsefulCompanyUrl(unwrappedUrl)) {
+      const domain = extractDomain(unwrappedUrl);
+      setWebsite(unwrappedUrl);
+      setLogoUrl(buildGoogleFaviconUrl(domain));
+      enrichmentPatch.website = unwrappedUrl;
+      enrichmentPatch.logo_url = buildGoogleFaviconUrl(domain);
+    }
+
+    const description = getSearchResultDescription(result);
+    if (description) {
+      const phoneMatch = description.match(/(\+?\d[\d\s\-().]{7,})/);
+      if (phoneMatch && !companyPhone) {
+        const resolvedPhone = phoneMatch[1].trim();
+        setCompanyPhone(resolvedPhone);
+        persistedFields.phone = resolvedPhone;
+      }
+
+      const emailMatch = description.match(/[\w.-]+@[\w.-]+\.\w{2,}/);
+      if (emailMatch && !companyEmail) {
+        const resolvedEmail = emailMatch[0];
+        setCompanyEmail(resolvedEmail);
+        if (!contactEmail) persistedFields.email = resolvedEmail;
+      }
+
+      const nextNote = note ? `${note}\n${description}` : description;
+      setNote(nextNote);
+      persistedFields.note = nextNote;
+    }
+
+    setPlacesResults([]);
+    void persistSavedContact(persistedFields, enrichmentPatch);
+    toast.success("Dati applicati dal risultato");
+  };
+
   const handlePlacesSearch = useCallback(async () => {
     if (!companyName.trim()) {
       toast.error("Inserisci il nome dell'azienda");
       return;
     }
-    if (!fsBridge.isAvailable) {
-      toast.error("Estensione Partner Connect non disponibile");
-      return;
-    }
+    if (!(await ensurePartnerConnectReady())) return;
+
     setPlacesLoading(true);
     try {
-      const query = `${companyName.trim()} company address contact`;
-      const res = await fsBridge.googleSearch(query, 8);
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        setPlacesResults(res.data);
+      const query = [companyName.trim(), contactName.trim(), "company", "address", "phone", "email", "website"]
+        .filter(Boolean)
+        .join(" ");
+      const res = await fsBridge.googleSearch(query, 8, true);
+      const normalizedResults = Array.isArray(res.data)
+        ? res.data.map((item: any) => ({
+            ...item,
+            url: unwrapGoogleResultUrl(item.url) || item.url || "",
+            description: getSearchResultDescription(item),
+          }))
+        : [];
+
+      if (res.success && normalizedResults.length > 0) {
+        setPlacesResults(normalizedResults);
       } else {
         toast.info("Nessun risultato trovato");
       }
@@ -119,156 +267,131 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     } finally {
       setPlacesLoading(false);
     }
-  }, [companyName, fsBridge]);
+  }, [companyName, contactName, ensurePartnerConnectReady, fsBridge]);
 
-  const applyPlacesResult = (result: any) => {
-    // Extract company name from title
-    if (result.title) {
-      const parts = result.title.split(" - ");
-      if (parts[0] && !companyName) setCompanyName(parts[0].trim());
-    }
-
-    // Extract website domain from URL (skip linkedin, google, etc.)
-    if (result.url && !website) {
-      const domain = extractDomain(result.url);
-      const skipDomains = ["linkedin.com", "facebook.com", "google.com", "yelp.com", "twitter.com", "instagram.com", "youtube.com", "wikipedia.org"];
-      if (domain && !skipDomains.some(s => domain.includes(s))) {
-        setWebsite(result.url);
-        // Auto-generate logo from domain
-        setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
-      }
-    }
-
-    // Try to parse address/phone/email from description
-    if (result.description) {
-      const desc = result.description;
-
-      // Phone patterns
-      const phoneMatch = desc.match(/(\+?\d[\d\s\-().]{7,})/);
-      if (phoneMatch && !companyPhone) setCompanyPhone(phoneMatch[1].trim());
-
-      // Email pattern
-      const emailMatch = desc.match(/[\w.-]+@[\w.-]+\.\w{2,}/);
-      if (emailMatch && !companyEmail) setCompanyEmail(emailMatch[0]);
-
-      // Append snippet to notes for reference
-      setNote(prev => prev ? `${prev}\n${desc}` : desc);
-    }
-
-    setPlacesResults([]);
-    toast.success("Dati applicati dal risultato");
-  };
-
-  // ── Logo Search (favicon from website domain) ──
   const handleLogoSearch = useCallback(async () => {
-    // If we have a website, generate favicon URL directly
-    if (website.trim()) {
-      const domain = extractDomain(website);
-      if (domain) {
-        setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
-        toast.success("Logo recuperato dal sito web");
-        return;
-      }
+    const derivedDomain = extractDomain(website) || extractDomainFromEmail(contactEmail || companyEmail);
+
+    if (derivedDomain) {
+      const nextLogoUrl = buildGoogleFaviconUrl(derivedDomain);
+      setLogoUrl(nextLogoUrl);
+      if (!website) setWebsite(`https://${derivedDomain}`);
+      void persistSavedContact({}, {
+        logo_url: nextLogoUrl,
+        ...(website ? {} : { website: `https://${derivedDomain}` }),
+      });
+      toast.success("Logo recuperato dal dominio aziendale");
+      return;
     }
 
-    // Fallback: search for company website via Google
     if (!companyName.trim()) {
       toast.error("Inserisci il nome dell'azienda o il sito web");
       return;
     }
-    if (!fsBridge.isAvailable) {
-      toast.error("Estensione Partner Connect non disponibile");
-      return;
-    }
+    if (!(await ensurePartnerConnectReady())) return;
+
     setLogoLoading(true);
     try {
-      const res = await fsBridge.googleSearch(`${companyName.trim()} official website`, 3);
-      if (res.success && Array.isArray(res.data)) {
-        const skipDomains = ["linkedin.com", "facebook.com", "google.com", "yelp.com", "wikipedia.org"];
-        const siteResult = res.data.find((r: any) => {
-          const d = extractDomain(r.url || "");
-          return d && !skipDomains.some(s => d.includes(s));
-        });
-        if (siteResult?.url) {
-          const domain = extractDomain(siteResult.url);
-          setLogoUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
-          if (!website) setWebsite(siteResult.url);
-          toast.success("Logo trovato: " + domain);
-        } else {
-          toast.info("Nessun sito web trovato per il logo");
-        }
+      const res = await fsBridge.googleSearch(`${companyName.trim()} official website`, 3, true);
+      const normalizedResults = Array.isArray(res.data)
+        ? res.data.map((item: any) => ({ ...item, url: unwrapGoogleResultUrl(item.url) || item.url || "" }))
+        : [];
+
+      const siteResult = normalizedResults.find((item: any) => isUsefulCompanyUrl(item.url));
+      if (res.success && siteResult?.url) {
+        const domain = extractDomain(siteResult.url);
+        const nextLogoUrl = buildGoogleFaviconUrl(domain);
+        setLogoUrl(nextLogoUrl);
+        setWebsite(siteResult.url);
+        void persistSavedContact({}, { logo_url: nextLogoUrl, website: siteResult.url });
+        toast.success("Logo trovato dal sito aziendale");
+      } else {
+        toast.info("Nessun sito web trovato per il logo");
       }
-    } catch {
-      toast.error("Errore ricerca logo");
+    } catch (e: any) {
+      toast.error("Errore ricerca logo: " + (e.message || "sconosciuto"));
     } finally {
       setLogoLoading(false);
     }
-  }, [companyName, website, fsBridge]);
+  }, [companyEmail, companyName, contactEmail, ensurePartnerConnectReady, fsBridge, persistSavedContact, website]);
 
-  // ── LinkedIn Search (cascade queries like useDeepSearchLocal) ──
   const handleLinkedInSearch = useCallback(async () => {
     if (!contactName.trim() && !companyName.trim()) {
       toast.error("Inserisci almeno nome contatto o azienda");
       return;
     }
-    if (!fsBridge.isAvailable) {
-      toast.error("Estensione Partner Connect non disponibile");
-      return;
-    }
+    if (!(await ensurePartnerConnectReady())) return;
+
     setLinkedinLoading(true);
     try {
-      // Cascade queries similar to useDeepSearchLocal
-      const queries = [];
       if (contactName.trim()) {
-        queries.push(`site:linkedin.com/in "${contactName.trim()}"${companyName ? ` "${companyName.trim()}"` : ""}`);
-        queries.push(`site:linkedin.com/in ${contactName.trim()} ${companyName.trim()}`);
-      }
-      if (companyName.trim()) {
-        queries.push(`site:linkedin.com/company "${companyName.trim()}"`);
-      }
+        const result = await linkedinLookup.searchSingle({
+          name: contactName.trim(),
+          company: companyName.trim() || null,
+          email: contactEmail.trim() || companyEmail.trim() || null,
+          role: position.trim() || null,
+          country: country || null,
+          sourceType: savedId ? "contact" : undefined,
+          sourceId: savedId || undefined,
+        });
 
-      let foundUrl = "";
-      let foundTitle = "";
-
-      for (const q of queries) {
-        if (foundUrl) break;
-        const res = await fsBridge.googleSearch(q, 5);
-        if (res.success && Array.isArray(res.data)) {
-          // Prefer /in/ profiles when searching for contacts
-          const liProfile = res.data.find((r: any) =>
-            r.url?.includes("linkedin.com/in/") || r.url?.includes("linkedin.com/company/")
-          );
-          if (liProfile?.url) {
-            foundUrl = liProfile.url;
-            foundTitle = liProfile.title || "";
-          }
+        if (result.url) {
+          setLinkedinUrl(result.url);
+          void persistSavedContact({}, {
+            linkedin_url: result.url,
+            linkedin_profile_url: result.url,
+            linkedin_resolved_method: result.resolvedMethod,
+          });
+          toast.success("Profilo LinkedIn trovato");
+          return;
         }
       }
 
-      if (foundUrl) {
-        setLinkedinUrl(foundUrl);
-        toast.success(`LinkedIn trovato: ${foundTitle || foundUrl}`);
+      const companyResult = await fsBridge.googleSearch(`"${companyName.trim()}" site:linkedin.com/company`, 3, true);
+      const normalizedCompanyResults = Array.isArray(companyResult.data)
+        ? companyResult.data.map((item: any) => ({ ...item, url: unwrapGoogleResultUrl(item.url) || item.url || "" }))
+        : [];
+      const companyMatch = normalizedCompanyResults.find((item: any) => item.url?.includes("linkedin.com/company/"));
+
+      if (companyResult.success && companyMatch?.url) {
+        setLinkedinUrl(companyMatch.url);
+        void persistSavedContact({}, {
+          linkedin_url: companyMatch.url,
+          linkedin_company_url: companyMatch.url,
+        });
+        toast.success("Pagina LinkedIn aziendale trovata");
       } else {
         toast.info("Nessun profilo LinkedIn trovato");
       }
     } catch (e: any) {
-      toast.error("Errore ricerca LinkedIn");
+      toast.error("Errore ricerca LinkedIn: " + (e.message || "sconosciuto"));
     } finally {
       setLinkedinLoading(false);
     }
-  }, [contactName, companyName, fsBridge]);
+  }, [
+    companyEmail,
+    companyName,
+    contactEmail,
+    contactName,
+    country,
+    ensurePartnerConnectReady,
+    fsBridge,
+    linkedinLookup,
+    persistSavedContact,
+    position,
+    savedId,
+  ]);
 
-  // ── Deep Search (uses the system's DeepSearch context) ──
-  const handleDeepSearch = useCallback(() => {
+  const handleDeepSearch = useCallback(async () => {
     if (!savedId) {
       toast.error("Salva prima il contatto, poi avvia la Deep Search");
       return;
     }
+    if (!(await ensurePartnerConnectReady())) return;
     deepSearch.start([savedId], true, "contact");
     toast.success("Deep Search avviata dal sistema");
-  }, [savedId, deepSearch]);
+  }, [deepSearch, ensurePartnerConnectReady, savedId]);
 
-  // ── Save ──
   const handleSave = async () => {
     if (!companyName.trim()) {
       toast.error("Il nome azienda è obbligatorio");
@@ -277,7 +400,10 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Non autenticato"); return; }
+      if (!user) {
+        toast.error("Non autenticato");
+        return;
+      }
 
       let importLogId: string;
       const { data: existingLog } = await supabase
@@ -309,7 +435,6 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         importLogId = newLog.id;
       }
 
-      // Build enrichment_data with linkedin and logo
       const enrichmentData: Record<string, any> = {};
       if (linkedinUrl) enrichmentData.linkedin_url = linkedinUrl;
       if (logoUrl) enrichmentData.logo_url = logoUrl;
@@ -341,7 +466,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         toast.error("Errore salvataggio: " + error.message);
       } else if (inserted) {
         setSavedId(inserted.id);
-        toast.success("Contatto salvato! Puoi ora avviare la Deep Search.");
+        toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
       }
     } catch (e: any) {
       toast.error("Errore: " + (e.message || "sconosciuto"));
@@ -357,10 +482,8 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
       return;
     }
     await handleSave();
-    // If save was successful (savedId set via effect), close
   };
 
-  // When savedId is set and user wants to close
   const handleClose = () => {
     resetForm();
     onOpenChange(false);
@@ -374,6 +497,9 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
             <Building2 className="w-5 h-5 text-primary" />
             Nuovo Contatto / Azienda
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Maschera di inserimento manuale con ricerca Google, logo, LinkedIn e Deep Search collegati al record salvato.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="search" className="w-full">
