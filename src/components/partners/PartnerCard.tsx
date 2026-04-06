@@ -236,6 +236,27 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           </div>
         )}
 
+        {/* Networks */}
+        {partner.partner_networks?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {partner.partner_networks.slice(0, 3).map((n: any) => (
+              <Tooltip key={n.id || n.network_name}>
+                <TooltipTrigger>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500 dark:bg-violet-500/15 dark:text-violet-400 font-medium truncate max-w-[100px] inline-block">
+                    {n.network_name}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{n.network_name}{n.expires ? ` — Scade ${new Date(n.expires).toLocaleDateString("it-IT")}` : ""}</TooltipContent>
+              </Tooltip>
+            ))}
+            {partner.partner_networks.length > 3 && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                +{partner.partner_networks.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Primary contact info */}
         {(() => {
           const contacts = partner.partner_contacts || [];
