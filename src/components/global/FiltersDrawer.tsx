@@ -586,46 +586,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
           {/* ═══ CRM ═══ */}
           {isCRM && (
-            <>
-              <FilterSection icon={Search} label="Cerca">
-                <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Contatto, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
-              </FilterSection>
-              <FilterSection icon={Layers} label="Raggruppa">
-                <ChipGroup>
-                  {CRM_GROUPBY.map(o => <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={ArrowUpDown} label="Ordina">
-                <ChipGroup>
-                  {CRM_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Database} label="Origine">
-                <ChipGroup>
-                  {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Users} label="Stato lead">
-                <ChipGroup>
-                  {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Plane} label="Circuito">
-                <ChipGroup>
-                  {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Wifi} label="Canale">
-                <ChipGroup>
-                  {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-              <FilterSection icon={Sparkles} label="Qualità dati">
-                <ChipGroup>
-                  {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
-                </ChipGroup>
-              </FilterSection>
-            </>
+            <CRMFiltersSection />
           )}
 
           {/* ═══ AGENDA ═══ */}
