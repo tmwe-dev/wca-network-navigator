@@ -1,6 +1,6 @@
 const WHATSAPP_EXTENSION_ZIP_FILENAME = "whatsapp-extension.zip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "4.2-domfocus";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.1-csp";
 
 export async function downloadWhatsAppExtensionZip() {
   const response = await fetch(`/${WHATSAPP_EXTENSION_ZIP_FILENAME}`);

@@ -20,7 +20,7 @@ try {
 // ── Action registry ──
 var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "5.0" });
+    sendResponse({ success: true, version: "5.1-csp" });
     return false;
   },
 
