@@ -70,6 +70,61 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const contacts = partner.partner_contacts || [];
   const services = partner.partner_services || [];
   const networks = partner.partner_networks || [];
+
+  // ── Email: navigate to composer with contact pre-filled ──
+  const handleSendEmail = useCallback((contact: any) => {
+    navigate("/email-composer", {
+      state: {
+        partnerIds: [partner.id],
+        prefilledRecipient: {
+          email: contact.email,
+          name: contact.name,
+          company: partner.company_name,
+          partnerId: partner.id,
+          contactId: contact.id,
+        },
+      },
+    });
+  }, [partner, navigate]);
+
+  // ── WhatsApp: send via extension bridge ──
+  const handleSendWhatsApp = useCallback(async (contact: any) => {
+    const phone = contact.mobile || contact.direct_phone;
+    if (!phone) return;
+    if (!waAvailable) {
+      toast.error("Estensione WhatsApp non connessa. Apri WhatsApp Web e ricarica.");
+      return;
+    }
+    setWaSending(contact.id);
+    try {
+      // Clean phone number
+      const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+      const result = await sendWhatsApp(cleanPhone, "");
+      if (result?.success) {
+        toast.success(`Chat WhatsApp aperta con ${contact.name}`);
+        // Create activity for holding pattern
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("activities").insert({
+            activity_type: "whatsapp_message" as any,
+            title: `WhatsApp a ${contact.name} (${partner.company_name})`,
+            source_type: "partner",
+            source_id: partner.id,
+            partner_id: partner.id,
+            selected_contact_id: contact.id,
+            status: "completed" as any,
+            user_id: user.id,
+          });
+        }
+      } else {
+        toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Errore invio WhatsApp");
+    } finally {
+      setWaSending(null);
+    }
+  }, [partner, waAvailable, sendWhatsApp]);
   const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
   const specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
 
