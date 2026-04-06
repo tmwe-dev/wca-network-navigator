@@ -60,6 +60,22 @@ export function useMarkAsRead() {
         .update({ read_at: new Date().toISOString() })
         .eq("id", messageId);
       if (error) throw error;
+
+      // Fire-and-forget: sync \Seen flag to IMAP server
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      if (projectId) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) return;
+          fetch(`https://${projectId}.supabase.co/functions/v1/mark-imap-seen`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ message_id: messageId }),
+          }).catch((err) => console.warn("[mark-imap-seen] sync failed:", err.message));
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
