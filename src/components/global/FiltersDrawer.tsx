@@ -753,19 +753,12 @@ function CRMFiltersSection() {
         </div>
       </FilterSection>
 
-      {/* Raggruppa + Origine on same row */}
-      <div className="grid grid-cols-2 gap-3">
-        <FilterSection icon={Layers} label="Raggruppa">
-          <ChipGroup>
-            {CRM_GROUPBY.map(o => <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>)}
-          </ChipGroup>
-        </FilterSection>
-        <FilterSection icon={Database} label="Origine">
-          <ChipGroup>
-            {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
-          </ChipGroup>
-        </FilterSection>
-      </div>
+      {/* Origine */}
+      <FilterSection icon={Database} label={`Origine (${g.filters.crmOrigin.size > 0 && g.filters.crmOrigin.size < 4 ? g.filters.crmOrigin.size + ' attive' : 'tutte'})`}>
+        <ChipGroup>
+          {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
+        </ChipGroup>
+      </FilterSection>
 
       {/* Ordina */}
       <FilterSection icon={ArrowUpDown} label="Ordina">
