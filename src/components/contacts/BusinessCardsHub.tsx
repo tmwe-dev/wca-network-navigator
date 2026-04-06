@@ -281,7 +281,8 @@ function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
   const hasPhoto = !!card.photo_url;
   const accent = getCardOriginClasses(card);
-  const flag = card.partner?.country_code ? countryFlag(card.partner.country_code) : "";
+  const cardCountry = getCardCountryCode(card);
+  const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
 
   return (
