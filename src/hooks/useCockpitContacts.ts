@@ -434,6 +434,10 @@ export function useSendToCockpit() {
       });
       if (error) throw error;
 
+      // Store source IDs for auto-preselection in Cockpit
+      const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
+      addCockpitPreselection(items.map(i => i.sourceId));
+
       // Auto-assign agents silently for each contact
       for (const item of items) {
         try {
