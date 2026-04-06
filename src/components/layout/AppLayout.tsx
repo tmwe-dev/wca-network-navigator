@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, RefreshCw, FlaskConical } from "lucide-react";
+import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, RefreshCw, FlaskConical, Plus } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
@@ -23,6 +23,7 @@ import { MissionDrawer } from "@/components/global/MissionDrawer";
 import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,6 +31,7 @@ export function AppLayout() {
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const [missionOpen, setMissionOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
@@ -161,6 +163,7 @@ export function AppLayout() {
               <div className="flex items-center gap-0.5 sm:gap-1">
                 <OperatorSelector />
                 <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/test-extensions")} aria-label="Test Extensions"><FlaskConical className="h-4 w-4 text-accent-foreground" /></Button></InfoTooltip>
+                <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
                 <InfoTooltip content="Sincronizza WCA"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))} aria-label="Sync WCA"><RefreshCw className="h-4 w-4" /></Button></InfoTooltip>
                 <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
               </div>
@@ -181,6 +184,7 @@ export function AppLayout() {
         <Suspense fallback={null}>
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
         </Suspense>
+        <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
       </div>
     <ClaudeBadge />
         </GlobalFiltersProvider>
