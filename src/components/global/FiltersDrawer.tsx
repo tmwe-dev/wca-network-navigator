@@ -592,35 +592,54 @@ function CRMFiltersSection() {
 
   // Country list from imported_contacts
   const [crmCountries, setCrmCountries] = useState<{ code: string; name: string; flag: string; total: number }[]>([]);
+  // Dynamic origins from imported_contacts
+  const [crmOrigins, setCrmOrigins] = useState<{ value: string; label: string; count: number }[]>([]);
 
-  // Fetch countries from imported_contacts
+  // Fetch countries and origins from imported_contacts
   useEffect(() => {
-    const fetchCountries = async () => {
+    const fetchData = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
+        // Fetch countries
         const { data } = await supabase
           .from("imported_contacts")
           .select("country")
           .not("country", "is", null);
-        if (!data) return;
-        const counts: Record<string, number> = {};
-        data.forEach((r: any) => {
-          const c = (r.country || "").toUpperCase().trim();
-          if (c) counts[c] = (counts[c] || 0) + 1;
-        });
-        const list = Object.entries(counts).map(([code, total]) => {
-          const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
-          return {
-            code,
-            name: wcaCountry?.name || code,
-            flag: getCountryFlag(code),
-            total,
-          };
-        }).sort((a, b) => b.total - a.total);
-        setCrmCountries(list);
+        if (data) {
+          const counts: Record<string, number> = {};
+          data.forEach((r: any) => {
+            const c = (r.country || "").toUpperCase().trim();
+            if (c) counts[c] = (counts[c] || 0) + 1;
+          });
+          const list = Object.entries(counts).map(([code, total]) => {
+            const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
+            return {
+              code,
+              name: wcaCountry?.name || code,
+              flag: getCountryFlag(code),
+              total,
+            };
+          }).sort((a, b) => b.total - a.total);
+          setCrmCountries(list);
+        }
+        // Fetch origins
+        const { data: originData } = await supabase
+          .from("imported_contacts")
+          .select("origin");
+        if (originData) {
+          const oCounts: Record<string, number> = {};
+          originData.forEach((r: any) => {
+            const o = (r.origin || "").trim();
+            if (o) oCounts[o] = (oCounts[o] || 0) + 1;
+          });
+          const oList = Object.entries(oCounts)
+            .map(([value, count]) => ({ value, label: value, count }))
+            .sort((a, b) => b.count - a.count);
+          setCrmOrigins(oList);
+        }
       } catch {}
     };
-    fetchCountries();
+    fetchData();
   }, []);
 
   const selectedCountries = useMemo(
@@ -757,9 +776,14 @@ function CRMFiltersSection() {
       </FilterSection>
 
       {/* Origine */}
-      <FilterSection icon={Database} label={`Origine (${g.filters.crmOrigin.size > 0 && g.filters.crmOrigin.size < 4 ? g.filters.crmOrigin.size + ' attive' : 'tutte'})`}>
+      <FilterSection icon={Database} label={`Origine (${g.filters.crmOrigin.size > 0 ? g.filters.crmOrigin.size + ' attive' : 'tutte'})`}>
         <ChipGroup>
-          {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
+          {crmOrigins.map(o => (
+            <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
+              {o.label} <span className="ml-1 text-[9px] opacity-60">({o.count})</span>
+            </Chip>
+          ))}
+          {crmOrigins.length === 0 && <span className="text-[11px] text-muted-foreground">Caricamento…</span>}
         </ChipGroup>
       </FilterSection>
 

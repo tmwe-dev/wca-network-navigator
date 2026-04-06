@@ -109,7 +109,7 @@ const defaults: GlobalFilterState = {
   networkDirectoryOnly: false,
   emailCategory: "all",
   emailSort: "date_desc",
-  crmOrigin: new Set(["wca", "import", "report_aziende"]),
+  crmOrigin: new Set<string>(),
   crmQuality: "all",
   crmChannel: "all",
   crmSelectedCountries: new Set<string>(),
