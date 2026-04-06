@@ -23,6 +23,7 @@ import { MissionDrawer } from "@/components/global/MissionDrawer";
 import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
