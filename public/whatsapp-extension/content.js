@@ -1,21 +1,32 @@
 // ══════════════════════════════════════════════
-// WhatsApp Direct Send - Content Script Bridge
-// Self-healing: reconnects when service worker restarts
+// WhatsApp Extension v5.0 — Content Script Bridge
+// Hardened: payload validation, action whitelist,
+// adaptive heartbeat with exponential backoff,
+// structured error codes
 // ══════════════════════════════════════════════
 
 (function () {
-  var HEARTBEAT_MS = 8000;
+  var BASE_HEARTBEAT_MS = 8000;
+  var MAX_HEARTBEAT_MS = 30000;
+  var currentHeartbeat = BASE_HEARTBEAT_MS;
   var alive = false;
-  var reconnectAttempts = 0;
+  var heartbeatTimer = null;
+
+  // ── Allowed actions whitelist ──
+  var ALLOWED_ACTIONS = [
+    "ping", "setConfig", "verifySession", "sendWhatsApp",
+    "readUnread", "learnDom", "diagnosticDom", "readThread",
+    "backfillChat",
+  ];
+
+  var MAX_STRING_LENGTH = 5000;
 
   function isExtensionAlive() {
     try {
       if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
       void chrome.runtime.getManifest();
       return true;
-    } catch (e) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   function post(payload) {
@@ -23,49 +34,41 @@
     catch (_) { window.postMessage(payload, "*"); }
   }
 
-  function failResponse(data, error) {
+  function failResponse(data, error, errorCode) {
     post({
       direction: "from-extension-wa",
       action: data.action,
       requestId: data.requestId,
-      response: { success: false, error: error },
+      response: { success: false, error: error, errorCode: errorCode || "ERR_BRIDGE" },
     });
   }
 
-  // Wake up service worker by sending a ping
-  function wakeServiceWorker() {
-    try {
-      chrome.runtime.sendMessage({ source: "wa-content-bridge", action: "ping" }, function(resp) {
-        if (chrome.runtime.lastError) {
-          alive = false;
-          return;
-        }
-        if (resp && resp.success) {
-          alive = true;
-          reconnectAttempts = 0;
-          post({ direction: "from-extension-wa", action: "contentScriptReady" });
-        }
-      });
-    } catch (_) {
-      alive = false;
+  // ── Payload validation ──
+  function validatePayload(data) {
+    if (!data || typeof data !== "object") return "Invalid payload";
+    if (!data.action || typeof data.action !== "string") return "Missing action";
+    if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
+    var stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+    for (var i = 0; i < stringFields.length; i++) {
+      var field = stringFields[i];
+      if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {
+        return "Field " + field + " exceeds max length";
+      }
     }
+    return null;
   }
 
   function relayMessage(data) {
+    var validationError = validatePayload(data);
+    if (validationError) {
+      failResponse(data, validationError, "ERR_VALIDATION");
+      return;
+    }
+
     if (!isExtensionAlive()) {
       alive = false;
-      // Try to wake the service worker instead of immediately failing
-      reconnectAttempts++;
-      if (reconnectAttempts <= 3) {
-        wakeServiceWorker();
-        // Retry relay after a short delay
-        setTimeout(function() {
-          if (alive) relayMessage(data);
-          else failResponse(data, "Extension context invalidated — ricarica la pagina");
-        }, 1000);
-        return;
-      }
-      failResponse(data, "Extension context invalidated — ricarica la pagina");
+      currentHeartbeat = BASE_HEARTBEAT_MS;
+      failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
       post({ direction: "from-extension-wa", action: "extensionDead" });
       return;
     }
@@ -76,6 +79,8 @@
       if (data.text) msg.text = data.text;
       if (data.contact) msg.contact = data.contact;
       if (data.maxMessages) msg.maxMessages = data.maxMessages;
+      if (data.maxScrolls) msg.maxScrolls = data.maxScrolls;
+      if (data.lastKnownText) msg.lastKnownText = data.lastKnownText;
       if (data.supabaseUrl) msg.supabaseUrl = data.supabaseUrl;
       if (data.anonKey) msg.anonKey = data.anonKey;
       if (data.authToken) msg.authToken = data.authToken;
@@ -83,34 +88,15 @@
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
           alive = false;
-          console.warn("[WA Content] Extension error:", chrome.runtime.lastError.message);
-          // Don't immediately fail - try to wake the worker
-          wakeServiceWorker();
-          setTimeout(function() {
-            if (alive) {
-              // Retry the relay
-              chrome.runtime.sendMessage(msg, function(retryResp) {
-                if (chrome.runtime.lastError) {
-                  failResponse(data, "Extension non raggiungibile dopo retry");
-                  return;
-                }
-                post({
-                  direction: "from-extension-wa",
-                  action: data.action,
-                  requestId: data.requestId,
-                  response: retryResp || { success: false, error: "No response" },
-                });
-              });
-            } else {
-              failResponse(data, "Extension context invalidated — ricarica la pagina");
-              post({ direction: "from-extension-wa", action: "extensionDead" });
-            }
-          }, 1500);
+          currentHeartbeat = BASE_HEARTBEAT_MS;
+          failResponse(data, "Extension context invalidated", "ERR_RUNTIME");
+          post({ direction: "from-extension-wa", action: "extensionDead" });
           return;
         }
 
         alive = true;
-        reconnectAttempts = 0;
+        currentHeartbeat = Math.min(currentHeartbeat * 1.5, MAX_HEARTBEAT_MS);
+
         post({
           direction: "from-extension-wa",
           action: data.action,
@@ -124,27 +110,33 @@
       });
     } catch (err) {
       alive = false;
-      console.warn("[WA Content] sendMessage failed:", err.message);
-      failResponse(data, "Extension context invalidated — prova a ricaricare la pagina");
+      currentHeartbeat = BASE_HEARTBEAT_MS;
+      failResponse(data, "Extension context invalidated", "ERR_SEND_FAILED");
       post({ direction: "from-extension-wa", action: "extensionDead" });
     }
   }
 
-  // Heartbeat: proactively wake service worker
-  setInterval(function () {
-    var nowAlive = isExtensionAlive();
-    if (nowAlive) {
-      // Proactively wake the service worker to keep it alive
-      wakeServiceWorker();
-    } else if (alive) {
-      alive = false;
-      globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = false;
-      post({ direction: "from-extension-wa", action: "extensionDead" });
-      console.warn("[WA Content] Extension context lost");
-    }
-  }, HEARTBEAT_MS);
+  // ── Adaptive heartbeat with exponential backoff ──
+  function scheduleHeartbeat() {
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    heartbeatTimer = setTimeout(function () {
+      var nowAlive = isExtensionAlive();
+      if (nowAlive && !alive) {
+        alive = true;
+        currentHeartbeat = BASE_HEARTBEAT_MS;
+        post({ direction: "from-extension-wa", action: "contentScriptReady" });
+      } else if (!nowAlive && alive) {
+        alive = false;
+        currentHeartbeat = BASE_HEARTBEAT_MS;
+        post({ direction: "from-extension-wa", action: "extensionDead" });
+      } else if (nowAlive) {
+        currentHeartbeat = Math.min(currentHeartbeat * 1.2, MAX_HEARTBEAT_MS);
+      }
+      scheduleHeartbeat();
+    }, currentHeartbeat);
+  }
 
-  // Remove previous listener if re-injected
+  // ── Remove previous listener if re-injected ──
   if (globalThis.__WA_MSG_LISTENER__) {
     window.removeEventListener("message", globalThis.__WA_MSG_LISTENER__);
   }
@@ -159,9 +151,6 @@
   window.addEventListener("message", globalThis.__WA_MSG_LISTENER__);
   globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = true;
 
-  // Initial check + wake
-  alive = isExtensionAlive();
-  if (alive) {
-    wakeServiceWorker();
-  }
+  post({ direction: "from-extension-wa", action: "contentScriptReady" });
+  scheduleHeartbeat();
 })();
