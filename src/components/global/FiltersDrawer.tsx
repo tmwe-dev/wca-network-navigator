@@ -803,11 +803,6 @@ function NetworkFiltersSection() {
         )}
       </FilterSection>
 
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
-        </ChipGroup>
-      </FilterSection>
 
       <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
         <p className="mb-2 text-[10px] text-muted-foreground">
