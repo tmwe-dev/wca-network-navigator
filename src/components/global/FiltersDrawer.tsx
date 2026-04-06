@@ -521,8 +521,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
           )}
 
           {/* ═══ CRM ═══ */}
-          {isCRM && (
+          {isCRM && g.filters.crmActiveTab === "contatti" && (
             <CRMFiltersSection />
+          )}
+          {isCRM && g.filters.crmActiveTab === "biglietti" && (
+            <BCAFiltersSection />
           )}
 
           {/* ═══ AGENDA ═══ */}
