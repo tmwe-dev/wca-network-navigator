@@ -275,7 +275,7 @@ export function PartnerListPanel({
                 {[
                   { value: "name", label: "Nome" },
                   { value: "rating", label: "Rating" },
-                  { value: "contacts", label: "Contatti" },
+                  { value: "recent", label: "Più recenti" },
                 ].map(o => (
                   <DropdownMenuItem
                     key={o.value}
