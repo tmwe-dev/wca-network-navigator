@@ -265,28 +265,31 @@ var AXTree = (function () {
     return await withDebugger(tabId, async function (tid) {
       var nodes = await getFullTree(tid);
       var threads = [];
+      var seen = {};
 
       // Find all list items or links that represent conversations
       var links = findByRole(nodes, "link");
       for (var i = 0; i < links.length; i++) {
         var link = links[i];
-        var name = link.name && link.name.value ? link.name.value : "";
-        // Check if it looks like a messaging thread link
-        // We look at children or properties
-        if (!name || name.length < 2) continue;
-        // We can't easily get href from AX tree, so we'll use DOM resolution
+        var rawName = link.name && link.name.value ? link.name.value : "";
+        if (!rawName || rawName.length < 2) continue;
         if (link.backendDOMNodeId) {
           try {
             var resolved = await cdp(tid, "DOM.resolveNode", { backendNodeId: link.backendDOMNodeId });
             if (resolved && resolved.object) {
               var hrefResult = await cdp(tid, "Runtime.callFunctionOn", {
                 objectId: resolved.object.objectId,
-                functionDeclaration: "function() { return this.href || ''; }",
+                functionDeclaration: "function() { var h = this.href || ''; var name = ''; var h3 = this.querySelector('h3'); if (h3) name = h3.textContent.replace(/\\s+/g,' ').trim(); if (!name) { var spans = this.querySelectorAll('span'); for (var s=0;s<spans.length;s++) { var t = (spans[s].textContent||'').trim(); if (t.length>1 && t.length<60 && !/^\\d/.test(t) && !/^(passa|go to|details)/i.test(t)) { name = t; break; } } } if (!name) { var img = this.querySelector('img[alt]'); if (img) { var alt = (img.getAttribute('alt')||'').trim(); if (alt.length>1 && alt.length<60 && !/photo|foto|avatar/i.test(alt)) name = alt; } } return JSON.stringify({href:h, name:name}); }",
                 returnByValue: true,
               });
-              var href = hrefResult && hrefResult.result && hrefResult.result.value;
-              if (href && /\/messaging\/thread\//.test(href)) {
-                threads.push({ name: name, threadUrl: href, unread: false, lastMessage: "" });
+              var parsed = null;
+              try { parsed = JSON.parse(hrefResult && hrefResult.result && hrefResult.result.value); } catch (_) {}
+              if (parsed && parsed.href && /\/messaging\/thread\//.test(parsed.href)) {
+                if (seen[parsed.href]) continue;
+                seen[parsed.href] = true;
+                var contactName = parsed.name || rawName;
+                if (/^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(contactName)) contactName = "";
+                if (contactName) threads.push({ name: contactName, threadUrl: parsed.href, unread: false, lastMessage: "" });
               }
             }
           } catch (_) {}
