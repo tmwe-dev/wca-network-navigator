@@ -1,48 +1,52 @@
 
-# Estensione Email Universale — Piano di Implementazione
 
-## Obiettivo
-Creare un'estensione Chrome standalone per scaricare email via IMAP sul PC dell'utente, con onboarding integrato che offre la scelta di storage (default: locale).
+# Fix: Invio WhatsApp dalla Inbox fallisce con "Contatto non trovato"
 
-## Architettura
+## Problema
 
-### 1. Onboarding nell'estensione (popup)
-- **Step 1 — Credenziali**: Email + Password
-- **Step 2 — Auto-discovery**: Il sistema cerca automaticamente il server IMAP (MX lookup + well-known providers map)
-- **Step 3 — Storage**: Scelta con **"Scarica sul PC"** come opzione principale/preselezionata, più opzione secondaria "Salva nel cloud"
-- **Step 4 — Conferma e primo sync**
+Quando rispondi a un messaggio WhatsApp dalla inbox, il sistema passa il **nome del contatto** (es. "Jose Programmatore Cuba") alla funzione `sendWhatsApp`. L'estensione cerca quel nome nella barra di ricerca di WhatsApp Web, ma se non trova corrispondenza esatta e il nome non contiene cifre, restituisce "Contatto non trovato".
 
-### 2. Struttura file estensione
+Il fallback via URL (`web.whatsapp.com/send?phone=...`) funziona solo se la stringa contiene almeno 6 cifre — un nome come "Jose Programmatore Cuba" non ne ha nessuna.
+
+## Soluzione
+
+Doppia strategia di invio nel componente `WhatsAppInboxView`:
+
+1. **Estrarre il numero di telefono dal `raw_payload`** dei messaggi del thread (spesso contiene un campo `phone`, `jid` o un numero nel campo `contact`)
+2. **Tentare prima con il nome** (ricerca nella chat list di WhatsApp Web)
+3. **Se fallisce, ritentare con il numero di telefono** se disponibile
+4. **Come ultimo fallback**, aprire `web.whatsapp.com/send?phone=...` se il numero e disponibile
+
+## Modifiche
+
+### 1. `src/components/outreach/WhatsAppInboxView.tsx`
+
+- Aggiungere una funzione helper `extractPhoneFromThread(thread)` che scansiona `raw_payload` dei messaggi del thread per estrarre un numero di telefono (cerca campi `phone`, `jid`, `sender`, o pattern numerici nel campo `contact`)
+- Modificare `handleSendReply`:
+  - Prima tentativo con `sendWhatsApp(activeTab, text)` (nome contatto — cerca nella search bar)
+  - Se fallisce con "Contatto non trovato", estrarre il telefono dal thread e ritentare con `sendWhatsApp(phone, text)`
+  - Se anche il secondo tentativo fallisce, mostrare errore con suggerimento
+
+### 2. `public/whatsapp-extension/actions.js`
+
+- Migliorare la funzione `openChat`: se la ricerca per nome fallisce, provare anche a cercare con varianti del nome (solo il primo nome, senza cognome/suffissi)
+- Abbassare la soglia minima per il fallback URL da 6 a 5 cifre per essere piu tolleranti con numeri corti
+
+## Dettaglio tecnico
+
+```text
+handleSendReply flow:
+  1. sendWhatsApp(contactName, text)
+     ├─ extension searches WA Web → found → send → OK
+     └─ "Contatto non trovato"
+  2. extractPhone from thread's raw_payload
+     ├─ phone found → sendWhatsApp(phone, text) → retry
+     └─ no phone → show error with context
 ```
-public/email-extension/
-├── manifest.json
-├── popup.html          — UI onboarding + dashboard
-├── popup.js            — Logica UI
-├── background.js       — Service worker IMAP
-├── imap-worker.js      — Connessione IMAP via fetch a edge function
-├── auto-discover.js    — Auto-discovery server IMAP
-├── storage-manager.js  — Gestione download locale (.eml) o cloud
-├── notifier.js         — Notifiche push nuove email
-├── popup.css           — Stile
-└── icons/
-```
 
-### 3. Funzionalità core
-| Feature | Dettaglio |
-|---|---|
-| Auto-discovery IMAP | MX DNS + mappa provider noti (Gmail, Outlook, Yahoo, ecc.) |
-| Download locale | Salva .eml nella cartella Download del PC via `chrome.downloads` |
-| Sync incrementale | Traccia ultimo UID scaricato, scarica solo i nuovi |
-| Notifiche | `chrome.notifications` per nuove email |
-| Dashboard | Popup con contatori, ultimo sync, pulsante sync manuale |
+La funzione `extractPhoneFromThread` cercherà in ordine:
+- `raw_payload.phone`
+- `raw_payload.jid` (formato `391234567890@s.whatsapp.net`)
+- `raw_payload.sender`
+- Pattern numerico nel campo `contact` stesso (se contiene cifre come "+39...")
 
-### 4. Edge function di supporto
-- `email-imap-proxy`: Proxy IMAP server-side (i browser non possono connettersi IMAP direttamente)
-
-### 5. File da creare/modificare
-| File | Azione |
-|---|---|
-| `public/email-extension/*` | Nuovo — tutti i file dell'estensione |
-| `supabase/functions/email-imap-proxy/index.ts` | Nuovo — proxy IMAP |
-| `src/components/settings/ExtensionsTab.tsx` | Aggiungere card download |
-| `public/email-extension.zip` | Nuovo — pacchetto installabile |
