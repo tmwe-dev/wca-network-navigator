@@ -13,7 +13,7 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
   const waBridge = useWhatsAppExtensionBridge();
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
-
+  const trackActivity = useTrackActivity();
   const handleCopy = () => {
     const text = draft.channel === "email"
       ? `Subject: ${draft.subject}\n\n${draft.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/?[^>]+(>|$)/g, "")}`
