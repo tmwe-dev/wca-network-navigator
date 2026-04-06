@@ -41,6 +41,7 @@ export interface GlobalFilterState {
   crmOrigin: Set<string>;
   crmQuality: string;
   crmChannel: string;
+  crmSelectedCountries: Set<string>;
 }
 
 interface GlobalFiltersCtxValue {
