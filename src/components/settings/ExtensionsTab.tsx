@@ -100,6 +100,31 @@ export function ExtensionsTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Email Client */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Mail className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Email Client Universale</p>
+                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              fetch("/email-extension.zip")
+                .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "email-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("Email Client scaricato!"); })
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
