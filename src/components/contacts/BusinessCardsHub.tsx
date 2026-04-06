@@ -476,6 +476,9 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
           <Globe className="w-3.5 h-3.5 text-violet-400" /> Cerca logo su Google
         </Button>
       )}
+
+      {/* Manual partner matching for unmatched cards */}
+      {card.match_status !== "matched" && <ManualPartnerMatcher card={card} />}
     </div>
   );
 }
