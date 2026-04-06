@@ -35,6 +35,7 @@ export function AppLayout() {
   const deepSearch = useDeepSearchRunner();
   const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
+  useWcaSync();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
