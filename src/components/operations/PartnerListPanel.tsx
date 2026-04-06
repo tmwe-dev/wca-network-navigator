@@ -377,6 +377,39 @@ export function PartnerListPanel({
           )}
         </div>
 
+        {/* ═══ COUNTRY TABS ═══ */}
+        {countryTabCounts.length > 1 && (
+          <div ref={tabsRef} className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
+            <button
+              onClick={() => setActiveCountryTab(null)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                activeCountryTab === null
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Tutti
+            </button>
+            {countryTabCounts.map(({ code, name, count }) => (
+              <button
+                key={code}
+                onClick={() => setActiveCountryTab(code === activeCountryTab ? null : code)}
+                className={cn(
+                  "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                  activeCountryTab === code
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <span>{getCountryFlag(code)}</span>
+                <span className="truncate max-w-[80px]">{name}</span>
+                <span className="opacity-70">({count})</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ═══ PARTNER LIST (Virtualized) ═══ */}
         <PartnerVirtualList
           partners={filteredPartners}
