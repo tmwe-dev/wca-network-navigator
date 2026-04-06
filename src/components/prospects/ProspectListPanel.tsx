@@ -410,7 +410,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">
-                {c.email && <a href={`mailto:${c.email}`} className={`hover:underline ${th.body}`}>{c.email}</a>}
+                {c.email && <button onClick={(e) => { e.stopPropagation(); navigate("/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.name, company: prospect.company_name } } }); }} className={`hover:underline ${th.body} cursor-pointer`}>{c.email}</button>}
                 {c.phone && <a href={`tel:${c.phone}`} className={`hover:underline ${th.body}`}>{c.phone}</a>}
                 {c.linkedin_url && <a href={c.linkedin_url} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>LinkedIn</a>}
               </div>
