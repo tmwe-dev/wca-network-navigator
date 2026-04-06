@@ -1,4 +1,4 @@
-import { Phone, Users, MoreHorizontal, Mail, Linkedin, MessageCircle, CalendarClock, StickyNote } from "lucide-react";
+import { Phone, Users, MoreHorizontal, Mail, Linkedin, MessageCircle, CalendarClock, StickyNote, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTodayActivities, type TodayActivity } from "@/hooks/useTodayActivities";
 import {
