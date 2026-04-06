@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Universal Email Client",
-  "version": "2.0.0",
-  "description": "Download, sync and manage your email from any IMAP provider. Auto-discovery, local download, push notifications.",
+  "name": "Universal Communication Hub",
+  "version": "3.0.0",
+  "description": "Email, WhatsApp e LinkedIn in un'unica estensione. Download locale, sync cloud, agente AI integrato.",
   "permissions": [
     "storage",
     "notifications",

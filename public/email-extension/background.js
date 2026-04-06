@@ -4,7 +4,7 @@
  * Message router + sync + side panel + email cache
  */
 
-import { VERSION, DEFAULTS, ERR } from "./config.js";
+import { VERSION, DEFAULTS, ERR, CHANNELS } from "./config.js";
 import { discoverImapServer } from "./auto-discover.js";
 import {
   getSyncState, updateSyncState,
