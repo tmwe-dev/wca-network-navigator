@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Universal Email Client",
+  "version": "1.0.0",
+  "description": "Download, sync and manage your email from any IMAP provider. Auto-discovery, local download, push notifications.",
+  "permissions": [
+    "storage",
+    "notifications",
+    "alarms",
+    "downloads"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "minimum_chrome_version": "102"
+}

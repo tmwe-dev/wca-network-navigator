@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Client</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ── ONBOARDING ── -->
+    <div id="onboarding" class="screen">
+      <!-- Step indicators -->
+      <div class="steps-bar">
+        <div class="step-dot active" data-step="0"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="1"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="2"></div>
+        <div class="step-line"></div>
+        <div class="step-dot" data-step="3"></div>
+      </div>
+
+      <!-- Step 0: Welcome -->
+      <div id="step-0" class="step active">
+        <div class="step-icon">📧</div>
+        <h2>Email Client Universale</h2>
+        <p class="subtitle">Scarica, sincronizza e gestisci la tua posta da qualsiasi provider IMAP.</p>
+        <button class="btn primary full" id="btn-start">Inizia configurazione</button>
+      </div>
+
+      <!-- Step 1: Credentials -->
+      <div id="step-1" class="step">
+        <h2>Le tue credenziali</h2>
+        <p class="subtitle">Inserisci email e password. Il server IMAP verrà trovato automaticamente.</p>
+        <div class="field">
+          <label for="input-email">Email</label>
+          <input type="email" id="input-email" placeholder="nome@esempio.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="input-password">Password</label>
+          <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password" />
+          <span class="hint">Per Gmail/Yahoo usa una password per app</span>
+        </div>
+        <div id="discover-status" class="status-box hidden"></div>
+        <button class="btn primary full" id="btn-discover">Trova server automaticamente</button>
+      </div>
+
+      <!-- Step 2: Server confirm -->
+      <div id="step-2" class="step">
+        <h2>Server IMAP</h2>
+        <p class="subtitle">Abbiamo trovato il tuo server. Verifica o modifica i dettagli.</p>
+        <div class="server-card">
+          <div class="server-badge" id="server-label">—</div>
+          <div class="field compact">
+            <label>Host</label>
+            <input type="text" id="input-host" />
+          </div>
+          <div class="field-row">
+            <div class="field compact">
+              <label>Porta</label>
+              <input type="number" id="input-port" value="993" />
+            </div>
+            <div class="field compact">
+              <label>TLS</label>
+              <select id="input-tls">
+                <option value="true" selected>SSL/TLS</option>
+                <option value="false">Nessuna</option>
+              </select>
+            </div>
+          </div>
+          <div class="method-badge" id="discover-method">—</div>
+        </div>
+        <div id="test-status" class="status-box hidden"></div>
+        <button class="btn primary full" id="btn-test">Testa connessione</button>
+      </div>
+
+      <!-- Step 3: Storage choice -->
+      <div id="step-3" class="step">
+        <h2>Dove salvare le email?</h2>
+        <p class="subtitle">Scegli come vuoi conservare la tua posta.</p>
+        
+        <div class="storage-options">
+          <label class="storage-option selected" data-mode="local">
+            <input type="radio" name="storage" value="local" checked />
+            <div class="option-content">
+              <div class="option-icon">💾</div>
+              <div class="option-text">
+                <strong>Scarica sul PC</strong>
+                <span>File .eml nella cartella Download. I dati restano tuoi, sempre accessibili offline.</span>
+              </div>
+              <div class="badge recommended">Consigliato</div>
+            </div>
+          </label>
+          
+          <label class="storage-option" data-mode="cloud">
+            <input type="radio" name="storage" value="cloud" />
+            <div class="option-content">
+              <div class="option-icon">☁️</div>
+              <div class="option-text">
+                <strong>Salva nel cloud</strong>
+                <span>Accessibile da qualsiasi dispositivo, ricerca avanzata, backup automatico.</span>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>Sincronizzazione automatica</label>
+          <select id="input-sync-interval">
+            <option value="0">Manuale</option>
+            <option value="5">Ogni 5 minuti</option>
+            <option value="15" selected>Ogni 15 minuti</option>
+            <option value="30">Ogni 30 minuti</option>
+            <option value="60">Ogni ora</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="input-notifications" checked />
+            <span>Notifiche per nuove email</span>
+          </label>
+        </div>
+
+        <button class="btn primary full" id="btn-finish">Completa e sincronizza</button>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="dashboard" class="screen hidden">
+      <div class="dash-header">
+        <div class="dash-title">
+          <span class="dash-icon">📧</span>
+          <div>
+            <h3 id="dash-email">—</h3>
+            <span class="dash-server" id="dash-server">—</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="btn-settings" title="Impostazioni">⚙️</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Email scaricate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-syncs">0</div>
+          <div class="stat-label">Sincronizzazioni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-last">Mai</div>
+          <div class="stat-label">Ultima sync</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-mode">—</div>
+          <div class="stat-label">Modalità</div>
+        </div>
+      </div>
+
+      <div id="sync-progress" class="progress-bar hidden">
+        <div class="progress-fill" id="progress-fill"></div>
+        <span class="progress-text" id="progress-text">Sincronizzazione...</span>
+      </div>
+
+      <div id="sync-result" class="status-box hidden"></div>
+
+      <button class="btn primary full" id="btn-sync">
+        <span id="sync-label">🔄 Sincronizza ora</span>
+      </button>
+
+      <button class="btn outline full mt-2" id="btn-reset">🗑️ Reset configurazione</button>
+    </div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
