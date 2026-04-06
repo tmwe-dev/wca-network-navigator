@@ -48,6 +48,7 @@ export function useSortingJobs() {
         `)
         .eq("status", "pending")
         .not("email_body", "is", null)
+        .is("campaign_batch_id", null)
         .order("scheduled_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data || []) as unknown as SortingJob[];

@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
+import { useTrackActivity } from "@/hooks/useTrackActivity";
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -62,7 +63,7 @@ export default function EmailCanvas({
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [sending, setSending] = useState(false);
-
+  const trackActivity = useTrackActivity();
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
   const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
@@ -125,6 +126,16 @@ export default function EmailCanvas({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
+      // Track activity
+      trackActivity.mutate({
+        activityType: "send_email",
+        title: `${displayEmail.partnerName || "—"} — ${displayEmail.contactName || displayEmail.contactEmail}`,
+        sourceId: activity?.partner_id || activity?.source_id || crypto.randomUUID(),
+        sourceType: (activity?.source_type === "contact" || activity?.source_type === "prospect") ? "imported_contact" : "partner",
+        partnerId: activity?.partner_id || undefined,
+        emailSubject: displaySubject,
+        description: `Email inviata a ${displayEmail.contactEmail}`,
+      });
     } catch (err: any) {
       toast({ title: "Errore invio", description: err.message, variant: "destructive" });
     } finally { setSending(false); }

@@ -11,6 +11,7 @@ export interface TodayActivity {
   completedAt: string | null;
   contactName: string;
   company: string;
+  status: string;
 }
 
 export function useTodayActivities() {
@@ -22,10 +23,10 @@ export function useTodayActivities() {
 
       const { data, error } = await supabase
         .from("activities")
-        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta")
+        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
         .gte("created_at", today.toISOString())
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
+        .in("status", ["pending", "in_progress", "completed"] as any)
+        .order("completed_at", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (error) throw error;
@@ -42,6 +43,7 @@ export function useTodayActivities() {
           completedAt: a.completed_at,
           contactName: meta.name || a.title?.split("—")[0]?.trim() || "—",
           company: meta.company || a.title?.split("—")[1]?.trim() || "",
+          status: a.status,
         };
       });
     },

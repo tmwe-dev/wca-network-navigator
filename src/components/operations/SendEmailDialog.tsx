@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTrackActivity } from "@/hooks/useTrackActivity";
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -26,7 +27,7 @@ export function SendEmailDialog({
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-
+  const trackActivity = useTrackActivity();
   const handleSend = async () => {
     if (!body.trim()) {
       toast.error("Scrivi un messaggio prima di inviare");
@@ -41,6 +42,15 @@ export function SendEmailDialog({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success(`Email inviata a ${recipientEmail}`);
+      trackActivity.mutate({
+        activityType: "send_email",
+        title: `${companyName || "—"} — ${recipientName || recipientEmail}`,
+        sourceId: partnerId,
+        sourceType: "partner",
+        partnerId,
+        emailSubject: subject,
+        description: `Email inviata a ${recipientEmail}`,
+      });
       onOpenChange(false);
       setBody("");
     } catch (e: any) {
