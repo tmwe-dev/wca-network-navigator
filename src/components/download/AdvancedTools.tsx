@@ -18,6 +18,7 @@ import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs
 import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { WcaBrowser } from "./WcaBrowser";
 import { useTheme, t } from "./theme";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 
 interface EnrichPartner {
   id: string;
