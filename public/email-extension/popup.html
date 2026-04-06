@@ -35,8 +35,8 @@
       <!-- Step 1: Email -->
       <div id="step-1" class="step">
         <div class="step-badge-row"><span class="channel-badge email">📧 Email</span><button class="btn-skip" id="skip-email">Salta →</button></div>
-        <h2>Configura Email IMAP</h2>
-        <p class="subtitle">Inserisci le credenziali del tuo account email.</p>
+        <h2>Configura Email</h2>
+        <p class="subtitle">Inserisci le credenziali per ricevere e inviare email.</p>
         <div class="field">
           <label for="email-addr">Email</label>
           <input type="email" id="email-addr" placeholder="nome@esempio.com" autocomplete="email" />
@@ -59,6 +59,7 @@
         <div class="step-badge-row"><span class="channel-badge email">📧 Email — Server</span></div>
         <div class="server-card">
           <div class="server-badge" id="email-server-label">—</div>
+          <div class="section-label">Ricezione (IMAP)</div>
           <div class="field compact">
             <label>Host IMAP</label>
             <input type="text" id="email-host" placeholder="imap.esempio.com" />
@@ -73,6 +74,26 @@
               <select id="email-tls">
                 <option value="true" selected>SSL/TLS</option>
                 <option value="false">Nessuna</option>
+              </select>
+            </div>
+          </div>
+          <div class="section-divider"></div>
+          <div class="section-label">Invio (SMTP)</div>
+          <div class="field compact">
+            <label>Host SMTP</label>
+            <input type="text" id="smtp-host" placeholder="smtp.esempio.com" />
+          </div>
+          <div class="field-row">
+            <div class="field compact">
+              <label>Porta</label>
+              <input type="number" id="smtp-port" value="587" />
+            </div>
+            <div class="field compact">
+              <label>Sicurezza</label>
+              <select id="smtp-tls">
+                <option value="starttls" selected>STARTTLS</option>
+                <option value="ssl">SSL/TLS</option>
+                <option value="none">Nessuna</option>
               </select>
             </div>
           </div>
@@ -268,6 +289,7 @@
           </div>
         </div>
         <div class="dash-actions">
+          <button class="btn-icon" id="btn-compose" title="Scrivi messaggio">✏️</button>
           <button class="btn-icon" id="btn-open-panel" title="Apri pannello">📬</button>
           <button class="btn-icon" id="btn-settings" title="Impostazioni">⚙️</button>
         </div>
@@ -288,8 +310,8 @@
           <div class="stat-label">Ultima sync</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" id="stat-mode">—</div>
-          <div class="stat-label">Modalità</div>
+          <div class="stat-value" id="stat-sent">0</div>
+          <div class="stat-label">Inviati</div>
         </div>
       </div>
 
@@ -329,6 +351,77 @@
         <span id="sync-label">🔄 Sincronizza ora</span>
       </button>
       <button class="btn outline full mt-2" id="btn-reset">🗑️ Reset configurazione</button>
+    </div>
+
+    <!-- ══ COMPOSE ══ -->
+    <div id="compose" class="screen hidden">
+      <div class="compose-header">
+        <button class="compose-back" id="btn-compose-back">← Indietro</button>
+        <div class="compose-channel-badge" id="compose-badge">📧 Email</div>
+      </div>
+
+      <h2 id="compose-title">Nuovo messaggio</h2>
+
+      <!-- Channel selector -->
+      <div class="compose-channel-selector">
+        <button class="compose-ch-btn active" data-compose-ch="email" id="compose-ch-email">📧 Email</button>
+        <button class="compose-ch-btn" data-compose-ch="whatsapp" id="compose-ch-wa">💬 WhatsApp</button>
+        <button class="compose-ch-btn" data-compose-ch="linkedin" id="compose-ch-li">💼 LinkedIn</button>
+      </div>
+
+      <!-- Email compose fields -->
+      <div id="compose-email-fields" class="compose-fields">
+        <div class="field compact">
+          <label for="compose-to">Destinatario</label>
+          <input type="email" id="compose-to" placeholder="destinatario@esempio.com" />
+        </div>
+        <div class="field compact">
+          <label for="compose-cc">CC (opzionale)</label>
+          <input type="email" id="compose-cc" placeholder="cc@esempio.com" />
+        </div>
+        <div class="field compact">
+          <label for="compose-subject">Oggetto</label>
+          <input type="text" id="compose-subject" placeholder="Oggetto del messaggio" />
+        </div>
+        <div class="field compact">
+          <label for="compose-body">Messaggio</label>
+          <textarea id="compose-body" class="compose-textarea" placeholder="Scrivi il tuo messaggio..." rows="6"></textarea>
+        </div>
+      </div>
+
+      <!-- WhatsApp compose fields -->
+      <div id="compose-wa-fields" class="compose-fields hidden">
+        <div class="field compact">
+          <label for="compose-wa-phone">Numero telefono</label>
+          <input type="tel" id="compose-wa-phone" placeholder="+39 333 1234567" />
+          <span class="hint">Formato internazionale con prefisso</span>
+        </div>
+        <div class="field compact">
+          <label for="compose-wa-body">Messaggio</label>
+          <textarea id="compose-wa-body" class="compose-textarea" placeholder="Scrivi il messaggio WhatsApp..." rows="4"></textarea>
+        </div>
+        <div class="wa-char-count"><span id="wa-char-count">0</span> / 4096</div>
+      </div>
+
+      <!-- LinkedIn compose fields -->
+      <div id="compose-li-fields" class="compose-fields hidden">
+        <div class="field compact">
+          <label for="compose-li-recipient">Nome o URL profilo</label>
+          <input type="text" id="compose-li-recipient" placeholder="Mario Rossi o https://linkedin.com/in/..." />
+          <span class="hint">Inserisci il nome per cercare o l'URL del profilo</span>
+        </div>
+        <div class="field compact">
+          <label for="compose-li-body">Messaggio</label>
+          <textarea id="compose-li-body" class="compose-textarea" placeholder="Scrivi il messaggio LinkedIn..." rows="4"></textarea>
+        </div>
+        <div class="li-char-count"><span id="li-char-count">0</span> / 8000</div>
+      </div>
+
+      <div id="compose-status" class="status-box hidden"></div>
+
+      <button class="btn primary full" id="btn-send">
+        <span id="send-label">📤 Invia messaggio</span>
+      </button>
     </div>
   </div>
 
