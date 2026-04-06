@@ -54,6 +54,8 @@ export function PartnerListPanel({
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hideHolding, setHideHolding] = useState(true);
+  const [activeCountryTab, setActiveCountryTab] = useState<string | null>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const activeSearch = g.filters.networkSearch.trim();
   const activeSort = g.filters.networkSort;
