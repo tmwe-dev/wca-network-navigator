@@ -46,7 +46,7 @@ export function CompactContactCard({
 
   return (
     <div
-      className={`group relative rounded-lg border p-2.5 text-xs transition-all ${
+      className={`group relative rounded-lg border p-2.5 text-xs transition-all overflow-hidden ${
         transferred
           ? "opacity-50 bg-muted/30"
           : isSelected
@@ -54,6 +54,8 @@ export function CompactContactCard({
           : "border-border hover:border-primary/30 hover:shadow-sm"
       }`}
     >
+      {/* Origin accent border */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l ${getOriginAccent(c.origin)}`} />
       <div className="flex items-start gap-2">
         <Checkbox
           checked={isSelected}

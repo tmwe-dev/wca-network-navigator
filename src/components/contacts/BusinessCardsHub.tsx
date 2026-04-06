@@ -483,6 +483,89 @@ function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPart
   );
 }
 
+/* ═══ Manual Partner Matcher ═══ */
+function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
+  const [searchTerm, setSearchTerm] = useState(card.company_name || "");
+  const [results, setResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const updateCard = useUpdateBusinessCard();
+
+  const doSearch = useCallback(async () => {
+    if (!searchTerm.trim()) return;
+    setSearching(true);
+    setSearched(true);
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, company_name, company_alias, country_code, country_name, city")
+        .or(`company_name.ilike.%${searchTerm.trim()}%,company_alias.ilike.%${searchTerm.trim()}%`)
+        .order("country_name")
+        .order("city")
+        .order("company_name")
+        .limit(20);
+      if (error) throw error;
+      setResults(data ?? []);
+    } catch (e: any) {
+      toast({ title: "Errore ricerca", description: e.message, variant: "destructive" });
+    } finally {
+      setSearching(false);
+    }
+  }, [searchTerm]);
+
+  const confirmMatch = useCallback(async (partnerId: string) => {
+    try {
+      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as any);
+      toast({ title: "✅ Match confermato" });
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    }
+  }, [card.id, updateCard]);
+
+  return (
+    <div className="space-y-2 bg-amber-500/5 rounded-lg p-3 border border-amber-500/15">
+      <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium flex items-center gap-1">
+        <Search className="w-3 h-3" /> Cerca partner WCA
+      </p>
+      <div className="flex gap-1.5">
+        <Input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && doSearch()}
+          placeholder="Nome azienda..."
+          className="h-7 text-xs flex-1"
+        />
+        <Button variant="outline" size="sm" className="h-7 text-[10px] px-2 shrink-0" onClick={doSearch} disabled={searching}>
+          {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+        </Button>
+      </div>
+      {searched && results.length === 0 && !searching && (
+        <p className="text-[10px] text-muted-foreground">Nessun partner trovato</p>
+      )}
+      {results.length > 0 && (
+        <div className="max-h-[200px] overflow-y-auto space-y-0.5">
+          {results.map((p) => (
+            <button
+              key={p.id}
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors group"
+              onClick={() => confirmMatch(p.id)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs shrink-0">{p.country_code ? String.fromCodePoint(...[...p.country_code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65)) : "🌍"}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{[p.city, p.country_name].filter(Boolean).join(", ")}</p>
+                </div>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 shrink-0" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══ Main Hub ═══ */
 
 export default function BusinessCardsHub() {
