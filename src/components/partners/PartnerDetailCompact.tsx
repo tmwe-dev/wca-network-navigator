@@ -33,6 +33,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
+import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
 
 interface PartnerDetailCompactProps {
   partner: any;
