@@ -43,8 +43,11 @@ interface PartnerDetailCompactProps {
 
 export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark }: PartnerDetailCompactProps) {
   const th = t(isDark);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deepSearching, setDeepSearching] = useState(false);
+  const [waSending, setWaSending] = useState<string | null>(null);
+  const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
