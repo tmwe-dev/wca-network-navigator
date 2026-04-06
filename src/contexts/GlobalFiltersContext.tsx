@@ -42,6 +42,7 @@ export interface GlobalFilterState {
   crmQuality: string;
   crmChannel: string;
   crmSelectedCountries: Set<string>;
+  crmActiveTab: string;
 }
 
 interface GlobalFiltersCtxValue {
