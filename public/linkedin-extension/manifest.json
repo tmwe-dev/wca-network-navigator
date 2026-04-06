@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "1.0",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn.",
-  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
+  "version": "2.0",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. Sistema ibrido AX Tree + AI Self-Healing.",
+  "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*", "https://zrbditqddhjkutzjycgi.supabase.co/*"],
   "background": {
     "service_worker": "background.js"

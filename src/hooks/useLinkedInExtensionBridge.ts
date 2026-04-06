@@ -126,6 +126,11 @@ export function useLinkedInExtensionBridge() {
     [sendMessage]
   );
 
+  const learnDom = useCallback(
+    (pageType?: string) => sendMessage("learnDom", { pageType: pageType || "profile" }, 60000),
+    [sendMessage]
+  );
+
   /**
    * Centralized auth guard — checks extension + real session.
    * Caches result for `cacheTtlMs` to avoid spamming verifySession.
