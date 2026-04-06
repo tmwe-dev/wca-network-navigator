@@ -1,51 +1,64 @@
 
+# AI Matching + Azioni operative + Layout migliorato per CRM (Contatti & Biglietti)
 
-# Matching manuale BCA + Bordo colore per origine
+## 3 blocchi di lavoro
 
-## 1. Matching manuale per biglietti "no match"
+### 1. Bottone AI Matching nel tab bar CRM
 
-Nella card di dettaglio di un biglietto con `match_status === "unmatched"` (pannello destro di BusinessCardsHub), aggiungere un blocco "Cerca partner":
+Aggiungere un terzo bottone nella barra tab di `CRM.tsx` (di fianco a Contatti e Biglietti): **"🤖 AI Match"** che apre un `Dialog` fullscreen-like.
 
-- Input di ricerca che esegue una query fuzzy su `partners` (via `ilike` su `company_name` e `company_alias`)
-- Risultati ordinati per **paese, citta, nome**
-- L'utente clicca sul partner corretto per confermarlo
-- Al click: `updateBusinessCard({ id, matched_partner_id: partner.id, match_status: "matched", match_confidence: 100 })`
-- Se nessun risultato va bene, l'utente lascia il biglietto come "unmatched"
+**Popup AI Match:**
+- Chiama Lovable AI (gemini-flash) passando la lista dei biglietti `unmatched` + un campione di partner dal DB
+- L'AI confronta nome azienda, paese, città, telefono, email e restituisce candidati con % di confidenza
+- UI: lista ordinata per confidenza decrescente, ogni riga mostra affiancati:
+  - **Sinistra**: dati BCA (nome, contatto, paese, città, telefono)
+  - **Destra**: dati Partner suggerito (nome, alias, paese, città)
+  - **Centro**: % confidenza con barra colorata
+- Checkbox per selezione multipla + bottone "Conferma selezionati" che fa `updateBusinessCard` in batch
+- Elaborazione in batch da 20 alla volta per non sovraccaricare
 
-Nessuna estensione PostgreSQL necessaria — si usa `ilike('%termine%')` lato client con una query Supabase standard.
+### 2. Azioni operative su selezione (Contatti + Biglietti)
 
-## 2. Bordo sinistro colorato per origine nelle card BCA
+**BusinessCardsHub** — quando `selectedIds.size > 0`, aggiungere barra azioni bulk (stesso pattern del `ContactListPanel`):
+- **Workspace** → crea attività email per i biglietti selezionati
+- **Campagna** → crea campaign_jobs
+- **Deep Search** → invoca deep-search per arricchimento
+- **LinkedIn Lookup** → cerca URL LinkedIn
+- **Email diretta** → apre composer con i selezionati
+- **WhatsApp** → invia messaggio ai selezionati con telefono
 
-Applicare lo stesso pattern del Cockpit (`originAccent`) alle card del BusinessCardsHub. Ogni card avrà un bordo sinistro di 3px con gradiente colore basato sull'origine:
+**BusinessCardDetailPanel** — aggiungere sotto "Azioni rapide":
+- **→ Cockpit** (trasferisci al cockpit)
+- **→ Workspace** (crea attività email)
+- **Genera Alias**
+- **Programma follow-up** (stessa logica ContactActionMenu)
 
-- **WCA** (matched con partner WCA): `from-chart-1/60` (blu/viola)
-- **BCA** (biglietto da visita senza match): `from-amber-500/60` (ambra)
-- **Import** (importati da file): `from-chart-3/60` (verde acqua)
-- **Manual** (inseriti manualmente): `from-emerald-500/60` (verde)
+### 3. Layout migliorato card BCA (CompactRow)
 
-La logica determina l'origine dal `match_status`:
-- `matched` + `partner.id` presente → WCA
-- `unmatched` o `pending` → BCA
+La CompactRow attuale è troppo compressa e illeggibile. Ristrutturazione:
 
-Si aggiunge il `div` con classe `absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l` a tutte e 3 le view (CompactRow, CardView, ExpandedView), più una sfumatura di colore leggera nel background della riga superiore della card.
+**CompactRow → due righe:**
+```text
+Riga 1: [checkbox] [🇮🇹] Nome Azienda                    [Match/No match] [📧] [📞]
+Riga 2:           👤 Nome Contatto · Posizione  · 📍 Città   [Evento] [Anno WCA]
+```
 
-## 3. Stessa logica nel CRM (CompactContactCard)
+- Allineamento fisso a sinistra per tutti gli elementi
+- Spazio minimo `py-2` invece di `py-1.5`
+- Se matched con partner WCA, mostrare anno di membership (da `partner.enrichment_data`)
+- Font size aumentato per company name (text-xs → text-sm)
 
-Le card dei contatti importati (`imported_contacts`) avranno il bordo sinistro basato sul campo `origin`:
-- `wca` → chart-1
-- `import` → chart-3
-- `bca` → amber-500
-- `manual` → emerald-500
-- `report_aziende` → chart-4
+**CardGridItem e ExpandedCardItem:**
+- Aggiungere anno membership WCA se disponibile
+- Mostrare paese con bandiera emoji
+- Allineare icone di azione a destra
 
-Identico al Cockpit.
-
-## File coinvolti
+### File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/BusinessCardsHub.tsx` | Aggiungere bordo sinistro colorato alle 3 view mode + pannello ricerca manuale partner nel dettaglio |
-| `src/components/import/CompactContactCard.tsx` | Aggiungere bordo sinistro colorato per origine |
+| `src/pages/CRM.tsx` | Aggiungere bottone "AI Match" + import Dialog |
+| `src/components/contacts/BusinessCardsHub.tsx` | Barra azioni bulk, layout CompactRow su 2 righe, azioni nel detail panel, popup AI Match |
+| `src/components/contacts/ContactCard.tsx` | Minor: verificare allineamento consistente (già buono) |
 
-Nessuna migrazione DB, nessun nuovo file.
-
+Nessuna migrazione DB. L'AI matching usa Lovable AI (gemini-flash) direttamente dal client via edge function.
