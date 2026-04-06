@@ -80,7 +80,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const actions = useContactActions({
     selection, setFilters: setFiltersNoop as any, setSortKey: setSortKeyNoop as any,
     setOpenGroups, setSelectedGroups,
-    currentGroupBy: gf.groupBy || "country", holdingPattern: gf.holdingPattern,
+    currentGroupBy: gf.groupBy || "country", holdingPattern: gf.holdingPattern as "out" | "in" | "all",
   });
 
   const virtualizer = useVirtualizer({
