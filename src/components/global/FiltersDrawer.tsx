@@ -776,9 +776,14 @@ function CRMFiltersSection() {
       </FilterSection>
 
       {/* Origine */}
-      <FilterSection icon={Database} label={`Origine (${g.filters.crmOrigin.size > 0 && g.filters.crmOrigin.size < 4 ? g.filters.crmOrigin.size + ' attive' : 'tutte'})`}>
+      <FilterSection icon={Database} label={`Origine (${g.filters.crmOrigin.size > 0 ? g.filters.crmOrigin.size + ' attive' : 'tutte'})`}>
         <ChipGroup>
-          {CRM_ORIGIN.map(o => <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>{o.label}</Chip>)}
+          {crmOrigins.map(o => (
+            <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
+              {o.label} <span className="ml-1 text-[9px] opacity-60">({o.count})</span>
+            </Chip>
+          ))}
+          {crmOrigins.length === 0 && <span className="text-[11px] text-muted-foreground">Caricamento…</span>}
         </ChipGroup>
       </FilterSection>
 
