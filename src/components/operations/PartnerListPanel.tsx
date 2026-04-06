@@ -67,6 +67,8 @@ export function PartnerListPanel({
   } = usePartnersPaginated({
     countries: countryCodes,
     search: activeSearch.length >= 2 ? activeSearch : undefined,
+    quality: activeQuality !== "all" ? activeQuality : undefined,
+    hideHolding,
   });
 
   const partners = useMemo(() => {
@@ -85,7 +87,7 @@ export function PartnerListPanel({
   const toggleFavorite = useToggleFavorite();
 
   const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
-  const totalCount = stats.total;
+  const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
       case "rating": return "Rating";
@@ -107,25 +109,8 @@ export function PartnerListPanel({
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
-    if (activeQuality === "with_email") {
-      list = list.filter((p: any) => !!p.email || (p.partner_contacts || []).some((c: any) => c.email));
-    }
-    if (activeQuality === "with_phone") {
-      list = list.filter((p: any) => !!p.phone || !!p.mobile || (p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile));
-    }
-    if (activeQuality === "with_profile") {
-      list = list.filter((p: any) => !!p.raw_profile_html);
-    }
-    if (activeQuality === "no_email") {
-      list = list.filter((p: any) => !p.email && !(p.partner_contacts || []).some((c: any) => c.email));
-    }
-    if (activeQuality === "no_contacts") {
-      list = list.filter((p: any) => !Array.isArray(p.partner_contacts) || p.partner_contacts.length === 0);
-    }
-
-    if (hideHolding) {
-      list = list.filter((p: any) => !p.lead_status || p.lead_status === "new");
-    }
+    // Quality and holding filters are now applied server-side in usePartnersPaginated
+    // Only keep client-side filters that can't be pushed to SQL
     if (progressFilter === "deep") {
       list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
     }
