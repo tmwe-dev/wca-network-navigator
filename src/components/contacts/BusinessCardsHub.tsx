@@ -165,22 +165,16 @@ function countryFlag(code: string | null | undefined): string {
 
 /* ═══ Resolve country from card data (partner → raw_data → location) ═══ */
 function getCardCountryCode(card: BusinessCardWithPartner): string | null {
-  // 1. From matched partner
   if (card.partner?.country_code) return card.partner.country_code;
-  // 2. From raw_data
   const rd = card.raw_data as any;
   if (rd?.country_code) return rd.country_code;
   if (rd?.country) {
-    const { resolveCountryCode } = require("@/lib/countries");
     const resolved = resolveCountryCode(rd.country);
     if (resolved) return resolved;
   }
-  // 3. From location field — try to resolve
   if (card.location) {
-    const { resolveCountryCode } = require("@/lib/countries");
     const resolved = resolveCountryCode(card.location);
     if (resolved) return resolved;
-    // Try last part after comma (e.g. "Bologna, Italy")
     const parts = card.location.split(",").map(s => s.trim());
     for (let i = parts.length - 1; i >= 0; i--) {
       const r = resolveCountryCode(parts[i]);
