@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
         return await handleTest(body);
       case "fetch":
         return await handleFetch(body);
+      case "send":
+        return await handleSend(body);
       default:
         return jsonResponse({ error: "Endpoint non trovato" }, 404);
     }
