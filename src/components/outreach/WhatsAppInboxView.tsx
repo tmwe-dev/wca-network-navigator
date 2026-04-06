@@ -485,6 +485,11 @@ export function WhatsAppInboxView() {
 
             {/* Reply input */}
             <div className="flex-shrink-0 px-4 py-2 border-t border-border bg-background">
+              {!isAvailable && (
+                <p className="text-[10px] text-yellow-600 dark:text-yellow-400 mb-1 text-center">
+                  ⚠ Estensione WhatsApp non connessa — il messaggio verrà inviato quando disponibile
+                </p>
+              )}
               <div className="flex items-center gap-2 max-w-2xl mx-auto">
                 <Input
                   value={replyText}
@@ -492,12 +497,12 @@ export function WhatsAppInboxView() {
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendReply(); } }}
                   placeholder="Scrivi un messaggio..."
                   className="flex-1 text-sm h-9"
-                  disabled={isSending || !isAvailable}
+                  disabled={isSending}
                 />
                 <Button
                   size="icon"
                   onClick={handleSendReply}
-                  disabled={!replyText.trim() || isSending || !isAvailable}
+                  disabled={!replyText.trim() || isSending}
                   className="bg-green-600 hover:bg-green-700 text-white h-9 w-9"
                 >
                   {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
