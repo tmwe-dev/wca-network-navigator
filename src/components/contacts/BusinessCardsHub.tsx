@@ -882,16 +882,50 @@ export default function BusinessCardsHub() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Bulk action bar */}
-      <BCABulkActionBar
+      <UnifiedBulkActionBar
         count={selectedIds.size}
-        cards={cards}
-        selectedIds={selectedIds}
+        sourceType="business_card"
         onClear={() => setSelectedIds(new Set())}
         onEmail={handleBulkEmail}
         onWhatsApp={handleBulkWhatsApp}
         onCockpit={handleBulkCockpit}
         onWorkspace={handleBulkWorkspace}
         onDelete={handleBulkDelete}
+        onDeepSearch={() => {
+          const partnerIds = new Set<string>();
+          for (const id of selectedIds) {
+            const card = cards.find(c => c.id === id);
+            if (card?.matched_partner_id) partnerIds.add(card.matched_partner_id);
+          }
+          if (partnerIds.size === 0) { toast({ title: "Nessun biglietto associato a un partner" }); return; }
+          supabase.functions.invoke("deep-search-partner", {
+            body: { partnerIds: Array.from(partnerIds) },
+          }).then(({ error }) => {
+            if (error) toast({ title: "Errore Deep Search", variant: "destructive" });
+            else toast({ title: `✅ Deep Search avviata su ${partnerIds.size} partner` });
+          });
+        }}
+        onGoogleLogo={() => {
+          const selected = cards.filter(c => selectedIds.has(c.id));
+          const first = selected.find(c => c.company_name);
+          if (first?.company_name) window.open(googleLogoSearchUrl(first.company_name), "_blank");
+        }}
+        onLinkedIn={() => {
+          const selected = cards.filter(c => selectedIds.has(c.id));
+          const names = selected.map(c => ({ name: c.contact_name || "", company: c.company_name || "" })).filter(n => n.name);
+          if (names.length === 0) { toast({ title: "Nessun contatto con nome" }); return; }
+          const query = `${names[0].name} ${names[0].company} LinkedIn`;
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
+        }}
+        onCampaign={() => {
+          const selected = cards.filter(c => selectedIds.has(c.id) && c.email);
+          if (selected.length === 0) { toast({ title: "Nessun contatto con email" }); return; }
+          navigate("/email-composer", {
+            state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) },
+          });
+        }}
+        withEmail={cards.filter(c => selectedIds.has(c.id) && c.email).length}
+        withPhone={cards.filter(c => selectedIds.has(c.id) && (c.phone || c.mobile)).length}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
