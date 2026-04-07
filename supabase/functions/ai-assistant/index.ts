@@ -2927,6 +2927,49 @@ serve(async (req) => {
         // Track UI actions
         if (tr?.ui_action) uiActions.push(tr.ui_action);
         if (tr?.step_result?.ui_action) uiActions.push(tr.step_result.ui_action);
+
+        // ── Auto-save L1 memory after significant tool calls ──
+        if (userId && tr?.success) {
+          const autoSaveTools: Record<string, (a: any, r: any) => string | null> = {
+            send_email: (a, r) => `Email inviata a ${a.to_email} — oggetto: "${a.subject}"`,
+            create_download_job: (a, r) => `Download avviato per ${r.country}, ${r.total_partners} partner (mode: ${r.mode})`,
+            download_single_partner: (a, r) => `Download singolo: "${a.company_name}" (WCA ID: ${r.wca_id})`,
+            deep_search_partner: (a, r) => `Deep search su "${a.company_name || a.partner_id}"`,
+            deep_search_contact: (a, r) => `Deep search contatto: "${a.contact_name || a.contact_id}"`,
+            bulk_update_partners: (a, r) => `Aggiornamento bulk: ${r.updated_count} partner — ${(r.changes || []).join(", ")}`,
+            create_reminder: (a, r) => `Reminder creato: "${a.title}" per ${r.company_name} (scadenza: ${a.due_date})`,
+            create_activity: (a, r) => `Attività creata: "${a.title}" (${a.activity_type})`,
+          };
+          const generator = autoSaveTools[tc.function.name];
+          if (generator) {
+            const content = generator(args, tr);
+            if (content) {
+              // Dedup check: avoid saving if very similar memory exists recently
+              const { data: existing } = await supabase
+                .from("ai_memory")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("source", "auto_tool")
+                .ilike("content", `%${content.substring(0, 40)}%`)
+                .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+                .limit(1);
+              
+              if (!existing?.length) {
+                supabase.from("ai_memory").insert({
+                  user_id: userId,
+                  content,
+                  memory_type: "fact",
+                  tags: [tc.function.name, new Date().toISOString().split("T")[0]],
+                  importance: 2,
+                  level: 1,
+                  confidence: 0.5,
+                  decay_rate: 0.02,
+                  source: "auto_tool",
+                }).then(() => {}).catch(() => {});
+              }
+            }
+          }
+        }
       }
 
       allMessages.push(assistantMessage);

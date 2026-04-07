@@ -371,6 +371,22 @@ export default function AIProfileSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current Focus — highlighted field */}
+          <div className="space-y-1.5 p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+            <Label className="flex items-center gap-1.5 text-primary font-medium">
+              <TrendingUp className="w-3.5 h-3.5" /> 🎯 Focus Corrente
+            </Label>
+            <Input
+              value={fields.ai_current_focus}
+              onChange={e => set("ai_current_focus", e.target.value)}
+              placeholder="Es. Questo mese il focus è l'acquisizione di partner in Germania e Far East"
+              className="border-primary/20"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Obiettivo temporaneo — l'AI lo userà per dare priorità alle risposte e suggerire azioni proattive
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label>Attività principali dell'azienda</Label>
             <Textarea
