@@ -422,7 +422,7 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
 }
 
 /* ═══ Bulk Action Bar for BCA ═══ */
-function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhatsApp, onCockpit, onWorkspace }: {
+function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhatsApp, onCockpit, onWorkspace, onDelete }: {
   count: number;
   cards: BusinessCardWithPartner[];
   selectedIds: Set<string>;
@@ -431,6 +431,7 @@ function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhats
   onWhatsApp: () => void;
   onCockpit: () => void;
   onWorkspace: () => void;
+  onDelete: () => void;
 }) {
   if (count === 0) return null;
   const selectedCards = cards.filter(c => selectedIds.has(c.id));
