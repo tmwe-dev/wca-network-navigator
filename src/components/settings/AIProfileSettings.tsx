@@ -26,6 +26,7 @@ const AI_KEYS = [
   "ai_sales_knowledge_base",
   "ai_tone", "ai_language", "ai_style_instructions",
   "ai_sector", "ai_networks", "ai_sector_notes",
+  "ai_business_goals", "ai_behavior_rules", "ai_company_activities",
 ] as const;
 
 type AIFields = Record<(typeof AI_KEYS)[number], string>;
