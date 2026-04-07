@@ -263,7 +263,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             const isActive = activeGroupTab === t.group_key;
             const label = groupBy === "country"
               ? `${countryFlag(t.group_key)} ${t.group_label}`
-              : t.group_label;
+              : t.group_label.toUpperCase();
             return (
               <button
                 key={t.group_key}
@@ -272,7 +272,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   "shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors",
                   isActive
                     ? "bg-primary/20 text-primary font-semibold"
-                    : "text-muted-foreground hover:bg-muted/60"
+                    : "text-foreground/80 hover:bg-muted/60"
                 )}
               >
                 {label} ({t.contact_count})
