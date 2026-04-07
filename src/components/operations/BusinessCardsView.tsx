@@ -393,9 +393,38 @@ export function BusinessCardsView() {
             {selectedBca.size > 0 && <span className="ml-1 text-amber-500">· {selectedBca.size} sel.</span>}
           </span>
           {selectedBca.size > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Button size="sm" className="h-7 text-xs gap-1.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25" variant="outline" onClick={handleSendToCockpit}><Send className="w-3 h-3" /> Cockpit ({selectedBca.size})</Button>
-              <Button size="sm" className="h-7 text-xs gap-1.5 bg-violet-500/15 text-violet-500 border border-violet-500/30 hover:bg-violet-500/25" variant="outline" onClick={handleBcaDeepSearch}><Brain className="w-3 h-3" /> Deep Search</Button>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <UnifiedBulkActionBar
+                count={selectedBca.size}
+                sourceType="business_card"
+                onClear={() => setSelectedBca(new Set())}
+                onCockpit={handleSendToCockpit}
+                onDeepSearch={handleBcaDeepSearch}
+                onWorkspace={() => {
+                  const selected = filtered.filter(c => selectedBca.has(c.id) && c.email);
+                  if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
+                  navigate("/email-composer", {
+                    state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) },
+                  });
+                }}
+                onLinkedIn={() => {
+                  const selected = filtered.filter(c => selectedBca.has(c.id));
+                  const first = selected.find(c => c.contact_name);
+                  if (first) {
+                    const query = `${first.contact_name} ${first.company_name || ""} LinkedIn`;
+                    window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
+                  }
+                }}
+                onCampaign={() => {
+                  const selected = filtered.filter(c => selectedBca.has(c.id) && c.email);
+                  if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
+                  navigate("/email-composer", {
+                    state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) },
+                  });
+                }}
+                withEmail={filtered.filter(c => selectedBca.has(c.id) && c.email).length}
+                withPhone={filtered.filter(c => selectedBca.has(c.id) && (c.phone || c.mobile)).length}
+              />
             </div>
           )}
           <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
