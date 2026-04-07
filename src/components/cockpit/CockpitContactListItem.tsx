@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import type { ContactOrigin } from "@/pages/Cockpit";
+import { ContactActionMenu } from "./ContactActionMenu";
+import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 interface Contact {
   id: string;
