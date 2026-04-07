@@ -2826,17 +2826,19 @@ serve(async (req) => {
     let systemPrompt = SYSTEM_PROMPT;
 
     // Load all context in parallel
-    const [memoryContext, userProfile, kbContext, opPrompts] = await Promise.all([
+    const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
       loadUserProfile(),
       loadKBContext(),
       loadOperativePrompts(userId),
+      loadMissionHistory(userId),
     ]);
 
     if (userProfile) systemPrompt += userProfile;
     if (memoryContext) systemPrompt += memoryContext;
     if (kbContext) systemPrompt += kbContext;
     if (opPrompts) systemPrompt += opPrompts;
+    if (missionHistory) systemPrompt += missionHistory;
 
     // Add page/selection context
     if (context) {
