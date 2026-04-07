@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -13,6 +13,7 @@ import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
+import MemoryDashboard from "@/components/ai/MemoryDashboard";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
@@ -52,6 +53,7 @@ export default function Settings() {
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "enrichment", label: "Arricchimento", icon: Image },
+    { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
   ];
@@ -123,6 +125,11 @@ export default function Settings() {
                 sortDir={enrSortDir}
                 search={enrSearch}
               />
+            )}
+            {tab === "memoria-ai" && (
+              <div className="float-panel p-5">
+                <MemoryDashboard />
+              </div>
             )}
           </div>
         )}

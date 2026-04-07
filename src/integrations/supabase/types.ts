@@ -301,35 +301,59 @@ export type Database = {
       }
       ai_memory: {
         Row: {
+          access_count: number
+          confidence: number
           content: string
           context_page: string | null
           created_at: string
+          decay_rate: number
           expires_at: string | null
           id: string
           importance: number
+          last_accessed_at: string | null
+          level: number
           memory_type: string
+          pending_promotion: boolean
+          promoted_at: string | null
+          source: string
           tags: string[] | null
           user_id: string
         }
         Insert: {
+          access_count?: number
+          confidence?: number
           content: string
           context_page?: string | null
           created_at?: string
+          decay_rate?: number
           expires_at?: string | null
           id?: string
           importance?: number
+          last_accessed_at?: string | null
+          level?: number
           memory_type?: string
+          pending_promotion?: boolean
+          promoted_at?: string | null
+          source?: string
           tags?: string[] | null
           user_id: string
         }
         Update: {
+          access_count?: number
+          confidence?: number
           content?: string
           context_page?: string | null
           created_at?: string
+          decay_rate?: number
           expires_at?: string | null
           id?: string
           importance?: number
+          last_accessed_at?: string | null
+          level?: number
           memory_type?: string
+          pending_promotion?: boolean
+          promoted_at?: string | null
+          source?: string
           tags?: string[] | null
           user_id?: string
         }
@@ -3131,6 +3155,10 @@ export type Database = {
       }
       increment_contact_interaction: {
         Args: { p_contact_id: string }
+        Returns: undefined
+      }
+      increment_memory_access: {
+        Args: { memory_ids: string[] }
         Returns: undefined
       }
       is_operator_admin: { Args: never; Returns: boolean }
