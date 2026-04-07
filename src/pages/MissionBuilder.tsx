@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, MessageCircle, Send, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Rocket, MessageCircle, Send, CheckCircle2, ArrowLeft, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MissionStepRenderer, TOTAL_STEPS, type MissionStepData } from "@/components/missions/MissionStepRenderer";
 import ReactMarkdown from "react-markdown";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+const LAURA_VOICE_ID = "FGY2WhTYpPnrIDTdsKH5";
+
+/** Extract first 2 sentences from markdown text for conversational TTS */
+function extractVoiceSummary(text: string): string {
+  const clean = text.replace(/[#*_`~\[\]()>|]/g, "").replace(/\n+/g, " ").trim();
+  const sentences = clean.match(/[^.!?]+[.!?]+/g);
+  if (!sentences) return clean.slice(0, 200);
+  return sentences.slice(0, 2).join(" ").trim();
+}
 
 type Msg = { role: "user" | "assistant"; content: string };
 
