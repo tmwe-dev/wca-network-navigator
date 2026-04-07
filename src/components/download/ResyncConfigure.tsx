@@ -8,6 +8,9 @@ import {
   RefreshCw, Play, Users, Mail, Phone, AlertTriangle, ArrowRight, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ResyncConfigure");
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
@@ -122,7 +125,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       stats.sort((a, b) => b.total_partners - a.total_partners);
       setNetworkStats(stats);
     } catch (err) {
-      console.error("Error loading network stats:", err);
+      log.error("load network stats failed", { message: err instanceof Error ? err.message : String(err) });
     }
     setLoading(false);
   }

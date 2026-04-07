@@ -1,6 +1,9 @@
 import { useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useWhatsAppDomLearning");
 
 const LEARN_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3 hours
 const CACHE_KEY = "wa_dom_schema";
@@ -76,13 +79,13 @@ export function useWhatsAppDomLearning() {
       if (result.success && (result as any).schema) {
         const schema = (result as any).schema as WaDomSchema;
         await saveSchema(schema);
-        console.log("[WA-DOM] ✅ Selettori appresi e salvati:", Object.keys(schema).length, "keys");
+        log.info("schema learned", { keys: Object.keys(schema).length });
         return schema;
       }
-      console.warn("[WA-DOM] ⚠️ Learning fallito:", result.error);
+      log.warn("learning failed", { error: result.error });
       return schemaRef.current;
     } catch (err) {
-      console.error("[WA-DOM] Errore learning:", err);
+      log.error("learning error", { message: err instanceof Error ? err.message : String(err) });
       return schemaRef.current;
     } finally {
       learningRef.current = false;
@@ -108,7 +111,7 @@ export function useWhatsAppDomLearning() {
 
   // Force re-learn (called when selectors fail)
   const forceRelearn = useCallback(async (): Promise<WaDomSchema | null> => {
-    console.log("[WA-DOM] 🔄 Force re-learn triggered (selettori falliti)");
+    log.info("force re-learn triggered");
     lastLearnRef.current = 0;
     return await learn();
   }, [learn]);

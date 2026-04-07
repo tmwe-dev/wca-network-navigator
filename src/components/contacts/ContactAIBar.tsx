@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { ContactFilters } from "@/hooks/useContacts";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ContactAIBar");
 
 export interface AICommand {
   type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "create_jobs" | "multi";
@@ -94,7 +97,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
         }
       }
     } catch (e: any) {
-      console.error("ContactAIBar error:", e);
+      log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
       toast({ title: "Errore", description: e.message || "Errore di comunicazione", variant: "destructive" });
     } finally {
       setLoading(false);

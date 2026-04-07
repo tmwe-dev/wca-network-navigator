@@ -1,4 +1,7 @@
 import { useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ViteChunkRecovery");
 
 const CHUNK_RELOAD_KEY = "__vite_chunk_reload_at__";
 const CHUNK_RELOAD_COOLDOWN_MS = 15000;
@@ -28,15 +31,15 @@ function reloadOncePerCooldown(source: string, detail?: unknown) {
     const now = Date.now();
 
     if (now - lastReloadAt < CHUNK_RELOAD_COOLDOWN_MS) {
-      console.warn("[ViteChunkRecovery] reload skipped (cooldown active)", { source, detail });
+      log.warn("reload skipped (cooldown)", { source, detail });
       return;
     }
 
     window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now));
-    console.warn("[ViteChunkRecovery] reloading after chunk load failure", { source, detail });
+    log.warn("reloading after chunk load failure", { source, detail });
     window.location.reload();
   } catch (error) {
-    console.warn("[ViteChunkRecovery] fallback reload", { source, detail, error });
+    log.warn("fallback reload", { source, detail, message: error instanceof Error ? error.message : String(error) });
     window.location.reload();
   }
 }

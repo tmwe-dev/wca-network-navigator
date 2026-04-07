@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAiAssistantChat");
 
 export type Msg = { role: "user" | "assistant"; content: string };
 
@@ -178,7 +181,7 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
       const { uiActions } = parseStructuredMessage(assistantSoFar);
       if (uiActions.length > 0) handleUiActions(uiActions);
     } catch (e) {
-      console.error("AI chat error:", e);
+      log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
       upsertAssistant("⚠️ Errore di connessione. Riprova.");
     }
 

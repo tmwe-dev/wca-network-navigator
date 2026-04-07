@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("PartnerAIBar");
 
 interface Props {
   viewContext?: {
@@ -61,7 +64,7 @@ export function PartnerAIBar({ viewContext }: Props) {
       setHistory([...newMessages, { role: "assistant", content: raw }]);
       setExpanded(true);
     } catch (e: any) {
-      console.error("PartnerAIBar error:", e);
+      log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
       toast.error(e.message || "Errore di comunicazione");
     } finally {
       setLoading(false);

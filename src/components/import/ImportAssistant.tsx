@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ImportAssistant");
 
 interface Message {
   role: "user" | "assistant";
@@ -77,7 +80,7 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
         }
       }
     } catch (err) {
-      console.error("Import assistant error:", err);
+      log.error("import assistant error", { message: err instanceof Error ? err.message : String(err) });
       setMessages([...allMessages, { role: "assistant", content: "❌ Errore di comunicazione con l'assistente." }]);
     } finally {
       setLoading(false);

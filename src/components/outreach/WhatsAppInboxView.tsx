@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { createLogger } from "@/lib/log";
+
+const waLog = createLogger("WhatsAppInboxView");
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -197,7 +200,7 @@ export function WhatsAppInboxView() {
       if (!result.success && activeThread) {
         const phone = extractPhoneFromThread(activeThread);
         if (phone) {
-          console.log(`[WA] Retry invio con telefono: ${phone}`);
+          waLog.info("retry send with phone", { phone });
           result = await sendWhatsApp(phone, text);
         }
       }

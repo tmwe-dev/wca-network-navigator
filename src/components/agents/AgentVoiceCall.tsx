@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import VoicePresence from "@/components/intelliflow/VoicePresence";
 import type { Agent } from "@/hooks/useAgents";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentVoiceCall");
 
 interface Props {
   agent: Agent;
@@ -19,7 +22,7 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     onConnect: () => setIsConnecting(false),
     onDisconnect: () => onClose(),
     onError: (err) => {
-      console.error("Voice call error:", err);
+      log.error("voice call error", { message: String(err) });
       setIsConnecting(false);
     },
   });
@@ -43,7 +46,7 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
         connectionType: "webrtc",
       });
     } catch (e) {
-      console.error("Failed to start voice call:", e);
+      log.error("start voice call failed", { message: e instanceof Error ? e.message : String(e) });
       setIsConnecting(false);
     }
   }, [agent.elevenlabs_agent_id, conversation]);
