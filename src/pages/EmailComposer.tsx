@@ -73,6 +73,17 @@ export default function EmailComposer() {
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Track AI-generated content to detect user edits
+  const [aiGeneratedBody, setAiGeneratedBody] = useState("");
+  const [aiGeneratedSubject, setAiGeneratedSubject] = useState("");
+  const isEditedAfterGeneration = aiGeneratedBody && (htmlBody !== aiGeneratedBody || subject !== aiGeneratedSubject);
+
+  // Save as template dialog
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("primo_contatto");
+  const [customCategory, setCustomCategory] = useState("");
+
   // Mini-dialog for unknown email
   const [unknownEmailDialog, setUnknownEmailDialog] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
