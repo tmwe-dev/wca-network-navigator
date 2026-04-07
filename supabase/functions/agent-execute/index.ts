@@ -1729,8 +1729,37 @@ serve(async (req) => {
       });
     }
 
+    // ━━━ Context Injection: User Profile + Memory + KB ━━━
+    let contextBlock = "";
+    try {
+      // Load user profile from app_settings
+      const { data: settings } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
+      if (settings && settings.length > 0) {
+        contextBlock += "\n\n--- PROFILO UTENTE ---\n";
+        for (const s of settings) {
+          const label = s.key.replace("ai_", "").replace(/_/g, " ").toUpperCase();
+          if (s.value) contextBlock += `${label}: ${s.value}\n`;
+        }
+      }
+      // Load top memories L2+L3
+      const { data: memories } = await supabase.from("ai_memory").select("content, memory_type, tags, level, importance")
+        .eq("user_id", userId).in("level", [2, 3]).order("importance", { ascending: false }).limit(5);
+      if (memories && memories.length > 0) {
+        contextBlock += "\n--- MEMORIA OPERATIVA ---\n";
+        for (const m of memories) contextBlock += `- [L${m.level}/${m.memory_type}] ${m.content}\n`;
+      }
+      // Load global KB entries
+      const { data: kbEntries } = await supabase.from("kb_entries").select("title, content")
+        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false }).limit(5);
+      if (kbEntries && kbEntries.length > 0) {
+        contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
+        for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 500)}\n\n`;
+      }
+    } catch (e) { console.error("Context injection error:", e); }
+
     // Build system prompt with KB
     let systemPrompt = agent.system_prompt || "Sei un agente AI.";
+    systemPrompt += contextBlock;
     systemPrompt += "\n\nRispondi SEMPRE in italiano. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.";
     
     const kb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
