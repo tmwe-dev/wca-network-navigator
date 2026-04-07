@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  Trash2,
+  Trash2, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
@@ -18,17 +18,31 @@ import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactActions } from "@/hooks/useContactActions";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import { sortContacts, type SortKey, countryFlag } from "./contactHelpers";
+import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   selectedId: string | null;
   onSelect: (contact: any) => void;
 }
 
+type SortDir = "asc" | "desc" | null;
+interface SortState { field: string; dir: SortDir }
+
+interface InlineFilter { field: string; value: string; label: string }
+
+const SORT_COLUMNS = [
+  { field: "company", label: "Azienda", sortKey: "company" },
+  { field: "name", label: "Contatto", sortKey: "name" },
+  { field: "city", label: "Città", sortKey: "city" },
+  { field: "country", label: "Paese", sortKey: "country" },
+  { field: "origin", label: "Origine", sortKey: "origin" },
+];
+
 export function ContactListPanel({ selectedId, onSelect }: Props) {
-  const { filters: gf, setCrmGroupTab, setCrmWcaMatch } = useGlobalFilters();
+  const { filters: gf, setCrmGroupTab, setCrmWcaMatch, setGroupBy } = useGlobalFilters();
   const [addOpen, setAddOpen] = useState(false);
   const selection = useSelection([]);
   const linkedInLookup = useLinkedInLookup();
@@ -36,7 +50,24 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
 
-  const sortKey = (gf.sortBy || "company") as SortKey;
+  // Sort state
+  const [sortState, setSortState] = useState<SortState>({ field: "company", dir: "asc" });
+
+  // Inline filters (click on value in card)
+  const [inlineFilters, setInlineFilters] = useState<InlineFilter[]>([]);
+
+  const addInlineFilter = useCallback((field: string, value: string) => {
+    setInlineFilters(prev => {
+      const exists = prev.some(f => f.field === field && f.value === value);
+      if (exists) return prev.filter(f => !(f.field === field && f.value === value));
+      return [...prev, { field, value, label: `${field}: ${value}` }];
+    });
+  }, []);
+
+  const removeInlineFilter = useCallback((field: string, value: string) => {
+    setInlineFilters(prev => prev.filter(f => !(f.field === field && f.value === value)));
+  }, []);
+
   const groupBy = gf.groupBy || "country";
   const activeGroupTab = gf.crmGroupTab || "";
   const wcaMatch = gf.crmWcaMatch || "all";
@@ -52,12 +83,20 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);
 
+  // Build sort key for server
+  const serverSort = useMemo(() => {
+    if (!sortState.dir) return "company_asc";
+    return `${sortState.field}_${sortState.dir}`;
+  }, [sortState]);
+
   // Build filters for infinite query
   const queryFilters: ContactPaginatedFilters = useMemo(() => {
     const f: ContactPaginatedFilters = {
       holdingPattern: gf.holdingPattern as any,
       search: gf.search,
+      sort: serverSort,
     };
+    // Group tab filters
     if (activeGroupTab && groupBy === "country") f.countries = [activeGroupTab];
     else if (gf.crmSelectedCountries.size > 0) f.countries = Array.from(gf.crmSelectedCountries);
 
@@ -70,8 +109,20 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     if (gf.crmChannel && gf.crmChannel !== "all") f.channel = gf.crmChannel;
     if (gf.crmQuality && gf.crmQuality !== "all") f.quality = gf.crmQuality;
     if (wcaMatch !== "all") f.wcaMatch = wcaMatch as any;
+
+    // Apply inline filters
+    const inlineCountries = inlineFilters.filter(f => f.field === "country").map(f => f.value);
+    const inlineCities = inlineFilters.filter(f => f.field === "city").map(f => f.value);
+    const inlineOrigins = inlineFilters.filter(f => f.field === "origin").map(f => f.value);
+    const inlineStatus = inlineFilters.find(f => f.field === "leadStatus");
+
+    if (inlineCountries.length > 0) f.countries = inlineCountries;
+    if (inlineCities.length > 0) f.cities = inlineCities;
+    if (inlineOrigins.length > 0) f.origins = inlineOrigins;
+    if (inlineStatus) f.leadStatus = inlineStatus.value;
+
     return f;
-  }, [gf, activeGroupTab, groupBy, wcaMatch]);
+  }, [gf, activeGroupTab, groupBy, wcaMatch, serverSort, inlineFilters]);
 
   const {
     data: paginatedData,
@@ -81,12 +132,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     isFetchingNextPage,
   } = useContactsPaginated(queryFilters);
 
-  // Flatten all pages
+  // Flatten all pages (already sorted server-side)
   const contacts = useMemo(() => {
     if (!paginatedData) return [];
-    const all = paginatedData.pages.flatMap(p => p.contacts);
-    return sortContacts(all, sortKey);
-  }, [paginatedData, sortKey]);
+    return paginatedData.pages.flatMap(p => p.contacts);
+  }, [paginatedData]);
 
   const totalCount = paginatedData?.pages?.[0]?.total ?? 0;
 
@@ -112,7 +162,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const virtualizer = useVirtualizer({
     count: contacts.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
+    estimateSize: () => 68,
     overscan: 10,
   });
 
@@ -121,6 +171,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const handleTabClick = (key: string) => {
     setCrmGroupTab(key === activeGroupTab ? "" : key);
+  };
+
+  const handleSortClick = (field: string) => {
+    setSortState(prev => {
+      if (prev.field !== field) return { field, dir: "asc" };
+      if (prev.dir === "asc") return { field, dir: "desc" };
+      if (prev.dir === "desc") return { field, dir: null };
+      return { field, dir: "asc" };
+    });
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortState.field !== field || !sortState.dir) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
+    return sortState.dir === "asc"
+      ? <ArrowUp className="w-3 h-3 text-primary" />
+      : <ArrowDown className="w-3 h-3 text-primary" />;
   };
 
   return (
@@ -155,11 +221,25 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </div>
       </div>
 
-      {/* Group tabs bar */}
-      {tabs.length > 0 && (
+      {/* Group tabs bar with dropdown */}
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 shrink-0">
+        {/* Dropdown for group type */}
+        <Select value={groupBy} onValueChange={(v) => { setGroupBy(v as any); setCrmGroupTab(""); }}>
+          <SelectTrigger className="h-7 w-[100px] text-[10px] border-border/40 bg-transparent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="country">Paese</SelectItem>
+            <SelectItem value="origin">Origine</SelectItem>
+            <SelectItem value="status">Stato</SelectItem>
+            <SelectItem value="date">Data</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Scrollable tabs */}
         <div
           ref={tabsRef}
-          className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 overflow-x-auto shrink-0 scrollbar-thin"
+          className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-thin"
           style={{ scrollbarWidth: "thin" }}
         >
           <button
@@ -194,7 +274,53 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             );
           })}
         </div>
+      </div>
+
+      {/* Inline filter chips */}
+      {inlineFilters.length > 0 && (
+        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1 shrink-0">
+          {inlineFilters.map((f, i) => (
+            <span
+              key={`${f.field}-${f.value}-${i}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20"
+            >
+              {f.value}
+              <button
+                onClick={() => removeInlineFilter(f.field, f.value)}
+                className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={() => setInlineFilters([])}
+            className="text-[9px] text-muted-foreground hover:text-foreground ml-1"
+          >
+            Reset
+          </button>
+        </div>
       )}
+
+      {/* Sortable column header */}
+      <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30">
+        <div className="w-[42px] shrink-0" /> {/* index+checkbox space */}
+        <div className="w-[20px] shrink-0" /> {/* flag space */}
+        {SORT_COLUMNS.map(col => (
+          <button
+            key={col.field}
+            onClick={() => handleSortClick(col.sortKey)}
+            className={cn(
+              "flex items-center gap-0.5 text-[9px] font-medium transition-colors shrink-0",
+              col.field === "company" || col.field === "name" ? "w-[200px]" : "w-[80px]",
+              sortState.field === col.sortKey && sortState.dir ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {col.label}
+            <SortIcon field={col.sortKey} />
+          </button>
+        ))}
+      </div>
 
       {/* Bulk actions */}
       {isBulk && (
@@ -273,7 +399,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       {/* Flat contact list with infinite scroll */}
       <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
-          <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+          <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
         ) : contacts.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto trovato</p>
         ) : (
@@ -299,6 +425,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                     onSelect={() => onSelect(c)}
                     onToggle={() => selection.toggle(c.id)}
                     index={vItem.index}
+                    onFilterClick={addInlineFilter}
                   />
                 </div>
               );
