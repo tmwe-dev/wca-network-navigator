@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  Trash2, ArrowUpDown, ArrowUp, ArrowDown,
+  Trash2, ArrowUpDown, ArrowUp, ArrowDown, Plane,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
