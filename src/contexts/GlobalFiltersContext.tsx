@@ -43,6 +43,8 @@ export interface GlobalFilterState {
   crmChannel: string;
   crmSelectedCountries: Set<string>;
   crmActiveTab: string;
+  crmGroupTab: string;
+  crmWcaMatch: string;
 }
 
 interface GlobalFiltersCtxValue {
@@ -78,6 +80,8 @@ interface GlobalFiltersCtxValue {
   setCrmChannel: (s: string) => void;
   setCrmSelectedCountries: (c: Set<string>) => void;
   setCrmActiveTab: (t: string) => void;
+  setCrmGroupTab: (t: string) => void;
+  setCrmWcaMatch: (t: string) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
@@ -114,6 +118,8 @@ const defaults: GlobalFilterState = {
   crmChannel: "all",
   crmSelectedCountries: new Set<string>(),
   crmActiveTab: "contatti",
+  crmGroupTab: "",
+  crmWcaMatch: "all",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
@@ -174,6 +180,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setCrmChannel = useCallback((s: string) => setFilters(p => ({ ...p, crmChannel: s })), []);
   const setCrmSelectedCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, crmSelectedCountries: c })), []);
   const setCrmActiveTab = useCallback((t: string) => setFilters(p => ({ ...p, crmActiveTab: t })), []);
+  const setCrmGroupTab = useCallback((t: string) => setFilters(p => ({ ...p, crmGroupTab: t })), []);
+  const setCrmWcaMatch = useCallback((t: string) => setFilters(p => ({ ...p, crmWcaMatch: t })), []);
   const resetFilters = useCallback(() => setFilters(cloneDefaults()), []);
 
   return (
@@ -186,6 +194,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       setNetworkSearch, setNetworkQuality, setNetworkSort, setNetworkSelectedCountries, setNetworkDirectoryOnly,
       setEmailCategory, setEmailSort,
       setCrmOrigin, setCrmQuality, setCrmChannel, setCrmSelectedCountries, setCrmActiveTab,
+      setCrmGroupTab, setCrmWcaMatch,
       resetFilters, currentRoute: location.pathname,
     }}>
       {children}

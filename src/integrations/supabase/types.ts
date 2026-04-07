@@ -1712,6 +1712,8 @@ export type Database = {
           raw_data: Json | null
           row_number: number
           user_id: string | null
+          wca_match_confidence: number | null
+          wca_partner_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -1743,6 +1745,8 @@ export type Database = {
           raw_data?: Json | null
           row_number?: number
           user_id?: string | null
+          wca_match_confidence?: number | null
+          wca_partner_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -1774,6 +1778,8 @@ export type Database = {
           raw_data?: Json | null
           row_number?: number
           user_id?: string | null
+          wca_match_confidence?: number | null
+          wca_partner_id?: string | null
           zip_code?: string | null
         }
         Relationships: [
@@ -1782,6 +1788,13 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imported_contacts_wca_partner_id_fkey"
+            columns: ["wca_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -3121,6 +3134,13 @@ export type Database = {
         Returns: undefined
       }
       is_operator_admin: { Args: never; Returns: boolean }
+      match_contacts_to_wca: {
+        Args: never
+        Returns: {
+          matched_count: number
+          total_processed: number
+        }[]
+      }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"

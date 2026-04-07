@@ -2,13 +2,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake,
-  Globe2, Linkedin, Briefcase
+  AlertTriangle, MessageCircle, User, MapPin, Sparkles, Handshake,
+  Globe2, Linkedin
 } from "lucide-react";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { InteractionMarkers, type InteractionMarker } from "./InteractionMarkers";
-import { clean, getContactQuality } from "./contactHelpers";
+import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -43,6 +42,8 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const cContactAlias = clean(c.contact_alias);
   const displayCompany = cCompanyAlias || cName || "Senza azienda";
   const displayContact = cContactAlias || cContact;
+  const flag = countryFlag(c.country);
+  const isWcaMatched = !!c.wca_partner_id;
 
   const ed = c.enrichment_data;
   const linkedinUrl = ed?.linkedin_url;
@@ -80,12 +81,15 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Company — fixed width */}
+        {/* Flag + Company — fixed width */}
         <div className="flex items-center gap-1 w-[180px] shrink-0 min-w-0">
-          <Building2 className="w-3 h-3 text-primary shrink-0" />
+          <span className="text-sm shrink-0" title={c.country || ""}>{flag}</span>
           <span className={`font-semibold truncate ${!cName && !cCompanyAlias ? "text-muted-foreground italic" : "text-foreground"}`}>
             {displayCompany}
           </span>
+          {isWcaMatched && (
+            <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
+          )}
           {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
           {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
         </div>

@@ -21,6 +21,7 @@ export interface ContactFilters {
   metPersonally?: boolean;
   channel?: string;
   quality?: string;
+  wcaMatch?: "matched" | "unmatched" | "all";
   page?: number;
   pageSize?: number;
 }
@@ -115,6 +116,9 @@ export function useContacts(filters: ContactFilters = {}) {
       else if (filters.quality === "not_enriched") q = q.is("deep_search_at", null);
       else if (filters.quality === "with_alias") q = q.not("company_alias", "is", null);
       else if (filters.quality === "no_alias") q = q.is("company_alias", null);
+      // WCA match filter
+      if (filters.wcaMatch === "matched") q = q.not("wca_partner_id", "is", null);
+      else if (filters.wcaMatch === "unmatched") q = q.is("wca_partner_id", null);
 
       const from = page * pageSize;
       const to = from + pageSize - 1;
