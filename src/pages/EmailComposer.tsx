@@ -239,6 +239,8 @@ export default function EmailComposer() {
           standalone: true,
           recipient_count: recipientsWithEmail.length,
           recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
+          recipient_name: recipientsWithEmail.length === 1 ? (recipientsWithEmail[0].contactAlias || recipientsWithEmail[0].contactName || "") : "",
+          recipient_company: recipientsWithEmail.length === 1 ? (recipientsWithEmail[0].companyAlias || recipientsWithEmail[0].companyName || "") : "",
           oracle_type: config.emailType?.id || null,
           oracle_tone: config.tone,
           use_kb: config.useKB,
