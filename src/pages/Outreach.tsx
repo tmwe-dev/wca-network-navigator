@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
@@ -8,6 +8,7 @@ const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
 const HoldingPatternTab = lazyRetry(() => import("@/components/outreach/HoldingPatternTab").then(m => ({ default: m.HoldingPatternTab })));
+const CodaAITab = lazyRetry(() => import("@/components/outreach/CodaAITab").then(m => ({ default: m.CodaAITab })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -24,6 +25,7 @@ export default function Outreach() {
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
     { value: "attivita", label: "Attività", icon: ListTodo },
     { value: "circuito", label: "Circuito", icon: Plane },
+    { value: "coda-ai", label: "Coda AI", icon: Bot },
   ];
 
   return (
@@ -36,6 +38,7 @@ export default function Outreach() {
             {tab === "inuscita" && <InUscitaTab />}
             {tab === "attivita" && <AttivitaTab />}
             {tab === "circuito" && <HoldingPatternTab />}
+            {tab === "coda-ai" && <CodaAITab />}
           </Suspense>
         </div>
       </div>

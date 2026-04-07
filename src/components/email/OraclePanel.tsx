@@ -8,11 +8,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, ImageIcon } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
+import { ImageGalleryTab } from "./ImageGalleryTab";
 import { cn } from "@/lib/utils";
 
 export interface OracleConfig {
@@ -26,12 +27,13 @@ interface OraclePanelProps {
   onGenerate: (config: OracleConfig) => void;
   onImprove: (config: OracleConfig) => void;
   onLoadTemplate: (subject: string, body: string) => void;
+  onInsertImage?: (url: string) => void;
   generating: boolean;
   improving: boolean;
   hasBody: boolean;
 }
 
-export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, generating, improving, hasBody }: OraclePanelProps) {
+export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onInsertImage, generating, improving, hasBody }: OraclePanelProps) {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
@@ -107,8 +109,12 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
 
       <Tabs defaultValue="tipi" className="flex-1 flex flex-col min-h-0">
         <TabsList className="shrink-0 mx-2 mt-2 h-7 p-0.5">
-          <TabsTrigger value="tipi" className="text-[10px] h-6 px-3">Tipi</TabsTrigger>
-          <TabsTrigger value="template" className="text-[10px] h-6 px-3">Template</TabsTrigger>
+          <TabsTrigger value="tipi" className="text-[10px] h-6 px-2">Tipi</TabsTrigger>
+          <TabsTrigger value="template" className="text-[10px] h-6 px-2">Template</TabsTrigger>
+          <TabsTrigger value="immagini" className="text-[10px] h-6 px-2 gap-0.5">
+            <ImageIcon className="w-2.5 h-2.5" />
+            Img
+          </TabsTrigger>
         </TabsList>
 
         {/* === TIPI TAB === */}
@@ -202,6 +208,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
               </div>
             )}
           </ScrollArea>
+        </TabsContent>
+
+        {/* === IMMAGINI TAB === */}
+        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0">
+          <ImageGalleryTab onInsertImage={onInsertImage || (() => {})} />
         </TabsContent>
       </Tabs>
 

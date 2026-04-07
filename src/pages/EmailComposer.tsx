@@ -575,6 +575,11 @@ export default function EmailComposer() {
             onGenerate={handleAIGenerate}
             onImprove={handleAIImprove}
             onLoadTemplate={handleLoadTemplate}
+            onInsertImage={(url) => {
+              const imgTag = `<div style="margin:12px 0"><img src="${url}" alt="Image" style="max-width:100%;height:auto;border-radius:4px" /></div>`;
+              setHtmlBody(prev => prev + imgTag);
+              toast.success("Immagine inserita nel corpo email");
+            }}
             generating={aiGenerating}
             improving={aiImproving}
             hasBody={!!htmlBody.trim()}
