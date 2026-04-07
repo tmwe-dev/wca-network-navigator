@@ -559,12 +559,21 @@ export const AVAILABLE_TOOLS = [
   { name: "search_business_cards", label: "Cerca Biglietti Visita", category: "Sistema" },
   { name: "execute_ui_action", label: "Azione UI", category: "Sistema" },
   { name: "get_operations_dashboard", label: "Dashboard Operativa", category: "Sistema" },
+  // Communication & Holding Pattern
+  { name: "get_inbox", label: "Leggi Inbox", category: "Comunicazione" },
+  { name: "get_conversation_history", label: "Storico Conversazioni", category: "Comunicazione" },
+  { name: "get_holding_pattern", label: "Circuito di Attesa", category: "Comunicazione" },
+  { name: "update_message_status", label: "Segna come Letto", category: "Comunicazione" },
+  { name: "get_email_thread", label: "Thread Email", category: "Comunicazione" },
+  { name: "analyze_incoming_email", label: "Analizza Email", category: "Comunicazione" },
   // Management Tools (Director)
   { name: "create_agent_task", label: "Crea Task Agente", category: "Management" },
   { name: "list_agent_tasks", label: "Lista Task Team", category: "Management" },
   { name: "get_team_status", label: "Stato Team", category: "Management" },
   { name: "update_agent_prompt", label: "Aggiorna Prompt Agente", category: "Management" },
   { name: "add_agent_kb_entry", label: "Aggiungi KB Agente", category: "Management" },
+  { name: "assign_contacts_to_agent", label: "Assegna Contatti ad Agente", category: "Management" },
+  { name: "create_campaign", label: "Crea Campagna (A/B)", category: "Management" },
   // Strategic Tools (Director)
   { name: "create_work_plan", label: "Crea Piano di Lavoro", category: "Strategia" },
   { name: "list_work_plans", label: "Lista Piani", category: "Strategia" },
