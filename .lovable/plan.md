@@ -1,91 +1,47 @@
 
-# Missioni AI-Driven: Onboarding Dinamico + Esecuzione Progressiva
 
-## Concetto
+# MissionBuilder — Voice + Risposte Conversazionali AI
 
-Sostituire l'onboarding statico con un wizard conversazionale AI che interroga il DB in tempo reale, propone filtri e numeri, registra la missione e alimenta il Cockpit per l'esecuzione uno-alla-volta.
+## Problemi identificati
 
----
+1. **Nessun input vocale**: Il MissionBuilder ha solo input testo, manca il microfono presente ovunque nel sistema (IntelliFlow, AiAssistantDialog)
+2. **AI deve rispondere a voce in modo sintetico**: Le risposte AI scritte possono essere lunghe/dettagliate, ma la voce deve essere breve e conversazionale — non leggere tutto il testo
+3. **Dati**: I dati visualizzati sono reali (dalla tabella `partners`), ma il contatore step mostrava "1/6" nella versione cached — ora è 1/10
 
-## Parte 1 — Tabella `outreach_missions`
+## Interventi
 
-Nuova tabella per registrare ogni missione con riassunto analizzabile da AI:
+### 1. Aggiungere `useContinuousSpeech` al MissionBuilder
 
-```sql
-CREATE TABLE outreach_missions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT,
-  status TEXT NOT NULL DEFAULT 'draft',
-  target_filters JSONB NOT NULL DEFAULT '{}',
-  channel TEXT NOT NULL DEFAULT 'email',
-  total_contacts INTEGER NOT NULL DEFAULT 0,
-  processed_contacts INTEGER NOT NULL DEFAULT 0,
-  agent_assignments JSONB DEFAULT '[]',
-  schedule_config JSONB DEFAULT '{}',
-  ai_summary TEXT,
-  work_plan_id UUID,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  completed_at TIMESTAMPTZ,
-  metadata JSONB DEFAULT '{}'
-);
-```
+Stesso pattern di IntelliFlowOverlay: bottone mic accanto al campo input, testo interim mostrato live, invio automatico al rilascio.
 
-Con RLS `user_id = auth.uid()`.
+**File**: `src/pages/MissionBuilder.tsx`
+- Import `useContinuousSpeech`
+- Bottone Mic/MicOff accanto al Textarea
+- Placeholder cambia in "🎙 Sto ascoltando…" quando attivo
+- Input mostra `interimText` durante l'ascolto
 
----
+### 2. Aggiungere TTS conversazionale (useAiVoice)
 
-## Parte 2 — Wizard Missione AI (`/mission-builder`)
+Integrare `useAiVoice` con voce attiva di default (Laura IT). Ma con una modifica chiave: **il testo letto a voce è una versione compressa/sintetica**, non il testo completo scritto.
 
-Pagina con flusso progressivo, ogni step scompare al completamento:
+**Approccio**: Dopo ogni risposta AI, estrarre una frase riassuntiva (max 2 righe) da leggere a voce. In pratica:
+- Il testo scritto nella chat rimane completo (markdown, dettagli, numeri)
+- Il TTS legge solo un riassunto conversazionale — es. "Ho trovato 176 contatti in Cina e 94 negli Stati Uniti. Seleziona i paesi che ti interessano."
+- Questo si ottiene aggiungendo un'istruzione al prompt del backend per generare un campo `voice_summary` nel messaggio, oppure facendo un estratto client-side delle prime 1-2 frasi
 
-1. **Chi contattare?** — AI interroga DB, mostra stats per paese/tipo/rating
-2. **Quanti e come frazionare?** — Batch per paese, l'utente aggiusta
-3. **Canale?** — Email/WhatsApp/LinkedIn, AI suggerisce in base a dati disponibili
-4. **Agenti?** — Distribuzione per territorio
-5. **Scheduling** — Immediato o programmato
-6. **Conferma** — Riassunto, creazione missione + inserimento contatti in cockpit_queue
+**Soluzione scelta**: Client-side — estrarre le prime 2 frasi dal testo pulito (senza markdown) e passarle al TTS. Zero modifiche backend.
 
-Pannello destro con chat AI per discutere in tempo reale ogni step.
+### 3. Bottone toggle voce nell'header chat
 
-**File nuovi**: `src/pages/MissionBuilder.tsx`, `src/components/missions/MissionStepRenderer.tsx`
+Piccolo bottone Volume2/VolumeX nell'header del pannello chat per attivare/disattivare TTS.
 
----
+## Riepilogo tecnico
 
-## Parte 3 — Collegamento Cockpit
+| Modifica | File |
+|----------|------|
+| Import `useContinuousSpeech`, aggiungere mic button | `src/pages/MissionBuilder.tsx` |
+| Import `useAiVoice`, TTS sintetico su risposte | `src/pages/MissionBuilder.tsx` |
+| Nessun file nuovo, nessuna migrazione | — |
 
-Quando missione attivata:
-- Contatti inseriti in `cockpit_queue` con `source_type = 'mission'`
-- Cockpit mostra badge "Missione attiva" con progresso
-- Ogni email inviata aggiorna `processed_contacts`
-- A completamento, AI genera `ai_summary`
+Totale: 1 file modificato. Pattern già collaudato nel progetto (IntelliFlow + AiAssistantDialog).
 
-**File modificati**: `useCockpitContacts.ts`, `Cockpit.tsx`
-
----
-
-## Parte 4 — AI Context: Missioni Passate
-
-Iniettare ultime 5 missioni completate nel contesto di `ai-assistant` e `agent-execute` per permettere:
-- Confronto con missioni precedenti
-- Riproposta di missioni simili
-- Analisi contatti non rispondenti
-
----
-
-## Parte 5 — Navigazione
-
-- Voce menu "🎯 Nuova Missione" nel sidebar
-- Bottone "Crea Missione" nel Cockpit
-- Storico missioni in Outreach
-
----
-
-## Ordine di implementazione
-
-1. Migrazione DB (`outreach_missions`)
-2. Wizard MissionBuilder
-3. Link Cockpit
-4. AI context injection
-5. Navigazione
