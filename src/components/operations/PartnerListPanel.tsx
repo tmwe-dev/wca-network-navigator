@@ -10,6 +10,7 @@ import {
 import {
   Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X, ArrowUpDown,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
