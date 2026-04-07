@@ -1,61 +1,104 @@
 
-# Card su 2 righe + Dropdown raggruppamento + Intestazione ordinabile + Filtri cliccabili inline
 
-## Cosa cambia
+# Ristrutturazione completa sidebar CRM — Semplificazione radicale
 
-### 1. ContactCard su 2 righe
-La card attuale è una sola riga orizzontale con tutto compresso. Ristrutturazione su 2 righe:
+## Problema
 
-```text
-Riga 1: #42 □ 🇮🇹 A&G CHEMICAL PRODUC...   Mario Rossi · CEO         WCA OLD    [⚡][🔗]
-Riga 2:           Osio Sotto · Italy        mario@acg.com              Cliente    ●3
-```
+La sidebar CRM è un disastro di usabilità:
+1. **Origini** mostrate come decine di chip espansi → occupano un metro di spazio
+2. **Stato/Circuito/Canale/Qualità** in 4 blocchi di chip sparsi → confusione
+3. **Paesi** relegati in fondo → invisibili
+4. **Click su gruppo** apre la lista contatti DENTRO la sidebar → inutile, l'utente vuole solo filtrare e poi vedere i risultati nella pagina principale
+5. **Formattazione**: origini in minuscolo/maiuscolo misto, nessuna capitalizzazione
+6. **Nessun arricchimento** dei gruppi (bandiere top, periodo dati, ecc.)
 
-- Riga 1: index, checkbox, bandiera, azienda (bold), nome contatto + posizione, origine, indicatori
-- Riga 2: (indentata sotto la bandiera) città · paese, email troncata, lead status, contatore interazioni
-- Altezza stimata card: ~68px (aggiornare `estimateSize` nel virtualizer)
-- Tutti gli elementi allineati a sinistra con larghezze fisse per incolonnamento
+## Soluzione: Sidebar compatta con dropdown multi-select
 
-### 2. Dropdown "Raggruppa per" al posto del bottone "Tutti"
-Il bottone "Tutti (11428)" diventa un `<select>` / dropdown che permette di scegliere il tipo di raggruppamento:
-- Paese (default)
-- Origine
-- Stato lead
+Ispirarsi alla sezione Network che funziona bene: cerca + filtri puliti + lista paesi con ricerca.
 
-Selezionando un raggruppamento, i tab orizzontali di fianco mostrano le voci di quel gruppo con conteggi. Questo usa `gf.groupBy` che già esiste nel context.
-
-### 3. Riga intestazione ordinabile sopra la lista
-Una riga header fissa tra i tab e la lista con le colonne cliccabili:
+### Layout nuovo della CRM section
 
 ```text
-[Azienda ↕] [Contatto ↕] [Città ↕] [Paese ↕] [Origine ↕]
+┌─────────────────────────────┐
+│ 🔍 CERCA                    │  ← come oggi, con risultati inline
+│ [Contatto, azienda, email…] │
+│ (risultati ricerca inline)  │
+├─────────────────────────────┤
+│ 📊 RAGGRUPPA PER            │  ← chip: Paese | Origine | Stato | Gruppo
+│ [Paese] [Origine] [Stato]   │
+├─────────────────────────────┤
+│ 🔽 ORIGINE          [▼ dd]  │  ← DROPDOWN multi-select con conteggi
+│   ✓ WCA OLD (2659)          │     Cerca + scroll interno
+│   ✓ Hubspot (707)           │     Prima lettera maiuscola
+│   □ Chimica Inorganica (185)│
+├─────────────────────────────┤
+│ 🔽 STATO             [▼ dd] │  ← DROPDOWN: Nuovo/Contattato/Qualificato/Convertito
+├─────────────────────────────┤
+│ 🔽 CIRCUITO          [▼ dd] │  ← DROPDOWN: Fuori/In/Tutti
+├─────────────────────────────┤
+│ 🔽 CANALE            [▼ dd] │  ← DROPDOWN: Email/Tel/LI/WA
+├─────────────────────────────┤
+│ 🔽 QUALITÀ           [▼ dd] │  ← DROPDOWN: Arricchiti/Non arricchiti/Con alias/Senza
+├─────────────────────────────┤
+│ 🏳 PAESI (tutti/3 sel.)     │  ← Come Network: cerca + lista scrollabile con bandiere e conteggi
+│ [Cerca paese…]              │
+│ 🇮🇹 Italy         4932      │
+│ 🇮🇳 India         2337      │
+│ 🇺🇸 United States 1477      │
+│ …                           │
+├─────────────────────────────┤
+│ [Reset filtri]  [Conferma]  │
+└─────────────────────────────┘
 ```
 
-Ogni click toglie ASC → DESC → nessun ordinamento. L'ordinamento viene passato come parametro `sort` alla query paginata (server-side).
+### Cambiamenti chiave
 
-### 4. Filtro inline cliccando su un valore
-Quando l'utente clicca su un valore nella card (es. "Italy", "Milano", "WCA OLD"), quel valore viene aggiunto come filtro attivo. Stato locale `activeFilters: Array<{field, value}>`.
+1. **Origini → Dropdown multi-select con ricerca**
+   - Collapsible dropdown che mostra le origini ordinate per conteggio
+   - Ricerca interna al dropdown
+   - Prima lettera maiuscola automatica (`capitalize()`)
+   - Multi-select con checkbox e conteggi
+   - Chiuso di default, mostra solo "N selezionati" o "Tutti"
 
-- I filtri attivi appaiono come chip in una barra sotto l'intestazione: `🇮🇹 Italy ✕` `Milano ✕`
-- Ogni chip ha una X per rimuoverlo
-- I filtri vengono combinati (AND) e passati alla query paginata
-- Cliccando lo stesso valore due volte lo rimuove
+2. **Stato/Circuito/Canale/Qualità → Dropdown singoli compatti**
+   - Ogni sezione diventa un dropdown a selezione singola (o multi dove ha senso)
+   - Una riga per filtro invece di un blocco di chip
 
-### 5. Applicazione agli altri moduli (Network + sidebar)
-Lo stesso pattern (intestazione ordinabile + filtro click su valore + chip attivi) verrà replicato in:
-- `PartnerListPanel.tsx` (Network) — stessa logica
-- `CRMContactNavigator` nella sidebar — versione compatta
+3. **Eliminare l'apertura contatti dentro la sidebar**
+   - Il `CRMContactNavigator` non apre più i gruppi con la lista contatti dentro
+   - Click su un gruppo → imposta il filtro nel context → la pagina principale si aggiorna
+   - La sidebar resta pulita, la lista si vede nella pagina
 
-Questo sarà un secondo step dopo il CRM.
+4. **Capitalizzazione e arricchimento**
+   - Tutte le etichette: prima lettera maiuscola
+   - Nei gruppi per paese: bandiere sempre presenti
+   - Nei gruppi per origine: indicazione del numero di paesi coperti (es. "WCA OLD · 45 paesi")
+
+5. **Paesi: identico a Network**
+   - Stessa logica di Network: lista scrollabile con bandiere, conteggi, ricerca, selezione multipla
+
+### Componente riutilizzabile: `FilterDropdownMulti`
+
+Creare un componente generico usabile ovunque:
+```typescript
+interface FilterDropdownMultiProps {
+  label: string;
+  icon?: LucideIcon;
+  options: Array<{ value: string; label: string; count?: number }>;
+  selected: Set<string>;
+  onToggle: (value: string) => void;
+  searchable?: boolean; // mostra campo cerca se > 10 opzioni
+  singleSelect?: boolean; // per stato/circuito
+}
+```
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactCard.tsx` | Layout 2 righe con elementi incolonnati; valori cliccabili che emettono evento filtro |
-| `src/components/contacts/ContactListPanel.tsx` | Dropdown raggruppamento; riga intestazione ordinabile; barra chip filtri attivi; `estimateSize` → 68; stato `activeFilters` + logica addFilter/removeFilter; passare filtri alla query |
-| `src/hooks/useContactsPaginated.ts` | Aggiungere supporto filtro `city` e ordinamento multi-colonna server-side |
-| `src/components/operations/PartnerListPanel.tsx` | (Step 2) Replicare intestazione ordinabile + filtro click inline |
-| `src/components/global/FiltersDrawer.tsx` | (Step 2) Stessa logica nella sidebar CRM navigator |
+| `src/components/global/FilterDropdownMulti.tsx` | **Nuovo** — Componente dropdown multi-select riutilizzabile con ricerca, conteggi, capitalizzazione |
+| `src/components/global/FiltersDrawer.tsx` | Riscrivere `CRMFiltersSection`: sostituire chip con dropdown, eliminare apertura contatti inline, semplificare layout. Riscrivere `CRMContactNavigator`: click su gruppo = imposta filtro, non apre lista |
+| `src/lib/capitalize.ts` | **Nuovo** — Helper `capitalizeFirst(str)` per uniformare le etichette |
 
 Nessuna migrazione DB.
+
