@@ -118,33 +118,35 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
               {allTypes.map((t) => {
                 const isCustom = customTypes.some(c => c.id === t.id);
                 return (
-                  <Tooltip key={t.id}>
-                    <TooltipTrigger asChild>
+                  <div key={t.id} className="flex items-center gap-0.5 group">
+                    <button
+                      onClick={() => setSelectedType(selectedType?.id === t.id ? null : t)}
+                      className={cn(
+                        "flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all text-xs",
+                        selectedType?.id === t.id
+                          ? "bg-primary/10 ring-1 ring-primary/30 text-primary font-medium"
+                          : "hover:bg-muted/50 text-foreground/70"
+                      )}
+                    >
+                      <span className="text-sm shrink-0">{t.icon}</span>
+                      <span className="truncate flex-1">{t.name}</span>
+                    </button>
+                    <button
+                      onClick={() => openDetail(t)}
+                      className="shrink-0 p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Dettaglio"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                    {isCustom && (
                       <button
-                        onClick={() => setSelectedType(selectedType?.id === t.id ? null : t)}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all text-xs group",
-                          selectedType?.id === t.id
-                            ? "bg-primary/10 ring-1 ring-primary/30 text-primary font-medium"
-                            : "hover:bg-muted/50 text-foreground/70"
-                        )}
+                        onClick={() => removeCustomType(t.id)}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity"
                       >
-                        <span className="text-sm shrink-0">{t.icon}</span>
-                        <span className="truncate flex-1">{t.name}</span>
-                        {isCustom && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeCustomType(t.id); }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
-                          >
-                            <X className="w-3 h-3 text-destructive" />
-                          </button>
-                        )}
+                        <X className="w-3 h-3 text-destructive" />
                       </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[220px] text-[11px]">
-                      {t.prompt}
-                    </TooltipContent>
-                  </Tooltip>
+                    )}
+                  </div>
                 );
               })}
 
