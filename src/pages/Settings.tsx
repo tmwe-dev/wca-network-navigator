@@ -53,6 +53,7 @@ export default function Settings() {
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "enrichment", label: "Arricchimento", icon: Image },
+    { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
   ];
