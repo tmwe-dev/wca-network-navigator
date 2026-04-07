@@ -202,6 +202,16 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
+            {gf.holdingPattern === "out" && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                <Plane className="w-2.5 h-2.5" /> Fuori circuito
+              </span>
+            )}
+            {gf.holdingPattern === "in" && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20">
+                <Plane className="w-2.5 h-2.5 animate-pulse" /> In circuito
+              </span>
+            )}
             <div className="flex gap-1">
               {(["all", "matched", "unmatched"] as const).map(v => (
                 <button

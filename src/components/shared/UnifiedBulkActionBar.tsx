@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   X, Briefcase, ClipboardList, Sparkles, Linkedin, MessageCircle,
-  Megaphone, Trash2, Loader2, Globe, Send, Layers,
+  Megaphone, Trash2, Loader2, Globe, Send, Layers, Link2,
 } from "lucide-react";
 
 export type BulkSourceType = "partner" | "contact" | "business_card";
