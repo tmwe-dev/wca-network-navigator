@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailGenerator");
 
 export interface GeneratedEmail {
   subject: string;
@@ -85,7 +88,7 @@ export function useEmailGenerator() {
         .eq("id", params.activity_id);
 
       if (updateError) {
-        console.error("Failed to save email to activity:", updateError);
+        log.error("save email to activity failed", { message: updateError instanceof Error ? updateError.message : String(updateError) });
         toast({
           title: "Email generata ma non salvata",
           description: updateError.message,
