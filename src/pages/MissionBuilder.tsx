@@ -45,6 +45,12 @@ export default function MissionBuilder() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Voice
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const lastSpokenIdxRef = useRef(-1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speech = useContinuousSpeech((text) => setChatInput(text));
+
   // Load stats on mount
   useEffect(() => {
     (async () => {
