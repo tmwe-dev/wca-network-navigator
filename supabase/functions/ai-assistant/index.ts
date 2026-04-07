@@ -318,7 +318,7 @@ const tools = [
           service: { type: "string", enum: ["air_freight","ocean_fcl","ocean_lcl","road_freight","rail_freight","project_cargo","dangerous_goods","perishables","pharma","ecommerce","relocations","customs_broker","warehousing","nvocc"], description: "Filter by service category" },
           certification: { type: "string", enum: ["IATA","BASC","ISO","C-TPAT","AEO"], description: "Filter by certification" },
           network_name: { type: "string", description: "Filter by network membership name" },
-          sort_by: { type: "string", enum: ["rating", "name", "recent"], description: "Sort order (default: rating)" },
+          sort_by: { type: "string", enum: ["rating", "name", "recent", "seniority"], description: "Sort order. 'seniority' = longest WCA membership first (by member_since)" },
           limit: { type: "number", description: "Max results (default 20, max 50)" },
           count_only: { type: "boolean", description: "Return only the count" },
         },
