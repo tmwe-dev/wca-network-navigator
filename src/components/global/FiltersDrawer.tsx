@@ -828,6 +828,141 @@ function CRMFiltersSection() {
   );
 }
 
+/* ── CRM Contact Group Navigator ── */
+
+function CRMContactNavigator({ groupBy }: { groupBy: string }) {
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [loadingGroup, setLoadingGroup] = useState<string | null>(null);
+  const [groupContacts, setGroupContacts] = useState<Record<string, any[]>>({});
+
+  // Use the RPC for group counts
+  const [groups, setGroups] = useState<{ key: string; label: string; count: number }[]>([]);
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase.rpc("get_contact_group_counts");
+        if (!data) return;
+        const filtered = (data as any[])
+          .filter((g: any) => g.group_type === groupBy)
+          .map((g: any) => ({ key: g.group_key, label: g.group_label, count: g.contact_count }))
+          .sort((a, b) => b.count - a.count);
+        setGroups(filtered);
+      } catch {}
+    };
+    fetchGroups();
+  }, [groupBy]);
+
+  const toggleGroup = async (key: string) => {
+    const next = new Set(openGroups);
+    if (next.has(key)) {
+      next.delete(key);
+      setOpenGroups(next);
+      return;
+    }
+    next.add(key);
+    setOpenGroups(next);
+
+    if (!groupContacts[key]) {
+      setLoadingGroup(key);
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        let q = supabase
+          .from("imported_contacts")
+          .select("id, name, company_name, company_alias, country, email, position, origin")
+          .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+          .order("company_name", { ascending: true })
+          .limit(500);
+
+        switch (groupBy) {
+          case "country":
+            if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
+            else q = q.eq("country", key);
+            break;
+          case "origin":
+            if (key === "Sconosciuta") q = q.is("origin", null);
+            else q = q.eq("origin", key);
+            break;
+          case "lead_status":
+            q = q.eq("lead_status", key);
+            break;
+          case "import_group":
+            q = q.eq("import_log_id", key);
+            break;
+        }
+
+        const { data } = await q;
+        setGroupContacts(prev => ({ ...prev, [key]: data || [] }));
+      } catch {}
+      finally { setLoadingGroup(null); }
+    }
+  };
+
+  const selectContact = (contactId: string) => {
+    window.dispatchEvent(new CustomEvent("crm-select-contact", { detail: { contactId } }));
+    window.dispatchEvent(new CustomEvent("filters-drawer-close"));
+  };
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div>
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
+        <Users className="w-3 h-3" /> Contatti per {groupBy === "country" ? "paese" : groupBy === "origin" ? "origine" : groupBy === "lead_status" ? "stato" : "gruppo"}
+      </label>
+      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[400px] overflow-y-auto">
+        {groups.map(group => {
+          const isOpen = openGroups.has(group.key);
+          const contacts = groupContacts[group.key];
+          return (
+            <div key={group.key} className="border-b border-border/20 last:border-b-0">
+              <button
+                onClick={() => toggleGroup(group.key)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-muted/40 transition-colors",
+                  isOpen && "bg-primary/5"
+                )}
+              >
+                <span className="text-[10px] text-muted-foreground">{isOpen ? "▾" : "▸"}</span>
+                {groupBy === "country" && <span className="text-sm">{getCountryFlag(group.key)}</span>}
+                <span className="text-xs font-medium truncate flex-1">{group.label}</span>
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{group.count}</Badge>
+              </button>
+              {isOpen && (
+                <div className="bg-background/50">
+                  {loadingGroup === group.key ? (
+                    <div className="px-3 py-2 text-[10px] text-muted-foreground">Caricamento…</div>
+                  ) : contacts && contacts.length > 0 ? (
+                    contacts.map((c: any) => (
+                      <button
+                        key={c.id}
+                        onClick={() => selectContact(c.id)}
+                        className="w-full text-left px-3 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs shrink-0">{getCountryFlag(c.country)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
+                            {c.name && <p className="text-[9px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
+                          </div>
+                          {c.email && <span className="text-[8px] text-muted-foreground truncate max-w-[80px]">{c.email}</span>}
+                        </div>
+                      </button>
+                    ))
+                  ) : contacts && contacts.length === 0 ? (
+                    <div className="px-3 py-2 text-[10px] text-muted-foreground">Nessun contatto</div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Network Filters with Country List ── */
 
 function NetworkFiltersSection() {
