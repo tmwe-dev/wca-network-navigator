@@ -41,9 +41,9 @@ export function UnifiedBulkActionBar({
   count, onClear,
   onWorkspace, onCockpit, onEmail, onWhatsApp,
   onDeepSearch, onLinkedIn, onGoogleLogo, onCampaign,
-  onDelete, onDeduplicate,
+  onDelete, onDeduplicate, onWcaMatch,
   withEmail = 0, withPhone = 0,
-  deepSearchLoading, linkedInLoading, deduplicateLoading, sendingToWorkspace,
+  deepSearchLoading, linkedInLoading, deduplicateLoading, sendingToWorkspace, wcaMatchLoading,
 }: UnifiedBulkActionBarProps) {
   if (count === 0) return null;
 
