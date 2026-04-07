@@ -1475,6 +1475,192 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       return { success: true, queue_id: data.id, channel: data.channel, recipient: data.recipient_name, message: `Messaggio ${channel} accodato per ${data.recipient_name || "destinatario"}. Il frontend lo invierà automaticamente.` };
     }
 
+    // ━━━ Communication & Holding Pattern Tools ━━━
+    case "get_inbox": {
+      let query = supabase.from("channel_messages").select("id, channel, direction, from_address, to_address, subject, body_text, email_date, read_at, partner_id, category, created_at")
+        .eq("user_id", userId).eq("direction", "inbound").order("email_date", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+      if (args.channel) query = query.eq("channel", args.channel);
+      if (args.unread_only) query = query.is("read_at", null);
+      if (args.partner_id) query = query.eq("partner_id", args.partner_id);
+      if (args.from_date) query = query.gte("email_date", args.from_date);
+      if (args.to_date) query = query.lte("email_date", args.to_date);
+      const { data, error } = await query;
+      if (error) return { error: error.message };
+      return { count: data?.length || 0, messages: (data || []).map((m: any) => ({ id: m.id, channel: m.channel, from: m.from_address, subject: m.subject, preview: m.body_text?.substring(0, 300) || "", date: m.email_date, read: !!m.read_at, partner_id: m.partner_id, category: m.category })) };
+    }
+
+    case "get_conversation_history": {
+      let pid = args.partner_id as string;
+      if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
+      const timeline: any[] = [];
+      if (pid) {
+        // Emails
+        const { data: emails } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
+          .eq("user_id", userId).or(`partner_id.eq.${pid},from_address.ilike.%${pid}%`).order("email_date", { ascending: false }).limit(30);
+        (emails || []).forEach((e: any) => timeline.push({ type: "email", direction: e.direction, subject: e.subject, from: e.from_address, date: e.email_date, channel: e.channel, preview: e.body_text?.substring(0, 200) }));
+        // Activities
+        const { data: acts } = await supabase.from("activities").select("id, title, activity_type, status, created_at, description")
+          .or(`partner_id.eq.${pid},source_id.eq.${pid}`).order("created_at", { ascending: false }).limit(30);
+        (acts || []).forEach((a: any) => timeline.push({ type: "activity", subtype: a.activity_type, title: a.title, status: a.status, date: a.created_at, description: a.description?.substring(0, 200) }));
+        // Interactions
+        const { data: ints } = await supabase.from("interactions").select("id, interaction_type, subject, notes, created_at")
+          .eq("partner_id", pid).order("created_at", { ascending: false }).limit(30);
+        (ints || []).forEach((i: any) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.subject, notes: i.notes?.substring(0, 200), date: i.created_at }));
+        // Sent emails
+        const { data: sent } = await supabase.from("email_campaign_queue").select("id, subject, recipient_email, status, sent_at")
+          .eq("partner_id", pid).eq("status", "sent").order("sent_at", { ascending: false }).limit(20);
+        (sent || []).forEach((s: any) => timeline.push({ type: "email_sent", subject: s.subject, to: s.recipient_email, date: s.sent_at }));
+      } else if (args.contact_id) {
+        const { data: cInts } = await supabase.from("contact_interactions").select("id, interaction_type, title, description, outcome, created_at")
+          .eq("contact_id", args.contact_id).order("created_at", { ascending: false }).limit(30);
+        (cInts || []).forEach((i: any) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.title, description: i.description?.substring(0, 200), outcome: i.outcome, date: i.created_at }));
+      }
+      timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return { count: timeline.length, timeline: timeline.slice(0, Number(args.limit) || 50) };
+    }
+
+    case "get_holding_pattern": {
+      const items: any[] = [];
+      const activeStatuses = ["contacted", "in_progress"];
+      const now = new Date();
+      // Partners (WCA)
+      if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
+        let pq = supabase.from("partners").select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")
+          .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
+        if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
+        const { data: partners } = await pq.limit(Number(args.limit) || 50);
+        (partners || []).forEach((p: any) => {
+          const days = p.last_interaction_at ? Math.floor((now.getTime() - new Date(p.last_interaction_at).getTime()) / 86400000) : 999;
+          if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
+          if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
+          items.push({ id: p.id, source: "wca", name: p.company_name, country: p.country_code, city: p.city, email: p.email, status: p.lead_status, days_waiting: days, interactions: p.interaction_count });
+        });
+      }
+      // Contacts (CRM)
+      if (!args.source_type || args.source_type === "crm" || args.source_type === "all") {
+        let cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
+          .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
+        const { data: contacts } = await cq.limit(Number(args.limit) || 50);
+        (contacts || []).forEach((c: any) => {
+          const days = c.last_interaction_at ? Math.floor((now.getTime() - new Date(c.last_interaction_at).getTime()) / 86400000) : 999;
+          if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
+          if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
+          items.push({ id: c.id, source: "crm", name: c.company_name || c.name || "—", country: c.country, city: c.city, email: c.email, status: c.lead_status, days_waiting: days, interactions: c.interaction_count });
+        });
+      }
+      items.sort((a, b) => b.days_waiting - a.days_waiting);
+      return { count: items.length, items: items.slice(0, Number(args.limit) || 50) };
+    }
+
+    case "update_message_status": {
+      const { error } = await supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", args.message_id).eq("user_id", userId);
+      return error ? { error: error.message } : { success: true, message: "Messaggio marcato come letto." };
+    }
+
+    case "get_email_thread": {
+      let messages: any[] = [];
+      // Strategy 1: by thread_id
+      if (args.thread_id) {
+        const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
+          .eq("user_id", userId).eq("thread_id", args.thread_id).order("email_date", { ascending: true });
+        messages = data || [];
+      }
+      // Strategy 2: by partner_id
+      if (messages.length === 0 && args.partner_id) {
+        const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel, thread_id, in_reply_to")
+          .eq("user_id", userId).eq("partner_id", args.partner_id).eq("channel", "email").order("email_date", { ascending: true }).limit(Number(args.limit) || 50);
+        messages = data || [];
+      }
+      // Strategy 3: by email address with subject matching
+      if (messages.length === 0 && args.email_address) {
+        const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
+          .eq("user_id", userId).eq("channel", "email").or(`from_address.ilike.%${args.email_address}%,to_address.ilike.%${args.email_address}%`)
+          .order("email_date", { ascending: true }).limit(Number(args.limit) || 50);
+        messages = data || [];
+      }
+      return { count: messages.length, thread: messages.map((m: any) => ({ id: m.id, direction: m.direction, from: m.from_address, to: m.to_address, subject: m.subject, preview: m.body_text?.substring(0, 500), date: m.email_date })) };
+    }
+
+    case "analyze_incoming_email": {
+      const { data: msg } = await supabase.from("channel_messages").select("from_address, to_address, subject, body_text, email_date, partner_id")
+        .eq("id", args.message_id).eq("user_id", userId).single();
+      if (!msg) return { error: "Messaggio non trovato" };
+      // Use AI to analyze
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const analysisRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST", headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-lite",
+          messages: [
+            { role: "system", content: "Analizza questa email e rispondi SOLO con un JSON valido: {\"sentiment\": \"positive|neutral|negative\", \"intent\": \"interest|info_request|refusal|ooo|auto_reply|spam|other\", \"suggested_action\": \"follow_up|escalation|close|schedule_call|respond_info|ignore\", \"urgency\": 1-5, \"summary\": \"breve riassunto in italiano\"}" },
+            { role: "user", content: `Da: ${msg.from_address}\nOggetto: ${msg.subject}\n\n${msg.body_text?.substring(0, 2000) || "(vuoto)"}` },
+          ],
+          max_tokens: 500,
+        }),
+      });
+      if (!analysisRes.ok) return { error: "Errore analisi AI" };
+      const analysisData = await analysisRes.json();
+      const analysisText = analysisData.choices?.[0]?.message?.content || "{}";
+      try {
+        const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, "").trim());
+        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, date: msg.email_date, partner_id: msg.partner_id, analysis: parsed };
+      } catch {
+        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, analysis: { raw: analysisText } };
+      }
+    }
+
+    case "assign_contacts_to_agent": {
+      // Find agent
+      const { data: agents } = await supabase.from("agents").select("id, name").eq("user_id", userId).ilike("name", `%${args.agent_name}%`).limit(1);
+      if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
+      const targetAgent = agents[0];
+      // Get contacts to assign
+      const sourceType = String(args.source_type || "partner");
+      let contactIds: { id: string; name: string }[] = [];
+      if (sourceType === "partner") {
+        let pq = supabase.from("partners").select("id, company_name").limit(Number(args.limit) || 20);
+        if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
+        if (args.lead_status) pq = pq.eq("lead_status", args.lead_status);
+        const { data } = await pq;
+        contactIds = (data || []).map((p: any) => ({ id: p.id, name: p.company_name }));
+      } else {
+        let cq = supabase.from("imported_contacts").select("id, name, company_name").limit(Number(args.limit) || 20);
+        if (args.lead_status) cq = cq.eq("lead_status", args.lead_status);
+        const { data } = await cq;
+        contactIds = (data || []).map((c: any) => ({ id: c.id, name: c.company_name || c.name || "—" }));
+      }
+      if (contactIds.length === 0) return { error: "Nessun contatto trovato con i filtri specificati." };
+      // Create assignments
+      const assignments = contactIds.map(c => ({ agent_id: targetAgent.id, source_type: sourceType, source_id: c.id, user_id: userId }));
+      const { error } = await supabase.from("client_assignments").insert(assignments);
+      if (error) return { error: error.message };
+      return { success: true, agent_name: targetAgent.name, assigned_count: contactIds.length, contacts: contactIds.slice(0, 10).map(c => c.name), message: `${contactIds.length} contatti assegnati a ${targetAgent.name}.` };
+    }
+
+    case "create_campaign": {
+      // Create work plan as campaign
+      const steps: any[] = [];
+      const contactType = String(args.contact_type || "all");
+      const countryCodes = (args.country_codes as string[]) || [];
+      steps.push({ index: 0, title: "Selezione contatti", description: `Tipo: ${contactType}, Paesi: ${countryCodes.join(", ") || "tutti"}`, status: "pending" });
+      const agentNames = (args.agent_names as string[]) || [];
+      if (agentNames.length > 0) steps.push({ index: 1, title: "Assegnazione agenti", description: `Agenti: ${agentNames.join(", ")}`, status: "pending" });
+      const abTest = args.ab_test as any;
+      if (abTest?.enabled && abTest?.variants?.length > 0) {
+        steps.push({ index: steps.length, title: "Configurazione A/B Test", description: `Varianti: ${abTest.variants.map((v: any) => `${v.agent_name}(${v.tone}/${v.percentage}%)`).join(" vs ")}`, status: "pending" });
+      }
+      steps.push({ index: steps.length, title: "Invio outreach", description: "Esecuzione invii tramite agenti assegnati", status: "pending" });
+      steps.push({ index: steps.length, title: "Monitoraggio circuito", description: "Verifica risposte e follow-up secondo workflow", status: "pending" });
+      const { data, error } = await supabase.from("ai_work_plans").insert({
+        user_id: userId, title: `Campagna: ${args.name}`, description: String(args.objective || ""),
+        steps: steps as any, status: "active",
+        tags: ["campaign", contactType, ...(countryCodes.map(c => `country:${c}`))],
+        metadata: { campaign: true, contact_type: contactType, country_codes: countryCodes, agent_names: agentNames, ab_test: abTest || null, max_contacts: Number(args.max_contacts) || 100 } as any,
+      }).select("id, title").single();
+      if (error) return { error: error.message };
+      return { success: true, campaign_id: data.id, name: data.title, steps: steps.length, message: `Campagna "${args.name}" creata con ${steps.length} step.` };
+    }
+
     default:
       return { error: `Tool sconosciuto: ${name}` };
   }
