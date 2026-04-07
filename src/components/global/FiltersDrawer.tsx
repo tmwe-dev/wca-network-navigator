@@ -1114,13 +1114,51 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
     return <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>;
   }
 
+  const SORT_OPTIONS = [
+    { field: "name", label: "Nome" },
+    { field: "company", label: "Azienda" },
+    { field: "city", label: "Città" },
+    { field: "country", label: "Paese" },
+  ];
+
+  const sortContacts = (list: any[]) => {
+    if (!list) return list;
+    return [...list].sort((a, b) => {
+      const fa = contactSort.field;
+      const va = (fa === "company" ? (a.company_alias || a.company_name) : a[fa]) || "";
+      const vb = (fa === "company" ? (b.company_alias || b.company_name) : b[fa]) || "";
+      const cmp = String(va).localeCompare(String(vb), undefined, { sensitivity: "base" });
+      return contactSort.asc ? cmp : -cmp;
+    });
+  };
+
+  const toggleSort = (field: string) => {
+    setContactSort(prev => prev.field === field ? { field, asc: !prev.asc } : { field, asc: true });
+  };
+
   return (
     <div className="flex-1 min-h-0">
       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
         <Users className="w-3 h-3" /> Contatti per {groupBy === "country" ? "paese" : groupBy === "origin" ? "origine" : groupBy === "lead_status" ? "stato" : "gruppo"}
         <Badge variant="secondary" className="text-[9px] h-4 px-1.5 ml-auto">{groups.reduce((s, g) => s + g.count, 0)}</Badge>
       </label>
-      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[calc(100vh-340px)] overflow-y-auto">
+      <div className="flex flex-wrap gap-0.5 mb-1.5">
+        {SORT_OPTIONS.map(o => (
+          <button
+            key={o.field}
+            onClick={() => toggleSort(o.field)}
+            className={cn(
+              "px-2 py-0.5 rounded text-[9px] font-medium border transition-all",
+              contactSort.field === o.field
+                ? "bg-primary/15 border-primary/30 text-primary"
+                : "border-border/30 text-muted-foreground hover:bg-muted/40"
+            )}
+          >
+            {o.label} {contactSort.field === o.field ? (contactSort.asc ? "↑" : "↓") : ""}
+          </button>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[calc(100vh-380px)] overflow-y-auto">
         {groups.map(group => {
           const isOpen = openGroups.has(group.key);
           const contacts = groupContacts[group.key];
