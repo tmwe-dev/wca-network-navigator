@@ -80,6 +80,8 @@ interface GlobalFiltersCtxValue {
   setCrmChannel: (s: string) => void;
   setCrmSelectedCountries: (c: Set<string>) => void;
   setCrmActiveTab: (t: string) => void;
+  setCrmGroupTab: (t: string) => void;
+  setCrmWcaMatch: (t: string) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
