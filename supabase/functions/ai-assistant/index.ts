@@ -2858,6 +2858,40 @@ serve(async (req) => {
         const filterLabels: Record<string, string> = { todo: "paesi con dati incompleti", no_profile: "paesi con profili mancanti", missing: "paesi mai esplorati" };
         systemPrompt += `\nFiltro attivo: ${filterLabels[context.filterMode] || context.filterMode}.`;
       }
+
+      // Mission Builder specific prompt
+      if (context.currentPage === "/mission-builder") {
+        systemPrompt += `\n\nMODALITÀ MISSION BUILDER — ISTRUZIONI SPECIALI:
+Sei in modalità creazione missione. Il tuo ruolo è guidare l'utente passo dopo passo nella configurazione di una campagna di outreach. NON mostrare tutto subito — fai UNA domanda alla volta.
+
+FLUSSO CONVERSAZIONALE:
+1. Chiedi COSA vuole fare (email, WhatsApp, LinkedIn, deep search, contatto ex-clienti, etc.)
+2. Chiedi CHI contattare — usa i dati reali del database. Se l'utente dice un paese/regione, cerca i numeri reali.
+3. Quando devi far selezionare i paesi, includi nel messaggio: [WIDGET:country_select]
+4. Quando devi far scegliere il canale, includi: [WIDGET:channel_select]
+5. Per regolare i batch per paese: [WIDGET:slider_batch]
+6. Per opzioni deep search: [WIDGET:toggle_group]
+7. Per il riepilogo finale con lancio: [WIDGET:confirm_summary]
+
+IMPORTANTE:
+- NON assumere che sia sempre per-paese. Potrebbe essere per tipo azienda, rating, ex-clienti, biglietti da visita.
+- Usa i dati reali: interroga il database per dare numeri precisi.
+- Rispondi in modo SINTETICO — massimo 2-3 frasi + il widget. La voce leggerà solo le prime 2 frasi.
+- Conferma ogni scelta prima di procedere al passo successivo.
+- Se l'utente fornisce più info in una volta, elaborale tutte e proponi il widget appropriato.
+
+DATI DISPONIBILI:`;
+        if (context.countryStats?.length) {
+          const topCountries = context.countryStats.slice(0, 10).map((c: any) => `${c.name} (${c.count})`).join(", ");
+          systemPrompt += `\nTop paesi nel DB: ${topCountries}. Totale paesi: ${context.countryStats.length}.`;
+        }
+        if (context.missionData) {
+          const md = context.missionData;
+          if (md.targets?.countries?.length) systemPrompt += `\nPaesi già selezionati: ${md.targets.countries.join(", ")}.`;
+          if (md.channel) systemPrompt += `\nCanale scelto: ${md.channel}.`;
+          if (md.deepSearch?.enabled) systemPrompt += `\nDeep Search attivo.`;
+        }
+      }
     }
 
     // Rolling summary: compress older messages if conversation is long
