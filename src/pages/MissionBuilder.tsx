@@ -99,6 +99,47 @@ export default function MissionBuilder() {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  // TTS on new assistant messages (conversational summary only)
+  useEffect(() => {
+    if (!voiceEnabled || isChatLoading || messages.length === 0) return;
+    const lastIdx = messages.length - 1;
+    const last = messages[lastIdx];
+    if (last.role !== "assistant" || lastIdx <= lastSpokenIdxRef.current) return;
+    lastSpokenIdxRef.current = lastIdx;
+    const summary = extractVoiceSummary(last.content);
+    if (summary.length < 5 || summary.startsWith("⚠️")) return;
+    // Fire-and-forget TTS
+    (async () => {
+      try {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        const resp = await fetch(TTS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          body: JSON.stringify({ text: summary, voiceId: LAURA_VOICE_ID }),
+        });
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; };
+        await audio.play();
+      } catch {}
+    })();
+  }, [messages, isChatLoading, voiceEnabled]);
+
+  // Stop audio on unmount
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  // Auto-send when speech stops
+  const prevListeningRef = useRef(false);
+  useEffect(() => {
+    if (prevListeningRef.current && !speech.listening && chatInput.trim()) {
+      sendChat(chatInput);
+    }
+    prevListeningRef.current = speech.listening;
+  }, [speech.listening]);
+
   // Send chat message
   const sendChat = useCallback(async (text: string) => {
     if (!text.trim() || isChatLoading) return;
