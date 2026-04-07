@@ -905,13 +905,23 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
         };
         const col = colMap[groupBy] || "country";
 
-        // Use a simple select with the group column only — no heavy aggregations
-        const { data, error } = await supabase
-          .from("imported_contacts")
-          .select(col)
-          .or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+        // Fetch all rows in pages of 5000 (Supabase default limit is 1000)
+        const allRows: any[] = [];
+        let from = 0;
+        const pageSize = 5000;
+        while (true) {
+          const { data: page, error: pageError } = await supabase
+            .from("imported_contacts")
+            .select(col)
+            .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+            .range(from, from + pageSize - 1);
+          if (pageError || !page || page.length === 0) break;
+          allRows.push(...page);
+          if (page.length < pageSize) break;
+          from += pageSize;
+        }
 
-        if (error || !data) { setGroups([]); return; }
+        if (allRows.length === 0) { setGroups([]); return; }
 
         // Client-side grouping (fast on ~11k lightweight rows with 1 column)
         const counts = new Map<string, number>();
