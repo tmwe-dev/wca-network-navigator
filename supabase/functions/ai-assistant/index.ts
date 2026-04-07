@@ -1157,6 +1157,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
   const sortBy = String(args.sort_by || "rating");
   if (sortBy === "name") query = query.order("company_name", { ascending: true });
   else if (sortBy === "recent") query = query.order("created_at", { ascending: false });
+  else if (sortBy === "seniority") query = query.order("member_since", { ascending: true, nullsFirst: false });
   else query = query.order("rating", { ascending: false, nullsFirst: false });
 
   const limit = Math.min(Number(args.limit) || 20, 50);
