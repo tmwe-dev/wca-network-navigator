@@ -56,6 +56,7 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
   showCheckbox = false,
   isActive = false,
   className,
+  actionMenu,
 }: UnifiedContactRowProps) {
   const statusCfg = STATUS_CONFIG[contact.status || "new"] || STATUS_CONFIG.new;
 
