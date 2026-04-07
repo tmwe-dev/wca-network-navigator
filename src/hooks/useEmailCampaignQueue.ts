@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailCampaignQueue");
 
 export interface QueueItem {
   id: string;
@@ -158,7 +161,7 @@ export function useProcessQueue() {
           await new Promise(r => setTimeout(r, 2000));
         }
       } catch (err) {
-        console.error("Queue processing error:", err);
+        log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });
         toast.error("Errore nel processing della coda");
         break;
       }

@@ -5,6 +5,9 @@
  */
 
 import { callCheckInbox } from "@/lib/checkInbox";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("backgroundSync");
 
 export interface DownloadedEmail {
   id: string;
@@ -127,7 +130,7 @@ export async function bgSyncStart() {
         consecutiveErrors = 0;
       } catch (batchErr: any) {
         consecutiveErrors += 1;
-        console.warn(`[bg-sync] Batch ${batchNum} error (${consecutiveErrors}/${MAX_RETRIES}): ${batchErr.message}`);
+        log.warn("batch error", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, message: batchErr.message });
 
         if (consecutiveErrors >= MAX_RETRIES) {
           throw batchErr;

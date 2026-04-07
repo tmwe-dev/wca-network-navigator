@@ -4,6 +4,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailActions");
 
 export type EmailAttachment = {
   id: string;
@@ -73,7 +76,7 @@ export function useMarkAsRead() {
               Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({ message_id: messageId }),
-          }).catch((err) => console.warn("[mark-imap-seen] sync failed:", err.message));
+          }).catch((err) => log.warn("mark-imap-seen sync failed", { message: err instanceof Error ? err.message : String(err) }));
         });
       }
     },

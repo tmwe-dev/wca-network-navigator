@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useImportLogs");
 
 // Find a field value from a row using multiple possible aliases
 function findField(row: Record<string, any>, aliases: string[]): string | null {
@@ -316,7 +319,7 @@ export function useTransferToPartners() {
           .single();
 
         if (pError) {
-          console.error("Transfer error:", pError);
+          log.error("transfer failed", { message: pError.message, code: pError.code });
           continue;
         }
 
