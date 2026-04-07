@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ interface AddContactDialogProps {
 export default function AddContactDialog({
   open, onOpenChange, defaultDestination = "contacts", partnerId, partnerName,
 }: AddContactDialogProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [destination, setDestination] = useState<Destination>(defaultDestination);
@@ -285,12 +287,37 @@ export default function AddContactDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
-          <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-            Salva
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            disabled={!form.email.trim()}
+            onClick={() => {
+              navigate("/email-composer", {
+                state: {
+                  prefilledRecipient: {
+                    email: form.email.trim(),
+                    name: form.name.trim() || undefined,
+                    company: form.company.trim() || undefined,
+                    city: form.city.trim() || undefined,
+                    countryCode: form.country.trim() || undefined,
+                  },
+                },
+              });
+              onOpenChange(false);
+            }}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Scrivi email
           </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
+            <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+              Salva
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
