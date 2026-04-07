@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -14,6 +14,7 @@ import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
+import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
@@ -56,6 +57,7 @@ export default function Settings() {
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
+    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
   ];
 
   // Dynamic filterSlot based on active tab
@@ -117,6 +119,7 @@ export default function Settings() {
               </div>
             )}
             {tab === "operatori" && <OperatorsSettings />}
+            {tab === "utenti" && <AdminUsers />}
             {tab === "enrichment" && (
               <EnrichmentSettings
                 source={enrSource}

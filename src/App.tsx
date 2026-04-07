@@ -46,6 +46,7 @@ const Auth = lazyRetry(() => import("./pages/Auth"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
 const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
+const AdminUsers = lazyRetry(() => import("./pages/AdminUsers"));
 
 const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
 const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
@@ -104,6 +105,7 @@ const App = () => (
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/settings/operators" element={<OperatorsSettings />} />
+                  <Route path="/settings/users" element={<AdminUsers />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
 
                    {/* ── Report Aziende (hidden, from Settings) ── */}

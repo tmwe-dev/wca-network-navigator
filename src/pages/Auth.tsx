@@ -10,6 +10,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Globe2, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 
+async function checkWhitelist(email: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc("is_email_authorized" as any, { p_email: email });
+    if (error) {
+      console.error("Whitelist check error:", error);
+      return false;
+    }
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+async function recordLogin(email: string) {
+  try {
+    await supabase.rpc("record_user_login" as any, { p_email: email });
+  } catch {}
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -18,17 +37,45 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) navigate("/", { replace: true });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user?.email && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        const allowed = await checkWhitelist(session.user.email);
+        if (!allowed) {
+          toast.error("Accesso non autorizzato. Contatta l'amministratore.");
+          await supabase.auth.signOut();
+          return;
+        }
+        await recordLogin(session.user.email);
+        navigate("/", { replace: true });
+      }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/", { replace: true });
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user?.email) {
+        const allowed = await checkWhitelist(session.user.email);
+        if (!allowed) {
+          await supabase.auth.signOut();
+          return;
+        }
+        navigate("/", { replace: true });
+      }
     });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Pre-check whitelist before attempting login
+    const allowed = await checkWhitelist(email);
+    if (!allowed) {
+      toast.error("Email non autorizzata. Contatta l'amministratore.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error(error.message);
     setLoading(false);
@@ -37,6 +84,15 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Pre-check whitelist
+    const allowed = await checkWhitelist(email);
+    if (!allowed) {
+      toast.error("Email non autorizzata. Solo gli utenti invitati possono registrarsi.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -59,6 +115,7 @@ export default function Auth() {
       toast.error("Errore con Google Sign-In");
       setLoading(false);
     }
+    // Whitelist check happens in onAuthStateChange after Google redirect
   };
 
   return (
