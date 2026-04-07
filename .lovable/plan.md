@@ -3,35 +3,13 @@
 
 ## Concetto
 
-Sostituire l'onboarding statico con un **wizard conversazionale AI** che:
-1. Interroga il DB in tempo reale (quanti partner per paese, qualità, status)
-2. Propone filtri e numeri concreti
-3. Registra la missione come `ai_work_plan` con step eseguibili
-4. Alimenta il Cockpit con i contatti da processare uno alla volta
+Sostituire l'onboarding statico con un wizard conversazionale AI che interroga il DB in tempo reale, propone filtri e numeri, registra la missione e alimenta il Cockpit per l'esecuzione uno-alla-volta.
 
 ---
 
-## Parte 1 — Wizard Missione AI (pagina `/mission-builder`)
+## Parte 1 — Tabella `outreach_missions`
 
-**Nuova pagina** con flusso progressivo guidato da AI:
-
-### Step del wizard (generati da AI, non hardcoded):
-1. **Chi contattare?** — AI interroga `partners` e `imported_contacts`, mostra statistiche per paese/tipo/rating. L'utente sceglie con chip e filtri.
-2. **Quanti e come frazionare?** — AI propone batch (es. "50 in Germania, 30 in Francia"). L'utente aggiusta.
-3. **Con quale canale?** — Email / WhatsApp / LinkedIn / mix. AI suggerisce in base ai dati disponibili (ha email? ha LinkedIn?).
-4. **Assegnare agenti?** — AI propone distribuzione per territorio. L'utente conferma.
-5. **Scheduling** — Subito / programmato / distribuito nel tempo.
-6. **Conferma e crea** — Riassunto + creazione del work plan.
-
-**Ogni step**: pannello sinistro con scelte, pannello destro con chat AI per discutere. Lo step completato scompare.
-
-**File**: `src/pages/MissionBuilder.tsx` (~300 righe), `src/components/missions/MissionStepRenderer.tsx`
-
----
-
-## Parte 2 — Tabella `outreach_missions` (nuovo)
-
-Registra ogni missione con riassunto per future analisi AI:
+Nuova tabella per registrare ogni missione con riassunto analizzabile da AI:
 
 ```sql
 CREATE TABLE outreach_missions (
@@ -39,72 +17,75 @@ CREATE TABLE outreach_missions (
   user_id UUID NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
-  status TEXT NOT NULL DEFAULT 'draft', -- draft/active/paused/completed
-  target_filters JSONB NOT NULL DEFAULT '{}', -- {countries, types, ratings, etc.}
+  status TEXT NOT NULL DEFAULT 'draft',
+  target_filters JSONB NOT NULL DEFAULT '{}',
   channel TEXT NOT NULL DEFAULT 'email',
   total_contacts INTEGER NOT NULL DEFAULT 0,
   processed_contacts INTEGER NOT NULL DEFAULT 0,
-  agent_assignments JSONB DEFAULT '[]', -- [{agent_id, country_codes, count}]
+  agent_assignments JSONB DEFAULT '[]',
   schedule_config JSONB DEFAULT '{}',
-  ai_summary TEXT, -- riassunto generato da AI a fine missione
-  work_plan_id UUID, -- link a ai_work_plans
+  ai_summary TEXT,
+  work_plan_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at TIMESTAMPTZ,
   metadata JSONB DEFAULT '{}'
 );
--- + RLS user_id = auth.uid()
 ```
 
-Questo permette ad AI di:
-- Verificare missioni passate prima di proporne di nuove
-- Riproporre missioni simili con varianti
-- Analizzare performance (processed/total, tempi)
+Con RLS `user_id = auth.uid()`.
+
+---
+
+## Parte 2 — Wizard Missione AI (`/mission-builder`)
+
+Pagina con flusso progressivo, ogni step scompare al completamento:
+
+1. **Chi contattare?** — AI interroga DB, mostra stats per paese/tipo/rating
+2. **Quanti e come frazionare?** — Batch per paese, l'utente aggiusta
+3. **Canale?** — Email/WhatsApp/LinkedIn, AI suggerisce in base a dati disponibili
+4. **Agenti?** — Distribuzione per territorio
+5. **Scheduling** — Immediato o programmato
+6. **Conferma** — Riassunto, creazione missione + inserimento contatti in cockpit_queue
+
+Pannello destro con chat AI per discutere in tempo reale ogni step.
+
+**File nuovi**: `src/pages/MissionBuilder.tsx`, `src/components/missions/MissionStepRenderer.tsx`
 
 ---
 
 ## Parte 3 — Collegamento Cockpit
 
-Quando una missione viene attivata:
-1. I contatti filtrati vengono inseriti nel `cockpit_queue` con `source_type = 'mission'` e ref alla missione
-2. Il Cockpit li mostra come tab/filtro "Missione attiva"
-3. L'utente processa uno alla volta: genera email → invia → next
-4. Ogni completamento aggiorna `outreach_missions.processed_contacts`
-5. A missione completata, AI genera un `ai_summary` automatico
+Quando missione attivata:
+- Contatti inseriti in `cockpit_queue` con `source_type = 'mission'`
+- Cockpit mostra badge "Missione attiva" con progresso
+- Ogni email inviata aggiorna `processed_contacts`
+- A completamento, AI genera `ai_summary`
 
-**File modificati**: 
-- `src/hooks/useCockpitContacts.ts` — aggiungere source "mission"
-- `src/pages/Cockpit.tsx` — badge missione attiva
+**File modificati**: `useCockpitContacts.ts`, `Cockpit.tsx`
 
 ---
 
 ## Parte 4 — AI Context: Missioni Passate
 
-Aggiornare `agent-execute` e `ai-assistant` per iniettare le ultime 5 `outreach_missions` completate nel contesto, permettendo:
-- "L'ultima volta che hai contattato la Germania hai raggiunto 45/50 partner"
-- "Vuoi rifare la stessa missione ma con canale WhatsApp?"
-- "Questi 12 contatti non hanno risposto dalla missione di Marzo"
-
-**File**: `supabase/functions/ai-assistant/index.ts`, `supabase/functions/agent-execute/index.ts`
+Iniettare ultime 5 missioni completate nel contesto di `ai-assistant` e `agent-execute` per permettere:
+- Confronto con missioni precedenti
+- Riproposta di missioni simili
+- Analisi contatti non rispondenti
 
 ---
 
-## Parte 5 — Navigazione e Accesso
+## Parte 5 — Navigazione
 
-- Voce menu: "🎯 Nuova Missione" (link a `/mission-builder`)
-- Accessibile anche dal Cockpit (bottone "Crea Missione")
-- Storico missioni visibile in Outreach → tab esistente o sotto-sezione
+- Voce menu "🎯 Nuova Missione" nel sidebar
+- Bottone "Crea Missione" nel Cockpit
+- Storico missioni in Outreach
 
 ---
 
-## Riepilogo tecnico
+## Ordine di implementazione
 
-| Parte | File | Tipo |
-|-------|------|------|
-| 1 | `src/pages/MissionBuilder.tsx` | **Nuovo** |
-| 1 | `src/components/missions/MissionStepRenderer.tsx` | **Nuovo** |
-| 2 | Migrazione `outreach_missions` | DB |
-| 3 | `useCockpitContacts.ts`, `Cockpit.tsx` | Modificati |
-| 4 | `ai-assistant/index.ts`, `agent-execute/index.ts` | Modificati |
-| 5 | `AppLayout.tsx` o router | Modificato |
-
-**Ordine**: 2 (DB) → 1 (Wizard) → 3 (Cockpit link) → 4 (AI context) → 5 (Nav)
+1. Migrazione DB (`outreach_missions`)
+2. Wizard MissionBuilder
+3. Link Cockpit
+4. AI context injection
+5. Navigazione
