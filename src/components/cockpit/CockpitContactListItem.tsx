@@ -123,6 +123,11 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
             {contact.priority}
           </span>
         </InfoTooltip>
+        {cockpitContact && (
+          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+            <ContactActionMenu contact={cockpitContact} />
+          </div>
+        )}
       </motion.div>
     </TooltipProvider>
   );

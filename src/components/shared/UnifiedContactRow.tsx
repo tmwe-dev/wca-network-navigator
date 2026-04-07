@@ -121,6 +121,13 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
       {contact.originLabel && (
         <span className="text-[9px] text-muted-foreground/50 shrink-0">{contact.originLabel}</span>
       )}
+
+      {/* Action menu */}
+      {actionMenu && (
+        <div className="shrink-0" onClick={e => e.stopPropagation()}>
+          {actionMenu}
+        </div>
+      )}
     </div>
   );
 });

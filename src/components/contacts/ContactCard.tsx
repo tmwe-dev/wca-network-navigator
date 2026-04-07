@@ -170,15 +170,17 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           ) : null}
         </div>
 
-        {/* Col 7: Lens — always visible */}
-        <button
-          data-no-filter
-          onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
-          className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
-          title="Visualizza dettaglio"
-        >
-          <Search className="w-3.5 h-3.5" />
-        </button>
+        {/* Col 7: Lens + Action Menu */}
+        <div className="flex items-center gap-0.5" data-no-filter>
+          <button
+            onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
+            className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
+            title="Visualizza dettaglio"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+          <ContactActionMenu contact={adaptImportedContact(c)} />
+        </div>
       </div>
 
       {/* Row 2 */}
