@@ -126,6 +126,11 @@ export default function Settings() {
                 search={enrSearch}
               />
             )}
+            {tab === "memoria-ai" && (
+              <div className="float-panel p-5">
+                <MemoryDashboard />
+              </div>
+            )}
           </div>
         )}
       </div>
