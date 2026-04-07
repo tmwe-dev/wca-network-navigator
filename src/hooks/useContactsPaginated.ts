@@ -63,6 +63,16 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
         query = query.in("city", filters.cities);
       }
 
+      // Companies
+      if (filters?.companies && filters.companies.length > 0) {
+        query = query.in("company_name", filters.companies);
+      }
+
+      // Names
+      if (filters?.names && filters.names.length > 0) {
+        query = query.in("name", filters.names);
+      }
+
       // Lead status
       if (filters?.leadStatus) {
         query = query.eq("lead_status", filters.leadStatus);
