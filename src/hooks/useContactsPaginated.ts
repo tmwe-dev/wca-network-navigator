@@ -13,6 +13,8 @@ export interface ContactPaginatedFilters {
   countries?: string[];
   origins?: string[];
   cities?: string[];
+  companies?: string[];
+  names?: string[];
   leadStatus?: string;
   channel?: string;
   quality?: string;
@@ -59,6 +61,16 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
       // Cities
       if (filters?.cities && filters.cities.length > 0) {
         query = query.in("city", filters.cities);
+      }
+
+      // Companies
+      if (filters?.companies && filters.companies.length > 0) {
+        query = query.in("company_name", filters.companies);
+      }
+
+      // Names
+      if (filters?.names && filters.names.length > 0) {
+        query = query.in("name", filters.names);
       }
 
       // Lead status

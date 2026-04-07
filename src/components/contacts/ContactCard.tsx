@@ -3,7 +3,7 @@ import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, MessageCircle, User, Sparkles, Handshake,
-  Globe2, Linkedin, Mail,
+  Globe2, Linkedin, Mail, Search,
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
@@ -18,6 +18,7 @@ interface ContactCardProps {
   hasBusinessCard?: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  onViewDetail?: () => void;
   index?: number;
   onFilterClick?: (field: string, value: string) => void;
 }
@@ -42,7 +43,7 @@ function Filterable({ field, value, children, onFilterClick, className }: {
   );
 }
 
-export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index, onFilterClick }: ContactCardProps) {
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
   const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
@@ -66,6 +67,16 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const companyWebsite = ed?.company_website;
   const inHolding = isInHoldingPattern(c.lead_status);
 
+  // Click on card row → filter by company
+  const handleRowClick = (e: React.MouseEvent) => {
+    // If clicking on checkbox or lens, don't filter
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-no-filter]')) return;
+    if (rawCompany && onFilterClick) {
+      onFilterClick("company", rawCompany);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -75,7 +86,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           ? isAiProcessed ? "bg-amber-500/15" : "bg-primary/15"
           : isSelected ? "bg-primary/5" : "hover:bg-muted/40"
       )}
-      onClick={onSelect}
+      onClick={handleRowClick}
       onDoubleClick={() => openDrawer({ sourceType: "contact", sourceId: c.id })}
     >
       {/* Row 1 */}
@@ -84,7 +95,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
         {/* Col 1: Index + Checkbox */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" data-no-filter>
           {typeof index === "number" && (
             <span className="text-[11px] text-primary font-mono font-bold w-[20px] text-right">#{index + 1}</span>
           )}
@@ -109,12 +120,13 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 3: Company + Position below */}
         <div className="min-w-0">
           <div className="flex items-center gap-1">
-            <span className={cn(
-              "font-semibold truncate text-[11px]",
-              !rawCompany ? "text-muted-foreground italic" : "text-foreground"
-            )}>
+            <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
+              className={cn(
+                "font-semibold truncate text-[11px]",
+                !rawCompany ? "text-muted-foreground italic" : "text-foreground"
+              )}>
               {displayCompany}
-            </span>
+            </Filterable>
             {isWcaMatched && (
               <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
             )}
@@ -129,10 +141,10 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 4: Contact name */}
         <div className="flex items-center gap-1 min-w-0">
           {displayContact ? (
-            <>
+            <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
               <User className="w-3 h-3 text-muted-foreground shrink-0" />
               <span className="truncate text-foreground/80">{displayContact}</span>
-            </>
+            </Filterable>
           ) : null}
         </div>
 
@@ -147,15 +159,26 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 6: Origin */}
-        <div className="min-w-0">
-          {cOrigin ? (
-            <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary font-semibold border-0 truncate max-w-full">
-                {capitalizeLabel(cOrigin)}
-              </Badge>
-            </Filterable>
-          ) : null}
+        {/* Col 6: Origin + Lens button */}
+        <div className="min-w-0 flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            {cOrigin ? (
+              <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary font-semibold border-0 truncate max-w-full">
+                  {capitalizeLabel(cOrigin)}
+                </Badge>
+              </Filterable>
+            ) : null}
+          </div>
+          {/* Lens button → view detail */}
+          <button
+            data-no-filter
+            onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
+            className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
+            title="Visualizza dettaglio"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -167,7 +190,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 1: empty */}
         <div />
 
-        {/* Col 2: indicators (linkedin, web, handshake) */}
+        {/* Col 2: indicators */}
         <div className="flex items-center justify-center gap-0.5">
           {linkedinUrl && (
             <span className="p-0.5 rounded bg-[hsl(210,80%,55%)]/10">
@@ -182,10 +205,10 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           {hasBusinessCard && <Handshake className="w-2.5 h-2.5 text-emerald-400" />}
         </div>
 
-        {/* Col 3: empty (under company) */}
+        {/* Col 3: empty */}
         <div />
 
-        {/* Col 4: Email (under contact) */}
+        {/* Col 4: Email */}
         <div className="flex items-center gap-0.5 min-w-0">
           {cEmail ? (
             <>
@@ -197,7 +220,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 5: Lead status + interactions */}
+        {/* Col 5: Lead status + holding */}
         <div className="flex items-center gap-1 min-w-0">
           <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
           {c.lead_status && c.lead_status !== "new" && (

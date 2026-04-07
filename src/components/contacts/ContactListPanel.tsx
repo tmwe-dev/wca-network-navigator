@@ -114,11 +114,15 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     const inlineCountries = inlineFilters.filter(f => f.field === "country").map(f => f.value);
     const inlineCities = inlineFilters.filter(f => f.field === "city").map(f => f.value);
     const inlineOrigins = inlineFilters.filter(f => f.field === "origin").map(f => f.value);
+    const inlineCompanies = inlineFilters.filter(f => f.field === "company").map(f => f.value);
+    const inlineNames = inlineFilters.filter(f => f.field === "name").map(f => f.value);
     const inlineStatus = inlineFilters.find(f => f.field === "leadStatus");
 
     if (inlineCountries.length > 0) f.countries = inlineCountries;
     if (inlineCities.length > 0) f.cities = inlineCities;
     if (inlineOrigins.length > 0) f.origins = inlineOrigins;
+    if (inlineCompanies.length > 0) f.companies = inlineCompanies;
+    if (inlineNames.length > 0) f.names = inlineNames;
     if (inlineStatus) f.leadStatus = inlineStatus.value;
 
     return f;
@@ -424,7 +428,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                     c={c}
                     isActive={selectedId === c.id}
                     isSelected={selection.selectedIds.has(c.id)}
-                    onSelect={() => onSelect(c)}
+                    onSelect={() => {}}
+                    onViewDetail={() => onSelect(c)}
                     onToggle={() => selection.toggle(c.id)}
                     index={vItem.index}
                     onFilterClick={addInlineFilter}

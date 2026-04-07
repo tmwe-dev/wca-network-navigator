@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Contacts() {
@@ -10,6 +10,10 @@ export default function Contacts() {
 
   const handleContactUpdated = useCallback((updated: any) => {
     setSelectedContact(updated);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedContact(null);
   }, []);
 
   // Listen for sidebar contact selection
@@ -35,7 +39,7 @@ export default function Contacts() {
   return (
     <div className="h-full overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Column 1 — Contact list (flat, filtered by sidebar) */}
+        {/* Column 1 — Contact list */}
         <ResizablePanel defaultSize={hasDetail ? 40 : 50} minSize={22} maxSize={60}>
           <div className="flex flex-col h-full border-r border-border">
             <ContactListPanel
@@ -48,9 +52,16 @@ export default function Contacts() {
         {hasDetail && (
           <>
             <ResizableHandle withHandle />
-            {/* Column 2 — Detail */}
+            {/* Column 2 — Detail with close button */}
             <ResizablePanel defaultSize={60}>
-              <div className="h-full bg-card">
+              <div className="h-full bg-card relative">
+                <button
+                  onClick={handleCloseDetail}
+                  className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Chiudi dettaglio"
+                >
+                  <X className="w-4 h-4" />
+                </button>
                 <ContactDetailPanel
                   key={selectedContact.id}
                   contact={selectedContact}
@@ -68,7 +79,7 @@ export default function Contacts() {
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 bg-card/30">
                 <Users className="w-10 h-10 mb-3 opacity-30" />
                 <p className="text-sm font-medium">Seleziona un contatto</p>
-                <p className="text-xs mt-1 opacity-60">per visualizzare i dettagli</p>
+                <p className="text-xs mt-1 opacity-60">Clicca 🔍 per visualizzare i dettagli</p>
               </div>
             </ResizablePanel>
           </>
