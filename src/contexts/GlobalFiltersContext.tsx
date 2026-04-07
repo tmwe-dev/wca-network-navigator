@@ -118,6 +118,8 @@ const defaults: GlobalFilterState = {
   crmChannel: "all",
   crmSelectedCountries: new Set<string>(),
   crmActiveTab: "contatti",
+  crmGroupTab: "",
+  crmWcaMatch: "all",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
