@@ -1,47 +1,87 @@
 
 
-# MissionBuilder — Voice + Risposte Conversazionali AI
+# Mission Builder — Da Wizard Statico a Conversazione AI-Driven
 
-## Problemi identificati
+## Problema
 
-1. **Nessun input vocale**: Il MissionBuilder ha solo input testo, manca il microfono presente ovunque nel sistema (IntelliFlow, AiAssistantDialog)
-2. **AI deve rispondere a voce in modo sintetico**: Le risposte AI scritte possono essere lunghe/dettagliate, ma la voce deve essere breve e conversazionale — non leggere tutto il testo
-3. **Dati**: I dati visualizzati sono reali (dalla tabella `partners`), ma il contatore step mostrava "1/6" nella versione cached — ora è 1/10
+Il Mission Builder mostra 10 step statici con UI hardcoded (badge paesi, slider, toggle). L'utente ha ragione: perché mostrare un selettore paesi se la missione potrebbe riguardare contatti, biglietti da visita, ex-clienti, o altro? L'AI deve guidare la conversazione e proporre le opzioni giuste in base al contesto.
 
-## Interventi
+## Nuovo Approccio
 
-### 1. Aggiungere `useContinuousSpeech` al MissionBuilder
+Eliminare il pannello sinistro con gli step fissi. Il pannello chat AI diventa l'interfaccia principale (full-width o quasi). L'AI fa domande progressive tramite prompt, e quando serve un input strutturato (multi-select paesi, scelta canale, slider), lo inietta come **widget inline nella chat** — non come step separato.
 
-Stesso pattern di IntelliFlowOverlay: bottone mic accanto al campo input, testo interim mostrato live, invio automatico al rilascio.
+## Architettura
 
-**File**: `src/pages/MissionBuilder.tsx`
-- Import `useContinuousSpeech`
-- Bottone Mic/MicOff accanto al Textarea
-- Placeholder cambia in "🎙 Sto ascoltando…" quando attivo
-- Input mostra `interimText` durante l'ascolto
+```text
+┌─────────────────────────────────────────────────┐
+│  Header: Nome missione + progress dots          │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  Chat AI (full panel)                           │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 🤖 Cosa vuoi fare oggi? Posso aiutarti  │   │
+│  │    con email, WhatsApp, ricerca...       │   │
+│  └─────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 👤 Voglio contattare partner in Europa   │   │
+│  └─────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 🤖 Ho trovato 245 partner in Europa.    │   │
+│  │    Seleziona i paesi:                   │   │
+│  │    ┌──────────────────────────┐         │   │
+│  │    │ ▼ Multi-select dropdown  │         │   │
+│  │    │ ☑ Germany (45)           │         │   │
+│  │    │ ☑ France (38)            │         │   │
+│  │    │ ☐ Italy (22)             │         │   │
+│  │    └──────────────────────────┘         │   │
+│  │    [Conferma selezione]                 │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  [🎙] [________________] [➤]                   │
+└─────────────────────────────────────────────────┘
+```
 
-### 2. Aggiungere TTS conversazionale (useAiVoice)
+## Implementazione
 
-Integrare `useAiVoice` con voce attiva di default (Laura IT). Ma con una modifica chiave: **il testo letto a voce è una versione compressa/sintetica**, non il testo completo scritto.
+### 1. Nuovo componente `MissionChatWidget`
 
-**Approccio**: Dopo ogni risposta AI, estrarre una frase riassuntiva (max 2 righe) da leggere a voce. In pratica:
-- Il testo scritto nella chat rimane completo (markdown, dettagli, numeri)
-- Il TTS legge solo un riassunto conversazionale — es. "Ho trovato 176 contatti in Cina e 94 negli Stati Uniti. Seleziona i paesi che ti interessano."
-- Questo si ottiene aggiungendo un'istruzione al prompt del backend per generare un campo `voice_summary` nel messaggio, oppure facendo un estratto client-side delle prime 1-2 frasi
+Widget inline renderizzabili dentro i messaggi AI. Tipi:
+- `country_select` — Dropdown multi-select con conteggio partner
+- `channel_select` — Radio buttons (Email/WhatsApp/LinkedIn/Mix)
+- `slider_batch` — Slider per regolare batch per paese
+- `toggle_group` — Switch per deep search, allegati, etc.
+- `confirm_summary` — Card riassuntiva con bottone "Lancia"
 
-**Soluzione scelta**: Client-side — estrarre le prime 2 frasi dal testo pulito (senza markdown) e passarle al TTS. Zero modifiche backend.
+L'AI non genera questi widget — sono triggerati dal codice quando l'AI risponde con keyword specifiche o quando il backend restituisce un `widget_type` nel messaggio.
 
-### 3. Bottone toggle voce nell'header chat
+### 2. Modifiche a `MissionBuilder.tsx`
 
-Piccolo bottone Volume2/VolumeX nell'header del pannello chat per attivare/disattivare TTS.
+- Rimuovere il layout 50/50 (step + chat) → chat full-width
+- Rimuovere import di `MissionStepRenderer` e `TOTAL_STEPS`
+- Il progress si basa su `stepData` compilato (quanti campi hanno valore)
+- L'AI apre la conversazione con: "Che tipo di attività vuoi creare?" invece di mostrare subito i paesi
+- Le risposte AI con widget inline aggiornano `stepData` tramite callback
 
-## Riepilogo tecnico
+### 3. Prompt di sistema aggiornato
 
-| Modifica | File |
-|----------|------|
-| Import `useContinuousSpeech`, aggiungere mic button | `src/pages/MissionBuilder.tsx` |
-| Import `useAiVoice`, TTS sintetico su risposte | `src/pages/MissionBuilder.tsx` |
-| Nessun file nuovo, nessuna migrazione | — |
+Aggiungere al contesto dell'`ai-assistant` un prompt specifico per `/mission-builder` che istruisce l'AI a:
+- Fare domande progressive (chi, cosa, come, quando)
+- Non assumere che sia sempre per-paese — potrebbe essere per tipo azienda, rating, ex-clienti
+- Proporre opzioni basate sui dati reali del DB
+- Confermare ogni scelta prima di procedere
 
-Totale: 1 file modificato. Pattern già collaudato nel progetto (IntelliFlow + AiAssistantDialog).
+### 4. Widget rendering nel chat
+
+Quando il messaggio AI contiene marker come `[WIDGET:country_select]` o il backend include `widget_type` nella risposta, il renderer del messaggio mostra il widget interattivo invece del testo raw.
+
+## File coinvolti
+
+| File | Azione |
+|------|--------|
+| `src/pages/MissionBuilder.tsx` | Rimuovere split layout, chat full-width, widget inline |
+| `src/components/missions/MissionStepRenderer.tsx` | Eliminato o ridotto a solo widget factory |
+| `src/components/missions/MissionChatWidgets.tsx` | **Nuovo** — widget inline per chat |
+| `supabase/functions/ai-assistant/index.ts` | Prompt mission-builder specifico |
+
+Nessuna migrazione DB. Il `stepData` resta identico — cambia solo come viene compilato (da widget inline invece che da step fissi).
 
