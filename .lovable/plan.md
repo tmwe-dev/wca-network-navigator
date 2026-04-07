@@ -1,14 +1,33 @@
 
 
-# Eliminazione utente Alexander dalla whitelist
+# Rimozione Bottoni Download/Export dalla Piattaforma
 
-## Azione
+## Obiettivo
+Eliminare tutti i punti dove un dipendente può scaricare dati dal database in locale (CSV, JSON, PDF), mantenendo solo le funzionalità di import (caricare dati dentro il sistema).
 
-Creare una migrazione SQL per eliminare `alexander.bittermann.88@gmail.com` dalla tabella `authorized_users`.
+## Punti di download identificati
 
-```sql
-DELETE FROM authorized_users WHERE email = 'alexander.bittermann.88@gmail.com';
-```
+| # | File | Cosa fa | Azione |
+|---|------|---------|--------|
+| 1 | `ImportExportSettings.tsx` | Tab "Esporta" con export CSV/JSON/PDF dei partner | Rimuovere intero tab "Esporta" e relativo codice |
+| 2 | `Import.tsx` | Bottone "Esporta CSV incompleti" durante import | Rimuovere bottone |
+| 3 | `ImportErrorMonitor.tsx` | Bottone "Esporta CSV errori" | Rimuovere bottone |
+| 4 | `useImportWizard.ts` | Funzione `handleExportIncomplete` | Rimuovere funzione |
 
-Un singolo comando, nessuna modifica al codice.
+### NON toccati (sono funzionalità operative, non export dati):
+- **Download allegati email** (`EmailDetailView.tsx`) — scaricare un allegato ricevuto non è export del DB
+- **Download estensione WhatsApp** (`ExtensionsTab.tsx`, `ChannelsTab.tsx`) — è un file di sistema, non dati
+- **Download WCA/scraper** (`WCAScraper`) — è import dati dentro il sistema, non export fuori
+
+## Modifiche
+
+| File | Modifica |
+|------|----------|
+| `src/components/settings/ImportExportSettings.tsx` | Rimuovere tab "Esporta", funzioni `exportCSV`, `exportJSON`, `downloadBlob`. Rinominare componente in `ImportSettings` |
+| `src/pages/Settings.tsx` | Aggiornare label tab da "Import/Export" a "Importa" |
+| `src/pages/Import.tsx` | Rimuovere bottone "Esporta CSV incompleti" |
+| `src/components/import/ImportErrorMonitor.tsx` | Rimuovere bottone "Esporta CSV errori" e funzione `exportErrorsToCSV` |
+| `src/hooks/useImportWizard.ts` | Rimuovere `handleExportIncomplete` |
+
+Nessun file nuovo. 5 file modificati.
 
