@@ -1,10 +1,11 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox, Target,
+  Earth, Send, Inbox, Target, LogOut,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWcaSession } from "@/hooks/useWcaSession";
@@ -62,6 +63,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+  const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(
     () => document.documentElement.classList.contains("dark")
@@ -210,6 +212,18 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             {isDark ? <Sun className="w-4 h-4 group-hover:text-warning" /> : <Moon className="w-4 h-4" />}
           </motion.div>
           <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+        </button>
+
+        {/* Logout */}
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            navigate("/auth");
+          }}
+          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors group"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Esci</span>
         </button>
       </div>
     </aside>
