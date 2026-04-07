@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Send, Save, Eye, Loader2, Mail, Paperclip, Link as LinkIcon, Plus, X, Braces, Users,
+  Send, Save, Eye, Loader2, Mail, Paperclip, Link as LinkIcon, Plus, X, Braces, Users, Bookmark,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getCountryFlag } from "@/lib/countries";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
