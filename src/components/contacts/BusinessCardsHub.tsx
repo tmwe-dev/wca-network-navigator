@@ -783,7 +783,7 @@ export default function BusinessCardsHub() {
 
   const { handleSendEmail, handleSendWhatsApp, waAvailable } = useDirectContactActions();
   const { processFiles, uploading, progress } = useUploadAndParse();
-  const { data: cards = [], isLoading } = useBusinessCards({
+  const { data: cards = [], isLoading, refetch } = useBusinessCards({
     event_name: eventFilter || undefined,
     match_status: statusFilter || undefined,
   });
