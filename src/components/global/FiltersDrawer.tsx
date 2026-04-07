@@ -821,6 +821,9 @@ function CRMFiltersSection() {
           </ChipGroup>
         </FilterSection>
       </div>
+
+      {/* ── Contact Group Navigator ── */}
+      <CRMContactNavigator groupBy={g.filters.groupBy} />
     </>
   );
 }
