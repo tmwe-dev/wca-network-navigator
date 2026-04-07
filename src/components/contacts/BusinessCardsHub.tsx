@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Upload, Camera, Handshake, Search, Loader2, ImagePlus, Building2, User, MapPin, Calendar,
   FileSpreadsheet, FileText, CheckCircle2, Mail, Phone, Eye, LayoutGrid, LayoutList, Rows3,
-  Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight,
+  Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight, Trash2,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
@@ -422,7 +422,7 @@ function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLo
 }
 
 /* ═══ Bulk Action Bar for BCA ═══ */
-function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhatsApp, onCockpit, onWorkspace }: {
+function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhatsApp, onCockpit, onWorkspace, onDelete }: {
   count: number;
   cards: BusinessCardWithPartner[];
   selectedIds: Set<string>;
@@ -431,6 +431,7 @@ function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhats
   onWhatsApp: () => void;
   onCockpit: () => void;
   onWorkspace: () => void;
+  onDelete: () => void;
 }) {
   if (count === 0) return null;
   const selectedCards = cards.filter(c => selectedIds.has(c.id));
@@ -464,6 +465,11 @@ function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhats
         <Button size="sm" variant="ghost" onClick={onCockpit}
           className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
           <ArrowRight className="w-3 h-3" /> Cockpit
+        </Button>
+
+        <Button size="sm" variant="ghost" onClick={onDelete}
+          className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15">
+          <Trash2 className="w-3 h-3" /> Elimina
         </Button>
 
         <button onClick={onClear} className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
@@ -777,7 +783,7 @@ export default function BusinessCardsHub() {
 
   const { handleSendEmail, handleSendWhatsApp, waAvailable } = useDirectContactActions();
   const { processFiles, uploading, progress } = useUploadAndParse();
-  const { data: cards = [], isLoading } = useBusinessCards({
+  const { data: cards = [], isLoading, refetch } = useBusinessCards({
     event_name: eventFilter || undefined,
     match_status: statusFilter || undefined,
   });
@@ -860,6 +866,17 @@ export default function BusinessCardsHub() {
     });
   }, [cards, selectedIds, navigate]);
 
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    if (!confirm(`Eliminare ${ids.length} biglietti da visita?`)) return;
+    const { error } = await supabase.from("business_cards").delete().in("id", ids);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    toast({ title: `✅ ${ids.length} biglietti eliminati` });
+    setSelectedIds(new Set());
+    refetch();
+  }, [selectedIds, refetch]);
+
   const showPanel = !!detailCard;
 
   return (
@@ -874,6 +891,7 @@ export default function BusinessCardsHub() {
         onWhatsApp={handleBulkWhatsApp}
         onCockpit={handleBulkCockpit}
         onWorkspace={handleBulkWorkspace}
+        onDelete={handleBulkDelete}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">

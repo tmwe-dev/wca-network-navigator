@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Trash2,
 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { useContacts } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
@@ -32,6 +35,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const linkedInLookup = useLinkedInLookup();
   const parentRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const qc = useQueryClient();
 
   const sortKey = (gf.sortBy || "company") as SortKey;
   const groupBy = gf.groupBy || "country";
@@ -232,6 +236,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 <Megaphone className="w-3.5 h-3.5" /> Campagna
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Aggiungi a Campagna</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button size="sm" variant="ghost"
+                className="h-7 px-2.5 text-xs gap-1.5 text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  const ids = Array.from(selection.selectedIds);
+                  if (!confirm(`Eliminare ${ids.length} contatti?`)) return;
+                  const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
+                  if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+                  toast({ title: `✅ ${ids.length} contatti eliminati` });
+                  selection.clear();
+                  qc.invalidateQueries({ queryKey: ["contacts"] });
+                  qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+                }}>
+                <Trash2 className="w-3.5 h-3.5" /> Elimina
+              </Button>
+            </TooltipTrigger><TooltipContent className="text-xs">Elimina contatti selezionati</TooltipContent></Tooltip>
             <button onClick={() => { selection.clear(); setSelectedGroups(new Set()); }}
               className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
               <X className="w-3.5 h-3.5" />
