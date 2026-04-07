@@ -1557,16 +1557,26 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function executeSaveMemory(args: Record<string, unknown>, userId: string) {
+  // Auto-determine level based on importance
+  const importance = Math.min(5, Math.max(1, Number(args.importance) || 3));
+  const level = importance >= 4 ? 2 : 1;
+  const confidence = level === 2 ? 0.6 : 0.5;
+  const decayRate = level === 2 ? 0.005 : 0.02;
+
   const { data, error } = await supabase.from("ai_memory").insert({
     user_id: userId,
     content: String(args.content),
     memory_type: String(args.memory_type || "fact"),
     tags: (args.tags as string[]) || [],
-    importance: Math.min(5, Math.max(1, Number(args.importance) || 3)),
+    importance,
     context_page: args.context_page ? String(args.context_page) : null,
+    level,
+    confidence,
+    decay_rate: decayRate,
+    source: "ai_save",
   }).select("id").single();
   if (error) return { error: error.message };
-  return { success: true, memory_id: data.id, message: "Ricordo salvato." };
+  return { success: true, memory_id: data.id, level, message: `Ricordo salvato (L${level}).` };
 }
 
 async function executeSearchMemory(args: Record<string, unknown>, userId: string) {
