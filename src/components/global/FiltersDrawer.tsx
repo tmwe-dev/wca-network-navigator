@@ -1073,7 +1073,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                           className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
                         >
                           <div className="flex items-start gap-1.5">
-                            <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>
+                            {c.country && <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>}
                             <button onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left">
                               <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
                               <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
