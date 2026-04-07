@@ -9,16 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Globe2, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("Auth");
 
 async function checkWhitelist(email: string): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc("is_email_authorized" as any, { p_email: email });
     if (error) {
-      console.error("Whitelist check error:", error);
+      log.error("whitelist check failed", { message: error.message, code: error.code });
       return false;
     }
     return data === true;
-  } catch {
+  } catch (err) {
+    log.warn("whitelist check threw", { message: err instanceof Error ? err.message : String(err) });
     return false;
   }
 }

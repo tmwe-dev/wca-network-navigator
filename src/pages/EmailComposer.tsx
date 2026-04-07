@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("EmailComposer");
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -366,7 +369,7 @@ export default function EmailComposer() {
         setActiveQueueStatus("completed");
       });
     } catch (err) {
-      console.error("Enqueue error:", err);
+      log.error("enqueue failed", { message: err instanceof Error ? err.message : String(err) });
       toast.error("Errore nell'accodamento");
     }
     setSending(false);
