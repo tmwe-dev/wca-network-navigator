@@ -1175,6 +1175,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
       email: p.email || null, phone: p.phone || null, rating: p.rating ?? null,
       has_profile: !!p.raw_profile_html, website: p.website || null,
       is_favorite: p.is_favorite, office_type: p.office_type, has_branches: p.has_branches,
+      member_since: p.member_since || null,
     })),
   };
 }
