@@ -27,6 +27,7 @@ interface OraclePanelProps {
   onGenerate: (config: OracleConfig) => void;
   onImprove: (config: OracleConfig) => void;
   onLoadTemplate: (subject: string, body: string) => void;
+  onInsertImage?: (url: string) => void;
   generating: boolean;
   improving: boolean;
   hasBody: boolean;
