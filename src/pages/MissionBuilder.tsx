@@ -130,7 +130,7 @@ export default function MissionBuilder() {
         audioRef.current = audio;
         audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; };
         await audio.play();
-      } catch {}
+      } catch (e) { console.warn("[MissionBuilder] TTS playback failed:", e); }
     })();
   }, [messages, isChatLoading, voiceEnabled]);
 
@@ -202,7 +202,7 @@ export default function MissionBuilder() {
                   return [...prev, { role: "assistant", content: assistantContent }];
                 });
               }
-            } catch {}
+            } catch { /* malformed SSE JSON chunk, skip */ }
           }
         }
       }

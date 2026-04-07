@@ -1,14 +1,15 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
-import { NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useScrapingSettings, calcDelay, getPatternPause, ensureMinDuration } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
+import { useAcquisitionFilters } from "@/hooks/useAcquisitionFilters";
+import { useNetworkPerformance } from "@/hooks/useNetworkPerformance";
+import { useCanvasVisualization } from "@/hooks/useCanvasVisualization";
 
 export type PipelineStatus = "idle" | "scanning" | "running" | "paused" | "done";
 export type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -33,37 +34,24 @@ const EMPTY_STATS: LiveStats = { processed: 0, withEmail: 0, withPhone: 0, compl
 export function useAcquisitionPipeline() {
   const { settings: scrapingSettings } = useScrapingSettings();
 
-  // Toolbar state
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [delaySeconds, setDelaySeconds] = useState(scrapingSettings.baseDelay);
-  const [includeEnrich, setIncludeEnrich] = useState(false);
-  const [includeDeepSearch, setIncludeDeepSearch] = useState(false);
+  // ── Composed hooks ──
+  const filters = useAcquisitionFilters(scrapingSettings.baseDelay);
+  const network = useNetworkPerformance();
+  const canvas = useCanvasVisualization();
 
   // Pipeline state
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
-  const [canvasPhase, setCanvasPhase] = useState<CanvasPhase>("idle");
-  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [qualityComplete, setQualityComplete] = useState(0);
   const [qualityIncomplete, setQualityIncomplete] = useState(0);
-  const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [resumeLoading, setResumeLoading] = useState(true);
   const [liveStats, setLiveStats] = useState<LiveStats>(EMPTY_STATS);
-
-  // Network performance tracking
-  const [networkStats, setNetworkStats] = useState<Record<string, NetworkStats>>({});
-  const [excludedNetworks, setExcludedNetworks] = useState<Set<string>>(new Set());
-  const excludedNetworksRef = useRef<Set<string>>(new Set());
-  const [networkRegressions, setNetworkRegressions] = useState<NetworkRegression[]>([]);
-  const networkBaselineRef = useRef<Record<string, { successes: number; consecutiveFailures: number }>>({});
 
   const [scanStats, setScanStats] = useState<ScanStats | null>(null);
   const [sessionHealth, setSessionHealth] = useState<SessionHealth>("unknown");
@@ -97,7 +85,7 @@ export function useAcquisitionPipeline() {
     let localStats = { ...liveStats };
     let consecutiveEmpty = 0;
     const AUTO_EXCLUDE_THRESHOLD = scrapingSettings.excludeThreshold;
-    let localNetworkStats: Record<string, { success: number; empty: number }> = { ...networkStats };
+    let localNetworkStats: Record<string, { success: number; empty: number }> = { ...network.networkStats };
 
     const keepAliveInterval = setInterval(async () => {
       try {
@@ -124,8 +112,8 @@ export function useAcquisitionPipeline() {
       const item = items[i];
 
       // Skip partner if ALL its networks are excluded
-      if (excludedNetworksRef.current.size > 0 && item.networks && item.networks.length > 0) {
-        const allExcluded = item.networks.every(n => excludedNetworksRef.current.has(n));
+      if (network.excludedNetworksRef.current.size > 0 && item.networks && item.networks.length > 0) {
+        const allExcluded = item.networks.every(n => network.excludedNetworksRef.current.has(n));
         if (allExcluded) {
           setQueue((prev) =>
             prev.map((q) =>
@@ -143,7 +131,7 @@ export function useAcquisitionPipeline() {
           q.wca_id === item.wca_id ? { ...q, status: "active" as const } : q
         )
       );
-      setCanvasPhase("downloading");
+      canvas.setCanvasPhase("downloading");
 
       // Ensure partner exists in DB
       let partnerId: string | null = null;
@@ -178,7 +166,7 @@ export function useAcquisitionPipeline() {
       }
 
       // Build canvas
-      const canvas: CanvasData = {
+      const canvasItem: CanvasData = {
         company_name: partnerData?.company_name || item.company_name,
         city: partnerData?.city || item.city,
         country_code: partnerData?.country_code || item.country_code,
@@ -205,21 +193,21 @@ export function useAcquisitionPipeline() {
           supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId),
           supabase.from("partner_services").select("service_category").eq("partner_id", partnerId),
         ]);
-        canvas.networks = (nets || []).map((n) => n.network_name);
-        canvas.services = (svcs || []).map((s) => s.service_category);
-        if (canvas.networks.length > 0) {
+        canvasItem.networks = (nets || []).map((n) => n.network_name);
+        canvasItem.services = (svcs || []).map((s) => s.service_category);
+        if (canvasItem.networks.length > 0) {
           setQueue((prev) =>
             prev.map((q) =>
-              q.wca_id === item.wca_id ? { ...q, networks: canvas.networks } : q
+              q.wca_id === item.wca_id ? { ...q, networks: canvasItem.networks } : q
             )
           );
         }
       }
 
-      setCanvasData(canvas);
+      canvas.setCanvasData(canvasItem);
 
       // Extract via Chrome Extension
-      setCanvasPhase("extracting");
+      canvas.setCanvasPhase("extracting");
 
       if (extensionAvailable || await checkExtension()) {
         try {
@@ -250,29 +238,29 @@ export function useAcquisitionPipeline() {
           }
 
           if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
-            canvas.contacts = extResult.contacts.map((c) => ({
+            canvasItem.contacts = extResult.contacts.map((c) => ({
               name: c.name || c.title || "Sconosciuto",
               title: c.title,
               email: c.email,
               direct_phone: c.phone,
               mobile: c.mobile,
             }));
-            canvas.contactSource = "extension";
+            canvasItem.contactSource = "extension";
 
             if (extResult.companyName && !extResult.companyName.startsWith("WCA ")) {
-              canvas.company_name = extResult.companyName;
+              canvasItem.company_name = extResult.companyName;
               if (partnerId) {
                 await supabase.from("partners").update({ company_name: extResult.companyName }).eq("id", partnerId);
               }
             }
-            setCanvasData({ ...canvas });
+            canvas.setCanvasData({ ...canvasItem });
           }
         } catch (extErr) {
           console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
         }
 
         // Fallback: check DB for contacts saved by extension
-        if (canvas.contactSource !== "extension" && partnerId) {
+        if (canvasItem.contactSource !== "extension" && partnerId) {
           try {
             const { data: dbContacts } = await supabase
               .from("partner_contacts")
@@ -280,15 +268,15 @@ export function useAcquisitionPipeline() {
               .eq("partner_id", partnerId);
             if (dbContacts && dbContacts.length > 0 &&
                 dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
-              canvas.contacts = dbContacts.map(c => ({
+              canvasItem.contacts = dbContacts.map(c => ({
                 name: c.name,
                 title: c.title || undefined,
                 email: c.email || undefined,
                 direct_phone: c.direct_phone || undefined,
                 mobile: c.mobile || undefined,
               }));
-              canvas.contactSource = "extension";
-              setCanvasData({ ...canvas });
+              canvasItem.contactSource = "extension";
+              canvas.setCanvasData({ ...canvasItem });
             }
           } catch { /* non-blocking */ }
         }
@@ -316,72 +304,10 @@ export function useAcquisitionPipeline() {
         await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
       }
 
-      // Update network stats
-      const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
-      if (canvas.networks && canvas.networks.length > 0) {
-        for (const net of canvas.networks) {
-          if (!localNetworkStats[net]) localNetworkStats[net] = { success: 0, empty: 0 };
-          if (hasAnyContact) localNetworkStats[net].success++;
-          else localNetworkStats[net].empty++;
-        }
-        setNetworkStats({ ...localNetworkStats });
-
-        // Auto-exclude networks with 0% success after threshold
-        for (const net of canvas.networks) {
-          const s = localNetworkStats[net];
-          if (s && s.success === 0 && (s.success + s.empty) >= AUTO_EXCLUDE_THRESHOLD && !excludedNetworksRef.current.has(net)) {
-            const networkToExclude = net;
-            const undoTimeout = setTimeout(() => {
-              excludedNetworksRef.current.add(networkToExclude);
-              setExcludedNetworks(new Set(excludedNetworksRef.current));
-            }, 5000);
-
-            toast({
-              title: `Network "${net}" verrà escluso`,
-              description: `0/${s.empty} partner con contatti. Escluso tra 5s.`,
-              action: (
-                <ToastAction altText="Annulla" onClick={() => {
-                  clearTimeout(undoTimeout);
-                  toast({ title: `"${networkToExclude}" mantenuto`, description: "L'esclusione è stata annullata." });
-                }}>
-                  Annulla
-                </ToastAction>
-              ),
-            });
-          }
-        }
-
-        // Regression detection
-        for (const net of canvas.networks) {
-          if (!networkBaselineRef.current[net]) {
-            networkBaselineRef.current[net] = { successes: 0, consecutiveFailures: 0 };
-          }
-          const baseline = networkBaselineRef.current[net];
-          if (hasAnyContact) {
-            baseline.successes++;
-            baseline.consecutiveFailures = 0;
-          } else {
-            baseline.consecutiveFailures++;
-          }
-          if (baseline.successes >= 2 && baseline.consecutiveFailures >= 3) {
-            setNetworkRegressions(prev => {
-              const existing = prev.find(r => r.network === net);
-              if (existing) {
-                return prev.map(r => r.network === net 
-                  ? { ...r, consecutiveFailures: baseline.consecutiveFailures } 
-                  : r
-                );
-              }
-              return [...prev, {
-                network: net,
-                previousSuccesses: baseline.successes,
-                consecutiveFailures: baseline.consecutiveFailures,
-              }];
-            });
-          } else if (hasAnyContact) {
-            setNetworkRegressions(prev => prev.filter(r => r.network !== net));
-          }
-        }
+      // Update network stats via composed hook
+      const hasAnyContact = canvasItem.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
+      if (canvasItem.networks && canvasItem.networks.length > 0) {
+        network.updateNetworkStats(canvasItem.networks, hasAnyContact, localNetworkStats, AUTO_EXCLUDE_THRESHOLD);
       }
 
       // Consecutive empty tracking
@@ -395,7 +321,7 @@ export function useAcquisitionPipeline() {
       // Enrich + Deep Search
       const parallelTasks: Promise<void>[] = [];
 
-      if (includeEnrich && partnerData?.website && partnerId) {
+      if (filters.includeEnrich && partnerData?.website && partnerId) {
         parallelTasks.push(
           (async () => {
             try {
@@ -417,7 +343,7 @@ export function useAcquisitionPipeline() {
               const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
               if (enrichResult?.enrichment) {
                 const ed = enrichResult.enrichment;
-                setCanvasData((prev) =>
+                canvas.setCanvasData((prev) =>
                   prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employee_count, founded: ed.founding_year ? String(ed.founding_year) : undefined, fleet: ed.has_own_fleet ? (ed.fleet_details || "Sì") : undefined } : prev
                 );
               }
@@ -426,7 +352,7 @@ export function useAcquisitionPipeline() {
         );
       }
 
-      if (includeDeepSearch && partnerId) {
+      if (filters.includeDeepSearch && partnerId) {
         parallelTasks.push(
           (async () => {
             try {
@@ -436,7 +362,7 @@ export function useAcquisitionPipeline() {
                   supabase.from("partners").select("logo_url").eq("id", partnerId!).maybeSingle(),
                   supabase.from("partner_social_links").select("*").eq("partner_id", partnerId!),
                 ]);
-                setCanvasData((prev) =>
+                canvas.setCanvasData((prev) =>
                   prev ? {
                     ...prev,
                     logo_url: updatedPartner?.logo_url || prev.logo_url,
@@ -452,24 +378,24 @@ export function useAcquisitionPipeline() {
       }
 
       if (parallelTasks.length > 0) {
-        setCanvasPhase("enriching");
+        canvas.setCanvasPhase("enriching");
         await Promise.all(parallelTasks);
       }
 
       // Complete + Animate
-      setCanvasPhase("complete");
+      canvas.setCanvasPhase("complete");
       await new Promise((r) => setTimeout(r, 1000));
 
-      setIsAnimatingOut(true);
-      setShowComet(true);
+      canvas.setIsAnimatingOut(true);
+      canvas.setShowComet(true);
       await new Promise((r) => setTimeout(r, 600));
-      setShowComet(false);
-      setIsAnimatingOut(false);
+      canvas.setShowComet(false);
+      canvas.setIsAnimatingOut(false);
       setCompletedCount((c) => c + 1);
 
-      const contactsWithEmail = canvas.contacts.filter(c => !!c.email?.trim());
-      const contactsWithPhone = canvas.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
-      const hasComplete = canvas.contacts.some((c) => !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim()));
+      const contactsWithEmail = canvasItem.contacts.filter(c => !!c.email?.trim());
+      const contactsWithPhone = canvasItem.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
+      const hasComplete = canvasItem.contacts.some((c) => !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim()));
 
       localStats = {
         processed: localStats.processed + 1,
@@ -495,7 +421,7 @@ export function useAcquisitionPipeline() {
         current_index: processedSet.size,
         processed_ids: [...processedSet] as any,
         last_processed_wca_id: item.wca_id,
-        last_processed_company: canvas.company_name || null,
+        last_processed_company: canvasItem.company_name || null,
         last_contact_result: contactResult,
         contacts_found_count: localStats.withEmail,
         contacts_missing_count: localStats.empty,
@@ -503,7 +429,7 @@ export function useAcquisitionPipeline() {
 
       setQueue((prev) =>
         prev.map((q) =>
-          q.wca_id === item.wca_id ? { ...q, status: "done" as const, company_name: canvas.company_name || q.company_name, city: canvas.city || q.city } : q
+          q.wca_id === item.wca_id ? { ...q, status: "done" as const, company_name: canvasItem.company_name || q.company_name, city: canvasItem.city || q.city } : q
         )
       );
 
@@ -515,11 +441,11 @@ export function useAcquisitionPipeline() {
 
     clearInterval(keepAliveInterval);
     return localStats;
-  }, [includeEnrich, includeDeepSearch, delaySeconds, extensionAvailable, checkExtension, extensionExtract, liveStats, scrapingSettings]);
+  }, [filters.includeEnrich, filters.includeDeepSearch, filters.delaySeconds, extensionAvailable, checkExtension, extensionExtract, liveStats, scrapingSettings, network, canvas, fsAvailable, fsScrapeUrl, sessionHealth]);
 
   // ── Scan directory ──
   const handleScan = useCallback(async () => {
-    if (selectedCountries.length === 0) {
+    if (filters.selectedCountries.length === 0) {
       toast({ title: "Seleziona almeno un paese", variant: "destructive" });
       return;
     }
@@ -528,7 +454,7 @@ export function useAcquisitionPipeline() {
     setQueue([]);
 
     try {
-      const result = await scanDirectory(selectedCountries, selectedNetworks);
+      const result = await scanDirectory(filters.selectedCountries, filters.selectedNetworks);
       setScanStats(result.scanStats);
       setQueue(result.queue);
       setSelectedIds(result.selectedIds);
@@ -546,7 +472,7 @@ export function useAcquisitionPipeline() {
       toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
       setPipelineStatus("idle");
     }
-  }, [selectedCountries, selectedNetworks]);
+  }, [filters.selectedCountries, filters.selectedNetworks]);
 
   // ── Start pipeline ──
   const startPipeline = useCallback(async () => {
@@ -568,9 +494,7 @@ export function useAcquisitionPipeline() {
     setCompletedCount(0);
     setQualityComplete(0);
     setQualityIncomplete(0);
-    setNetworkStats({});
-    setExcludedNetworks(new Set());
-    excludedNetworksRef.current = new Set();
+    network.resetNetworkPerformance();
     setLiveStats(EMPTY_STATS);
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
@@ -578,7 +502,7 @@ export function useAcquisitionPipeline() {
     let jobId = activeJobId;
     try {
       if (!jobId) {
-        const countryCode = items[0]?.country_code || selectedCountries[0] || "";
+        const countryCode = items[0]?.country_code || filters.selectedCountries[0] || "";
         const { data: countryPartner } = await supabase
           .from("partners")
           .select("country_name")
@@ -591,10 +515,10 @@ export function useAcquisitionPipeline() {
           .insert({
             country_code: countryCode,
             country_name: countryPartner?.country_name || countryCode,
-            network_name: selectedNetworks.length > 0 ? selectedNetworks.join(", ") : "All Networks",
+            network_name: filters.selectedNetworks.length > 0 ? filters.selectedNetworks.join(", ") : "All Networks",
             wca_ids: items.map((i) => i.wca_id) as any,
             total_count: items.length,
-            delay_seconds: delaySeconds,
+            delay_seconds: filters.delaySeconds,
             status: "running",
             job_type: "acquisition",
           })
@@ -617,8 +541,8 @@ export function useAcquisitionPipeline() {
 
     const localStats = await runExtensionLoop(jobId!, items);
 
-    setCanvasPhase("idle");
-    setCanvasData(null);
+    canvas.setCanvasPhase("idle");
+    canvas.setCanvasData(null);
 
     if (cancelRef.current) {
       setPipelineStatus("idle");
@@ -639,55 +563,43 @@ export function useAcquisitionPipeline() {
         description: `${localStats.processed} partner processati — Completi: ${localStats.complete}, Incompleti: ${localStats.processed - localStats.complete}`,
       });
     }
-  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop, waitForExtension]);
+  }, [queue, filters.includeEnrich, filters.includeDeepSearch, filters.delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, filters.selectedCountries, filters.selectedNetworks, runExtensionLoop, waitForExtension, network, canvas]);
 
-  // ── Network exclusion handlers ──
-  const handleExcludeNetwork = useCallback((network: string) => {
-    setExcludedNetworks((prev) => {
-      const next = new Set(prev);
-      next.add(network);
-      excludedNetworksRef.current = next;
-      return next;
-    });
+  // ── Network exclusion handlers (with queue updates) ──
+  const handleExcludeNetwork = useCallback((networkName: string) => {
+    network.handleExcludeNetwork(networkName);
     setQueue((prev) =>
       prev.map((q) => {
         if (q.status !== "pending" || !q.networks || q.networks.length === 0) return q;
-        const updatedExcluded = new Set(excludedNetworksRef.current);
-        updatedExcluded.add(network);
+        const updatedExcluded = new Set(network.excludedNetworksRef.current);
+        updatedExcluded.add(networkName);
         const allExcluded = q.networks.every(n => updatedExcluded.has(n));
         return allExcluded ? { ...q, status: "done" as const, skippedNetwork: true } : q;
       })
     );
-    toast({ title: `Network "${network}" escluso`, description: "I partner con solo questo network verranno saltati." });
-  }, []);
+  }, [network]);
 
-  const handleReincludeNetwork = useCallback((network: string) => {
-    setExcludedNetworks((prev) => {
-      const next = new Set(prev);
-      next.delete(network);
-      excludedNetworksRef.current = next;
-      return next;
-    });
+  const handleReincludeNetwork = useCallback((networkName: string) => {
+    network.handleReincludeNetwork(networkName);
     setQueue((prev) =>
       prev.map((q) => {
         if (!q.skippedNetwork || !q.networks) return q;
-        const updatedExcluded = new Set(excludedNetworksRef.current);
-        updatedExcluded.delete(network);
+        const updatedExcluded = new Set(network.excludedNetworksRef.current);
+        updatedExcluded.delete(networkName);
         const stillAllExcluded = q.networks.every(n => updatedExcluded.has(n));
         return stillAllExcluded ? q : { ...q, status: "pending" as const, skippedNetwork: false };
       })
     );
-    toast({ title: `Network "${network}" riattivato` });
-  }, []);
+  }, [network]);
 
   // ── Partner click handler ──
   const handlePartnerClick = useCallback(async (wcaId: number) => {
     const preview = await loadPartnerPreview(wcaId);
     if (!preview) return;
-    setCanvasData(preview);
-    setCanvasPhase("complete");
-    setIsAnimatingOut(false);
-  }, []);
+    canvas.setCanvasData(preview);
+    canvas.setCanvasPhase("complete");
+    canvas.setIsAnimatingOut(false);
+  }, [canvas]);
 
   // ── Pause/Resume/Cancel ──
   const togglePause = useCallback(() => {
@@ -709,27 +621,23 @@ export function useAcquisitionPipeline() {
   }, [activeJobId]);
 
   return {
-    // Toolbar
-    selectedCountries, setSelectedCountries,
-    selectedNetworks, setSelectedNetworks,
-    delaySeconds, setDelaySeconds,
-    includeEnrich, setIncludeEnrich,
-    includeDeepSearch, setIncludeDeepSearch,
+    // Toolbar (from useAcquisitionFilters)
+    ...filters,
+    // Canvas (from useCanvasVisualization)
+    ...canvas,
+    // Network (from useNetworkPerformance — expose only the public subset)
+    networkStats: network.networkStats,
+    excludedNetworks: network.excludedNetworks,
+    networkRegressions: network.networkRegressions,
     // Pipeline
     pipelineStatus,
     queue, setQueue,
     activeIndex,
-    canvasData, canvasPhase,
-    isAnimatingOut,
     completedCount, qualityComplete, qualityIncomplete,
-    showComet,
     showSessionAlert, setShowSessionAlert,
     selectedIds, setSelectedIds,
     liveStats,
     resumeLoading,
-    // Network
-    networkStats, excludedNetworks,
-    networkRegressions,
     // Scan
     scanStats,
     // Session

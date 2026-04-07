@@ -27,7 +27,7 @@ export default function Contacts() {
           .eq("id", contactId)
           .single();
         if (data) setSelectedContact(data);
-      } catch {}
+      } catch (e) { console.warn("[Contacts] failed to load contact:", e); }
     };
     window.addEventListener("crm-select-contact", handler);
     return () => window.removeEventListener("crm-select-contact", handler);

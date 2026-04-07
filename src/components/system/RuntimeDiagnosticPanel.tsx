@@ -68,7 +68,7 @@ export function RuntimeDiagnosticPanel() {
     try {
       const { data } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(10);
       state.activeJobs = data?.length || 0;
-    } catch {}
+    } catch (e) { console.error("[RuntimeDiagnostic] failed to fetch active jobs:", e); }
 
     // Cache size
     state.queryCacheSize = queryClient.getQueryCache().getAll().length;
@@ -77,13 +77,13 @@ export function RuntimeDiagnosticPanel() {
     try {
       const raw = localStorage.getItem("last_wca_error");
       if (raw) state.lastWcaError = JSON.parse(raw);
-    } catch {}
+    } catch { /* malformed cache */ }
 
     // Last failed call
     try {
       const raw = localStorage.getItem("last_failed_network_call");
       if (raw) state.lastFailedCall = JSON.parse(raw);
-    } catch {}
+    } catch { /* malformed cache */ }
 
     setDiag(state);
   }, [queryClient]);

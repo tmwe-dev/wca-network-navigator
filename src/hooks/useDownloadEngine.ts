@@ -81,7 +81,7 @@ async function getWcaCookie(): Promise<string> {
         return parsed.cookie;
       }
     }
-  } catch {}
+  } catch { /* malformed cache */ }
   console.log("[CLAUDE-ENGINE] Login via wca-app.vercel.app...");
   const res = await fetch("https://wca-app.vercel.app/api/login", {
     method: "POST",
@@ -93,7 +93,7 @@ async function getWcaCookie(): Promise<string> {
     throw new Error(data.error || "Login WCA fallito via wca-app");
   }
   console.log("[CLAUDE-ENGINE] Login OK — cookie ottenuto");
-  try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+  try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* storage full or unavailable */ }
   return data.cookies;
 }
 
@@ -122,10 +122,10 @@ export function useDownloadEngine() {
             if (s.key === "download_batch_size" && s.value) defaults.batchSize = parseInt(s.value);
             if (s.key === "download_circuit_threshold" && s.value) defaults.circuitThreshold = parseInt(s.value);
             if (s.key === "download_circuit_cooldown" && s.value) defaults.circuitCooldown = parseInt(s.value);
-          } catch {}
+          } catch (e) { console.warn("[DownloadEngine] failed to parse setting:", e); }
         }
       }
-    } catch {}
+    } catch (e) { console.error("[DownloadEngine] failed to load config from app_settings:", e); }
     return defaults;
   };
 
@@ -241,7 +241,7 @@ export function useDownloadEngine() {
                 wca_id: item.wca_id, company_name: `WCA ${item.wca_id}`,
                 country_code: job.country_code, scraped_at: new Date().toISOString(),
               }, { onConflict: "wca_id" });
-            } catch {}
+            } catch (e) { console.error("[DownloadEngine] failed to upsert partners_no_contacts:", e); }
             await emitEvent(jobId, item.id, "item_failed", { state: "member_not_found" });
           } else {
             recordFailure(cb);

@@ -79,7 +79,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       const data = await res.json();
       setHasCookie(data.success && !!data.cookies);
       if (data.success && data.cookies) {
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* storage full or unavailable */ }
       }
     } catch { setHasCookie(false); }
   }

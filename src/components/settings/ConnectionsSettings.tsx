@@ -89,7 +89,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
-    } catch {}
+    } catch (e) { console.error("[ConnectionsSettings] failed to save connection settings:", e); }
     toast.success(results.join(" · "));
     setConnectingAll(false);
   };
