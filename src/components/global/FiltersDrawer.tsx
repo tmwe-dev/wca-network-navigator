@@ -993,8 +993,11 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
   // City filter state for expanded groups
   const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
 
-  if (groups.length === 0) return (
+  if (groupsLoading) return (
     <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>
+  );
+  if (groups.length === 0) return (
+    <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>
   );
 
   return (
