@@ -885,7 +885,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
         const { supabase } = await import("@/integrations/supabase/client");
         let q = supabase
           .from("imported_contacts")
-          .select("id, name, company_name, company_alias, country, email, position, origin")
+          .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
           .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
           .order("company_name", { ascending: true })
           .limit(500);
@@ -919,6 +919,9 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
     window.dispatchEvent(new CustomEvent("filters-drawer-close"));
   };
 
+  // City filter state for expanded groups
+  const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
+
   if (groups.length === 0) return (
     <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>
   );
@@ -933,6 +936,13 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
         {groups.map(group => {
           const isOpen = openGroups.has(group.key);
           const contacts = groupContacts[group.key];
+          const cf = cityFilter[group.key]?.toLowerCase() || "";
+          const filteredContacts = contacts && cf
+            ? contacts.filter((c: any) => 
+                (c.city || "").toLowerCase().includes(cf) || 
+                (c.name || "").toLowerCase().includes(cf) ||
+                (c.company_name || "").toLowerCase().includes(cf))
+            : contacts;
           return (
             <div key={group.key} className="border-b border-border/20 last:border-b-0">
               <button
@@ -951,25 +961,56 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                 <div className="bg-background/50">
                   {loadingGroup === group.key ? (
                     <div className="px-3 py-2 text-[10px] text-muted-foreground">Caricamento…</div>
-                  ) : contacts && contacts.length > 0 ? (
-                    contacts.map((c: any) => (
-                      <button
-                        key={c.id}
-                        onClick={() => selectContact(c.id)}
-                        className="w-full text-left px-3 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs shrink-0">{getCountryFlag(c.country)}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
-                            {c.name && <p className="text-[9px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
-                          </div>
-                          {c.email && <span className="text-[8px] text-muted-foreground truncate max-w-[80px]">{c.email}</span>}
+                  ) : filteredContacts && filteredContacts.length > 0 ? (
+                    <>
+                      {contacts && contacts.length > 10 && (
+                        <div className="px-2 py-1 border-b border-border/10">
+                          <Input
+                            value={cityFilter[group.key] || ""}
+                            onChange={e => setCityFilter(prev => ({ ...prev, [group.key]: e.target.value }))}
+                            placeholder="Filtra per città/nome…"
+                            className="h-6 text-[10px] bg-muted/20 border-border/30"
+                          />
                         </div>
-                      </button>
-                    ))
+                      )}
+                      {filteredContacts.map((c: any) => (
+                        <div
+                          key={c.id}
+                          className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
+                        >
+                          <div className="flex items-start gap-1.5">
+                            <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>
+                            <button onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left">
+                              <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
+                              <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+                                {c.name && <span className="truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</span>}
+                                {c.city && <span className="flex items-center gap-0.5 shrink-0 text-muted-foreground/70">📍{c.city}</span>}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {c.email && (
+                                  <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground truncate max-w-[100px]">
+                                    <Mail className="w-2.5 h-2.5 shrink-0" />{c.email}
+                                  </span>
+                                )}
+                                {(c.phone || c.mobile) && (
+                                  <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground shrink-0">
+                                    <Phone className="w-2.5 h-2.5" />{c.phone || c.mobile}
+                                  </span>
+                                )}
+                                {c.origin && groupBy !== "origin" && (
+                                  <Badge variant="outline" className="text-[7px] h-3 px-1 shrink-0">{c.origin}</Badge>
+                                )}
+                              </div>
+                            </button>
+                            <CRMContactQuickActions contact={c} />
+                          </div>
+                        </div>
+                      ))}
+                    </>
                   ) : contacts && contacts.length === 0 ? (
                     <div className="px-3 py-2 text-[10px] text-muted-foreground">Nessun contatto</div>
+                  ) : filteredContacts && filteredContacts.length === 0 ? (
+                    <div className="px-3 py-2 text-[10px] text-muted-foreground">Nessun risultato per il filtro</div>
                   ) : null}
                 </div>
               )}
