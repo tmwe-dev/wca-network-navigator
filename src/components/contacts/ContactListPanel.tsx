@@ -1,18 +1,19 @@
-import { useState, useMemo, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  ChevronLeft, ChevronRight, Trash2,
+  Trash2,
 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useInView } from "@/hooks/useInView";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
-import { useContacts } from "@/hooks/useContacts";
+import { useContactsPaginated, type ContactPaginatedFilters } from "@/hooks/useContactsPaginated";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactActions } from "@/hooks/useContactActions";
@@ -20,7 +21,6 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { sortContacts, type SortKey, countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
-import type { ContactFilters } from "@/hooks/useContacts";
 
 interface Props {
   selectedId: string | null;
@@ -29,7 +29,6 @@ interface Props {
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
   const { filters: gf, setCrmGroupTab, setCrmWcaMatch } = useGlobalFilters();
-  const [page, setPage] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const selection = useSelection([]);
   const linkedInLookup = useLinkedInLookup();
@@ -53,54 +52,51 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);
 
-  // Build filters from global state + active group tab
-  const queryFilters: ContactFilters = useMemo(() => {
-    const f: ContactFilters = {
+  // Build filters for infinite query
+  const queryFilters: ContactPaginatedFilters = useMemo(() => {
+    const f: ContactPaginatedFilters = {
       holdingPattern: gf.holdingPattern as any,
       search: gf.search,
-      page,
-      pageSize: 200,
     };
-    // Countries
-    if (activeGroupTab && groupBy === "country") {
-      f.countries = [activeGroupTab];
-    } else if (gf.crmSelectedCountries.size > 0) {
-      f.countries = Array.from(gf.crmSelectedCountries);
-    }
-    // Origins
-    if (activeGroupTab && groupBy === "origin") {
-      f.origins = [activeGroupTab];
-    } else if (gf.crmOrigin.size > 0 && gf.crmOrigin.size < 4) {
-      f.origins = Array.from(gf.crmOrigin);
-    }
-    // Lead status
-    if (activeGroupTab && groupBy === "status") {
-      f.leadStatus = activeGroupTab as any;
-    } else if (gf.leadStatus && gf.leadStatus !== "all") {
-      f.leadStatus = gf.leadStatus as any;
-    }
-    // Channel
-    if (gf.crmChannel && gf.crmChannel !== "all") {
-      f.channel = gf.crmChannel;
-    }
-    // Quality
-    if (gf.crmQuality && gf.crmQuality !== "all") {
-      f.quality = gf.crmQuality;
-    }
-    // WCA match
-    if (wcaMatch !== "all") {
-      f.wcaMatch = wcaMatch as any;
-    }
+    if (activeGroupTab && groupBy === "country") f.countries = [activeGroupTab];
+    else if (gf.crmSelectedCountries.size > 0) f.countries = Array.from(gf.crmSelectedCountries);
+
+    if (activeGroupTab && groupBy === "origin") f.origins = [activeGroupTab];
+    else if (gf.crmOrigin.size > 0 && gf.crmOrigin.size < 4) f.origins = Array.from(gf.crmOrigin);
+
+    if (activeGroupTab && groupBy === "status") f.leadStatus = activeGroupTab;
+    else if (gf.leadStatus && gf.leadStatus !== "all") f.leadStatus = gf.leadStatus;
+
+    if (gf.crmChannel && gf.crmChannel !== "all") f.channel = gf.crmChannel;
+    if (gf.crmQuality && gf.crmQuality !== "all") f.quality = gf.crmQuality;
+    if (wcaMatch !== "all") f.wcaMatch = wcaMatch as any;
     return f;
-  }, [gf.holdingPattern, gf.search, gf.crmSelectedCountries, gf.crmOrigin, gf.leadStatus, gf.crmChannel, gf.crmQuality, page, activeGroupTab, groupBy, wcaMatch]);
+  }, [gf, activeGroupTab, groupBy, wcaMatch]);
 
-  const { data, isLoading } = useContacts(queryFilters);
-  const rawContacts = data?.items ?? [];
-  const totalCount = data?.totalCount ?? 0;
-  const pageSize = data?.pageSize ?? 200;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useContactsPaginated(queryFilters);
 
-  const contacts = useMemo(() => sortContacts(rawContacts, sortKey), [rawContacts, sortKey]);
+  // Flatten all pages
+  const contacts = useMemo(() => {
+    if (!paginatedData) return [];
+    const all = paginatedData.pages.flatMap(p => p.contacts);
+    return sortContacts(all, sortKey);
+  }, [paginatedData, sortKey]);
+
+  const totalCount = paginatedData?.pages?.[0]?.total ?? 0;
+
+  // Infinite scroll sentinel
+  const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
+  useEffect(() => {
+    if (loadMoreInView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
@@ -125,7 +121,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const handleTabClick = (key: string) => {
     setCrmGroupTab(key === activeGroupTab ? "" : key);
-    setPage(0);
   };
 
   return (
@@ -135,12 +130,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
-            {/* WCA match filter chips */}
             <div className="flex gap-1">
               {(["all", "matched", "unmatched"] as const).map(v => (
                 <button
                   key={v}
-                  onClick={() => { setCrmWcaMatch(v); setPage(0); }}
+                  onClick={() => setCrmWcaMatch(v)}
                   className={cn(
                     "text-[9px] px-1.5 py-0.5 rounded-full transition-colors",
                     wcaMatch === v
@@ -169,7 +163,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           style={{ scrollbarWidth: "thin" }}
         >
           <button
-            onClick={() => { setCrmGroupTab(""); setPage(0); }}
+            onClick={() => setCrmGroupTab("")}
             className={cn(
               "shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors",
               !activeGroupTab
@@ -246,7 +240,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
                   toast({ title: `✅ ${ids.length} contatti eliminati` });
                   selection.clear();
-                  qc.invalidateQueries({ queryKey: ["contacts"] });
+                  qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
                   qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
                 }}>
                 <Trash2 className="w-3.5 h-3.5" /> Elimina
@@ -276,7 +270,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </div>
       )}
 
-      {/* Flat contact list */}
+      {/* Flat contact list with infinite scroll */}
       <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
@@ -311,20 +305,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             })}
           </div>
         )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 px-3 py-1.5 border-t border-border/30 shrink-0">
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </Button>
-          <span className="text-[10px] text-muted-foreground">{page + 1} / {totalPages}</span>
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Button>
+        {/* Infinite scroll sentinel */}
+        <div ref={loadMoreRef} className="h-8 flex items-center justify-center">
+          {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
         </div>
-      )}
+      </div>
 
       {addOpen && (
         <Suspense fallback={null}>

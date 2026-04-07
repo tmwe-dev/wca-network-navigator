@@ -103,7 +103,7 @@ export function AppLayout() {
     <DeepSearchContext.Provider value={deepSearch}>
       <MissionProvider>
         <GlobalFiltersProvider>
-      <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+      <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)} onWheel={(e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }}>
         {/* Visual tab triggers — follow drawer edges */}
         <button
           onClick={() => setFiltersOpen(true)}
