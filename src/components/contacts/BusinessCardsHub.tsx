@@ -866,6 +866,17 @@ export default function BusinessCardsHub() {
     });
   }, [cards, selectedIds, navigate]);
 
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    if (!confirm(`Eliminare ${ids.length} biglietti da visita?`)) return;
+    const { error } = await supabase.from("business_cards").delete().in("id", ids);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    toast({ title: `✅ ${ids.length} biglietti eliminati` });
+    setSelectedIds(new Set());
+    refetch();
+  }, [selectedIds, refetch]);
+
   const showPanel = !!detailCard;
 
   return (
@@ -880,6 +891,7 @@ export default function BusinessCardsHub() {
         onWhatsApp={handleBulkWhatsApp}
         onCockpit={handleBulkCockpit}
         onWorkspace={handleBulkWorkspace}
+        onDelete={handleBulkDelete}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
