@@ -107,18 +107,30 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
     queryFn: async () => {
       if (!countryCode) return [];
 
-      const { data, error } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, partner_type")
-        .eq("is_active", true)
-        .eq("country_code", countryCode)
-        .order("company_name");
+      // Paginate to get all partners for the country
+      const PAGE_SIZE = 2000;
+      let allData: any[] = [];
+      let offset = 0;
 
-      if (error) throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from("partners")
+          .select("id, company_name, city, country_code, country_name, email, partner_type")
+          .eq("is_active", true)
+          .eq("country_code", countryCode)
+          .order("company_name")
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
 
       const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
       
-      return (data || []).map(p => ({
+      return allData.map(p => ({
         ...p,
         lat: country?.lat || 0,
         lng: country?.lng || 0,
@@ -127,6 +139,6 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
     enabled: !!countryCode,
     staleTime: 5_000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 8_000,
+    refetchInterval: 30_000,
   });
 }
