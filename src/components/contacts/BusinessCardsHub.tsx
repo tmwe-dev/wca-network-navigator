@@ -466,6 +466,11 @@ function BCABulkActionBar({ count, cards, selectedIds, onClear, onEmail, onWhats
           <ArrowRight className="w-3 h-3" /> Cockpit
         </Button>
 
+        <Button size="sm" variant="ghost" onClick={onDelete}
+          className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15">
+          <Trash2 className="w-3 h-3" /> Elimina
+        </Button>
+
         <button onClick={onClear} className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
           <X className="w-3.5 h-3.5" />
         </button>

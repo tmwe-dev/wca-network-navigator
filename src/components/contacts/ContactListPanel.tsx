@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Trash2,
 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { useContacts } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
