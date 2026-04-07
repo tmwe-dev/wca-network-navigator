@@ -22,6 +22,7 @@ import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 
 interface Props {
   selectedId: string | null;
