@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useDownloadJobs");
 
 export interface DownloadJob {
   id: string;
@@ -144,7 +147,7 @@ export function useCreateDownloadJob() {
         // If the job is stale (>2 min without update), kill it and proceed with new one
         if (ageMs > 120_000) {
           await supabase.from("download_jobs").update({ status: "stopped", error_message: "Sostituito da nuovo download" }).eq("id", job.id);
-          console.log("[CLAUDE-ENGINE] Stale job killed:", job.id);
+          log.info("stale job killed", { jobId: job.id, ageMs });
         } else {
           // Truly active job — return its ID
           return job.id;
