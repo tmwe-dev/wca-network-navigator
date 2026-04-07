@@ -2765,12 +2765,21 @@ serve(async (req) => {
 
     const { messages, context } = await req.json();
 
-    // Build system prompt with memory context
+    // Build system prompt with all context injections
     let systemPrompt = SYSTEM_PROMPT;
 
-    // Load persistent memory
-    const memoryContext = await loadMemoryContext(userId);
+    // Load all context in parallel
+    const [memoryContext, userProfile, kbContext, opPrompts] = await Promise.all([
+      loadMemoryContext(userId),
+      loadUserProfile(),
+      loadKBContext(),
+      loadOperativePrompts(userId),
+    ]);
+
+    if (userProfile) systemPrompt += userProfile;
     if (memoryContext) systemPrompt += memoryContext;
+    if (kbContext) systemPrompt += kbContext;
+    if (opPrompts) systemPrompt += opPrompts;
 
     // Add page/selection context
     if (context) {
@@ -2792,7 +2801,11 @@ serve(async (req) => {
       }
     }
 
-    const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
+    // Rolling summary: compress older messages if conversation is long
+    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || provider.apiKey;
+    const compressedMessages = await compressMessages(messages, LOVABLE_KEY, userId);
+
+    const allMessages = [{ role: "system", content: systemPrompt }, ...compressedMessages];
 
     // First call with tools — with retry and model fallback
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
