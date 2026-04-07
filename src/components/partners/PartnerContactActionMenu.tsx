@@ -95,8 +95,9 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
       onSendWhatsApp(contact);
     } else {
       const phone = (contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "");
-      if (phone) window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
-      else toast.info("Numero non disponibile");
+      if (!phone) { toast.info("Numero non disponibile"); return; }
+      // Fallback: open wa.me if no callback provided (bridge should be used via parent)
+      window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
     }
   };
 

@@ -36,28 +36,9 @@ export function useContactActions(deps: Deps) {
   const handleDeepSearch = useCallback(async (contactIds: string[]) => {
     if (deepSearchLoading || !contactIds.length) return;
     setDeepSearchLoading(true);
-    let success = 0, errors = 0;
-    toast({ title: `Deep Search avviata su ${contactIds.length} contatti...` });
-    for (const id of contactIds) {
-      try {
-        const { data, error } = await supabase.functions.invoke("deep-search-contact", { body: { contactId: id } });
-        if (error) {
-          const errMsg = typeof error === "object" && error?.message ? error.message : String(error);
-          if (errMsg.includes("402") || errMsg.includes("Crediti insufficienti")) {
-            toast({ title: "Crediti insufficienti", variant: "destructive" }); break;
-          }
-          errors++; continue;
-        }
-        if (data?.success === false && data?.error?.includes?.("Crediti")) {
-          toast({ title: "Crediti insufficienti", variant: "destructive" }); break;
-        }
-        if (data?.success) success++; else errors++;
-      } catch { errors++; }
-    }
-    invalidateContacts();
-    toast({ title: "Deep Search completata", description: `${success} arricchiti${errors > 0 ? `, ${errors} errori` : ""}`, variant: errors > 0 && success === 0 ? "destructive" : "default" });
+    toast({ title: "Deep Search disponibile tramite Partner Connect", description: "Usa il pulsante Deep Search nella vista Cockpit o Network per arricchire i contatti tramite l'estensione Partner Connect." });
     setDeepSearchLoading(false);
-  }, [deepSearchLoading, queryClient]);
+  }, [deepSearchLoading]);
 
   const handleGroupDeepSearch = useCallback(async (group: ContactGroupCount) => {
     const ids = await fetchGroupContactIds(currentGroupBy, group.group_key, holdingPattern);
