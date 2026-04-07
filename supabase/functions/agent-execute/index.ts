@@ -1755,6 +1755,16 @@ serve(async (req) => {
         contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
         for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 500)}\n\n`;
       }
+      // Load mission history
+      const { data: missions } = await supabase.from("outreach_missions").select("title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary")
+        .eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
+      if (missions?.length) {
+        contextBlock += "\n--- STORICO MISSIONI ---\n";
+        for (const m of missions) {
+          const filters = m.target_filters as any;
+          contextBlock += `- "${m.title}" [${m.status}] ${m.channel} — ${m.processed_contacts}/${m.total_contacts} — Paesi: ${filters?.countries?.join(", ") || "N/D"}\n`;
+        }
+      }
     } catch (e) { console.error("Context injection error:", e); }
 
     // Build system prompt with KB
