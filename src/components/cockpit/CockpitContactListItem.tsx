@@ -52,7 +52,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
 
 const priorityLabel = (p: number) => p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa";
 
-export function CockpitContactListItem({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
+export function CockpitContactListItem({ contact, cockpitContact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
   const oc = originConfig[contact.origin];
   const isAiProcessed = !!contact.deepSearchAt;
 
