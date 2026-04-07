@@ -7,10 +7,10 @@ export interface HoldingItem {
   id: string;
   source: HoldingSource;
   name: string;
-  country?: string;
-  countryCode?: string;
-  city?: string;
-  email?: string;
+  country?: string | null;
+  countryCode?: string | null;
+  city?: string | null;
+  email?: string | null;
   leadStatus: string;
   lastInteractionAt: string | null;
   interactionCount: number;
@@ -23,8 +23,8 @@ export interface TimelineEntry {
   subType: string;
   title: string;
   description: string | null;
-  status?: string;
-  outcome?: string;
+  status?: string | null;
+  outcome?: string | null;
 }
 
 const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];

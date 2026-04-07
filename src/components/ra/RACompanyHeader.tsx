@@ -42,8 +42,8 @@ export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
               </Badge>
             )}
             {prospect.lead_status && (
-              <Badge className={`gap-1 border ${LEAD_STATUS_LABELS[prospect.lead_status]?.color}`}>
-                {LEAD_STATUS_LABELS[prospect.lead_status]?.label}
+              <Badge className={`gap-1 border ${LEAD_STATUS_LABELS[prospect.lead_status as RALeadStatus]?.color}`}>
+                {LEAD_STATUS_LABELS[prospect.lead_status as RALeadStatus]?.label}
               </Badge>
             )}
           </div>

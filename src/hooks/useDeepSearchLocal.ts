@@ -246,8 +246,10 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     partnerId: string, websiteQualityScore: number, website: string | null,
     memberSince: string | null, branchCities: any,
   ) => {
-    const { data: services = [] } = await supabase.from("partner_services").select("service_category").eq("partner_id", partnerId);
-    const { data: networks = [] } = await supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId);
+    const { data: servicesData } = await supabase.from("partner_services").select("service_category").eq("partner_id", partnerId);
+    const { data: networksData } = await supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId);
+    const services = servicesData ?? [];
+    const networks = networksData ?? [];
 
     const websiteScore = websiteQualityScore || (website ? 2 : 1);
     const svcSet = new Set(services.map((s: any) => s.service_category));
@@ -304,15 +306,17 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
 
     if (pErr || !partner) return { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?", error: "Partner not found" };
 
-    const { data: contacts = [] } = await supabase
+    const { data: contactsData } = await supabase
       .from("partner_contacts")
       .select("id, name, title, email, mobile, direct_phone")
       .eq("partner_id", partnerId);
+    const contacts = contactsData ?? [];
 
-    const { data: existingLinks = [] } = await supabase
+    const { data: existingLinksData } = await supabase
       .from("partner_social_links")
       .select("contact_id, platform")
       .eq("partner_id", partnerId);
+    const existingLinks = existingLinksData ?? [];
 
     const existingSet = new Set(existingLinks.map((l) => `${l.contact_id || "company"}_${l.platform}`));
     const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();

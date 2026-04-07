@@ -209,7 +209,7 @@ export function useCockpitContacts() {
       if (st === "partner_contact") {
         const pc = pcMap[sid];
         if (!pc) continue;
-        const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        const partner = (pc.partner_id ? partnersMap[pc.partner_id] : undefined) || (item.partner_id ? partnersMap[item.partner_id] : undefined);
         const pMeta = extractPartnerMeta(partner);
         result.push({
           id: `pc-${pc.id}`,

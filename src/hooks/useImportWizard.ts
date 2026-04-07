@@ -275,7 +275,10 @@ export function useImportWizard() {
           return { ...mapped, _raw: row };
         });
         const nonEmptyCount = finalRows.filter(r =>
-          TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+          TARGET_COLUMNS.some(col => {
+            const val = (r as Record<string, unknown>)[col];
+            return val != null && String(val).trim();
+          })
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
         if (fillRate < 0.1) {
