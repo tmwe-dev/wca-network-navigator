@@ -213,6 +213,18 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           </motion.div>
           <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
         </button>
+
+        {/* Logout */}
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            navigate("/auth");
+          }}
+          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors group"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Esci</span>
+        </button>
       </div>
     </aside>
   );
