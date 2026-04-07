@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, MessageCircle, Send, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Rocket, MessageCircle, Send, CheckCircle2, ArrowLeft, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MissionStepRenderer, TOTAL_STEPS, type MissionStepData } from "@/components/missions/MissionStepRenderer";
 import ReactMarkdown from "react-markdown";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+const LAURA_VOICE_ID = "FGY2WhTYpPnrIDTdsKH5";
+
+/** Extract first 2 sentences from markdown text for conversational TTS */
+function extractVoiceSummary(text: string): string {
+  const clean = text.replace(/[#*_`~\[\]()>|]/g, "").replace(/\n+/g, " ").trim();
+  const sentences = clean.match(/[^.!?]+[.!?]+/g);
+  if (!sentences) return clean.slice(0, 200);
+  return sentences.slice(0, 2).join(" ").trim();
+}
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -32,6 +44,12 @@ export default function MissionBuilder() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const lastSpokenIdxRef = useRef(-1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speech = useContinuousSpeech((text) => setChatInput(text));
 
   // Load stats on mount
   useEffect(() => {
@@ -86,6 +104,47 @@ export default function MissionBuilder() {
   useEffect(() => {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // TTS on new assistant messages (conversational summary only)
+  useEffect(() => {
+    if (!voiceEnabled || isChatLoading || messages.length === 0) return;
+    const lastIdx = messages.length - 1;
+    const last = messages[lastIdx];
+    if (last.role !== "assistant" || lastIdx <= lastSpokenIdxRef.current) return;
+    lastSpokenIdxRef.current = lastIdx;
+    const summary = extractVoiceSummary(last.content);
+    if (summary.length < 5 || summary.startsWith("⚠️")) return;
+    // Fire-and-forget TTS
+    (async () => {
+      try {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        const resp = await fetch(TTS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          body: JSON.stringify({ text: summary, voiceId: LAURA_VOICE_ID }),
+        });
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; };
+        await audio.play();
+      } catch {}
+    })();
+  }, [messages, isChatLoading, voiceEnabled]);
+
+  // Stop audio on unmount
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  // Auto-send when speech stops
+  const prevListeningRef = useRef(false);
+  useEffect(() => {
+    if (prevListeningRef.current && !speech.listening && chatInput.trim()) {
+      sendChat(chatInput);
+    }
+    prevListeningRef.current = speech.listening;
+  }, [speech.listening]);
 
   // Send chat message
   const sendChat = useCallback(async (text: string) => {
@@ -296,7 +355,16 @@ export default function MissionBuilder() {
         <div className="w-[380px] border-l border-border flex flex-col bg-muted/10">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Assistente Missione</span>
+            <span className="text-sm font-medium flex-1">Assistente Missione</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => { setVoiceEnabled(v => !v); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }}
+              title={voiceEnabled ? "Disattiva voce" : "Attiva voce"}
+            >
+              {voiceEnabled ? <Volume2 className="w-3.5 h-3.5 text-primary" /> : <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />}
+            </Button>
           </div>
 
           <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
@@ -331,16 +399,29 @@ export default function MissionBuilder() {
           </ScrollArea>
 
           <div className="p-3 border-t border-border">
+            {speech.listening && speech.interimText && (
+              <div className="text-xs text-primary mb-2 animate-pulse truncate">🎙 {speech.interimText}</div>
+            )}
             <div className="flex gap-2">
               <Textarea
                 ref={chatInputRef}
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
-                placeholder="Chiedi all'AI..."
+                placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Chiedi all'AI..."}
                 className="min-h-[40px] max-h-[80px] resize-none text-sm"
                 rows={1}
               />
+              {speech.hasSpeechAPI && (
+                <Button
+                  size="icon"
+                  variant={speech.listening ? "default" : "outline"}
+                  onClick={speech.toggle}
+                  className={speech.listening ? "animate-pulse" : ""}
+                >
+                  {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
               <Button size="icon" onClick={() => sendChat(chatInput)} disabled={isChatLoading || !chatInput.trim()}>
                 <Send className="w-4 h-4" />
               </Button>
