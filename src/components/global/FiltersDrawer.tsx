@@ -886,23 +886,66 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
   const [loadingGroup, setLoadingGroup] = useState<string | null>(null);
   const [groupContacts, setGroupContacts] = useState<Record<string, any[]>>({});
 
-  // Use the RPC for group counts
+  // Lightweight direct query instead of heavy RPC (avoids statement timeout on 11k+ contacts)
   const [groups, setGroups] = useState<{ key: string; label: string; count: number }[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
 
   useEffect(() => {
     const fetchGroups = async () => {
+      setGroupsLoading(true);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        const { data } = await supabase.rpc("get_contact_group_counts");
-        if (!data) return;
-        // Map UI groupBy to RPC group_type
-        const rpcType = groupBy === "lead_status" ? "status" : groupBy === "import_group" ? "date" : groupBy;
-        const filtered = (data as any[])
-          .filter((g: any) => g.group_type === rpcType)
-          .map((g: any) => ({ key: g.group_key, label: g.group_label, count: g.contact_count }))
+        
+        // Map groupBy to the actual DB column
+        const colMap: Record<string, string> = {
+          country: "country",
+          origin: "origin",
+          lead_status: "lead_status",
+          import_group: "import_log_id",
+        };
+        const col = colMap[groupBy] || "country";
+
+        // Fetch all rows in pages of 5000 (Supabase default limit is 1000)
+        const allRows: any[] = [];
+        let from = 0;
+        const pageSize = 5000;
+        while (true) {
+          const { data: page, error: pageError } = await supabase
+            .from("imported_contacts")
+            .select(col)
+            .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+            .range(from, from + pageSize - 1);
+          if (pageError || !page || page.length === 0) break;
+          allRows.push(...page);
+          if (page.length < pageSize) break;
+          from += pageSize;
+        }
+
+        if (allRows.length === 0) { setGroups([]); return; }
+
+        // Client-side grouping (fast on ~11k lightweight rows with 1 column)
+        const counts = new Map<string, number>();
+        for (const row of allRows as any[]) {
+          const val = row[col] || (groupBy === "country" ? "??" : groupBy === "origin" ? "Sconosciuta" : "—");
+          counts.set(val, (counts.get(val) || 0) + 1);
+        }
+
+        const STATUS_LABELS: Record<string, string> = {
+          new: "Nuovo", contacted: "Contattato", in_progress: "In corso",
+          negotiation: "Trattativa", converted: "Cliente", lost: "Perso",
+        };
+
+        const grouped = Array.from(counts.entries())
+          .map(([key, count]) => ({
+            key,
+            label: groupBy === "lead_status" ? (STATUS_LABELS[key] || key) : (key === "??" ? "Sconosciuto" : key),
+            count,
+          }))
           .sort((a, b) => b.count - a.count);
-        setGroups(filtered);
-      } catch {}
+
+        setGroups(grouped);
+      } catch { setGroups([]); }
+      finally { setGroupsLoading(false); }
     };
     fetchGroups();
   }, [groupBy]);
@@ -960,8 +1003,11 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
   // City filter state for expanded groups
   const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
 
-  if (groups.length === 0) return (
+  if (groupsLoading) return (
     <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>
+  );
+  if (groups.length === 0) return (
+    <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>
   );
 
   return (
