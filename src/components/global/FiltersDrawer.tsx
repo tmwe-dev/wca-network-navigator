@@ -964,12 +964,17 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
       setLoadingGroup(key);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        let q = supabase
-          .from("imported_contacts")
-          .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
-          .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-          .order("company_name", { ascending: true })
-          .limit(500);
+        // Paginated fetch — no hard limit
+        const allContacts: any[] = [];
+        let from = 0;
+        const ps = 2000;
+        while (true) {
+          let q = supabase
+            .from("imported_contacts")
+            .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
+            .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+            .order("company_name", { ascending: true })
+            .range(from, from + ps - 1);
 
         switch (groupBy) {
           case "country":
