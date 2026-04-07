@@ -243,8 +243,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         {/* Scrollable tabs */}
         <div
           ref={tabsRef}
-          className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-thin"
-          style={{ scrollbarWidth: "thin" }}
+          className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-none"
+          style={{ scrollbarWidth: "none" }}
         >
           <button
             onClick={() => setCrmGroupTab("")}
