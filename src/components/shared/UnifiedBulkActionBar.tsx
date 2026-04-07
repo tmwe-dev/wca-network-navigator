@@ -134,6 +134,7 @@ export function UnifiedBulkActionBar({
           </TooltipTrigger><TooltipContent className="text-xs">Verifica associazione WCA</TooltipContent></Tooltip>
         )}
 
+        {onDelete && (
           <Tooltip><TooltipTrigger asChild>
             <Button size="sm" variant="ghost"
               className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15"
