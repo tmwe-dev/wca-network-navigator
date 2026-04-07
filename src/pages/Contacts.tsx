@@ -16,7 +16,6 @@ export default function Contacts() {
     setSelectedContact(null);
   }, []);
 
-  // Listen for sidebar contact selection
   useEffect(() => {
     const handler = async (e: Event) => {
       const contactId = (e as CustomEvent).detail?.contactId;
@@ -39,8 +38,8 @@ export default function Contacts() {
   return (
     <div className="h-full overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Column 1 — Contact list */}
-        <ResizablePanel defaultSize={hasDetail ? 40 : 50} minSize={22} maxSize={60}>
+        {/* Column 1 — Contact list: always gets majority of space */}
+        <ResizablePanel defaultSize={hasDetail ? 55 : 100} minSize={40} maxSize={80}>
           <div className="flex flex-col h-full border-r border-border">
             <ContactListPanel
               selectedId={selectedContact?.id ?? null}
@@ -52,8 +51,8 @@ export default function Contacts() {
         {hasDetail && (
           <>
             <ResizableHandle withHandle />
-            {/* Column 2 — Detail with close button */}
-            <ResizablePanel defaultSize={60}>
+            {/* Column 2 — Detail: starts small, max 55% */}
+            <ResizablePanel defaultSize={45} minSize={20} maxSize={55}>
               <div className="h-full bg-card relative">
                 <button
                   onClick={handleCloseDetail}
@@ -75,7 +74,7 @@ export default function Contacts() {
         {!hasDetail && (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={50}>
+            <ResizablePanel defaultSize={0} minSize={0} maxSize={0}>
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 bg-card/30">
                 <Users className="w-10 h-10 mb-3 opacity-30" />
                 <p className="text-sm font-medium">Seleziona un contatto</p>

@@ -67,9 +67,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const companyWebsite = ed?.company_website;
   const inHolding = isInHoldingPattern(c.lead_status);
 
-  // Click on card row → filter by company
   const handleRowClick = (e: React.MouseEvent) => {
-    // If clicking on checkbox or lens, don't filter
     const target = e.target as HTMLElement;
     if (target.closest('[data-no-filter]')) return;
     if (rawCompany && onFilterClick) {
@@ -107,7 +105,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Col 2: Flag (large) + country code */}
+        {/* Col 2: Flag + country code */}
         <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="flex flex-col items-center">
           <span className="text-lg leading-none">{flag}</span>
           {cCountry && (
@@ -117,8 +115,8 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </Filterable>
 
-        {/* Col 3: Company + Position below */}
-        <div className="min-w-0">
+        {/* Col 3: Company + Position */}
+        <div className="min-w-0 overflow-hidden">
           <div className="flex items-center gap-1">
             <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
               className={cn(
@@ -139,7 +137,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         </div>
 
         {/* Col 4: Contact name */}
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           {displayContact ? (
             <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
               <User className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -149,7 +147,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         </div>
 
         {/* Col 5: City */}
-        <div className="min-w-0">
+        <div className="min-w-0 overflow-hidden">
           {cCity ? (
             <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-muted-foreground text-[10px] block">
               {capitalizeLabel(cCity)}
@@ -159,30 +157,29 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 6: Origin + Lens button */}
-        <div className="min-w-0 flex items-center gap-1">
-          <div className="flex-1 min-w-0">
-            {cOrigin ? (
-              <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary font-semibold border-0 truncate max-w-full">
-                  {capitalizeLabel(cOrigin)}
-                </Badge>
-              </Filterable>
-            ) : null}
-          </div>
-          {/* Lens button → view detail */}
-          <button
-            data-no-filter
-            onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
-            className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
-            title="Visualizza dettaglio"
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
+        {/* Col 6: Origin */}
+        <div className="min-w-0 overflow-hidden">
+          {cOrigin ? (
+            <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary font-semibold border-0 truncate max-w-full">
+                {capitalizeLabel(cOrigin)}
+              </Badge>
+            </Filterable>
+          ) : null}
         </div>
+
+        {/* Col 7: Lens — always visible */}
+        <button
+          data-no-filter
+          onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
+          className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
+          title="Visualizza dettaglio"
+        >
+          <Search className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Row 2 — same grid */}
+      {/* Row 2 */}
       <div
         className={cn(CONTACT_GRID_CLASS, "px-2 pb-1.5")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
@@ -209,7 +206,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         <div />
 
         {/* Col 4: Email */}
-        <div className="flex items-center gap-0.5 min-w-0">
+        <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
           {cEmail ? (
             <>
               <Mail className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
@@ -220,12 +217,12 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 5: Lead status + holding */}
-        <div className="flex items-center gap-1 min-w-0">
+        {/* Col 5: Lead status */}
+        <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
           <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
           {c.lead_status && c.lead_status !== "new" && (
             <Filterable field="leadStatus" value={c.lead_status} onFilterClick={onFilterClick}>
-              <span className="text-[9px] text-violet-400 bg-violet-500/15 px-1 py-0 rounded-full font-medium">
+              <span className="text-[9px] text-violet-400 bg-violet-500/15 px-1 py-0 rounded-full font-medium truncate">
                 {c.lead_status}
               </span>
             </Filterable>
@@ -241,6 +238,9 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             <MessageCircle className="w-2.5 h-2.5" />{c.interaction_count || 0}
           </span>
         </div>
+
+        {/* Col 7: empty */}
+        <div />
       </div>
     </div>
   );

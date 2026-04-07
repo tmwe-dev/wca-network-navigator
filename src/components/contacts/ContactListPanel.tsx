@@ -326,6 +326,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             <SortIcon field={col.sortKey} />
           </button>
         ))}
+        <div /> {/* lens column spacer */}
       </div>
 
       {/* Bulk actions */}
