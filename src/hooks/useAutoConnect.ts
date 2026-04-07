@@ -28,7 +28,7 @@ export function useAutoConnect() {
         try {
           const r = await li.verifySession();
           liOk = r.success === true && r.authenticated === true;
-        } catch (e) { console.warn("[AutoConnect] LinkedIn session verify failed:", e); }
+        } catch {}
       }
       // No fallback to DB credentials — they don't mean you're logged in locally
 
@@ -38,7 +38,7 @@ export function useAutoConnect() {
         try {
           const r = await wa.verifySession();
           waOk = r.success === true;
-        } catch (e) { console.warn("[AutoConnect] WhatsApp session verify failed:", e); }
+        } catch {}
       }
       if (!waOk) {
         try {
@@ -48,14 +48,14 @@ export function useAutoConnect() {
             .eq("key", "whatsapp_sender")
             .maybeSingle();
           if (data?.value) waOk = true;
-        } catch (e) { console.error("[AutoConnect] failed to fetch WhatsApp sender setting:", e); }
+        } catch {}
       }
 
       // Persist real state
       try {
         await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
         await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-      } catch (e) { console.error("[AutoConnect] failed to persist connection settings:", e); }
+      } catch {}
     };
 
     const timer = setTimeout(run, 2000);

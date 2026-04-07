@@ -120,7 +120,7 @@ export default function AgentChatHub() {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch { /* audio playback not available */ }
+    } catch {}
   };
 
   if (isLoading) {

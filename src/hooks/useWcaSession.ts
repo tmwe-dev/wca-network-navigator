@@ -34,7 +34,7 @@ export function useWcaSession() {
             cookie: data.cookies,
             savedAt: Date.now(),
           }));
-        } catch { /* storage full or unavailable */ }
+        } catch {}
         return true;
       }
       setSessionActive(false);

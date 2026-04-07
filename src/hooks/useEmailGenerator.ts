@@ -39,7 +39,7 @@ export function useEmailGenerator() {
           if (error.context instanceof Response) {
             parsed = await error.context.json();
           }
-        } catch (e) { console.warn("[EmailGenerator] failed to parse error response:", e); }
+        } catch {}
         
         if (parsed?.error === "no_contact") {
           toast({

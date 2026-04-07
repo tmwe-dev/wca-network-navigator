@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
@@ -6,30 +7,29 @@ import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
-import { useCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { useClientAssignments, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommandBar";
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/pages/Cockpit";
 
-import { useCockpitViewState } from "@/hooks/useCockpitViewState";
-import { useCockpitDragDrop } from "@/hooks/useCockpitDragDrop";
-import { useBulkContactActions } from "@/hooks/useBulkContactActions";
-
 export function useCockpitLogic() {
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
   useAutoConnect();
-
-  const viewState = useCockpitViewState();
-  const { sourceTab, setActiveFilters, setViewMode } = viewState;
-
+  const [sourceTab, setSourceTab] = useState<SourceTab>("all");
+  const [activeFilters, setActiveFilters] = useState<import("@/pages/Cockpit").CockpitFilter[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
+  const [showLinkedInFlow, setShowLinkedInFlow] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     contactLinkedinUrl: null, companyName: null, countryCode: null, subject: "", body: "", language: "english",
     isGenerating: false, scrapingPhase: "idle", linkedinProfile: null,
   });
-
+  const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
@@ -50,6 +50,7 @@ export function useCockpitLogic() {
     import("@/lib/cockpitPreselection").then(({ consumeCockpitPreselection }) => {
       const pendingIds = consumeCockpitPreselection();
       if (pendingIds.length === 0) return;
+      // Match by sourceId — cockpit contacts use sourceId field
       const matchingIds = contacts
         .filter(c => pendingIds.includes(c.sourceId))
         .map(c => c.id);
@@ -61,23 +62,13 @@ export function useCockpitLogic() {
 
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
+  const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
   const linkedInLookup = useLinkedInLookup();
   const { agents } = useAgents();
   const { data: allAssignments } = useClientAssignments();
   const assignClient = useAssignClient();
-
-  const dragDrop = useCockpitDragDrop({
-    selectedIds: selection.selectedIds,
-    selectionCount: selection.count,
-  });
-  const { getDraggedIds } = dragDrop;
-
-  const bulkActions = useBulkContactActions({
-    contactsMap,
-    selection,
-    linkedInLookup,
-  });
+  const queryClient = useQueryClient();
 
   const assignmentInfoMap = useMemo(() => {
     const map = new Map<string, AssignmentInfo>();
@@ -95,7 +86,7 @@ export function useCockpitLogic() {
     if (assignmentInfoMap.has(sourceId)) return;
     const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach")) || agents.find(a => a.is_active);
     if (!salesAgent) return;
-    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch (e) { console.error("[CockpitLogic] auto-assign failed:", e); }
+    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch {}
   }, [agents, assignmentInfoMap, assignClient]);
 
   // AI Action Executor
@@ -137,7 +128,26 @@ export function useCockpitLogic() {
       }
     }
     if (message) toast.success(message);
-  }, [selection, contacts, setActiveFilters, setViewMode]);
+  }, [selection, contacts]);
+
+  const handleRemoveFilter = useCallback((filterId: string) => {
+    setActiveFilters(prev => prev.filter(f => f.id !== filterId));
+  }, []);
+
+  const handleDragStart = useCallback((id: string) => setDraggedContactId(id), []);
+  const handleDragEnd = useCallback(() => setDraggedContactId(null), []);
+
+  const getDraggedIds = useCallback((): string[] => {
+    if (!draggedContactId) return [];
+    if (selection.selectedIds.has(draggedContactId) && selection.count > 1) return Array.from(selection.selectedIds);
+    return [draggedContactId];
+  }, [draggedContactId, selection.selectedIds, selection.count]);
+
+  const dragCount = useMemo(() => {
+    if (!draggedContactId) return 0;
+    if (selection.selectedIds.has(draggedContactId) && selection.count > 1) return selection.count;
+    return 1;
+  }, [draggedContactId, selection.selectedIds, selection.count]);
 
   const handleDrop = useCallback(async (channel: DraftChannel, _contactId: string, _contactName: string) => {
     const ids = getDraggedIds();
@@ -253,33 +263,48 @@ export function useCockpitLogic() {
     }
   }, [draftState, generate, refetchCredits, contactsMap]);
 
+  const handleBulkDeepSearch = useCallback(() => toast.info(`Deep Search per ${selection.count} contatti`), [selection.count]);
+  const handleBulkAlias = useCallback(() => toast.info(`Generazione Alias per ${selection.count} contatti`), [selection.count]);
+
+  const handleBulkLinkedInLookup = useCallback(async () => {
+    const ids = Array.from(selection.selectedIds);
+    if (!ids.length) return;
+    const sourceIds = ids.map(id => contactsMap[id]).filter(c => c && c.sourceType === "contact").map(c => c!.sourceId);
+    if (!sourceIds.length) { toast.info("Seleziona contatti importati per il LinkedIn Lookup"); return; }
+    await linkedInLookup.lookupBatch(sourceIds);
+    queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+  }, [selection.selectedIds, contactsMap, linkedInLookup, queryClient]);
+
+  const handleSingleDeepSearch = useCallback((id: string) => toast.info(`Deep Search per ${contactsMap[id]?.name || id}`), [contactsMap]);
+  const handleSingleAlias = useCallback((id: string) => toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`), [contactsMap]);
+  const handleSingleLinkedInLookup = useCallback((id: string) => {
+    const contact = contactsMap[id];
+    if (!contact) return;
+    if (contact.sourceId) linkedInLookup.lookupBatch([contact.sourceId]);
+  }, [contactsMap, linkedInLookup]);
+
+  const handleBulkDelete = useCallback(() => setShowDeleteConfirm(true), []);
+  const confirmBulkDelete = useCallback(async () => {
+    const ids = Array.from(selection.selectedIds);
+    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch { toast.error("Errore durante l'eliminazione"); }
+    setShowDeleteConfirm(false);
+  }, [selection, deleteContacts]);
+
   const contactsForAI = useMemo(() =>
     contacts.map(c => ({ id: c.id, name: c.name, company: c.company, country: c.country, priority: c.priority, language: c.language, channels: c.channels })),
   [contacts]);
 
   return {
-    viewMode: viewState.viewMode, setViewMode: viewState.setViewMode,
-    sourceTab: viewState.sourceTab, setSourceTab: viewState.setSourceTab,
-    activeFilters: viewState.activeFilters, handleRemoveFilter: viewState.handleRemoveFilter,
-    executeAIActions,
-    batchMode: viewState.batchMode, setBatchMode: viewState.setBatchMode,
-    showLinkedInFlow: viewState.showLinkedInFlow, setShowLinkedInFlow: viewState.setShowLinkedInFlow,
+    viewMode, setViewMode, sourceTab, setSourceTab,
+    activeFilters, handleRemoveFilter, executeAIActions,
+    batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
     draftState, setDraftState,
-    draggedContactId: dragDrop.draggedContactId, dragCount: dragDrop.dragCount,
-    handleDragStart: dragDrop.handleDragStart, handleDragEnd: dragDrop.handleDragEnd,
-    handleDrop,
+    draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
     handleGenerateAfterReview, handleRegenerate,
     contacts, contactsMap, isLoading, selection,
-    handleBulkDeepSearch: bulkActions.handleBulkDeepSearch,
-    handleBulkAlias: bulkActions.handleBulkAlias,
-    handleBulkLinkedInLookup: bulkActions.handleBulkLinkedInLookup,
-    handleSingleDeepSearch: bulkActions.handleSingleDeepSearch,
-    handleSingleAlias: bulkActions.handleSingleAlias,
-    handleSingleLinkedInLookup: bulkActions.handleSingleLinkedInLookup,
-    handleBulkDelete: bulkActions.handleBulkDelete,
-    confirmBulkDelete: bulkActions.confirmBulkDelete,
-    showDeleteConfirm: bulkActions.showDeleteConfirm,
-    setShowDeleteConfirm: bulkActions.setShowDeleteConfirm,
+    handleBulkDeepSearch, handleBulkAlias, handleBulkLinkedInLookup,
+    handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
+    handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
   };
 }

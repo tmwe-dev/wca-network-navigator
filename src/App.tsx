@@ -15,7 +15,6 @@ import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPan
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
-import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
@@ -50,12 +49,10 @@ const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
 
 const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
 const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
-// Debug/test pages — excluded from production bundle
 const TestDownload = lazyRetry(() => import("./pages/TestDownload"));
 const TestLinkedInSearch = lazyRetry(() => import("./pages/TestLinkedInSearch"));
 const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
 const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
-const isDev = import.meta.env.DEV;
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const AILab = lazyRetry(() => import("./pages/AILab"));
 const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
@@ -98,35 +95,33 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   {/* ── 5 consolidated environments ── */}
-                  <Route path="/" element={<FeatureErrorBoundary feature="Home"><SuperHome3D /></FeatureErrorBoundary>} />
-                  <Route path="/network" element={<FeatureErrorBoundary feature="Network"><NetworkPage /></FeatureErrorBoundary>} />
-                  <Route path="/crm" element={<FeatureErrorBoundary feature="CRM"><CRM /></FeatureErrorBoundary>} />
-                  <Route path="/outreach" element={<FeatureErrorBoundary feature="Outreach"><Outreach /></FeatureErrorBoundary>} />
-                  <Route path="/inreach" element={<FeatureErrorBoundary feature="Inreach"><Inreach /></FeatureErrorBoundary>} />
-                  <Route path="/agenda" element={<FeatureErrorBoundary feature="Agenda"><Agenda /></FeatureErrorBoundary>} />
-                  <Route path="/agent-chat" element={<FeatureErrorBoundary feature="Agent Chat"><AgentChatHub /></FeatureErrorBoundary>} />
-                  <Route path="/settings" element={<FeatureErrorBoundary feature="Settings"><Settings /></FeatureErrorBoundary>} />
-                  <Route path="/settings/operators" element={<FeatureErrorBoundary feature="Settings"><OperatorsSettings /></FeatureErrorBoundary>} />
-                  <Route path="/email-composer" element={<FeatureErrorBoundary feature="Email Composer"><EmailComposer /></FeatureErrorBoundary>} />
+                  <Route path="/" element={<SuperHome3D />} />
+                  <Route path="/network" element={<NetworkPage />} />
+                  <Route path="/crm" element={<CRM />} />
+                   <Route path="/outreach" element={<Outreach />} />
+                   <Route path="/inreach" element={<Inreach />} />
+                  <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/agent-chat" element={<AgentChatHub />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/operators" element={<OperatorsSettings />} />
+                  <Route path="/email-composer" element={<EmailComposer />} />
 
-                  {/* ── Report Aziende (hidden, from Settings) ── */}
-                  <Route path="/ra" element={<FeatureErrorBoundary feature="Report Aziende"><RADashboard /></FeatureErrorBoundary>} />
-                  <Route path="/ra/explorer" element={<FeatureErrorBoundary feature="Report Aziende"><RAExplorer /></FeatureErrorBoundary>} />
-                  <Route path="/ra/scraping" element={<FeatureErrorBoundary feature="Report Aziende"><RAScrapingEngine /></FeatureErrorBoundary>} />
-                  <Route path="/ra/company/:id" element={<FeatureErrorBoundary feature="Report Aziende"><RACompanyDetail /></FeatureErrorBoundary>} />
+                   {/* ── Report Aziende (hidden, from Settings) ── */}
+                   <Route path="/ra" element={<RADashboard />} />
+                   <Route path="/ra/explorer" element={<RAExplorer />} />
+                   <Route path="/ra/scraping" element={<RAScrapingEngine />} />
+                   <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
-                  {/* ── Utility pages ── */}
-                  <Route path="/campaigns" element={<FeatureErrorBoundary feature="Campaigns"><Campaigns /></FeatureErrorBoundary>} />
-                  <Route path="/campaign-jobs" element={<FeatureErrorBoundary feature="Campaigns"><CampaignJobs /></FeatureErrorBoundary>} />
-                  {isDev && <>
-                    <Route path="/test-download" element={<TestDownload />} />
-                    <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
-                    <Route path="/test-extensions" element={<TestExtensions />} />
-                    <Route path="/diagnostics" element={<Diagnostics />} />
-                  </>}
+                   {/* ── Utility pages ── */}
+                  <Route path="/campaigns" element={<Campaigns />} />
+                  <Route path="/campaign-jobs" element={<CampaignJobs />} />
+                  <Route path="/test-download" element={<TestDownload />} />
+                  <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
+                  <Route path="/test-extensions" element={<TestExtensions />} />
+                  <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/guida" element={<Guida />} />
-                  <Route path="/ai-lab" element={<FeatureErrorBoundary feature="AI Lab"><AILab /></FeatureErrorBoundary>} />
-                  <Route path="/mission-builder" element={<FeatureErrorBoundary feature="Mission Builder"><MissionBuilder /></FeatureErrorBoundary>} />
+                   <Route path="/ai-lab" element={<AILab />} />
+                   <Route path="/mission-builder" element={<MissionBuilder />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />

@@ -1,11 +1,9 @@
-import { useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
 import { getPatternPause } from "@/hooks/useScrapingSettings";
-import { useLinkedInFlowProgress } from "./useLinkedInFlowProgress";
-import { saveEnrichmentToPartner, getProcessedCount, getCountByStatus, sleep } from "@/lib/linkedInFlowUtils";
 
 export interface LinkedInFlowJob {
   id: string;
@@ -49,9 +47,40 @@ interface FlowContact {
 export function useLinkedInFlow() {
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
-  const fp = useLinkedInFlowProgress();
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<LinkedInFlowPhase>("idle");
+  const [progress, setProgress] = useState({ total: 0, processed: 0, success: 0, errors: 0 });
+  const [currentContact, setCurrentContact] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<string | null>(null);
   const abortRef = useRef(false);
   const runningRef = useRef(false);
+
+  // Listen for realtime updates on the job
+  useEffect(() => {
+    if (!activeJobId) return;
+    const channel = supabase
+      .channel(`li-flow-${activeJobId}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "linkedin_flow_jobs",
+        filter: `id=eq.${activeJobId}`,
+      }, (payload: any) => {
+        const row = payload.new;
+        setProgress({
+          total: row.total_count,
+          processed: row.processed_count,
+          success: row.success_count,
+          errors: row.error_count,
+        });
+        if (row.status === "completed" || row.status === "cancelled") {
+          setPhase(row.status === "completed" ? "completed" : "idle");
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [activeJobId]);
 
   /**
    * Start a LinkedIn flow batch job.
@@ -79,6 +108,7 @@ export function useLinkedInFlow() {
       return null;
     }
 
+    // Preflight: verify LinkedIn session is actually authenticated
     if (hasLi) {
       const authCheck = await liBridge.ensureAuthenticated(0);
       if (!authCheck.ok) {
@@ -94,6 +124,7 @@ export function useLinkedInFlow() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Non autenticato"); return null; }
 
+    // Create job
     const { data: job, error: jobErr } = await supabase
       .from("linkedin_flow_jobs")
       .insert({
@@ -116,6 +147,7 @@ export function useLinkedInFlow() {
       return null;
     }
 
+    // Insert items
     const items = contacts.map((c, i) => ({
       job_id: job.id,
       contact_id: c.id,
@@ -132,9 +164,9 @@ export function useLinkedInFlow() {
       return null;
     }
 
-    fp.setActiveJobId(job.id);
-    fp.setProgress({ total: contacts.length, processed: 0, success: 0, errors: 0 });
-    fp.setPhase("scraping");
+    setActiveJobId(job.id);
+    setProgress({ total: contacts.length, processed: 0, success: 0, errors: 0 });
+    setPhase("scraping");
     abortRef.current = false;
     runningRef.current = true;
 
@@ -163,6 +195,7 @@ export function useLinkedInFlow() {
       return;
     }
 
+    // Read job config once
     const { data: jobData } = await supabase
       .from("linkedin_flow_jobs")
       .select("config")
@@ -176,12 +209,12 @@ export function useLinkedInFlow() {
       if (abortRef.current) {
         await supabase.from("linkedin_flow_jobs").update({ status: "cancelled" }).eq("id", jobId);
         runningRef.current = false;
-        fp.setPhase("idle");
+        setPhase("idle");
         toast.info("LinkedIn Flow interrotto");
         return;
       }
 
-      fp.setCurrentContact(item.contact_name || item.contact_id);
+      setCurrentContact(item.contact_name || item.contact_id);
 
       await supabase.from("linkedin_flow_items")
         .update({ status: "processing", started_at: new Date().toISOString() })
@@ -192,10 +225,12 @@ export function useLinkedInFlow() {
       let errorMsg: string | null = null;
 
       try {
-        // STEP 1: LinkedIn Profile Scraping
+        // ═══════════════════════════════════════════
+        // STEP 1: LinkedIn Profile Scraping (via LinkedIn Extension)
+        // ═══════════════════════════════════════════
         if (item.linkedin_url && liBridge.isAvailable) {
-          fp.setPhase("scraping");
-          fp.setCurrentStep("Scraping profilo LinkedIn...");
+          setPhase("scraping");
+          setCurrentStep("Scraping profilo LinkedIn...");
 
           const result = await liBridge.extractProfile(item.linkedin_url);
 
@@ -216,14 +251,18 @@ export function useLinkedInFlow() {
             enrichment.linkedin_error = result.error || "Extraction failed";
           }
 
+          // Human-like pause after scraping (3-6s)
           await sleep(3000 + Math.random() * 3000);
         }
 
+        // ═══════════════════════════════════════════
         // STEP 2: Website Deep Search (via Partner Connect)
+        // ═══════════════════════════════════════════
         if (jobConfig.deep_search_web && pcBridge.isAvailable && item.company_name) {
-          fp.setPhase("deep_search");
-          fp.setCurrentStep("Deep Search sito web...");
+          setPhase("deep_search");
+          setCurrentStep("Deep Search sito web...");
 
+          // Find the partner's website from DB
           const { data: partner } = await supabase
             .from("partners")
             .select("website, enrichment_data")
@@ -233,11 +272,14 @@ export function useLinkedInFlow() {
 
           const website = partner?.website;
           const existingEnrichment = (partner?.enrichment_data as Record<string, any>) || {};
+
+          // Check if cached scrape is fresh (< 30 days)
           const cachedAt = existingEnrichment.website_scraped_at;
           const isCacheFresh = cachedAt && (Date.now() - new Date(cachedAt).getTime()) < 30 * 86400000;
 
           if (website && !isCacheFresh) {
             try {
+              // Use Partner Connect to scrape the company website
               const scrapeResult = await pcBridge.scrapeUrl(website);
 
               if (scrapeResult.success && scrapeResult.markdown) {
@@ -252,7 +294,8 @@ export function useLinkedInFlow() {
                 };
                 enrichment.website_ok = true;
 
-                fp.setCurrentStep("Analisi AI del sito...");
+                // Use Partner Connect brain to analyze the content
+                setCurrentStep("Analisi AI del sito...");
                 try {
                   const analysis = await pcBridge.brainAnalyze(
                     `Analizza questa azienda per una partnership nel freight forwarding. ` +
@@ -282,18 +325,22 @@ export function useLinkedInFlow() {
           }
         }
 
+        // ═══════════════════════════════════════════
         // STEP 3: Save enrichment to partner DB
-        fp.setPhase("enriching");
-        fp.setCurrentStep("Salvataggio dati...");
+        // ═══════════════════════════════════════════
+        setPhase("enriching");
+        setCurrentStep("Salvataggio dati...");
 
         if (item.company_name) {
           await saveEnrichmentToPartner(item.company_name, enrichment);
         }
 
+        // ═══════════════════════════════════════════
         // STEP 4: AI Outreach Generation
+        // ═══════════════════════════════════════════
         if (jobConfig.generate_outreach && (enrichment.linkedin_ok || enrichment.website_ok)) {
-          fp.setPhase("generating");
-          fp.setCurrentStep("Generazione bozza AI...");
+          setPhase("generating");
+          setCurrentStep("Generazione bozza AI...");
 
           try {
             const { data: outreach } = await supabase.functions.invoke("generate-outreach", {
@@ -318,7 +365,9 @@ export function useLinkedInFlow() {
           }
         }
 
+        // ═══════════════════════════════════════════
         // STEP 5: Auto-connect (optional, smart)
+        // ═══════════════════════════════════════════
         const connStatus = enrichment.connection_status || "unknown";
         const shouldConnect = jobConfig.auto_connect
           && item.linkedin_url
@@ -327,7 +376,7 @@ export function useLinkedInFlow() {
           && connStatus !== "pending";
 
         if (shouldConnect && enrichment.outreach?.body) {
-          fp.setCurrentStep("Invio richiesta collegamento...");
+          setCurrentStep("Invio richiesta collegamento...");
           try {
             const note = enrichment.outreach.body.replace(/<[^>]+>/g, "").trim().slice(0, 295) + (enrichment.outreach.body.length > 295 ? "..." : "");
             const connResult = await liBridge.sendConnectionRequest(item.linkedin_url!, note);
@@ -341,11 +390,11 @@ export function useLinkedInFlow() {
           }
           await sleep(5000 + Math.random() * 4000);
         } else if (connStatus === "connected") {
-          fp.setCurrentStep("Già connesso — skip collegamento");
+          setCurrentStep("Già connesso — skip collegamento");
           enrichment.connection_skipped = true;
           enrichment.connection_skip_reason = "already_connected";
         } else if (connStatus === "pending") {
-          fp.setCurrentStep("Richiesta già in attesa — skip");
+          setCurrentStep("Richiesta già in attesa — skip");
           enrichment.connection_skipped = true;
           enrichment.connection_skip_reason = "pending";
         }
@@ -377,12 +426,12 @@ export function useLinkedInFlow() {
         updated_at: new Date().toISOString(),
       }).eq("id", jobId);
 
-      fp.setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
+      setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
 
-      // Human-pattern pause between contacts
+      // Human-pattern pause between contacts (fixed sequence, no regularity)
       if (idx < items.length - 1) {
         const patternPause = getPatternPause(idx);
-        fp.setCurrentStep(`Pausa ${patternPause}s...`);
+        setCurrentStep(`Pausa ${patternPause}s...`);
         await sleep(patternPause * 1000);
       }
     }
@@ -404,48 +453,137 @@ export function useLinkedInFlow() {
     }).eq("id", jobId);
 
     runningRef.current = false;
-    fp.setPhase("completed");
-    fp.setCurrentContact(null);
-    fp.setCurrentStep(null);
+    setPhase("completed");
+    setCurrentContact(null);
+    setCurrentStep(null);
     toast.success(`LinkedIn Flow completato: ${successes} OK, ${errors} errori`);
   };
 
   const stopFlow = useCallback(() => {
     abortRef.current = true;
-    fp.setPhase("paused");
+    setPhase("paused");
   }, []);
 
   const resumeFlow = useCallback(async () => {
-    if (!fp.activeJobId) return;
+    if (!activeJobId) return;
     abortRef.current = false;
     runningRef.current = true;
-    fp.setPhase("scraping");
+    setPhase("scraping");
 
     const { data: job } = await supabase
       .from("linkedin_flow_jobs")
       .select("delay_seconds")
-      .eq("id", fp.activeJobId)
+      .eq("id", activeJobId)
       .single();
 
     await supabase.from("linkedin_flow_jobs")
       .update({ status: "running" })
-      .eq("id", fp.activeJobId);
+      .eq("id", activeJobId);
 
-    processLoop(fp.activeJobId, (job?.delay_seconds as number) || 15);
-  }, [fp.activeJobId, processLoop]);
+    processLoop(activeJobId, (job?.delay_seconds as number) || 15);
+  }, [activeJobId, processLoop]);
 
   return {
     startFlow,
     stopFlow,
     resumeFlow,
-    phase: fp.phase,
-    progress: fp.progress,
-    currentContact: fp.currentContact,
-    currentStep: fp.currentStep,
-    activeJobId: fp.activeJobId,
-    isRunning: fp.isRunning,
+    phase,
+    progress,
+    currentContact,
+    currentStep,
+    activeJobId,
+    isRunning: phase === "scraping" || phase === "enriching" || phase === "deep_search" || phase === "generating",
     extensionAvailable: liBridge.isAvailable || pcBridge.isAvailable,
     linkedInAvailable: liBridge.isAvailable,
     partnerConnectAvailable: pcBridge.isAvailable,
   };
+}
+
+// ── Helpers ──
+
+async function saveEnrichmentToPartner(companyName: string, enrichment: Record<string, any>) {
+  try {
+    const { data: partners } = await supabase
+      .from("partners")
+      .select("id, enrichment_data")
+      .ilike("company_name", `%${companyName}%`)
+      .limit(1);
+
+    if (partners?.[0]) {
+      const existing = (partners[0].enrichment_data as Record<string, any>) || {};
+      const update: Record<string, any> = { ...existing };
+
+      // LinkedIn data
+      if (enrichment.linkedin_ok && enrichment.linkedin) {
+        update.linkedin_profile_name = enrichment.linkedin.name;
+        update.linkedin_profile_headline = enrichment.linkedin.headline;
+        update.linkedin_profile_location = enrichment.linkedin.location;
+        update.linkedin_profile_about = enrichment.linkedin.about?.slice(0, 2000);
+        update.linkedin_profile_url = enrichment.linkedin.profileUrl;
+        update.linkedin_scraped_at = enrichment.processed_at;
+        update.linkedin_summary = [
+          enrichment.linkedin.name,
+          enrichment.linkedin.headline,
+          enrichment.linkedin.about?.slice(0, 500),
+        ].filter(Boolean).join(" — ");
+      }
+
+      // Website data (via Partner Connect)
+      if (enrichment.website_ok && enrichment.website && !enrichment.website_cached) {
+        update.website_title = enrichment.website.title;
+        update.website_description = enrichment.website.description;
+        update.website_content_preview = enrichment.website.content_preview?.slice(0, 3000);
+        update.website_lang = enrichment.website.lang;
+        update.website_scraped_at = enrichment.processed_at;
+        update.website_scrape_source = "partner_connect";
+      }
+
+      // AI Analysis (via Partner Connect brain)
+      if (enrichment.website_analysis) {
+        update.website_analysis = enrichment.website_analysis;
+        update.website_analyzed_at = enrichment.processed_at;
+      }
+
+      // Connection status
+      if (enrichment.connection_status) {
+        update.linkedin_connection_status = enrichment.connection_status;
+      }
+      if (enrichment.connection_sent !== undefined) {
+        update.linkedin_connection_sent = enrichment.connection_sent;
+        update.linkedin_connection_at = enrichment.processed_at;
+      }
+      if (enrichment.connection_skipped) {
+        update.linkedin_connection_skipped = true;
+        update.linkedin_connection_skip_reason = enrichment.connection_skip_reason;
+      }
+
+      await supabase.from("partners").update({
+        enrichment_data: update,
+      }).eq("id", partners[0].id);
+    }
+  } catch (e) {
+    console.error("Failed to save enrichment to partner:", e);
+  }
+}
+
+async function getProcessedCount(jobId: string): Promise<number> {
+  const { count } = await supabase
+    .from("linkedin_flow_items")
+    .select("*", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .in("status", ["completed", "error"]);
+  return count || 0;
+}
+
+async function getCountByStatus(jobId: string, status: string): Promise<number> {
+  const { count } = await supabase
+    .from("linkedin_flow_items")
+    .select("*", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .eq("status", status);
+  return count || 0;
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -180,7 +180,7 @@ export function getAllDirectories(): Directory[] {
     if (key?.startsWith(DIR_PREFIX)) {
       try {
         dirs.push(JSON.parse(localStorage.getItem(key)!));
-      } catch { /* malformed cache */ }
+      } catch {}
     }
   }
   return dirs;

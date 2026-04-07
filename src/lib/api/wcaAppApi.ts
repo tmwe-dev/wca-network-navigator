@@ -18,7 +18,7 @@ async function getOrRefreshCookie(): Promise<string> {
         return parsed.cookie;
       }
     }
-  } catch { /* malformed cache */ }
+  } catch {}
 
   const res = await fetch(`${BASE}/login`, {
     method: "POST",
@@ -30,7 +30,7 @@ async function getOrRefreshCookie(): Promise<string> {
   if (!cookie) throw new Error(data.error || "Login WCA fallito");
   try {
     localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() }));
-  } catch { /* storage full or unavailable */ }
+  } catch {}
   return cookie;
 }
 

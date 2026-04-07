@@ -9,16 +9,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "html", "lcov"],
-      include: ["src/hooks/**", "src/lib/**", "src/components/**"],
-      exclude: [
-        "src/test/**",
-        "src/integrations/supabase/types.ts",
-        "src/components/ui/**",
-      ],
-    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

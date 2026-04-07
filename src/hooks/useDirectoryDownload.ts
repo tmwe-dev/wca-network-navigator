@@ -237,7 +237,7 @@ export function useDirectoryDownload({
           const parsed = JSON.parse(cached);
           if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) hasCookie = true;
         }
-      } catch { /* malformed cache */ }
+      } catch {}
       if (!hasCookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", {
           method: "POST",
@@ -250,7 +250,7 @@ export function useDirectoryDownload({
           setIsScanning(false);
           return;
         }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* storage full or unavailable */ }
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
       }
     } catch {
       setScanError("Connessione WCA fallita");

@@ -224,7 +224,7 @@ export function useImportWizard() {
       });
       setAiMapping(result);
       toast({ title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)` });
-    } catch (e) { console.error("[ImportWizard] paste analysis failed:", e); }
+    } catch {}
   }, [pasteText, analyzeStructure]);
 
   // ── Drag & Drop ──
