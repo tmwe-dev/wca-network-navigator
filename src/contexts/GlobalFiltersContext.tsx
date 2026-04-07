@@ -180,6 +180,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setCrmChannel = useCallback((s: string) => setFilters(p => ({ ...p, crmChannel: s })), []);
   const setCrmSelectedCountries = useCallback((c: Set<string>) => setFilters(p => ({ ...p, crmSelectedCountries: c })), []);
   const setCrmActiveTab = useCallback((t: string) => setFilters(p => ({ ...p, crmActiveTab: t })), []);
+  const setCrmGroupTab = useCallback((t: string) => setFilters(p => ({ ...p, crmGroupTab: t })), []);
+  const setCrmWcaMatch = useCallback((t: string) => setFilters(p => ({ ...p, crmWcaMatch: t })), []);
   const resetFilters = useCallback(() => setFilters(cloneDefaults()), []);
 
   return (
