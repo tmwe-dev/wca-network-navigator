@@ -80,7 +80,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     if (!groupCounts) return [];
     return groupCounts
       .filter(g => g.group_type === groupBy)
-      .sort((a, b) => b.contact_count - a.contact_count);
+      .sort((a, b) => a.group_label.localeCompare(b.group_label));
   }, [groupCounts, groupBy]);
 
   const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);

@@ -78,7 +78,11 @@ export function FilterDropdownMulti({
         className={cn(
           "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all border",
           selected.size > 0
-            ? "bg-primary/10 border-primary/20 text-primary"
+            ? activeColor === "danger"
+              ? "bg-destructive/10 border-destructive/20 text-destructive"
+              : activeColor === "info"
+                ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                : "bg-primary/10 border-primary/20 text-primary"
             : "border-border/40 text-muted-foreground hover:bg-muted/30"
         )}
       >
