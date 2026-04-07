@@ -298,6 +298,31 @@ export default function EmailComposer() {
     toast.info("Template caricato: " + name);
   };
 
+  const handleSaveAsTemplate = async () => {
+    const finalCategory = templateCategory === "__new__" ? customCategory.trim() : templateCategory;
+    if (!templateName.trim() || !finalCategory) {
+      toast.error("Inserisci nome e categoria");
+      return;
+    }
+    try {
+      // Save as email_templates entry (reuse existing table)
+      const { error } = await supabase.from("email_drafts" as any).insert({
+        subject,
+        html_body: htmlBody,
+        category: finalCategory,
+        recipient_type: "template",
+        status: "template",
+        total_count: 0,
+      } as any);
+      if (error) throw error;
+      setSaveTemplateOpen(false);
+      setTemplateName("");
+      setTemplateCategory("primo_contatto");
+      setCustomCategory("");
+      toast.success(`Template "${templateName}" salvato`);
+    } catch { toast.error("Errore nel salvataggio template"); }
+  };
+
   const handleSaveDraft = async () => {
     try {
       await saveDraft.mutateAsync({
