@@ -956,7 +956,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
   const [groups, setGroups] = useState<{ key: string; label: string; count: number }[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
-
+  const [contactSort, setContactSort] = useState<{ field: string; asc: boolean }>({ field: "name", asc: true });
   useEffect(() => {
     const fetchGroups = async () => {
       setGroupsLoading(true);
