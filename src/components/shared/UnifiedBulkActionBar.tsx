@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   X, Briefcase, ClipboardList, Sparkles, Linkedin, MessageCircle,
-  Megaphone, Trash2, Loader2, Globe, Send, Layers,
+  Megaphone, Trash2, Loader2, Globe, Send, Layers, Link2,
 } from "lucide-react";
 
 export type BulkSourceType = "partner" | "contact" | "business_card";
@@ -23,6 +23,7 @@ export interface UnifiedBulkActionBarProps {
   onCampaign?: () => void;
   onDelete?: () => void;
   onDeduplicate?: () => void;
+  onWcaMatch?: () => void;
 
   /* Counts for contextual labels */
   withEmail?: number;
@@ -33,15 +34,16 @@ export interface UnifiedBulkActionBarProps {
   linkedInLoading?: boolean;
   deduplicateLoading?: boolean;
   sendingToWorkspace?: boolean;
+  wcaMatchLoading?: boolean;
 }
 
 export function UnifiedBulkActionBar({
   count, onClear,
   onWorkspace, onCockpit, onEmail, onWhatsApp,
   onDeepSearch, onLinkedIn, onGoogleLogo, onCampaign,
-  onDelete, onDeduplicate,
+  onDelete, onDeduplicate, onWcaMatch,
   withEmail = 0, withPhone = 0,
-  deepSearchLoading, linkedInLoading, deduplicateLoading, sendingToWorkspace,
+  deepSearchLoading, linkedInLoading, deduplicateLoading, sendingToWorkspace, wcaMatchLoading,
 }: UnifiedBulkActionBarProps) {
   if (count === 0) return null;
 
@@ -122,6 +124,14 @@ export function UnifiedBulkActionBar({
               {deduplicateLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />} Consolida
             </Button>
           </TooltipTrigger><TooltipContent className="text-xs">Consolida duplicati</TooltipContent></Tooltip>
+        )}
+
+        {onWcaMatch && (
+          <Tooltip><TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className={btn} onClick={onWcaMatch} disabled={wcaMatchLoading}>
+              {wcaMatchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />} WCA Match
+            </Button>
+          </TooltipTrigger><TooltipContent className="text-xs">Verifica associazione WCA</TooltipContent></Tooltip>
         )}
 
         {onDelete && (

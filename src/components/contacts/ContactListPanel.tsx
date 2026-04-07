@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  Trash2, ArrowUpDown, ArrowUp, ArrowDown,
+  Trash2, ArrowUpDown, ArrowUp, ArrowDown, Plane,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
@@ -202,6 +202,16 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
+            {gf.holdingPattern === "out" && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                <Plane className="w-2.5 h-2.5" /> Fuori circuito
+              </span>
+            )}
+            {gf.holdingPattern === "in" && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20">
+                <Plane className="w-2.5 h-2.5 animate-pulse" /> In circuito
+              </span>
+            )}
             <div className="flex gap-1">
               {(["all", "matched", "unmatched"] as const).map(v => (
                 <button
@@ -379,6 +389,14 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
             qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
           } : undefined}
+          onWcaMatch={async () => {
+            const { data, error } = await supabase.rpc("match_contacts_to_wca");
+            if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+            toast({ title: `✅ WCA Match completato — ${data?.length || 0} associazioni trovate` });
+            selection.clear();
+            qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+            qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+          }}
         />
       )}
 
