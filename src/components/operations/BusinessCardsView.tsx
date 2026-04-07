@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Globe, ArrowUpAZ, ArrowDownAZ, Users, Star,
   MessageCircle, Loader2,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useBusinessCards, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
