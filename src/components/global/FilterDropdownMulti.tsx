@@ -35,6 +35,7 @@ export function FilterDropdownMulti({
   singleSelect,
   capitalize: doCapitalize = true,
   placeholder,
+  activeColor = "default",
 }: FilterDropdownMultiProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
