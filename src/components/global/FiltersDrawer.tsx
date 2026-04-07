@@ -976,25 +976,30 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
             .order("company_name", { ascending: true })
             .range(from, from + ps - 1);
 
-        switch (groupBy) {
-          case "country":
-            if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
-            else q = q.eq("country", key);
-            break;
-          case "origin":
-            if (key === "Sconosciuta") q = q.is("origin", null);
-            else q = q.eq("origin", key);
-            break;
-          case "lead_status":
-            q = q.eq("lead_status", key);
-            break;
-          case "import_group":
-            q = q.eq("import_log_id", key);
-            break;
-        }
+          switch (groupBy) {
+            case "country":
+              if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
+              else q = q.eq("country", key);
+              break;
+            case "origin":
+              if (key === "Sconosciuta") q = q.is("origin", null);
+              else q = q.eq("origin", key);
+              break;
+            case "lead_status":
+              q = q.eq("lead_status", key);
+              break;
+            case "import_group":
+              q = q.eq("import_log_id", key);
+              break;
+          }
 
-        const { data } = await q;
-        setGroupContacts(prev => ({ ...prev, [key]: data || [] }));
+          const { data: page } = await q;
+          if (!page || page.length === 0) break;
+          allContacts.push(...page);
+          if (page.length < ps) break;
+          from += ps;
+        }
+        setGroupContacts(prev => ({ ...prev, [key]: allContacts }));
       } catch {}
       finally { setLoadingGroup(null); }
     }
