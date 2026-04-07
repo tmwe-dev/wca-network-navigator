@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Send, Save, Eye, Loader2, Mail, Paperclip, Link as LinkIcon, Plus, X, Braces, Users,
+  Send, Save, Eye, Loader2, Mail, Paperclip, Link as LinkIcon, Plus, X, Braces, Users, Bookmark,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getCountryFlag } from "@/lib/countries";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
@@ -72,6 +73,17 @@ export default function EmailComposer() {
   const [linksOpen, setLinksOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Track AI-generated content to detect user edits
+  const [aiGeneratedBody, setAiGeneratedBody] = useState("");
+  const [aiGeneratedSubject, setAiGeneratedSubject] = useState("");
+  const isEditedAfterGeneration = aiGeneratedBody && (htmlBody !== aiGeneratedBody || subject !== aiGeneratedSubject);
+
+  // Save as template dialog
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("primo_contatto");
+  const [customCategory, setCustomCategory] = useState("");
 
   // Mini-dialog for unknown email
   const [unknownEmailDialog, setUnknownEmailDialog] = useState(false);
@@ -248,8 +260,8 @@ export default function EmailComposer() {
         },
       });
       if (error) throw error;
-      if (data?.subject) setSubject(data.subject);
-      if (data?.body) setHtmlBody(data.body);
+      if (data?.subject) { setSubject(data.subject); setAiGeneratedSubject(data.subject); }
+      if (data?.body) { setHtmlBody(data.body); setAiGeneratedBody(data.body); }
       toast.success("Email generata con Oracolo 🔮");
     } catch (err: any) {
       toast.error("Errore generazione AI: " + (err.message || "Sconosciuto"));
@@ -284,6 +296,31 @@ export default function EmailComposer() {
   const handleLoadTemplate = (name: string, _url: string) => {
     setSubject(name);
     toast.info("Template caricato: " + name);
+  };
+
+  const handleSaveAsTemplate = async () => {
+    const finalCategory = templateCategory === "__new__" ? customCategory.trim() : templateCategory;
+    if (!templateName.trim() || !finalCategory) {
+      toast.error("Inserisci nome e categoria");
+      return;
+    }
+    try {
+      // Save as email_templates entry (reuse existing table)
+      const { error } = await supabase.from("email_drafts" as any).insert({
+        subject,
+        html_body: htmlBody,
+        category: finalCategory,
+        recipient_type: "template",
+        status: "template",
+        total_count: 0,
+      } as any);
+      if (error) throw error;
+      setSaveTemplateOpen(false);
+      setTemplateName("");
+      setTemplateCategory("primo_contatto");
+      setCustomCategory("");
+      toast.success(`Template "${templateName}" salvato`);
+    } catch { toast.error("Errore nel salvataggio template"); }
   };
 
   const handleSaveDraft = async () => {
@@ -518,6 +555,11 @@ export default function EmailComposer() {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1.5 h-9 text-xs">
                   <Save className="w-3.5 h-3.5" /> Bozza
                 </Button>
+                {isEditedAfterGeneration && (
+                  <Button variant="outline" size="sm" onClick={() => { setTemplateName(subject); setSaveTemplateOpen(true); }} className="gap-1.5 h-9 text-xs border-primary/30 text-primary hover:bg-primary/10">
+                    <Bookmark className="w-3.5 h-3.5" /> Salva template
+                  </Button>
+                )}
                 <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
                   {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
@@ -563,6 +605,48 @@ export default function EmailComposer() {
           <DialogFooter>
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setUnknownEmailDialog(false)}>Annulla</Button>
             <Button size="sm" className="h-8 text-xs" onClick={confirmUnknownEmail}>Aggiungi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save as template dialog */}
+      <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Salva come template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <Label className="text-xs">Nome template *</Label>
+              <Input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Es. Follow-up trasporti aerei" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Tipologia *</Label>
+              <Select value={templateCategory} onValueChange={setTemplateCategory}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primo_contatto">🤝 Primo contatto</SelectItem>
+                  <SelectItem value="follow_up">🔄 Follow-up</SelectItem>
+                  <SelectItem value="richiesta_info">📋 Richiesta info</SelectItem>
+                  <SelectItem value="proposta_servizi">📦 Proposta servizi</SelectItem>
+                  <SelectItem value="partnership">🤝 Partnership</SelectItem>
+                  <SelectItem value="network_espresso">✈️ Network espresso</SelectItem>
+                  <SelectItem value="__new__">➕ Nuova categoria...</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {templateCategory === "__new__" && (
+              <div>
+                <Label className="text-xs">Nome nuova categoria *</Label>
+                <Input value={customCategory} onChange={e => setCustomCategory(e.target.value)} placeholder="Es. Post-fiera" className="h-8 text-sm" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSaveTemplateOpen(false)}>Annulla</Button>
+            <Button size="sm" className="h-8 text-xs" onClick={handleSaveAsTemplate}>Salva</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
