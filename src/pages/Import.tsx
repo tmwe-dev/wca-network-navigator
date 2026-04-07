@@ -12,7 +12,7 @@ import {
 import {
   Upload, FileText, Loader2, AlertCircle,
   Sparkles, Users, ClipboardPaste,
-  FileSearch, Download, Wand2, FolderOpen, Trash2,
+  FileSearch, Wand2, FolderOpen, Trash2,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
