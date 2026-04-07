@@ -6,6 +6,7 @@ import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
   Trash2, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
