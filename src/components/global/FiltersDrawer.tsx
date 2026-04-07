@@ -919,14 +919,17 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
     window.dispatchEvent(new CustomEvent("filters-drawer-close"));
   };
 
-  if (groups.length === 0) return null;
+  if (groups.length === 0) return (
+    <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>
+  );
 
   return (
-    <div>
+    <div className="flex-1 min-h-0">
       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
         <Users className="w-3 h-3" /> Contatti per {groupBy === "country" ? "paese" : groupBy === "origin" ? "origine" : groupBy === "lead_status" ? "stato" : "gruppo"}
+        <Badge variant="secondary" className="text-[9px] h-4 px-1.5 ml-auto">{groups.reduce((s, g) => s + g.count, 0)}</Badge>
       </label>
-      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[400px] overflow-y-auto">
+      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[calc(100vh-340px)] overflow-y-auto">
         {groups.map(group => {
           const isOpen = openGroups.has(group.key);
           const contacts = groupContacts[group.key];
