@@ -9,6 +9,8 @@ import {
   Plane, Mail, Phone, MessageCircle, Linkedin, Tag,
   ListTodo, Clock, CheckCircle2, AlertTriangle, Zap, Globe, RefreshCw,
 } from "lucide-react";
+import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
+import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode, type CockpitChannelFilter, type CockpitQualityFilter } from "@/contexts/GlobalFiltersContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
