@@ -2,13 +2,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake,
-  Globe2, Linkedin, Briefcase
+  AlertTriangle, MessageCircle, User, MapPin, Sparkles, Handshake,
+  Globe2, Linkedin
 } from "lucide-react";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { InteractionMarkers, type InteractionMarker } from "./InteractionMarkers";
-import { clean, getContactQuality } from "./contactHelpers";
+import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
