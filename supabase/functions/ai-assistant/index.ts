@@ -1137,7 +1137,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
   }
 
   let query = supabase.from("partners").select(
-    isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches",
+    isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches, member_since",
     isCount ? { count: "exact", head: true } : undefined
   );
 
