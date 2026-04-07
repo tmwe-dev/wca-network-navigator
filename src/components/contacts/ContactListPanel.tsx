@@ -6,6 +6,7 @@ import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
   Trash2, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
@@ -312,7 +313,17 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
-        <div /> {/* index+checkbox */}
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
+            onCheckedChange={(checked) => {
+              if (checked) selection.setSelectedIds(new Set(contacts.map((c: any) => c.id)));
+              else selection.clear();
+            }}
+            aria-label="Seleziona tutti"
+            className="shrink-0"
+          />
+        </div>
         <div /> {/* flag */}
         {SORT_COLUMNS.map(col => (
           <button

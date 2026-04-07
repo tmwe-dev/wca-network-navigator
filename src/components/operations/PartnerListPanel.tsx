@@ -4,6 +4,7 @@ import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -352,8 +353,19 @@ export function PartnerListPanel({
             />
           )}
 
-          {/* ROW 3: Hide holding pattern toggle */}
+          {/* ROW 3: Select all + Hide holding pattern toggle */}
           <div className="flex items-center gap-2">
+            <Checkbox
+              checked={filteredPartners.length > 0 && selectedIds.size === filteredPartners.length}
+              onCheckedChange={(checked) => {
+                if (checked) setSelectedIds(new Set(filteredPartners.map((p: any) => p.id)));
+                else setSelectedIds(new Set());
+              }}
+              aria-label="Seleziona tutti"
+              className="shrink-0"
+            />
+            <span className="text-[10px] text-muted-foreground">Tutti</span>
+            <div className="w-px h-3 bg-border/50 mx-1" />
             <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
