@@ -275,6 +275,17 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       {/* Quick actions — icon buttons */}
       <ContactQuickActions contact={c} />
       <div className="flex flex-wrap gap-1.5">
+        {c.company_name && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
+            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`, "_blank")}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Cerca Logo
+          </Button>
+        )}
         {needsAlias && (
           <Button
             variant="outline"
