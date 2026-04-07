@@ -121,6 +121,7 @@ const App = () => (
                   <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/guida" element={<Guida />} />
                    <Route path="/ai-lab" element={<AILab />} />
+                   <Route path="/mission-builder" element={<MissionBuilder />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />
