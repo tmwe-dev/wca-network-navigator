@@ -191,6 +191,27 @@ const CRM_CHANNEL = [
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const g = useGlobalFilters();
   const location = useLocation();
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const isResizing = useRef(false);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const w = Math.max(320, Math.min(ev.clientX, window.innerWidth * 0.8));
+      setDrawerWidth(w);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const resizeRef = useRef<HTMLDivElement>(null);
 
   const route = location.pathname;
   const isOutreach = route === "/outreach";
