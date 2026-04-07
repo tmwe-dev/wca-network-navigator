@@ -1,50 +1,122 @@
 
 
-# Allineamento card contatti a colonne + conteggio nei chip filtro
+# Analisi Gap: Network vs CRM (Contatti + Biglietti da Visita)
 
-## Problemi dallo screenshot
+## Panoramica
 
-1. **Città e Paese sotto il nome azienda** a sinistra (riga 2) — devono stare sotto le rispettive colonne header (Città, Paese)
-2. **Origine nel badge** non allineata sotto la colonna "Origine" — è nella riga 1 a destra
-3. **Email** disallineata — non sotto una colonna dedicata
-4. **Chip filtro attivo** (es. "AEROSPAZIALE ✕") non mostra il conteggio dei risultati filtrati
-5. **"Cliente" appare come nome contatto** quando non c'è un nome — non deve mostrare niente se non c'è nome reale
+Ho analizzato in profondità le tre sezioni — **Network** (PartnerListPanel + BusinessCardsView), **CRM Contatti** (ContactListPanel) e **CRM Biglietti** (BusinessCardsHub) — confrontando le funzionalità disponibili.
 
-## Soluzione: layout a griglia con colonne allineate all'header
+---
 
-Le colonne dell'header e le righe della card devono avere le stesse larghezze fisse. Ogni valore va nella colonna corrispondente.
-
-### Layout card (2 righe, stesse colonne dell'header)
+## Matrice Funzionalità: cosa c'è e cosa manca
 
 ```text
-HEADER:   [#/□  🏳]  [Azienda ↕      ]  [Contatto ↕    ]  [Città ↕  ]  [Paese ↕  ]  [Origine ↕  ]
-RIGA 1:   #33 □  🇮🇹   CHECK SOLUTION srl  Lorena · CEO      Milano       Italy        AEROSPAZIALE
-RIGA 2:              (indicatori)          mario@email.com   (lead st.)   (interaz.)   (azioni)
+Funzionalità                    Network/Partners  Network/BCA  CRM/Contatti  CRM/Biglietti
+──────────────────────────────  ────────────────  ───────────  ────────────  ─────────────
+Deep Search (bulk)                   ✅              ✅            ✅            ❌
+Deep Search (singolo)                ✅              ✅            ✅            ❌
+Ricerca Google Logo                  ✅              ✅            ❌            ✅ (solo detail)
+LinkedIn Lookup (bulk)               ❌              ❌            ✅            ❌
+Invio Cockpit (bulk)                 ✅              ✅            ✅ (via Job)   ✅
+Invio Workspace (bulk)               ✅              ❌            ✅            ❌
+Email (singolo/bulk)                 ✅              ✅            ✅            ✅
+WhatsApp (singolo/bulk)              ❌              ✅            ❌            ✅
+Campagna (bulk)                      ❌              ❌            ✅            ❌
+Elimina (bulk)                       ❌              ❌            ✅            ✅ (tramite Hub)
+Deduplicazione/Consolidamento        ✅ (Edge Fn)    ❌            ❌            ❌
+AI Match (BCA → Partner)             ❌              ❌            ✅ (dialog)   ❌
+Generazione Alias (bulk)             ✅              ❌            ❌            ❌
+Filtro Holding Pattern               ✅              ✅            ✅            ✅
+Filtro per Paese (sidebar)           ✅ (mappa)      ✅ (sidebar)  ✅ (drawer)   ✅ (drawer)
+Sync WCA                             ❌              ✅            ❌            ✅
+Vista multipla (compact/card/exp)    ❌              ✅            ❌            ✅
 ```
 
-Struttura a `grid` con `grid-template-columns` identiche tra header e card:
-- Col 1: `42px` — index + checkbox
-- Col 2: `20px` — bandiera
-- Col 3: `1fr` (min 140px) — Azienda (riga 1) / indicatori (riga 2)
-- Col 4: `1fr` (min 120px) — Contatto (riga 1) / Email con icona (riga 2)
-- Col 5: `90px` — Città (riga 1) / lead status (riga 2)
-- Col 6: `80px` — Paese (riga 1) / interazioni (riga 2)
-- Col 7: `90px` — Origine badge (riga 1) / azioni (riga 2)
+---
 
-### Chip filtro con conteggio
+## Gap critici identificati
 
-Il chip "AEROSPAZIALE ✕" diventa **"AEROSPAZIALE (84) ✕"** — mostrando `totalCount` dal query corrente.
+### 1. Consolidamento/Deduplicazione — ASSENTE nel CRM
+- **Network** ha una Edge Function `deduplicate-partners` che raggruppa per `company_name + country_code`, assegna punteggi di completezza e fonde i record duplicati spostando relazioni
+- **CRM Contatti e Biglietti**: nessuna funzione di consolidamento. Se hai "ARGUS GLOBAL LOGISTICS" due volte con dati diversi, non puoi fonderli
 
-### Fix "Cliente" come nome contatto
+### 2. Deep Search — ASSENTE nei Biglietti CRM
+- **Network/BCA** ha Deep Search tramite `useDeepSearch` che opera sui `partner_id` matchati
+- **CRM Contatti** ha Deep Search nella bulk action bar (max 20)
+- **CRM Biglietti (Hub)** non ha alcun pulsante Deep Search — né singolo né bulk
 
-Se `c.name` non esiste, non mostrare nulla (trattino `—`), non "Cliente".
+### 3. Ricerca Google Logo — ASSENTE nei Contatti CRM
+- **Network** e **Biglietti** hanno `googleLogoSearchUrl` per cercare il logo
+- **Contatti CRM**: nessun pulsante per cercare il logo dell'azienda
+
+### 4. LinkedIn Lookup — SOLO nei Contatti CRM
+- Solo `ContactListPanel` integra `useLinkedInLookup` per la ricerca batch dei profili LinkedIn
+- Non disponibile in Network, né in Biglietti
+
+### 5. WhatsApp bulk — SOLO nei Biglietti
+- Il bulk WhatsApp è nel BCA Hub e nel BusinessCardsView, ma non nei Contatti CRM né in Network/Partners
+
+### 6. Workspace bulk — ASSENTE nei Biglietti CRM
+- Network/Partners ha "Workspace" nella barra bulk
+- CRM Contatti ha "Workspace" nella barra bulk
+- CRM Biglietti ha solo Cockpit, Email, WhatsApp, Elimina — manca Workspace
+
+### 7. Campagna — SOLO nei Contatti CRM
+- Solo `ContactListPanel` ha il pulsante "Campagna" nella bulk bar
+
+---
+
+## Piano di Intervento proposto
+
+### Step 1: Componente Bulk Action Bar unificato
+Creare un **unico componente `UnifiedBulkActionBar`** che riceve:
+- Il tipo di sorgente (`partner` | `contact` | `business_card`)
+- Le azioni disponibili in base al contesto
+- I dati dei record selezionati
+
+Tutte le sezioni lo usano. Azioni standardizzate:
+- **Cockpit** — sempre disponibile
+- **Workspace** — sempre disponibile
+- **Email** — se almeno un record ha email
+- **WhatsApp** — se almeno un record ha telefono
+- **Deep Search** — sempre (opera su partner_id per BCA, su contact_id per contatti)
+- **LinkedIn Lookup** — se estensione disponibile
+- **Google Logo** — se almeno un record ha company_name
+- **Campagna** — sempre disponibile
+- **Elimina** — sempre disponibile (con conferma)
+
+### Step 2: Consolidamento AI per Contatti CRM
+Riutilizzare la logica di `deduplicate-partners` in una nuova **Edge Function `deduplicate-contacts`**:
+- Raggruppa per `company_name` normalizzato (lowercase, trim)
+- Punteggio di completezza (email, telefono, LinkedIn, enrichment)
+- Mantiene il record più ricco, sposta le interazioni e fonde i dati
+- UI: pulsante "Consolida duplicati" nella bulk bar quando 2+ selezionati hanno lo stesso nome azienda, oppure un pulsante globale "Trova duplicati" nell'header
+
+### Step 3: Deep Search nei Biglietti CRM
+Aggiungere `useDeepSearch` al BusinessCardsHub:
+- Per i biglietti matchati: opera sul `partner_id`
+- Per i non matchati: prima tenta il match, poi opera
+- Pulsante nella bulk bar + pulsante nel detail panel
+
+### Step 4: Google Logo nei Contatti CRM
+Aggiungere il pulsante "Cerca logo Google" nel detail panel dei contatti e nella bulk bar
+
+### Step 5: LinkedIn Lookup ovunque
+Estendere `useLinkedInLookup` a Network/Partners e ai Biglietti
+
+---
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactCard.tsx` | Ristrutturare layout: spostare città, paese, origine nelle colonne corrette usando grid con stesse larghezze dell'header; riga 2 con email sotto "Contatto", lead status sotto "Città"; rimuovere "Cliente" fallback |
-| `src/components/contacts/ContactListPanel.tsx` | Header ordinabile con grid identiche alla card; chip filtro con `(totalCount)` incluso; grid-template-columns condiviso come costante |
+| `src/components/shared/UnifiedBulkActionBar.tsx` | **Nuovo** — Componente bulk bar standardizzato |
+| `src/components/contacts/ContactListPanel.tsx` | Sostituire bulk bar con `UnifiedBulkActionBar`, aggiungere Google Logo |
+| `src/components/contacts/BusinessCardsHub.tsx` | Sostituire `BCABulkActionBar` con `UnifiedBulkActionBar`, aggiungere Deep Search + Workspace + LinkedIn + Campagna |
+| `src/components/operations/PartnerListPanel.tsx` | Sostituire selezione bar con `UnifiedBulkActionBar`, aggiungere LinkedIn + WhatsApp + Campagna |
+| `src/components/operations/BusinessCardsView.tsx` | Aggiungere Workspace + LinkedIn + Campagna nella bulk bar |
+| `supabase/functions/deduplicate-contacts/index.ts` | **Nuovo** — Edge Function consolidamento contatti |
+| `src/components/contacts/ContactDetailPanel.tsx` | Aggiungere pulsante Google Logo |
 
-Nessuna migrazione DB.
+Migration SQL per `deduplicate-contacts` — nessuna nuova tabella, opera su `imported_contacts` esistente.
 
