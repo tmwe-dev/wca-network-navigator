@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent browser back/forward on horizontal swipe */
+html, body {
+  overscroll-behavior-x: none;
+}
+
 @layer base {
   :root {
     --background: 210 40% 98%;
