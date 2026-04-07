@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
@@ -41,6 +42,7 @@ interface Props {
 export function ContactActionMenu({ contact, children }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { handleSendWhatsApp: bridgeSendWhatsApp, waAvailable } = useDirectContactActions();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -111,10 +113,13 @@ export function ContactActionMenu({ contact, children }: Props) {
   const handleSendEmail = () => {
     navigate("/email-composer", {
       state: {
+        partnerIds: contact.partnerId ? [contact.partnerId] : [],
         prefilledRecipient: {
           email: contact.email,
           name: contact.name,
           company: contact.company,
+          partnerId: contact.partnerId,
+          contactId: contact.sourceId,
         },
       },
     });
@@ -122,11 +127,19 @@ export function ContactActionMenu({ contact, children }: Props) {
 
   const handleSendWhatsApp = () => {
     const phone = contact.phone?.replace(/[^0-9+]/g, "");
-    if (phone) {
-      window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
-    } else {
+    if (!phone) {
       toast.info("Numero di telefono non disponibile");
+      return;
     }
+    bridgeSendWhatsApp({
+      phone,
+      contactName: contact.name,
+      companyName: contact.company,
+      contactId: contact.sourceId,
+      partnerId: contact.partnerId,
+      sourceType: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
+      sourceId: contact.partnerId || contact.sourceId,
+    });
   };
 
   return (

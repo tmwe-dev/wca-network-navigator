@@ -63,7 +63,7 @@ export function useDirectContactActions() {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
             await supabase.from("activities").insert({
-              activity_type: "phone_call" as any,
+              activity_type: "whatsapp_message" as any,
               title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
               source_type: opts.sourceType || "partner",
               source_id: opts.sourceId || opts.partnerId || opts.contactId || "",

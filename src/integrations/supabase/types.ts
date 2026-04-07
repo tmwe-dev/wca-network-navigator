@@ -3179,6 +3179,8 @@ export type Database = {
         | "meeting"
         | "follow_up"
         | "other"
+        | "whatsapp_message"
+        | "linkedin_message"
       campaign_job_status: "pending" | "in_progress" | "completed" | "skipped"
       campaign_job_type: "email" | "call"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
@@ -3350,6 +3352,8 @@ export const Constants = {
         "meeting",
         "follow_up",
         "other",
+        "whatsapp_message",
+        "linkedin_message",
       ],
       campaign_job_status: ["pending", "in_progress", "completed", "skipped"],
       campaign_job_type: ["email", "call"],
