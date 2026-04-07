@@ -72,7 +72,7 @@ export function useWcaSync() {
               log.error("sse error", { message: evt.message });
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch {}
+          } catch { /* intentionally ignored: best-effort cleanup */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["partners"] });

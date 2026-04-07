@@ -215,7 +215,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
         try {
           const domain = new URL(websiteUrl).hostname;
           logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
         if (logoUrl) {
           const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
           if (!error) logoFound = true;
@@ -497,7 +497,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
           const domain = new URL(websiteUrl).hostname;
           const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
           if (logoUrl) logoFound = true;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
         if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
           const qa = await aiCall(
             `Rate this company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,

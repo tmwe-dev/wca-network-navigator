@@ -42,7 +42,7 @@ export function useEmailGenerator() {
           if (error.context instanceof Response) {
             parsed = await error.context.json();
           }
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
         
         if (parsed?.error === "no_contact") {
           toast({

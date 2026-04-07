@@ -669,7 +669,7 @@ function CRMFiltersSection() {
             .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
             .sort((a, b) => (b.count || 0) - (a.count || 0))
         );
-      } catch {}
+      } catch { /* intentionally ignored: best-effort cleanup */ }
     };
     fetchData();
   }, []);
@@ -1226,7 +1226,7 @@ function BCAFiltersSection() {
         });
         setBcaEvents(Object.entries(evCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
         setBcaStatuses(Object.entries(stCounts).map(([status, count]) => ({ status, count })));
-      } catch {}
+      } catch { /* intentionally ignored: best-effort cleanup */ }
     };
     fetchMeta();
   }, []);

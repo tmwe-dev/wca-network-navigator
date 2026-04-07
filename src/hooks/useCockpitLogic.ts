@@ -89,7 +89,7 @@ export function useCockpitLogic() {
     if (assignmentInfoMap.has(sourceId)) return;
     const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach")) || agents.find(a => a.is_active);
     if (!salesAgent) return;
-    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch {}
+    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch { /* intentionally ignored: best-effort cleanup */ }
   }, [agents, assignmentInfoMap, assignClient]);
 
   // AI Action Executor
