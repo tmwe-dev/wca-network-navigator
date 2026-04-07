@@ -35,6 +35,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const linkedInLookup = useLinkedInLookup();
   const parentRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const qc = useQueryClient();
 
   const sortKey = (gf.sortBy || "company") as SortKey;
   const groupBy = gf.groupBy || "country";
