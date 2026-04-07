@@ -84,7 +84,8 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                   c={c}
                   isActive={selectedId === c.id}
                   isSelected={selection.selectedIds.has(c.id)}
-                  onSelect={() => onSelect(c)}
+                  onSelect={() => {}}
+                  onViewDetail={() => onSelect(c)}
                   onToggle={() => selection.toggle(c.id)}
                   index={page * pageSize + virtualRow.index}
                   
