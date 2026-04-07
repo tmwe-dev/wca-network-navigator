@@ -224,12 +224,12 @@ function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: 
 
   return (
     <div className={cn(
-      "relative flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden cursor-pointer",
+      "relative flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-colors hover:bg-muted/40 border border-transparent overflow-hidden cursor-pointer group/row",
       isSelected && "bg-primary/10 border-primary/20",
     )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l", accent.border)} />
       
-      {/* Row 1: Checkbox, Flag, Company, Status, Icons */}
+      {/* Row 1: Checkbox, Flag, Company, Status, Icons, Quick Actions */}
       <div className="flex items-center gap-2 min-w-0">
         <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 shrink-0" onClick={(e) => e.stopPropagation()} />
         {flag && <span className="text-sm shrink-0">{flag}</span>}
@@ -239,6 +239,7 @@ function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: 
         </span>
         {card.email && <Mail className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
         {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
+        <BCAQuickActions card={card} />
       </div>
 
       {/* Row 2: Contact name, Position, City, Event, WCA year */}
