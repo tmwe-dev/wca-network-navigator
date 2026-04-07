@@ -372,7 +372,7 @@ export function PartnerListPanel({
                 const ids = Array.from(selectedIds);
                 if (ids.length > 0) onDeepSearch(ids);
               } : undefined}
-              deepSearchRunning={deepSearchRunning}
+              deepSearchLoading={deepSearchRunning}
               onLinkedIn={() => {
                 const partner = (partners || []).find((p: any) => selectedIds.has(p.id));
                 if (partner) {
