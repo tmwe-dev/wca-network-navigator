@@ -14,6 +14,7 @@ import {
   FileSpreadsheet, FileText, CheckCircle2, Mail, Phone, Eye, LayoutGrid, LayoutList, Rows3,
   Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight, Trash2,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
