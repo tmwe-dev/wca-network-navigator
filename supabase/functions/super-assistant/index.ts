@@ -69,6 +69,23 @@ serve(async (req) => {
     // Fetch context data in parallel
     const contextParts: string[] = [];
 
+    // Load user profile from app_settings
+    const { data: aiSettings } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .like("key", "ai_%");
+
+    if (aiSettings?.length) {
+      const get = (k: string) => aiSettings.find((s: any) => s.key === k)?.value?.trim() || "";
+      const profileParts: string[] = [];
+      if (get("ai_company_name")) profileParts.push(`Azienda: ${get("ai_company_name")} (${get("ai_company_alias")})`);
+      if (get("ai_contact_name")) profileParts.push(`Referente: ${get("ai_contact_name")} — ${get("ai_contact_role")}`);
+      if (get("ai_company_activities")) profileParts.push(`Attività: ${get("ai_company_activities")}`);
+      if (get("ai_business_goals")) profileParts.push(`Obiettivi: ${get("ai_business_goals")}`);
+      if (get("ai_behavior_rules")) profileParts.push(`Regole: ${get("ai_behavior_rules")}`);
+      if (profileParts.length) contextParts.push(`## Profilo Utente\n${profileParts.join("\n")}`);
+    }
+
     if (systemStats) {
       contextParts.push(`## Statistiche Sistema\n${JSON.stringify(systemStats, null, 2)}`);
     }
