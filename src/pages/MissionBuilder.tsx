@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MissionStepRenderer, type MissionStepData } from "@/components/missions/MissionStepRenderer";
+import { MissionStepRenderer, TOTAL_STEPS, type MissionStepData } from "@/components/missions/MissionStepRenderer";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -165,7 +165,7 @@ export default function MissionBuilder() {
 
   // Complete step
   const handleStepComplete = useCallback(async () => {
-    if (currentStep === 5) {
+    if (currentStep === TOTAL_STEPS - 1) {
       // Launch mission
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -183,6 +183,12 @@ export default function MissionBuilder() {
           total_contacts: totalContacts,
           agent_assignments: stepData.agents || [],
           schedule_config: { type: stepData.schedule, date: stepData.scheduleDate },
+          metadata: {
+            deepSearch: stepData.deepSearch || {},
+            communication: stepData.communication || {},
+            attachments: stepData.attachments || {},
+            toneConfig: stepData.toneConfig || {},
+          },
         }).select().single();
 
         if (error) throw error;
@@ -239,11 +245,11 @@ export default function MissionBuilder() {
             className="bg-transparent text-lg font-semibold text-foreground outline-none w-full placeholder:text-muted-foreground/50"
           />
         </div>
-        <div className="flex gap-1">
-          {[0, 1, 2, 3, 4, 5].map(i => (
+        <div className="flex gap-0.5">
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <div
               key={i}
-              className={`w-8 h-1.5 rounded-full transition-all ${
+              className={`w-6 h-1.5 rounded-full transition-all ${
                 completedSteps.includes(i) ? "bg-primary" : i === currentStep ? "bg-primary/50" : "bg-muted"
               }`}
             />
