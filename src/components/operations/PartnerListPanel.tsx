@@ -4,6 +4,7 @@ import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
