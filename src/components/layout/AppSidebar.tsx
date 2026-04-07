@@ -1,10 +1,11 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox, Target,
+  Earth, Send, Inbox, Target, LogOut,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWcaSession } from "@/hooks/useWcaSession";
