@@ -10,6 +10,7 @@ import {
 import {
   Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X, ArrowUpDown,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -361,19 +362,41 @@ export function PartnerListPanel({
 
           {/* SELECTION ACTION BAR */}
           {selectedIds.size > 0 && (
-            <div className={cn("flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-2", "bg-primary/5 border-primary/20")}>
-              <span className="text-xs font-bold text-primary">{selectedIds.size} selezionati</span>
-              <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("cockpit")}>
-                <Inbox className="w-3 h-3" /> Cockpit
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("workspace")}>
-                <LayoutGrid className="w-3 h-3" /> Workspace
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
-                ✕
-              </Button>
-            </div>
+            <UnifiedBulkActionBar
+              count={selectedIds.size}
+              sourceType="partner"
+              onClear={() => setSelectedIds(new Set())}
+              onCockpit={() => handleSendTo("cockpit")}
+              onWorkspace={() => handleSendTo("workspace")}
+              onDeepSearch={onDeepSearch ? () => {
+                const ids = Array.from(selectedIds);
+                if (ids.length > 0) onDeepSearch(ids);
+              } : undefined}
+              deepSearchLoading={deepSearchRunning}
+              onLinkedIn={() => {
+                const partner = (partners || []).find((p: any) => selectedIds.has(p.id));
+                if (partner) {
+                  const name = (partner as any).company_name || "";
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(name + " LinkedIn")}`, "_blank");
+                }
+              }}
+              onWhatsApp={() => {
+                const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
+                for (const p of partnerList as any[]) {
+                  const contacts = p.partner_contacts || [];
+                  const c = contacts.find((c: any) => c.mobile || c.direct_phone);
+                  if (c) {
+                    const phone = (c.mobile || c.direct_phone || "").replace(/[^0-9+]/g, "");
+                    if (phone) { window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank"); break; }
+                  }
+                }
+              }}
+              onCampaign={() => {
+                navigate("/email-composer", {
+                  state: { partnerIds: Array.from(selectedIds) },
+                });
+              }}
+            />
           )}
         </div>
 

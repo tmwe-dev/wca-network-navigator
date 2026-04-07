@@ -6,6 +6,7 @@ import {
   Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
   Trash2, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
@@ -331,60 +332,43 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
       {/* Bulk actions */}
       {isBulk && (
-        <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-semibold text-violet-300 mr-1">{selection.count} sel.</span>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className={btnClass}
-                onClick={() => actions.handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}>
-                <Briefcase className="w-3.5 h-3.5" /> Workspace
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Invia al Workspace Email</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className={btnClass}
-                onClick={() => actions.handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}>
-                <ClipboardList className="w-3.5 h-3.5" /> Job
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Crea Job Campagna</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className={btnClass} disabled={actions.deepSearchLoading}
-                onClick={() => actions.handleDeepSearch(Array.from(selection.selectedIds).slice(0, 20))}>
-                {actions.deepSearchLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Deep Search
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Arricchisci con Deep Search (max 20)</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className={btnClass} disabled={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
-                onClick={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}>
-                {actions.linkedInLookupLoading || linkedInLookup.progress.status === "running" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Linkedin className="w-3.5 h-3.5" />} LinkedIn
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Cerca URL LinkedIn via Google</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className={btnClass} onClick={actions.handleBulkCampaign}>
-                <Megaphone className="w-3.5 h-3.5" /> Campagna
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Aggiungi a Campagna</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost"
-                className="h-7 px-2.5 text-xs gap-1.5 text-destructive hover:bg-destructive/10"
-                onClick={async () => {
-                  const ids = Array.from(selection.selectedIds);
-                  if (!confirm(`Eliminare ${ids.length} contatti?`)) return;
-                  const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
-                  if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
-                  toast({ title: `✅ ${ids.length} contatti eliminati` });
-                  selection.clear();
-                  qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-                  qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
-                }}>
-                <Trash2 className="w-3.5 h-3.5" /> Elimina
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Elimina contatti selezionati</TooltipContent></Tooltip>
-            <button onClick={() => { selection.clear(); setSelectedGroups(new Set()); }}
-              className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+        <UnifiedBulkActionBar
+          count={selection.count}
+          sourceType="contact"
+          onClear={() => { selection.clear(); setSelectedGroups(new Set()); }}
+          onWorkspace={() => actions.handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}
+          onCockpit={() => actions.handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}
+          onDeepSearch={() => actions.handleDeepSearch(Array.from(selection.selectedIds).slice(0, 20))}
+          deepSearchLoading={actions.deepSearchLoading}
+          onLinkedIn={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}
+          linkedInLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
+          onCampaign={actions.handleBulkCampaign}
+          onGoogleLogo={() => {
+            const ids = Array.from(selection.selectedIds);
+            const c = contacts.find(x => ids.includes(x.id));
+            if (c?.company_name) window.open(`https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`, "_blank");
+          }}
+          onDelete={async () => {
+            const ids = Array.from(selection.selectedIds);
+            if (!confirm(`Eliminare ${ids.length} contatti?`)) return;
+            const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
+            if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+            toast({ title: `✅ ${ids.length} contatti eliminati` });
+            selection.clear();
+            qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+            qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+          }}
+          onDeduplicate={selection.count >= 2 ? async () => {
+            const { data, error } = await supabase.functions.invoke("deduplicate-contacts", {
+              body: { contactIds: Array.from(selection.selectedIds) },
+            });
+            if (error) { toast({ title: "Errore", description: String(error), variant: "destructive" }); return; }
+            toast({ title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati` });
+            selection.clear();
+            qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+            qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+          } : undefined}
+        />
       )}
 
       {linkedInLookup.progress.status === "running" && (

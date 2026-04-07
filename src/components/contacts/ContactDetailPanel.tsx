@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
@@ -275,6 +275,17 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       {/* Quick actions — icon buttons */}
       <ContactQuickActions contact={c} />
       <div className="flex flex-wrap gap-1.5">
+        {c.company_name && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
+            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`, "_blank")}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Cerca Logo
+          </Button>
+        )}
         {needsAlias && (
           <Button
             variant="outline"
