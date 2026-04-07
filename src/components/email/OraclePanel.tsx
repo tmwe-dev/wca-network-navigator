@@ -83,6 +83,17 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
     if (selectedType?.id === id) setSelectedType(null);
   };
 
+  const handleDuplicate = (newType: EmailType) => {
+    const updated = [...customTypes, newType];
+    updateSetting.mutate({ key: "email_oracle_types", value: JSON.stringify(updated) });
+    setSelectedType(newType);
+  };
+
+  const openDetail = (t: EmailType) => {
+    setDetailType(t);
+    setDetailOpen(true);
+  };
+
   const salesKB = settings?.ai_sales_knowledge_base || "";
   const companyKB = settings?.ai_knowledge_base || "";
 
