@@ -90,9 +90,28 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
       else if (filters?.wcaMatch === "unmatched") query = query.is("wca_partner_id", null);
 
       // Sorting
-      if (filters?.sort === "name") {
+      const sort = filters?.sort || "company_asc";
+      if (sort === "company_asc") {
+        query = query.order("company_name", { ascending: true, nullsFirst: false }).order("name");
+      } else if (sort === "company_desc") {
+        query = query.order("company_name", { ascending: false, nullsFirst: true }).order("name");
+      } else if (sort === "name_asc") {
         query = query.order("name", { ascending: true, nullsFirst: false }).order("company_name");
-      } else if (filters?.sort === "recent") {
+      } else if (sort === "name_desc") {
+        query = query.order("name", { ascending: false, nullsFirst: true }).order("company_name");
+      } else if (sort === "city_asc") {
+        query = query.order("city", { ascending: true, nullsFirst: false }).order("company_name");
+      } else if (sort === "city_desc") {
+        query = query.order("city", { ascending: false, nullsFirst: true }).order("company_name");
+      } else if (sort === "country_asc") {
+        query = query.order("country", { ascending: true, nullsFirst: false }).order("company_name");
+      } else if (sort === "country_desc") {
+        query = query.order("country", { ascending: false, nullsFirst: true }).order("company_name");
+      } else if (sort === "origin_asc") {
+        query = query.order("origin", { ascending: true, nullsFirst: false }).order("company_name");
+      } else if (sort === "origin_desc") {
+        query = query.order("origin", { ascending: false, nullsFirst: true }).order("company_name");
+      } else if (sort === "recent") {
         query = query.order("created_at", { ascending: false });
       } else {
         query = query.order("company_name", { ascending: true, nullsFirst: false }).order("name");
