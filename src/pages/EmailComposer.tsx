@@ -555,6 +555,11 @@ export default function EmailComposer() {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1.5 h-9 text-xs">
                   <Save className="w-3.5 h-3.5" /> Bozza
                 </Button>
+                {isEditedAfterGeneration && (
+                  <Button variant="outline" size="sm" onClick={() => { setTemplateName(subject); setSaveTemplateOpen(true); }} className="gap-1.5 h-9 text-xs border-primary/30 text-primary hover:bg-primary/10">
+                    <Bookmark className="w-3.5 h-3.5" /> Salva template
+                  </Button>
+                )}
                 <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
                   {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
