@@ -1,78 +1,127 @@
 
 
-# Ottimizzazioni Sistema Cognitivo — 4 Interventi Mirati
+# Audit Completo — Comunicazione, AI, Estensioni e Bottoni
 
-## 1. Latenza Rolling Summary (Fase 3) — Compressione Parallela
+## Inventario Completo degli Elementi
 
-**Problema attuale**: `compressMessages` fa una chiamata API bloccante PRIMA della risposta all'utente, aggiungendo 1-3 secondi di latenza.
+### EMAIL — 7 punti di lancio
+| # | Componente | Azione | Metodo |
+|---|-----------|--------|--------|
+| 1 | `ContactActionMenu` (Cockpit ⋮) | "Invia email ora" | `navigate("/email-composer")` |
+| 2 | `PartnerContactActionMenu` (Network ⋮) | "Invia email" | `onSendEmail` callback o navigate |
+| 3 | `ContactRecordActions` (Drawer) | Bottone Email | `useDirectContactActions().handleSendEmail` → navigate |
+| 4 | `PartnerDetailCompact` (Network inline) | Click su email | `handleSendEmail` → navigate |
+| 5 | `BusinessCardsView` (BCA inline) | Icona Mail su card | `useDirectContactActions().handleSendEmail` |
+| 6 | `SendEmailDialog` (Operations) | Dialog modale + `send-email` EF | `supabase.functions.invoke("send-email")` |
+| 7 | `EmailCanvas` / `useAIDraftActions` (Workspace) | Invio email diretta | `supabase.functions.invoke("send-email")` |
 
-**Soluzione**: Eseguire la compressione in modo non-bloccante:
-- Se `messages.length > 8`, la prima volta si usa il fallback (ultimi 6 messaggi, no API call)
-- La compressione viene salvata come "rolling_summary" nella history lato client (`useAiAssistantChat`)
-- Al messaggio successivo, il summary pre-calcolato viene incluso nel payload — zero latenza aggiuntiva
+### WHATSAPP — 5 punti di lancio
+| # | Componente | Metodo |
+|---|-----------|--------|
+| 1 | `ContactActionMenu` (Cockpit ⋮) | ⚠️ `window.open("wa.me/...")` — NON usa extension bridge |
+| 2 | `PartnerContactActionMenu` (Network ⋮) | ⚠️ Fallback `window.open("wa.me/...")` se nessun callback |
+| 3 | `ContactRecordActions` (Drawer) | ✅ `useDirectContactActions().handleSendWhatsApp` → extension bridge |
+| 4 | `PartnerDetailCompact` (Network inline) | ✅ `sendWhatsApp` via extension bridge |
+| 5 | `useOutreachQueue` (Coda automatica) | ✅ `wa.sendWhatsApp` via extension bridge |
 
-**File**:
-| File | Modifica |
-|------|----------|
-| `supabase/functions/ai-assistant/index.ts` | Rendere `compressMessages` asincrono e non-bloccante: se il summary non è ancora pronto, usare truncamento semplice. Salvare il summary in DB come memoria L1 per riuso |
-| `src/hooks/useAiAssistantChat.ts` | Dopo ogni risposta AI con >8 messaggi, triggerare la compressione in background (POST separato) e includere il summary nel prossimo invio |
+### LINKEDIN — 3 punti di lancio
+| # | Componente | Metodo |
+|---|-----------|--------|
+| 1 | `ContactRecordActions` (Drawer) | `LinkedInDMDialog` → `sendDirectMessage` via extension bridge |
+| 2 | `useOutreachQueue` (Coda automatica) | `li.sendDirectMessage` via extension bridge |
+| 3 | `useLinkedInLookup` (Ricerca profili) | `pcBridge.googleSearch` via Partner Connect |
 
----
+### DEEP SEARCH — 3 punti di lancio
+| # | Componente | Metodo |
+|---|-----------|--------|
+| 1 | `useDeepSearchRunner` (Partner/globale) | ✅ `localSearch.searchPartner/searchContact` via Partner Connect |
+| 2 | `useContactActions.handleDeepSearch` (CRM Contatti) | ⛔ CHIAMA `deep-search-contact` DEPRECATA |
+| 3 | `UnifiedBulkActionBar` (Tutte le viste) | Delega a runner del contesto |
 
-## 2. Decay Calibrato (Fase 2) — Prevenire Amnesia
+### AI — 6 punti di interazione
+| # | Componente | Edge Function |
+|---|-----------|--------------|
+| 1 | `useAiAssistantChat` (Drawer AI) | `ai-assistant` (streaming) |
+| 2 | `HomeAIPrompt` (Home) | `ai-assistant` o `agent-execute` |
+| 3 | `ContactAIBar` (CRM) | `contacts-assistant` |
+| 4 | Email Composer / Oracle | `generate-email`, `improve-email` |
+| 5 | `useOutreachGenerator` | `generate-outreach` |
+| 6 | `KnowledgeBaseManager` | `improve-email` (per miglioramento KB) |
 
-**Problema attuale**: Decay lineare `confidence - (decay_rate × days)`. Con 2%/giorno, una L1 a confidence 0.50 viene pruned (< 0.05) in ~23 giorni. Potrebbe essere troppo aggressivo per utenti che tornano dopo un weekend.
+### ALIAS — 3 punti di lancio
+| # | Componente | Edge Function |
+|---|-----------|--------------|
+| 1 | `ContactDetailPanel` (CRM dettaglio) | `generate-aliases` |
+| 2 | `useContactActions.handleGroupAlias` (CRM bulk) | `generate-aliases` |
+| 3 | `Operations` / `FilterActionBar` (Network) | `generate-aliases` |
 
-**Modifiche**:
-- Cambiare formula a **decay esponenziale**: `confidence × (1 - decay_rate)^days` — più morbido, non azzera mai completamente
-- Aggiungere **grace period**: nessun decay per i primi 3 giorni dopo l'ultimo accesso
-- Ridurre soglia pruning da 0.05 a **0.02** per L1
-- Aggiungere log delle stats nel promoter per monitoraggio
-
-**File**:
-| File | Modifica |
-|------|----------|
-| `supabase/functions/memory-promoter/index.ts` | Formula esponenziale + grace period 3 giorni + soglia pruning 0.02 |
-
----
-
-## 3. Auto-Save Potenziato (Fase 2) — Meno Dipendenza da Feedback Utente
-
-**Problema**: I FeedbackButtons esistono ma gli utenti li usano raramente. L'auto-save post-tool è più determinante.
-
-**Modifiche**:
-- Nell'esecuzione dei tool in `ai-assistant`, aggiungere auto-save L1 per: `send_email`, `create_download_job`, `deep_search_partner`, `deep_search_contact`, `bulk_update_partners`, `create_reminder`
-- Se lo stesso pattern viene auto-salvato 3+ volte → promozione automatica a L2 (senza feedback)
-- Aggiungere logica di **deduplicazione**: prima di salvare, verificare se esiste già una memoria simile (stesso tag + contenuto parziale)
-
-**File**:
-| File | Modifica |
-|------|----------|
-| `supabase/functions/ai-assistant/index.ts` | Auto-save dopo ogni tool call significativo + dedup check |
-
----
-
-## 4. Campo "Current Focus" nel Profilo (suggerimento bonus)
-
-**Aggiunta**: Campo `ai_current_focus` in `AIProfileSettings` — una stringa breve tipo "Questo mese il focus è l'acquisizione partner in Germania" che viene iniettata nel system prompt di tutti gli agenti.
-
-**File**:
-| File | Modifica |
-|------|----------|
-| `src/components/settings/AIProfileSettings.tsx` | Aggiungere campo "Focus Corrente" con placeholder e icona |
-| `supabase/functions/ai-assistant/index.ts` | In `loadUserProfile`, includere `ai_current_focus` come prima riga del profilo |
-| `supabase/functions/super-assistant/index.ts` | Idem |
+### WCA MATCH / BCA — 2 punti
+| # | Componente | Metodo |
+|---|-----------|--------|
+| 1 | `ContactListPanel` bulk | `supabase.rpc("match_contacts_to_wca")` |
+| 2 | `BusinessCardsView` sync | `supabase.functions.invoke("sync-business-cards")` |
 
 ---
 
-## Riepilogo tecnico
+## BUG CRITICI TROVATI
 
-| Intervento | Impatto | Rischio |
-|-----------|---------|---------|
-| Summary parallelo | -2s latenza media | Basso — fallback sicuro |
-| Decay esponenziale | Memorie vivono ~3x più a lungo | Basso — più conservativo |
-| Auto-save potenziato | +80% memorie utili senza feedback | Medio — serve dedup |
-| Current Focus | Risposte AI più proattive | Zero |
+### 🔴 BUG 1 — `handleDeepSearch` in CRM chiama Edge Function DEPRECATA
+**File**: `src/hooks/useContactActions.ts` riga 43
+**Problema**: `supabase.functions.invoke("deep-search-contact")` chiama una funzione che ritorna HTTP 410 (Gone) con messaggio "DEPRECATED". La Deep Search per contatti in CRM è **completamente non funzionante**.
+**Fix**: Usare `useDeepSearchRunner` con `mode: "contact"` come fa già il resto del sistema (Cockpit, Network, BCA).
 
-Nessuna migrazione DB necessaria — le colonne esistono già. Solo modifiche a codice edge functions + 1 campo UI.
+### 🔴 BUG 2 — `activity_type: "whatsapp_message"` non esiste nell'enum
+**File**: `src/components/partners/PartnerDetailCompact.tsx` riga 110 e `src/hooks/useDirectContactActions.ts` riga 70
+**Problema**: L'enum `activity_type` nel DB ha solo: `send_email`, `phone_call`, `add_to_campaign`, `meeting`, `follow_up`, `other`. Il tipo `"whatsapp_message"` non esiste → l'insert usa `as any` per bypassare TypeScript ma il DB potrebbe rifiutare l'insert o accettarlo solo perché non c'è un check constraint stretto. In `useDirectContactActions.ts` viene usato `"phone_call" as any` come workaround — incoerente.
+**Fix**: Aggiungere `whatsapp_message` e `linkedin_message` all'enum `activity_type` via migrazione, oppure uniformare usando `"phone_call"` ovunque (meno preciso).
+
+### 🟡 BUG 3 — WhatsApp nel Cockpit usa `window.open` invece dell'extension bridge
+**File**: `src/components/cockpit/ContactActionMenu.tsx` riga 123-130
+**Problema**: Il pulsante WhatsApp nel menu ⋮ del Cockpit apre `wa.me/` nel browser invece di usare l'extension bridge. Non crea attività, non entra nel circuito di attesa. Tutti gli altri punti (Drawer, Network, BCA) usano correttamente il bridge.
+**Fix**: Sostituire con `useDirectContactActions().handleSendWhatsApp`.
+
+### 🟡 BUG 4 — `PartnerContactActionMenu` fallback WhatsApp usa `window.open`
+**File**: `src/components/partners/PartnerContactActionMenu.tsx` riga 93-101
+**Problema**: Se non viene passato `onSendWhatsApp` come prop, il fallback è `window.open("wa.me/...")` — stesso problema del BUG 3. In pratica il prop viene sempre passato da `PartnerDetailCompact`, ma il fallback è fragile.
+
+### 🟢 NOTA — `ContactActionMenu` email non passa `partnerId`
+**File**: `src/components/cockpit/ContactActionMenu.tsx` riga 111-121
+**Osservazione**: Il `prefilledRecipient` non include `partnerId` o `contactId`, perdendo il link al record. Gli altri punti (Drawer, Network) li passano correttamente.
+
+---
+
+## PIANO DI FIX
+
+### Step 1 — Migrazione DB: aggiungere tipi attività mancanti
+```sql
+ALTER TYPE activity_type ADD VALUE IF NOT EXISTS 'whatsapp_message';
+ALTER TYPE activity_type ADD VALUE IF NOT EXISTS 'linkedin_message';
+```
+
+### Step 2 — Fix Deep Search contatti in CRM
+In `useContactActions.ts`, sostituire la chiamata alla EF deprecata con l'uso di `useDeepSearchRunner` (contesto `DeepSearchContext`), oppure importare direttamente `useDeepSearchLocal` per eseguire la ricerca client-side.
+
+### Step 3 — Uniformare WhatsApp nel Cockpit
+In `ContactActionMenu.tsx`, importare e usare `useDirectContactActions().handleSendWhatsApp` al posto di `window.open`.
+
+### Step 4 — Aggiungere `partnerId`/`contactId` al menu Cockpit
+Passare i riferimenti nel `prefilledRecipient` per mantenere il link al record.
+
+### Step 5 — Cleanup `as any` sui tipi attività
+Dopo la migrazione enum, rimuovere tutti i cast `as any` su `activity_type` e `whatsapp_message`.
+
+---
+
+## File da modificare
+
+| File | Modifica |
+|------|----------|
+| Migrazione SQL | `ALTER TYPE activity_type ADD VALUE 'whatsapp_message'` + `'linkedin_message'` |
+| `src/hooks/useContactActions.ts` | Sostituire chiamata `deep-search-contact` con runner client-side |
+| `src/components/cockpit/ContactActionMenu.tsx` | WhatsApp via extension bridge + aggiungere IDs al recipient email |
+| `src/components/partners/PartnerContactActionMenu.tsx` | Fallback WhatsApp via bridge invece di `window.open` |
+| `src/components/partners/PartnerDetailCompact.tsx` | Rimuovere `as any` su `activity_type` dopo migrazione |
+| `src/hooks/useDirectContactActions.ts` | Usare `"whatsapp_message"` invece di `"phone_call" as any` |
+
+Totale: 1 migrazione + 5 file da modificare. Nessun file nuovo.
 
