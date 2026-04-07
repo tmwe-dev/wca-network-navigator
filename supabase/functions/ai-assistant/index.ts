@@ -2676,10 +2676,40 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
   if (messages.length <= 8) return messages;
 
   const LIVE_WINDOW = 6;
-  const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
   const recentMessages = messages.slice(messages.length - LIVE_WINDOW);
 
-  // Compress older messages into a summary
+  // Check if a pre-computed rolling summary exists from a previous turn
+  const { data: existingSummary } = await supabase
+    .from("ai_memory")
+    .select("content")
+    .eq("user_id", userId)
+    .eq("source", "rolling_summary")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (existingSummary?.[0]?.content) {
+    // Use pre-computed summary — ZERO latency added
+    // Trigger background refresh for the NEXT turn (fire-and-forget)
+    const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
+    generateAndSaveSummary(olderMessages, apiKey, userId).catch(() => {});
+
+    return [
+      { role: "system", content: `RIEPILOGO CONVERSAZIONE PRECEDENTE:\n${existingSummary[0].content}` },
+      ...recentMessages,
+    ];
+  }
+
+  // First time with >8 messages: no summary yet — use truncation fallback (no blocking API call)
+  // Trigger background summary generation for NEXT turn
+  const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
+  generateAndSaveSummary(olderMessages, apiKey, userId).catch(() => {});
+
+  // Return only recent messages (no latency penalty)
+  return recentMessages;
+}
+
+// Non-blocking background summary generation
+async function generateAndSaveSummary(olderMessages: any[], apiKey: string, userId: string): Promise<void> {
   const summaryPrompt = `Riassumi in modo conciso (3-5 righe) il contesto operativo di questa conversazione. Cattura: decisioni prese, azioni eseguite, dati importanti menzionati, richieste pendenti.\n\n${olderMessages.map((m: any) => `${m.role}: ${String(m.content || "").substring(0, 300)}`).join("\n")}`;
 
   try {
@@ -2697,8 +2727,15 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
       const data = await resp.json();
       const summary = data.choices?.[0]?.message?.content;
       if (summary) {
-        // Save summary as L1 memory
-        supabase.from("ai_memory").insert({
+        // Delete old rolling summaries to keep only latest
+        await supabase
+          .from("ai_memory")
+          .delete()
+          .eq("user_id", userId)
+          .eq("source", "rolling_summary");
+
+        // Save new summary
+        await supabase.from("ai_memory").insert({
           user_id: userId,
           content: summary,
           memory_type: "conversation",
@@ -2708,20 +2745,12 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
           confidence: 0.4,
           decay_rate: 0.02,
           source: "rolling_summary",
-        }).then(() => {}).catch(() => {});
-
-        return [
-          { role: "system", content: `RIEPILOGO CONVERSAZIONE PRECEDENTE:\n${summary}` },
-          ...recentMessages,
-        ];
+        });
       }
     }
   } catch (e) {
-    console.error("[ChatMemory] Summary generation failed:", e);
+    console.error("[ChatMemory] Background summary generation failed:", e);
   }
-
-  // Fallback: just keep recent messages
-  return recentMessages;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
