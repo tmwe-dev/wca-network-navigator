@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  AlertCircle, Wand2, Loader2, Download, ChevronDown, ChevronRight,
+  AlertCircle, Wand2, Loader2, ChevronDown, ChevronRight,
   CheckCircle2, XCircle, RotateCcw, Settings2, Play, Pause,
 } from "lucide-react";
 import { type ImportError } from "@/hooks/useImportLogs";
