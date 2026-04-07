@@ -1,14 +1,33 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
 
   const handleContactUpdated = useCallback((updated: any) => {
     setSelectedContact(updated);
+  }, []);
+
+  // Listen for sidebar contact selection
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const contactId = (e as CustomEvent).detail?.contactId;
+      if (!contactId) return;
+      try {
+        const { data } = await supabase
+          .from("imported_contacts")
+          .select("*")
+          .eq("id", contactId)
+          .single();
+        if (data) setSelectedContact(data);
+      } catch {}
+    };
+    window.addEventListener("crm-select-contact", handler);
+    return () => window.removeEventListener("crm-select-contact", handler);
   }, []);
 
   const hasDetail = !!selectedContact;
