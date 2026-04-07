@@ -26,7 +26,6 @@ function isInHoldingPattern(status: string | undefined): boolean {
   return !!status && status !== "new";
 }
 
-/** Clickable value that triggers a filter */
 function Filterable({ field, value, children, onFilterClick, className }: {
   field: string; value: string | null; children: React.ReactNode;
   onFilterClick?: (field: string, value: string) => void; className?: string;
@@ -70,7 +69,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   return (
     <div
       className={cn(
-        "cursor-pointer border-b border-border/30 transition-colors text-xs",
+        "cursor-pointer border-b border-border/50 transition-colors text-xs",
         inHolding && "border-l-2 border-l-muted-foreground/40",
         isActive
           ? isAiProcessed ? "bg-amber-500/15" : "bg-primary/15"
@@ -81,7 +80,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
     >
       {/* Row 1 */}
       <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 py-1")}
+        className={cn(CONTACT_GRID_CLASS, "px-2 pt-1.5 pb-0.5")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
         {/* Col 1: Index + Checkbox */}
@@ -97,17 +96,17 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Col 2: Flag (double size) + Country below */}
-        <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="flex flex-col items-center cursor-pointer">
+        {/* Col 2: Flag (large) + country code */}
+        <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="flex flex-col items-center">
           <span className="text-lg leading-none">{flag}</span>
           {cCountry && (
-            <span className="text-[8px] text-muted-foreground truncate max-w-[36px] leading-tight mt-0.5">
-              {cCountry.length > 4 ? cCountry.slice(0, 3).toUpperCase() : cCountry.toUpperCase()}
+            <span className="text-[8px] text-muted-foreground leading-tight mt-0.5 uppercase">
+              {cCountry.slice(0, 3)}
             </span>
           )}
         </Filterable>
 
-        {/* Col 3: Company (row1) + Position (row1 sub) */}
+        {/* Col 3: Company + Position below */}
         <div className="min-w-0">
           <div className="flex items-center gap-1">
             <span className={cn(
@@ -123,30 +122,28 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
           </div>
           {cPosition && (
-            <span className="text-[10px] text-primary/70 truncate block">{capitalizeLabel(cPosition)}</span>
+            <span className="text-[10px] text-primary/70 truncate block leading-tight">{capitalizeLabel(cPosition)}</span>
           )}
         </div>
 
-        {/* Col 4: Contact name only */}
+        {/* Col 4: Contact name */}
         <div className="flex items-center gap-1 min-w-0">
           {displayContact ? (
             <>
               <User className="w-3 h-3 text-muted-foreground shrink-0" />
               <span className="truncate text-foreground/80">{displayContact}</span>
             </>
-          ) : (
-            <span />
-          )}
+          ) : null}
         </div>
 
         {/* Col 5: City */}
         <div className="min-w-0">
           {cCity ? (
-            <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-muted-foreground text-[10px]">
+            <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-muted-foreground text-[10px] block">
               {capitalizeLabel(cCity)}
             </Filterable>
           ) : (
-            <span className="text-muted-foreground/40">—</span>
+            <span className="text-muted-foreground/30">—</span>
           )}
         </div>
 
@@ -162,17 +159,16 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         </div>
       </div>
 
-      {/* Row 2 */}
+      {/* Row 2 — same grid */}
       <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 pb-1")}
+        className={cn(CONTACT_GRID_CLASS, "px-2 pb-1.5")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
-        {/* Col 1-2: empty spacers */}
-        <div />
+        {/* Col 1: empty */}
         <div />
 
-        {/* Col 3: Indicators */}
-        <div className="flex items-center gap-1">
+        {/* Col 2: indicators (linkedin, web, handshake) */}
+        <div className="flex items-center justify-center gap-0.5">
           {linkedinUrl && (
             <span className="p-0.5 rounded bg-[hsl(210,80%,55%)]/10">
               <Linkedin className="w-2.5 h-2.5 text-[hsl(210,80%,55%)]" />
@@ -183,10 +179,13 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               <Globe2 className="w-2.5 h-2.5 text-emerald-400" />
             </span>
           )}
-          {hasBusinessCard && <Handshake className="w-3 h-3 text-emerald-400" />}
+          {hasBusinessCard && <Handshake className="w-2.5 h-2.5 text-emerald-400" />}
         </div>
 
-        {/* Col 4: Email */}
+        {/* Col 3: empty (under company) */}
+        <div />
+
+        {/* Col 4: Email (under contact) */}
         <div className="flex items-center gap-0.5 min-w-0">
           {cEmail ? (
             <>
@@ -194,24 +193,24 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               <span className="text-muted-foreground truncate text-[10px]">{cEmail}</span>
             </>
           ) : (
-            <span className="text-muted-foreground/50 italic text-[10px]">no email</span>
+            <span className="text-muted-foreground/40 italic text-[10px]">no email</span>
           )}
         </div>
 
-        {/* Col 5: Lead status — lilla/violet color */}
-        <div className="min-w-0">
+        {/* Col 5: Lead status + interactions */}
+        <div className="flex items-center gap-1 min-w-0">
+          <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
           {c.lead_status && c.lead_status !== "new" && (
             <Filterable field="leadStatus" value={c.lead_status} onFilterClick={onFilterClick}>
-              <span className="text-[9px] text-violet-400 bg-violet-500/15 px-1.5 py-0.5 rounded-full font-medium">
+              <span className="text-[9px] text-violet-400 bg-violet-500/15 px-1 py-0 rounded-full font-medium">
                 {c.lead_status}
               </span>
             </Filterable>
           )}
         </div>
 
-        {/* Col 6: Interactions */}
-        <div className="flex items-center gap-0.5">
-          <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
+        {/* Col 6: Interaction count */}
+        <div className="flex items-center">
           <span className={cn(
             "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
             c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
