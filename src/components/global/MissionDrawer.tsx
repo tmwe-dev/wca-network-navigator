@@ -30,6 +30,26 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [recipientSearch, setRecipientSearch] = useState("");
   const location = useLocation();
   const currentPath = location.pathname;
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const isResizing = useRef(false);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const w = Math.max(320, Math.min(window.innerWidth - ev.clientX, window.innerWidth * 0.8));
+      setDrawerWidth(w);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+  const currentPath = location.pathname;
 
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
