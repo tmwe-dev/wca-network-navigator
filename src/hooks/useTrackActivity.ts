@@ -80,6 +80,8 @@ export function useTrackActivity() {
       qc.invalidateQueries({ queryKey: ["worked-today"] });
       qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
       qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      qc.invalidateQueries({ queryKey: ["contacts-group-counts"] });
     },
   });
 }
