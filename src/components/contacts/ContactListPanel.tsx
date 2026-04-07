@@ -236,6 +236,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 <Megaphone className="w-3.5 h-3.5" /> Campagna
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Aggiungi a Campagna</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button size="sm" variant="ghost"
+                className="h-7 px-2.5 text-xs gap-1.5 text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  const ids = Array.from(selection.selectedIds);
+                  if (!confirm(`Eliminare ${ids.length} contatti?`)) return;
+                  const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
+                  if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+                  toast({ title: `✅ ${ids.length} contatti eliminati` });
+                  selection.clear();
+                  qc.invalidateQueries({ queryKey: ["contacts"] });
+                  qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+                }}>
+                <Trash2 className="w-3.5 h-3.5" /> Elimina
+              </Button>
+            </TooltipTrigger><TooltipContent className="text-xs">Elimina contatti selezionati</TooltipContent></Tooltip>
             <button onClick={() => { selection.clear(); setSelectedGroups(new Set()); }}
               className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
               <X className="w-3.5 h-3.5" />
