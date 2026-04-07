@@ -1,147 +1,69 @@
 
-Problema capito: l’elenco non è sparito “per caso”, è stato implementato in modo che di fatto non emerge nella sidebar come navigatore vero.
 
-## Perché oggi non lo vedi
+# Arricchimento card contatti sidebar + azioni rapide + fix email CRM
 
-Dalla struttura attuale di `FiltersDrawer.tsx` risultano 4 problemi concreti:
+## Problemi identificati
 
-1. `CRMContactNavigator` esiste davvero, ma viene renderizzato in fondo alla `CRMFiltersSection`, sotto tanti blocchi filtro.
-   - Quindi visivamente sembra una sidebar solo filtri.
-   - Su viewport come il tuo, il navigatore contatti resta troppo in basso.
+1. **Card contatti nella sidebar troppo scarne** — mostrano solo bandiera, nome azienda, nome contatto e email. Manca: città, telefono, origine, azioni rapide (⋮)
+2. **Icona globo inutile** — nel gruppo "country" il globo non serve, la bandiera del paese basta
+3. **Nessun filtro per città** dentro i gruppi espansi
+4. **Nessun menu azioni rapide (⋮)** sulle card nella sidebar (né contatti né biglietti)
+5. **Email dal CRM non porta all'email composer** — il click sull'icona mail nella barra bulk non trasferisce correttamente i destinatari
 
-2. Non c’è un controllo chiaro “Raggruppa per” nella sidebar CRM.
-   - Il navigator usa `g.filters.groupBy`, ma nella sidebar non stai scegliendo in modo evidente il grouping.
-   - Quindi resti bloccato sul default `country`.
+## Piano di intervento
 
-3. C’è una incoerenza tra UI e RPC:
-   - UI usa `lead_status` / `import_group`
-   - RPC `get_contact_group_counts()` restituisce `status` / `date`
-   - Risultato: alcuni gruppi non combaciano correttamente.
+### 1. Arricchire la card contatto nella sidebar CRM
 
-4. I gruppi nel drawer non sono filtrati con gli stessi filtri della lista centrale.
-   - La lista centrale usa `crmSelectedCountries`, `crmOrigin`, `leadStatus`, `crmChannel`, `crmQuality`, `holdingPattern`
-   - Il navigator invece carica i gruppi da RPC “grezza” e i contatti per gruppo con query quasi indipendente
-   - Quindi la sidebar e la lista non parlano davvero la stessa lingua.
-
-## Obiettivo
-
-Far diventare la sidebar sinistra CRM un navigatore reale, come nel Network:
+Nel `CRMContactNavigator` (riga ~955 di `FiltersDrawer.tsx`), la card di ogni contatto dentro un gruppo espanso diventa:
 
 ```text
-Sidebar CRM
-├ Cerca
-├ Raggruppa per
-├ Filtri rapidi
-├ Gruppi contatti
-│  ├ Italy
-│  │  ├ Contatto A
-│  │  ├ Contatto B
-│  ├ WCA OLD
-│  │  ├ Contatto C
-│  │  ├ Contatto D
+🇮🇹 Azienda Nome                    ⋮
+   👤 Contatto · Ruolo   📍 Milano
+   📧 email@...  📱 +39...
 ```
 
-## Piano di allineamento
+- Bandiera sempre visibile (già c'è)
+- Aggiungere città sotto il nome
+- Aggiungere icona telefono se presente
+- Aggiungere mini-badge origine (come nel Cockpit)
+- Aggiungere menu ⋮ con `ContactActionMenu` per azioni rapide (Email, WhatsApp, Cockpit, ecc.)
+- Rimuovere il globo inutile dal label del gruppo
 
-### 1. Rendere il navigatore visibile subito
-In `src/components/global/FiltersDrawer.tsx` sposterò il blocco navigatore più in alto nella sezione CRM:
+Dati già disponibili nella query: `id, name, company_name, company_alias, country, email, position, origin` → aggiungere `phone, city, lead_status, enrichment_data` alla select
 
-Ordine nuovo:
-1. Cerca
-2. Raggruppa per
-3. Navigatore contatti
-4. Filtri avanzati (paesi, origine, stato, circuito, qualità, canale, ordina)
+### 2. Filtro per città dentro il gruppo espanso
 
-Così la sidebar smette di sembrare un pannello filtri puro.
+Quando un gruppo è espanso e contiene >10 contatti, mostrare un mini-input "Filtra per città/nome…" in cima al gruppo espanso che filtra client-side i contatti caricati.
 
-### 2. Aggiungere un controllo esplicito “Raggruppa per”
-Userò `CRM_GROUPBY` già presente per mostrare chip o tab compatti:
-- Paese
-- Origine
-- Stato
-- Gruppo import
+### 3. Sub-filtro gruppo ↔ paese / paese ↔ gruppo
 
-Questo renderà immediato capire perché i contatti sono raggruppati in un certo modo.
+Nella sezione "Raggruppa per", quando si raggruppa per origine, dentro ogni gruppo espanso mostrare un chip-filter per paese. E viceversa: se raggruppo per paese, mostrare chip-filter per origine dentro il gruppo. Questo viene fatto client-side sui contatti già caricati nel gruppo.
 
-### 3. Correggere la mappatura dei gruppi
-Va riallineata la logica tra:
-- `CRM_GROUPBY`
-- `CRMContactNavigator`
-- `get_contact_group_counts()`
+### 4. Menu azioni rapide (⋮) nella sidebar
 
-Decisione consigliata:
-- mantenere lato UI: `country | origin | lead_status | import_group`
-- adattare il navigator a tradurre i valori RPC esistenti
-oppure
-- estendere la sorgente dati gruppi per includere davvero `lead_status` e `import_group`
+Importare `ContactActionMenu` e renderizzarlo su ogni riga contatto nella sidebar. Il menu si apre al click sul ⋮ senza selezionare il contatto.
 
-Così evitiamo mismatch come `status` vs `lead_status`.
+Per i biglietti da visita (BCA), aggiungere lo stesso pattern: ⋮ con azioni Email, WhatsApp, Cockpit disponibili direttamente dalla lista.
 
-### 4. Sincronizzare sidebar e lista centrale
-Il navigatore deve usare gli stessi filtri attivi della lista contatti:
-- ricerca
-- paesi selezionati
-- origini
-- holding pattern
-- stato lead
-- qualità
-- canale
+### 5. Fix: email bulk dal CRM → email composer
 
-In pratica:
-- i conteggi gruppo devono riflettere i filtri correnti
-- l’espansione gruppo deve mostrare solo i contatti coerenti con quei filtri
+In `ContactListPanel.tsx` il bottone "Workspace" nella barra bulk (riga ~117) chiama `actions.handleAICommand({ type: "send_to_workspace" })`. Verificare che questa azione:
+- Raccolga gli email dei contatti selezionati
+- Navighi a `/email-composer` con i destinatari precompilati
+- Se non funziona, correggere usando `useDirectContactActions.handleSendEmail` o navigazione diretta con `prefilledRecipients` (plurale, array)
 
-### 5. Rendere la selezione realmente “da sidebar”
-La selezione via `crm-select-contact` già esiste e `Contacts.tsx` la ascolta.
-Va solo resa coerente in UX:
-- evidenziazione stabile nella lista centrale
-- chiusura drawer dopo click
-- gruppo/contatto visivamente chiari e densi come nel Network
+### 6. Stessa cosa per BCA
 
-### 6. Ridurre il peso dei filtri in alto
-La parte filtri CRM oggi occupa troppo spazio.
-La compatto così:
-- Paesi con area collassabile o altezza più corta
-- Origini con chip scrollabili
-- Ordina meno invasivo
-- Stato/circuito/canale/qualità in griglie più strette
-
-Obiettivo: lasciare più spazio verticale all’elenco contatti.
+Nella lista biglietti (`BusinessCardsHub.tsx`), aggiungere il menu ⋮ a ogni card nella vista compact/list, usando `useDirectContactActions` per le azioni Email e WhatsApp.
 
 ## File coinvolti
 
-| File | Intervento |
-|---|---|
-| `src/components/global/FiltersDrawer.tsx` | Riordinare layout CRM, aggiungere “Raggruppa per”, dare priorità visiva al navigatore, sincronizzare i filtri col navigator |
-| `src/pages/Contacts.tsx` | Mantenere la selezione guidata da evento, verificare evidenziazione coerente dopo click sidebar |
-| `src/hooks/useContactGroups.ts` oppure logica in `FiltersDrawer.tsx` | Allineare group keys/types ai valori reali usati nel CRM |
-| `supabase/migrations/...get_contact_group_counts...` | Solo se serve estendere i raggruppamenti reali a `lead_status` e `import_group` |
+| File | Modifica |
+|------|----------|
+| `src/components/global/FiltersDrawer.tsx` | Arricchire card nel `CRMContactNavigator`: aggiungere campi alla query (phone, city, lead_status), layout 2 righe, menu ⋮, filtro città inline, sub-filtro cross-group |
+| `src/components/contacts/BusinessCardsHub.tsx` | Aggiungere menu ⋮ alle card nella lista compact |
+| `src/components/contacts/ContactListPanel.tsx` | Fix bulk email → email composer con destinatari corretti |
+| `src/hooks/useContactActions.ts` | Verificare/correggere `send_to_workspace` per passare email array al composer |
 
-## Scelta progettuale consigliata
+Nessuna migrazione DB.
 
-La soluzione migliore non è “aggiungere ancora roba”, ma fare questa gerarchia:
-
-```text
-TOP: cerca + raggruppa
-MID: elenco gruppi/contatti
-BOTTOM: filtri avanzati
-```
-
-Perché il tuo uso principale lì non è filtrare: è navigare e selezionare velocemente i contatti.
-
-## Risultato atteso
-
-Dopo l’allineamento:
-- apri la sidebar CRM
-- vedi subito gruppi e contatti
-- scegli come raggrupparli
-- clicchi un contatto preciso
-- si aggiorna lista centrale + dettaglio a destra
-- i filtri restano disponibili ma non nascondono più il navigatore
-
-## Nota tecnica importante
-
-In questo momento il codice conferma che l’elenco è stato inserito, ma è stato integrato male nella gerarchia della sidebar. Quindi il fix corretto non è “aggiungerlo di nuovo”, ma:
-- renderlo visibile,
-- metterlo nella posizione giusta,
-- e farlo usare gli stessi criteri della lista centrale.
