@@ -464,6 +464,42 @@ export type Database = {
         }
         Relationships: []
       }
+      authorized_users: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          login_count: number
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          login_count?: number
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          login_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blacklist_entries: {
         Row: {
           blacklist_no: number | null
@@ -3228,6 +3264,7 @@ export type Database = {
         Args: { memory_ids: string[] }
         Returns: undefined
       }
+      is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
       match_contacts_to_wca: {
         Args: never
@@ -3236,6 +3273,7 @@ export type Database = {
           total_processed: number
         }[]
       }
+      record_user_login: { Args: { p_email: string }; Returns: undefined }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"
