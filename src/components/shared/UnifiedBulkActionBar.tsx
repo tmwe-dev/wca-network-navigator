@@ -126,7 +126,14 @@ export function UnifiedBulkActionBar({
           </TooltipTrigger><TooltipContent className="text-xs">Consolida duplicati</TooltipContent></Tooltip>
         )}
 
-        {onDelete && (
+        {onWcaMatch && (
+          <Tooltip><TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className={btn} onClick={onWcaMatch} disabled={wcaMatchLoading}>
+              {wcaMatchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />} WCA Match
+            </Button>
+          </TooltipTrigger><TooltipContent className="text-xs">Verifica associazione WCA</TooltipContent></Tooltip>
+        )}
+
           <Tooltip><TooltipTrigger asChild>
             <Button size="sm" variant="ghost"
               className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15"
