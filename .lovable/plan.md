@@ -1,161 +1,110 @@
 
+# Missioni AI-Driven: Onboarding Dinamico + Esecuzione Progressiva
 
-# Piano Aggiornato: Team AI Autonomo — 7 Sezioni con Ottimizzazioni
+## Concetto
 
-Integro i 4 feedback ricevuti nel piano esistente.
-
----
-
-## Sezione A — 8 Nuovi Tool per gli Agenti
-
-**File**: `supabase/functions/agent-execute/index.ts`
-
-| Tool | Descrizione |
-|------|-------------|
-| `get_inbox` | Legge `channel_messages` filtrabili per canale, read/unread, partner_id, date range |
-| `get_conversation_history` | Timeline unificata per partner/contatto: email + activities + interactions |
-| `get_holding_pattern` | Contatti con `lead_status = 'contacted'/'in_progress'`, giorni in attesa, canale usato |
-| `update_message_status` | Marca messaggi come letti/processati |
-| `get_email_thread` | Thread email raggruppato per `thread_id`, fallback su `in_reply_to` chain, poi subject pulito (strip "Re:/Fwd:") + `from_address`/`to_address` matching |
-| `analyze_incoming_email` | Chiede all'AI sentiment/intent/next-step su un messaggio |
-| `assign_contacts_to_agent` | Director assegna batch contatti a un agente (via `client_assignments`) |
-| `create_campaign` | Crea campagna strutturata con A/B test opzionale |
-
-### Threading robusto (A5)
-Il tool `get_email_thread` usa questa cascata:
-1. Se `thread_id` presente → raggruppa per `thread_id`
-2. Altrimenti, segui la catena `in_reply_to` → `message_id_external`
-3. Fallback: subject normalizzato (strip `Re:`, `Fwd:`, `R:`, `I:`) + match su `from_address`/`to_address` invertiti
+Sostituire l'onboarding statico con un **wizard conversazionale AI** che:
+1. Interroga il DB in tempo reale (quanti partner per paese, qualità, status)
+2. Propone filtri e numeri concreti
+3. Registra la missione come `ai_work_plan` con step eseguibili
+4. Alimenta il Cockpit con i contatti da processare uno alla volta
 
 ---
 
-## Sezione B — Context Injection in agent-execute
+## Parte 1 — Wizard Missione AI (pagina `/mission-builder`)
 
-**File**: `supabase/functions/agent-execute/index.ts`
+**Nuova pagina** con flusso progressivo guidato da AI:
 
-Portare in `agent-execute` la stessa logica di `ai-assistant`:
-- Caricare `app_settings` con prefisso `ai_` (nome, azienda, ruolo, obiettivi, regole, focus corrente)
-- Caricare top-5 memorie L2+L3 da `ai_memory`
-- Caricare top-5 `kb_entries` globali per priorità
-- Iniettare tutto nel system prompt PRIMA della KB dell'agente
+### Step del wizard (generati da AI, non hardcoded):
+1. **Chi contattare?** — AI interroga `partners` e `imported_contacts`, mostra statistiche per paese/tipo/rating. L'utente sceglie con chip e filtri.
+2. **Quanti e come frazionare?** — AI propone batch (es. "50 in Germania, 30 in Francia"). L'utente aggiusta.
+3. **Con quale canale?** — Email / WhatsApp / LinkedIn / mix. AI suggerisce in base ai dati disponibili (ha email? ha LinkedIn?).
+4. **Assegnare agenti?** — AI propone distribuzione per territorio. L'utente conferma.
+5. **Scheduling** — Subito / programmato / distribuito nel tempo.
+6. **Conferma e crea** — Riassunto + creazione del work plan.
 
-Questo unifica la Fase 1 del piano cognitivo con la Sezione B, come suggerito.
+**Ogni step**: pannello sinistro con scelte, pannello destro con chat AI per discutere. Lo step completato scompare.
 
----
-
-## Sezione C — Workflow Circuito di Attesa
-
-**File**: `src/data/agentTemplates.ts` — nuova KB entry per ogni ruolo
-
-### Regole differenziate
-
-| Tipo | Follow-up 1 | Follow-up 2 | Escalation |
-|------|-------------|-------------|------------|
-| **Partner WCA** | +5gg email reminder | +7gg WhatsApp/LinkedIn | +14gg call Robin |
-| **Contatto CRM** | +5gg stesso canale | +10gg canale alternativo | +14gg call Robin |
-| **Ex-cliente** | +3gg call prioritaria | +7gg proposta speciale | +14gg Director review |
-
-Queste regole vengono codificate come KB entry "Workflow Circuito di Attesa" iniettata nella KB di ogni agente outreach/sales.
+**File**: `src/pages/MissionBuilder.tsx` (~300 righe), `src/components/missions/MissionStepRenderer.tsx`
 
 ---
 
-## Sezione D — Ciclo Autonomo con Auto-Approvazione
+## Parte 2 — Tabella `outreach_missions` (nuovo)
 
-**File nuovo**: `supabase/functions/agent-autonomous-cycle/index.ts`
+Registra ogni missione con riassunto per future analisi AI:
 
-### Auto-Approvazione per Low-Stakes
-L'agente autonomo classifica ogni azione proposta in 2 categorie:
-
-| Categoria | Esempio | Approvazione |
-|-----------|---------|-------------|
-| **Low-stakes** | Follow-up routine su contatto "freddo" (lead_status: new/contacted), reminder scaduto standard | **Auto-approvata** → eseguita direttamente |
-| **High-stakes** | Contatto "caldo" (warm/hot), ex-cliente, primo contatto su partner WCA ad alto rating, email con proposta commerciale | **Richiede ok Director** → task con status "proposed" |
-
-### Scheduling a cascata (anti rate-limit)
-Invece di svegliare tutti gli agenti simultaneamente:
-1. Il ciclo carica gli agenti attivi
-2. Li processa **in sequenza** (non in parallelo)
-3. Ogni agente ha un **budget per ciclo**: max 10 azioni
-4. Se il budget è esaurito, le azioni rimanenti vengono messe in coda per il ciclo successivo
-5. Delay di 2-3 secondi tra le chiamate AI per rispettare i rate limit
-
-### Cron job
 ```sql
-SELECT cron.schedule('agent-autonomous-cycle', '0 */1 * * *', ...);
+CREATE TABLE outreach_missions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'draft', -- draft/active/paused/completed
+  target_filters JSONB NOT NULL DEFAULT '{}', -- {countries, types, ratings, etc.}
+  channel TEXT NOT NULL DEFAULT 'email',
+  total_contacts INTEGER NOT NULL DEFAULT 0,
+  processed_contacts INTEGER NOT NULL DEFAULT 0,
+  agent_assignments JSONB DEFAULT '[]', -- [{agent_id, country_codes, count}]
+  schedule_config JSONB DEFAULT '{}',
+  ai_summary TEXT, -- riassunto generato da AI a fine missione
+  work_plan_id UUID, -- link a ai_work_plans
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ,
+  metadata JSONB DEFAULT '{}'
+);
+-- + RLS user_id = auth.uid()
 ```
 
----
-
-## Sezione E — KB Completa con Mappa Tool + Campi DB
-
-**File**: `src/data/agentTemplates.ts`
-
-### E1. KB Entry universale "Mappa Strumenti Sistema"
-Elenco completo dei 48+ tool con nome esatto, descrizione 1-riga, parametri principali, quando usarlo. Aggiunta automaticamente a TUTTI gli agenti.
-
-### E2. KB Entry universale "Campi Database"
-Schema semplificato di: `partners`, `imported_contacts`, `channel_messages`, `activities`, `reminders`, `interactions`, `business_cards`, `campaign_jobs`. Solo i campi operativi (no UUID interni).
-
-### E3. Aggiornamento KB per ruolo
-Aggiornamento delle KB entry esistenti per includere i nuovi tool (get_inbox, get_conversation_history, get_holding_pattern, analyze_incoming_email).
+Questo permette ad AI di:
+- Verificare missioni passate prima di proporne di nuove
+- Riproporre missioni simili con varianti
+- Analizzare performance (processed/total, tempi)
 
 ---
 
-## Sezione F — Analisi Email in Arrivo
+## Parte 3 — Collegamento Cockpit
 
-Integrata nel tool `analyze_incoming_email` (Sezione A). L'analisi produce:
-- **Sentiment**: positivo / neutrale / negativo
-- **Intent**: richiesta info, conferma interesse, rifiuto, OOO, spam, auto-reply
-- **Azione suggerita**: follow-up, escalation, close, schedule call
-- **Urgenza**: 1-5
+Quando una missione viene attivata:
+1. I contatti filtrati vengono inseriti nel `cockpit_queue` con `source_type = 'mission'` e ref alla missione
+2. Il Cockpit li mostra come tab/filtro "Missione attiva"
+3. L'utente processa uno alla volta: genera email → invia → next
+4. Ogni completamento aggiorna `outreach_missions.processed_contacts`
+5. A missione completata, AI genera un `ai_summary` automatico
 
-Il ciclo autonomo (Sezione D) usa questo tool per analizzare email non lette da contatti nel circuito.
-
----
-
-## Sezione G — Director Potenziato + Campagne A/B
-
-**File**: `supabase/functions/agent-execute/index.ts` + `src/data/agentTemplates.ts`
-
-### Tool `create_campaign` con A/B Test
-```
-Parametri:
-- name, objective, country_codes[], contact_type (wca/crm/ex_client)
-- agent_ids[] (agenti assegnati)
-- ab_test: { enabled: true, variants: [
-    { agent_id: "...", tone: "formale", percentage: 50 },
-    { agent_id: "...", tone: "colloquiale", percentage: 50 }
-  ]}
-```
-
-La campagna crea i task distribuiti tra gli agenti secondo le percentuali, con un tag `ab_variant` per tracking successivo.
-
-### Aggiornamento prompt Director
-Aggiungere istruzioni per:
-- Creare piani giornalieri basati sul circuito di attesa
-- Usare `assign_contacts_to_agent` per distribuzione per zona/lingua
-- Lanciare campagne A/B per testare approcci diversi
-- Ricevere solo le proposte high-stakes dal ciclo autonomo
+**File modificati**: 
+- `src/hooks/useCockpitContacts.ts` — aggiungere source "mission"
+- `src/pages/Cockpit.tsx` — badge missione attiva
 
 ---
 
-## Riepilogo Tecnico
+## Parte 4 — AI Context: Missioni Passate
 
-| Sezione | File | Modifiche |
-|---------|------|-----------|
-| A+F | `agent-execute/index.ts` | +8 tool definitions, +8 executeTool cases |
-| B | `agent-execute/index.ts` | +loadUserProfile, +loadMemory, +loadKB (~80 righe) |
-| C+E | `agentTemplates.ts` | +3 KB entries universali, +1 KB circuito per ruolo |
-| D | `agent-autonomous-cycle/index.ts` | **Nuovo** — ciclo autonomo con auto-approve + cascata |
-| G | `agent-execute/index.ts` + `agentTemplates.ts` | +2 tool (assign, campaign) + prompt Director aggiornato |
+Aggiornare `agent-execute` e `ai-assistant` per iniettare le ultime 5 `outreach_missions` completate nel contesto, permettendo:
+- "L'ultima volta che hai contattato la Germania hai raggiunto 45/50 partner"
+- "Vuoi rifare la stessa missione ma con canale WhatsApp?"
+- "Questi 12 contatti non hanno risposto dalla missione di Marzo"
 
-**Totale**: 1 file nuovo, 2 file modificati. ~10 nuovi tool. 1 cron job.
+**File**: `supabase/functions/ai-assistant/index.ts`, `supabase/functions/agent-execute/index.ts`
 
-### Ordine di implementazione
-1. **A+B** — Tool + context injection (prerequisito)
-2. **E** — KB completa (gli agenti devono sapere cosa possono fare)
-3. **C** — Workflow circuito
-4. **F** — Analisi email (già nel tool A)
-5. **G** — Director + campagne A/B
-6. **D** — Ciclo autonomo (dopo che tutto funziona manualmente)
+---
 
+## Parte 5 — Navigazione e Accesso
+
+- Voce menu: "🎯 Nuova Missione" (link a `/mission-builder`)
+- Accessibile anche dal Cockpit (bottone "Crea Missione")
+- Storico missioni visibile in Outreach → tab esistente o sotto-sezione
+
+---
+
+## Riepilogo tecnico
+
+| Parte | File | Tipo |
+|-------|------|------|
+| 1 | `src/pages/MissionBuilder.tsx` | **Nuovo** |
+| 1 | `src/components/missions/MissionStepRenderer.tsx` | **Nuovo** |
+| 2 | Migrazione `outreach_missions` | DB |
+| 3 | `useCockpitContacts.ts`, `Cockpit.tsx` | Modificati |
+| 4 | `ai-assistant/index.ts`, `agent-execute/index.ts` | Modificati |
+| 5 | `AppLayout.tsx` o router | Modificato |
+
+**Ordine**: 2 (DB) → 1 (Wizard) → 3 (Cockpit link) → 4 (AI context) → 5 (Nav)
