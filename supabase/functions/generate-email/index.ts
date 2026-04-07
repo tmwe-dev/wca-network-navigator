@@ -347,7 +347,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, recipient_count, recipient_countries } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
@@ -368,12 +368,11 @@ serve(async (req) => {
 
     if (standalone) {
       // ── STANDALONE MODE: detect language from recipient_countries ──
-      // Extract first country code from recipient_countries string (e.g. "DE, FR" → "DE")
       const firstCountry = (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
       partner = {
         id: null,
-        company_name: "Destinatario generico",
-        company_alias: null,
+        company_name: recipient_company || "Destinatario generico",
+        company_alias: recipient_company || null,
         country_code: firstCountry.toUpperCase().trim(),
         country_name: recipient_countries || "Vari",
         city: "",
@@ -384,7 +383,19 @@ serve(async (req) => {
         rating: null,
         raw_profile_markdown: null,
       };
-      contact = null;
+      // If a recipient name was provided (e.g. manual entry), create a synthetic contact
+      if (recipient_name) {
+        contact = {
+          name: recipient_name,
+          contact_alias: recipient_name,
+          title: null,
+          email: null,
+          direct_phone: null,
+          mobile: null,
+        };
+      } else {
+        contact = null;
+      }
       contactEmail = "destinatario@email.com";
       sourceType = "standalone";
     } else {
