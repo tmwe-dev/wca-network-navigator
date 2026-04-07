@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense, useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
