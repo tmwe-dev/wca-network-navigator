@@ -209,6 +209,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             )}
           </ScrollArea>
         </TabsContent>
+
+        {/* === IMMAGINI TAB === */}
+        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0">
+          <ImageGalleryTab onInsertImage={onInsertImage || (() => {})} />
+        </TabsContent>
       </Tabs>
 
       {/* === AI OPTIONS — always visible at bottom === */}
