@@ -20,7 +20,9 @@ async function checkWhitelist(email: string): Promise<boolean> {
 }
 
 async function recordLogin(email: string) {
-  await supabase.rpc("record_user_login", { p_email: email }).catch(() => {});
+  try {
+    await supabase.rpc("record_user_login" as any, { p_email: email });
+  } catch {}
 }
 
 export default function Auth() {
