@@ -3,6 +3,10 @@
  * 🤖 Claude Engine V8 · Nessun bridge, chiamate dirette
  */
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("wcaAppApi");
+
 const BASE = "https://wca-app.vercel.app/api";
 
 // ─── Cookie cache ───────────────────────────────────────────────
@@ -18,7 +22,9 @@ async function getOrRefreshCookie(): Promise<string> {
         return parsed.cookie;
       }
     }
-  } catch {}
+  } catch (err) {
+    log.warn("cookie cache read failed", { message: err instanceof Error ? err.message : String(err) });
+  }
 
   const res = await fetch(`${BASE}/login`, {
     method: "POST",
@@ -30,7 +36,9 @@ async function getOrRefreshCookie(): Promise<string> {
   if (!cookie) throw new Error(data.error || "Login WCA fallito");
   try {
     localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() }));
-  } catch {}
+  } catch (err) {
+    log.warn("cookie cache write failed", { message: err instanceof Error ? err.message : String(err) });
+  }
   return cookie;
 }
 
