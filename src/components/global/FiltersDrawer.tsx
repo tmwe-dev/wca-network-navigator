@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense, useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,6 +191,27 @@ const CRM_CHANNEL = [
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const g = useGlobalFilters();
   const location = useLocation();
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const isResizing = useRef(false);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const w = Math.max(320, Math.min(ev.clientX, window.innerWidth * 0.8));
+      setDrawerWidth(w);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const resizeRef = useRef<HTMLDivElement>(null);
 
   const route = location.pathname;
   const isOutreach = route === "/outreach";
@@ -355,9 +376,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     g.setCrmOrigin(next);
   };
 
+  const defaultWidthClass = isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl", isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]")} style={{ background: "linear-gradient(to right, hsl(0 0% 0%) 0%, hsl(0 0% 0%) 20%, hsl(var(--background)) 40%)" }}>
+      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl", !drawerWidth && defaultWidthClass)} style={{ ...(drawerWidth ? { width: drawerWidth, maxWidth: "80vw" } : {}), background: "linear-gradient(to right, hsl(0 0% 0%) 0%, hsl(0 0% 0%) 20%, hsl(var(--background)) 40%)" }}>
         {/* Header */}
         <div className="px-5 py-3 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
           <div className="flex items-center gap-3">
@@ -577,6 +600,12 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             <Check className="w-3.5 h-3.5" /> Conferma
           </Button>
         </div>
+        {/* Resize handle */}
+        <div
+          ref={resizeRef}
+          onMouseDown={startResize}
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors z-50"
+        />
       </SheetContent>
     </Sheet>
   );
@@ -927,7 +956,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
   const [groups, setGroups] = useState<{ key: string; label: string; count: number }[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
-
+  const [contactSort, setContactSort] = useState<{ field: string; asc: boolean }>({ field: "name", asc: true });
   useEffect(() => {
     const fetchGroups = async () => {
       setGroupsLoading(true);
@@ -1085,24 +1114,64 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
     return <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>;
   }
 
+  const SORT_OPTIONS = [
+    { field: "name", label: "Nome" },
+    { field: "company", label: "Azienda" },
+    { field: "city", label: "Città" },
+    { field: "country", label: "Paese" },
+  ];
+
+  const sortContacts = (list: any[]) => {
+    if (!list) return list;
+    return [...list].sort((a, b) => {
+      const fa = contactSort.field;
+      const va = (fa === "company" ? (a.company_alias || a.company_name) : a[fa]) || "";
+      const vb = (fa === "company" ? (b.company_alias || b.company_name) : b[fa]) || "";
+      const cmp = String(va).localeCompare(String(vb), undefined, { sensitivity: "base" });
+      return contactSort.asc ? cmp : -cmp;
+    });
+  };
+
+  const toggleSort = (field: string) => {
+    setContactSort(prev => prev.field === field ? { field, asc: !prev.asc } : { field, asc: true });
+  };
+
   return (
     <div className="flex-1 min-h-0">
       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
         <Users className="w-3 h-3" /> Contatti per {groupBy === "country" ? "paese" : groupBy === "origin" ? "origine" : groupBy === "lead_status" ? "stato" : "gruppo"}
         <Badge variant="secondary" className="text-[9px] h-4 px-1.5 ml-auto">{groups.reduce((s, g) => s + g.count, 0)}</Badge>
       </label>
-      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[calc(100vh-340px)] overflow-y-auto">
+      <div className="flex flex-wrap gap-0.5 mb-1.5">
+        {SORT_OPTIONS.map(o => (
+          <button
+            key={o.field}
+            onClick={() => toggleSort(o.field)}
+            className={cn(
+              "px-2 py-0.5 rounded text-[9px] font-medium border transition-all",
+              contactSort.field === o.field
+                ? "bg-primary/15 border-primary/30 text-primary"
+                : "border-border/30 text-muted-foreground hover:bg-muted/40"
+            )}
+          >
+            {o.label} {contactSort.field === o.field ? (contactSort.asc ? "↑" : "↓") : ""}
+          </button>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border/40 bg-muted/10 max-h-[calc(100vh-380px)] overflow-y-auto">
         {groups.map(group => {
           const isOpen = openGroups.has(group.key);
           const contacts = groupContacts[group.key];
           const cf = cityFilter[group.key]?.toLowerCase() || "";
-          const filteredContacts = contacts && cf
-            ? contacts.filter((c: any) =>
-                (c.city || "").toLowerCase().includes(cf) ||
-                (c.name || "").toLowerCase().includes(cf) ||
-                (c.company_name || "").toLowerCase().includes(cf)
-              )
-            : contacts;
+          const filteredContacts = sortContacts(
+            contacts && cf
+              ? contacts.filter((c: any) =>
+                  (c.city || "").toLowerCase().includes(cf) ||
+                  (c.name || "").toLowerCase().includes(cf) ||
+                  (c.company_name || "").toLowerCase().includes(cf)
+                )
+              : contacts
+          );
           const groupCountryCode = groupBy === "country" ? resolveCountryCode(group.key) : null;
 
           return (

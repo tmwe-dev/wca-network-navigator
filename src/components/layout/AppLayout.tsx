@@ -109,9 +109,11 @@ export function AppLayout() {
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
+          className={cn(
+            "fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer",
+            filtersOpen && "opacity-0 pointer-events-none"
+          )}
           style={{
-            left: filtersOpen ? "min(92vw, 620px)" : 0,
             background: "hsla(270, 60%, 65%, 0.25)",
             backdropFilter: "blur(8px)",
           }}
@@ -123,9 +125,11 @@ export function AppLayout() {
           onClick={() => setMissionOpen(true)}
           onMouseEnter={() => handleEdgeEnter("right")}
           onMouseLeave={() => handleEdgeLeave("right")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
+          className={cn(
+            "fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer",
+            missionOpen && "opacity-0 pointer-events-none"
+          )}
           style={{
-            right: missionOpen ? "min(90vw, 700px)" : 0,
             background: "hsla(270, 60%, 65%, 0.25)",
             backdropFilter: "blur(8px)",
           }}

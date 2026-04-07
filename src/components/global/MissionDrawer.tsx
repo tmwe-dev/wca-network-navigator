@@ -30,6 +30,25 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [recipientSearch, setRecipientSearch] = useState("");
   const location = useLocation();
   const currentPath = location.pathname;
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const isResizing = useRef(false);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const w = Math.max(320, Math.min(window.innerWidth - ev.clientX, window.innerWidth * 0.8));
+      setDrawerWidth(w);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -67,7 +86,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="right" className={cn("p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl", !drawerWidth && "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px]")} style={drawerWidth ? { width: drawerWidth, maxWidth: "80vw" } : undefined}>
         {/* Header */}
         <div className="px-5 py-3 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
           <div className="flex items-center gap-3">
@@ -321,6 +340,11 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </div>
           </DialogContent>
         </Dialog>
+        {/* Resize handle */}
+        <div
+          onMouseDown={startResize}
+          className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors z-50"
+        />
       </SheetContent>
     </Sheet>
   );
