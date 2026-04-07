@@ -15,6 +15,8 @@ import {
   Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight, Trash2,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
+import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
+import { adaptBusinessCard } from "@/lib/contactActionAdapter";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
