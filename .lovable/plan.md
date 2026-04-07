@@ -1,58 +1,40 @@
 
 
-# Menu azioni (⋮) su tutte le card + Verifica sincronizzazione circuito di attesa
+# Ristrutturazione tipi email nell'Oracolo — da tooltip a dialog strutturato
 
-## Situazione attuale — Menu azioni a tre pallini
+## Situazione attuale
 
-| Vista | Ha il menu ⋮? |
-|-------|---------------|
-| Cockpit — ContactStream (card e list) | ✅ `ContactActionMenu` |
-| Network — PartnerDetailCompact (contatti del partner) | ✅ `PartnerContactActionMenu` |
-| **CRM Contatti — ContactCard** | ❌ MANCA |
-| **CRM Biglietti — BusinessCardsHub** | ❌ MANCA |
-| **CockpitContactListItem** (riga compatta cockpit) | ❌ MANCA (è nel ContactStream wrapper, non nella riga stessa) |
-| **UnifiedContactRow** (componente shared) | ❌ MANCA |
+I **tipi email sono identici** tra Cockpit e Email Composer — entrambi usano `DEFAULT_EMAIL_TYPES` da `src/data/defaultEmailTypes.ts` (6 tipi: Primo contatto, Follow-up, Richiesta info, Proposta servizi, Partnership, Network espresso). Non manca nulla.
 
-## Situazione attuale — Circuito di attesa
+Il problema è la **presentazione**: quando passi il mouse su un tipo, appare un tooltip con il prompt grezzo (testo lungo, non formattato, illeggibile).
 
-Il flusso `useTrackActivity` escalda correttamente `lead_status: new → contacted` per:
-- Partner (tabella `partners`)
-- Contatti importati (tabella `imported_contacts`)
-- Biglietti da visita (tabella `business_cards`)
+## Cosa cambia
 
-Il filtro `holdingPattern` in `useContactsPaginated` usa `interaction_count > 0` per determinare chi è "in circuito". **Problema potenziale**: `useTrackActivity` aggiorna `lead_status` ma non incrementa `interaction_count` direttamente — `interaction_count` viene da `contact_interactions` tramite un conteggio separato. Devo verificare che il conteggio sia coerente.
+### 1. Rimuovere il tooltip su hover
+Eliminare il `<Tooltip>` che mostra il prompt grezzo al passaggio del mouse.
 
-## Piano di intervento
+### 2. Aggiungere un pulsante "info" accanto a ogni tipo
+Un'icona piccola (ℹ️ o eye) a destra di ogni riga tipo email che apre un dialog.
 
-### Step 1: Aggiungere il menu ⋮ alla ContactCard del CRM
-- Importare `ContactActionMenu` dal cockpit (o creare un wrapper per contatti importati che adatta l'interfaccia)
-- Il `ContactActionMenu` attuale accetta un `CockpitContact` — serve un adattatore che mappa `imported_contact` → `CockpitContact`
-- Posizionare il menu nella **Col 7** (dove c'è la lente), aggiungendo i tre pallini accanto alla lente
+### 3. Dialog strutturato con contenuto formattato
+Quando clicchi sull'icona info, si apre un `Dialog` ben formattato che mostra:
+- **Nome e icona** del tipo in header
+- **Obiettivo** — estratto dalla prima riga del prompt
+- **Struttura** — i passaggi (hook → ponte → value → CTA) formattati come lista ordinata
+- **Vincoli** — le regole come bullet points
+- **Tono** — il tono associato
+- Un pulsante **"Modifica prompt"** che attiva un `Textarea` per editare il prompt e salvarlo come nuovo tipo personalizzato
 
-### Step 2: Aggiungere il menu ⋮ ai biglietti da visita (BusinessCardsHub)
-- Nelle card compact/expanded dei biglietti, aggiungere lo stesso menu azioni
-- Adattare i dati del biglietto al formato richiesto dal menu
+### 4. Selettore tipo come dropdown (opzionale, da confermare)
+Invece della lista verticale di bottoni, un `Select` dropdown compatto nella sezione "Opzioni AI" con il tipo selezionato, liberando spazio verticale nell'Oracolo. L'icona info rimane accessibile dal dropdown.
 
-### Step 3: Aggiungere il menu ⋮ alla CockpitContactListItem
-- Attualmente il menu appare solo nel wrapper `ContactStream` su hover — va messo direttamente nella riga
-
-### Step 4: Aggiungere il menu ⋮ alla UnifiedContactRow
-- Componente shared usato potenzialmente in più punti — aggiungere un prop opzionale per il menu azioni
-
-### Step 5: Verifica sincronizzazione circuito di attesa
-- Controllare che `interaction_count` in `imported_contacts` venga aggiornato quando `useTrackActivity` crea un record in `contact_interactions`
-- Verificare che la query del filtro `holdingPattern` sia coerente con i dati scritti
-- Controllare che i contatti lavorati oggi (`useWorkedToday`) vengano effettivamente esclusi dalla lista quando il filtro "fuori circuito" è attivo
-- Se necessario, aggiungere un trigger SQL che incrementa `interaction_count` sulla tabella `imported_contacts` quando viene inserita una riga in `contact_interactions`
-
-## File coinvolti
+## Dettagli tecnici
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactCard.tsx` | Aggiungere import e rendering del menu ⋮ nella Col 7 accanto alla lente |
-| `src/components/contacts/BusinessCardsHub.tsx` | Aggiungere menu ⋮ su ogni card biglietto da visita |
-| `src/components/cockpit/CockpitContactListItem.tsx` | Aggiungere menu ⋮ inline nella riga |
-| `src/components/shared/UnifiedContactRow.tsx` | Aggiungere prop `actionMenu` opzionale |
-| `src/components/cockpit/ContactActionMenu.tsx` | Eventuale refactor per accettare un formato contatto generico (o creare un adattatore) |
-| Migration SQL (se necessario) | Trigger per sincronizzare `interaction_count` con le inserzioni in `contact_interactions` |
+| `src/components/email/OraclePanel.tsx` | Rimuovere `<Tooltip>` da ogni tipo; aggiungere icona info con onClick che apre dialog; importare `Dialog` |
+| `src/components/email/EmailTypeDetailDialog.tsx` | **Nuovo** — Dialog che riceve un `EmailType`, lo formatta in sezioni (Obiettivo, Struttura, Vincoli), e offre "Duplica e modifica" per creare un tipo custom |
+| `src/data/defaultEmailTypes.ts` | Nessuna modifica (i dati sono già completi e condivisi) |
+
+Nessuna migrazione DB.
 
