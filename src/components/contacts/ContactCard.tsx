@@ -42,6 +42,8 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const cContactAlias = clean(c.contact_alias);
   const displayCompany = cCompanyAlias || cName || "Senza azienda";
   const displayContact = cContactAlias || cContact;
+  const flag = countryFlag(c.country);
+  const isWcaMatched = !!c.wca_partner_id;
 
   const ed = c.enrichment_data;
   const linkedinUrl = ed?.linkedin_url;
