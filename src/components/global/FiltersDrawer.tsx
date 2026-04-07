@@ -925,7 +925,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
 
         // Client-side grouping (fast on ~11k lightweight rows with 1 column)
         const counts = new Map<string, number>();
-        for (const row of data as any[]) {
+        for (const row of allRows as any[]) {
           const val = row[col] || (groupBy === "country" ? "??" : groupBy === "origin" ? "Sconosciuta" : "—");
           counts.set(val, (counts.get(val) || 0) + 1);
         }
