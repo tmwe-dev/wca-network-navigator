@@ -318,7 +318,7 @@ const tools = [
           service: { type: "string", enum: ["air_freight","ocean_fcl","ocean_lcl","road_freight","rail_freight","project_cargo","dangerous_goods","perishables","pharma","ecommerce","relocations","customs_broker","warehousing","nvocc"], description: "Filter by service category" },
           certification: { type: "string", enum: ["IATA","BASC","ISO","C-TPAT","AEO"], description: "Filter by certification" },
           network_name: { type: "string", description: "Filter by network membership name" },
-          sort_by: { type: "string", enum: ["rating", "name", "recent"], description: "Sort order (default: rating)" },
+          sort_by: { type: "string", enum: ["rating", "name", "recent", "seniority"], description: "Sort order. 'seniority' = longest WCA membership first (by member_since)" },
           limit: { type: "number", description: "Max results (default 20, max 50)" },
           count_only: { type: "boolean", description: "Return only the count" },
         },
@@ -1137,7 +1137,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
   }
 
   let query = supabase.from("partners").select(
-    isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches",
+    isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches, member_since",
     isCount ? { count: "exact", head: true } : undefined
   );
 
@@ -1157,6 +1157,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
   const sortBy = String(args.sort_by || "rating");
   if (sortBy === "name") query = query.order("company_name", { ascending: true });
   else if (sortBy === "recent") query = query.order("created_at", { ascending: false });
+  else if (sortBy === "seniority") query = query.order("member_since", { ascending: true, nullsFirst: false });
   else query = query.order("rating", { ascending: false, nullsFirst: false });
 
   const limit = Math.min(Number(args.limit) || 20, 50);
@@ -1174,6 +1175,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
       email: p.email || null, phone: p.phone || null, rating: p.rating ?? null,
       has_profile: !!p.raw_profile_html, website: p.website || null,
       is_favorite: p.is_favorite, office_type: p.office_type, has_branches: p.has_branches,
+      member_since: p.member_since || null,
     })),
   };
 }
