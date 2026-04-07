@@ -49,7 +49,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
-  const currentPath = location.pathname;
 
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
