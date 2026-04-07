@@ -315,8 +315,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       >
         <div className="flex items-center justify-center">
           <Checkbox
-            checked={selection.isAllSelected}
-            onCheckedChange={(checked) => selection.toggleAll(!!checked)}
+            checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
+            onCheckedChange={(checked) => {
+              if (checked) selection.setSelectedIds(new Set(contacts.map((c: any) => c.id)));
+              else selection.clear();
+            }}
             aria-label="Seleziona tutti"
             className="shrink-0"
           />
