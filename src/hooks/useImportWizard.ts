@@ -5,6 +5,9 @@ import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useImportWizard");
 import {
   useImportLogs,
   useImportLog,
@@ -206,7 +209,7 @@ export function useImportWizard() {
         });
       }
     } catch (err) {
-      console.error(err);
+      log.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
