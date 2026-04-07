@@ -6,6 +6,9 @@
  * Testa la connessione chiamando wca-app.vercel.app/api/login.
  */
 import { useState, useCallback } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useWcaSession");
 
 const WCA_APP_LOGIN = "https://wca-app.vercel.app/api/login";
 
@@ -34,7 +37,9 @@ export function useWcaSession() {
             cookie: data.cookies,
             savedAt: Date.now(),
           }));
-        } catch {}
+        } catch (err) {
+          log.warn("session cache write failed", { message: err instanceof Error ? err.message : String(err) });
+        }
         return true;
       }
       setSessionActive(false);
