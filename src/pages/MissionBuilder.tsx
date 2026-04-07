@@ -349,7 +349,16 @@ export default function MissionBuilder() {
         <div className="w-[380px] border-l border-border flex flex-col bg-muted/10">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Assistente Missione</span>
+            <span className="text-sm font-medium flex-1">Assistente Missione</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => { setVoiceEnabled(v => !v); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }}
+              title={voiceEnabled ? "Disattiva voce" : "Attiva voce"}
+            >
+              {voiceEnabled ? <Volume2 className="w-3.5 h-3.5 text-primary" /> : <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />}
+            </Button>
           </div>
 
           <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
