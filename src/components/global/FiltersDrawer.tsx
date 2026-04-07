@@ -357,7 +357,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl", isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]")}>
+      <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl", isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]")} style={{ background: "linear-gradient(to right, hsl(0 0% 0%) 0%, hsl(0 0% 0%) 20%, hsl(var(--background)) 40%)" }}>
         {/* Header */}
         <div className="px-5 py-3 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
           <div className="flex items-center gap-3">
@@ -964,32 +964,42 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
       setLoadingGroup(key);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        let q = supabase
-          .from("imported_contacts")
-          .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
-          .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-          .order("company_name", { ascending: true })
-          .limit(500);
+        // Paginated fetch — no hard limit
+        const allContacts: any[] = [];
+        let from = 0;
+        const ps = 2000;
+        while (true) {
+          let q = supabase
+            .from("imported_contacts")
+            .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
+            .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+            .order("company_name", { ascending: true })
+            .range(from, from + ps - 1);
 
-        switch (groupBy) {
-          case "country":
-            if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
-            else q = q.eq("country", key);
-            break;
-          case "origin":
-            if (key === "Sconosciuta") q = q.is("origin", null);
-            else q = q.eq("origin", key);
-            break;
-          case "lead_status":
-            q = q.eq("lead_status", key);
-            break;
-          case "import_group":
-            q = q.eq("import_log_id", key);
-            break;
+          switch (groupBy) {
+            case "country":
+              if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
+              else q = q.eq("country", key);
+              break;
+            case "origin":
+              if (key === "Sconosciuta") q = q.is("origin", null);
+              else q = q.eq("origin", key);
+              break;
+            case "lead_status":
+              q = q.eq("lead_status", key);
+              break;
+            case "import_group":
+              q = q.eq("import_log_id", key);
+              break;
+          }
+
+          const { data: page } = await q;
+          if (!page || page.length === 0) break;
+          allContacts.push(...page);
+          if (page.length < ps) break;
+          from += ps;
         }
-
-        const { data } = await q;
-        setGroupContacts(prev => ({ ...prev, [key]: data || [] }));
+        setGroupContacts(prev => ({ ...prev, [key]: allContacts }));
       } catch {}
       finally { setLoadingGroup(null); }
     }
@@ -1063,7 +1073,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                           className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
                         >
                           <div className="flex items-start gap-1.5">
-                            <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>
+                            {c.country && <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>}
                             <button onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left">
                               <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
                               <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
