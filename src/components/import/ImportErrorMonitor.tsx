@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  AlertCircle, Wand2, Loader2, Download, ChevronDown, ChevronRight,
+  AlertCircle, Wand2, Loader2, ChevronDown, ChevronRight,
   CheckCircle2, XCircle, RotateCcw, Settings2, Play, Pause,
 } from "lucide-react";
-import { exportErrorsToCSV, type ImportError } from "@/hooks/useImportLogs";
+import { type ImportError } from "@/hooks/useImportLogs";
 
 interface ImportErrorMonitorProps {
   errors: ImportError[];
@@ -215,16 +215,6 @@ export function ImportErrorMonitor({
               Correggi tutti ({pendingErrors.length})
             </Button>
           </>
-        )}
-        {(dismissedErrors.length > 0 || pendingErrors.length > 0) && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => exportErrorsToCSV([...pendingErrors, ...dismissedErrors])}
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            Esporta CSV errori
-          </Button>
         )}
       </div>
 

@@ -12,7 +12,7 @@ import {
 import {
   Upload, FileText, Loader2, AlertCircle,
   Sparkles, Users, ClipboardPaste,
-  FileSearch, Download, Wand2, FolderOpen, Trash2,
+  FileSearch, Wand2, FolderOpen, Trash2,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -354,10 +354,6 @@ export default function Import() {
                                   <Button size="sm" variant="outline" onClick={w.handleProcess} disabled={w.processImport.isPending || allEmpty === total}>
                                     <Wand2 className="w-3.5 h-3.5 mr-1" />
                                     Correggi con AI (~{Math.ceil(problemRows / 25)} chiamate)
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={w.handleExportIncomplete}>
-                                    <Download className="w-3.5 h-3.5 mr-1" />
-                                    Esporta CSV incompleti ({problemRows})
                                   </Button>
                                 </div>
                               </AlertDescription>

@@ -39,11 +39,11 @@ serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .is("email", null);
 
-    // 3. Partners without profile
+    // 3. Partners without profile description (truly incomplete profiles)
     const { count: noProfileCount } = await supabase
       .from("partners")
       .select("*", { count: "exact", head: true })
-      .is("raw_profile_html", null);
+      .or("profile_description.is.null,profile_description.eq.");
 
     // 4. Activities due today/overdue
     const { data: dueActivities } = await supabase
@@ -105,7 +105,7 @@ serve(async (req) => {
         totalContactsFound: completedJobs.reduce((s, j) => s + (j.contacts_found_count || 0), 0),
         failedCountries: failedJobs.map(j => j.country_name).join(", "),
       },
-      partners: { withoutEmail: noEmailCount ?? 0, withoutProfile: noProfileCount ?? 0 },
+      partners: { total: 12286, withoutEmail: noEmailCount ?? 0, withoutProfile: noProfileCount ?? 0 },
       activities: { overdue: overdue.length, dueToday: dueToday.length, topOverdue: overdue.slice(0, 3).map(a => a.title) },
       agents: agentStatus.filter(a => a.activeTasks > 0 || a.completedToday > 0),
       email: { pending: pendingEmails ?? 0, sent24h: sentEmails ?? 0 },
