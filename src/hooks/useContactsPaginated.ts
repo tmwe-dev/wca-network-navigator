@@ -13,6 +13,8 @@ export interface ContactPaginatedFilters {
   countries?: string[];
   origins?: string[];
   cities?: string[];
+  companies?: string[];
+  names?: string[];
   leadStatus?: string;
   channel?: string;
   quality?: string;
