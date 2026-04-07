@@ -165,7 +165,7 @@ export default function MissionBuilder() {
 
   // Complete step
   const handleStepComplete = useCallback(async () => {
-    if (currentStep === 5) {
+    if (currentStep === TOTAL_STEPS - 1) {
       // Launch mission
       try {
         const { data: { session } } = await supabase.auth.getSession();
