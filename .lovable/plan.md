@@ -1,67 +1,61 @@
 
+# Card su 2 righe + Dropdown raggruppamento + Intestazione ordinabile + Filtri cliccabili inline
 
-# Tab orizzontali per raggruppamento + Card arricchite + Matching contatti-WCA
+## Cosa cambia
 
-## Panoramica
-
-Tre interventi sulla pagina Contatti del CRM:
-1. Barra di tab orizzontali scrollabili sopra la lista, che riflettono il raggruppamento attivo (paese, origine, stato)
-2. Card dei contatti arricchite con bandiera, origine, città visibili direttamente nella riga
-3. Sistema di matching contatti → partner WCA (come fatto per i biglietti da visita) con opzione di esclusione
-
----
-
-## 1. Tab orizzontali sopra la lista contatti
-
-Aggiungere in `ContactListPanel.tsx`, tra l'header e la lista, una barra scrollabile orizzontale che mostra i gruppi basati sul `groupBy` attivo nel contesto globale.
-
-- Se `groupBy === "country"` → tab per ogni paese con bandiera e conteggio (es. "🇮🇹 Italy (4932)")
-- Se `groupBy === "origin"` → tab per ogni origine con conteggio
-- Se `groupBy === "lead_status"` → tab per ogni stato
-
-Cliccando un tab si filtra la lista per quel valore. Un tab "Tutti" a sinistra mostra tutto.
-
-I dati dei gruppi vengono calcolati lato client dai contatti già caricati oppure tramite una query leggera (conteggio per colonna), riutilizzando la stessa logica del `CRMContactNavigator` nella sidebar.
+### 1. ContactCard su 2 righe
+La card attuale è una sola riga orizzontale con tutto compresso. Ristrutturazione su 2 righe:
 
 ```text
-[Tutti (11404)] [🇮🇹 Italy (4932)] [🇮🇳 India (2337)] [🇺🇸 US (1477)] [🇦🇪 UAE (111)] →
-─────────────────────────────────────────────────────────────────────────
-#1 □ 🇮🇹 Logigate Srl  |  Mario Rossi · CEO  |  Milano  |  WCA OLD  |  ...
+Riga 1: #42 □ 🇮🇹 A&G CHEMICAL PRODUC...   Mario Rossi · CEO         WCA OLD    [⚡][🔗]
+Riga 2:           Osio Sotto · Italy        mario@acg.com              Cliente    ●3
 ```
 
-## 2. Card contatti arricchite
+- Riga 1: index, checkbox, bandiera, azienda (bold), nome contatto + posizione, origine, indicatori
+- Riga 2: (indentata sotto la bandiera) città · paese, email troncata, lead status, contatore interazioni
+- Altezza stimata card: ~68px (aggiornare `estimateSize` nel virtualizer)
+- Tutti gli elementi allineati a sinistra con larghezze fisse per incolonnamento
 
-La `ContactCard.tsx` attuale non mostra bandiera paese. Modifiche:
+### 2. Dropdown "Raggruppa per" al posto del bottone "Tutti"
+Il bottone "Tutti (11428)" diventa un `<select>` / dropdown che permette di scegliere il tipo di raggruppamento:
+- Paese (default)
+- Origine
+- Stato lead
 
-- Aggiungere la bandiera del paese (da `resolveCountryCode(c.country)`) subito dopo il checkbox, prima del nome azienda
-- La bandiera sostituisce l'icona `Building2` come primo elemento visivo
-- Mantenere gli altri elementi già presenti (città, origine, indicatori)
+Selezionando un raggruppamento, i tab orizzontali di fianco mostrano le voci di quel gruppo con conteggi. Questo usa `gf.groupBy` che già esiste nel context.
 
-## 3. Matching contatti → partner WCA
+### 3. Riga intestazione ordinabile sopra la lista
+Una riga header fissa tra i tab e la lista con le colonne cliccabili:
 
-Concetto: molti dei ~11.400 contatti importati potrebbero corrispondere a partner WCA già nel database. Identificarli evita duplicazioni.
+```text
+[Azienda ↕] [Contatto ↕] [Città ↕] [Paese ↕] [Origine ↕]
+```
 
-**Approccio tecnico:**
-- Creare una migration che aggiunge a `imported_contacts` due colonne: `wca_partner_id UUID REFERENCES partners(id)` e `wca_match_confidence SMALLINT`
-- Creare un trigger o funzione SQL simile a `match_business_card` che confronta `company_name`/`company_alias` con `partners.company_name`, dominio email con `partner_contacts.email`, e boost per paese
-- Aggiungere un filtro nella UI: "Nascondi matchati WCA" / "Solo matchati WCA" / "Tutti" — come chip nella barra tab o nel filtro sidebar
-- Nel `ContactCard`, se `wca_partner_id` è valorizzato, mostrare un badge "WCA" verde per indicare il match
+Ogni click toglie ASC → DESC → nessun ordinamento. L'ordinamento viene passato come parametro `sort` alla query paginata (server-side).
 
-**Flusso utente:**
-1. L'utente clicca "Match con WCA" (bottone nella toolbar)
-2. Un edge function (o RPC) esegue il matching batch
-3. I risultati appaiono come badge nelle card
-4. L'utente può filtrare per vedere solo i non-matchati (contatti "puri") o solo i matchati
+### 4. Filtro inline cliccando su un valore
+Quando l'utente clicca su un valore nella card (es. "Italy", "Milano", "WCA OLD"), quel valore viene aggiunto come filtro attivo. Stato locale `activeFilters: Array<{field, value}>`.
 
----
+- I filtri attivi appaiono come chip in una barra sotto l'intestazione: `🇮🇹 Italy ✕` `Milano ✕`
+- Ogni chip ha una X per rimuoverlo
+- I filtri vengono combinati (AND) e passati alla query paginata
+- Cliccando lo stesso valore due volte lo rimuove
+
+### 5. Applicazione agli altri moduli (Network + sidebar)
+Lo stesso pattern (intestazione ordinabile + filtro click su valore + chip attivi) verrà replicato in:
+- `PartnerListPanel.tsx` (Network) — stessa logica
+- `CRMContactNavigator` nella sidebar — versione compatta
+
+Questo sarà un secondo step dopo il CRM.
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactListPanel.tsx` | Aggiungere barra tab orizzontali sopra la lista con gruppi dinamici |
-| `src/components/contacts/ContactCard.tsx` | Aggiungere bandiera paese, badge WCA match |
-| `src/hooks/useContacts.ts` | Aggiungere filtro `wcaMatch` (matched/unmatched/all) e colonna `wca_partner_id` |
-| `src/contexts/GlobalFiltersContext.tsx` | Aggiungere `crmGroupTab` per il tab attivo selezionato |
-| Migration SQL | Aggiungere `wca_partner_id` e `wca_match_confidence` a `imported_contacts`; creare funzione `match_contacts_to_wca()` |
+| `src/components/contacts/ContactCard.tsx` | Layout 2 righe con elementi incolonnati; valori cliccabili che emettono evento filtro |
+| `src/components/contacts/ContactListPanel.tsx` | Dropdown raggruppamento; riga intestazione ordinabile; barra chip filtri attivi; `estimateSize` → 68; stato `activeFilters` + logica addFilter/removeFilter; passare filtri alla query |
+| `src/hooks/useContactsPaginated.ts` | Aggiungere supporto filtro `city` e ordinamento multi-colonna server-side |
+| `src/components/operations/PartnerListPanel.tsx` | (Step 2) Replicare intestazione ordinabile + filtro click inline |
+| `src/components/global/FiltersDrawer.tsx` | (Step 2) Stessa logica nella sidebar CRM navigator |
 
+Nessuna migrazione DB.
