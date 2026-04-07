@@ -2527,6 +2527,8 @@ async function loadUserProfile(): Promise<string> {
   const parts: string[] = [];
   const get = (k: string) => settings[k]?.trim() || "";
 
+  // Current Focus — injected FIRST for maximum AI proactivity
+  if (get("ai_current_focus")) parts.push(`🎯 FOCUS CORRENTE: ${get("ai_current_focus")}`);
   if (get("ai_company_name") || get("ai_company_alias"))
     parts.push(`AZIENDA: ${get("ai_company_name")} (${get("ai_company_alias")})`);
   if (get("ai_contact_name") || get("ai_contact_alias"))
