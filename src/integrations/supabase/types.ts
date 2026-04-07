@@ -1230,6 +1230,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email_address: string
+          exclusive_agent_id: string | null
           id: string
           notes: string | null
           prompt_id: string | null
@@ -1241,6 +1242,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email_address: string
+          exclusive_agent_id?: string | null
           id?: string
           notes?: string | null
           prompt_id?: string | null
@@ -1252,6 +1254,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email_address?: string
+          exclusive_agent_id?: string | null
           id?: string
           notes?: string | null
           prompt_id?: string | null
@@ -1259,6 +1262,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_address_rules_exclusive_agent_id_fkey"
+            columns: ["exclusive_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_address_rules_prompt_id_fkey"
             columns: ["prompt_id"]
