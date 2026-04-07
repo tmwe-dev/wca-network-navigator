@@ -1,47 +1,67 @@
 
 
-# Linguette che scompaiono + Sidebar ridimensionabili + Ordinamento sotto ricerca
+# Tab orizzontali per raggruppamento + Card arricchite + Matching contatti-WCA
 
-## 1. Linguette scompaiono quando la sidebar è aperta
+## Panoramica
 
-In `AppLayout.tsx` le due `<button>` (righe 108-135) attualmente si spostano con `left: filtersOpen ? ... : 0`. La modifica:
+Tre interventi sulla pagina Contatti del CRM:
+1. Barra di tab orizzontali scrollabili sopra la lista, che riflettono il raggruppamento attivo (paese, origine, stato)
+2. Card dei contatti arricchite con bandiera, origine, città visibili direttamente nella riga
+3. Sistema di matching contatti → partner WCA (come fatto per i biglietti da visita) con opzione di esclusione
 
-- Quando `filtersOpen === true` → la linguetta sinistra diventa `opacity-0 pointer-events-none` (scompare)
-- Quando `missionOpen === true` → la linguetta destra diventa `opacity-0 pointer-events-none` (scompare)
-- Quando la sidebar si chiude → la linguetta riappare con transizione fade
+---
 
-Basta aggiungere le classi condizionali e rimuovere il calcolo `left`/`right` che le fa scorrere. La linguetta resta fissa al bordo dello schermo e semplicemente appare/scompare.
+## 1. Tab orizzontali sopra la lista contatti
 
-## 2. Sidebar ridimensionabili (drag per allargare)
+Aggiungere in `ContactListPanel.tsx`, tra l'header e la lista, una barra scrollabile orizzontale che mostra i gruppi basati sul `groupBy` attivo nel contesto globale.
 
-Aggiungere un handle di resize al bordo interno di entrambe le sidebar:
+- Se `groupBy === "country"` → tab per ogni paese con bandiera e conteggio (es. "🇮🇹 Italy (4932)")
+- Se `groupBy === "origin"` → tab per ogni origine con conteggio
+- Se `groupBy === "lead_status"` → tab per ogni stato
 
-- **FiltersDrawer** (sinistra): un div di 4px sul bordo destro del `SheetContent`, con `cursor: col-resize` e logica `onMouseDown` → `onMouseMove` per aggiornare la larghezza tramite state locale (`drawerWidth`). Min 320px, max 80vw.
-- **MissionDrawer** (destra): stesso pattern sul bordo sinistro.
+Cliccando un tab si filtra la lista per quel valore. Un tab "Tutti" a sinistra mostra tutto.
 
-La larghezza viene applicata come `style={{ width: drawerWidth }}` al posto delle classi fisse `w-[90vw] sm:w-[400px]`.
-
-## 3. Ordinamento sotto la barra ricerca nel navigatore CRM
-
-Nel `CRMContactNavigator` dentro `FiltersDrawer.tsx`, subito dopo l'input di ricerca e prima dell'elenco gruppi, inserire una riga compatta con i bottoni di ordinamento:
+I dati dei gruppi vengono calcolati lato client dai contatti già caricati oppure tramite una query leggera (conteggio per colonna), riutilizzando la stessa logica del `CRMContactNavigator` nella sidebar.
 
 ```text
-[🔍 Cerca contatto...]
-[Nome ↕] [Azienda ↕] [Città ↕] [Paese ↕]
-─────────────────────────────
-🇮🇹 Italy (234)
-  ...
+[Tutti (11404)] [🇮🇹 Italy (4932)] [🇮🇳 India (2337)] [🇺🇸 US (1477)] [🇦🇪 UAE (111)] →
+─────────────────────────────────────────────────────────────────────────
+#1 □ 🇮🇹 Logigate Srl  |  Mario Rossi · CEO  |  Milano  |  WCA OLD  |  ...
 ```
 
-I bottoni toggle ASC/DESC agiscono sull'ordinamento dei contatti all'interno dei gruppi espansi.
+## 2. Card contatti arricchite
+
+La `ContactCard.tsx` attuale non mostra bandiera paese. Modifiche:
+
+- Aggiungere la bandiera del paese (da `resolveCountryCode(c.country)`) subito dopo il checkbox, prima del nome azienda
+- La bandiera sostituisce l'icona `Building2` come primo elemento visivo
+- Mantenere gli altri elementi già presenti (città, origine, indicatori)
+
+## 3. Matching contatti → partner WCA
+
+Concetto: molti dei ~11.400 contatti importati potrebbero corrispondere a partner WCA già nel database. Identificarli evita duplicazioni.
+
+**Approccio tecnico:**
+- Creare una migration che aggiunge a `imported_contacts` due colonne: `wca_partner_id UUID REFERENCES partners(id)` e `wca_match_confidence SMALLINT`
+- Creare un trigger o funzione SQL simile a `match_business_card` che confronta `company_name`/`company_alias` con `partners.company_name`, dominio email con `partner_contacts.email`, e boost per paese
+- Aggiungere un filtro nella UI: "Nascondi matchati WCA" / "Solo matchati WCA" / "Tutti" — come chip nella barra tab o nel filtro sidebar
+- Nel `ContactCard`, se `wca_partner_id` è valorizzato, mostrare un badge "WCA" verde per indicare il match
+
+**Flusso utente:**
+1. L'utente clicca "Match con WCA" (bottone nella toolbar)
+2. Un edge function (o RPC) esegue il matching batch
+3. I risultati appaiono come badge nelle card
+4. L'utente può filtrare per vedere solo i non-matchati (contatti "puri") o solo i matchati
+
+---
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/layout/AppLayout.tsx` | Linguette: aggiungere `opacity-0 pointer-events-none` condizionale quando la rispettiva sidebar è aperta; rimuovere il calcolo `left`/`right` dinamico |
-| `src/components/global/FiltersDrawer.tsx` | Aggiungere handle di resize sul bordo destro + state `width`; aggiungere barra ordinamento sotto la ricerca nel navigatore |
-| `src/components/global/MissionDrawer.tsx` | Aggiungere handle di resize sul bordo sinistro + state `width` |
-
-Nessuna migrazione DB.
+| `src/components/contacts/ContactListPanel.tsx` | Aggiungere barra tab orizzontali sopra la lista con gruppi dinamici |
+| `src/components/contacts/ContactCard.tsx` | Aggiungere bandiera paese, badge WCA match |
+| `src/hooks/useContacts.ts` | Aggiungere filtro `wcaMatch` (matched/unmatched/all) e colonna `wca_partner_id` |
+| `src/contexts/GlobalFiltersContext.tsx` | Aggiungere `crmGroupTab` per il tab attivo selezionato |
+| Migration SQL | Aggiungere `wca_partner_id` e `wca_match_confidence` a `imported_contacts`; creare funzione `match_contacts_to_wca()` |
 
