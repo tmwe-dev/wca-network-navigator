@@ -259,8 +259,8 @@ export default function EmailComposer() {
         },
       });
       if (error) throw error;
-      if (data?.subject) setSubject(data.subject);
-      if (data?.body) setHtmlBody(data.body);
+      if (data?.subject) { setSubject(data.subject); setAiGeneratedSubject(data.subject); }
+      if (data?.body) { setHtmlBody(data.body); setAiGeneratedBody(data.body); }
       toast.success("Email generata con Oracolo 🔮");
     } catch (err: any) {
       toast.error("Errore generazione AI: " + (err.message || "Sconosciuto"));
