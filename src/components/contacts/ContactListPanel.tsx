@@ -38,7 +38,6 @@ const SORT_COLUMNS = [
   { field: "company", label: "Azienda", sortKey: "company" },
   { field: "name", label: "Contatto", sortKey: "name" },
   { field: "city", label: "Città", sortKey: "city" },
-  { field: "country", label: "Paese", sortKey: "country" },
   { field: "origin", label: "Origine", sortKey: "origin" },
 ];
 
