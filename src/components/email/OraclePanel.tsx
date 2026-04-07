@@ -270,6 +270,13 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
           {improving ? "Miglioramento..." : "🪄 Migliora"}
         </Button>
       </div>
+
+      <EmailTypeDetailDialog
+        emailType={detailType}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onDuplicate={handleDuplicate}
+      />
     </div>
   );
 }
