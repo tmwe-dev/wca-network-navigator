@@ -45,7 +45,7 @@ const SORT_COLUMNS = [
 export function ContactListPanel({ selectedId, onSelect }: Props) {
   const { filters: gf, setCrmGroupTab, setCrmWcaMatch, setGroupBy } = useGlobalFilters();
   const [addOpen, setAddOpen] = useState(false);
-  const selection = useSelection([]);
+  const selection = useSelection(contacts);
   const linkedInLookup = useLinkedInLookup();
   const parentRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
