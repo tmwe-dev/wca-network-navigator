@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import type { ContactOrigin } from "@/pages/Cockpit";
+import { ContactActionMenu } from "./ContactActionMenu";
+import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 interface Contact {
   id: string;
@@ -27,6 +29,7 @@ interface Contact {
 
 interface Props {
   contact: Contact;
+  cockpitContact?: CockpitContact;
   flag: string;
   index: number;
   isSelected: boolean;
@@ -49,7 +52,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
 
 const priorityLabel = (p: number) => p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa";
 
-export function CockpitContactListItem({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
+export function CockpitContactListItem({ contact, cockpitContact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
   const oc = originConfig[contact.origin];
   const isAiProcessed = !!contact.deepSearchAt;
 
@@ -120,6 +123,11 @@ export function CockpitContactListItem({ contact, flag, index, isSelected, onTog
             {contact.priority}
           </span>
         </InfoTooltip>
+        {cockpitContact && (
+          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+            <ContactActionMenu contact={cockpitContact} />
+          </div>
+        )}
       </motion.div>
     </TooltipProvider>
   );

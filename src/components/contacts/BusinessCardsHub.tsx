@@ -15,6 +15,8 @@ import {
   Globe, Sparkles, MessageCircle, Send, X, ClipboardList, Briefcase, ArrowRight, Trash2,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
+import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
+import { adaptBusinessCard } from "@/lib/contactActionAdapter";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
@@ -234,20 +236,21 @@ function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
     const phone = (card.mobile || card.phone || "").replace(/[^0-9+]/g, "");
     if (phone) window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
   };
-  return (
-    <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0" onClick={e => e.stopPropagation()}>
-      {card.email && (
-        <button onClick={handleEmail} className="p-0.5 rounded hover:bg-primary/10" title="Email">
-          <Mail className="w-3 h-3 text-primary" />
-        </button>
-      )}
-      {(card.phone || card.mobile) && (
-        <button onClick={handleWhatsApp} className="p-0.5 rounded hover:bg-emerald-500/10" title="WhatsApp">
-          <MessageCircle className="w-3 h-3 text-emerald-500" />
-        </button>
-      )}
-    </div>
-  );
+    return (
+      <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+        {card.email && (
+          <button onClick={handleEmail} className="p-0.5 rounded hover:bg-primary/10" title="Email">
+            <Mail className="w-3 h-3 text-primary" />
+          </button>
+        )}
+        {(card.phone || card.mobile) && (
+          <button onClick={handleWhatsApp} className="p-0.5 rounded hover:bg-emerald-500/10" title="WhatsApp">
+            <MessageCircle className="w-3 h-3 text-emerald-500" />
+          </button>
+        )}
+        <ContactActionMenu contact={adaptBusinessCard(card)} />
+      </div>
+    );
 }
 
 /* ═══ Compact List Row — 2 righe ═══ */
