@@ -358,6 +358,51 @@ export default function AIProfileSettings() {
         </CardContent>
       </Card>
 
+      {/* ── Card 5: Business Context ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <CardTitle className="text-base">Contesto Business</CardTitle>
+          </div>
+          <CardDescription>
+            Obiettivi, attività e regole comportamentali che l'AI utilizzerà in tutte le interazioni
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Attività principali dell'azienda</Label>
+            <Textarea
+              value={fields.ai_company_activities}
+              onChange={e => set("ai_company_activities", e.target.value)}
+              placeholder={`Es. Import/export via aerea e marittima, gestione doganale, magazzinaggio, distribuzione last-mile in Europa.`}
+              className="min-h-[80px] text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Obiettivi commerciali attuali</Label>
+            <Textarea
+              value={fields.ai_business_goals}
+              onChange={e => set("ai_business_goals", e.target.value)}
+              placeholder={`Es. Espandere la rete partner in Far East, aumentare il volume ocean FCL del 20%, acquisire 5 nuovi clienti pharma entro Q4.`}
+              className="min-h-[80px] text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Regole comportamentali AI</Label>
+            <Textarea
+              value={fields.ai_behavior_rules}
+              onChange={e => set("ai_behavior_rules", e.target.value)}
+              placeholder={`Es. Non proporre mai sconti nella prima email. Usa sempre il Lei con interlocutori italiani. Menziona sempre WCA come punto in comune. Non promettere transit time specifici senza verifica.`}
+              className="min-h-[100px] text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Queste regole saranno iniettate in TUTTE le interazioni AI del sistema
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* ── Save Button ── */}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} size="lg">
