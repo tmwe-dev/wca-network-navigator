@@ -41,6 +41,8 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, gen
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("📧");
   const [newPrompt, setNewPrompt] = useState("");
+  const [detailType, setDetailType] = useState<EmailType | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   
 
   const { data: settings } = useAppSettings();
