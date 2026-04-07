@@ -157,7 +157,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-2 border-t border-sidebar-border space-y-px">
+      <div className="flex-shrink-0 px-2 py-2 border-t border-sidebar-border space-y-px">
         {/* WCA status */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
