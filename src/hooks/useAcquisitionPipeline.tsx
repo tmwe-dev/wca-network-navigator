@@ -9,6 +9,9 @@ import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBrid
 import { useScrapingSettings, calcDelay, getPatternPause, ensureMinDuration } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAcquisitionPipeline");
 
 export type PipelineStatus = "idle" | "scanning" | "running" | "paused" | "done";
 export type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -268,7 +271,7 @@ export function useAcquisitionPipeline() {
             setCanvasData({ ...canvas });
           }
         } catch (extErr) {
-          console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
+          log.warn("extension call failed", { wcaId: item.wca_id, message: extErr instanceof Error ? extErr.message : String(extErr) });
         }
 
         // Fallback: check DB for contacts saved by extension
@@ -612,7 +615,7 @@ export function useAcquisitionPipeline() {
           .eq("id", jobId);
       }
     } catch (err) {
-      console.error("Failed to create/update acquisition job:", err);
+      log.error("create/update acquisition job failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
     }
 
     const localStats = await runExtensionLoop(jobId!, items);
