@@ -211,6 +211,44 @@ function getWcaYear(card: BusinessCardWithPartner): string | null {
   return year ? String(year) : null;
 }
 
+/* ═══ BCA Quick Actions (⋮) ═══ */
+function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
+  const navigate = useNavigate();
+  const handleEmail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!card.email) return;
+    navigate("/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: card.email,
+          name: card.contact_name || undefined,
+          company: card.company_name || undefined,
+          partnerId: card.matched_partner_id || undefined,
+        },
+      },
+    });
+  };
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const phone = (card.mobile || card.phone || "").replace(/[^0-9+]/g, "");
+    if (phone) window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
+  };
+  return (
+    <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0" onClick={e => e.stopPropagation()}>
+      {card.email && (
+        <button onClick={handleEmail} className="p-0.5 rounded hover:bg-primary/10" title="Email">
+          <Mail className="w-3 h-3 text-primary" />
+        </button>
+      )}
+      {(card.phone || card.mobile) && (
+        <button onClick={handleWhatsApp} className="p-0.5 rounded hover:bg-emerald-500/10" title="WhatsApp">
+          <MessageCircle className="w-3 h-3 text-emerald-500" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ═══ Compact List Row — 2 righe ═══ */
 function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
