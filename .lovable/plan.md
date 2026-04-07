@@ -1,39 +1,58 @@
 
 
-# Checkbox "Seleziona tutti / Deseleziona tutti" sopra ogni elenco selezionabile
+# Menu azioni (⋮) su tutte le card + Verifica sincronizzazione circuito di attesa
 
-## Cosa cambia
+## Situazione attuale — Menu azioni a tre pallini
 
-Aggiungere un checkbox nella riga dell'header (sopra l'elenco, nella barra colonne o nella barra info) in tutte le liste selezionabili. Quando premuto, seleziona tutti gli elementi visibili; se già tutti selezionati, deseleziona tutti.
+| Vista | Ha il menu ⋮? |
+|-------|---------------|
+| Cockpit — ContactStream (card e list) | ✅ `ContactActionMenu` |
+| Network — PartnerDetailCompact (contatti del partner) | ✅ `PartnerContactActionMenu` |
+| **CRM Contatti — ContactCard** | ❌ MANCA |
+| **CRM Biglietti — BusinessCardsHub** | ❌ MANCA |
+| **CockpitContactListItem** (riga compatta cockpit) | ❌ MANCA (è nel ContactStream wrapper, non nella riga stessa) |
+| **UnifiedContactRow** (componente shared) | ❌ MANCA |
 
-## Liste coinvolte
+## Situazione attuale — Circuito di attesa
 
-1. **CRM Contatti** (`ContactListPanel.tsx`) — nella riga header ordinabile (riga 311-331), sostituire il `<div />` vuoto nella prima cella con un `<Checkbox>` che usa `selection.toggleAll` / `selection.isAllSelected`. Il `useSelection` attualmente riceve `[]` come items — va aggiornato per passare `contacts` così che `selectAll` e `isAllSelected` funzionino correttamente.
+Il flusso `useTrackActivity` escalda correttamente `lead_status: new → contacted` per:
+- Partner (tabella `partners`)
+- Contatti importati (tabella `imported_contacts`)
+- Biglietti da visita (tabella `business_cards`)
 
-2. **Network Partners** (`PartnerListPanel.tsx`) — usa `selectedIds` come `Set<string>` manuale (non `useSelection`). Aggiungere un checkbox nell'header della lista che seleziona/deseleziona tutti i `partners` caricati.
+Il filtro `holdingPattern` in `useContactsPaginated` usa `interaction_count > 0` per determinare chi è "in circuito". **Problema potenziale**: `useTrackActivity` aggiorna `lead_status` ma non incrementa `interaction_count` direttamente — `interaction_count` viene da `contact_interactions` tramite un conteggio separato. Devo verificare che il conteggio sia coerente.
 
-3. **CRM Biglietti da Visita** (`BusinessCardsHub.tsx`) — aggiungere checkbox nell'header sopra l'elenco dei biglietti.
+## Piano di intervento
 
-4. **Attività** (`ActivitiesTab.tsx`) — già usa `useSelection` con `toggleAll`/`isAllSelected`. Aggiungere il checkbox nell'header della lista se non presente.
+### Step 1: Aggiungere il menu ⋮ alla ContactCard del CRM
+- Importare `ContactActionMenu` dal cockpit (o creare un wrapper per contatti importati che adatta l'interfaccia)
+- Il `ContactActionMenu` attuale accetta un `CockpitContact` — serve un adattatore che mappa `imported_contact` → `CockpitContact`
+- Posizionare il menu nella **Col 7** (dove c'è la lente), aggiungendo i tre pallini accanto alla lente
 
-## Dettagli tecnici
+### Step 2: Aggiungere il menu ⋮ ai biglietti da visita (BusinessCardsHub)
+- Nelle card compact/expanded dei biglietti, aggiungere lo stesso menu azioni
+- Adattare i dati del biglietto al formato richiesto dal menu
 
-- **`ContactListPanel.tsx`**: cambiare `useSelection([])` → `useSelection(contacts)` per avere `isAllSelected` e `toggleAll` funzionanti. Nella riga header grid (riga 315), sostituire `<div />` con `<Checkbox checked={selection.isAllSelected} onCheckedChange={selection.toggleAll} />`.
+### Step 3: Aggiungere il menu ⋮ alla CockpitContactListItem
+- Attualmente il menu appare solo nel wrapper `ContactStream` su hover — va messo direttamente nella riga
 
-- **`PartnerListPanel.tsx`**: aggiungere un checkbox nell'header che fa `setSelectedIds(new Set(partners.map(p => p.id)))` o `setSelectedIds(new Set())`.
+### Step 4: Aggiungere il menu ⋮ alla UnifiedContactRow
+- Componente shared usato potenzialmente in più punti — aggiungere un prop opzionale per il menu azioni
 
-- **`BusinessCardsHub.tsx`**: stesso pattern — checkbox nell'header della lista.
+### Step 5: Verifica sincronizzazione circuito di attesa
+- Controllare che `interaction_count` in `imported_contacts` venga aggiornato quando `useTrackActivity` crea un record in `contact_interactions`
+- Verificare che la query del filtro `holdingPattern` sia coerente con i dati scritti
+- Controllare che i contatti lavorati oggi (`useWorkedToday`) vengano effettivamente esclusi dalla lista quando il filtro "fuori circuito" è attivo
+- Se necessario, aggiungere un trigger SQL che incrementa `interaction_count` sulla tabella `imported_contacts` quando viene inserita una riga in `contact_interactions`
 
-- **`ActivitiesTab.tsx`**: aggiungere checkbox prima della lista.
-
-## File modificati
+## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactListPanel.tsx` | `useSelection(contacts)` + Checkbox nell'header grid |
-| `src/components/operations/PartnerListPanel.tsx` | Checkbox select all/deselect all nell'header |
-| `src/components/contacts/BusinessCardsHub.tsx` | Checkbox select all/deselect all nell'header |
-| `src/components/agenda/ActivitiesTab.tsx` | Checkbox select all/deselect all nell'header |
-
-Nessuna migrazione DB.
+| `src/components/contacts/ContactCard.tsx` | Aggiungere import e rendering del menu ⋮ nella Col 7 accanto alla lente |
+| `src/components/contacts/BusinessCardsHub.tsx` | Aggiungere menu ⋮ su ogni card biglietto da visita |
+| `src/components/cockpit/CockpitContactListItem.tsx` | Aggiungere menu ⋮ inline nella riga |
+| `src/components/shared/UnifiedContactRow.tsx` | Aggiungere prop `actionMenu` opzionale |
+| `src/components/cockpit/ContactActionMenu.tsx` | Eventuale refactor per accettare un formato contatto generico (o creare un adattatore) |
+| Migration SQL (se necessario) | Trigger per sincronizzare `interaction_count` con le inserzioni in `contact_interactions` |
 
