@@ -11,7 +11,7 @@ import {
   AlertCircle, Wand2, Loader2, Download, ChevronDown, ChevronRight,
   CheckCircle2, XCircle, RotateCcw, Settings2, Play, Pause,
 } from "lucide-react";
-import { exportErrorsToCSV, type ImportError } from "@/hooks/useImportLogs";
+import { type ImportError } from "@/hooks/useImportLogs";
 
 interface ImportErrorMonitorProps {
   errors: ImportError[];
