@@ -56,6 +56,11 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
         query = query.in("origin", filters.origins);
       }
 
+      // Cities
+      if (filters?.cities && filters.cities.length > 0) {
+        query = query.in("city", filters.cities);
+      }
+
       // Lead status
       if (filters?.leadStatus) {
         query = query.eq("lead_status", filters.leadStatus);
