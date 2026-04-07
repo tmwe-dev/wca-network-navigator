@@ -841,6 +841,44 @@ function CRMFiltersSection() {
   );
 }
 
+/* ── CRM Contact Quick Actions (⋮ menu) ── */
+function CRMContactQuickActions({ contact }: { contact: any }) {
+  const navigate = useNavigate();
+  const handleEmail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!contact.email) return;
+    navigate("/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: contact.email,
+          name: contact.name || undefined,
+          company: contact.company_name || undefined,
+          contactId: contact.id,
+        },
+      },
+    });
+  };
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const phone = (contact.phone || contact.mobile || "").replace(/[^0-9+]/g, "");
+    if (phone) window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
+  };
+  return (
+    <div className="flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0">
+      {contact.email && (
+        <button onClick={handleEmail} className="p-0.5 rounded hover:bg-primary/10" title="Email">
+          <Mail className="w-3 h-3 text-primary" />
+        </button>
+      )}
+      {(contact.phone || contact.mobile) && (
+        <button onClick={handleWhatsApp} className="p-0.5 rounded hover:bg-emerald-500/10" title="WhatsApp">
+          <MessageCircle className="w-3 h-3 text-emerald-500" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ── CRM Contact Group Navigator ── */
 
 function CRMContactNavigator({ groupBy }: { groupBy: string }) {
