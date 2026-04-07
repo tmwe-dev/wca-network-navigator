@@ -216,16 +216,6 @@ export function ImportErrorMonitor({
             </Button>
           </>
         )}
-        {(dismissedErrors.length > 0 || pendingErrors.length > 0) && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => exportErrorsToCSV([...pendingErrors, ...dismissedErrors])}
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            Esporta CSV errori
-          </Button>
-        )}
       </div>
 
       {/* Error list with expandable details */}

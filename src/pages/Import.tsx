@@ -355,10 +355,6 @@ export default function Import() {
                                     <Wand2 className="w-3.5 h-3.5 mr-1" />
                                     Correggi con AI (~{Math.ceil(problemRows / 25)} chiamate)
                                   </Button>
-                                  <Button size="sm" variant="outline" onClick={w.handleExportIncomplete}>
-                                    <Download className="w-3.5 h-3.5 mr-1" />
-                                    Esporta CSV incompleti ({problemRows})
-                                  </Button>
                                 </div>
                               </AlertDescription>
                             </Alert>
