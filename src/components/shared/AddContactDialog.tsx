@@ -287,12 +287,37 @@ export default function AddContactDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
-          <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-            Salva
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            disabled={!form.email.trim()}
+            onClick={() => {
+              navigate("/email-composer", {
+                state: {
+                  prefilledRecipient: {
+                    email: form.email.trim(),
+                    name: form.name.trim() || undefined,
+                    company: form.company.trim() || undefined,
+                    city: form.city.trim() || undefined,
+                    countryCode: form.country.trim() || undefined,
+                  },
+                },
+              });
+              onOpenChange(false);
+            }}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Scrivi email
           </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
+            <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+              Salva
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
