@@ -1073,26 +1073,25 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                           className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
                         >
                           <div className="flex items-start gap-1.5">
-                            {c.country && <span className="text-xs shrink-0 mt-0.5">{getCountryFlag(c.country)}</span>}
+                            <span className="text-xs shrink-0 mt-0.5 w-4 text-center">{c.country ? getCountryFlag(c.country) : ""}</span>
                             <button onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left">
-                              <p className="text-[11px] font-medium truncate">{c.company_alias || c.company_name || c.name || "—"}</p>
-                              <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
-                                {c.name && <span className="truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</span>}
-                                {c.city && <span className="flex items-center gap-0.5 shrink-0 text-muted-foreground/70">📍{c.city}</span>}
+                              {/* Riga 1: Azienda */}
+                              <p className="text-[11px] font-medium truncate leading-tight">{c.company_alias || c.company_name || c.name || "—"}</p>
+                              {/* Riga 2: Nome · Ruolo | Città — posizioni fisse */}
+                              <div className="flex items-center text-[9px] text-muted-foreground leading-tight mt-0.5">
+                                <span className="truncate min-w-0 flex-1">{c.name || "—"}{c.position ? ` · ${c.position}` : ""}</span>
+                                <span className="shrink-0 w-[70px] text-right truncate text-muted-foreground/70">{c.city || ""}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {c.email && (
-                                  <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground truncate max-w-[100px]">
-                                    <Mail className="w-2.5 h-2.5 shrink-0" />{c.email}
-                                  </span>
-                                )}
-                                {(c.phone || c.mobile) && (
-                                  <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground shrink-0">
-                                    <Phone className="w-2.5 h-2.5" />{c.phone || c.mobile}
-                                  </span>
-                                )}
+                              {/* Riga 3: Email | Telefono | Origine — posizioni fisse */}
+                              <div className="flex items-center text-[8px] text-muted-foreground leading-tight mt-0.5">
+                                <span className="truncate min-w-0 flex-1 flex items-center gap-0.5">
+                                  {c.email ? <><Mail className="w-2.5 h-2.5 shrink-0" />{c.email}</> : "—"}
+                                </span>
+                                <span className="shrink-0 w-[80px] text-right truncate flex items-center justify-end gap-0.5">
+                                  {(c.phone || c.mobile) ? <><Phone className="w-2.5 h-2.5 shrink-0" />{c.phone || c.mobile}</> : ""}
+                                </span>
                                 {c.origin && groupBy !== "origin" && (
-                                  <Badge variant="outline" className="text-[7px] h-3 px-1 shrink-0">{c.origin}</Badge>
+                                  <Badge variant="outline" className="text-[7px] h-3 px-1 shrink-0 ml-1">{c.origin}</Badge>
                                 )}
                               </div>
                             </button>
