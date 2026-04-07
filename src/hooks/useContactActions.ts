@@ -182,14 +182,33 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
   if (!contactIds.length) return;
   const { data: contacts } = await supabase.from("imported_contacts").select("id, company_name, name, email, country, city").in("id", contactIds.slice(0, 200)).not("email", "is", null);
   if (!contacts?.length) { toast({ title: "Nessun contatto con email", variant: "destructive" }); return; }
-  const activities = contacts.map((ct: any) => ({
-    partner_id: null, source_type: "contact" as const, source_id: ct.id, activity_type: "send_email" as const,
-    title: `Email a ${ct.name || ct.company_name || "Contatto"}`, description: `Contatto: ${ct.name || ""} - ${ct.email}`,
-    priority: "medium", source_meta: { company_name: ct.company_name, contact_name: ct.name, email: ct.email, country: ct.country, city: ct.city },
+
+  if (contacts.length === 1) {
+    // Single contact → prefill email composer directly
+    const ct = contacts[0] as any;
+    navigate("/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: ct.email,
+          name: ct.name || undefined,
+          company: ct.company_name || undefined,
+          contactId: ct.id,
+        },
+      },
+    });
+    return;
+  }
+
+  // Multiple contacts → pass as array of recipients
+  const recipients = contacts.map((ct: any) => ({
+    email: ct.email,
+    name: ct.name || undefined,
+    company: ct.company_name || undefined,
+    contactId: ct.id,
   }));
-  await supabase.from("activities").insert(activities);
-  toast({ title: "Inviati al Workspace", description: `${activities.length} attività email create` });
-  navigate("/workspace");
+  navigate("/email-composer", {
+    state: { prefilledRecipients: recipients },
+  });
 }
 
 async function createCampaignJobs(contactIds: string[], selection: ReturnType<typeof useSelection>, setSelectedGroups: React.Dispatch<React.SetStateAction<Set<string>>>, navigate: ReturnType<typeof useNavigate>) {
