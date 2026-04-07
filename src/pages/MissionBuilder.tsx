@@ -183,6 +183,12 @@ export default function MissionBuilder() {
           total_contacts: totalContacts,
           agent_assignments: stepData.agents || [],
           schedule_config: { type: stepData.schedule, date: stepData.scheduleDate },
+          metadata: {
+            deepSearch: stepData.deepSearch || {},
+            communication: stepData.communication || {},
+            attachments: stepData.attachments || {},
+            toneConfig: stepData.toneConfig || {},
+          },
         }).select().single();
 
         if (error) throw error;
