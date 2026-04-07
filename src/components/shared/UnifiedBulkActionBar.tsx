@@ -23,6 +23,7 @@ export interface UnifiedBulkActionBarProps {
   onCampaign?: () => void;
   onDelete?: () => void;
   onDeduplicate?: () => void;
+  onWcaMatch?: () => void;
 
   /* Counts for contextual labels */
   withEmail?: number;
@@ -33,6 +34,7 @@ export interface UnifiedBulkActionBarProps {
   linkedInLoading?: boolean;
   deduplicateLoading?: boolean;
   sendingToWorkspace?: boolean;
+  wcaMatchLoading?: boolean;
 }
 
 export function UnifiedBulkActionBar({
