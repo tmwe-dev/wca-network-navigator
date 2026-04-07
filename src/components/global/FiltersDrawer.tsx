@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useCountryStats } from "@/hooks/useCountryStats";
-import { getCountryFlag } from "@/lib/countries";
+import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 
@@ -589,46 +589,69 @@ function CRMFiltersSection() {
   const [countrySearch, setCountrySearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [inlineSortOpen, setInlineSortOpen] = useState(false);
 
-  // Country list from imported_contacts
-  const [crmCountries, setCrmCountries] = useState<{ code: string; name: string; flag: string; total: number }[]>([]);
-  // Dynamic origins from imported_contacts
+  const [crmCountries, setCrmCountries] = useState<{ value: string; name: string; flag: string; total: number }[]>([]);
   const [crmOrigins, setCrmOrigins] = useState<{ value: string; label: string; count: number }[]>([]);
 
-  // Fetch countries and origins from imported_contacts
   useEffect(() => {
     const fetchData = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        // Fetch countries
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("country")
-          .not("country", "is", null);
-        if (data) {
+        const pageSize = 1000;
+
+        const countryRows: any[] = [];
+        let countryFrom = 0;
+        while (true) {
+          const { data: page, error } = await supabase
+            .from("imported_contacts")
+            .select("country")
+            .range(countryFrom, countryFrom + pageSize - 1);
+          if (error || !page || page.length === 0) break;
+          countryRows.push(...page);
+          if (page.length < pageSize) break;
+          countryFrom += pageSize;
+        }
+
+        if (countryRows.length > 0) {
           const counts: Record<string, number> = {};
-          data.forEach((r: any) => {
-            const c = (r.country || "").toUpperCase().trim();
-            if (c) counts[c] = (counts[c] || 0) + 1;
+          countryRows.forEach((r: any) => {
+            const raw = (r.country || "").trim();
+            if (!raw) return;
+            counts[raw] = (counts[raw] || 0) + 1;
           });
-          const list = Object.entries(counts).map(([code, total]) => {
-            const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
-            return {
-              code,
-              name: wcaCountry?.name || code,
-              flag: getCountryFlag(code),
-              total,
-            };
-          }).sort((a, b) => b.total - a.total);
+
+          const list = Object.entries(counts)
+            .map(([value, total]) => {
+              const resolved = resolveCountryCode(value);
+              const wcaCountry = resolved ? WCA_COUNTRIES.find((c: any) => c.code === resolved) : null;
+              return {
+                value,
+                name: wcaCountry?.name || value,
+                flag: resolved ? getCountryFlag(resolved) : "",
+                total,
+              };
+            })
+            .sort((a, b) => b.total - a.total);
           setCrmCountries(list);
         }
-        // Fetch origins
-        const { data: originData } = await supabase
-          .from("imported_contacts")
-          .select("origin");
-        if (originData) {
+
+        const originRows: any[] = [];
+        let originFrom = 0;
+        while (true) {
+          const { data: page, error } = await supabase
+            .from("imported_contacts")
+            .select("origin")
+            .range(originFrom, originFrom + pageSize - 1);
+          if (error || !page || page.length === 0) break;
+          originRows.push(...page);
+          if (page.length < pageSize) break;
+          originFrom += pageSize;
+        }
+
+        if (originRows.length > 0) {
           const oCounts: Record<string, number> = {};
-          originData.forEach((r: any) => {
+          originRows.forEach((r: any) => {
             const o = (r.origin || "").trim();
             if (o) oCounts[o] = (oCounts[o] || 0) + 1;
           });
@@ -639,11 +662,12 @@ function CRMFiltersSection() {
         }
       } catch {}
     };
+
     fetchData();
   }, []);
 
   const selectedCountries = useMemo(
-    () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.code)),
+    () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.value)),
     [crmCountries, g.filters.crmSelectedCountries]
   );
 
@@ -651,18 +675,19 @@ function CRMFiltersSection() {
     const q = countrySearch.toLowerCase();
     const matches = !q
       ? crmCountries
-      : crmCountries.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+      : crmCountries.filter(c => c.name.toLowerCase().includes(q) || c.value.toLowerCase().includes(q));
+
     return [...matches].sort((a, b) => {
-      const aS = g.filters.crmSelectedCountries.has(a.code) ? 1 : 0;
-      const bS = g.filters.crmSelectedCountries.has(b.code) ? 1 : 0;
+      const aS = g.filters.crmSelectedCountries.has(a.value) ? 1 : 0;
+      const bS = g.filters.crmSelectedCountries.has(b.value) ? 1 : 0;
       if (aS !== bS) return bS - aS;
       return b.total - a.total;
     });
   }, [crmCountries, countrySearch, g.filters.crmSelectedCountries]);
 
-  const toggleCountry = (code: string) => {
+  const toggleCountry = (value: string) => {
     const next = new Set(g.filters.crmSelectedCountries);
-    if (next.has(code)) next.delete(code); else next.add(code);
+    if (next.has(value)) next.delete(value); else next.add(value);
     g.setCrmSelectedCountries(next);
   };
 
@@ -672,10 +697,13 @@ function CRMFiltersSection() {
     g.setCrmOrigin(next);
   };
 
-  // Inline search
   const searchValue = g.filters.search;
   useEffect(() => {
-    if (searchValue.trim().length < 2) { setSearchResults([]); return; }
+    if (searchValue.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
     setSearching(true);
     const doSearch = async () => {
       try {
@@ -686,18 +714,19 @@ function CRMFiltersSection() {
           .or(`name.ilike.%${searchValue}%,company_name.ilike.%${searchValue}%,company_alias.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
           .limit(30);
         setSearchResults(data || []);
-      } catch { setSearchResults([]); }
-      finally { setSearching(false); }
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
     };
+
     const timer = setTimeout(doSearch, 300);
     return () => clearTimeout(timer);
   }, [searchValue]);
 
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-
   return (
     <>
-      {/* Search with inline results */}
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Contatto, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
         {searchValue.trim().length >= 2 && (
@@ -711,132 +740,141 @@ function CRMFiltersSection() {
                 <div className="px-2.5 py-1.5 bg-muted/30">
                   <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
                 </div>
-                {searchResults.map((c: any) => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent("crm-select-contact", { detail: { contactId: c.id } }));
-                      window.dispatchEvent(new CustomEvent("filters-drawer-close"));
-                    }}
-                    className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm shrink-0">{getCountryFlag(c.country)}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{c.company_alias || c.company_name || "—"}</p>
-                        {c.name && <p className="text-[10px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
+                {searchResults.map((c: any) => {
+                  const resolvedCountry = resolveCountryCode(c.country || "");
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent("crm-select-contact", { detail: { contactId: c.id } }));
+                        window.dispatchEvent(new CustomEvent("filters-drawer-close"));
+                      }}
+                      className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm shrink-0 w-4 text-center">{resolvedCountry ? getCountryFlag(resolvedCountry) : ""}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{c.company_alias || c.company_name || "—"}</p>
+                          {c.name && <p className="text-[10px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
+                        </div>
+                        {c.email && <span className="text-[9px] text-muted-foreground truncate max-w-[110px]">{c.email}</span>}
                       </div>
-                      {c.email && <span className="text-[9px] text-muted-foreground truncate max-w-[110px]">{c.email}</span>}
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </>
             )}
           </div>
         )}
       </FilterSection>
 
-      {/* ── Raggruppa per ── */}
-      <FilterSection icon={Layers} label="Raggruppa per">
-        <ChipGroup>
-          {CRM_GROUPBY.map(o => (
-            <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
-      {/* ── Contact Group Navigator — MAIN ELEMENT ── */}
-      <CRMContactNavigator groupBy={g.filters.groupBy} />
-
-      {/* ── Filtri avanzati (collapsible) ── */}
-      <button
-        onClick={() => setFiltersExpanded(!filtersExpanded)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted/40 transition-colors"
-      >
-        <Filter className="w-3.5 h-3.5" />
-        <span className="font-medium">Filtri avanzati</span>
-        <span className="ml-auto text-[10px]">{filtersExpanded ? "▾" : "▸"}</span>
-      </button>
-
-      {filtersExpanded && (
-        <div className="space-y-3 pl-1">
-          {/* Country list with checkboxes */}
-          <FilterSection icon={Globe} label={`Paesi (${g.filters.crmSelectedCountries.size > 0 ? g.filters.crmSelectedCountries.size + ' sel.' : 'tutti'})`}>
-            {selectedCountries.length > 0 && (
-              <div className="mb-1.5 flex flex-wrap gap-1">
-                {selectedCountries.map((country) => (
-                  <button key={country.code} onClick={() => toggleCountry(country.code)}
-                    className="inline-flex items-center gap-0.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
-                    <span>{country.flag}</span><span>{country.code}</span> ×
-                  </button>
+      <div className="space-y-2">
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <FilterSection icon={Layers} label="Raggruppa per">
+              <ChipGroup>
+                {CRM_GROUPBY.map(o => (
+                  <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
                 ))}
-                <button onClick={() => g.setCrmSelectedCountries(new Set())} className="text-[9px] text-destructive hover:underline ml-1">Reset</button>
-              </div>
-            )}
-            <Input value={countrySearch} onChange={e => setCountrySearch(e.target.value)} placeholder="Cerca paese..." className="h-6 text-[10px] bg-muted/30 border-border/40 mb-1" />
-            <div className="max-h-[140px] overflow-y-auto rounded border border-border/40 bg-muted/10 p-0.5">
-              {filteredCountries.map(c => (
-                <button key={c.code} onClick={() => toggleCountry(c.code)}
-                  className={cn(
-                    "w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-[11px] transition-all",
-                    g.filters.crmSelectedCountries.has(c.code) ? "bg-primary/15 text-primary" : "hover:bg-muted/40"
-                  )}>
-                  <span className="text-sm">{c.flag}</span>
-                  <span className="flex-1 text-left truncate">{c.name}</span>
-                  {g.filters.crmSelectedCountries.has(c.code) && <Check className="w-2.5 h-2.5 text-primary" />}
-                  <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{c.total}</Badge>
-                </button>
-              ))}
-            </div>
-          </FilterSection>
+              </ChipGroup>
+            </FilterSection>
+          </div>
+          <div className="shrink-0 pt-7">
+            <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => setInlineSortOpen(v => !v)}>
+              <ArrowUpDown className="w-3.5 h-3.5" /> Ordina
+            </Button>
+          </div>
+        </div>
 
-          {/* Origine */}
-          <FilterSection icon={Database} label="Origine">
-            <ChipGroup>
-              {crmOrigins.map(o => (
-                <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
-                  {o.label} <span className="ml-0.5 text-[8px] opacity-60">({o.count})</span>
-                </Chip>
-              ))}
-            </ChipGroup>
-          </FilterSection>
-
-          {/* Ordina */}
-          <FilterSection icon={ArrowUpDown} label="Ordina">
+        {inlineSortOpen && (
+          <div className="rounded-lg border border-border/40 bg-muted/10 p-2">
             <ChipGroup>
               {CRM_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}
             </ChipGroup>
-          </FilterSection>
-
-          {/* Stato + Circuito */}
-          <div className="grid grid-cols-2 gap-2">
-            <FilterSection icon={Users} label="Stato">
-              <ChipGroup>
-                {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-            <FilterSection icon={Plane} label="Circuito">
-              <ChipGroup>
-                {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
           </div>
+        )}
+      </div>
 
-          {/* Canale + Qualità */}
-          <div className="grid grid-cols-2 gap-2">
-            <FilterSection icon={Wifi} label="Canale">
-              <ChipGroup>
-                {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-            <FilterSection icon={Sparkles} label="Qualità">
-              <ChipGroup>
-                {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-          </div>
+      <CRMContactNavigator groupBy={g.filters.groupBy} />
+
+      <div className="rounded-lg border border-border/40 bg-muted/10 p-2 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Filter className="w-3.5 h-3.5" /> Filtri contesto
         </div>
-      )}
+
+        <FilterSection icon={Database} label="Origine">
+          <ChipGroup>
+            {crmOrigins.map(o => (
+              <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
+                {o.label} <span className="ml-0.5 text-[8px] opacity-60">({o.count})</span>
+              </Chip>
+            ))}
+          </ChipGroup>
+        </FilterSection>
+
+        <div className="grid grid-cols-2 gap-2">
+          <FilterSection icon={Users} label="Stato">
+            <ChipGroup>
+              {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
+            </ChipGroup>
+          </FilterSection>
+          <FilterSection icon={Plane} label="Circuito">
+            <ChipGroup>
+              {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
+            </ChipGroup>
+          </FilterSection>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <FilterSection icon={Wifi} label="Canale">
+            <ChipGroup>
+              {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
+            </ChipGroup>
+          </FilterSection>
+          <FilterSection icon={Sparkles} label="Qualità">
+            <ChipGroup>
+              {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
+            </ChipGroup>
+          </FilterSection>
+        </div>
+
+        <FilterSection icon={Globe} label={`Paesi (${g.filters.crmSelectedCountries.size > 0 ? g.filters.crmSelectedCountries.size + ' sel.' : 'tutti'})`}>
+          {selectedCountries.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap gap-1">
+              {selectedCountries.map((country) => (
+                <button
+                  key={country.value}
+                  onClick={() => toggleCountry(country.value)}
+                  className="inline-flex items-center gap-0.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary"
+                >
+                  <span>{country.flag}</span>
+                  <span className="max-w-[90px] truncate">{country.name}</span>
+                  ×
+                </button>
+              ))}
+              <button onClick={() => g.setCrmSelectedCountries(new Set())} className="text-[9px] text-destructive hover:underline ml-1">Reset</button>
+            </div>
+          )}
+          <Input value={countrySearch} onChange={e => setCountrySearch(e.target.value)} placeholder="Cerca paese..." className="h-6 text-[10px] bg-muted/30 border-border/40 mb-1" />
+          <div className="max-h-[140px] overflow-y-auto rounded border border-border/40 bg-muted/10 p-0.5">
+            {filteredCountries.map(c => (
+              <button
+                key={c.value}
+                onClick={() => toggleCountry(c.value)}
+                className={cn(
+                  "w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-[11px] transition-all",
+                  g.filters.crmSelectedCountries.has(c.value) ? "bg-primary/15 text-primary" : "hover:bg-muted/40"
+                )}
+              >
+                <span className="text-sm w-4 text-center">{c.flag}</span>
+                <span className="flex-1 text-left truncate">{c.name}</span>
+                {g.filters.crmSelectedCountries.has(c.value) && <Check className="w-2.5 h-2.5 text-primary" />}
+                <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{c.total}</Badge>
+              </button>
+            ))}
+          </div>
+        </FilterSection>
+      </div>
     </>
   );
 }
@@ -882,21 +920,19 @@ function CRMContactQuickActions({ contact }: { contact: any }) {
 /* ── CRM Contact Group Navigator ── */
 
 function CRMContactNavigator({ groupBy }: { groupBy: string }) {
+  const g = useGlobalFilters();
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [loadingGroup, setLoadingGroup] = useState<string | null>(null);
   const [groupContacts, setGroupContacts] = useState<Record<string, any[]>>({});
-
-  // Lightweight direct query instead of heavy RPC (avoids statement timeout on 11k+ contacts)
   const [groups, setGroups] = useState<{ key: string; label: string; count: number }[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
+  const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchGroups = async () => {
       setGroupsLoading(true);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        
-        // Map groupBy to the actual DB column
         const colMap: Record<string, string> = {
           country: "country",
           origin: "origin",
@@ -905,10 +941,9 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
         };
         const col = colMap[groupBy] || "country";
 
-        // Fetch all rows in pages of 5000 (Supabase default limit is 1000)
         const allRows: any[] = [];
         let from = 0;
-        const pageSize = 5000;
+        const pageSize = 1000;
         while (true) {
           const { data: page, error: pageError } = await supabase
             .from("imported_contacts")
@@ -921,32 +956,42 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
           from += pageSize;
         }
 
-        if (allRows.length === 0) { setGroups([]); return; }
+        if (allRows.length === 0) {
+          setGroups([]);
+          return;
+        }
 
-        // Client-side grouping (fast on ~11k lightweight rows with 1 column)
         const counts = new Map<string, number>();
         for (const row of allRows as any[]) {
-          const val = row[col] || (groupBy === "country" ? "??" : groupBy === "origin" ? "Sconosciuta" : "—");
+          const val = row[col] || (groupBy === "country" ? "Sconosciuto" : groupBy === "origin" ? "Sconosciuta" : "—");
           counts.set(val, (counts.get(val) || 0) + 1);
         }
 
         const STATUS_LABELS: Record<string, string> = {
-          new: "Nuovo", contacted: "Contattato", in_progress: "In corso",
-          negotiation: "Trattativa", converted: "Cliente", lost: "Perso",
+          new: "Nuovo",
+          contacted: "Contattato",
+          in_progress: "In corso",
+          negotiation: "Trattativa",
+          converted: "Cliente",
+          lost: "Perso",
         };
 
         const grouped = Array.from(counts.entries())
           .map(([key, count]) => ({
             key,
-            label: groupBy === "lead_status" ? (STATUS_LABELS[key] || key) : (key === "??" ? "Sconosciuto" : key),
+            label: groupBy === "lead_status" ? (STATUS_LABELS[key] || key) : key,
             count,
           }))
           .sort((a, b) => b.count - a.count);
 
         setGroups(grouped);
-      } catch { setGroups([]); }
-      finally { setGroupsLoading(false); }
+      } catch {
+        setGroups([]);
+      } finally {
+        setGroupsLoading(false);
+      }
     };
+
     fetchGroups();
   }, [groupBy]);
 
@@ -964,21 +1009,21 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
       setLoadingGroup(key);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        // Paginated fetch — no hard limit
         const allContacts: any[] = [];
         let from = 0;
-        const ps = 2000;
+        const pageSize = 1000;
+
         while (true) {
           let q = supabase
             .from("imported_contacts")
             .select("id, name, company_name, company_alias, country, email, position, origin, phone, mobile, city, lead_status")
             .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
             .order("company_name", { ascending: true })
-            .range(from, from + ps - 1);
+            .range(from, from + pageSize - 1);
 
           switch (groupBy) {
             case "country":
-              if (key === "??" || key === "Sconosciuto") q = q.is("country", null);
+              if (key === "Sconosciuto") q = q.is("country", null);
               else q = q.eq("country", key);
               break;
             case "origin":
@@ -996,12 +1041,15 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
           const { data: page } = await q;
           if (!page || page.length === 0) break;
           allContacts.push(...page);
-          if (page.length < ps) break;
-          from += ps;
+          if (page.length < pageSize) break;
+          from += pageSize;
         }
+
         setGroupContacts(prev => ({ ...prev, [key]: allContacts }));
-      } catch {}
-      finally { setLoadingGroup(null); }
+      } catch {
+      } finally {
+        setLoadingGroup(null);
+      }
     }
   };
 
@@ -1010,15 +1058,32 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
     window.dispatchEvent(new CustomEvent("filters-drawer-close"));
   };
 
-  // City filter state for expanded groups
-  const [cityFilter, setCityFilter] = useState<Record<string, string>>({});
+  const applySearchFilter = (value?: string) => {
+    if (!value) return;
+    g.setSearch(value);
+  };
 
-  if (groupsLoading) return (
-    <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>
-  );
-  if (groups.length === 0) return (
-    <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>
-  );
+  const addCountryFilter = (country?: string) => {
+    if (!country) return;
+    const next = new Set(g.filters.crmSelectedCountries);
+    next.add(country);
+    g.setCrmSelectedCountries(next);
+  };
+
+  const addOriginFilter = (origin?: string) => {
+    if (!origin) return;
+    const next = new Set(g.filters.crmOrigin);
+    next.add(origin);
+    g.setCrmOrigin(next);
+  };
+
+  if (groupsLoading) {
+    return <div className="text-center py-4 text-[11px] text-muted-foreground">Caricamento gruppi…</div>;
+  }
+
+  if (groups.length === 0) {
+    return <div className="text-center py-4 text-[11px] text-muted-foreground">Nessun gruppo trovato</div>;
+  }
 
   return (
     <div className="flex-1 min-h-0">
@@ -1032,11 +1097,14 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
           const contacts = groupContacts[group.key];
           const cf = cityFilter[group.key]?.toLowerCase() || "";
           const filteredContacts = contacts && cf
-            ? contacts.filter((c: any) => 
-                (c.city || "").toLowerCase().includes(cf) || 
+            ? contacts.filter((c: any) =>
+                (c.city || "").toLowerCase().includes(cf) ||
                 (c.name || "").toLowerCase().includes(cf) ||
-                (c.company_name || "").toLowerCase().includes(cf))
+                (c.company_name || "").toLowerCase().includes(cf)
+              )
             : contacts;
+          const groupCountryCode = groupBy === "country" ? resolveCountryCode(group.key) : null;
+
           return (
             <div key={group.key} className="border-b border-border/20 last:border-b-0">
               <button
@@ -1047,7 +1115,7 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                 )}
               >
                 <span className="text-[10px] text-muted-foreground">{isOpen ? "▾" : "▸"}</span>
-                {groupBy === "country" && <span className="text-sm">{getCountryFlag(group.key)}</span>}
+                {groupBy === "country" && <span className="text-sm w-4 text-center">{groupCountryCode ? getCountryFlag(groupCountryCode) : ""}</span>}
                 <span className="text-xs font-medium truncate flex-1">{group.label}</span>
                 <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{group.count}</Badge>
               </button>
@@ -1067,38 +1135,101 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
                           />
                         </div>
                       )}
-                      {filteredContacts.map((c: any) => (
-                        <div
-                          key={c.id}
-                          className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
-                        >
-                          <div className="flex items-start gap-1.5">
-                            <span className="text-xs shrink-0 mt-0.5 w-4 text-center">{c.country ? getCountryFlag(c.country) : ""}</span>
-                            <button onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left">
-                              {/* Riga 1: Azienda */}
-                              <p className="text-[11px] font-medium truncate leading-tight">{c.company_alias || c.company_name || c.name || "—"}</p>
-                              {/* Riga 2: Nome · Ruolo | Città — posizioni fisse */}
-                              <div className="flex items-center text-[9px] text-muted-foreground leading-tight mt-0.5">
-                                <span className="truncate min-w-0 flex-1">{c.name || "—"}{c.position ? ` · ${c.position}` : ""}</span>
-                                <span className="shrink-0 w-[70px] text-right truncate text-muted-foreground/70">{c.city || ""}</span>
+                      {filteredContacts.map((c: any) => {
+                        const resolvedCountry = resolveCountryCode(c.country || "");
+                        return (
+                          <div
+                            key={c.id}
+                            className="w-full text-left px-2.5 py-1.5 hover:bg-primary/10 transition-colors border-t border-border/10 group/card"
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addCountryFilter(c.country);
+                                }}
+                                className="text-xs shrink-0 mt-0.5 w-4 text-center"
+                              >
+                                {resolvedCountry ? getCountryFlag(resolvedCountry) : ""}
+                              </button>
+
+                              <div onClick={() => selectContact(c.id)} className="flex-1 min-w-0 text-left cursor-pointer">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    applySearchFilter(c.company_alias || c.company_name || c.name);
+                                  }}
+                                  className="text-[11px] font-medium truncate leading-tight w-full text-left hover:text-primary"
+                                >
+                                  {c.company_alias || c.company_name || c.name || "—"}
+                                </button>
+
+                                <div className="flex items-center text-[9px] text-muted-foreground leading-tight mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      applySearchFilter(c.name || c.position);
+                                    }}
+                                    className="truncate min-w-0 flex-1 text-left hover:text-primary"
+                                  >
+                                    {c.name || "—"}{c.position ? ` · ${c.position}` : ""}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      applySearchFilter(c.city);
+                                    }}
+                                    className="shrink-0 w-[70px] text-right truncate text-muted-foreground/70 hover:text-primary"
+                                  >
+                                    {c.city || ""}
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center text-[8px] text-muted-foreground leading-tight mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      applySearchFilter(c.email);
+                                    }}
+                                    className="truncate min-w-0 flex-1 flex items-center gap-0.5 text-left hover:text-primary"
+                                  >
+                                    {c.email ? <><Mail className="w-2.5 h-2.5 shrink-0" />{c.email}</> : "—"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      applySearchFilter(c.phone || c.mobile);
+                                    }}
+                                    className="shrink-0 w-[80px] text-right truncate flex items-center justify-end gap-0.5 hover:text-primary"
+                                  >
+                                    {(c.phone || c.mobile) ? <><Phone className="w-2.5 h-2.5 shrink-0" />{c.phone || c.mobile}</> : ""}
+                                  </button>
+                                  {c.origin && groupBy !== "origin" && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        addOriginFilter(c.origin);
+                                      }}
+                                      className="shrink-0 ml-1"
+                                    >
+                                      <Badge variant="outline" className="text-[7px] h-3 px-1">{c.origin}</Badge>
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                              {/* Riga 3: Email | Telefono | Origine — posizioni fisse */}
-                              <div className="flex items-center text-[8px] text-muted-foreground leading-tight mt-0.5">
-                                <span className="truncate min-w-0 flex-1 flex items-center gap-0.5">
-                                  {c.email ? <><Mail className="w-2.5 h-2.5 shrink-0" />{c.email}</> : "—"}
-                                </span>
-                                <span className="shrink-0 w-[80px] text-right truncate flex items-center justify-end gap-0.5">
-                                  {(c.phone || c.mobile) ? <><Phone className="w-2.5 h-2.5 shrink-0" />{c.phone || c.mobile}</> : ""}
-                                </span>
-                                {c.origin && groupBy !== "origin" && (
-                                  <Badge variant="outline" className="text-[7px] h-3 px-1 shrink-0 ml-1">{c.origin}</Badge>
-                                )}
-                              </div>
-                            </button>
-                            <CRMContactQuickActions contact={c} />
+
+                              <CRMContactQuickActions contact={c} />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </>
                   ) : contacts && contacts.length === 0 ? (
                     <div className="px-3 py-2 text-[10px] text-muted-foreground">Nessun contatto</div>
