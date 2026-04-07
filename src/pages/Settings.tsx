@@ -57,6 +57,7 @@ export default function Settings() {
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
+    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
   ];
 
   // Dynamic filterSlot based on active tab
