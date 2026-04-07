@@ -55,6 +55,7 @@ const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
 const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const AILab = lazyRetry(() => import("./pages/AILab"));
+const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
