@@ -600,6 +600,12 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             <Check className="w-3.5 h-3.5" /> Conferma
           </Button>
         </div>
+        {/* Resize handle */}
+        <div
+          ref={resizeRef}
+          onMouseDown={startResize}
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors z-50"
+        />
       </SheetContent>
     </Sheet>
   );
