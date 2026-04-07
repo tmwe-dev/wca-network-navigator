@@ -1585,6 +1585,41 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       const { data: msg } = await supabase.from("channel_messages").select("from_address, to_address, subject, body_text, email_date, partner_id")
         .eq("id", args.message_id).eq("user_id", userId).single();
       if (!msg) return { error: "Messaggio non trovato" };
+
+      // Check/lock exclusive agent for this email address
+      let exclusiveAgentName: string | null = null;
+      if (msg.from_address) {
+        const fromAddr = msg.from_address.toLowerCase().trim();
+        const { data: rule } = await supabase.from("email_address_rules")
+          .select("id, exclusive_agent_id")
+          .eq("email_address", fromAddr).eq("user_id", userId).maybeSingle();
+        
+        if (rule && !rule.exclusive_agent_id) {
+          // Lock this address to the current executing agent
+          const executingAgentId = context?.agent_id;
+          if (executingAgentId) {
+            await supabase.from("email_address_rules")
+              .update({ exclusive_agent_id: executingAgentId })
+              .eq("id", rule.id);
+            const { data: ag } = await supabase.from("agents").select("name").eq("id", executingAgentId).single();
+            exclusiveAgentName = ag?.name || null;
+          }
+        } else if (!rule) {
+          const executingAgentId = context?.agent_id;
+          if (executingAgentId) {
+            await supabase.from("email_address_rules").insert({
+              email_address: fromAddr, user_id: userId,
+              exclusive_agent_id: executingAgentId, category: "auto",
+            });
+            const { data: ag } = await supabase.from("agents").select("name").eq("id", executingAgentId).single();
+            exclusiveAgentName = ag?.name || null;
+          }
+        } else if (rule?.exclusive_agent_id) {
+          const { data: ag } = await supabase.from("agents").select("name").eq("id", rule.exclusive_agent_id).single();
+          exclusiveAgentName = ag?.name || null;
+        }
+      }
+
       // Use AI to analyze
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const analysisRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1603,9 +1638,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       const analysisText = analysisData.choices?.[0]?.message?.content || "{}";
       try {
         const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, "").trim());
-        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, date: msg.email_date, partner_id: msg.partner_id, analysis: parsed };
+        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, date: msg.email_date, partner_id: msg.partner_id, exclusive_agent: exclusiveAgentName, analysis: parsed };
       } catch {
-        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, analysis: { raw: analysisText } };
+        return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, exclusive_agent: exclusiveAgentName, analysis: { raw: analysisText } };
       }
     }
 
