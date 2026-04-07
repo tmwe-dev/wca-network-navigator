@@ -54,13 +54,15 @@ serve(async (req) => {
       stats.promoted_l2_candidate = ids.length;
     }
 
-    // ── 3. Decay: reduce confidence based on days since last access ──
+    // ── 3. Decay: EXPONENTIAL with 3-day grace period ──
+    // Formula: confidence × (1 - decay_rate)^(days - 3)
     // L1: decay_rate default 0.02/day, L2: 0.005/day, L3: no decay
+    const GRACE_PERIOD_DAYS = 3;
     const { data: decayable } = await supabase
       .from("ai_memory")
-      .select("id, confidence, decay_rate, last_accessed_at, level")
+      .select("id, confidence, decay_rate, last_accessed_at, created_at, level")
       .in("level", [1, 2])
-      .gt("confidence", 0.05);
+      .gt("confidence", 0.02);
 
     if (decayable?.length) {
       const now = Date.now();
@@ -69,11 +71,17 @@ serve(async (req) => {
       for (const m of decayable as any[]) {
         const lastAccess = new Date(m.last_accessed_at || m.created_at).getTime();
         const daysSince = Math.max(0, (now - lastAccess) / (1000 * 60 * 60 * 24));
-        if (daysSince < 1) continue;
+        
+        // Grace period: no decay for first 3 days
+        if (daysSince <= GRACE_PERIOD_DAYS) continue;
 
-        const newConfidence = Math.max(0, m.confidence - (m.decay_rate * daysSince));
-        if (newConfidence < m.confidence) {
-          updates.push({ id: m.id, confidence: Math.round(newConfidence * 1000) / 1000 });
+        const effectiveDays = daysSince - GRACE_PERIOD_DAYS;
+        // Exponential decay: more gentle, never fully zeroes out
+        const newConfidence = m.confidence * Math.pow(1 - m.decay_rate, effectiveDays);
+        const rounded = Math.round(newConfidence * 1000) / 1000;
+        
+        if (rounded < m.confidence) {
+          updates.push({ id: m.id, confidence: Math.max(0, rounded) });
         }
       }
 
@@ -86,12 +94,12 @@ serve(async (req) => {
       stats.decayed = updates.length;
     }
 
-    // ── 4. Prune: remove L1 with confidence < 0.05 ──
+    // ── 4. Prune: remove L1 with confidence < 0.02 (lowered threshold) ──
     const { data: prunable } = await supabase
       .from("ai_memory")
       .select("id")
       .eq("level", 1)
-      .lt("confidence", 0.05);
+      .lt("confidence", 0.02);
 
     if (prunable?.length) {
       const ids = prunable.map((m: any) => m.id);

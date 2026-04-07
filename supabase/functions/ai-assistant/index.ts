@@ -2527,6 +2527,8 @@ async function loadUserProfile(): Promise<string> {
   const parts: string[] = [];
   const get = (k: string) => settings[k]?.trim() || "";
 
+  // Current Focus — injected FIRST for maximum AI proactivity
+  if (get("ai_current_focus")) parts.push(`🎯 FOCUS CORRENTE: ${get("ai_current_focus")}`);
   if (get("ai_company_name") || get("ai_company_alias"))
     parts.push(`AZIENDA: ${get("ai_company_name")} (${get("ai_company_alias")})`);
   if (get("ai_contact_name") || get("ai_contact_alias"))
@@ -2674,10 +2676,40 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
   if (messages.length <= 8) return messages;
 
   const LIVE_WINDOW = 6;
-  const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
   const recentMessages = messages.slice(messages.length - LIVE_WINDOW);
 
-  // Compress older messages into a summary
+  // Check if a pre-computed rolling summary exists from a previous turn
+  const { data: existingSummary } = await supabase
+    .from("ai_memory")
+    .select("content")
+    .eq("user_id", userId)
+    .eq("source", "rolling_summary")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (existingSummary?.[0]?.content) {
+    // Use pre-computed summary — ZERO latency added
+    // Trigger background refresh for the NEXT turn (fire-and-forget)
+    const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
+    generateAndSaveSummary(olderMessages, apiKey, userId).catch(() => {});
+
+    return [
+      { role: "system", content: `RIEPILOGO CONVERSAZIONE PRECEDENTE:\n${existingSummary[0].content}` },
+      ...recentMessages,
+    ];
+  }
+
+  // First time with >8 messages: no summary yet — use truncation fallback (no blocking API call)
+  // Trigger background summary generation for NEXT turn
+  const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
+  generateAndSaveSummary(olderMessages, apiKey, userId).catch(() => {});
+
+  // Return only recent messages (no latency penalty)
+  return recentMessages;
+}
+
+// Non-blocking background summary generation
+async function generateAndSaveSummary(olderMessages: any[], apiKey: string, userId: string): Promise<void> {
   const summaryPrompt = `Riassumi in modo conciso (3-5 righe) il contesto operativo di questa conversazione. Cattura: decisioni prese, azioni eseguite, dati importanti menzionati, richieste pendenti.\n\n${olderMessages.map((m: any) => `${m.role}: ${String(m.content || "").substring(0, 300)}`).join("\n")}`;
 
   try {
@@ -2695,8 +2727,15 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
       const data = await resp.json();
       const summary = data.choices?.[0]?.message?.content;
       if (summary) {
-        // Save summary as L1 memory
-        supabase.from("ai_memory").insert({
+        // Delete old rolling summaries to keep only latest
+        await supabase
+          .from("ai_memory")
+          .delete()
+          .eq("user_id", userId)
+          .eq("source", "rolling_summary");
+
+        // Save new summary
+        await supabase.from("ai_memory").insert({
           user_id: userId,
           content: summary,
           memory_type: "conversation",
@@ -2706,20 +2745,12 @@ async function compressMessages(messages: any[], apiKey: string, userId: string)
           confidence: 0.4,
           decay_rate: 0.02,
           source: "rolling_summary",
-        }).then(() => {}).catch(() => {});
-
-        return [
-          { role: "system", content: `RIEPILOGO CONVERSAZIONE PRECEDENTE:\n${summary}` },
-          ...recentMessages,
-        ];
+        });
       }
     }
   } catch (e) {
-    console.error("[ChatMemory] Summary generation failed:", e);
+    console.error("[ChatMemory] Background summary generation failed:", e);
   }
-
-  // Fallback: just keep recent messages
-  return recentMessages;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2896,6 +2927,49 @@ serve(async (req) => {
         // Track UI actions
         if (tr?.ui_action) uiActions.push(tr.ui_action);
         if (tr?.step_result?.ui_action) uiActions.push(tr.step_result.ui_action);
+
+        // ── Auto-save L1 memory after significant tool calls ──
+        if (userId && tr?.success) {
+          const autoSaveTools: Record<string, (a: any, r: any) => string | null> = {
+            send_email: (a, r) => `Email inviata a ${a.to_email} — oggetto: "${a.subject}"`,
+            create_download_job: (a, r) => `Download avviato per ${r.country}, ${r.total_partners} partner (mode: ${r.mode})`,
+            download_single_partner: (a, r) => `Download singolo: "${a.company_name}" (WCA ID: ${r.wca_id})`,
+            deep_search_partner: (a, r) => `Deep search su "${a.company_name || a.partner_id}"`,
+            deep_search_contact: (a, r) => `Deep search contatto: "${a.contact_name || a.contact_id}"`,
+            bulk_update_partners: (a, r) => `Aggiornamento bulk: ${r.updated_count} partner — ${(r.changes || []).join(", ")}`,
+            create_reminder: (a, r) => `Reminder creato: "${a.title}" per ${r.company_name} (scadenza: ${a.due_date})`,
+            create_activity: (a, r) => `Attività creata: "${a.title}" (${a.activity_type})`,
+          };
+          const generator = autoSaveTools[tc.function.name];
+          if (generator) {
+            const content = generator(args, tr);
+            if (content) {
+              // Dedup check: avoid saving if very similar memory exists recently
+              const { data: existing } = await supabase
+                .from("ai_memory")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("source", "auto_tool")
+                .ilike("content", `%${content.substring(0, 40)}%`)
+                .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+                .limit(1);
+              
+              if (!existing?.length) {
+                supabase.from("ai_memory").insert({
+                  user_id: userId,
+                  content,
+                  memory_type: "fact",
+                  tags: [tc.function.name, new Date().toISOString().split("T")[0]],
+                  importance: 2,
+                  level: 1,
+                  confidence: 0.5,
+                  decay_rate: 0.02,
+                  source: "auto_tool",
+                }).then(() => {}).catch(() => {});
+              }
+            }
+          }
+        }
       }
 
       allMessages.push(assistantMessage);

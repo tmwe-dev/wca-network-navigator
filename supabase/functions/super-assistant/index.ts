@@ -80,6 +80,7 @@ serve(async (req) => {
       const profileParts: string[] = [];
       if (get("ai_company_name")) profileParts.push(`Azienda: ${get("ai_company_name")} (${get("ai_company_alias")})`);
       if (get("ai_contact_name")) profileParts.push(`Referente: ${get("ai_contact_name")} — ${get("ai_contact_role")}`);
+      if (get("ai_current_focus")) profileParts.push(`🎯 FOCUS CORRENTE: ${get("ai_current_focus")}`);
       if (get("ai_company_activities")) profileParts.push(`Attività: ${get("ai_company_activities")}`);
       if (get("ai_business_goals")) profileParts.push(`Obiettivi: ${get("ai_business_goals")}`);
       if (get("ai_behavior_rules")) profileParts.push(`Regole: ${get("ai_behavior_rules")}`);
