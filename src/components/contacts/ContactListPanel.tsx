@@ -14,8 +14,9 @@ import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactActions } from "@/hooks/useContactActions";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import { sortContacts, type SortKey } from "./contactHelpers";
+import { sortContacts, type SortKey, countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
+import { useContactGroupCounts } from "@/hooks/useContactGroups";
 import type { ContactFilters } from "@/hooks/useContacts";
 
 interface Props {
@@ -24,16 +25,31 @@ interface Props {
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
-  const { filters: gf } = useGlobalFilters();
+  const { filters: gf, setCrmGroupTab, setCrmWcaMatch } = useGlobalFilters();
   const [page, setPage] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const selection = useSelection([]);
   const linkedInLookup = useLinkedInLookup();
   const parentRef = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const sortKey = (gf.sortBy || "company") as SortKey;
+  const groupBy = gf.groupBy || "country";
+  const activeGroupTab = gf.crmGroupTab || "";
+  const wcaMatch = gf.crmWcaMatch || "all";
 
-  // Build filters from global state
+  // Group counts for tabs
+  const { data: groupCounts } = useContactGroupCounts();
+  const tabs = useMemo(() => {
+    if (!groupCounts) return [];
+    return groupCounts
+      .filter(g => g.group_type === groupBy)
+      .sort((a, b) => b.contact_count - a.contact_count);
+  }, [groupCounts, groupBy]);
+
+  const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);
+
+  // Build filters from global state + active group tab
   const queryFilters: ContactFilters = useMemo(() => {
     const f: ContactFilters = {
       holdingPattern: gf.holdingPattern as any,
@@ -42,15 +58,21 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       pageSize: 200,
     };
     // Countries
-    if (gf.crmSelectedCountries.size > 0) {
+    if (activeGroupTab && groupBy === "country") {
+      f.countries = [activeGroupTab];
+    } else if (gf.crmSelectedCountries.size > 0) {
       f.countries = Array.from(gf.crmSelectedCountries);
     }
     // Origins
-    if (gf.crmOrigin.size > 0 && gf.crmOrigin.size < 4) {
+    if (activeGroupTab && groupBy === "origin") {
+      f.origins = [activeGroupTab];
+    } else if (gf.crmOrigin.size > 0 && gf.crmOrigin.size < 4) {
       f.origins = Array.from(gf.crmOrigin);
     }
     // Lead status
-    if (gf.leadStatus && gf.leadStatus !== "all") {
+    if (activeGroupTab && groupBy === "status") {
+      f.leadStatus = activeGroupTab as any;
+    } else if (gf.leadStatus && gf.leadStatus !== "all") {
       f.leadStatus = gf.leadStatus as any;
     }
     // Channel
@@ -61,8 +83,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     if (gf.crmQuality && gf.crmQuality !== "all") {
       f.quality = gf.crmQuality;
     }
+    // WCA match
+    if (wcaMatch !== "all") {
+      f.wcaMatch = wcaMatch as any;
+    }
     return f;
-  }, [gf.holdingPattern, gf.search, gf.crmSelectedCountries, gf.crmOrigin, gf.leadStatus, gf.crmChannel, gf.crmQuality, page]);
+  }, [gf.holdingPattern, gf.search, gf.crmSelectedCountries, gf.crmOrigin, gf.leadStatus, gf.crmChannel, gf.crmQuality, page, activeGroupTab, groupBy, wcaMatch]);
 
   const { data, isLoading } = useContacts(queryFilters);
   const rawContacts = data?.items ?? [];
@@ -80,7 +106,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const actions = useContactActions({
     selection, setFilters: setFiltersNoop as any, setSortKey: setSortKeyNoop as any,
     setOpenGroups, setSelectedGroups,
-    currentGroupBy: gf.groupBy || "country", holdingPattern: gf.holdingPattern as "out" | "in" | "all",
+    currentGroupBy: groupBy, holdingPattern: gf.holdingPattern as "out" | "in" | "all",
   });
 
   const virtualizer = useVirtualizer({
@@ -93,12 +119,36 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const isBulk = selection.count > 0;
   const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground";
 
+  const handleTabClick = (key: string) => {
+    setCrmGroupTab(key === activeGroupTab ? "" : key);
+    setPage(0);
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
+            {/* WCA match filter chips */}
+            <div className="flex gap-1">
+              {(["all", "matched", "unmatched"] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => { setCrmWcaMatch(v); setPage(0); }}
+                  className={cn(
+                    "text-[9px] px-1.5 py-0.5 rounded-full transition-colors",
+                    wcaMatch === v
+                      ? "bg-primary/20 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {v === "all" ? "Tutti" : v === "matched" ? "WCA ✓" : "Solo CRM"}
+                </button>
+              ))}
+            </div>
+          </div>
           <Tooltip><TooltipTrigger asChild>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setAddOpen(true)}>
               <UserPlus className="w-3.5 h-3.5" /> Nuovo
@@ -106,6 +156,47 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
         </div>
       </div>
+
+      {/* Group tabs bar */}
+      {tabs.length > 0 && (
+        <div
+          ref={tabsRef}
+          className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 overflow-x-auto shrink-0 scrollbar-thin"
+          style={{ scrollbarWidth: "thin" }}
+        >
+          <button
+            onClick={() => { setCrmGroupTab(""); setPage(0); }}
+            className={cn(
+              "shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors",
+              !activeGroupTab
+                ? "bg-primary/20 text-primary font-semibold"
+                : "text-muted-foreground hover:bg-muted/60"
+            )}
+          >
+            Tutti ({totalAllGroups})
+          </button>
+          {tabs.slice(0, 50).map(t => {
+            const isActive = activeGroupTab === t.group_key;
+            const label = groupBy === "country"
+              ? `${countryFlag(t.group_key)} ${t.group_label}`
+              : t.group_label;
+            return (
+              <button
+                key={t.group_key}
+                onClick={() => handleTabClick(t.group_key)}
+                className={cn(
+                  "shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors",
+                  isActive
+                    ? "bg-primary/20 text-primary font-semibold"
+                    : "text-muted-foreground hover:bg-muted/60"
+                )}
+              >
+                {label} ({t.contact_count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Bulk actions */}
       {isBulk && (
