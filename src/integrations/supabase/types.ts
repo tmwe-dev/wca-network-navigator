@@ -3157,6 +3157,10 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: undefined
       }
+      increment_memory_access: {
+        Args: { memory_ids: string[] }
+        Returns: undefined
+      }
       is_operator_admin: { Args: never; Returns: boolean }
       match_contacts_to_wca: {
         Args: never
