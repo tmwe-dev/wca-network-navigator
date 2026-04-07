@@ -424,7 +424,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                     c={c}
                     isActive={selectedId === c.id}
                     isSelected={selection.selectedIds.has(c.id)}
-                    onSelect={() => onSelect(c)}
+                    onSelect={() => {}}
+                    onViewDetail={() => onSelect(c)}
                     onToggle={() => selection.toggle(c.id)}
                     index={vItem.index}
                     onFilterClick={addInlineFilter}
