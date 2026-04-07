@@ -1163,13 +1163,15 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
           const isOpen = openGroups.has(group.key);
           const contacts = groupContacts[group.key];
           const cf = cityFilter[group.key]?.toLowerCase() || "";
-          const filteredContacts = contacts && cf
-            ? contacts.filter((c: any) =>
-                (c.city || "").toLowerCase().includes(cf) ||
-                (c.name || "").toLowerCase().includes(cf) ||
-                (c.company_name || "").toLowerCase().includes(cf)
-              )
-            : contacts;
+          const filteredContacts = sortContacts(
+            contacts && cf
+              ? contacts.filter((c: any) =>
+                  (c.city || "").toLowerCase().includes(cf) ||
+                  (c.name || "").toLowerCase().includes(cf) ||
+                  (c.company_name || "").toLowerCase().includes(cf)
+                )
+              : contacts
+          );
           const groupCountryCode = groupBy === "country" ? resolveCountryCode(group.key) : null;
 
           return (
