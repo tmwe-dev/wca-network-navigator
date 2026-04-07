@@ -285,7 +285,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               key={`${f.field}-${f.value}-${i}`}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20"
             >
-              {f.value}
+              {f.value} ({totalCount})
               <button
                 onClick={() => removeInlineFilter(f.field, f.value)}
                 className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
