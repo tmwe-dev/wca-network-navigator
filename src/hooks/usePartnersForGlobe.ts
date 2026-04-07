@@ -43,19 +43,31 @@ export function usePartnersForGlobe() {
   return useQuery({
     queryKey: ["partners-globe"],
     queryFn: async () => {
-      const { data: partners, error } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, partner_type")
-        .eq("is_active", true)
-        .order("company_name");
+      // Paginate to fetch ALL partners (bypass 1000-row default limit)
+      const PAGE_SIZE = 2000;
+      let allPartners: any[] = [];
+      let offset = 0;
 
-      if (error) throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from("partners")
+          .select("id, company_name, city, country_code, country_name, email, partner_type")
+          .eq("is_active", true)
+          .order("company_name")
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allPartners = allPartners.concat(data);
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
 
       // Reset counts efficiently
       const countryCounts: Record<string, number> = {};
       
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (partners || []).map(p => {
+      const globePartners: GlobePartner[] = allPartners.map(p => {
         countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
         const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
         return {
@@ -84,7 +96,7 @@ export function usePartnersForGlobe() {
     },
     staleTime: 5_000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 8_000, // Auto-refresh every 8s for near-realtime
+    refetchInterval: 30_000,
   });
 }
 

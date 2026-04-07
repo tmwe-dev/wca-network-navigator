@@ -39,11 +39,11 @@ serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .is("email", null);
 
-    // 3. Partners without profile
+    // 3. Partners without deep search (meaningful "incomplete profile")
     const { count: noProfileCount } = await supabase
       .from("partners")
       .select("*", { count: "exact", head: true })
-      .is("raw_profile_html", null);
+      .is("deep_search_done_at", null);
 
     // 4. Activities due today/overdue
     const { data: dueActivities } = await supabase
