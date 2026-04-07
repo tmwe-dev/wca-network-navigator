@@ -63,6 +63,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+  const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(
     () => document.documentElement.classList.contains("dark")
