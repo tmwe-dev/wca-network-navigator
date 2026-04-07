@@ -29,6 +29,7 @@ interface Contact {
 
 interface Props {
   contact: Contact;
+  cockpitContact?: CockpitContact;
   flag: string;
   index: number;
   isSelected: boolean;
