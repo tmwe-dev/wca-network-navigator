@@ -857,8 +857,10 @@ function CRMContactNavigator({ groupBy }: { groupBy: string }) {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data } = await supabase.rpc("get_contact_group_counts");
         if (!data) return;
+        // Map UI groupBy to RPC group_type
+        const rpcType = groupBy === "lead_status" ? "status" : groupBy === "import_group" ? "date" : groupBy;
         const filtered = (data as any[])
-          .filter((g: any) => g.group_type === groupBy)
+          .filter((g: any) => g.group_type === rpcType)
           .map((g: any) => ({ key: g.group_key, label: g.group_label, count: g.contact_count }))
           .sort((a, b) => b.count - a.count);
         setGroups(filtered);
