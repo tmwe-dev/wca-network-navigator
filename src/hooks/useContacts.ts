@@ -85,7 +85,7 @@ export function useContacts(filters: ContactFilters = {}) {
         const s = sanitizeSearchTerm(filters.search);
         if (s) {
           q = q.or(
-            `company_name.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%`
+            `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`
           );
         }
       }

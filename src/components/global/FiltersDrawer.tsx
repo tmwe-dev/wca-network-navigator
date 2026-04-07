@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useCountryStats } from "@/hooks/useCountryStats";
-import { getCountryFlag } from "@/lib/countries";
+import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 
