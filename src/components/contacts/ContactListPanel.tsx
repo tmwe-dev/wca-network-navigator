@@ -22,6 +22,7 @@ import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 
 interface Props {
   selectedId: string | null;
@@ -284,7 +285,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               key={`${f.field}-${f.value}-${i}`}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20"
             >
-              {f.value}
+              {f.value} ({totalCount})
               <button
                 onClick={() => removeInlineFilter(f.field, f.value)}
                 className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
@@ -302,17 +303,19 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </div>
       )}
 
-      {/* Sortable column header */}
-      <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30">
-        <div className="w-[42px] shrink-0" /> {/* index+checkbox space */}
-        <div className="w-[20px] shrink-0" /> {/* flag space */}
+      {/* Sortable column header — same grid as ContactCard */}
+      <div
+        className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")}
+        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
+      >
+        <div /> {/* index+checkbox */}
+        <div /> {/* flag */}
         {SORT_COLUMNS.map(col => (
           <button
             key={col.field}
             onClick={() => handleSortClick(col.sortKey)}
             className={cn(
-              "flex items-center gap-0.5 text-[9px] font-medium transition-colors shrink-0",
-              col.field === "company" || col.field === "name" ? "w-[200px]" : "w-[80px]",
+              "flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left",
               sortState.field === col.sortKey && sortState.dir ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
