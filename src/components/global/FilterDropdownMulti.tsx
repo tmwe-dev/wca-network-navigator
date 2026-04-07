@@ -21,6 +21,8 @@ interface FilterDropdownMultiProps {
   singleSelect?: boolean;
   capitalize?: boolean;
   placeholder?: string;
+  /** Custom color scheme: "default" | "danger" | "info" */
+  activeColor?: "default" | "danger" | "info";
 }
 
 export function FilterDropdownMulti({
