@@ -10,6 +10,8 @@ import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { cn } from "@/lib/utils";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS, capitalizeLabel } from "./contactGridLayout";
+import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
+import { adaptImportedContact } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
   c: any;
