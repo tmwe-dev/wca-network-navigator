@@ -21,6 +21,7 @@ export interface ContactFilters {
   metPersonally?: boolean;
   channel?: string;
   quality?: string;
+  wcaMatch?: "matched" | "unmatched" | "all";
   page?: number;
   pageSize?: number;
 }
