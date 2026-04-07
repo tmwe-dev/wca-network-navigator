@@ -51,27 +51,40 @@ export default function MissionBuilder() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("country_code, country_name, email")
-        .eq("is_active", true);
-
-      if (partners) {
-        const map = new Map<string, { code: string; name: string; count: number; withEmail: number }>();
-        for (const p of partners) {
-          const code = p.country_code || "??";
-          const entry = map.get(code) || { code, name: p.country_name || code, count: 0, withEmail: 0 };
-          entry.count++;
-          if (p.email) entry.withEmail++;
-          map.set(code, entry);
-        }
-        setCountryStats(Array.from(map.values()).sort((a, b) => b.count - a.count));
+      // Load ALL partners using iterative range() to avoid 1000-row limit
+      const allPartners: { country_code: string | null; country_name: string | null; email: string | null }[] = [];
+      const BATCH = 2000;
+      let from = 0;
+      while (true) {
+        const { data: batch } = await supabase
+          .from("partners")
+          .select("country_code, country_name, email")
+          .eq("is_active", true)
+          .range(from, from + BATCH - 1);
+        if (!batch || batch.length === 0) break;
+        allPartners.push(...batch);
+        if (batch.length < BATCH) break;
+        from += BATCH;
       }
 
-      // AI-driven welcome
+      const map = new Map<string, { code: string; name: string; count: number; withEmail: number }>();
+      for (const p of allPartners) {
+        const code = p.country_code || "??";
+        const entry = map.get(code) || { code, name: p.country_name || code, count: 0, withEmail: 0 };
+        entry.count++;
+        if (p.email) entry.withEmail++;
+        map.set(code, entry);
+      }
+      setCountryStats(Array.from(map.values()).sort((a, b) => b.count - a.count));
+
+      // AI-driven welcome with REAL numbers
+      const totalPartners = allPartners.length;
+      const totalCountries = map.size;
+      const totalWithEmail = allPartners.filter(p => p.email).length;
+
       setMessages([{
         role: "assistant",
-        content: `🎯 **Benvenuto!** Sono qui per aiutarti a creare la tua missione.\n\nHo trovato **${partners?.length || 0} partner** nel tuo database, distribuiti in **${new Set(partners?.map(p => p.country_code)).size || 0} paesi**.\n\nCosa vuoi fare? Puoi dirmi ad esempio:\n- *"Contatta i partner in Germania e Francia via email"*\n- *"Fai deep search sui contatti senza profilo in Europa"*\n- *"Prepara una campagna WhatsApp per i top-rated"*\n\nOppure semplicemente parlami del tuo obiettivo e ti guido io.`,
+        content: `🎯 **Benvenuto!** Sono qui per aiutarti a creare la tua missione.\n\nNel tuo database ci sono **${totalPartners.toLocaleString("it-IT")} partner attivi** in **${totalCountries} paesi** (di cui **${totalWithEmail.toLocaleString("it-IT")}** con email).\n\nCosa vuoi fare? Puoi dirmi ad esempio:\n- *"Contatta i partner in Germania e Francia via email"*\n- *"Fai deep search sui contatti senza profilo in Europa"*\n- *"Prepara una campagna WhatsApp per i top-rated"*\n\nOppure semplicemente parlami del tuo obiettivo e ti guido io.`,
       }]);
     })();
   }, []);
