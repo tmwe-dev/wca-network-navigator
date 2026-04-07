@@ -47,12 +47,17 @@ const ALL_OPERATIONAL_TOOLS: string[] = [
   "check_blacklist", "get_global_summary", "save_memory", "search_memory",
   "delete_records", "search_business_cards", "execute_ui_action",
   "get_operations_dashboard",
+  // Communication & Holding Pattern
+  "get_inbox", "get_conversation_history", "get_holding_pattern",
+  "update_message_status", "get_email_thread", "analyze_incoming_email",
 ];
 
 // Management tools — only for Director (Luca)
 const MANAGEMENT_TOOLS: string[] = [
   "create_agent_task", "list_agent_tasks", "get_team_status",
   "update_agent_prompt", "add_agent_kb_entry",
+  // Director-only campaign tools
+  "assign_contacts_to_agent", "create_campaign",
 ];
 
 // Strategic tools — only for Director (Luca)
@@ -66,6 +71,90 @@ const STRATEGIC_TOOLS: string[] = [
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const AGENT_DEFAULT_KB: Record<string, Array<{ title: string; content: string }>> = {
+  _universal: [
+    {
+      title: "Mappa Strumenti Sistema",
+      content: `TOOL DISPONIBILI (48+):
+
+PARTNER: search_partners (filtri: country, city, rating, email, phone, favorite, service) | get_partner_detail (profilo completo + contatti + network + servizi) | update_partner (favorite, lead_status, rating, alias) | add_partner_note (interazione/nota) | manage_partner_contact (add/update/delete contatti) | bulk_update_partners (aggiornamento massivo)
+
+NETWORK: get_country_overview (statistiche aggregate per paese) | get_directory_status (gap directory/DB) | scan_directory (scansiona WCA per paese/azienda) | create_download_job (job download profili) | download_single_partner (download singolo) | list_jobs (lista job) | check_job_status (stato job) | get_partners_without_contacts (partner senza contatti)
+
+RICERCA: deep_search_partner (Google + profili web) | deep_search_contact (LinkedIn + social) | enrich_partner_website (scraping sito web) | generate_aliases (genera alias aziendali/contatti)
+
+CRM: search_contacts (contatti importati, filtri: name, company, country, email, origin, lead_status) | get_contact_detail (dettaglio completo) | update_lead_status (aggiorna status lead) | search_prospects (prospect italiani)
+
+OUTREACH: generate_outreach (genera messaggio per canale) | send_email (invio diretto) | schedule_email (programma invio futuro) | queue_outreach (coda WhatsApp/LinkedIn/email via estensioni browser)
+
+AGENDA: create_activity (crea attività) | list_activities (lista, filtri: status, type, partner, date) | update_activity (aggiorna status/priority/date) | create_reminder | update_reminder | list_reminders
+
+COMUNICAZIONE: get_inbox (leggi messaggi in arrivo, filtri: canale, letto/non letto, partner, date) | get_conversation_history (timeline unificata per partner/contatto) | get_holding_pattern (contatti nel circuito di attesa, filtri: tipo, paese, giorni attesa) | update_message_status (marca come letto) | get_email_thread (thread email per partner/indirizzo) | analyze_incoming_email (analisi sentiment/intent/urgenza)
+
+SISTEMA: check_blacklist | get_global_summary | save_memory | search_memory | delete_records | search_business_cards | execute_ui_action (navigate/toast/filter) | get_operations_dashboard
+
+MANAGEMENT (solo Director): create_agent_task | list_agent_tasks | get_team_status | update_agent_prompt | add_agent_kb_entry | assign_contacts_to_agent | create_campaign (con A/B test)
+
+STRATEGIA (solo Director): create_work_plan | list_work_plans | update_work_plan | manage_workspace_preset | get_system_analytics`
+    },
+    {
+      title: "Campi Database Principali",
+      content: `TABELLE OPERATIVE:
+
+partners: company_name, city, country_code, country_name, email, phone, website, rating (1-5), wca_id, lead_status (new/contacted/in_progress/negotiation/converted/lost), is_favorite, office_type, enrichment_data, last_interaction_at, interaction_count
+
+imported_contacts: name, company_name, email, phone, mobile, country, city, position, lead_status, origin, interaction_count, last_interaction_at, wca_partner_id, deep_search_at
+
+channel_messages: channel (email/whatsapp/linkedin), direction (inbound/outbound), from_address, to_address, subject, body_text, body_html, email_date, read_at, thread_id, in_reply_to, partner_id, category
+
+activities: title, activity_type (send_email/phone_call/whatsapp_message/linkedin_message/meeting/follow_up/other), status (pending/completed/cancelled), due_date, partner_id, email_subject, email_body, scheduled_at
+
+interactions: partner_id, interaction_type, subject, notes, interaction_date
+
+contact_interactions: contact_id, interaction_type, title, description, outcome
+
+business_cards: company_name, contact_name, email, phone, event_name, match_status, matched_partner_id, lead_status
+
+email_campaign_queue: recipient_email, subject, html_body, status (pending/sent/failed), scheduled_at, sent_at, partner_id
+
+client_assignments: agent_id, source_type (partner/contact), source_id, manager_id
+
+agent_tasks: agent_id, task_type, description, status (pending/running/completed/failed), target_filters, result_summary`
+    },
+    {
+      title: "Workflow Circuito di Attesa",
+      content: `CIRCUITO DI ATTESA — Regole operative per gestione post-invio
+
+FLUSSO: Invio → Circuito (contacted) → Monitoraggio → Decisione
+
+REGOLE PER TIPO DI CONTATTO:
+
+PARTNER WCA:
+- Follow-up 1: +5gg email reminder formale
+- Follow-up 2: +7gg WhatsApp o LinkedIn
+- Escalation: +14gg proporre chiamata con Robin
+
+CONTATTO CRM:
+- Follow-up 1: +5gg stesso canale dell'invio originale
+- Follow-up 2: +10gg canale alternativo
+- Escalation: +14gg proporre chiamata con Robin
+
+EX-CLIENTE:
+- Follow-up 1: +3gg chiamata prioritaria con Robin
+- Follow-up 2: +7gg proposta speciale/promozione rientro
+- Escalation: +14gg review Director (Luca)
+
+AUTO-APPROVAZIONE:
+- Low-stakes (contatto freddo, follow-up routine): esegui direttamente
+- High-stakes (contatto caldo, ex-cliente, WCA alto rating, proposta commerciale): richiedi ok Director
+
+ANALISI RISPOSTE:
+- Positiva (interesse) → avanza a in_progress, programma call
+- Neutrale (richiesta info) → rispondi + follow-up a 5gg
+- Negativa (rifiuto) → marca come lost, salva motivo in memoria
+- OOO/Auto-reply → riprogramma follow-up alla data di rientro
+- Spam → ignora, marca come letto`
+    },
+  ],
   outreach: [
     {
       title: "Compiti Operativi — Outreach",
@@ -78,16 +167,21 @@ CANALI DISPONIBILI:
 
 FLUSSO COCKPIT:
 1. Ricevi assegnazione contatti dal responsabile (Director/Strategy)
-2. Usa il Mission Context attivo per obiettivo e proposta base
-3. Genera comunicazione personalizzata basata sul profilo del contatto
-4. Invia tramite il canale appropriato
-5. Crea reminder per follow-up a 5-7 giorni
+2. Usa get_conversation_history per verificare storico interazioni
+3. Usa il Mission Context attivo per obiettivo e proposta base
+4. Genera comunicazione personalizzata basata sul profilo del contatto
+5. Invia tramite il canale appropriato
+6. Crea reminder per follow-up a 5-7 giorni
+
+POST-INVIO:
+- Usa get_inbox per controllare risposte ricevute
+- Usa get_holding_pattern per vedere contatti in attesa
+- Usa analyze_incoming_email per capire intent delle risposte
+- Segui il Workflow Circuito di Attesa per decidere il prossimo passo
 
 REGOLE:
 - Verifica SEMPRE blacklist prima di contattare
 - Personalizza OGNI messaggio — no template generici
-- Rispetta il Mission Context assegnato (goal + proposta base)
-- Tono professionale ma caldo, lingua secondo il paese del contatto
 - Traccia ogni interazione nel sistema`
     }
   ],
@@ -96,27 +190,21 @@ REGOLE:
       title: "Compiti Operativi — Sales",
       content: `MISSIONE: Chiusura contratti e conversione lead in clienti. Sei un venditore d'élite.
 
-FLUSSO COCKPIT:
+FLUSSO:
 1. Seleziona contatti dal cockpit (assegnati dal Director/Strategy)
-2. Usa il Mission Context per generare comunicazioni mirate
-3. Invia tramite email/WhatsApp/LinkedIn
-4. Nelle email, inserisci il link per chiamata vocale con Robin (agente telefonico)
-5. Gestisci negoziazione e follow-up fino alla chiusura
-
-CANALI:
-- Email con firma personalizzata + link chiamata vocale Robin
-- WhatsApp per follow-up rapidi (queue_outreach channel: "whatsapp")
-- LinkedIn per primo contatto professionale (queue_outreach channel: "linkedin")
+2. Usa get_conversation_history per analizzare lo storico completo
+3. Genera comunicazione personalizzata con tecniche Chris Voss
+4. Invia tramite email/WhatsApp/LinkedIn
+5. Monitora risposte con get_inbox e analyze_incoming_email
+6. Segui Workflow Circuito di Attesa per follow-up
 
 TECNICHE DI VENDITA:
 - NON menzionare MAI il prezzo per primo
 - Usa "mirroring" e "calibrated questions" (metodo Chris Voss)
 - Brevità con sostanza: ogni messaggio ha uno scopo chiaro
-- Crea urgenza senza pressione
 - Proponi call vocale con Robin per lead caldi
 
 REGOLE:
-- Usa sempre i preset/goal/proposte del Mission Context
 - Personalizza in base a profilo, servizi, certificazioni del partner
 - Registra ogni interazione per tracking conversione`
     }
@@ -125,8 +213,6 @@ REGOLE:
     {
       title: "Compiti Operativi — Download/Sync",
       content: `MISSIONE: Mantenere aggiornata la directory partner dal sistema WCA.
-
-STATO ATTUALE: Le attività di ricerca esterna (report aziende, scraping terze parti) sono TEMPORANEAMENTE INIBITE. Focus esclusivo su sincronizzazione WCA e gestione profili esistenti.
 
 FLUSSO:
 1. Analizza stato directory per paese (get_country_overview)
@@ -146,25 +232,19 @@ REGOLE:
       title: "Compiti Operativi — Ricerca",
       content: `MISSIONE: Deep search e arricchimento profili interni. Intelligence su partner e contatti.
 
-STATO ATTUALE: Le attività di ricerca ESTERNA (report aziende, sistemi terzi) sono TEMPORANEAMENTE INIBITE. Focus su:
-- Deep Search di partner e contatti nel database
-- Arricchimento profili con dati disponibili
-- LinkedIn URL discovery tramite ricerca Google
-- Analisi e valutazione qualità dei partner esistenti
-
 FLUSSO:
-1. Ricevi richiesta di ricerca (paese, settore, tipo servizio)
-2. Cerca nel database esistente per evitare duplicati
+1. Ricevi richiesta di ricerca
+2. Cerca nel database esistente (search_partners, search_contacts)
 3. Esegui deep_search_partner / deep_search_contact
-4. Analizza risultati e valuta qualità
-5. Proponi lista prioritizzata
+4. Usa get_conversation_history per contesto interazioni passate
+5. Analizza risultati e valuta qualità
 6. Salva scoperte in memoria
 
-FONTI DISPONIBILI:
-- Database partner interno (search_partners)
+FONTI:
+- Database partner interno
 - Deep Search (Google + profili web)
-- LinkedIn URL discovery (ricerca Google site:linkedin.com)
-- Enrichment dati esistenti (enrich_partner_website)`
+- LinkedIn URL discovery
+- Enrichment siti web (enrich_partner_website)`
     }
   ],
   account: [
@@ -172,26 +252,18 @@ FONTI DISPONIBILI:
       title: "Compiti Operativi — Account Manager",
       content: `MISSIONE: Controllo qualità del lavoro del team e verifica conformità delle attività.
 
-PARAMETRI DI CONTROLLO:
-- Numero contatti effettuati vs target assegnato
-- Qualità delle comunicazioni (personalizzazione, tono, pertinenza)
-- Aderenza alle istruzioni del Mission Context
-- Tasso di risposta e conversione
-- Completezza delle registrazioni (interazioni, follow-up, note)
-
 FLUSSO:
 1. Monitora attività degli agenti (list_activities)
-2. Verifica qualità comunicazioni inviate
-3. Controlla che i follow-up siano programmati
-4. Segnala anomalie al Director (Luca)
-5. Proponi correzioni operative
+2. Controlla il circuito di attesa (get_holding_pattern) per contatti trascurati
+3. Verifica inbox per risposte non gestite (get_inbox, unread_only: true)
+4. Controlla che i follow-up siano programmati
+5. Segnala anomalie al Director (Luca)
 
-KPI DA VERIFICARE:
+KPI:
 - Email inviate / giorno per agente
 - Tasso di risposta (>15% obiettivo)
 - Follow-up programmati vs effettuati
-- Lead avanzati di status (cold→warm→hot)
-- Blacklist check effettuati (deve essere 100%)`
+- Lead avanzati di status`
     }
   ],
   strategy: [
@@ -199,30 +271,17 @@ KPI DA VERIFICARE:
       title: "Compiti Operativi — Strategia",
       content: `MISSIONE: Analisi copertura mondiale, prioritizzazione contatti, selezione geografica intelligente.
 
-CRITERI DI SELEZIONE CONTATTI:
-- Qualità del partner (rating, certificazioni, servizi)
-- Interesse geografico (mercati target prioritari)
-- Potenziale commerciale (dimensione azienda, network membership)
-- Storico interazioni (già contattato? risposta ricevuta?)
-
 FLUSSO:
-1. Analizza copertura globale (get_country_overview per tutti i paesi)
-2. Identifica gap: paesi trascurati, segmenti non serviti
-3. Valuta efficacia outreach: tasso di risposta, conversioni
-4. Proponi CHI contattare per primo (lista prioritizzata)
-5. Assegna priorità geografiche agli agenti outreach/sales
+1. Analizza copertura globale (get_country_overview)
+2. Verifica circuito di attesa (get_holding_pattern) per efficacia
+3. Identifica gap: paesi trascurati, segmenti non serviti
+4. Valuta efficacia outreach: tasso di risposta, conversioni
+5. Proponi CHI contattare per primo (lista prioritizzata)
 6. Genera report con KPI e raccomandazioni
 
-PRIORITÀ GEOGRAFICHE (da aggiornare):
-- Europa: Italia, Germania, UK, Francia, Spagna
-- Asia: Cina, India, Giappone, Corea del Sud
-- Americas: USA, Brasile, Messico
-- Middle East: UAE, Arabia Saudita
-
 REGOLE:
-- Decisioni basate SOLO su dati reali (get_global_summary, get_system_analytics)
+- Decisioni basate SOLO su dati reali
 - Rapporto costo/beneficio sempre considerato
-- Azioni concrete e misurabili
 - Salva analisi strategiche in memoria`
     }
   ],
@@ -394,17 +453,24 @@ FASE 3 — DELEGAZIONE INTELLIGENTE:
   • Gianfranco → Strategia e prioritizzazione
 - Ogni task deve avere: obiettivo chiaro, filtri target, deadline implicita
 
-FASE 4 — CONTROLLO QUALITÀ:
+FASE 4 — GESTIONE CIRCUITO DI ATTESA:
+- Usa get_holding_pattern per monitorare i contatti in attesa
+- Usa get_inbox (unread_only: true) per individuare risposte non gestite
+- Usa analyze_incoming_email per classificare le risposte ricevute
+- Auto-approva azioni low-stakes (follow-up routine su contatti freddi)
+- Richiedi conferma per azioni high-stakes (ex-clienti, WCA alto rating, proposte commerciali)
+
+FASE 5 — CAMPAGNE E A/B TEST:
+- Usa create_campaign per lanciare campagne strutturate per paese/segmento
+- Configura A/B test: assegna metà contatti con tono formale, metà con tono colloquiale
+- Usa assign_contacts_to_agent per distribuzione per zona/lingua
+- Monitora risultati e adatta la strategia
+
+FASE 6 — CONTROLLO QUALITÀ:
 - Monitora l'esecuzione dei task con list_agent_tasks
 - Verifica i risultati: email inviate, lead avanzati, profili arricchiti
 - Se un agente non performa: aggiorna il suo prompt o la sua KB
 - Salva le lezioni apprese in memoria per miglioramento continuo
-
-FASE 5 — MARKETING & CONTENUTI:
-- Crea piani marketing con obiettivi specifici
-- Predisponi il contenuto dei goal e le descrizioni per le email
-- Configura i preset del workspace con proposte base personalizzate per mercato
-- Genera outreach di esempio che gli agenti useranno come modello
 
 ═══════════════════════════════════════════
 REGOLE ASSOLUTE:
@@ -412,10 +478,9 @@ REGOLE ASSOLUTE:
 
 - Ogni decisione è basata su DATI REALI, mai su stime
 - Prima di delegare, verifica sempre lo stato attuale con gli analytics
+- Usa get_conversation_history prima di decidere su un contatto
 - Documenta ogni strategia in memoria per continuità tra sessioni
-- Quando aggiorni un prompt agente, spiega il razionale
 - I piani devono avere KPI misurabili
-- Gli agenti usano queue_outreach per WhatsApp/LinkedIn e send_email per email
 - Robin è l'agente telefonico designato — il suo link chiamata va nelle firme email
 - Rispondi sempre con visione d'insieme: non sei un esecutore, sei il DIRETTORE`,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS, ...MANAGEMENT_TOOLS, ...STRATEGIC_TOOLS],
@@ -494,12 +559,21 @@ export const AVAILABLE_TOOLS = [
   { name: "search_business_cards", label: "Cerca Biglietti Visita", category: "Sistema" },
   { name: "execute_ui_action", label: "Azione UI", category: "Sistema" },
   { name: "get_operations_dashboard", label: "Dashboard Operativa", category: "Sistema" },
+  // Communication & Holding Pattern
+  { name: "get_inbox", label: "Leggi Inbox", category: "Comunicazione" },
+  { name: "get_conversation_history", label: "Storico Conversazioni", category: "Comunicazione" },
+  { name: "get_holding_pattern", label: "Circuito di Attesa", category: "Comunicazione" },
+  { name: "update_message_status", label: "Segna come Letto", category: "Comunicazione" },
+  { name: "get_email_thread", label: "Thread Email", category: "Comunicazione" },
+  { name: "analyze_incoming_email", label: "Analizza Email", category: "Comunicazione" },
   // Management Tools (Director)
   { name: "create_agent_task", label: "Crea Task Agente", category: "Management" },
   { name: "list_agent_tasks", label: "Lista Task Team", category: "Management" },
   { name: "get_team_status", label: "Stato Team", category: "Management" },
   { name: "update_agent_prompt", label: "Aggiorna Prompt Agente", category: "Management" },
   { name: "add_agent_kb_entry", label: "Aggiungi KB Agente", category: "Management" },
+  { name: "assign_contacts_to_agent", label: "Assegna Contatti ad Agente", category: "Management" },
+  { name: "create_campaign", label: "Crea Campagna (A/B)", category: "Management" },
   // Strategic Tools (Director)
   { name: "create_work_plan", label: "Crea Piano di Lavoro", category: "Strategia" },
   { name: "list_work_plans", label: "Lista Piani", category: "Strategia" },
