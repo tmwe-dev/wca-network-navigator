@@ -10,7 +10,7 @@ import {
   ListTodo, Clock, CheckCircle2, AlertTriangle, Zap, Globe, RefreshCw,
 } from "lucide-react";
 import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode, type CockpitChannelFilter, type CockpitQualityFilter } from "@/contexts/GlobalFiltersContext";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useCountryStats } from "@/hooks/useCountryStats";
