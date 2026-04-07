@@ -29,7 +29,7 @@ export function StepWCA({ onNext, onSkip }: StepWCAProps) {
         setStatus("ok");
         try {
           localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() }));
-        } catch {}
+        } catch { /* storage full or unavailable */ }
       } else {
         setStatus("fail");
       }

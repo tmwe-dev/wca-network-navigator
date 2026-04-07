@@ -69,7 +69,7 @@ export function useWcaSync() {
               console.error("Sync SSE error:", evt.message);
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch {}
+          } catch { /* malformed SSE JSON chunk */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["partners"] });

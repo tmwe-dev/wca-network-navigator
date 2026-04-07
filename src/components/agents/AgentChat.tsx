@@ -64,7 +64,7 @@ export function AgentChat({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch {}
+    } catch { /* audio playback not available */ }
   };
 
   return (

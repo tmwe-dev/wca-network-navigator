@@ -44,7 +44,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch {}
+    } catch { /* storage full or unavailable */ }
 
     lines.push("");
     lines.push(`Error: ${error?.message || "Unknown"}`);

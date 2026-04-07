@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
 
+// ── Re-export from extracted modules so existing consumers keep working ──
+export { useTransferToPartners, useCreateActivitiesFromImport } from "./useImportTransfer";
+export { useFixImportErrors, exportErrorsToCSV } from "./useImportErrorHandling";
+
+// ── Field-alias utilities (used by core import mutations) ──
+
 // Find a field value from a row using multiple possible aliases
 function findField(row: Record<string, any>, aliases: string[]): string | null {
   for (const alias of aliases) {
@@ -28,6 +34,8 @@ const FIELD_ALIASES: Record<string, string[]> = {
   company_alias: ["company_alias", "alias_azienda", "alias_2"],
   contact_alias: ["contact_alias", "alias", "alias_contatto"],
 };
+
+// ── Shared types ──
 
 export interface ImportLog {
   id: string;
@@ -90,6 +98,8 @@ export interface ImportError {
   ai_suggestions: any;
   created_at: string;
 }
+
+// ── Queries ──
 
 export function useImportLogs() {
   return useQuery({
@@ -170,6 +180,8 @@ export function useImportErrors(importLogId: string | null) {
     enabled: !!importLogId,
   });
 }
+
+// ── Core mutations ──
 
 export function useCreateImport() {
   const queryClient = useQueryClient();
@@ -290,152 +302,6 @@ export function useToggleContactSelection() {
   });
 }
 
-export function useTransferToPartners() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (contacts: ImportedContact[]) => {
-      let successCount = 0;
-      for (const c of contacts) {
-        // Insert partner
-        const { data: partner, error: pError } = await supabase
-          .from("partners")
-          .insert({
-            company_name: c.company_name || "Unknown",
-            country_code: resolveCountryCode(c.country || "") || "XX",
-            country_name: c.country || "Unknown",
-            city: c.city || "Unknown",
-            address: c.address,
-            phone: c.phone,
-            mobile: c.mobile,
-            email: c.email,
-            company_alias: c.company_alias,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (pError) {
-          console.error("Transfer error:", pError);
-          continue;
-        }
-
-        // Insert contact if name exists
-        if (c.name) {
-          await supabase.from("partner_contacts").insert({
-            partner_id: partner.id,
-            name: c.name,
-            email: c.email,
-            direct_phone: c.phone,
-            mobile: c.mobile,
-            contact_alias: c.contact_alias,
-            title: (c as any).position || null,
-            is_primary: true,
-          });
-        }
-
-        // Mark as transferred
-        await supabase
-          .from("imported_contacts")
-          .update({ is_transferred: true })
-          .eq("id", c.id);
-
-        successCount++;
-      }
-      return successCount;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      toast({ title: `${count} partner trasferiti con successo` });
-    },
-  });
-}
-
-export function useCreateActivitiesFromImport() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      contacts,
-      activityType,
-      campaignBatchId,
-    }: {
-      contacts: ImportedContact[];
-      activityType: "send_email" | "phone_call";
-      campaignBatchId?: string;
-    }) => {
-      // First transfer to partners, then create activities
-      let count = 0;
-      for (const c of contacts) {
-        // Upsert partner
-        const { data: partner, error: pError } = await supabase
-          .from("partners")
-          .insert({
-            company_name: c.company_name || "Unknown",
-            country_code: resolveCountryCode(c.country || "") || "XX",
-            country_name: c.country || "Unknown",
-            city: c.city || "Unknown",
-            phone: c.phone,
-            email: c.email,
-            company_alias: c.company_alias,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (pError) continue;
-
-        // Create contact
-        let contactId: string | null = null;
-        if (c.name) {
-          const { data: contact } = await supabase
-            .from("partner_contacts")
-            .insert({
-              partner_id: partner.id,
-              name: c.name,
-              email: c.email,
-              direct_phone: c.phone,
-              mobile: c.mobile,
-              contact_alias: c.contact_alias,
-              is_primary: true,
-            })
-            .select()
-            .single();
-          contactId = contact?.id || null;
-        }
-
-        // Create activity
-        await supabase.from("activities").insert({
-          partner_id: partner.id,
-          source_type: "partner",
-          source_id: partner.id,
-          activity_type: activityType,
-          title: `${activityType === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
-          status: "pending",
-          priority: "medium",
-          selected_contact_id: contactId,
-          campaign_batch_id: campaignBatchId || null,
-        });
-
-        await supabase
-          .from("imported_contacts")
-          .update({ is_transferred: true })
-          .eq("id", c.id);
-
-        count++;
-      }
-      return count;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      toast({ title: `${count} attività create con successo` });
-    },
-  });
-}
-
 export function useAnalyzeImportStructure() {
   return useMutation({
     mutationFn: async ({
@@ -463,71 +329,6 @@ export function useAnalyzeImportStructure() {
       toast({ title: "Errore analisi AI", description: String(err), variant: "destructive" });
     },
   });
-}
-
-export function useFixImportErrors() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ importLogId, customPrompt }: { importLogId: string; customPrompt?: string }) => {
-      const { data, error } = await supabase.functions.invoke("process-ai-import", {
-        body: { import_log_id: importLogId, mode: "fix_errors", custom_prompt: customPrompt || undefined },
-      });
-      if (error) throw error;
-      return data as { corrected: number; dismissed: number; has_more: boolean; remaining: number };
-    },
-    onSuccess: (result, { importLogId }) => {
-      queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
-      toast({
-        title: "Batch completato",
-        description: `${result.corrected} corretti, ${result.dismissed} non recuperabili${result.has_more ? ` — ${result.remaining} rimanenti` : ""}`,
-      });
-    },
-    onError: (err) => {
-      toast({ title: "Errore correzione AI", description: String(err), variant: "destructive" });
-    },
-  });
-}
-
-export function exportErrorsToCSV(errors: ImportError[]) {
-  const SEP = ";";
-  const escapeCell = (val: any) => {
-    if (val === null || val === undefined) return "";
-    const s = String(val).replace(/"/g, '""');
-    if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-      return `"${s}"`;
-    }
-    return s;
-  };
-
-  // Extract raw_data fields as separate columns
-  const firstWithRaw = errors.find(e => e.raw_data && typeof e.raw_data === "object");
-  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
-
-  const headers = ["riga", "tipo_errore", "messaggio", ...rawKeys];
-  const csvRows = [headers.map(escapeCell).join(SEP)];
-
-  for (const err of errors) {
-    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, any>;
-    const row = [
-      escapeCell(err.row_number),
-      escapeCell(err.error_type),
-      escapeCell(err.error_message),
-      ...rawKeys.map(k => escapeCell(raw[k])),
-    ];
-    csvRows.push(row.join(SEP));
-  }
-
-  const BOM = "\uFEFF";
-  const blob = new Blob([BOM + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `errori_import_${Date.now()}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 export function useCreateImportFromParsedRows() {

@@ -83,7 +83,7 @@ export function useOutreachGenerator() {
           if (error.context instanceof Response) {
             parsed = await error.context.json();
           }
-        } catch {}
+        } catch (e) { console.warn("[OutreachGenerator] failed to parse error response:", e); }
         throw new Error(parsed?.error || error.message);
       }
       if (data?.error) throw new Error(data.error);
