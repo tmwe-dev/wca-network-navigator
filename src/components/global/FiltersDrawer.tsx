@@ -589,46 +589,68 @@ function CRMFiltersSection() {
   const [countrySearch, setCountrySearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [inlineSortOpen, setInlineSortOpen] = useState(false);
 
-  // Country list from imported_contacts
   const [crmCountries, setCrmCountries] = useState<{ code: string; name: string; flag: string; total: number }[]>([]);
-  // Dynamic origins from imported_contacts
   const [crmOrigins, setCrmOrigins] = useState<{ value: string; label: string; count: number }[]>([]);
 
-  // Fetch countries and origins from imported_contacts
   useEffect(() => {
     const fetchData = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        // Fetch countries
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("country")
-          .not("country", "is", null);
-        if (data) {
+
+        const countryRows: any[] = [];
+        let countryFrom = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data: page, error } = await supabase
+            .from("imported_contacts")
+            .select("country")
+            .range(countryFrom, countryFrom + pageSize - 1);
+          if (error || !page || page.length === 0) break;
+          countryRows.push(...page);
+          if (page.length < pageSize) break;
+          countryFrom += pageSize;
+        }
+
+        if (countryRows.length > 0) {
           const counts: Record<string, number> = {};
-          data.forEach((r: any) => {
-            const c = (r.country || "").toUpperCase().trim();
-            if (c) counts[c] = (counts[c] || 0) + 1;
+          countryRows.forEach((r: any) => {
+            const raw = (r.country || "").trim();
+            if (!raw) return;
+            const resolved = resolveCountryCode(raw) || raw.toUpperCase();
+            counts[resolved] = (counts[resolved] || 0) + 1;
           });
-          const list = Object.entries(counts).map(([code, total]) => {
-            const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
-            return {
-              code,
-              name: wcaCountry?.name || code,
-              flag: getCountryFlag(code),
-              total,
-            };
-          }).sort((a, b) => b.total - a.total);
+          const list = Object.entries(counts)
+            .map(([code, total]) => {
+              const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === code);
+              return {
+                code,
+                name: wcaCountry?.name || code,
+                flag: getCountryFlag(code),
+                total,
+              };
+            })
+            .sort((a, b) => b.total - a.total);
           setCrmCountries(list);
         }
-        // Fetch origins
-        const { data: originData } = await supabase
-          .from("imported_contacts")
-          .select("origin");
-        if (originData) {
+
+        const originRows: any[] = [];
+        let originFrom = 0;
+        while (true) {
+          const { data: page, error } = await supabase
+            .from("imported_contacts")
+            .select("origin")
+            .range(originFrom, originFrom + pageSize - 1);
+          if (error || !page || page.length === 0) break;
+          originRows.push(...page);
+          if (page.length < pageSize) break;
+          originFrom += pageSize;
+        }
+
+        if (originRows.length > 0) {
           const oCounts: Record<string, number> = {};
-          originData.forEach((r: any) => {
+          originRows.forEach((r: any) => {
             const o = (r.origin || "").trim();
             if (o) oCounts[o] = (oCounts[o] || 0) + 1;
           });
@@ -672,7 +694,10 @@ function CRMFiltersSection() {
     g.setCrmOrigin(next);
   };
 
-  // Inline search
+  const applyInlineFilter = (value: string) => {
+    g.setSearch(value);
+  };
+
   const searchValue = g.filters.search;
   useEffect(() => {
     if (searchValue.trim().length < 2) { setSearchResults([]); return; }
@@ -693,11 +718,8 @@ function CRMFiltersSection() {
     return () => clearTimeout(timer);
   }, [searchValue]);
 
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-
   return (
     <>
-      {/* Search with inline results */}
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Contatto, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
         {searchValue.trim().length >= 2 && (
@@ -721,7 +743,7 @@ function CRMFiltersSection() {
                     className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm shrink-0">{getCountryFlag(c.country)}</span>
+                      <span className="text-sm shrink-0">{c.country ? getCountryFlag(resolveCountryCode(c.country) || c.country) : ""}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{c.company_alias || c.company_name || "—"}</p>
                         {c.name && <p className="text-[10px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
@@ -736,31 +758,77 @@ function CRMFiltersSection() {
         )}
       </FilterSection>
 
-      {/* ── Raggruppa per ── */}
-      <FilterSection icon={Layers} label="Raggruppa per">
-        <ChipGroup>
-          {CRM_GROUPBY.map(o => (
-            <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
+      <div className="space-y-2">
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <FilterSection icon={Layers} label="Raggruppa per">
+              <ChipGroup>
+                {CRM_GROUPBY.map(o => (
+                  <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
+                ))}
+              </ChipGroup>
+            </FilterSection>
+          </div>
+          <div className="shrink-0">
+            <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => setInlineSortOpen(v => !v)}>
+              <ArrowUpDown className="w-3.5 h-3.5" /> Ordina
+            </Button>
+          </div>
+        </div>
 
-      {/* ── Contact Group Navigator — MAIN ELEMENT ── */}
+        {inlineSortOpen && (
+          <div className="rounded-lg border border-border/40 bg-muted/10 p-2">
+            <ChipGroup>
+              {CRM_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}
+            </ChipGroup>
+          </div>
+        )}
+      </div>
+
       <CRMContactNavigator groupBy={g.filters.groupBy} />
 
-      {/* ── Filtri avanzati (collapsible) ── */}
-      <button
-        onClick={() => setFiltersExpanded(!filtersExpanded)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted/40 transition-colors"
-      >
-        <Filter className="w-3.5 h-3.5" />
-        <span className="font-medium">Filtri avanzati</span>
-        <span className="ml-auto text-[10px]">{filtersExpanded ? "▾" : "▸"}</span>
-      </button>
+      <div className="rounded-lg border border-border/40 bg-muted/10 p-2 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Filter className="w-3.5 h-3.5" /> Filtri contesto
+        </div>
 
-      {filtersExpanded && (
-        <div className="space-y-3 pl-1">
-          {/* Country list with checkboxes */}
+        <div className="space-y-2">
+          <FilterSection icon={Database} label="Origine">
+            <ChipGroup>
+              {crmOrigins.map(o => (
+                <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
+                  {o.label} <span className="ml-0.5 text-[8px] opacity-60">({o.count})</span>
+                </Chip>
+              ))}
+            </ChipGroup>
+          </FilterSection>
+
+          <div className="grid grid-cols-2 gap-2">
+            <FilterSection icon={Users} label="Stato">
+              <ChipGroup>
+                {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
+              </ChipGroup>
+            </FilterSection>
+            <FilterSection icon={Plane} label="Circuito">
+              <ChipGroup>
+                {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
+              </ChipGroup>
+            </FilterSection>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <FilterSection icon={Wifi} label="Canale">
+              <ChipGroup>
+                {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
+              </ChipGroup>
+            </FilterSection>
+            <FilterSection icon={Sparkles} label="Qualità">
+              <ChipGroup>
+                {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
+              </ChipGroup>
+            </FilterSection>
+          </div>
+
           <FilterSection icon={Globe} label={`Paesi (${g.filters.crmSelectedCountries.size > 0 ? g.filters.crmSelectedCountries.size + ' sel.' : 'tutti'})`}>
             {selectedCountries.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
@@ -789,54 +857,8 @@ function CRMFiltersSection() {
               ))}
             </div>
           </FilterSection>
-
-          {/* Origine */}
-          <FilterSection icon={Database} label="Origine">
-            <ChipGroup>
-              {crmOrigins.map(o => (
-                <Chip key={o.value} active={g.filters.crmOrigin.has(o.value)} onClick={() => toggleCrmOrigin(o.value)}>
-                  {o.label} <span className="ml-0.5 text-[8px] opacity-60">({o.count})</span>
-                </Chip>
-              ))}
-            </ChipGroup>
-          </FilterSection>
-
-          {/* Ordina */}
-          <FilterSection icon={ArrowUpDown} label="Ordina">
-            <ChipGroup>
-              {CRM_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}
-            </ChipGroup>
-          </FilterSection>
-
-          {/* Stato + Circuito */}
-          <div className="grid grid-cols-2 gap-2">
-            <FilterSection icon={Users} label="Stato">
-              <ChipGroup>
-                {CRM_LEAD_STATUS.map(o => <Chip key={o.value} active={g.filters.leadStatus === o.value} onClick={() => g.setLeadStatus(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-            <FilterSection icon={Plane} label="Circuito">
-              <ChipGroup>
-                {CRM_HOLDING.map(o => <Chip key={o.value} active={g.filters.holdingPattern === o.value} onClick={() => g.setHoldingPattern(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-          </div>
-
-          {/* Canale + Qualità */}
-          <div className="grid grid-cols-2 gap-2">
-            <FilterSection icon={Wifi} label="Canale">
-              <ChipGroup>
-                {CRM_CHANNEL.map(o => <Chip key={o.value} active={g.filters.crmChannel === o.value} onClick={() => g.setCrmChannel(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-            <FilterSection icon={Sparkles} label="Qualità">
-              <ChipGroup>
-                {CRM_QUALITY.map(o => <Chip key={o.value} active={g.filters.crmQuality === o.value} onClick={() => g.setCrmQuality(o.value)}>{o.label}</Chip>)}
-              </ChipGroup>
-            </FilterSection>
-          </div>
         </div>
-      )}
+      </div>
     </>
   );
 }
