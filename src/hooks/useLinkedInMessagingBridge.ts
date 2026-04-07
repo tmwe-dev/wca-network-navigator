@@ -5,6 +5,9 @@
  * Ultra-conservative: long timeouts, no aggressive polling.
  */
 import { useState, useCallback, useEffect, useRef } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInMessagingBridge");
 
 type BridgeResponse = {
   success: boolean;
@@ -241,17 +244,17 @@ export function useLinkedInMessagingBridge() {
 
   // ── READ INBOX: Direct call to LinkedIn extension (same as test page) ──
   const readInbox = useCallback(async (): Promise<BridgeResponse> => {
-    console.log("[LI Bridge] Reading inbox via LinkedIn extension (direct)...");
+    log.debug("reading inbox via extension");
     const result = await sendToLinkedInExt("readLinkedInInbox", {}, 35000);
-    console.log("[LI Bridge] readInbox result:", JSON.stringify(result).slice(0, 500));
+    log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
     return { ...result, source: "linkedin-ext" };
   }, []);
 
   // ── READ THREAD: Direct call to LinkedIn extension (same as test page) ──
   const readThread = useCallback(async (threadUrl: string): Promise<BridgeResponse> => {
-    console.log("[LI Bridge] Reading thread via LinkedIn extension (direct):", threadUrl);
+    log.debug("reading thread via extension", { threadUrl });
     const result = await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 30000);
-    console.log("[LI Bridge] readThread result:", JSON.stringify(result).slice(0, 500));
+    log.debug("readThread result", { preview: JSON.stringify(result).slice(0, 500) });
     return { ...result, source: "linkedin-ext" };
   }, []);
 

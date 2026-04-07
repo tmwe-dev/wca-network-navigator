@@ -4,6 +4,9 @@ import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
 import { getPatternPause } from "@/hooks/useScrapingSettings";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInFlow");
 
 export interface LinkedInFlowJob {
   id: string;
@@ -361,7 +364,7 @@ export function useLinkedInFlow() {
               };
             }
           } catch (e: any) {
-            console.warn("Outreach generation skipped:", e.message);
+            log.warn("outreach generation skipped", { message: e instanceof Error ? e.message : String(e) });
           }
         }
 
@@ -402,7 +405,7 @@ export function useLinkedInFlow() {
       } catch (e: any) {
         itemStatus = "error";
         errorMsg = e.message || "Unknown error";
-        console.error(`LinkedIn flow error for ${item.contact_name}:`, e);
+        log.error("flow error", { contactName: item.contact_name, message: e instanceof Error ? e.message : String(e) });
       }
 
       // Save item result
@@ -562,7 +565,7 @@ async function saveEnrichmentToPartner(companyName: string, enrichment: Record<s
       }).eq("id", partners[0].id);
     }
   } catch (e) {
-    console.error("Failed to save enrichment to partner:", e);
+    log.error("save enrichment to partner failed", { message: e instanceof Error ? e.message : String(e) });
   }
 }
 

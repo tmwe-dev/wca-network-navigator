@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInExtensionBridge");
 
 type LiExtensionResponse = {
   success: boolean;
@@ -69,17 +72,17 @@ export function useLinkedInExtensionBridge() {
       return new Promise((resolve) => {
         const requestId = `li_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-        console.log(`[LI Bridge] → ${action}`, { requestId, payload: payload ? Object.keys(payload) : [] });
+        log.debug("→ request", { action, requestId, payloadKeys: payload ? Object.keys(payload) : [] });
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
-          console.warn(`[LI Bridge] ⏰ Timeout for ${action} (${timeoutMs}ms)`, requestId);
+          log.warn("timeout", { action, timeoutMs, requestId });
           resolve({ success: false, error: "Timeout" });
         }, timeoutMs);
 
         pendingRef.current.set(requestId, (response) => {
           clearTimeout(timer);
-          console.log(`[LI Bridge] ← ${action}`, { requestId, success: response.success, error: response.error });
+          log.debug("← response", { action, requestId, success: response.success, error: response.error });
           resolve(response);
         });
 

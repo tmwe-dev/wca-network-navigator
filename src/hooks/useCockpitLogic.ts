@@ -8,6 +8,9 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useCockpitLogic");
 import { useClientAssignments, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,14 +212,14 @@ export function useCockpitLogic() {
                 const existing = (partnerRows[0].enrichment_data as Record<string, any>) || {};
                 await sb.from("partners").update({ enrichment_data: { ...existing, linkedin_profile_name: scrapedProfile?.name, linkedin_profile_headline: scrapedProfile?.headline, linkedin_profile_location: scrapedProfile?.location, linkedin_profile_about: scrapedProfile?.about?.slice(0, 2000), linkedin_profile_url: scrapedProfile?.profileUrl, linkedin_scraped_at: new Date().toISOString(), linkedin_summary: [scrapedProfile?.name, scrapedProfile?.headline, scrapedProfile?.about?.slice(0, 500)].filter(Boolean).join(" — ") } }).eq("id", partnerRows[0].id);
               }
-            } catch (e) { console.error("Failed to save LinkedIn profile to DB:", e); }
+            } catch (e) { log.error("save linkedin profile failed", { message: e instanceof Error ? e.message : String(e) }); }
           });
           await new Promise(r => setTimeout(r, 500));
         } else {
           toast.info("Profilo LinkedIn non estratto — generazione con dati DB");
         }
       } catch (e) {
-        console.error("LinkedIn scraping failed:", e);
+        log.error("linkedin scraping failed", { message: e instanceof Error ? e.message : String(e) });
         toast.info("Scraping LinkedIn fallito — generazione con dati DB");
       }
     }

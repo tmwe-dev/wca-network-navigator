@@ -8,6 +8,9 @@ import {
   normalizeLinkedInProfileUrl,
   pickBestLinkedInCandidate,
 } from "@/lib/linkedinSearch";
+import { createLogger } from "@/lib/log";
+
+const moduleLog = createLogger("useLinkedInLookup");
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -170,7 +173,7 @@ export function useLinkedInLookup() {
             }) as any).eq("id", contact.sourceId);
           }
         } catch (e) {
-          console.error("[LinkedInLookup] Failed to persist log:", e);
+          moduleLog.error("persist log failed", { message: e instanceof Error ? e.message : String(e) });
         }
       }
 
@@ -249,7 +252,7 @@ export function useLinkedInLookup() {
             break;
           }
         } catch (e) {
-          console.warn("[LinkedInLookup] Google search error:", e);
+          moduleLog.warn("google search error", { message: e instanceof Error ? e.message : String(e) });
         }
       }
 
