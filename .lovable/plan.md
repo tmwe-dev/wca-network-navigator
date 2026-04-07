@@ -1,33 +1,18 @@
 
 
-# Rimozione Bottoni Download/Export dalla Piattaforma
+# Aggiunta Tasto Logout nella Sidebar
 
-## Obiettivo
-Eliminare tutti i punti dove un dipendente può scaricare dati dal database in locale (CSV, JSON, PDF), mantenendo solo le funzionalità di import (caricare dati dentro il sistema).
+## Modifica
 
-## Punti di download identificati
+Aggiungere un bottone "Esci" nel footer della sidebar (`src/components/layout/AppSidebar.tsx`), sotto il toggle tema, che chiama `supabase.auth.signOut()` e redirige a `/auth`.
 
-| # | File | Cosa fa | Azione |
-|---|------|---------|--------|
-| 1 | `ImportExportSettings.tsx` | Tab "Esporta" con export CSV/JSON/PDF dei partner | Rimuovere intero tab "Esporta" e relativo codice |
-| 2 | `Import.tsx` | Bottone "Esporta CSV incompleti" durante import | Rimuovere bottone |
-| 3 | `ImportErrorMonitor.tsx` | Bottone "Esporta CSV errori" | Rimuovere bottone |
-| 4 | `useImportWizard.ts` | Funzione `handleExportIncomplete` | Rimuovere funzione |
+## Dettaglio tecnico
 
-### NON toccati (sono funzionalità operative, non export dati):
-- **Download allegati email** (`EmailDetailView.tsx`) — scaricare un allegato ricevuto non è export del DB
-- **Download estensione WhatsApp** (`ExtensionsTab.tsx`, `ChannelsTab.tsx`) — è un file di sistema, non dati
-- **Download WCA/scraper** (`WCAScraper`) — è import dati dentro il sistema, non export fuori
+**File**: `src/components/layout/AppSidebar.tsx`
 
-## Modifiche
+- Importare `LogOut` da lucide-react, `supabase` dal client, `useNavigate` da react-router-dom
+- Aggiungere bottone "Esci" dopo il theme toggle (riga ~213), stesso stile degli altri bottoni footer ma con colore `text-destructive` on hover
+- Al click: `await supabase.auth.signOut()` → `navigate("/auth")`
 
-| File | Modifica |
-|------|----------|
-| `src/components/settings/ImportExportSettings.tsx` | Rimuovere tab "Esporta", funzioni `exportCSV`, `exportJSON`, `downloadBlob`. Rinominare componente in `ImportSettings` |
-| `src/pages/Settings.tsx` | Aggiornare label tab da "Import/Export" a "Importa" |
-| `src/pages/Import.tsx` | Rimuovere bottone "Esporta CSV incompleti" |
-| `src/components/import/ImportErrorMonitor.tsx` | Rimuovere bottone "Esporta CSV errori" e funzione `exportErrorsToCSV` |
-| `src/hooks/useImportWizard.ts` | Rimuovere `handleExportIncomplete` |
-
-Nessun file nuovo. 5 file modificati.
+Un file modificato, zero migrazioni.
 
