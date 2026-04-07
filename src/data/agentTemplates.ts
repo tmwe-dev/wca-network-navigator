@@ -47,12 +47,17 @@ const ALL_OPERATIONAL_TOOLS: string[] = [
   "check_blacklist", "get_global_summary", "save_memory", "search_memory",
   "delete_records", "search_business_cards", "execute_ui_action",
   "get_operations_dashboard",
+  // Communication & Holding Pattern
+  "get_inbox", "get_conversation_history", "get_holding_pattern",
+  "update_message_status", "get_email_thread", "analyze_incoming_email",
 ];
 
 // Management tools — only for Director (Luca)
 const MANAGEMENT_TOOLS: string[] = [
   "create_agent_task", "list_agent_tasks", "get_team_status",
   "update_agent_prompt", "add_agent_kb_entry",
+  // Director-only campaign tools
+  "assign_contacts_to_agent", "create_campaign",
 ];
 
 // Strategic tools — only for Director (Luca)
