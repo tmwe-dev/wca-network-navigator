@@ -860,6 +860,7 @@ function CRMFiltersSection() {
           onToggle={toggleHolding}
           singleSelect
           capitalize={false}
+          activeColor={g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"}
         />
 
         <FilterDropdownMulti
