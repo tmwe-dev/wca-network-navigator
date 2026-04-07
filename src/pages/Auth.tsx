@@ -11,12 +11,16 @@ import { Loader2, Globe2, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 async function checkWhitelist(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
-  if (error) {
-    console.error("Whitelist check error:", error);
+  try {
+    const { data, error } = await supabase.rpc("is_email_authorized" as any, { p_email: email });
+    if (error) {
+      console.error("Whitelist check error:", error);
+      return false;
+    }
+    return data === true;
+  } catch {
     return false;
   }
-  return data === true;
 }
 
 async function recordLogin(email: string) {
