@@ -2511,45 +2511,215 @@ async function consumeCredits(userId: string, usage: { prompt_tokens?: number; c
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// LOAD MEMORY CONTEXT
+// LOAD USER PROFILE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function loadUserProfile(): Promise<string> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .like("key", "ai_%");
+  if (!data?.length) return "";
+
+  const settings: Record<string, string> = {};
+  for (const row of data as any[]) settings[row.key] = row.value || "";
+
+  const parts: string[] = [];
+  const get = (k: string) => settings[k]?.trim() || "";
+
+  if (get("ai_company_name") || get("ai_company_alias"))
+    parts.push(`AZIENDA: ${get("ai_company_name")} (${get("ai_company_alias")})`);
+  if (get("ai_contact_name") || get("ai_contact_alias"))
+    parts.push(`REFERENTE: ${get("ai_contact_name")} (${get("ai_contact_alias")}) — ${get("ai_contact_role")}`);
+  if (get("ai_sector")) parts.push(`SETTORE: ${get("ai_sector")}`);
+  if (get("ai_networks")) parts.push(`NETWORK: ${get("ai_networks")}`);
+  if (get("ai_company_activities")) parts.push(`ATTIVITÀ: ${get("ai_company_activities")}`);
+  if (get("ai_business_goals")) parts.push(`OBIETTIVI ATTUALI: ${get("ai_business_goals")}`);
+  if (get("ai_tone")) parts.push(`TONO: ${get("ai_tone")}`);
+  if (get("ai_language")) parts.push(`LINGUA: ${get("ai_language")}`);
+  if (get("ai_behavior_rules")) parts.push(`REGOLE COMPORTAMENTALI:\n${get("ai_behavior_rules")}`);
+  if (get("ai_style_instructions")) parts.push(`ISTRUZIONI STILE: ${get("ai_style_instructions")}`);
+  if (get("ai_sector_notes")) parts.push(`NOTE SETTORE: ${get("ai_sector_notes")}`);
+
+  if (parts.length === 0) return "";
+  return `\n\nPROFILO UTENTE E AZIENDA:\n${parts.join("\n")}`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LOAD KB ENTRIES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function loadKBContext(): Promise<string> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, content, category, tags")
+    .eq("is_active", true)
+    .gte("priority", 5)
+    .order("priority", { ascending: false })
+    .limit(10);
+
+  if (!data?.length) return "";
+
+  const entries = (data as any[]).map(e =>
+    `### ${e.title} [${(e.tags || []).join(", ") || e.category}]\n${e.content}`
+  ).join("\n\n");
+
+  return `\n\nKNOWLEDGE BASE AZIENDALE:\n${entries}`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LOAD OPERATIVE PROMPTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function loadOperativePrompts(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("operative_prompts")
+    .select("name, objective, procedure, criteria")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(5);
+
+  if (!data?.length) return "";
+
+  const prompts = (data as any[]).map(p =>
+    `**${p.name}**: Obiettivo: ${p.objective}. Procedura: ${p.procedure}. Criteri: ${p.criteria}`
+  ).join("\n");
+
+  return `\n\nPROMPT OPERATIVI ATTIVI:\n${prompts}`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LOAD MEMORY CONTEXT (TIERED L1/L2/L3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function loadMemoryContext(userId: string): Promise<string> {
-  const { data: memories } = await supabase.from("ai_memory")
-    .select("content, memory_type, tags, importance, created_at")
-    .eq("user_id", userId)
-    .or("expires_at.is.null,expires_at.gt.now()")
-    .order("importance", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(20);
+  // Load memories in priority: L3 first, then L2, then L1
+  const [l3Res, l2Res, l1Res, plansRes] = await Promise.all([
+    supabase.from("ai_memory")
+      .select("id, content, memory_type, tags, importance, level, confidence")
+      .eq("user_id", userId)
+      .eq("level", 3)
+      .or("expires_at.is.null,expires_at.gt.now()")
+      .order("importance", { ascending: false })
+      .limit(10),
+    supabase.from("ai_memory")
+      .select("id, content, memory_type, tags, importance, level, confidence")
+      .eq("user_id", userId)
+      .eq("level", 2)
+      .or("expires_at.is.null,expires_at.gt.now()")
+      .order("confidence", { ascending: false })
+      .limit(10),
+    supabase.from("ai_memory")
+      .select("id, content, memory_type, tags, importance, level, confidence")
+      .eq("user_id", userId)
+      .eq("level", 1)
+      .or("expires_at.is.null,expires_at.gt.now()")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.from("ai_work_plans")
+      .select("id, title, status, current_step, steps, tags")
+      .eq("user_id", userId)
+      .in("status", ["running", "paused"])
+      .limit(5),
+  ]);
 
-  const { data: plans } = await supabase.from("ai_work_plans")
-    .select("id, title, status, current_step, steps, tags")
-    .eq("user_id", userId)
-    .in("status", ["running", "paused"])
-    .limit(5);
+  // Increment access_count and last_accessed_at for loaded memories
+  const allMemoryIds: string[] = [];
+  for (const res of [l3Res, l2Res, l1Res]) {
+    if (res.data) allMemoryIds.push(...res.data.map((m: any) => m.id));
+  }
+  if (allMemoryIds.length > 0) {
+    // Fire-and-forget update for access tracking
+    supabase.rpc("increment_memory_access", { memory_ids: allMemoryIds }).then(() => {}).catch(() => {});
+  }
 
   let context = "";
 
-  if (memories && memories.length > 0) {
-    context += "\n\nMEMORIA OPERATIVA (ricordi salvati dall'utente e dall'AI):\n";
+  const formatMemories = (memories: any[], levelName: string) => {
+    if (!memories?.length) return "";
+    let s = `\n[${levelName}]\n`;
+    const typeEmoji: Record<string, string> = { preference: "⭐", decision: "🎯", fact: "📌", conversation: "💬" };
     for (const m of memories) {
-      const typeEmoji: Record<string, string> = { preference: "⭐", decision: "🎯", fact: "📌", conversation: "💬" };
-      context += `${typeEmoji[m.memory_type] || "📝"} [${m.memory_type}] ${m.content} (tags: ${(m.tags || []).join(", ")})\n`;
+      s += `${typeEmoji[m.memory_type] || "📝"} ${m.content} (conf: ${Math.round(m.confidence * 100)}%, tags: ${(m.tags || []).join(", ")})\n`;
     }
+    return s;
+  };
+
+  if (l3Res.data?.length || l2Res.data?.length || l1Res.data?.length) {
+    context += "\n\nMEMORIA OPERATIVA (L3=permanente, L2=operativa, L1=sessione):";
+    context += formatMemories(l3Res.data || [], "L3 PERMANENTE");
+    context += formatMemories(l2Res.data || [], "L2 OPERATIVA");
+    context += formatMemories(l1Res.data || [], "L1 SESSIONE");
   }
 
-  if (plans && plans.length > 0) {
+  if (plansRes.data && plansRes.data.length > 0) {
     context += "\n\nPIANI DI LAVORO ATTIVI:\n";
-    for (const p of plans) {
+    for (const p of plansRes.data as any[]) {
       const steps = p.steps as any[];
-      context += `🔄 "${p.title}" — stato: ${p.status}, progresso: ${p.current_step}/${steps.length} (tags: ${(p.tags || []).join(", ")})\n`;
+      context += `🔄 "${p.title}" — stato: ${p.status}, progresso: ${p.current_step}/${steps.length}\n`;
       const nextStep = steps[p.current_step];
       if (nextStep) context += `   → Prossimo step: ${nextStep.description}\n`;
     }
   }
 
   return context;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ROLLING SUMMARY (ChatMemory)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function compressMessages(messages: any[], apiKey: string, userId: string): Promise<any[]> {
+  if (messages.length <= 8) return messages;
+
+  const LIVE_WINDOW = 6;
+  const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
+  const recentMessages = messages.slice(messages.length - LIVE_WINDOW);
+
+  // Compress older messages into a summary
+  const summaryPrompt = `Riassumi in modo conciso (3-5 righe) il contesto operativo di questa conversazione. Cattura: decisioni prese, azioni eseguite, dati importanti menzionati, richieste pendenti.\n\n${olderMessages.map((m: any) => `${m.role}: ${String(m.content || "").substring(0, 300)}`).join("\n")}`;
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{ role: "user", content: summaryPrompt }],
+        max_tokens: 300,
+      }),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      const summary = data.choices?.[0]?.message?.content;
+      if (summary) {
+        // Save summary as L1 memory
+        supabase.from("ai_memory").insert({
+          user_id: userId,
+          content: summary,
+          memory_type: "conversation",
+          tags: ["session_summary", "chat_memory", new Date().toISOString().split("T")[0]],
+          importance: 2,
+          level: 1,
+          confidence: 0.4,
+          decay_rate: 0.02,
+          source: "rolling_summary",
+        }).then(() => {}).catch(() => {});
+
+        return [
+          { role: "system", content: `RIEPILOGO CONVERSAZIONE PRECEDENTE:\n${summary}` },
+          ...recentMessages,
+        ];
+      }
+    }
+  } catch (e) {
+    console.error("[ChatMemory] Summary generation failed:", e);
+  }
+
+  // Fallback: just keep recent messages
+  return recentMessages;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
