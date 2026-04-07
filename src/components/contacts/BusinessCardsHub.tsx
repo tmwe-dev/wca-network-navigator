@@ -956,6 +956,18 @@ export default function BusinessCardsHub() {
               </Select>
             )}
 
+            <div className="flex items-center gap-1.5">
+              <Checkbox
+                checked={cards.length > 0 && selectedIds.size === cards.length}
+                onCheckedChange={(checked) => {
+                  if (checked) setSelectedIds(new Set(cards.map(c => c.id)));
+                  else setSelectedIds(new Set());
+                }}
+                aria-label="Seleziona tutti"
+                className="shrink-0"
+              />
+              <span className="text-[10px] text-muted-foreground">Tutti</span>
+            </div>
             <Badge variant="outline" className="text-[10px] h-7 px-2 border-violet-500/15">{cards.length} biglietti</Badge>
 
             <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-md p-0.5">

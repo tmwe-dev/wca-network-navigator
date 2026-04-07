@@ -312,7 +312,14 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
-        <div /> {/* index+checkbox */}
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={selection.isAllSelected}
+            onCheckedChange={(checked) => selection.toggleAll(!!checked)}
+            aria-label="Seleziona tutti"
+            className="shrink-0"
+          />
+        </div>
         <div /> {/* flag */}
         {SORT_COLUMNS.map(col => (
           <button
