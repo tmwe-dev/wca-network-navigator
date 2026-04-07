@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
 import type { ContactOrigin } from "@/pages/Cockpit";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useCockpitContacts");
 
 export interface CockpitContact {
   id: string;
@@ -448,7 +451,7 @@ export function useSendToCockpit() {
             userId: user.id,
           });
         } catch (e) {
-          console.warn("[SendToCockpit] Auto-assign failed for", item.sourceId, e);
+          log.warn("auto-assign failed", { sourceId: item.sourceId, message: e instanceof Error ? e.message : String(e) });
         }
       }
 
