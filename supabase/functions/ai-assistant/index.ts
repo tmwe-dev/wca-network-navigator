@@ -2548,6 +2548,32 @@ async function loadUserProfile(): Promise<string> {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LOAD MISSION HISTORY
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function loadMissionHistory(userId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from("outreach_missions")
+      .select("title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary, created_at, completed_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (!data?.length) return "";
+    let block = "\n\n--- STORICO MISSIONI RECENTI ---\n";
+    for (const m of data) {
+      const filters = m.target_filters as any;
+      const countries = filters?.countries?.join(", ") || "N/D";
+      const progress = `${m.processed_contacts}/${m.total_contacts}`;
+      block += `- "${m.title}" [${m.status}] — ${m.channel} — Paesi: ${countries} — Progresso: ${progress}`;
+      if (m.ai_summary) block += ` — Riepilogo: ${m.ai_summary.substring(0, 100)}`;
+      block += `\n`;
+    }
+    return block;
+  } catch { return ""; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // LOAD KB ENTRIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
