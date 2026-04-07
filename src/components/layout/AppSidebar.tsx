@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox,
+  Earth, Send, Inbox, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +26,7 @@ function getNavSections(pathname: string) {
     {
       label: "Strumenti",
       items: [
+        { title: "Nuova Missione", url: "/mission-builder", icon: Target },
         { title: "Outreach", url: "/outreach", icon: Rocket },
         { title: "Inreach", url: "/inreach", icon: Inbox },
         { title: "Email Composer", url: "/email-composer", icon: Mail },

@@ -55,6 +55,7 @@ const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
 const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const AILab = lazyRetry(() => import("./pages/AILab"));
+const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -120,6 +121,7 @@ const App = () => (
                   <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/guida" element={<Guida />} />
                    <Route path="/ai-lab" element={<AILab />} />
+                   <Route path="/mission-builder" element={<MissionBuilder />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />
