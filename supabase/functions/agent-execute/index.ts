@@ -569,22 +569,141 @@ const ALL_TOOLS: Record<string, any> = {
     type: "function",
     function: {
       name: "queue_outreach",
-      description: "Queue an outreach message (WhatsApp, LinkedIn, email, SMS) to be sent automatically by the frontend via browser extensions. Use this to send messages through channels that require browser-side execution.",
+      description: "Queue an outreach message (WhatsApp, LinkedIn, email, SMS) to be sent automatically by the frontend via browser extensions.",
       parameters: {
         type: "object",
         properties: {
           channel: { type: "string", enum: ["email", "linkedin", "whatsapp", "sms"], description: "Delivery channel" },
-          recipient_name: { type: "string", description: "Recipient name" },
-          recipient_email: { type: "string", description: "Email (required for email channel)" },
-          recipient_phone: { type: "string", description: "Phone number (required for whatsapp/sms)" },
-          recipient_linkedin_url: { type: "string", description: "LinkedIn profile URL (for linkedin channel)" },
-          partner_id: { type: "string", description: "Partner UUID" },
-          contact_id: { type: "string", description: "Contact ID" },
-          subject: { type: "string", description: "Subject (for email)" },
-          body: { type: "string", description: "Message body (plain text for WA/LI/SMS, HTML for email)" },
-          priority: { type: "number", description: "Priority (0=normal, 1=high)" },
+          recipient_name: { type: "string" }, recipient_email: { type: "string" },
+          recipient_phone: { type: "string" }, recipient_linkedin_url: { type: "string" },
+          partner_id: { type: "string" }, contact_id: { type: "string" },
+          subject: { type: "string" }, body: { type: "string" }, priority: { type: "number" },
         },
         required: ["channel", "body"],
+      },
+    },
+  },
+  // ━━━ NEW: Communication & Holding Pattern Tools ━━━
+  get_inbox: {
+    type: "function",
+    function: {
+      name: "get_inbox",
+      description: "Read incoming messages from channel_messages. Filter by channel (email/whatsapp/linkedin), read/unread status, partner_id, date range.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel: { type: "string", enum: ["email", "whatsapp", "linkedin"] },
+          unread_only: { type: "boolean" }, partner_id: { type: "string" },
+          from_date: { type: "string" }, to_date: { type: "string" },
+          limit: { type: "number" },
+        },
+      },
+    },
+  },
+  get_conversation_history: {
+    type: "function",
+    function: {
+      name: "get_conversation_history",
+      description: "Get unified timeline for a partner or contact: emails sent/received, activities, interactions. Sorted by date desc.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string" }, contact_id: { type: "string" }, company_name: { type: "string" },
+          limit: { type: "number" },
+        },
+      },
+    },
+  },
+  get_holding_pattern: {
+    type: "function",
+    function: {
+      name: "get_holding_pattern",
+      description: "Get contacts in the holding pattern (lead_status: contacted/in_progress). Filter by source type (wca/crm/prospect), country, days waiting.",
+      parameters: {
+        type: "object",
+        properties: {
+          source_type: { type: "string", enum: ["wca", "crm", "prospect", "all"] },
+          country_code: { type: "string" }, min_days_waiting: { type: "number" },
+          max_days_waiting: { type: "number" }, limit: { type: "number" },
+        },
+      },
+    },
+  },
+  update_message_status: {
+    type: "function",
+    function: {
+      name: "update_message_status",
+      description: "Mark a channel_message as read/processed.",
+      parameters: {
+        type: "object",
+        properties: { message_id: { type: "string" } },
+        required: ["message_id"],
+      },
+    },
+  },
+  get_email_thread: {
+    type: "function",
+    function: {
+      name: "get_email_thread",
+      description: "Get an email thread for a partner or email address. Uses thread_id, in_reply_to chain, or subject matching.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string" }, email_address: { type: "string" },
+          thread_id: { type: "string" }, limit: { type: "number" },
+        },
+      },
+    },
+  },
+  analyze_incoming_email: {
+    type: "function",
+    function: {
+      name: "analyze_incoming_email",
+      description: "Analyze an incoming email message: detect sentiment, intent (interest/refusal/OOO/spam), suggest next action, urgency 1-5.",
+      parameters: {
+        type: "object",
+        properties: { message_id: { type: "string" } },
+        required: ["message_id"],
+      },
+    },
+  },
+  assign_contacts_to_agent: {
+    type: "function",
+    function: {
+      name: "assign_contacts_to_agent",
+      description: "Director assigns a batch of contacts to an agent via client_assignments. Filter by country, lead_status, source_type.",
+      parameters: {
+        type: "object",
+        properties: {
+          agent_name: { type: "string" }, country_code: { type: "string" },
+          lead_status: { type: "string" }, source_type: { type: "string", enum: ["partner", "contact", "prospect"] },
+          limit: { type: "number" },
+        },
+        required: ["agent_name"],
+      },
+    },
+  },
+  create_campaign: {
+    type: "function",
+    function: {
+      name: "create_campaign",
+      description: "Create a structured outreach campaign with optional A/B test. Specify target contacts, agents, and variant configuration.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" }, objective: { type: "string" },
+          country_codes: { type: "array", items: { type: "string" } },
+          contact_type: { type: "string", enum: ["wca", "crm", "ex_client", "all"] },
+          agent_names: { type: "array", items: { type: "string" } },
+          ab_test: { type: "object", properties: {
+            enabled: { type: "boolean" },
+            variants: { type: "array", items: { type: "object", properties: {
+              agent_name: { type: "string" }, tone: { type: "string" }, percentage: { type: "number" },
+            }}}
+          }},
+          max_contacts: { type: "number" },
+        },
+        required: ["name", "objective"],
       },
     },
   },
