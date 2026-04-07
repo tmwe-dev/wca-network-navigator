@@ -393,16 +393,29 @@ export default function MissionBuilder() {
           </ScrollArea>
 
           <div className="p-3 border-t border-border">
+            {speech.listening && speech.interimText && (
+              <div className="text-xs text-primary mb-2 animate-pulse truncate">🎙 {speech.interimText}</div>
+            )}
             <div className="flex gap-2">
               <Textarea
                 ref={chatInputRef}
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
-                placeholder="Chiedi all'AI..."
+                placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Chiedi all'AI..."}
                 className="min-h-[40px] max-h-[80px] resize-none text-sm"
                 rows={1}
               />
+              {speech.hasSpeechAPI && (
+                <Button
+                  size="icon"
+                  variant={speech.listening ? "default" : "outline"}
+                  onClick={speech.toggle}
+                  className={speech.listening ? "animate-pulse" : ""}
+                >
+                  {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
               <Button size="icon" onClick={() => sendChat(chatInput)} disabled={isChatLoading || !chatInput.trim()}>
                 <Send className="w-4 h-4" />
               </Button>
