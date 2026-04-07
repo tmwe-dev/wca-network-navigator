@@ -2175,6 +2175,63 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_missions: {
+        Row: {
+          agent_assignments: Json | null
+          ai_summary: string | null
+          channel: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          processed_contacts: number
+          schedule_config: Json | null
+          status: string
+          target_filters: Json
+          title: string
+          total_contacts: number
+          user_id: string
+          work_plan_id: string | null
+        }
+        Insert: {
+          agent_assignments?: Json | null
+          ai_summary?: string | null
+          channel?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          processed_contacts?: number
+          schedule_config?: Json | null
+          status?: string
+          target_filters?: Json
+          title: string
+          total_contacts?: number
+          user_id: string
+          work_plan_id?: string | null
+        }
+        Update: {
+          agent_assignments?: Json | null
+          ai_summary?: string | null
+          channel?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          processed_contacts?: number
+          schedule_config?: Json | null
+          status?: string
+          target_filters?: Json
+          title?: string
+          total_contacts?: number
+          user_id?: string
+          work_plan_id?: string | null
+        }
+        Relationships: []
+      }
       outreach_queue: {
         Row: {
           attempts: number
