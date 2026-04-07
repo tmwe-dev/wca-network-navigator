@@ -245,11 +245,11 @@ export default function MissionBuilder() {
             className="bg-transparent text-lg font-semibold text-foreground outline-none w-full placeholder:text-muted-foreground/50"
           />
         </div>
-        <div className="flex gap-1">
-          {[0, 1, 2, 3, 4, 5].map(i => (
+        <div className="flex gap-0.5">
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <div
               key={i}
-              className={`w-8 h-1.5 rounded-full transition-all ${
+              className={`w-6 h-1.5 rounded-full transition-all ${
                 completedSteps.includes(i) ? "bg-primary" : i === currentStep ? "bg-primary/50" : "bg-muted"
               }`}
             />
