@@ -28,6 +28,7 @@ interface UnifiedContactRowProps {
   showCheckbox?: boolean;
   isActive?: boolean;
   className?: string;
+  actionMenu?: React.ReactNode;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
