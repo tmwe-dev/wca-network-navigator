@@ -608,6 +608,48 @@ export default function EmailComposer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Save as template dialog */}
+      <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Salva come template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <Label className="text-xs">Nome template *</Label>
+              <Input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Es. Follow-up trasporti aerei" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Tipologia *</Label>
+              <Select value={templateCategory} onValueChange={setTemplateCategory}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primo_contatto">🤝 Primo contatto</SelectItem>
+                  <SelectItem value="follow_up">🔄 Follow-up</SelectItem>
+                  <SelectItem value="richiesta_info">📋 Richiesta info</SelectItem>
+                  <SelectItem value="proposta_servizi">📦 Proposta servizi</SelectItem>
+                  <SelectItem value="partnership">🤝 Partnership</SelectItem>
+                  <SelectItem value="network_espresso">✈️ Network espresso</SelectItem>
+                  <SelectItem value="__new__">➕ Nuova categoria...</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {templateCategory === "__new__" && (
+              <div>
+                <Label className="text-xs">Nome nuova categoria *</Label>
+                <Input value={customCategory} onChange={e => setCustomCategory(e.target.value)} placeholder="Es. Post-fiera" className="h-8 text-sm" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSaveTemplateOpen(false)}>Annulla</Button>
+            <Button size="sm" className="h-8 text-xs" onClick={handleSaveAsTemplate}>Salva</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
