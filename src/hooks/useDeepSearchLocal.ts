@@ -6,20 +6,28 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
-// Lovable AI Gateway
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-2.5-flash-lite";
 
-async function aiCall(prompt: string, apiKey: string): Promise<string | null> {
-  const resp = await fetch(AI_GATEWAY, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: AI_MODEL, messages: [{ role: "user", content: prompt }] }),
-  });
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  return data?.choices?.[0]?.message?.content?.trim() || null;
+/**
+ * Server-side AI helper. Sostituisce il vecchio fetch diretto al
+ * Lovable Gateway con Bearer client-side (Vol. II §6.2 — secrets non
+ * devono mai vivere nel browser).
+ */
+async function aiCall(prompt: string): Promise<string | null> {
+  try {
+    const result = await invokeEdge<{ content: string | null }>(
+      "ai-deep-search-helper",
+      {
+        body: { prompt, model: AI_MODEL },
+        context: "useDeepSearchLocal.aiCall",
+      }
+    );
+    return result?.content ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function toWhatsAppNumber(phone: string): string {
@@ -115,7 +123,6 @@ export function useDeepSearchLocal() {
     location: string,
     partnerId: string,
     existingSet: Set<string>,
-    apiKey: string | null,
   ) => {
     let socialLinksFound = 0;
     const contactProfiles: Record<string, any> = {};
@@ -142,13 +149,12 @@ export function useDeepSearchLocal() {
           await delay(500);
         }
 
-        if (results.length > 0 && apiKey) {
+        if (results.length > 0) {
           const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
           const answer = await aiCall(
             `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}${domainHint}
 Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
-If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-            apiKey
+If one matches, respond with ONLY the URL. If none, respond "NONE".`
           );
           if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
             const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
@@ -201,7 +207,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
 
   /** Scrape website + logo + quality score */
   const scrapeWebsite = useCallback(async (
-    website: string | null, partnerId: string, apiKey: string | null,
+    website: string | null, partnerId: string,
     contacts?: Array<{ email?: string | null }>,
   ) => {
     let logoFound = false;
@@ -220,10 +226,9 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
           const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
           if (!error) logoFound = true;
         }
-        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
+        if (scraped.markdown && scraped.markdown.length > 100) {
           const qa = await aiCall(
-            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
-            apiKey
+            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`
           );
           if (qa) {
             const parsed = parseInt(qa.replace(/[^1-5]/g, ""));
@@ -296,8 +301,6 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     companyName: string;
     error?: string;
   }> => {
-    const apiKey = import.meta.env.VITE_LOVABLE_API_KEY || null;
-
     const { data: partner, error: pErr } = await supabase
       .from("partners")
       .select("id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone, branch_cities, has_branches")
@@ -323,7 +326,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
 
     // LinkedIn + WhatsApp for contacts
     const { socialLinksFound: contactLinks, contactProfiles } = await searchLinkedInForContacts(
-      contacts || [], partner.company_name, location, partnerId, existingSet, apiKey,
+      contacts || [], partner.company_name, location, partnerId, existingSet,
     );
 
     // Company LinkedIn
@@ -331,7 +334,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
 
     // Website + Logo
     const { logoFound, websiteQualityScore } = await scrapeWebsite(
-      partner.website, partnerId, apiKey, contacts,
+      partner.website, partnerId, contacts,
     );
 
     // Save enrichment
@@ -377,8 +380,6 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     companyName: string;
     error?: string;
   }> => {
-    const apiKey = import.meta.env.VITE_LOVABLE_API_KEY || null;
-
     const { data: contact, error: cErr } = await supabase
       .from("imported_contacts")
       .select("id, name, company_name, email, phone, mobile, country, city, position, enrichment_data")
@@ -405,7 +406,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     const contactProfiles: Record<string, any> = {};
 
     // --- LinkedIn Personal (Cascade Search) ---
-    if (contact.name && contact.name.length >= 3 && apiKey) {
+    if (contact.name && contact.name.length >= 3) {
       const domainKw = extractDomainKeyword(contact.email);
       const lastName = getLastName(contact.name);
       const cascadeQueries = [
@@ -428,8 +429,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
         const answer = await aiCall(
           `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.position ? ` Title: "${contact.position}"` : ""}${domainHint}
 Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
-If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-          apiKey
+If one matches, respond with ONLY the URL. If none, respond "NONE".`
         );
         if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
           const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
@@ -498,10 +498,9 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
           const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
           if (logoUrl) logoFound = true;
         } catch { /* intentionally ignored: best-effort cleanup */ }
-        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
+        if (scraped.markdown && scraped.markdown.length > 100) {
           const qa = await aiCall(
-            `Rate this company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
-            apiKey
+            `Rate this company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`
           );
           if (qa) {
             const parsed = parseInt(qa.replace(/[^1-5]/g, ""));

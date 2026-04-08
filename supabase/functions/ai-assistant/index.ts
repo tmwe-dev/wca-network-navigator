@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeLike } from "../_shared/sqlEscape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1124,7 +1125,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
     if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
   }
   if (args.network_name) {
-    const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${args.network_name}%`);
+    const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
     const netIds = (data || []).map((r: any) => r.partner_id);
     partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
     if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
@@ -1143,8 +1144,8 @@ async function executeSearchPartners(args: Record<string, unknown>) {
 
   if (partnerIdFilter) query = query.in("id", partnerIdFilter.slice(0, 500));
   if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
-  if (args.city) query = query.ilike("city", `%${args.city}%`);
-  if (args.search_name) query = query.ilike("company_name", `%${args.search_name}%`);
+  if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+  if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name)}%`);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_email === false) query = query.is("email", null);
   if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
@@ -1249,7 +1250,7 @@ async function executePartnerDetail(args: Record<string, unknown>) {
     const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
     partner = data;
   } else if (args.company_name) {
-    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
     partner = data;
   }
   if (!partner) return { error: "Partner non trovato" };
@@ -1306,8 +1307,8 @@ async function executeGlobalSummary() {
 
 async function executeCheckBlacklist(args: Record<string, unknown>) {
   let query = supabase.from("blacklist_entries").select("company_name, country, city, total_owed_amount, claims, status, blacklist_no, matched_partner_id");
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
   query = query.order("total_owed_amount", { ascending: false, nullsFirst: false }).limit(20);
   const { data, error } = await query;
   if (error) return { error: error.message };
@@ -1443,9 +1444,9 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 
   // Step 1: Try to find the partner in the DB
   if (!wcaId) {
-    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${companyName}%`);
+    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${escapeLike(companyName)}%`);
     if (countryCode) query = query.eq("country_code", countryCode);
-    if (city) query = query.ilike("city", `%${city}%`);
+    if (city) query = query.ilike("city", `%${escapeLike(city)}%`);
     const { data: found } = await query.limit(5);
     
     if (found && found.length > 0) {
@@ -1590,7 +1591,7 @@ async function executeSearchMemory(args: Record<string, unknown>, userId: string
 
   if (args.memory_type) query = query.eq("memory_type", args.memory_type);
   if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-  if (args.search_text) query = query.ilike("content", `%${args.search_text}%`);
+  if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text)}%`);
 
   // Filter out expired
   query = query.or("expires_at.is.null,expires_at.gt.now()");
@@ -1722,7 +1723,7 @@ async function executeSearchTemplates(args: Record<string, unknown>, userId: str
   let query = supabase.from("ai_plan_templates").select("id, name, description, steps_template, tags, use_count, last_used_at")
     .eq("user_id", userId).order("use_count", { ascending: false }).limit(10);
   if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
+  if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
   const { data, error } = await query;
   if (error) return { error: error.message };
   return {
@@ -1759,7 +1760,7 @@ async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: st
     return data ? { id: data.id, name: data.company_name } : null;
   }
   if (args.company_name) {
-    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
     return data ? { id: data.id, name: data.company_name } : null;
   }
   return null;
@@ -1831,8 +1832,8 @@ async function executeUpdateLeadStatus(args: Record<string, unknown>) {
 
   // Filter-based update
   let query = supabase.from("imported_contacts").select("id", { count: "exact" });
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
 
   const { data: matches, count } = await query.limit(200);
   if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
@@ -1890,9 +1891,9 @@ async function executeSearchBusinessCards(args: Record<string, unknown>) {
     .order("created_at", { ascending: false })
     .limit(Number(args.limit) || 20);
 
-  if (args.event_name) query = query.ilike("event_name", `%${args.event_name}%`);
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.contact_name) query = query.ilike("contact_name", `%${args.contact_name}%`);
+  if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name)}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.contact_name) query = query.ilike("contact_name", `%${escapeLike(args.contact_name)}%`);
   if (args.match_status) query = query.eq("match_status", args.match_status);
 
   const { data, error } = await query;
@@ -1939,11 +1940,11 @@ async function executeSearchContacts(args: Record<string, unknown>) {
     isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
     isCount ? { count: "exact", head: true } : undefined
   );
-  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
-  if (args.email) query = query.ilike("email", `%${args.email}%`);
-  if (args.origin) query = query.ilike("origin", `%${args.origin}%`);
+  if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
+  if (args.email) query = query.ilike("email", `%${escapeLike(args.email)}%`);
+  if (args.origin) query = query.ilike("origin", `%${escapeLike(args.origin)}%`);
   if (args.lead_status) query = query.eq("lead_status", args.lead_status);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_email === false) query = query.is("email", null);
@@ -1963,7 +1964,7 @@ async function executeGetContactDetail(args: Record<string, unknown>) {
     const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
     contact = data;
   } else if (args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
     contact = data;
   }
   if (!contact) return { error: "Contatto non trovato" };
@@ -1977,11 +1978,11 @@ async function executeSearchProspects(args: Record<string, unknown>) {
     isCount ? "id" : "id, company_name, city, province, region, codice_ateco, descrizione_ateco, fatturato, dipendenti, email, phone, pec, website, lead_status, partita_iva, forma_giuridica, rating_affidabilita, created_at",
     isCount ? { count: "exact", head: true } : undefined
   );
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.city) query = query.ilike("city", `%${args.city}%`);
-  if (args.province) query = query.ilike("province", `%${args.province}%`);
-  if (args.region) query = query.ilike("region", `%${args.region}%`);
-  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${args.codice_ateco}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+  if (args.province) query = query.ilike("province", `%${escapeLike(args.province)}%`);
+  if (args.region) query = query.ilike("region", `%${escapeLike(args.region)}%`);
+  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${escapeLike(args.codice_ateco)}%`);
   if (args.min_fatturato) query = query.gte("fatturato", Number(args.min_fatturato));
   if (args.max_fatturato) query = query.lte("fatturato", Number(args.max_fatturato));
   if (args.lead_status) query = query.eq("lead_status", args.lead_status);
@@ -2100,7 +2101,7 @@ async function executeDeepSearchPartner(args: Record<string, unknown>, authHeade
 async function executeDeepSearchContact(args: Record<string, unknown>, authHeader: string) {
   let contactId = args.contact_id as string;
   if (!contactId && args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
     if (data) contactId = data.id;
   }
   if (!contactId) return { error: "Contatto non trovato" };
@@ -2904,9 +2905,11 @@ DATI DISPONIBILI:`;
 
     // First call with tools — with retry and model fallback
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    // Cascade fallback: ogni modello deve esistere realmente sul gateway.
+    // 'gpt-5-mini' è stato rimosso (modello inesistente).
     const fallbackModels = provider.isUserKey
       ? [provider.model]
-      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-4o-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {
@@ -2959,7 +2962,25 @@ DATI DISPONIBILI:`;
 
       for (const tc of assistantMessage.tool_calls) {
         console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
-        const args = JSON.parse(tc.function.arguments || "{}");
+        // SAFE PARSE: LLM occasionally emits malformed JSON. Don't crash the whole request.
+        let args: any;
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch (parseErr) {
+          const errMsg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+          console.error(`[ai-assistant] tool args parse failed for ${tc.function.name}:`, errMsg);
+          toolResults.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify({
+              success: false,
+              error: "INVALID_TOOL_ARGS",
+              message: `Tool arguments were not valid JSON: ${errMsg}. Please retry with valid JSON.`,
+              raw_arguments_snippet: String(tc.function.arguments || "").substring(0, 200),
+            }),
+          });
+          continue;
+        }
         const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
         console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
@@ -3014,7 +3035,7 @@ DATI DISPONIBILI:`;
                 .select("id")
                 .eq("user_id", userId)
                 .eq("source", "auto_tool")
-                .ilike("content", `%${content.substring(0, 40)}%`)
+                .ilike("content", `%${escapeLike(content.substring(0, 40))}%`)
                 .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
                 .limit(1);
               

@@ -227,10 +227,12 @@ serve(async (req) => {
     intelligence.sources_checked.push("partners");
     let partnerId: string | null = null;
     if (company_name) {
+      // Escape SQL LIKE wildcards (%, _) per evitare wildcard injection.
+      const safeName = company_name.replace(/[\\%_]/g, (c: string) => `\\${c}`);
       const { data: partnerRows } = await supabase
         .from("partners")
         .select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
-        .ilike("company_name", `%${company_name}%`)
+        .ilike("company_name", `%${safeName}%`)
         .limit(1);
       const partner = partnerRows?.[0];
       if (partner) {
