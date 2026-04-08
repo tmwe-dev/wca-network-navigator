@@ -1870,7 +1870,7 @@ serve(async (req) => {
         for (const tc of msg.tool_calls) {
           console.log(`[Agent ${agent.name}] Tool: ${tc.function.name}`);
           const args = JSON.parse(tc.function.arguments || "{}");
-          const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
+          const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id });
           console.log(`[Agent ${agent.name}] Result:`, JSON.stringify(toolResult).substring(0, 300));
           toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
         }
