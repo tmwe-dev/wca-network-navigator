@@ -525,3 +525,65 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 | Globe rendering math | 0% | **~80%** |
 
 **Soglia Vol. II §8.3 raggiunta su 7 moduli puri** (era 5 a fine sessione #9).
+
+---
+
+## Sessione #11 — 8 aprile 2026 (mattina/4) — Misc utils + AI agent response
+
+**Operatore**: Claude (Cowork, Opus 4.6)
+**Branch**: `recovery/wca-network-navigator`
+
+### Interventi
+
+1. **+17 test su misc utils** (`src/test/misc-utils.test.ts`):
+   - `buildDeterministicId`: idempotenza, sensibilità prefix/contact/text/ts,
+     normalizzazione spazi/case, unicode (CJK/arabo/thai/emoji), pipe-stripping,
+     troncamento contact ≥50 char.
+   - `capitalizeFirst`: happy + edge.
+   - `queryKeys`: tutte le 9 chiavi documentate (partners, partner, country/
+     partner stats, directoryCache, dbPartnersForCountries, noProfileWcaIds,
+     downloadJobs, userCredits).
+
+2. **+14 test su AI agent response** (`src/test/ai-agent-response.test.ts`):
+   - `sanitizeVisibleAiText`: rimozione marker, rimozione code blocks,
+     collassamento newline, edge null/empty.
+   - `parseAiAgentResponse`: estrazione partners da `---STRUCTURED_DATA---`,
+     skip type !== "partners", auto-generazione operation card da
+     `---JOB_CREATED---`, no-duplicate, parse uiActions, fallback su JSON
+     malformato.
+   - `dispatchAiUiActions` / `dispatchAiAgentEffects`: emissione CustomEvent
+     `ai-ui-action` (mockata via `vi.spyOn(window, 'dispatchEvent')`),
+     auto-aggiunta `start_download_job`, no-dup quando già presente.
+
+### Verifica 4-check
+
+| Check | Risultato |
+|---|---|
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
+| `vitest run` | ✅ **16 file, 232/232** |
+| `vite build` | ✅ 16.93s |
+
+### Delta sessione #11
+
+| Metrica | Pre-#11 | Post-#11 | Δ |
+|---|---|---|---|
+| File di test | 14 | **16** | +2 |
+| Test cases | 201 | **232** | +31 |
+| Moduli puri coperti | 15 | **18** | +3 |
+
+### Coverage flussi critici post #11
+
+| Flusso | Coverage |
+|---|---|
+| WCA scraper / app API | ~90% |
+| WCA checkpoint (rate-limit) | ~85% |
+| AI agent response parsing/dispatch | **~90%** (nuovo) |
+| Message dedup (multi-channel) | **~95%** (nuovo) |
+| Import wizard | ~80% |
+| Cockpit (group/sort/preselect) | ~75% |
+| Contact adapter | ~90% |
+| Email parsing/normalization | ~75% |
+| Activity status cycle | ~80% |
+| Globe rendering math | ~80% |
+
+**10 flussi/moduli puri ora ≥70%** (era 7 a fine sessione #10).
