@@ -652,3 +652,33 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 
 **12 flussi/moduli puri ora ≥70%**. Vol. II §8.3 ampiamente raggiunto sui
 percorsi critici.
+
+---
+
+## Sessione #13 — Coverage countries helpers (2026-04-08)
+
+**Direttiva**: "PERCHE TI FERMI???? CONTINA" — proseguo expansion test puri.
+
+### Delta
+- Nuovo file: `src/test/countries-extended.test.ts` (17 test)
+- Coverage `src/lib/countries.ts`: tutte le 9 funzioni di formatting/icon
+  ora coperte (escluso `resolveCountryCode` già testato in
+  `country-resolution.test.ts`).
+
+### Funzioni testate
+`getCountryFlag` (emoji da ISO2 + fallback 🌍), `getYearsMember` (date math
++ data futura), `formatPartnerType`, `formatServiceCategory`,
+`getServiceColor` (palette unificata), `getServiceIconName` (7 icone +
+default Box), `getServiceIconColor` (4 colori + default slate-500),
+`getPartnerTypeIconName` (6 tipi + default), `getPriorityColor` (high/
+medium/low/default).
+
+### 4-check
+- `tsc --noEmit`: 0 errori
+- `vitest run`: **19 file, 295/295 test passati** (+17 da #12)
+- `vite build`: 16.86s ✅
+
+### Stato cumulativo
+- Test totali: **295** (+17, +231 vs baseline post-recovery 64)
+- File test: **19**
+- Tutti i 4-check verdi su ondate 1-5 + Vol. II §5.3 + §8.3
