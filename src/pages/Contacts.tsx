@@ -4,9 +4,43 @@ import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUrlState } from "@/hooks/useUrlState";
+import { trackEntityOpen } from "@/lib/telemetry";
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
+  const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
+
+  const loadContactById = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase
+        .from("imported_contacts")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (data) {
+        setSelectedContact(data);
+        trackEntityOpen("contact", id);
+      }
+    } catch { /* best-effort */ }
+  }, []);
+
+  // Hydrate from URL on first mount / when url changes externally
+  useEffect(() => {
+    if (urlContactId && (!selectedContact || selectedContact.id !== urlContactId)) {
+      void loadContactById(urlContactId);
+    }
+    if (!urlContactId && selectedContact) {
+      setSelectedContact(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlContactId]);
+
+  const handleSelect = useCallback((contact: any) => {
+    setSelectedContact(contact);
+    if (contact?.id) setUrlContactId(contact.id);
+  }, [setUrlContactId]);
 
   const handleContactUpdated = useCallback((updated: any) => {
     setSelectedContact(updated);
@@ -14,24 +48,19 @@ export default function Contacts() {
 
   const handleCloseDetail = useCallback(() => {
     setSelectedContact(null);
-  }, []);
+    setUrlContactId("");
+  }, [setUrlContactId]);
 
   useEffect(() => {
     const handler = async (e: Event) => {
       const contactId = (e as CustomEvent).detail?.contactId;
       if (!contactId) return;
-      try {
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("*")
-          .eq("id", contactId)
-          .single();
-        if (data) setSelectedContact(data);
-      } catch { /* intentionally ignored: best-effort cleanup */ }
+      setUrlContactId(contactId);
+      await loadContactById(contactId);
     };
     window.addEventListener("crm-select-contact", handler);
     return () => window.removeEventListener("crm-select-contact", handler);
-  }, []);
+  }, [setUrlContactId, loadContactById]);
 
   const hasDetail = !!selectedContact;
 
@@ -43,7 +72,7 @@ export default function Contacts() {
           <div className="flex flex-col h-full border-r border-border">
             <ContactListPanel
               selectedId={selectedContact?.id ?? null}
-              onSelect={(contact: any) => setSelectedContact(contact)}
+              onSelect={handleSelect}
             />
           </div>
         </ResizablePanel>
