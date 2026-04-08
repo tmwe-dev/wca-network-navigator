@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,7 +95,8 @@ Deno.serve(async (req) => {
     });
 
     // Inject signature and footer images into HTML
-    let finalHtml = html;
+    // Vol. II §6.4: every HTML chunk passes through sanitizer before concat
+    let finalHtml = sanitizeHtml(html);
 
     // If sent by an AI agent, use agent's signature instead of default
     if (agent_id) {
@@ -105,22 +107,26 @@ Deno.serve(async (req) => {
         .single();
 
       if (agentRow?.signature_html) {
-        finalHtml += agentRow.signature_html;
+        finalHtml += sanitizeHtml(agentRow.signature_html);
       } else if (agentRow) {
-        // Auto-generate minimal agent signature
-        const avatarPart = agentRow.signature_image_url
-          ? `<img src="${agentRow.signature_image_url}" alt="${agentRow.name}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" />`
-          : `<span style="font-size:28px;">${agentRow.avatar_emoji}</span>`;
-        const callPart = agentRow.voice_call_url
-          ? `<br/><a href="${agentRow.voice_call_url}" style="color:#2563eb;font-size:12px;text-decoration:none;">📞 Chiamami</a>`
+        // Auto-generate minimal agent signature (escape user-provided fields)
+        const safeName = escapeHtml(agentRow.name || "");
+        const safeRole = escapeHtml(agentRow.role || "");
+        const safeImageUrl = sanitizeHtml(`<img src="${agentRow.signature_image_url || ""}" alt="${safeName}" />`);
+        const safeCallUrl = agentRow.voice_call_url
+          ? sanitizeHtml(`<a href="${agentRow.voice_call_url}">Chiamami</a>`)
           : "";
+        const avatarPart = agentRow.signature_image_url
+          ? safeImageUrl
+          : `<span style="font-size:28px;">${escapeHtml(agentRow.avatar_emoji || "")}</span>`;
+        const callPart = safeCallUrl ? `<br/>${safeCallUrl}` : "";
         finalHtml += `<div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:12px;">
           <table cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;font-size:13px;color:#333;">
             <tr>
               <td style="padding-right:10px;vertical-align:top;">${avatarPart}</td>
               <td style="vertical-align:top;">
-                <strong>${agentRow.name}</strong><br/>
-                <span style="color:#666;font-size:12px;">${agentRow.role}</span>${callPart}
+                <strong>${safeName}</strong><br/>
+                <span style="color:#666;font-size:12px;">${safeRole}</span>${callPart}
               </td>
             </tr>
           </table>
@@ -129,17 +135,17 @@ Deno.serve(async (req) => {
       // Still add footer image if configured
       const footerImg = s["ai_footer_image_url"];
       if (footerImg) {
-        finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+        finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
       }
     } else {
       // Default user signature
       const sigImg = s["ai_signature_image_url"];
       const footerImg = s["ai_footer_image_url"];
       if (sigImg) {
-        finalHtml += `<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`;
+        finalHtml += sanitizeHtml(`<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`);
       }
       if (footerImg) {
-        finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+        finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
       }
     }
 

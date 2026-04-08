@@ -17,6 +17,7 @@ import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendLinkedIn as sendLinkedInUnified } from "@/lib/inbox/sendMessage";
 
 type ChatThread = {
   contact: string;
@@ -123,24 +124,15 @@ export function LinkedInInboxView() {
     setIsSending(true);
     setReplyText("");
     try {
-      // Use the same approach as TestExtensions: direct postMessage to extension
-      const result = await sendMessage(threadUrl, text);
+      // Unified wrapper: rate limit + circuit breaker + persistence + session tracking
+      const result = await sendLinkedInUnified(
+        { recipient_url: threadUrl, text, thread_id: threadUrl },
+        async (url, body) => sendMessage(url, body)
+      );
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
         return;
-      }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("channel_messages").insert({
-          user_id: user.id,
-          channel: "linkedin",
-          direction: "outbound",
-          to_address: activeTab,
-          body_text: text,
-          thread_id: threadUrl,
-          message_id_external: `li_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        });
       }
       toast.success("Inviato ✓");
     } catch (err: any) {

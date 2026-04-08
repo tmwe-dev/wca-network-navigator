@@ -5,6 +5,15 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { markSessionExpired } from "@/lib/inbox/sessionTracker";
+
+const log = createLogger("useWhatsAppAdaptiveSync");
+
+function isAuthError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /auth|session|login|expired|unauthorized|qr|logout/i.test(msg);
+}
 
 // ── Attention Levels ──
 // 0 = Idle:          sidebar scan every 60-90s
@@ -220,7 +229,11 @@ export function useWhatsAppAdaptiveSync() {
           toast.success(`📱 ${newCount} nuovi messaggi WhatsApp`, { duration: 2000 });
         }
       }
-    } catch (_) {
+    } catch (err) {
+      log.warn("sidebar_scan.failed", { error: err instanceof Error ? err.message : String(err) });
+      if (isAuthError(err)) {
+        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setIsReading(false);
     }
@@ -247,7 +260,11 @@ export function useWhatsAppAdaptiveSync() {
         queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
         scheduleDeescalation(); // reset de-escalation timer
       }
-    } catch (_) {
+    } catch (err) {
+      log.warn("thread_scan.failed", { error: err instanceof Error ? err.message : String(err) });
+      if (isAuthError(err)) {
+        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setIsReading(false);
     }

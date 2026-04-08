@@ -21,6 +21,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendWhatsApp as sendWhatsAppUnified } from "@/lib/inbox/sendMessage";
 
 type ChatThread = {
   contact: string;
@@ -193,33 +194,29 @@ export function WhatsAppInboxView() {
         .trim();
       const contactToSend = normalizedContact || activeTab.trim();
 
-      // 1. Try sending by contact name (search bar match)
-      let result = await sendWhatsApp(contactToSend, text);
-
-      // 2. If failed, retry with phone number extracted from thread
-      if (!result.success && activeThread) {
-        const phone = extractPhoneFromThread(activeThread);
-        if (phone) {
-          waLog.info("retry send with phone", { phone });
-          result = await sendWhatsApp(phone, text);
+      // Bridge sender adapter: tries by contact name, then falls back to phone
+      const bridgeSender = async (recipient: string, body: string) => {
+        let r = await sendWhatsApp(recipient, body);
+        if (!r.success && activeThread) {
+          const phone = extractPhoneFromThread(activeThread);
+          if (phone) {
+            waLog.info("retry send with phone", { phone });
+            r = await sendWhatsApp(phone, body);
+          }
         }
-      }
+        return r;
+      };
+
+      // Unified wrapper: rate limit + circuit breaker + persistence + session tracking
+      const result = await sendWhatsAppUnified(
+        { recipient: contactToSend, text },
+        bridgeSender
+      );
 
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
         return;
-      }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("channel_messages").insert({
-          user_id: user.id,
-          channel: "whatsapp",
-          direction: "outbound",
-          to_address: activeTab,
-          body_text: text,
-          message_id_external: `wa_out_${activeTab}_${Date.now()}`,
-        });
       }
       toast.success("Inviato ✓");
     } catch (err: any) {
