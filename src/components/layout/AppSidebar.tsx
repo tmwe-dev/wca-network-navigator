@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox, Target, LogOut,
+  Earth, Send, Inbox, Target, LogOut, Activity, Crown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ function getNavSections(pathname: string) {
       items: [
         { title: "Agenti", url: "/agents", icon: Bot },
         { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
+        { title: "Staff Direzionale", url: "/staff-direzionale", icon: Crown },
       ],
     },
     {
@@ -51,6 +52,7 @@ function getNavSections(pathname: string) {
     {
       label: "Sistema",
       items: [
+        { title: "Telemetria", url: "/telemetry", icon: Activity },
         { title: "Impostazioni", url: "/settings", icon: Settings },
       ],
     },
