@@ -32,7 +32,7 @@ describe("checkInbox.schemas", () => {
 
     it("passa campi extra (passthrough)", () => {
       const r = CheckInboxMessageSchema.parse({ id: "x", extra: "field" });
-      expect((r as any).extra).toBe("field");
+      expect((r as Record<string, unknown>).extra).toBe("field");
     });
   });
 

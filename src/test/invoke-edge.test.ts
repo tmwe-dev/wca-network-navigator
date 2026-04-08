@@ -105,4 +105,44 @@ describe("invokeEdge", () => {
       expect((err as ApiError).message).toContain("my-fn");
     }
   });
+
+  it("estrae body strutturato dal Response del FunctionsHttpError", async () => {
+    const fakeResponse = new Response(
+      JSON.stringify({ error: "no_email", partner_name: "Acme Srl" }),
+      { status: 422, headers: { "Content-Type": "application/json" } }
+    );
+    invokeMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "boom", context: fakeResponse, name: "FunctionsHttpError" },
+    });
+    try {
+      await invokeEdge("generate-email", { context: "test.bodyExtract" });
+      throw new Error("expected throw");
+    } catch (err) {
+      const apiErr = err as ApiError;
+      expect(apiErr.code).toBe("VALIDATION_FAILED");
+      expect(apiErr.httpStatus).toBe(422);
+      expect(apiErr.message).toBe("no_email"); // dal body, non dal generic "boom"
+      const body = apiErr.details?.body as { error?: string; partner_name?: string };
+      expect(body?.error).toBe("no_email");
+      expect(body?.partner_name).toBe("Acme Srl");
+    }
+  });
+
+  it("non si rompe se il body non è JSON valido", async () => {
+    const fakeResponse = new Response("not-json", { status: 500 });
+    invokeMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "internal", context: fakeResponse },
+    });
+    try {
+      await invokeEdge("my-fn", { context: "test.nonJson" });
+      throw new Error("expected throw");
+    } catch (err) {
+      const apiErr = err as ApiError;
+      expect(apiErr.code).toBe("SERVER_ERROR");
+      expect(apiErr.message).toBe("internal");
+      expect(apiErr.details?.body).toBeUndefined();
+    }
+  });
 });

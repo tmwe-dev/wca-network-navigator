@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 export interface BriefingAction {
   label: string;
@@ -27,9 +27,7 @@ export function useDailyBriefing() {
     queryKey: ["daily-briefing"],
     staleTime: 15 * 60 * 1000, // 15 min cache
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("daily-briefing");
-      if (error) throw error;
-      return data as DailyBriefing;
+      return invokeEdge<DailyBriefing>("daily-briefing", { context: "useDailyBriefing" });
     },
   });
 }

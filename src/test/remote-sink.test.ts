@@ -17,7 +17,7 @@ describe("remoteSink", () => {
     __resetInstalledSinkState();
     logConfig.reset();
     fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {

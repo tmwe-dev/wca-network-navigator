@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
@@ -346,7 +347,7 @@ export function useLinkedInFlow() {
           setCurrentStep("Generazione bozza AI...");
 
           try {
-            const { data: outreach } = await supabase.functions.invoke("generate-outreach", {
+            const outreach = await invokeEdge<{ subject?: string; body?: string; language?: string; error?: string } | null>("generate-outreach", {
               body: {
                 channel: "linkedin",
                 contact_name: item.contact_name || "",
@@ -354,6 +355,7 @@ export function useLinkedInFlow() {
                 quality: "standard",
                 linkedin_profile: enrichment.linkedin || undefined,
               },
+              context: "useLinkedInFlow.outreach",
             });
 
             if (outreach && !outreach.error) {

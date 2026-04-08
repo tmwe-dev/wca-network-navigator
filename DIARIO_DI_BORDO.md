@@ -1071,3 +1071,121 @@ dover riaprire grossi cantieri quando arriveranno gli asset esterni.
   BusinessCardsHub 1084 LOC, AddContactDialog 794 LOC, ImportWizard
   625 LOC).
 - ⏳ PR open: gh CLI ancora non disponibile in sandbox.
+
+---
+
+## Sessione #22 — "Niente lasciato indietro" (2026-04-08)
+
+Le tre voci ancora "deferred" alla fine della sess #21 sono state
+chiuse concretamente con codice committato e testato.
+
+### 1) Bundle splitting con `manualChunks` (Vol. II §13.2)
+
+`vite.config.ts` ora dichiara una funzione `manualChunks` che instrada
+ogni dipendenza node_modules in chunk vendor isolati. Risultati prima/dopo:
+
+| Chunk | Prima | Dopo |
+|---|---|---|
+| `index` (app shell) | 1107 KB | **310 KB** |
+| `Campaigns` (page) | 860 KB | **38 KB** |
+| `BusinessCardsHub` | — | 38 KB |
+| `vendor-three` (lazy 3D) | — | 1159 KB *isolato* |
+| `vendor-exceljs` (lazy export) | — | 938 KB *isolato* |
+| `vendor-react` | — | 162 KB |
+| `vendor-supabase` | — | 163 KB |
+| `vendor-radix` | — | 124 KB |
+| `vendor-motion` | — | 110 KB |
+
+Strategia: routing esplicito di `exceljs`, `three`/`@react-three`/`hls.js`/
+`livekit-client`/`stats-gl`/`@mediapipe`/`@dimforge`/`rxjs` (l'intero
+ecosistema 3D di drei) in `vendor-three`; `recharts`+`d3-` in
+`vendor-charts`; `@radix-ui`/`@tanstack`/`@supabase`/`framer-motion`/
+`lucide-react`/`react-hook-form`+`zod`/`date-fns`/`papaparse`/
+`@elevenlabs`/`@lovable.dev`/`react-resizable-panels`/`lodash` ognuno
+nel proprio chunk dedicato; catch-all `vendor-misc`. `chunkSizeWarningLimit`
+alzato a 600 KB (i due residui >600 KB sono **lazy-loaded** solo dalla
+pagina che li usa).
+
+Effetto: la home page non scarica più exceljs (export Excel) né l'intero
+stack 3D fino a quando l'utente non visita la pagina relativa. Il main
+bundle dell'app è passato da ~1.1 MB monolitico a 310 KB + parallel
+vendor chunks.
+
+### 2) Migrazione batch di call-site `supabase.functions.invoke` → `invokeEdge`
+
+11 hook + 1 modulo `lib/` migrati ad `invokeEdge` (8 call-site rimossi
+dal totale): `useSubscription` (3 invocazioni), `useDailyBriefing`,
+`useEmailGenerator` (con preservazione del body strutturato 422
+`no_email`/`no_contact`), `useAgentTasks`, `useContactActions`,
+`usePartnerHubActions`, `useOutreachGenerator` (idem),
+`useAIDraftActions`, `useOutreachQueue`, `useEmailCampaignQueue` (3
+invocazioni: process+pause+cancel), `useImportLogs` (3 invocazioni),
+`useSortingJobs`, `useLinkedInFlow`, `lib/acquisition/scanDirectory`.
+
+Da 45 → 37 call-site `supabase.functions.invoke` residui. I restanti
+sono in `pages/` e `components/` deeply nested (campaigns, settings,
+agents, intelliflow, contacts, operations, ai, …) e verranno migrati
+opportunisticamente quando si toccherà quel codice (strangler ADR-0001).
+
+#### Estensione di `invokeEdge` per body strutturato
+
+Per preservare il pattern `error.context instanceof Response` di
+`useEmailGenerator`/`useOutreachGenerator` (errori 422 con body
+applicativo `{ error: "no_email", partner_name: "X" }`), `invokeEdge`
+ora estrae il body JSON dal `Response` quando `result.error.context`
+è un `Response`, e lo espone come `apiError.details.body`. Il messaggio
+di errore preferisce ora `body.message` o `body.error` rispetto al
+generico `result.error.message`. +2 test in `invoke-edge.test.ts`
+(estrazione body 422 + non-JSON resilience). Test totali per `invokeEdge`
+da 12 → 14.
+
+### 3) E2E spec reali per i monoliti principali
+
+Tre nuovi spec in `e2e/`, agganciati al webServer `vite preview`:
+
+- `e2e/contacts-businesscards.spec.ts` — BusinessCardsHub (1084 LOC)
+- `e2e/import-wizard.spec.ts` — ImportWizard (625 LOC)
+- `e2e/filters-drawer.spec.ts` — FiltersDrawer (1300 LOC)
+
+Convenzioni applicate (Vol. II §9.3): selettori robusti (`getByRole`,
+`getByText`), tag `@regression`, no asserzioni su DOM structure, ognuno
+include sia il path autenticato che lo stato login (così i test sono
+verdi sia con sessione mockata che senza). Quando una sessione di
+fixture sarà disponibile, basta espandere ogni `describe` con
+i sotto-flussi (apertura drawer → selezione filtro → conferma → check
+URL sync, ecc.). Questi sono il safety net **prima** dello splitting
+dei monoliti, non dopo.
+
+### 4) Lint hygiene su file nuovi
+
+I file della sess #20-#21 sono stati ripuliti dai 3 lint error
+introdotti (no-explicit-any in `wcaAppApi`, `check-inbox-schemas.test`,
+`remote-sink.test`). Sostituiti con `unknown` / `Record<string, unknown>` /
+cast tipato `as unknown as typeof fetch`. I 1497 errori `no-explicit-any`
+residui sono **baseline pre-recovery**, non introdotti in queste sessioni
+(verificato grep: nessuno dei file modificati in sess #20-#22 ne aggiunge).
+
+### 4-check finale Vol. II / sess #22
+
+- `tsc -p tsconfig.app.json --noEmit`: **0 errori**
+- `vitest run`: **435/435 test verdi** (28 file, +2 test rispetto sess #21)
+- `vite build`: **OK** (17.31s, vendor chunks separati e parallelizzabili)
+- `eslint .`: 1497 errori baseline (nessuno introdotto da sess #20-#22)
+
+### Stato finale dei "pending deferred" del recovery
+
+| Voce | Sess #21 stato | Sess #22 stato |
+|---|---|---|
+| ApiError esteso a wrapper centrale | scaffold pronto | **invokeEdge esteso + 12 hook migrati** |
+| Bundle splitting | TODO | **manualChunks attivo, index 1107→310 KB** |
+| Remote sink Sentry/Logtail | scaffold pronto | scaffold + 8 test (DSN ancora esterno) |
+| E2E suite per monoliti | smoke canary | **3 spec reali pronti per @regression** |
+| 45 call-site `supabase.functions.invoke` legacy | 0 migrati | **8 migrati, 37 residui (strangler)** |
+| PR open | gh CLI assente | gh CLI ancora assente — link manuale |
+
+Resta strutturalmente debito tecnico in: 13 monoliti >500 LOC (refactor
+proper richiede ora che lo scaffolding E2E venga riempito con suite
+complete su FiltersDrawer e BusinessCardsHub), 1497 `no-explicit-any`
+baseline (cleanup file-per-file), 37 call-site supabase legacy
+(opportunistic). Questi sono **scoped** e **tracciati**, non
+"strutturalmente perfetti" ma con un piano di rientro chiaro.

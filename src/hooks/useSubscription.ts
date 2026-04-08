@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getTierByProductId, type SubscriptionTier } from "@/config/subscriptionTiers";
+
+type CheckSubscriptionResult = { subscribed?: boolean; product_id?: string | null; subscription_end?: string | null };
+type CheckoutResult = { url?: string };
 
 interface SubscriptionState {
   loading: boolean;
@@ -21,16 +25,17 @@ export function useSubscription() {
 
   const checkSubscription = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("check-subscription");
-      if (error) throw error;
+      const data = await invokeEdge<CheckSubscriptionResult>("check-subscription", {
+        context: "useSubscription.check",
+      });
 
-      const tier = getTierByProductId(data.product_id);
+      const tier = getTierByProductId(data?.product_id ?? null);
       setState({
         loading: false,
-        subscribed: data.subscribed ?? false,
+        subscribed: data?.subscribed ?? false,
         tier,
-        subscriptionEnd: data.subscription_end ?? null,
-        productId: data.product_id ?? null,
+        subscriptionEnd: data?.subscription_end ?? null,
+        productId: data?.product_id ?? null,
       });
     } catch {
       setState(prev => ({ ...prev, loading: false }));
@@ -53,16 +58,17 @@ export function useSubscription() {
   }, [checkSubscription]);
 
   const startCheckout = async (priceId: string) => {
-    const { data, error } = await supabase.functions.invoke("create-checkout", {
+    const data = await invokeEdge<CheckoutResult>("create-checkout", {
       body: { priceId },
+      context: "useSubscription.startCheckout",
     });
-    if (error) throw error;
     if (data?.url) window.open(data.url, "_blank");
   };
 
   const openPortal = async () => {
-    const { data, error } = await supabase.functions.invoke("customer-portal");
-    if (error) throw error;
+    const data = await invokeEdge<CheckoutResult>("customer-portal", {
+      context: "useSubscription.openPortal",
+    });
     if (data?.url) window.open(data.url, "_blank");
   };
 

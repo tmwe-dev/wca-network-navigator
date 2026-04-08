@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { isApiError } from "@/lib/api/apiError";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { toast } from "@/hooks/use-toast";
@@ -100,11 +102,14 @@ export function useOutreachQueue() {
         }
 
         case "email": {
-          const { error } = await supabase.functions.invoke("send-email", {
-            body: { to: item.recipient_email, subject: item.subject || "(nessun oggetto)", html: item.body },
-          });
-          if (error) {
-            await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", error.message);
+          try {
+            await invokeEdge("send-email", {
+              body: { to: item.recipient_email, subject: item.subject || "(nessun oggetto)", html: item.body },
+              context: "useOutreachQueue.email",
+            });
+          } catch (err) {
+            const msg = isApiError(err) ? err.message : (err instanceof Error ? err.message : String(err));
+            await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
             return false;
           }
           await updateStatus(item.id, "sent");

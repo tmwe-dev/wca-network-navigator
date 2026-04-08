@@ -48,28 +48,50 @@ export async function invokeEdge<T = unknown>(
 
   if (result.error) {
     // supabase.functions.invoke restituisce { data, error } senza throw
-    // sui 4xx/5xx — convertiamo l'errore preservando lo status quando
-    // disponibile sull'oggetto FunctionsHttpError.
+    // sui 4xx/5xx — convertiamo l'errore preservando lo status e — quando
+    // possibile — anche il body strutturato (es. { error: "no_email" }).
     const errAny = result.error as unknown as {
       message?: string;
-      context?: { status?: number };
+      context?: Response | { status?: number };
       status?: number;
       name?: string;
     };
-    const status = errAny?.context?.status ?? errAny?.status;
+    const ctxResponse = errAny?.context;
+    const isResponse = typeof Response !== "undefined" && ctxResponse instanceof Response;
+    const status = isResponse
+      ? (ctxResponse as Response).status
+      : (ctxResponse as { status?: number } | undefined)?.status ?? errAny?.status;
+
+    let body: Record<string, unknown> | undefined;
+    if (isResponse) {
+      try {
+        const cloned = (ctxResponse as Response).clone();
+        body = (await cloned.json()) as Record<string, unknown>;
+      } catch {
+        // body non-JSON o stream già consumato — best-effort
+      }
+    }
+
+    const code: ApiError["code"] =
+      status === 401 ? "UNAUTHENTICATED" :
+      status === 403 ? "FORBIDDEN" :
+      status === 404 ? "NOT_FOUND" :
+      status === 422 ? "VALIDATION_FAILED" :
+      status === 429 ? "RATE_LIMITED" :
+      typeof status === "number" && status >= 500 ? "SERVER_ERROR" :
+      "UNKNOWN_ERROR";
+
+    const messageFromBody =
+      typeof body?.message === "string" ? (body.message as string) :
+      typeof body?.error === "string" ? (body.error as string) :
+      undefined;
+
     log.warn("invoke returned error", { functionName, context, status, name: errAny?.name });
     throw new ApiError({
-      code:
-        status === 401 ? "UNAUTHENTICATED" :
-        status === 403 ? "FORBIDDEN" :
-        status === 404 ? "NOT_FOUND" :
-        status === 422 ? "VALIDATION_FAILED" :
-        status === 429 ? "RATE_LIMITED" :
-        typeof status === "number" && status >= 500 ? "SERVER_ERROR" :
-        "UNKNOWN_ERROR",
-      message: errAny?.message ?? `Edge function "${functionName}" failed`,
+      code,
+      message: messageFromBody ?? errAny?.message ?? `Edge function "${functionName}" failed`,
       httpStatus: status,
-      details: { context, functionName },
+      details: { context, functionName, body },
     });
   }
 

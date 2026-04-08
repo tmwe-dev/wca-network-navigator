@@ -111,7 +111,7 @@ export interface ScrapeProfile {
   certifications?: string[];
   branch_cities?: string[];
   country_code?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ScrapeResult {
