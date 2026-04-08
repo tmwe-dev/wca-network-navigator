@@ -768,3 +768,78 @@ removeSuspendedJob, getSuspendedJobs.
 ### Stato cumulativo
 - Test totali: **355** (+291 vs baseline 64)
 - File test: **22**
+
+---
+
+## Sessione #17 — utils + activityConstants + wa-zip (2026-04-08)
+
+### Delta
+- Nuovo file: `src/test/misc-modules.test.ts` (12 test)
+- Coverage: `src/lib/utils.ts` (cn), `src/lib/activityConstants.ts`
+  (icons/labels/cycle/nextStatus), `src/lib/whatsappExtensionZip.ts`
+  (constant export).
+
+### Casi coperti
+- `cn`: merge Tailwind con dedup, ignora falsy, oggetti condizionali, vuoto.
+- `ACTIVITY_TYPE_ICONS/LABELS`: completezza di tutti i 6 tipi attesi.
+- `STATUS_LABELS/ICONS`: parità tra labels e icons.
+- `STATUS_CYCLE`: ordine deterministico ['pending','in_progress','completed'].
+- `JOB_STATUS_ICONS`: 4 stati job.
+- `nextStatus`: ciclo + fallback (status sconosciuto → pending).
+- `WHATSAPP_EXTENSION_REQUIRED_VERSION` esportato.
+
+---
+
+## Sessione #18 — backgroundSync (parti pure) + lazyRetry (2026-04-08)
+
+### Delta
+- Nuovo file: `src/test/bg-sync-lazy.test.ts` (11 test)
+- Coverage: `src/lib/backgroundSync.ts` (API singleton sincrona) +
+  `src/lib/lazyRetry.ts` (wrapper React.lazy).
+
+### Casi coperti
+**backgroundSync**: stato iniziale idle, subscribe/unsubscribe con
+notifica immediata snapshot, subscribeEmails non-eager, immutabilità
+getEmailHistory (copia), bgSyncStop no-throw fuori run, bgSyncReset
+notifica i listener e azzera storia.
+**lazyRetry**: ritorna lazy React component, factory invocata
+correttamente, retry triggera la factory una seconda volta dopo
+fallimento (con retryDelay piccolo).
+
+### 4-check finale (post #18)
+- `tsc --noEmit`: 0 errori
+- `vitest run`: **24 file, 378/378 test passati** (+23 da #16)
+- `vite build`: 29.33s ✅
+
+### Stato cumulativo
+- Test totali: **378** (+314 vs baseline 64)
+- File test: **24**
+- Vol. II §5.3 (zod runtime): attivo su wcaAppApi
+- Vol. II §8.3 (≥70% critici): **superato** su tutti i flussi puri
+
+### Moduli puri ora coperti (mappa)
+| Modulo | Test |
+|---|---|
+| countries | country-resolution + countries-extended |
+| log | log |
+| api/wcaAppApi + schemas | wca-app-api + wca-api-schemas |
+| api/wcaScraper | wca-scraper |
+| import/validator | import-validator |
+| import/heuristicMapper | heuristic-mapper |
+| import/fileParser | file-parser |
+| ai/agentResponse | ai-agent-response |
+| linkedinSearch | linkedin-search |
+| wcaCheckpoint + sanitizeSearch | wca-checkpoint |
+| partnerUtils + groupByCountry + cockpitPreselection | cockpit-utils |
+| contactActionAdapter | contact-adapter |
+| messageDedup + queryKeys + capitalize | misc-utils |
+| download/extractProfile | heuristic-mapper |
+| localDirectory | local-directory |
+| businessCardFileParser | business-card-parser |
+| utils + activityConstants + whatsappExtensionZip | misc-modules |
+| backgroundSync + lazyRetry | bg-sync-lazy |
+| download | download-engine |
+| schema | schema-validation |
+| email helpers | email-utils |
+| contact helpers | contact-helpers |
+
