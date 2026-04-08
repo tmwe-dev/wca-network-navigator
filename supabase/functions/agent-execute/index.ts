@@ -5,6 +5,7 @@ import { ALL_TOOLS } from "./tools-schema.ts";
 import { resolvePartnerId as resolvePartnerIdShared } from "./tools/shared.ts";
 import { PARTNER_TOOLS, executePartnerTool } from "./tools/partners.ts";
 import { CONTACT_TOOLS, executeContactTool } from "./tools/contacts.ts";
+import { ACTIVITY_TOOLS, executeActivityTool } from "./tools/activities.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +30,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
   // Delega al modulo per-dominio.
   if (PARTNER_TOOLS.has(name)) return executePartnerTool(name, args, supabase);
   if (CONTACT_TOOLS.has(name)) return executeContactTool(name, args, supabase);
+  if (ACTIVITY_TOOLS.has(name)) return executeActivityTool(name, args, supabase);
 
   switch (name) {
     case "get_country_overview": {
@@ -83,15 +85,6 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       const { data, error } = await query.limit(20);
       if (error) return { error: error.message };
       return { count: data?.length || 0, entries: data || [] };
-    }
-
-    case "list_reminders": {
-      let query = supabase.from("reminders").select("id, title, description, due_date, priority, status, partner_id").order("due_date", { ascending: true }).limit(30);
-      if (args.status) query = query.eq("status", args.status);
-      if (args.priority) query = query.eq("priority", args.priority);
-      const { data, error } = await query;
-      if (error) return { error: error.message };
-      return { count: data?.length || 0, reminders: data || [] };
     }
 
     case "create_download_job": {
@@ -152,24 +145,6 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       return { count: data?.length || 0, memories: data || [] };
     }
 
-    case "create_reminder": {
-      const partner = await resolvePartnerId(args);
-      if (!partner) return { error: "Partner non trovato" };
-      const { error } = await supabase.from("reminders").insert({ partner_id: partner.id, title: String(args.title), description: args.description ? String(args.description) : null, due_date: String(args.due_date), priority: String(args.priority || "medium") });
-      if (error) return { error: error.message };
-      return { success: true, message: `Reminder creato per "${partner.name}".` };
-    }
-
-    case "update_lead_status": {
-      const status = String(args.status);
-      if (args.contact_ids && Array.isArray(args.contact_ids)) {
-        const { error } = await supabase.from("imported_contacts").update({ lead_status: status }).in("id", args.contact_ids as string[]);
-        if (error) return { error: error.message };
-        return { success: true, updated: (args.contact_ids as string[]).length };
-      }
-      return { error: "Specificare contact_ids" };
-    }
-
     case "check_job_status": {
       if (args.job_id) {
         const { data } = await supabase.from("download_jobs").select("id, status, current_index, total_count, contacts_found_count, last_processed_company, error_message").eq("id", args.job_id).single();
@@ -177,39 +152,6 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       }
       const { data } = await supabase.from("download_jobs").select("id, country_name, status, current_index, total_count").in("status", ["running", "pending"]).limit(5);
       return { active_jobs: data || [] };
-    }
-
-    case "list_activities": {
-      let query = supabase.from("activities").select("id, title, activity_type, status, priority, due_date, partner_id, source_meta, created_at").order("due_date", { ascending: true, nullsFirst: false }).limit(Number(args.limit) || 30);
-      if (args.status) query = query.eq("status", args.status);
-      if (args.activity_type) query = query.eq("activity_type", args.activity_type);
-      const { data, error } = await query;
-      if (error) return { error: error.message };
-      return { count: data?.length || 0, activities: (data || []).map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
-    }
-
-    case "create_activity": {
-      let partnerId = args.partner_id as string | null;
-      let companyName = args.company_name as string || "";
-      if (!partnerId && companyName) { const r = await resolvePartnerId(args); if (r) { partnerId = r.id; companyName = r.name; } }
-      const { data, error } = await supabase.from("activities").insert({
-        title: String(args.title), description: args.description ? String(args.description) : null,
-        activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
-        partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
-        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as any,
-      }).select("id").single();
-      if (error) return { error: error.message };
-      return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
-    }
-
-    case "update_activity": {
-      const updates: Record<string, unknown> = {};
-      if (args.status) { updates.status = args.status; if (args.status === "completed") updates.completed_at = new Date().toISOString(); }
-      if (args.priority) updates.priority = args.priority;
-      if (args.due_date) updates.due_date = args.due_date;
-      const { error } = await supabase.from("activities").update(updates).eq("id", args.activity_id);
-      if (error) return { error: error.message };
-      return { success: true, message: "Attività aggiornata." };
     }
 
     case "generate_outreach": {
@@ -322,19 +264,6 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
         return error ? { error: error.message } : { success: true, message: `Contatto "${args.name}" aggiunto.` };
       }
       return { error: "Azione non valida" };
-    }
-
-    case "update_reminder": {
-      if (args.delete) {
-        const { error } = await supabase.from("reminders").delete().eq("id", args.reminder_id);
-        return error ? { error: error.message } : { success: true };
-      }
-      const updates: Record<string, unknown> = {};
-      if (args.status) updates.status = args.status;
-      if (args.priority) updates.priority = args.priority;
-      if (args.due_date) updates.due_date = args.due_date;
-      const { error } = await supabase.from("reminders").update(updates).eq("id", args.reminder_id);
-      return error ? { error: error.message } : { success: true };
     }
 
     case "delete_records": {
