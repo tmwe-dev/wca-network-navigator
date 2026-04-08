@@ -73,7 +73,7 @@ export function makeEntityPaginated<TRow, TFilters extends { sort?: string }>(
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        let q: PostgrestQB = supabase
+        let q: PostgrestQB = (supabase as any)
           .from(config.table)
           .select(config.selectFields, {
             count: config.exactCount === false ? "estimated" : "exact",
