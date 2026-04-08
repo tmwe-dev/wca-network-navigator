@@ -1344,3 +1344,83 @@ con estrazione-logica, violando la legge #6.
 
 Il recovery avanza per passi piccoli, verificati, reversibili. Metodo
 applicato alla lettera.
+
+---
+
+## Sessione #25 — 2026-04-08 — Fase A (tsc = 0) + Fase B (split agent-execute)
+
+**Branch**: `recovery/multichannel-hardening` (continuazione)
+**Obiettivo**: attaccare le due voci prioritarie della valutazione 72.800
+(«servirebbe refactoring dei mega-file» + «i `as any` sono workaround»).
+
+### Fase A — azzerare gli 11 errori tsc pre-esistenti
+
+Commit `cbbe0ba0` — `recovery/fase-a: azzerare 11 errori tsc pre-esistenti`.
+
+| File | Fix |
+|---|---|
+| `HomeAIPrompt.tsx` | aggiunto import `invokeEdge` mancante (-1 `supabase` unused) |
+| `ContactRecordHeader.tsx` | completata mappa `RecordSourceType` (+4 chiavi: `business_card`, `voice_session`, `campaign`, `task`) |
+| `FiltersDrawer.tsx` | importati tipi `CockpitChannelFilter`, `CockpitQualityFilter`, `WorkspaceFilterKey` da `GlobalFiltersContext` |
+| `telemetry.ts` | cast temporaneo `(supabase as any).from('page_events')` con TODO rigenerare types |
+| `useEntityPaginated.ts` | cast generico `(supabase as any).from(config.table)` per bypassare narrowing sul table name (factory polimorfica); rimosso tipo `UseInfiniteQueryOptions` incompatibile |
+| `wcaScraper.ts` | tipizzati correttamente `networks`/`contacts` (erano `unknown[]`) |
+
+**4-check**: tsc **11 → 0**, eslint 1642 → 1640, vitest 465/465, build OK.
+
+### Fase B — split `agent-execute/index.ts` per dominio
+
+Applicato strangler pattern via delega nel switch principale:
+
+```typescript
+if (PARTNER_TOOLS.has(name)) return executePartnerTool(name, args, supabase);
+if (CONTACT_TOOLS.has(name)) return executeContactTool(name, args, supabase);
+if (ACTIVITY_TOOLS.has(name)) return executeActivityTool(name, args, supabase);
+if (JOB_TOOLS.has(name)) return executeJobTool(name, args, supabase);
+```
+
+Un commit per ogni dominio, ognuno isolato e 4-check verde.
+
+| Commit | Dominio | Tool | LOC index |
+|---|---|---|---|
+| `12a4a4e5` | shared helper | `resolvePartnerId` in `tools/shared.ts` | 1317 → 1310 |
+| `e8c839fd` | partners | 6 case (`search_partners`, `get_partner_detail`, `get_partners_without_contacts`, `update_partner`, `add_partner_note`, `bulk_update_partners`) | 1310 → 1227 |
+| `6689a351` | contacts | 3 case (`search_contacts`, `get_contact_detail`, `search_prospects`) | 1227 → 1192 |
+| `6daee599` | activities | 7 case (`list_activities`, `create_activity`, `update_activity`, `list_reminders`, `create_reminder`, `update_reminder`, `update_lead_status`) | 1192 → 1121 |
+| `ad0749a9` | jobs | 4 case (`list_jobs`, `create_download_job`, `download_single_partner`, `check_job_status`) | 1121 → 1062 |
+
+**Bilancio cumulativo (sess #24 + #25)**:
+
+- `agent-execute/index.ts`: **2013 → 1062 LOC** (-951, -47,2%)
+- Nuovi moduli per-dominio (5): `tools/shared.ts`, `tools/partners.ts`,
+  `tools/contacts.ts`, `tools/activities.ts`, `tools/jobs.ts`
+  (totale ~470 LOC estratte, netto + header/delega)
+- **20 tool migrati** su 59 totali nello switch
+- 4-check verde ad **ogni** commit (tsc 0, eslint trend -5 → -3 → -3 → -5,
+  vitest 465/465, build OK)
+
+### Backlog Ondata 2 ancora da lavorare
+
+1. `agent-execute/index.ts` 1062 LOC residue — case ancora nel file:
+   - outreach/email (9): `generate_outreach`, `send_email`, `schedule_email`,
+     `queue_outreach`, `get_inbox`, `get_conversation_history`,
+     `get_email_thread`, `update_message_status`, `analyze_incoming_email`
+   - agents/workspace (7): `create_agent_task`, `list_agent_tasks`,
+     `get_team_status`, `update_agent_prompt`, `add_agent_kb_entry`,
+     `assign_contacts_to_agent`, `manage_workspace_preset`
+   - work plans (3): `create_work_plan`, `list_work_plans`, `update_work_plan`
+   - directory/stats (7): `get_country_overview`, `get_directory_status`,
+     `get_global_summary`, `get_operations_dashboard`, `get_system_analytics`,
+     `get_holding_pattern`, `check_blacklist`
+   - ai-memory (2): `save_memory`, `search_memory`
+   - partner network/enrichment (5): `deep_search_partner`,
+     `deep_search_contact`, `enrich_partner_website`, `scan_directory`,
+     `generate_aliases`, `manage_partner_contact`
+   - misc (4): `execute_ui_action`, `delete_records`, `search_business_cards`,
+     `create_campaign`
+2. `ai-assistant/index.ts` 3788 LOC — stesso metodo, dopo aver
+   completato agent-execute
+3. `FiltersDrawer.tsx` 1114 LOC — continuare strangler
+
+Il refactor è procedurale e ri-applicabile: chiunque può continuare il
+pattern scrivendo un nuovo `tools/<dominio>.ts` + una riga di delega.
