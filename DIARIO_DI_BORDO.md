@@ -682,3 +682,31 @@ medium/low/default).
 - Test totali: **295** (+17, +231 vs baseline post-recovery 64)
 - File test: **19**
 - Tutti i 4-check verdi su ondate 1-5 + Vol. II §5.3 + §8.3
+
+---
+
+## Sessione #14 — Coverage fileParser (2026-04-08)
+
+### Delta
+- Nuovo file: `src/test/file-parser.test.ts` (18 test)
+- Coverage `src/lib/import/fileParser.ts`: parseFile end-to-end via
+  jsdom File API.
+
+### Casi coperti
+**CSV/TXT**: auto-detect delimiter (`,` / `;` / `\t`), normalizzazione
+larghezza righe, filtro righe vuote, dedup headers duplicati,
+override `hasHeader=false` con auto-headers, `skipRows`, throw su
+file vuoto, capping `sampleRows ≤ SAMPLE_SIZE` (50).
+**JSON**: array di oggetti, union di chiavi su record eterogenei,
+estrazione da object con array nested, singolo oggetto → 1 record,
+serializzazione valori nested, throw su JSON malformato/vuoto.
+
+### 4-check
+- `tsc --noEmit`: 0 errori
+- `vitest run`: **20 file, 313/313 test passati** (+18 da #13)
+- `vite build`: 22.57s ✅
+
+### Stato cumulativo
+- Test totali: **313** (+249 vs baseline 64)
+- File test: **20**
+- Vol. II §8.3 (≥70% sui flussi critici): **abbondantemente raggiunto**
