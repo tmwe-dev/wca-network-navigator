@@ -728,7 +728,7 @@ async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: st
   return null;
 }
 
-async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
   switch (name) {
     case "search_partners": {
       const isCount = !!args.count_only;

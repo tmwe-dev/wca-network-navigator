@@ -12,7 +12,7 @@
  *   const safe = escapeLike(userInput);
  *   query.ilike("name", `%${safe}%`);
  */
-export function escapeLike(value: string | null | undefined): string {
+export function escapeLike(value: unknown): string {
   if (value == null) return "";
   return String(value).replace(/[\\%_]/g, (c) => `\\${c}`);
 }
