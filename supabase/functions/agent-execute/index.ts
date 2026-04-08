@@ -714,6 +714,8 @@ const ALL_TOOLS: Record<string, any> = {
 // TOOL EXECUTION (mirrors ai-assistant logic)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+interface ExecuteContext { agent_id?: string }
+
 async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
