@@ -412,3 +412,58 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 - Apertura PR `recovery/wca-network-navigator → main` (gh CLI non disponibile
   in questa sessione, da fare manualmente o da sessione successiva con gh
   installato)
+
+---
+
+## Sessione #9 — 8 aprile 2026 (mattina/2) — Email + Activity + Adozione zod
+
+**Operatore**: Claude (Cowork, Opus 4.6)
+**Branch**: `recovery/wca-network-navigator`
+
+### Interventi
+
+1. **+34 test su email helpers + activity** (`src/test/email-utils.test.ts`):
+   - `formatBytes`: B/KB/MB
+   - `decodeRfc2047`: encoded-word B (base64), Q (quoted-printable), underscore→space
+   - `blockRemoteImages`: sostituzione src http(s), preserve data: URI
+   - `extractSenderBrand`: aziendale, gmail/personali, .co.uk, trattini
+   - `normalizeEmailHtml/Text/Content`: detection HTML, decode entities, preview
+   - `renderEmailTextAsHtml`: escape XSS + placeholder vuoto
+   - `nextStatus`: ciclo pending→in_progress→completed→pending
+
+2. **Adozione `safeParse*` nei call site `wcaAppApi.ts`**:
+   inseriti `safeParseDiscover`, `safeParseScrape`, `safeParseCheckIds`,
+   `safeParseJobStart` in coda alla deserializzazione `res.json()` di
+   `wcaDiscover`, `wcaScrape`, `wcaCheckIds`, `wcaJobStart`. **Non-breaking**:
+   il chiamante riceve sempre il payload, ma se lo schema fallisce parte
+   un `log.warn` strutturato (sink futuro = Sentry) con i primi 3 issue.
+
+### Verifica 4-check
+
+| Check | Risultato |
+|---|---|
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
+| `vitest run` | ✅ **12 file, 171/171** test |
+| `vite build` | ✅ 15.02s, 0 errori |
+
+### Delta sessione #9
+
+| Metrica | Pre-#9 | Post-#9 | Δ |
+|---|---|---|---|
+| File di test | 11 | **12** | +1 |
+| Test cases | 137 | **171** | +34 |
+| Endpoint con runtime validation attiva | 0 | **4** | +4 (discover, scrape, check-ids, job-start) |
+
+### Coverage flussi critici post #9
+
+| Flusso | Pre-#9 | Post-#9 |
+|---|---|---|
+| WCA scraper / app API | ~85% | **~90%** (zod attivo nei call site) |
+| Import wizard | ~80% | ~80% |
+| Cockpit (group/sort/preselect) | ~75% | ~75% |
+| Email parsing/normalization | 0% | **~75%** |
+| Activity status cycle | 0% | **~80%** |
+| Campaign queue | 0% | 0% (rinviato sessione #10) |
+| Acquisition pipeline | 0% | 0% (rinviato sessione #10) |
+
+**5 dei 7 flussi critici ora sopra soglia Vol. II §8.3 (≥70%)**.

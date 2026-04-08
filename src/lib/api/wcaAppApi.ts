@@ -4,6 +4,12 @@
  */
 
 import { createLogger } from "@/lib/log";
+import {
+  safeParseDiscover,
+  safeParseScrape,
+  safeParseCheckIds,
+  safeParseJobStart,
+} from "./wcaAppApi.schemas";
 
 const log = createLogger("wcaAppApi");
 
@@ -215,7 +221,10 @@ export async function wcaDiscover(
     body: JSON.stringify({ cookies: cookie, page, filters }),
   });
   if (!res.ok) throw new Error(`Discover failed: ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  // Vol. II §5.3 — runtime schema check (best-effort, non-breaking)
+  safeParseDiscover(json);
+  return json;
 }
 
 /** Discover TUTTI i membri (tutte le pagine) */
@@ -249,7 +258,9 @@ export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promi
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  safeParseScrape(json);
+  return json;
 }
 
 /** Salva profilo su Supabase */
@@ -271,7 +282,9 @@ export async function wcaCheckIds(ids: number[], country?: string): Promise<Chec
     body: JSON.stringify({ ids, country }),
   });
   if (!res.ok) throw new Error(`Check-IDs failed: ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  safeParseCheckIds(json);
+  return json;
 }
 
 // ─── Job System (server-side worker) ────────────────────────────
@@ -292,7 +305,9 @@ export async function wcaJobStart(
     }),
   });
   if (!res.ok) throw new Error(`Job-start failed: ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  safeParseJobStart(json);
+  return json;
 }
 
 /** Pausa job */
