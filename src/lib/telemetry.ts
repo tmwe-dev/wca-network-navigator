@@ -67,7 +67,7 @@ async function insert(
       duration_ms: opts.durationMs ?? null,
     };
     // intentionally not awaited in caller — fire and forget
-    await supabase.from("page_events").insert(payload as any);
+    await supabase.from("page_events" as any).insert(payload as any);
   } catch (e) {
     if (typeof console !== "undefined") {
       console.debug("[telemetry] insert failed", e);

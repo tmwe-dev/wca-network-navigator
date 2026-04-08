@@ -1955,7 +1955,7 @@ Esegui il compito usando i tool disponibili. Agisci concretamente sul database. 
           for (const tc of msg.tool_calls) {
             console.log(`[Agent ${agent.name} Task] Tool: ${tc.function.name}`);
             const args = JSON.parse(tc.function.arguments || "{}");
-            const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
+            const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id });
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
           }
           allMessages.push(msg);
