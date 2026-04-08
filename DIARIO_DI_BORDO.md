@@ -587,3 +587,68 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 | Globe rendering math | ~80% |
 
 **10 flussi/moduli puri ora ≥70%** (era 7 a fine sessione #10).
+
+---
+
+## Sessione #12 — 8 aprile 2026 — Heuristic mapper, extract profile, LinkedIn search
+
+**Operatore**: Claude (Cowork, Opus 4.6)
+**Branch**: `recovery/wca-network-navigator`
+
+### Interventi
+
+1. **+15 test su heuristicMapper + normalizeExtensionResult**
+   (`src/test/heuristic-mapper.test.ts`):
+   - `autoMapColumns`: header IT/EN, no riuso target, transformations
+     specifiche, sourceIndex preservato, confidence.
+   - `mappingsToDict`: filter su targetColumn vuoto.
+   - `normalizeExtensionResult`: shape errore, state inferenza, htmlLength,
+     defaults, propagazione metadati.
+
+2. **+31 test su `linkedinSearch`** (`src/test/linkedin-search.test.ts`):
+   - `getEmailDomain`: aziendale vs personale (gmail/libero/pec), case-insensitive.
+   - `unwrapGoogleResultUrl`: redirect /url, passthrough, malformati.
+   - `isLinkedInProfileUrl`: /in/, /pub/, no company/jobs, redirect google.
+   - `normalizeLinkedInProfileUrl`: rimozione query string e trailing slash.
+   - `cleanGoogleLinkedInTitle`: pulizia suffissi.
+   - `extractLinkedInCandidateFromGoogleResult`: name + headline + fallback snippet.
+   - `scoreLinkedInCandidate`: match perfetto, base 0.3, capped a 1, no URL → 0.
+   - `pickBestLinkedInCandidate`: selezione massimo, gestione zero candidati.
+   - `buildLinkedInGoogleQueries`: progressione, dedup, skip company "—" e
+     gmail dominio.
+
+### Verifica 4-check
+
+| Check | Risultato |
+|---|---|
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
+| `vitest run` | ✅ **18 file, 278/278** |
+| `vite build` | ✅ 15.94s |
+
+### Delta sessione #12
+
+| Metrica | Pre-#12 | Post-#12 | Δ |
+|---|---|---|---|
+| File di test | 16 | **18** | +2 |
+| Test cases | 232 | **278** | +46 |
+| Moduli puri coperti | 18 | **21** | +3 |
+
+### Coverage flussi critici post #12
+
+| Flusso | Coverage |
+|---|---|
+| WCA scraper / app API | ~90% |
+| WCA checkpoint (rate-limit) | ~85% |
+| AI agent response parsing/dispatch | ~90% |
+| Message dedup (multi-channel) | ~95% |
+| Import wizard (validator + heuristic mapper) | **~90%** |
+| Cockpit (group/sort/preselect) | ~75% |
+| Contact adapter | ~90% |
+| Email parsing/normalization | ~75% |
+| Activity status cycle | ~80% |
+| Globe rendering math | ~80% |
+| LinkedIn search/scoring | **~95%** (nuovo) |
+| Extension result normalization | **~95%** (nuovo) |
+
+**12 flussi/moduli puri ora ≥70%**. Vol. II §8.3 ampiamente raggiunto sui
+percorsi critici.
