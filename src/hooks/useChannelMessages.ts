@@ -4,7 +4,10 @@
 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useChannelMessages");
 
 export type ChannelMessage = {
   id: string;
@@ -116,11 +119,24 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
         ...(filterStr ? { filter: filterStr } : {}),
       }, (payload) => {
         const newRow = payload.new as ChannelMessage;
-        // Only update page 0 of matching channel
+        // Vol. II §10.1: dedup per id E per message_id_external (UID race-safe)
         const baseKey = ["channel-messages", channel, searchQuery, 0];
         queryClient.setQueryData<ChannelMessage[]>(baseKey, (old) => {
           if (!old) return old;
+          // dedup by id
           if (old.some(m => m.id === newRow.id)) return old;
+          // dedup by external id (sync race possibile)
+          if (newRow.message_id_external) {
+            const existingIdx = old.findIndex(
+              m => m.message_id_external === newRow.message_id_external
+            );
+            if (existingIdx >= 0) {
+              const next = old.slice();
+              next[existingIdx] = newRow;
+              return next;
+            }
+          }
+          log.debug("realtime.prepend", { channel, id: newRow.id });
           return [newRow, ...old].slice(0, PAGE_SIZE);
         });
         queryClient.invalidateQueries({ queryKey: ["email-count"] });
