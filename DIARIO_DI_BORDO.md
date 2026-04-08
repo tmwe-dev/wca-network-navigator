@@ -983,3 +983,91 @@ altrimenti si dimenticherebbero entro fine trimestre (Vol. II §16.5).
 - Remote sink Sentry/Logtail: ancora bloccato su credenziali esterne.
 - Refactor componenti monolite (FiltersDrawer 1300 LOC, BusinessCardsHub
   1084 LOC): richiede E2E test scaffolding non ancora presente.
+
+---
+
+## Sessione #21 — Vol. II "Pending deferred motivati" sbloccati (2026-04-08)
+
+Tre voci marcate "deferred" alla fine della sessione #20 sono state
+affrontate concretamente con scaffolding non-breaking, in modo da non
+dover riaprire grossi cantieri quando arriveranno gli asset esterni.
+
+### 1) Strangler client API legacy → `invokeEdge`
+
+- Nuovo `src/lib/api/invokeEdge.ts`: wrapper centralizzato per
+  `supabase.functions.invoke` che normalizza qualunque errore in
+  `ApiError` (mappa status 401/403/404/422/429/5xx come i fetch
+  endpoint), preservando `details.context` e `details.functionName`.
+- Il pattern strangler (ADR-0001) consente di **non toccare** i 45
+  call-site esistenti che usano direttamente `supabase.functions.invoke`:
+  i nuovi flussi e le migrazioni incrementali passano da `invokeEdge`,
+  i flussi legacy continuano a funzionare invariati.
+- Test `src/test/invoke-edge.test.ts` (12 test): success path, body+headers,
+  exception path (NETWORK_ERROR), 7 status code → code mapping, fallback
+  message, status mancante.
+- Migrato `src/lib/whatsappExtensionZip.ts` ad `ApiError` (era l'ultimo
+  fetch wrapper non migrato dopo `wcaAppApi` e `checkInbox`).
+
+### 2) Remote sink logger env-gated
+
+- Nuovo `src/lib/log/remoteSink.ts` con `installRemoteSink(options?)`:
+  - Attivazione gated da `VITE_REMOTE_LOG_ENDPOINT` + opzionale
+    `VITE_REMOTE_LOG_TOKEN` (Bearer) → no-op senza credenziali, niente
+    rotture nei deploy esistenti.
+  - Buffer interno + flush per dimensione (`flushAt`, default 20) o
+    intervallo (`flushIntervalMs`, default 10s).
+  - `sendBeacon` su `beforeunload` per non perdere log al close tab.
+  - Filtro per livello (default: solo `warn`/`error`) — ADR-0003.
+  - Idempotente, sink resiliente (qualunque errore di rete è
+    silenziato perché non deve mai far saltare l'app — Vol. II §4.5).
+- Agganciato in `src/main.tsx` come prima cosa dopo gli import: la
+  registrazione è invariante rispetto al render React.
+- Test `src/test/remote-sink.test.ts` (8 test): no-op senza endpoint,
+  install + idempotency, level filter, flush at threshold, Bearer token,
+  custom minLevel, resilienza a fetch failure.
+
+### 3) Scaffold E2E Playwright per i monoliti
+
+- Nuovo `playwright.config.ts` con webServer su `vite preview`,
+  `chromium` desktop, retries CI, trace on first retry.
+- Cartella `e2e/` con `home.smoke.spec.ts` (canary: la root monta senza
+  errori console critici e nessun ErrorBoundary visibile al boot) e
+  `e2e/README.md` con setup, convenzioni e roadmap (suite per
+  FiltersDrawer/BusinessCardsHub/AddContactDialog da scrivere PRIMA del
+  refactor, per catturare regressioni comportamentali durante lo
+  splitting — Vol. II §9.3).
+- Aggiunti script `e2e`, `e2e:ui`, `e2e:report` in `package.json`.
+- Lo scaffold **non** installa `@playwright/test` né browser binaries:
+  resta inerte finché qualcuno non lancia
+  `npm i -D @playwright/test && npx playwright install --with-deps`.
+  Questo evita di gonfiare CI e node_modules prematuramente. tsconfig
+  e vitest non includono `e2e/`, quindi nessuna interferenza con la
+  pipeline esistente.
+
+### Side-effect: narrowing in `useEmailSync`
+
+- `callCheckInbox` ora restituisce `Promise<unknown>` (post-strangler
+  zod, sess #20). `useEmailSync.useCheckInbox` è stato aggiornato con
+  narrowing difensivo (`raw as { total?, matched? } | null` + check
+  `typeof === "number"`) invece di assumere lo shape, in linea con
+  Vol. II §5.1 ("i client non devono fidarsi del payload remoto").
+
+### 4-check finale Vol. II / sess #21
+
+- `tsc -p tsconfig.app.json --noEmit`: **0 errori**
+- `vitest run`: **433/433 test verdi** (28 file, +20 test vs sess #20)
+- `vite build`: **OK** (17.39s)
+
+### Stato pending dopo sess #21
+
+- ✅ ApiError esteso a `invokeEdge` + `whatsappExtensionZip`. Migrazione
+  dei 45 call-site `supabase.functions.invoke` resta strangler-pronta:
+  sostituzione opportunistica file-per-file quando si tocca il codice.
+- ✅ Remote sink scaffolding completo. Attivazione effettiva richiede
+  solo `VITE_REMOTE_LOG_ENDPOINT` (+ DSN Sentry/Logtail nei loro
+  formati specifici, da configurare in deploy).
+- ✅ Scaffold E2E pronto. Suite per i monoliti da scrivere prima
+  dell'estrazione dei sotto-componenti (FiltersDrawer 1300 LOC,
+  BusinessCardsHub 1084 LOC, AddContactDialog 794 LOC, ImportWizard
+  625 LOC).
+- ⏳ PR open: gh CLI ancora non disponibile in sandbox.

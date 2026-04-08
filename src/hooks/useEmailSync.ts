@@ -39,12 +39,18 @@ export function useCheckInbox() {
 
   return useMutation({
     mutationFn: callCheckInbox,
-    onSuccess: (data) => {
+    onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
       queryClient.invalidateQueries({ queryKey: ["email-count"] });
 
-      if (data.total > 0) {
-        toast.success(`📬 ${data.total} email scaricate (${data.matched} con contatto)`);
+      // callCheckInbox restituisce `unknown` (Vol. II §5.1 strangler).
+      // Qui facciamo narrowing difensivo invece di assumere lo shape.
+      const data = raw as { total?: number; matched?: number } | null;
+      const total = typeof data?.total === "number" ? data.total : 0;
+      const matched = typeof data?.matched === "number" ? data.matched : 0;
+
+      if (total > 0) {
+        toast.success(`📬 ${total} email scaricate (${matched} con contatto)`);
       } else {
         toast.info("Nessuna nuova email");
       }
