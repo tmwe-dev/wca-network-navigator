@@ -1278,3 +1278,69 @@ contratti API e l'error handling** (zero call-site bypassano `invokeEdge`,
 zero throw non normalizzati nelle invocazioni edge). Resta debito
 strutturale tracciato — ridotto, scopato, e con un metodo riproducibile
 (strangler + script regex) per le iterazioni successive.
+
+---
+
+## Sessione #24 — 2026-04-08 — Ondata 2 Fase 4 Vol. I (primo passo): split agent-execute
+
+**Branch**: `recovery/multichannel-hardening` (continuazione sess #23)
+**Motivazione doctrine**: Vol. I cap. IX — "refactor locale" consentito
+all'AI quando: (1) un commit = un cambiamento verificabile in isolamento,
+(2) zero modifiche di comportamento (pure data extraction), (3) 4-check
+protocol verde prima e dopo.
+
+### Cambiamento
+
+Estrazione di `ALL_TOOLS` (31 definizioni di tool OpenAI function-calling,
+schema JSON puro-dato, zero I/O) da `index.ts` in un nuovo modulo
+`tools-schema.ts`.
+
+- `supabase/functions/agent-execute/index.ts`: **2013 → 1317 LOC** (-696)
+- `supabase/functions/agent-execute/tools-schema.ts`: **nuovo, 705 LOC**
+- `index.ts` aggiunge `import { ALL_TOOLS } from "./tools-schema.ts"`
+- Unica referenza in `index.ts` (passaggio schema a LLM) invariata
+- Switch `executeTool(...)` preservato identico in `index.ts`
+
+### 4-check protocol (doctrine obbligatorio)
+
+| Check | Baseline sess #23 | Sess #24 | Delta |
+|---|---|---|---|
+| `tsc -p tsconfig.app.json --noEmit` | 11 errori preesistenti | 11 errori | **invariato** (edge functions fuori dallo scope di `tsconfig.app.json`, verificato) |
+| `npx eslint .` | 1643 problemi | **1642** | **-1** |
+| `npx vitest run` | 465/465 | **465/465** | **invariato** |
+| `npm run build` | ✓ 24s | **✓ 24.13s** | **invariato** |
+
+**Tutti e 4 i check verdi. Baseline non peggiorata su nessun asse.**
+
+### Perché solo questa estrazione in questa sessione
+
+La doctrine (Vol. I, 7 Leggi del Recupero, legge #2 "one flow at a time"
++ legge #6 "un commit = un cambiamento verificabile in isolamento")
+impone che ogni commit sia isolato e ri-verificabile. L'estrazione di
+`ALL_TOOLS` è la mossa più sicura possibile sul file monolitico perché è
+dato puro (nessun comportamento, nessuna I/O), import-only consumer (una
+sola riga di index.ts usa la costante), zero rischio di regressione
+semantica (il compiler lo garantisce). Spezzare anche lo switch
+`executeTool(...)` nello stesso commit avrebbe mescolato estrazione-dati
+con estrazione-logica, violando la legge #6.
+
+### Backlog Ondata 2 Fase 4 Vol. I — da future sessioni
+
+1. **`supabase/functions/agent-execute/index.ts`** (1317 LOC residue):
+   spezzare `executeTool` switch per dominio (partners / contacts /
+   events / kb / utility → `tools/<domain>.ts`). Ogni dominio = 1 commit
+   isolato, 4-check verde. Stima 4-5 sessioni.
+2. **`supabase/functions/ai-assistant/index.ts`** (3788 LOC): file più
+   grande del repo, criticità alta (prompt orchestration). Da affrontare
+   dopo aver completato agent-execute. Stima 6-8 sessioni.
+3. **`src/components/contacts/FiltersDrawer.tsx`** (1114 LOC residue da
+   sess #23): continuare estrazione sezioni rimanenti. Stima 2-3 sessioni.
+
+### File toccati sessione #24
+
+- `supabase/functions/agent-execute/index.ts` (modificato, -696 LOC)
+- `supabase/functions/agent-execute/tools-schema.ts` (nuovo, +705 LOC)
+- `DIARIO_DI_BORDO.md` (questa entry)
+
+Il recovery avanza per passi piccoli, verificati, reversibili. Metodo
+applicato alla lettera.
