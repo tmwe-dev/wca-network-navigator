@@ -739,3 +739,32 @@ riconosciuta, popolamento raw_data con tutte le celle.
 ### Stato cumulativo
 - Test totali: **328** (+264 vs baseline 64)
 - File test: **21**
+
+---
+
+## Sessione #16 — Coverage localDirectory (2026-04-08)
+
+### Delta
+- Nuovo file: `src/test/local-directory.test.ts` (27 test)
+- Coverage `src/lib/localDirectory.ts`: tutte le 14 funzioni esportate.
+
+### Casi coperti
+**Directory CRUD**: createDirectory (preserva stati esistenti, salva
+memberNetworks), getDirectory (null su inesistente), markIdDone /
+markIdFailed (no-op su country sconosciuto), saveDirectory (aggiorna
+updatedAt).
+**Query helpers**: getPendingIds, getDoneCount, getTotalCount,
+isCountryCompleted (true solo se total>0 e nessun pending),
+checkMissingIdsLocal (filtra solo non-done).
+**Suspended jobs**: saveSuspendedJob (skip se no pending, upsert),
+removeSuspendedJob, getSuspendedJobs.
+**Member networks**: priorità domini own (non wca-*), fallback al primo.
+**getAllDirectories**: filtra per prefix, ignora corrotti.
+
+### 4-check
+- `tsc --noEmit`: 0 errori
+- `vitest run`: **22 file, 355/355 test passati** (+27 da #15)
+
+### Stato cumulativo
+- Test totali: **355** (+291 vs baseline 64)
+- File test: **22**
