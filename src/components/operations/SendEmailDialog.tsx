@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useTrackActivity } from "@/hooks/useTrackActivity";
 
@@ -36,10 +37,7 @@ export function SendEmailDialog({
     setSending(true);
     try {
       const html = body.replace(/\n/g, "<br/>");
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { to: recipientEmail, subject, html, partner_id: partnerId },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("send-email", { body: { to: recipientEmail, subject, html, partner_id: partnerId }, context: "SendEmailDialog.send_email" });
       if (data?.error) throw new Error(data.error);
       toast.success(`Email inviata a ${recipientEmail}`);
       trackActivity.mutate({

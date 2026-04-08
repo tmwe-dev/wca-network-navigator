@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, Loader2, CheckCircle2, Building2, User, MapPin, Mail, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useUpdateBusinessCard } from "@/hooks/useBusinessCards";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -68,10 +69,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     setSelected(new Map());
     setHasRun(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-match-business-cards", {
-        body: { batch_offset: 0, batch_size: 20 },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("ai-match-business-cards", { body: { batch_offset: 0, batch_size: 20 }, context: "AIMatchDialog.ai_match_business_cards" });
       if (data.error) throw new Error(data.error);
       setResults(data.matches || []);
       setTotalUnmatched(data.total_unmatched || 0);

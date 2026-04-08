@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
@@ -38,8 +39,7 @@ export function PartnerAIBar({ viewContext }: Props) {
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: {
+      const data = await invokeEdge<any>("ai-assistant", { body: {
           messages: newMessages,
           context: viewContext ? {
             source: "partner_hub",
@@ -48,10 +48,7 @@ export function PartnerAIBar({ viewContext }: Props) {
             totalPartners: viewContext.totalPartners,
             selectedCount: viewContext.selectedCount,
           } : undefined,
-        },
-      });
-
-      if (error) throw error;
+        }, context: "PartnerAIBar.ai_assistant" });
       if (data?.error) {
         toast.error(data.error);
         setLoading(false);

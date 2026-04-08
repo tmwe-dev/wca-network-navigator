@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PartnerRating } from "@/components/partners/PartnerRating";
@@ -58,8 +59,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
     try {
-      const { data, error } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId: partner.id } });
-      if (error) throw error;
+      const data = await invokeEdge<any>("deep-search-partner", { body: { partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
       if (data?.success) {
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });

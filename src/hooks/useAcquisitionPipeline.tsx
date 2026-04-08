@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
@@ -417,7 +418,7 @@ export function useAcquisitionPipeline() {
                 } catch { /* fallback to server-side fetch */ }
               }
 
-              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
+              const enrichResult = await invokeEdge<any>("enrich-partner-website", { body: enrichBody, context: "useAcquisitionPipeline.enrich_partner_website" });
               if (enrichResult?.enrichment) {
                 const ed = enrichResult.enrichment;
                 setCanvasData((prev) =>
@@ -433,7 +434,7 @@ export function useAcquisitionPipeline() {
         parallelTasks.push(
           (async () => {
             try {
-              const { data: deepResult } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId } });
+              const deepResult = await invokeEdge<any>("deep-search-partner", { body: { partnerId }, context: "useAcquisitionPipeline.deep_search_partner" });
               if (deepResult) {
                 const [{ data: updatedPartner }, { data: socialLinks }] = await Promise.all([
                   supabase.from("partners").select("logo_url").eq("id", partnerId!).maybeSingle(),

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
@@ -101,7 +102,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
             } catch { /* fallback to server-side fetch */ }
           }
 
-          await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
+          await invokeEdge("enrich-partner-website", { body: enrichBody, context: "AdvancedTools.enrich_partner_website" });
           setResults(prev => [...prev, { id: ids[i], success: true }]);
         }
       } catch { setResults(prev => [...prev, { id: ids[i], success: false }]); }

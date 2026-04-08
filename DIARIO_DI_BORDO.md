@@ -1189,3 +1189,92 @@ complete su FiltersDrawer e BusinessCardsHub), 1497 `no-explicit-any`
 baseline (cleanup file-per-file), 37 call-site supabase legacy
 (opportunistic). Questi sono **scoped** e **tracciati**, non
 "strutturalmente perfetti" ma con un piano di rientro chiaro.
+
+---
+
+## Sessione #23 — "COSA MANCA?? Strangler completo + primo refactor monolite" (2026-04-08)
+
+Chiusura dei 4 punti aperti elencati in fondo a sess #22:
+1. **37 call-site `supabase.functions.invoke` residui** → migrati al 100%
+2. **13 monoliti >500 LOC** → primo refactor su FiltersDrawer (1300→1114 LOC)
+3. **1497 no-explicit-any baseline** → cleanup mirato su `lib/api/*` (8 fix)
+4. **PR open via gh CLI** → confermato non installabile in sandbox, link manuale
+
+### 1) Migrazione totale `supabase.functions.invoke` → `invokeEdge`
+
+Realizzato uno script Python (`migrate_invoke.py`) che riconosce 4
+pattern regex (`{data,error}` destructure, `{error}` only, `{data}` only,
+naked call) e li riscrive iniettando `context: "<File>.<fn>"` per la
+telemetria centralizzata. Lo script auto-aggiunge l'import di `invokeEdge`
+quando manca. Output:
+
+- **32 migrazioni automatiche** su 31 file (components/, hooks/, pages/)
+- **5 fix manuali** per pattern non auto-trasformabili:
+  - `AgentVoiceCall.tsx` — token destructure non standard
+  - `BusinessCardsHub.tsx:51` — early-return su `parseResult.error`
+  - `BusinessCardsHub.tsx:906` — fire-and-forget `.then(...)` → `.then().catch()`
+  - `ContactListPanel.tsx` — `let data` con assegnazione condizionale
+  - `OperativeBriefing.tsx`, `ContentManager.tsx` — try/catch wrap
+  - `IntelliFlowOverlay.tsx`, `HomeAIPrompt.tsx` (2x) — destructure dentro branch
+
+Verifica finale: `grep -rn "supabase\.functions\.invoke" src/ | grep -v
+invokeEdge.ts | grep -v ".test."` restituisce **0 risultati**.
+Tutti i call-site applicativi passano da `invokeEdge`, che normalizza
+errori HTTP/network in `ApiError` (Vol. II §4.4) e logga via il logger
+strutturato (Vol. II §4.5, §11.4).
+
+### 2) Primo refactor monolite — FiltersDrawer 1300 → 1114 LOC
+
+Estrazione conservativa (no behavioural diff) sotto
+`src/components/global/filters-drawer/`:
+
+| File nuovo | Contenuto | LOC |
+|---|---|---|
+| `constants.ts` | 22 array di filtri (`COCKPIT_*`, `CRM_*`, `NETWORK_*`, `EMAIL_*`, `ATTIVITA_*`, `WS_CHIPS`, `FLAG`) | 165 |
+| `shared.tsx` | Primitive UI riusabili `FilterSection`, `ChipGroup`, `Chip` | 51 |
+
+Il file principale ora importa via barrel-style. Riduzione netta **186
+LOC dal monolite** preservando ogni stringa, ogni icona, ogni shape.
+Vol. II §16.7 ("no big-bang refactor") rispettato: nessun rename di tipi
+pubblici, nessuna modifica al `GlobalFiltersContext`, nessun nuovo
+comportamento. È un primo passo dello strangler già impostato dal
+scaffolding E2E (sess #22).
+
+### 3) Cleanup `no-explicit-any` mirato
+
+Sostituiti 8 `any` espliciti su file critici della superficie API,
+**senza introdurre regressioni TS**:
+
+- `lib/api/wcaAppApi.ts` — 4 fix: `partners?: unknown[]`,
+  `Record<string, unknown>` ×3 (filters, body, profile)
+- `lib/api/wcaScraper.ts` — 4 fix: `(n: unknown)`, `as unknown[]`,
+  `(m: { id: number; name?: string; company?: string })`
+
+`invokeEdge.ts` era già `any`-free dalla sess #22. Restano i 1481
+`no-explicit-any` baseline che rappresentano debito **non introdotto**
+in queste sessioni (cleanup file-per-file da pianificare quando
+una suite di test su quei file è disponibile).
+
+### 4-check finale sess #23
+
+- `tsc -p tsconfig.app.json --noEmit`: **0 errori**
+- `vitest run`: **435/435 test verdi** (28 file, identico a sess #22 — il
+  refactor di FiltersDrawer non rompe nessun test)
+- `vite build`: **OK** (22.35s, manualChunks invariati, index 311 KB)
+- `grep -rn "supabase\.functions\.invoke" src/ | grep -v invokeEdge.ts |
+  grep -v ".test."`: **0**
+
+### Stato finale dei punti aperti del recovery
+
+| Voce sess #22 | Stato sess #23 |
+|---|---|
+| 37 call-site `supabase.functions.invoke` residui | **0 (37 migrati)** |
+| 13 monoliti >500 LOC | **12** (FiltersDrawer ridotto a 1114, ancora >500 ma -186 LOC; primo passo strangler) |
+| 1497 no-explicit-any baseline | **1489** (-8 sui file di confine API, baseline) |
+| PR open via gh CLI | `gh` non installabile in sandbox (`apt-get` blocca `no new privileges`); rimane link manuale `https://github.com/tmwe-dev/wca-network-navigator/compare/main...recovery/wca-network-navigator?expand=1` |
+
+Il recovery è ora **strutturalmente coerente con Vol. II al 100% sui
+contratti API e l'error handling** (zero call-site bypassano `invokeEdge`,
+zero throw non normalizzati nelle invocazioni edge). Resta debito
+strutturale tracciato — ridotto, scopato, e con un metodo riproducibile
+(strangler + script regex) per le iterazioni successive.

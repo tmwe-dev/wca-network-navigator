@@ -24,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -160,10 +161,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
     if (aliasLoading) return;
     setAliasLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-aliases", {
-        body: { contactIds: [c.id] },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("generate-aliases", { body: { contactIds: [c.id] }, context: "ContactDetailPanel.generate_aliases" });
       const processed = data?.processed || 0;
       if (processed === 0) {
         toast({ title: "Alias già presente", description: "Questo contatto ha già un alias generato" });

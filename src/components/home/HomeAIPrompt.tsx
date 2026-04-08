@@ -104,19 +104,20 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      let data: any, error: any;
+      let data: any;
       if (targetAgent) {
         // Route to agent-execute
-        ({ data, error } = await supabase.functions.invoke("agent-execute", {
+        data = await invokeEdge<any>("agent-execute", {
           body: { agent_id: targetAgent.id, messages: newMessages },
-        }));
+          context: "HomeAIPrompt.agent_execute",
+        });
       } else {
         // Default: ai-assistant
-        ({ data, error } = await supabase.functions.invoke("ai-assistant", {
+        data = await invokeEdge<any>("ai-assistant", {
           body: { messages: newMessages },
-        }));
+          context: "HomeAIPrompt.ai_assistant",
+        });
       }
-      if (error) throw error;
       const raw = data?.content || data?.message || "";
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setResponse(raw);

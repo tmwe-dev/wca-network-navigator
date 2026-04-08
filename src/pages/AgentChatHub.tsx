@@ -7,6 +7,7 @@ import { useAgents, type Agent } from "@/hooks/useAgents";
 import { AgentAvatarCarousel } from "@/components/agents/AgentAvatarCarousel";
 import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 
@@ -88,10 +89,7 @@ export default function AgentChatHub() {
     forceRender((n) => n + 1);
 
     try {
-      const { data, error } = await supabase.functions.invoke("agent-execute", {
-        body: { agent_id: activeId, chat_messages: newMsgs },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
       const reply: Message = { role: "assistant", content: data?.response || "Nessuna risposta" };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
     } catch {

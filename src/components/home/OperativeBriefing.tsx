@@ -3,6 +3,7 @@ import { Bot, Loader2, RefreshCw, Zap, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BriefingAction } from "@/hooks/useDailyBriefing";
@@ -54,11 +55,8 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
           .single();
         if (taskErr) throw taskErr;
 
-        // Fire agent-execute
-        const { error: execErr } = await supabase.functions.invoke("agent-execute", {
-          body: { agent_id: agentId, task_id: (task as any).id },
-        });
-        if (execErr) throw execErr;
+        // Fire agent-execute (lancia ApiError on failure, catturato dal try esterno)
+        await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as any).id }, context: "OperativeBriefing.agent_execute" });
 
         toast.success(`Task assegnato a ${action.agentName}`);
         qc.invalidateQueries({ queryKey: ["agent-tasks"] });

@@ -17,6 +17,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
 import { useTrackActivity } from "@/hooks/useTrackActivity";
@@ -120,10 +121,7 @@ export default function EmailCanvas({
     setSending(true);
     try {
       const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("send-email", { body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
       // Track activity

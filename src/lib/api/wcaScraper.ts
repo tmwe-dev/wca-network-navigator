@@ -176,8 +176,8 @@ export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
         email: p.email || null,
         phone: p.phone || null,
         website: p.website || null,
-        networks: (p.networks || []).map((n: any) => typeof n === "string" ? { name: n } : n),
-        contacts: (p.contacts || []) as any[],
+        networks: (p.networks || []).map((n: unknown) => typeof n === "string" ? { name: n } : n),
+        contacts: (p.contacts || []) as unknown[],
       },
       contactsFound: p.contacts?.length || 0,
       totalContacts: p.contacts?.length || 0,
@@ -197,7 +197,7 @@ export async function scrapeWcaDirectory(
   try {
     const result = await wcaDiscover(countryCode, pageIndex || 1);
 
-    const members: DirectoryMember[] = (result.members || []).map((m: any) => ({
+    const members: DirectoryMember[] = (result.members || []).map((m: { id: number; name?: string; company?: string }) => ({
       company_name: m.name || m.company || "",
       city: undefined,
       country: undefined,

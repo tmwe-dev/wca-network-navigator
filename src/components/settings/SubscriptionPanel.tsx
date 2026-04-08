@@ -8,6 +8,7 @@ import { SUBSCRIPTION_TIERS, type SubscriptionTier, TOKEN_PRICING, CREDIT_PACKS 
 import { Check, Crown, Loader2, ExternalLink, Zap, Calculator, Coins, ShoppingCart, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 export function SubscriptionPanel() {
   const { tier, subscribed, subscriptionEnd, loading, startCheckout, openPortal, checkSubscription } = useSubscription();
@@ -51,8 +52,7 @@ export function SubscriptionPanel() {
   const handleBuyCredits = async () => {
     setBuyingCredits(true);
     try {
-      const { data, error } = await supabase.functions.invoke("buy-credits", { body: { quantity: 1 } });
-      if (error) throw error;
+      const data = await invokeEdge<any>("buy-credits", { body: { quantity: 1 }, context: "SubscriptionPanel.buy_credits" });
       if (data?.url) window.open(data.url, "_blank");
     } catch (e: any) { toast.error(e?.message || "Errore nell'acquisto crediti"); }
     finally { setBuyingCredits(false); }

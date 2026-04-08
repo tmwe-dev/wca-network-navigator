@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import ExcelJS from "exceljs";
 
 /* ── Parse XLS/CSV file ── */
@@ -103,8 +104,7 @@ export default function BlacklistManager() {
   const handleScrape = async () => {
     setScraping(true);
     try {
-      const { data, error } = await supabase.functions.invoke("scrape-wca-blacklist");
-      if (error) throw error;
+      const data = await invokeEdge<any>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
       if (data?.success) {
         toast.success(`Scraping completato: ${data.entries_count || 0} record, ${data.matched_count || 0} match`);
       } else {

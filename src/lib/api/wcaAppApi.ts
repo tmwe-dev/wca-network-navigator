@@ -201,7 +201,7 @@ export interface VerifyResult {
 
 export interface PartnersResult {
   success: boolean;
-  partners?: any[];
+  partners?: unknown[];
   total?: number;
   page?: number;
   error?: string;
@@ -227,7 +227,7 @@ export async function wcaDiscover(
   options?: { cookie?: string; networks?: string[]; searchTerm?: string; searchBy?: string; city?: string }
 ): Promise<DiscoverResult> {
   const cookie = options?.cookie || (await getOrRefreshCookie());
-  const filters: Record<string, any> = { country };
+  const filters: Record<string, unknown> = { country };
   if (options?.networks?.length) filters.networks = options.networks;
   if (options?.searchTerm) filters.searchTerm = options.searchTerm;
   if (options?.searchBy) filters.searchBy = options.searchBy;
@@ -268,7 +268,7 @@ export async function wcaDiscoverAll(
 
 /** Scrape profili (SSO auto server-side, no cookie needed) */
 export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promise<ScrapeResult> {
-  const body: Record<string, any> = { wcaIds };
+  const body: Record<string, unknown> = { wcaIds };
   if (networkDomain) body.networkDomain = networkDomain;
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
@@ -282,7 +282,7 @@ export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promi
 }
 
 /** Salva profilo su Supabase */
-export async function wcaSave(profile: Record<string, any>): Promise<SaveResult> {
+export async function wcaSave(profile: Record<string, unknown>): Promise<SaveResult> {
   const res = await fetch(`${BASE}/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
