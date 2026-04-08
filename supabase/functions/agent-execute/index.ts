@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { ALL_TOOLS } from "./tools-schema.ts";
+import { resolvePartnerId as resolvePartnerIdShared } from "./tools/shared.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,17 +19,9 @@ const supabase = createClient(
 // TOOL EXECUTION (mirrors ai-assistant logic)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
-  if (args.partner_id) {
-    const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
-    return data ? { id: data.id, name: data.company_name } : null;
-  }
-  if (args.company_name) {
-    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
-    return data ? { id: data.id, name: data.company_name } : null;
-  }
-  return null;
-}
+// Wrapper locale che fissa il client `supabase` di modulo. La logica vive in
+// `tools/shared.ts` per essere condivisibile con i moduli per-dominio.
+const resolvePartnerId = (args: Record<string, unknown>) => resolvePartnerIdShared(supabase, args);
 
 async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string): Promise<unknown> {
   switch (name) {
