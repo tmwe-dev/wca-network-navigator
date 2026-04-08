@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,9 +16,10 @@ import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPan
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
+import SuperHome3D from "./pages/SuperHome3D";
+import Auth from "./pages/Auth";
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
-const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
 const CRM = lazyRetry(() => import("./pages/CRM"));
 const Outreach = lazyRetry(() => import("./pages/Outreach"));
@@ -42,7 +44,6 @@ if (typeof window !== "undefined") {
 }
 
 const EmailComposer = lazyRetry(() => import("./pages/EmailComposer"));
-const Auth = lazyRetry(() => import("./pages/Auth"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
 const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
@@ -72,7 +73,14 @@ const queryClient = new QueryClient({
 });
 
 function PageFallback() {
-  return <div className="min-h-screen" />;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span>Caricamento applicazione…</span>
+      </div>
+    </div>
+  );
 }
 
 const App = () => (
