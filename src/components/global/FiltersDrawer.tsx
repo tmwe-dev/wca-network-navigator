@@ -198,19 +198,19 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     g.setCockpitCountries(next);
   };
 
-  const toggleCockpitChannel = (key: string) => {
+  const toggleCockpitChannel = (key: CockpitChannelFilter) => {
     const next = new Set(g.filters.cockpitChannels);
     if (next.has(key)) next.delete(key); else next.add(key);
     g.setCockpitChannels(next);
   };
 
-  const toggleCockpitQuality = (key: string) => {
+  const toggleCockpitQuality = (key: CockpitQualityFilter) => {
     const next = new Set(g.filters.cockpitQuality);
     if (next.has(key)) next.delete(key); else next.add(key);
     g.setCockpitQuality(next);
   };
 
-  const toggleWs = (key: string) => {
+  const toggleWs = (key: WorkspaceFilterKey) => {
     const next = new Set(g.filters.workspaceFilters);
     if (next.has(key)) next.delete(key); else next.add(key);
     g.setWorkspaceFilters(next);
