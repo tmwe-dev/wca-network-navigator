@@ -332,3 +332,83 @@ Dal Vol. II "Il Metodo Enterprise", i capitoli più rilevanti per verificare la 
 Il Protocollo del Recupero Vol. I è stato portato a termine sulle 5 ondate previste, con particolare profondità sulle ondate 1-4. L'ondata 5 è stata avviata con un nucleo di test sul percorso critico WCA (il più rappresentativo del prodotto) e lascia traccia del pattern da replicare sugli altri flussi. La codebase è ora in stato "contenuto": nessun degrado nuovo può entrare senza violare i controlli statici attivati, e ogni errore futuro è osservabile dal logger strutturato.
 
 Prossimo commit: `docs: DIARIO sessione #7 — ondate 1-5 complete`.
+
+---
+
+## Sessione #8 — 8 aprile 2026 (mattina) — Estensione coverage + Zod runtime
+
+**Operatore**: Claude (Cowork, Opus 4.6)
+**Branch**: `recovery/wca-network-navigator`
+**Mandato utente**: "PROSEGUIAMO" — continuazione del backlog di fine sessione #7.
+
+### Interventi
+
+1. **+24 test su `import/validator`** (`src/test/import-validator.test.ts`):
+   normalizePhone (italian mobile/landline, separatori multipli), extractEmail
+   (best-effort + lowercasing), parseCountry (40+ codici), applyTransformation
+   (tutti i 7 tipi), validateAndTransform (happy path, rejected rows, NULL
+   string, malformed email tollerata), transformRow (fuzzy lookup, auto-detect
+   per phone/email/country/name).
+
+2. **+31 test su cockpit utils** (`src/test/cockpit-utils.test.ts`):
+   - `groupByCountry`: ordinamento per dimensione, fallback "??"/"Sconosciuto"
+   - `cockpitPreselection`: localStorage stubbato, add/peek/consume/dedup
+   - `partnerUtils`: asEnrichment, getRealLogoUrl, getEffectiveLogoUrl
+     (priorità partner.logo_url su enrichment), getEnrichmentSnippet
+     (headline → sector → summary 80c), hasLinkedIn (social_links + enrichment),
+     hasWhatsApp (mobile + contacts), getBranchCountries (dedup escluso HQ),
+     sortPartners (5 SortOption, immutabilità verificata)
+
+3. **Zod runtime schemas su wcaAppApi** (`src/lib/api/wcaAppApi.schemas.ts`):
+   Vol. II §5.3 "Validazione runtime dei payload remoti". Strategia strangler:
+   - Schemi zod per Discover/Scrape/CheckIds/JobStart/WcaMember/ScrapeProfile
+   - `ScrapeProfileSchema` con `.passthrough()` per accettare campi futuri
+     senza rompere
+   - 4 helper `safeParse*` che ritornano `null + log.warn` invece di lanciare
+   - **Nessun breaking change** sui chiamanti esistenti: gli schemi sono
+     opt-in, possono essere adottati progressivamente
+
+4. **+18 test su zod schemas** (`src/test/wca-api-schemas.test.ts`):
+   accettazione/rifiuto, passthrough, enum, nullable, no-throw garantito.
+
+### Verifica 4-check finale
+
+| Check | Risultato |
+|---|---|
+| `tsc -p tsconfig.app.json --noEmit` (strict on) | ✅ 0 errori |
+| `vitest run` | ✅ **11 file, 137/137** test passing |
+| `vite build` | ✅ 17.84s, 0 errori |
+
+### Delta metriche sessione #8
+
+| Metrica | Pre-#8 | Post-#8 | Δ |
+|---|---|---|---|
+| File di test | 8 | **11** | +3 |
+| Test cases | 64 | **137** | +73 |
+| Schemi runtime zod su wcaAppApi | 0 | **7** | nuovo |
+| Helper safeParse* | 0 | **4** | nuovo |
+
+### Mappatura coverage flussi critici (post #8)
+
+| Flusso critico | Coverage stimata pre-#8 | Coverage post-#8 |
+|---|---|---|
+| WCA scraper / app API | ~70% (contract test) | **~85%** (+ schemi runtime) |
+| Import wizard (validation/transform) | 0% | **~80%** (validator + transformRow) |
+| Cockpit (group/sort/preselect) | 0% | **~75%** (utils puri coperti) |
+| Email composer | 0% | 0% (rinviato sessione #9) |
+| Campaign queue | 0% | 0% (rinviato sessione #9) |
+| Acquisition pipeline | 0% | 0% (rinviato sessione #9) |
+| Activity tracking | 0% | 0% (rinviato sessione #9) |
+
+Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra soglia**.
+
+### Cosa NON è ancora stato fatto (sessione #9+)
+
+- Test E2E Email/Campaign/Acquisition/Activity (4 flussi)
+- Adozione effettiva di `safeParseDiscover/Scrape` nei call site (oggi solo
+  disponibili come strumento opt-in)
+- Refactor dei 4 monoliti (Vol. I Ondata 2)
+- Sink remoto Sentry/Logtail
+- Apertura PR `recovery/wca-network-navigator → main` (gh CLI non disponibile
+  in questa sessione, da fare manualmente o da sessione successiva con gh
+  installato)
