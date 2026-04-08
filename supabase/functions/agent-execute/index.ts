@@ -8,6 +8,7 @@ import { CONTACT_TOOLS, executeContactTool } from "./tools/contacts.ts";
 import { ACTIVITY_TOOLS, executeActivityTool } from "./tools/activities.ts";
 import { JOB_TOOLS, executeJobTool } from "./tools/jobs.ts";
 import { STATS_TOOLS, executeStatsTool } from "./tools/stats.ts";
+import { MEMORY_TOOLS, executeMemoryTool } from "./tools/memory.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,23 +36,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
   if (ACTIVITY_TOOLS.has(name)) return executeActivityTool(name, args, supabase);
   if (JOB_TOOLS.has(name)) return executeJobTool(name, args, supabase);
   if (STATS_TOOLS.has(name)) return executeStatsTool(name, args, supabase, userId);
+  if (MEMORY_TOOLS.has(name)) return executeMemoryTool(name, args, supabase, userId);
 
   switch (name) {
-    case "save_memory": {
-      const { data, error } = await supabase.from("ai_memory").insert({ user_id: userId, content: String(args.content), memory_type: String(args.memory_type || "fact"), tags: (args.tags as string[]) || [], importance: Math.min(5, Math.max(1, Number(args.importance) || 3)) }).select("id").single();
-      if (error) return { error: error.message };
-      return { success: true, memory_id: data.id };
-    }
-
-    case "search_memory": {
-      let query = supabase.from("ai_memory").select("content, memory_type, tags, importance, created_at").eq("user_id", userId).order("importance", { ascending: false }).limit(Number(args.limit) || 10);
-      if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-      if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text)}%`);
-      const { data, error } = await query;
-      if (error) return { error: error.message };
-      return { count: data?.length || 0, memories: data || [] };
-    }
-
     case "generate_outreach": {
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify(args),
