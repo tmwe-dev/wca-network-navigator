@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useImportLogs");
 
 // Find a field value from a row using multiple possible aliases
 function findField(row: Record<string, any>, aliases: string[]): string | null {
@@ -250,11 +254,10 @@ export function useProcessImport() {
 
   return useMutation({
     mutationFn: async (importLogId: string) => {
-      const { data, error } = await supabase.functions.invoke("process-ai-import", {
+      return invokeEdge<unknown>("process-ai-import", {
         body: { import_log_id: importLogId },
+        context: "useProcessImport",
       });
-      if (error) throw error;
-      return data;
     },
     onSuccess: (_, importLogId) => {
       queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
@@ -316,7 +319,7 @@ export function useTransferToPartners() {
           .single();
 
         if (pError) {
-          console.error("Transfer error:", pError);
+          log.error("transfer failed", { message: pError.message, code: pError.code });
           continue;
         }
 
@@ -447,17 +450,16 @@ export function useAnalyzeImportStructure() {
       inputType: "paste" | "file";
       rawText?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("analyze-import-structure", {
-        body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText },
-      });
-      if (error) throw error;
-      return data as {
+      return invokeEdge<{
         column_mapping: Record<string, string>;
         parsed_rows: any[];
         confidence: number;
         warnings: string[];
         unmapped_columns?: string[];
-      };
+      }>("analyze-import-structure", {
+        body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText },
+        context: "useAnalyzeImportStructure",
+      });
     },
     onError: (err) => {
       toast({ title: "Errore analisi AI", description: String(err), variant: "destructive" });
@@ -470,11 +472,10 @@ export function useFixImportErrors() {
 
   return useMutation({
     mutationFn: async ({ importLogId, customPrompt }: { importLogId: string; customPrompt?: string }) => {
-      const { data, error } = await supabase.functions.invoke("process-ai-import", {
+      return invokeEdge<{ corrected: number; dismissed: number; has_more: boolean; remaining: number }>("process-ai-import", {
         body: { import_log_id: importLogId, mode: "fix_errors", custom_prompt: customPrompt || undefined },
+        context: "useFixImportErrors",
       });
-      if (error) throw error;
-      return data as { corrected: number; dismissed: number; has_more: boolean; remaining: number };
     },
     onSuccess: (result, { importLogId }) => {
       queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });

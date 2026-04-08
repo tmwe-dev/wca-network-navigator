@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem, CONTENT_CATEGORIES } from "@/data/defaultContentPresets";
@@ -115,10 +116,8 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
     if (isNew && editText.trim()) {
       setCategorizing(true);
       try {
-        const { data, error } = await supabase.functions.invoke("categorize-content", {
-          body: { name: editName.trim(), text: editText.trim(), type: contentType === "proposal" ? "proposal" : "goal" },
-        });
-        if (!error && data?.category) {
+        const data = await invokeEdge<{ category?: string }>("categorize-content", { body: { name: editName.trim(), text: editText.trim(), type: contentType === "proposal" ? "proposal" : "goal" }, context: "ContentManager.categorize_content" });
+        if (data?.category) {
           finalCategory = data.category;
         }
       } catch { /* fallback to manual */ }

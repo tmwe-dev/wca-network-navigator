@@ -12,6 +12,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
@@ -380,10 +381,13 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
           }}
           onDeduplicate={selection.count >= 2 ? async () => {
-            const { data, error } = await supabase.functions.invoke("deduplicate-contacts", {
-              body: { contactIds: Array.from(selection.selectedIds) },
-            });
-            if (error) { toast({ title: "Errore", description: String(error), variant: "destructive" }); return; }
+            let data: { mergedGroups?: number; deletedRecords?: number } | null = null;
+            try {
+              data = await invokeEdge<{ mergedGroups?: number; deletedRecords?: number }>("deduplicate-contacts", { body: { contactIds: Array.from(selection.selectedIds) }, context: "ContactListPanel.deduplicate_contacts" });
+            } catch (err) {
+              toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+              return;
+            }
             toast({ title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati` });
             selection.clear();
             qc.invalidateQueries({ queryKey: ["contacts-paginated"] });

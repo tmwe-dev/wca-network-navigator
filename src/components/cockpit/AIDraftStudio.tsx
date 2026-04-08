@@ -424,7 +424,7 @@ function DebugRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function SourceBadge({ source }: { source: string }) {
+function SourceBadge({ source }: { source?: string }) {
   return (
     <span className={`font-mono text-[10px] ${source === "live_scraped" ? "text-success" : source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}>
       {source === "live_scraped" ? "🔴 Live" : source === "cached" ? "📦 Cache" : "—"}

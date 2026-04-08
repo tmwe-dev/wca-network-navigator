@@ -3,9 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import type { ContactFilters } from "@/hooks/useContacts";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ContactAIBar");
 
 export interface AICommand {
   type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "create_jobs" | "multi";
@@ -59,8 +63,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const { data, error } = await supabase.functions.invoke("contacts-assistant", {
-        body: {
+      const data = await invokeEdge<any>("contacts-assistant", { body: {
           messages: newMessages,
           context: {
             filters,
@@ -69,10 +72,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
             groupBy: filters.groupBy || "country",
             sortKey,
           },
-        },
-      });
-
-      if (error) throw error;
+        }, context: "ContactAIBar.contacts_assistant" });
       if (data?.error) {
         toast({ title: "Errore AI", description: data.error, variant: "destructive" });
         setLoading(false);
@@ -94,7 +94,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
         }
       }
     } catch (e: any) {
-      console.error("ContactAIBar error:", e);
+      log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
       toast({ title: "Errore", description: e.message || "Errore di comunicazione", variant: "destructive" });
     } finally {
       setLoading(false);

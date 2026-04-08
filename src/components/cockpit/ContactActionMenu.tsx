@@ -136,7 +136,7 @@ export function ContactActionMenu({ contact, children }: Props) {
       contactName: contact.name,
       companyName: contact.company,
       contactId: contact.sourceId,
-      partnerId: contact.partnerId,
+      partnerId: contact.partnerId ?? undefined,
       sourceType: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
       sourceId: contact.partnerId || contact.sourceId,
     });

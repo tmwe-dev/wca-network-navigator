@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { isApiError } from "@/lib/api/apiError";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailGenerator");
+
+type GenerateEmailErrorBody = { error?: string; message?: string; partner_name?: string };
 
 export interface GeneratedEmail {
   subject: string;
@@ -27,38 +34,37 @@ export function useEmailGenerator() {
     setIsGenerating(true);
     setEmail(null);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-email", {
-        body: params,
-      });
-      
-      // Handle structured error responses (e.g. 422 no_email, no_contact)
-      if (error) {
-        // Try to parse the response body for structured errors
-        let parsed: any = null;
-        try {
-          if (error.context instanceof Response) {
-            parsed = await error.context.json();
+      let data: (GeneratedEmail & GenerateEmailErrorBody) | null = null;
+      try {
+        data = await invokeEdge<GeneratedEmail & GenerateEmailErrorBody>("generate-email", {
+          body: params,
+          context: "useEmailGenerator.generate",
+        });
+      } catch (err) {
+        // Vol. II §5.3 — gli errori 422 con body strutturato sono dispatchati
+        // sui codici applicativi `no_email` / `no_contact` invece di toast generici.
+        if (isApiError(err)) {
+          const body = (err.details?.body ?? {}) as GenerateEmailErrorBody;
+          if (body.error === "no_contact") {
+            toast({
+              title: "Contatto mancante",
+              description: `${body.partner_name || "Il partner"} non ha un contatto selezionato. Seleziona un contatto prima di generare.`,
+              variant: "destructive",
+            });
+            return null;
           }
-        } catch {}
-        
-        if (parsed?.error === "no_contact") {
-          toast({
-            title: "Contatto mancante",
-            description: `${parsed.partner_name || "Il partner"} non ha un contatto selezionato. Seleziona un contatto prima di generare.`,
-            variant: "destructive",
-          });
-          return null;
+          if (body.error === "no_email") {
+            toast({
+              title: "Email mancante",
+              description: `${body.partner_name || "Il partner"} non ha un indirizzo email. Aggiungi un contatto con email prima di generare.`,
+              variant: "destructive",
+            });
+            return null;
+          }
         }
-        if (parsed?.error === "no_email") {
-          toast({
-            title: "Email mancante",
-            description: `${parsed.partner_name || "Il partner"} non ha un indirizzo email. Aggiungi un contatto con email prima di generare.`,
-            variant: "destructive",
-          });
-          return null;
-        }
-        throw new Error(parsed?.message || parsed?.error || error.message);
+        throw err;
       }
+
       if (data?.error) {
         if (data.error === "no_email") {
           toast({
@@ -85,7 +91,7 @@ export function useEmailGenerator() {
         .eq("id", params.activity_id);
 
       if (updateError) {
-        console.error("Failed to save email to activity:", updateError);
+        log.error("save email to activity failed", { message: updateError instanceof Error ? updateError.message : String(updateError) });
         toast({
           title: "Email generata ma non salvata",
           description: updateError.message,

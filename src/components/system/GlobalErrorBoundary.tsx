@@ -1,4 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GlobalErrorBoundary");
 
 interface Props {
   children: ReactNode;
@@ -19,7 +22,12 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
-    console.error("[GlobalErrorBoundary]", error, errorInfo);
+    log.error("unhandled react error", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   private getDiagnosticInfo(): string {
@@ -44,7 +52,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
 
     lines.push("");
     lines.push(`Error: ${error?.message || "Unknown"}`);

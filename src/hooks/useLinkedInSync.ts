@@ -8,6 +8,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -45,7 +48,7 @@ export function useLinkedInSync() {
       }
 
       const result = await readInbox();
-      console.log("[LI Sync] readInbox result:", JSON.stringify(result).slice(0, 500));
+      log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
 
       if (!result.success) {
         toast.error(`Lettura LinkedIn fallita: ${result.error || "errore sconosciuto"}`);
@@ -73,7 +76,7 @@ export function useLinkedInSync() {
         });
         if (!error) newMsgs++;
         else if (error.code === "23505") dupes++;
-        else console.warn("[LI Sync] insert error:", error.message);
+        else log.warn("insert error", { message: error.message });
       }
 
       if (newMsgs > 0) {
@@ -86,7 +89,7 @@ export function useLinkedInSync() {
       }
       setLastSyncAt(Date.now());
     } catch (err: any) {
-      console.warn("[LI Sync]", err.message);
+      log.warn("sync error", { message: err instanceof Error ? err.message : String(err) });
       toast.error(`Errore sync: ${err.message}`);
     } finally {
       setIsReading(false);

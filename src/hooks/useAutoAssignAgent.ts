@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAutoAssignAgent");
 
 /**
  * Auto-assign an agent (and optional manager) to a contact based on:
@@ -97,7 +100,7 @@ export async function autoAssignAgent(params: {
     });
 
   if (error) {
-    console.warn("[AutoAssign] Failed to assign agent:", error.message);
+    log.warn("assign agent failed", { message: error.message });
     return;
   }
 

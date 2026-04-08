@@ -4,6 +4,7 @@ import { Globe, Download, Linkedin, ShieldAlert, Wifi } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useWcaSession } from "@/hooks/useWcaSession";
 import BlacklistManager from "@/components/settings/BlacklistManager";
@@ -57,8 +58,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     if (!cookie) return;
     setSavingCookie(true);
     try {
-      const { data, error } = await supabase.functions.invoke("save-wca-cookie", { body: { cookie } });
-      if (error) throw error;
+      const data = await invokeEdge<any>("save-wca-cookie", { body: { cookie }, context: "ConnectionsSettings.save_wca_cookie" });
       if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
       else toast.warning("Cookie salvato ma la verifica è fallita.");
       ensureSession();
@@ -89,7 +89,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
     toast.success(results.join(" · "));
     setConnectingAll(false);
   };

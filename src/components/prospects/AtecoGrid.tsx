@@ -135,7 +135,7 @@ function FilterMultiSelect({
 
 /* ─── Ranking filter helper ─── */
 
-function passesRankingFilter(rank: AtecoRank | undefined, filters: ProspectFilters | undefined): boolean {
+function passesRankingFilter(rank: AtecoRank | null | undefined, filters: ProspectFilters | undefined): boolean {
   if (!filters) return true;
   const hasRankFilter = filters.rank_volume_min > 0 || filters.rank_valore_min > 0 ||
     filters.rank_intl.length > 0 || filters.rank_score_min > 0;

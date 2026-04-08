@@ -4,8 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Phone, PhoneOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import VoicePresence from "@/components/intelliflow/VoicePresence";
 import type { Agent } from "@/hooks/useAgents";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentVoiceCall");
 
 interface Props {
   agent: Agent;
@@ -19,7 +23,7 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     onConnect: () => setIsConnecting(false),
     onDisconnect: () => onClose(),
     onError: (err) => {
-      console.error("Voice call error:", err);
+      log.error("voice call error", { message: String(err) });
       setIsConnecting(false);
     },
   });
@@ -32,18 +36,15 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const { data, error } = await supabase.functions.invoke(
-        "elevenlabs-conversation-token",
-        { body: { agent_id: agent.elevenlabs_agent_id } }
-      );
-      if (error || !data?.token) throw new Error("No token received");
+      const data = await invokeEdge<{ token?: string }>("elevenlabs-conversation-token", { body: { agent_id: agent.elevenlabs_agent_id }, context: "AgentVoiceCall.elevenlabs_conversation_token" });
+      if (!data?.token) throw new Error("No token received");
 
       await conversation.startSession({
         conversationToken: data.token,
         connectionType: "webrtc",
       });
     } catch (e) {
-      console.error("Failed to start voice call:", e);
+      log.error("start voice call failed", { message: e instanceof Error ? e.message : String(e) });
       setIsConnecting(false);
     }
   }, [agent.elevenlabs_agent_id, conversation]);

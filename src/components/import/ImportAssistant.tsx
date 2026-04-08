@@ -5,9 +5,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ImportAssistant");
 
 interface Message {
   role: "user" | "assistant";
@@ -44,18 +48,13 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("import-assistant", {
-        body: {
+      const data = await invokeEdge<any>("import-assistant", { body: {
           messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           context: {
             activeLogId,
             activeFileName,
           },
-        },
-      });
-
-      if (error) throw error;
-
+        }, context: "ImportAssistant.import_assistant" });
       if (data?.error) {
         toast({ title: "Errore AI", description: data.error, variant: "destructive" });
         setMessages([...allMessages, { role: "assistant", content: `⚠️ ${data.error}` }]);
@@ -77,7 +76,7 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
         }
       }
     } catch (err) {
-      console.error("Import assistant error:", err);
+      log.error("import assistant error", { message: err instanceof Error ? err.message : String(err) });
       setMessages([...allMessages, { role: "assistant", content: "❌ Errore di comunicazione con l'assistente." }]);
     } finally {
       setLoading(false);

@@ -6,6 +6,9 @@ import { useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useWcaSync");
 
 export function useWcaSync() {
   const queryClient = useQueryClient();
@@ -66,10 +69,10 @@ export function useWcaSync() {
                 { id: toastId, duration: 8000 }
               );
             } else if (evt.type === "error") {
-              console.error("Sync SSE error:", evt.message);
+              log.error("sse error", { message: evt.message });
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch {}
+          } catch { /* intentionally ignored: best-effort cleanup */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["partners"] });

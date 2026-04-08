@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AddContactDialog");
 import { supabase } from "@/integrations/supabase/client";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
@@ -185,7 +188,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     if (Object.keys(payload).length === 0) return;
 
     const { error } = await (supabase.from("imported_contacts").update(payload) as any).eq("id", savedId);
-    if (error) console.warn("[AddContactDialog] Persist update failed", error);
+    if (error) log.warn("persist update failed", { message: error.message, code: error.code });
   }, [savedId]);
 
   const applyPlacesResult = (result: any) => {

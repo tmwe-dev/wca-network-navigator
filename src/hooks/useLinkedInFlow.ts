@@ -1,9 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
 import { getPatternPause } from "@/hooks/useScrapingSettings";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInFlow");
 
 export interface LinkedInFlowJob {
   id: string;
@@ -343,7 +347,7 @@ export function useLinkedInFlow() {
           setCurrentStep("Generazione bozza AI...");
 
           try {
-            const { data: outreach } = await supabase.functions.invoke("generate-outreach", {
+            const outreach = await invokeEdge<{ subject?: string; body?: string; language?: string; error?: string } | null>("generate-outreach", {
               body: {
                 channel: "linkedin",
                 contact_name: item.contact_name || "",
@@ -351,6 +355,7 @@ export function useLinkedInFlow() {
                 quality: "standard",
                 linkedin_profile: enrichment.linkedin || undefined,
               },
+              context: "useLinkedInFlow.outreach",
             });
 
             if (outreach && !outreach.error) {
@@ -361,7 +366,7 @@ export function useLinkedInFlow() {
               };
             }
           } catch (e: any) {
-            console.warn("Outreach generation skipped:", e.message);
+            log.warn("outreach generation skipped", { message: e instanceof Error ? e.message : String(e) });
           }
         }
 
@@ -402,7 +407,7 @@ export function useLinkedInFlow() {
       } catch (e: any) {
         itemStatus = "error";
         errorMsg = e.message || "Unknown error";
-        console.error(`LinkedIn flow error for ${item.contact_name}:`, e);
+        log.error("flow error", { contactName: item.contact_name, message: e instanceof Error ? e.message : String(e) });
       }
 
       // Save item result
@@ -562,7 +567,7 @@ async function saveEnrichmentToPartner(companyName: string, enrichment: Record<s
       }).eq("id", partners[0].id);
     }
   } catch (e) {
-    console.error("Failed to save enrichment to partner:", e);
+    log.error("save enrichment to partner failed", { message: e instanceof Error ? e.message : String(e) });
   }
 }
 

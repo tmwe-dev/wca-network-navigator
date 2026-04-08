@@ -223,12 +223,12 @@ export function useActionPanelLogic({
       try {
         const cached = localStorage.getItem("wca_session_cookie");
         if (cached) { const parsed = JSON.parse(cached); if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) cookie = parsed.cookie; }
-      } catch {}
+      } catch { /* intentionally ignored: best-effort cleanup */ }
       if (!cookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         const data = await res.json();
         if (!data.success || !data.cookies) { toast({ title: "Login WCA fallito", description: data.error || "Riprova.", variant: "destructive" }); return; }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* intentionally ignored: best-effort cleanup */ }
       }
     } catch { toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
 

@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
 import type { ContactOrigin } from "@/pages/Cockpit";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useCockpitContacts");
 
 export interface CockpitContact {
   id: string;
@@ -206,7 +209,7 @@ export function useCockpitContacts() {
       if (st === "partner_contact") {
         const pc = pcMap[sid];
         if (!pc) continue;
-        const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        const partner = (pc.partner_id ? partnersMap[pc.partner_id] : undefined) || (item.partner_id ? partnersMap[item.partner_id] : undefined);
         const pMeta = extractPartnerMeta(partner);
         result.push({
           id: `pc-${pc.id}`,
@@ -448,7 +451,7 @@ export function useSendToCockpit() {
             userId: user.id,
           });
         } catch (e) {
-          console.warn("[SendToCockpit] Auto-assign failed for", item.sourceId, e);
+          log.warn("auto-assign failed", { sourceId: item.sourceId, message: e instanceof Error ? e.message : String(e) });
         }
       }
 

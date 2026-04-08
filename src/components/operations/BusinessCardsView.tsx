@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
@@ -104,8 +105,7 @@ export function BusinessCardsView() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-business-cards");
-      if (error) throw error;
+      const data = await invokeEdge<any>("sync-business-cards", { context: "BusinessCardsView.sync_business_cards" });
       toast.success(`Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati`);
       qc.invalidateQueries({ queryKey: ["business-cards"] });
     } catch (e: any) {

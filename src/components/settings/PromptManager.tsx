@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   primo_contatto: Handshake,
@@ -183,10 +184,7 @@ export function PromptManager() {
     if (!editPrompt.trim()) return;
     setImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("improve-email", {
-        body: { html: editPrompt, tone: editTone, improveType: "prompt" },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("improve-email", { body: { html: editPrompt, tone: editTone, improveType: "prompt" }, context: "PromptManager.improve_email" });
       if (data?.html) setEditPrompt(data.html);
       toast.success("Prompt migliorato con AI");
     } catch (e: any) {

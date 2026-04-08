@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("EmailComposer");
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -239,8 +243,7 @@ export default function EmailComposer() {
     setAiGenerating(true);
     try {
       const effectiveGoal = config.emailType?.prompt || goal || "";
-      const { data, error } = await supabase.functions.invoke("generate-email", {
-        body: {
+      const data = await invokeEdge<any>("generate-email", { body: {
           goal: effectiveGoal,
           base_proposal: baseProposal,
           language: "italiano",
@@ -257,9 +260,7 @@ export default function EmailComposer() {
           oracle_tone: config.tone,
           use_kb: config.useKB,
           deep_search: config.deepSearch,
-        },
-      });
-      if (error) throw error;
+        }, context: "EmailComposer.generate_email" });
       if (data?.subject) { setSubject(data.subject); setAiGeneratedSubject(data.subject); }
       if (data?.body) { setHtmlBody(data.body); setAiGeneratedBody(data.body); }
       toast.success("Email generata con Oracolo 🔮");
@@ -275,16 +276,13 @@ export default function EmailComposer() {
     }
     setAiImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("improve-email", {
-        body: {
+      const data = await invokeEdge<any>("improve-email", { body: {
           subject, html_body: htmlBody,
           recipient_count: recipientsWithEmail.length,
           recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
           oracle_tone: config.tone,
           use_kb: config.useKB,
-        },
-      });
-      if (error) throw error;
+        }, context: "EmailComposer.improve_email" });
       if (data?.subject) setSubject(data.subject);
       if (data?.body) setHtmlBody(data.body);
       toast.success("Email migliorata con AI 🪄");
@@ -366,7 +364,7 @@ export default function EmailComposer() {
         setActiveQueueStatus("completed");
       });
     } catch (err) {
-      console.error("Enqueue error:", err);
+      log.error("enqueue failed", { message: err instanceof Error ? err.message : String(err) });
       toast.error("Errore nell'accodamento");
     }
     setSending(false);

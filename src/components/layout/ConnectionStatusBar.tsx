@@ -31,12 +31,12 @@ function loadCachedStatus(): ChannelStatus {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { /* intentionally ignored: best-effort cleanup */ }
   return { li: false, wa: false, fs: false, ai: true };
 }
 
 function saveCachedStatus(s: ChannelStatus) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* intentionally ignored: best-effort cleanup */ }
 }
 
 export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
@@ -114,7 +114,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
             .eq("key", "whatsapp_sender")
             .maybeSingle();
           if (data?.value) waOk = true;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
       }
       if (!waOk) problems.push("WhatsApp: né estensione né API configurata");
     }
@@ -130,7 +130,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
 
     setConnecting(false);
 
@@ -151,7 +151,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     try {
       const { callCheckInbox } = await import("@/lib/checkInbox");
       await callCheckInbox();
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
     setTimeout(() => setSyncing(false), 3000);
   }, []);
 

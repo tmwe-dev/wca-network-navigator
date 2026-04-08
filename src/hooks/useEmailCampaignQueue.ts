@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailCampaignQueue");
 
 export interface QueueItem {
   id: string;
@@ -133,10 +137,10 @@ export function useProcessQueue() {
     let completed = false;
     while (!completed && !abortRef.current) {
       try {
-        const { data, error } = await supabase.functions.invoke("process-email-queue", {
+        const data = await invokeEdge<{ completed?: boolean; sent?: number; failed?: number }>("process-email-queue", {
           body: { draft_id: draftId, action: "process" },
+          context: "useEmailCampaignQueue.process",
         });
-        if (error) throw error;
 
         if (data?.completed) {
           completed = true;
@@ -158,7 +162,7 @@ export function useProcessQueue() {
           await new Promise(r => setTimeout(r, 2000));
         }
       } catch (err) {
-        console.error("Queue processing error:", err);
+        log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });
         toast.error("Errore nel processing della coda");
         break;
       }
@@ -170,18 +174,28 @@ export function useProcessQueue() {
 
   const pauseProcessing = useCallback(async (draftId: string) => {
     abortRef.current = true;
-    await supabase.functions.invoke("process-email-queue", {
-      body: { draft_id: draftId, action: "pause" },
-    });
+    try {
+      await invokeEdge("process-email-queue", {
+        body: { draft_id: draftId, action: "pause" },
+        context: "useEmailCampaignQueue.pause",
+      });
+    } catch (err) {
+      log.warn("pause failed", { message: err instanceof Error ? err.message : String(err) });
+    }
     qc.invalidateQueries({ queryKey: ["email-drafts"] });
     toast.info("Campagna in pausa");
   }, [qc]);
 
   const cancelProcessing = useCallback(async (draftId: string) => {
     abortRef.current = true;
-    await supabase.functions.invoke("process-email-queue", {
-      body: { draft_id: draftId, action: "cancel" },
-    });
+    try {
+      await invokeEdge("process-email-queue", {
+        body: { draft_id: draftId, action: "cancel" },
+        context: "useEmailCampaignQueue.cancel",
+      });
+    } catch (err) {
+      log.warn("cancel failed", { message: err instanceof Error ? err.message : String(err) });
+    }
     qc.invalidateQueries({ queryKey: ["email-drafts"] });
     qc.invalidateQueries({ queryKey: ["email-campaign-queue"] });
     toast.info("Campagna annullata");

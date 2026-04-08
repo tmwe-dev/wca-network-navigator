@@ -28,7 +28,7 @@ export function useAutoConnect() {
         try {
           const r = await li.verifySession();
           liOk = r.success === true && r.authenticated === true;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
       }
       // No fallback to DB credentials — they don't mean you're logged in locally
 
@@ -38,7 +38,7 @@ export function useAutoConnect() {
         try {
           const r = await wa.verifySession();
           waOk = r.success === true;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
       }
       if (!waOk) {
         try {
@@ -48,14 +48,14 @@ export function useAutoConnect() {
             .eq("key", "whatsapp_sender")
             .maybeSingle();
           if (data?.value) waOk = true;
-        } catch {}
+        } catch { /* intentionally ignored: best-effort cleanup */ }
       }
 
       // Persist real state
       try {
         await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
         await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-      } catch {}
+      } catch { /* intentionally ignored: best-effort cleanup */ }
     };
 
     const timer = setTimeout(run, 2000);

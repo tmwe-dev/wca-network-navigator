@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { isApiError } from "@/lib/api/apiError";
 import { toast } from "@/hooks/use-toast";
 import type { DraftChannel } from "@/pages/Cockpit";
 
@@ -73,18 +74,18 @@ export function useOutreachGenerator() {
     setIsGenerating(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-outreach", {
-        body: params,
-      });
-
-      if (error) {
-        let parsed: any = null;
-        try {
-          if (error.context instanceof Response) {
-            parsed = await error.context.json();
-          }
-        } catch {}
-        throw new Error(parsed?.error || error.message);
+      let data: (OutreachResult & { error?: string }) | null = null;
+      try {
+        data = await invokeEdge<OutreachResult & { error?: string }>("generate-outreach", {
+          body: params,
+          context: "useOutreachGenerator",
+        });
+      } catch (err) {
+        if (isApiError(err)) {
+          const body = (err.details?.body ?? {}) as { error?: string };
+          throw new Error(body.error || err.message);
+        }
+        throw err;
       }
       if (data?.error) throw new Error(data.error);
 

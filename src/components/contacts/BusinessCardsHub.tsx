@@ -20,6 +20,7 @@ import { adaptBusinessCard } from "@/lib/contactActionAdapter";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -47,8 +48,7 @@ function useUploadAndParse() {
     if (uploadErr) throw uploadErr;
     const { data: urlData } = supabase.storage.from("import-files").getPublicUrl(path);
     const photoUrl = urlData.publicUrl;
-    const { data: parseResult, error: parseErr } = await supabase.functions.invoke("parse-business-card", { body: { imageUrl: photoUrl } });
-    if (parseErr) throw parseErr;
+    const parseResult = await invokeEdge<{ error?: string; data?: any }>("parse-business-card", { body: { imageUrl: photoUrl }, context: "BusinessCardsHub.parse_business_card" });
     if (parseResult?.error) throw new Error(parseResult.error);
     const extracted = parseResult?.data || {};
     await createCard.mutateAsync({
@@ -902,12 +902,12 @@ export default function BusinessCardsHub() {
             if (card?.matched_partner_id) partnerIds.add(card.matched_partner_id);
           }
           if (partnerIds.size === 0) { toast({ title: "Nessun biglietto associato a un partner" }); return; }
-          supabase.functions.invoke("deep-search-partner", {
+          invokeEdge("deep-search-partner", {
             body: { partnerIds: Array.from(partnerIds) },
-          }).then(({ error }) => {
-            if (error) toast({ title: "Errore Deep Search", variant: "destructive" });
-            else toast({ title: `✅ Deep Search avviata su ${partnerIds.size} partner` });
-          });
+            context: "BusinessCardsHub.deep_search_partner",
+          })
+            .then(() => toast({ title: `✅ Deep Search avviata su ${partnerIds.size} partner` }))
+            .catch(() => toast({ title: "Errore Deep Search", variant: "destructive" }));
         }}
         onGoogleLogo={() => {
           const selected = cards.filter(c => selectedIds.has(c.id));

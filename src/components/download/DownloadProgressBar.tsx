@@ -6,9 +6,18 @@
 import { Button } from "@/components/ui/button";
 import { Loader2, Square, Play, RotateCcw, CheckCircle2, AlertTriangle, Pause } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
-import type { DownloadProgress } from "@/hooks/useWcaAppDownload";
 import type { SuspendedJob } from "@/lib/localDirectory";
 import { cn } from "@/lib/utils";
+
+export interface DownloadProgress {
+  phase: "idle" | "login" | "discover" | "compare" | "download" | "done" | "error" | "paused";
+  current: number;
+  total: number;
+  message: string;
+  countryCode?: string;
+  /** ID del job server-side (se attivo) */
+  serverJobId?: string;
+}
 
 interface DownloadProgressBarProps {
   progress: DownloadProgress;

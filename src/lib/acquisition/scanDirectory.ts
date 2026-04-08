@@ -3,8 +3,13 @@
  * Pure async function that returns scan results without managing React state.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { isApiError } from "@/lib/api/apiError";
+import { createLogger } from "@/lib/log";
 import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
+
+const log = createLogger("scanDirectory");
 
 export interface ScanResult {
   queue: QueueItem[];
@@ -59,10 +64,23 @@ export async function scanDirectory(
           });
         }
       } else {
-        const { data: scanResult } = await supabase.functions.invoke(
-          "scrape-wca-directory",
-          { body: { countryCode: code, network: net } }
-        );
+        type ScrapeResult = { members?: Array<{ wca_id: number; company_name?: string; city?: string }> };
+        let scanResult: ScrapeResult | null = null;
+        try {
+          scanResult = await invokeEdge<ScrapeResult>("scrape-wca-directory", {
+            body: { countryCode: code, network: net },
+            context: "scanDirectory",
+          });
+        } catch (err) {
+          // Vol. II §4.4: errori transient di scan non devono bloccare
+          // l'intero ciclo di paesi/network. Loggiamo e continuiamo.
+          if (isApiError(err)) {
+            log.warn("scrape-wca-directory failed", { code, net, errCode: err.code });
+          } else {
+            log.warn("scrape-wca-directory unknown error", { code, net });
+          }
+          scanResult = null;
+        }
 
         if (scanResult?.members) {
           const membersJson = scanResult.members.map((m: any) => ({

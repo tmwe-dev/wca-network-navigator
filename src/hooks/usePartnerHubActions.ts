@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useCreateActivities } from "@/hooks/useActivities";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
@@ -168,10 +169,10 @@ export function usePartnerHubActions({
     setAliasGenerating(type);
     const toastId = toast.loading("Generazione alias in corso...");
     try {
-      const { error } = await supabase.functions.invoke("generate-aliases", {
+      await invokeEdge("generate-aliases", {
         body: { countryCode, type },
+        context: "usePartnerHubActions.generateAliases",
       });
-      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`, { id: toastId });
     } catch (e: any) {

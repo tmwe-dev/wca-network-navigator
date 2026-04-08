@@ -8,6 +8,9 @@ import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GlobalChat");
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
@@ -171,7 +174,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
           }
         }
       } catch (e) {
-        console.error("AI chat error:", e);
+        log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
         assistantContent = "⚠️ Errore di connessione. Riprova.";
       }
 

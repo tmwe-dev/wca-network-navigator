@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAiAssistantChat");
 
 export type Msg = { role: "user" | "assistant"; content: string };
 
@@ -32,19 +35,19 @@ export function parseStructuredMessage(content: string) {
   if (uiIdx !== -1) {
     const jsonStr = text.substring(uiIdx + UI_ACTIONS_DELIMITER.length).trim();
     text = text.substring(0, uiIdx).trim();
-    try { uiActions = JSON.parse(jsonStr.split("\n\n")[0]); } catch {}
+    try { uiActions = JSON.parse(jsonStr.split("\n\n")[0]); } catch { /* intentionally ignored: best-effort cleanup */ }
   }
   const jobIdx = text.indexOf(JOB_CREATED_DELIMITER);
   if (jobIdx !== -1) {
     const jsonStr = text.substring(jobIdx + JOB_CREATED_DELIMITER.length).trim();
     text = text.substring(0, jobIdx).trim();
-    try { jobCreated = JSON.parse(jsonStr.split("\n")[0]); } catch {}
+    try { jobCreated = JSON.parse(jsonStr.split("\n")[0]); } catch { /* intentionally ignored: best-effort cleanup */ }
   }
   const idx = text.indexOf(STRUCTURED_DELIMITER);
   if (idx !== -1) {
     const jsonStr = text.substring(idx + STRUCTURED_DELIMITER.length).trim();
     text = text.substring(0, idx).trim();
-    try { const parsed = JSON.parse(jsonStr); if (parsed?.type === "partners" && Array.isArray(parsed.data)) partners = parsed.data; } catch {}
+    try { const parsed = JSON.parse(jsonStr); if (parsed?.type === "partners" && Array.isArray(parsed.data)) partners = parsed.data; } catch { /* intentionally ignored: best-effort cleanup */ }
   }
   return { text, partners, jobCreated, uiActions };
 }
@@ -171,14 +174,14 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
           if (!raw.startsWith("data: ")) continue;
           const jsonStr = raw.slice(6).trim();
           if (jsonStr === "[DONE]") continue;
-          try { const parsed = JSON.parse(jsonStr); const content = parsed.choices?.[0]?.delta?.content; if (content) upsertAssistant(content); } catch {}
+          try { const parsed = JSON.parse(jsonStr); const content = parsed.choices?.[0]?.delta?.content; if (content) upsertAssistant(content); } catch { /* intentionally ignored: best-effort cleanup */ }
         }
       }
 
       const { uiActions } = parseStructuredMessage(assistantSoFar);
       if (uiActions.length > 0) handleUiActions(uiActions);
     } catch (e) {
-      console.error("AI chat error:", e);
+      log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
       upsertAssistant("⚠️ Errore di connessione. Riprova.");
     }
 

@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearchLocal } from "./useDeepSearchLocal";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useDeepSearchRunner");
 
 export type DeepSearchMode = "partner" | "contact";
 
@@ -208,7 +211,7 @@ export function useDeepSearchRunner(): DeepSearchState {
           error: error ? String(error) : undefined,
         };
         setResults(prev => [...prev, result]);
-        if (error) console.error("Deep search error for", id, error);
+        if (error) log.error("deep search failed", { id, message: error instanceof Error ? error.message : String(error) });
 
         // Live update caches
         if (mode === "contact") {

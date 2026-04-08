@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
@@ -34,10 +35,7 @@ export function AgentChat({ agent }: Props) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("agent-execute", {
-        body: { agent_id: agent.id, chat_messages: newMsgs },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("agent-execute", { body: { agent_id: agent.id, chat_messages: newMsgs }, context: "AgentChat.agent_execute" });
       setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
     } catch (e) {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
@@ -64,7 +62,7 @@ export function AgentChat({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
   };
 
   return (

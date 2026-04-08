@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { MissionStepData } from "@/components/missions/MissionStepRenderer";
 import { extractWidgets, MissionWidgetRenderer, type WidgetConfig } from "@/components/missions/MissionChatWidgets";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("MissionBuilder");
 import ReactMarkdown from "react-markdown";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
@@ -118,7 +121,7 @@ export default function MissionBuilder() {
         audioRef.current = audio;
         audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; };
         await audio.play();
-      } catch {}
+      } catch { /* intentionally ignored: best-effort cleanup */ }
     })();
   }, [messages, isChatLoading, voiceEnabled]);
 
@@ -193,7 +196,7 @@ export default function MissionBuilder() {
                   return [...prev, { role: "assistant", content: assistantContent }];
                 });
               }
-            } catch {}
+            } catch { /* intentionally ignored: best-effort cleanup */ }
           }
         }
       }
@@ -206,7 +209,7 @@ export default function MissionBuilder() {
         return [...prev, { role: "assistant", content: cleanText, widgets }];
       });
     } catch (e) {
-      console.error("Mission chat error:", e);
+      log.error("mission chat error", { message: e instanceof Error ? e.message : String(e) });
       setMessages(prev => [...prev, { role: "assistant", content: "⚠️ Errore di connessione. Riprova." }]);
     }
 

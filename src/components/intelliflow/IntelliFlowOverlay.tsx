@@ -4,6 +4,7 @@ import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, Message
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
@@ -137,10 +138,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
     try {
       // Route to cockpit-assistant if on cockpit page and in operational mode
       if (isCockpit && mode === "operational" && cockpitContacts) {
-        const { data, error } = await supabase.functions.invoke("cockpit-assistant", {
-          body: { command: content, contacts: cockpitContacts },
-        });
-        if (error) throw error;
+        const data = await invokeEdge<any>("cockpit-assistant", { body: { command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
         if (data?.error) throw new Error(data.error);
         
         const actions = data?.actions || [];
@@ -158,8 +156,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
         const body = mode === "conversational"
           ? { messages: history, pageContext: currentPage, systemStats: stats }
           : { messages: history, context: { currentPage } };
-        const { data, error } = await supabase.functions.invoke(fnName, { body });
-        if (error) throw error;
+        const data = await invokeEdge<any>(fnName, { body, context: `IntelliFlowOverlay.${fnName}` });
         const raw = data?.content || data?.message || "";
         dispatchAiAgentEffects(parseAiAgentResponse(raw));
         const assistantMsg: ConversationMessage = { role: "assistant", content: raw, timestamp: ts() };

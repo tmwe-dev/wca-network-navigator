@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
@@ -54,8 +55,10 @@ export function useContactActions(deps: Deps) {
       const ids = selection.count > 0 ? Array.from(selection.selectedIds) : await fetchGroupContactIds(currentGroupBy, group.group_key, holdingPattern);
       if (!ids.length) { toast({ title: "Nessun contatto trovato" }); return; }
       toast({ title: `Generazione alias per ${ids.length} contatti...` });
-      const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { contactIds: ids } });
-      if (error) throw error;
+      const data = await invokeEdge<{ processed?: number }>("generate-aliases", {
+        body: { contactIds: ids },
+        context: "useContactActions.handleGroupAlias",
+      });
       const processed = data?.processed || 0;
       toast({ title: processed === 0 ? "Alias già presenti" : "✨ Alias generati", description: processed === 0 ? "Tutti i contatti hanno già un alias" : `${processed} contatti elaborati` });
       invalidateContacts();

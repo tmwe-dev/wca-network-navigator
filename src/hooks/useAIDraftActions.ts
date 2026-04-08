@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
@@ -149,10 +150,10 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
         ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'],
         ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
       });
-      const { data, error } = await supabase.functions.invoke("send-email", {
+      const data = await invokeEdge<{ error?: string }>("send-email", {
         body: { to: draft.contactEmail, subject: draft.subject, html: sanitizedHtml },
+        context: "useAIDraftActions.sendEmail",
       });
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${draft.contactEmail}` });
       trackActivity.mutate({

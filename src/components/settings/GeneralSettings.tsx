@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import TemplateManager from "@/components/settings/TemplateManager";
 import AIProfileSettings from "@/components/settings/AIProfileSettings";
 
@@ -68,15 +69,12 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
       const fromField = emailName.trim()
         ? `${emailName.trim()} <${emailSender.trim()}>`
         : emailSender.trim();
-      const { error } = await supabase.functions.invoke("send-email", {
-        body: {
+      await invokeEdge("send-email", { body: {
           to: testEmailTo.trim(),
           subject: "✅ Test Email da WCA Network Navigator",
           html: `<p>Ciao! Questa è un'email di test inviata da <strong>WCA Network Navigator</strong>.</p><p>Se la ricevi, la configurazione del mittente <strong>${fromField}</strong> è corretta.</p>`,
           from: fromField,
-        },
-      });
-      if (error) throw error;
+        }, context: "GeneralSettings.send_email" });
       toast.success("Email di test inviata con successo!");
     } catch (err: any) {
       toast.error("Errore invio: " + (err.message || "Sconosciuto"));

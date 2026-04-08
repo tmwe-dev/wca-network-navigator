@@ -15,6 +15,7 @@ import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
@@ -177,8 +178,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
     setAliasGenerating(true);
     const toastId = toast.loading("Generazione alias in corso...");
     try {
-      const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { countryCodes: codes } });
-      if (error) throw error;
+      const data = await invokeEdge<any>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
       if (data?.success) {
         toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
         queryClient.invalidateQueries({ queryKey: ["partners"] });

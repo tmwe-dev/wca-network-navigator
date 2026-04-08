@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Pencil, Trash2, Search, Download, Sparkles, Star, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -92,10 +93,7 @@ export function KnowledgeBaseManager() {
     if (!editEntry?.content?.trim()) return;
     setImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("improve-email", {
-        body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false },
-      });
-      if (error) throw error;
+      const data = await invokeEdge<any>("improve-email", { body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false }, context: "KnowledgeBaseManager.improve_email" });
       const improved = data?.body || data?.html;
       if (improved) {
         setEditEntry(prev => ({ ...prev, content: improved }));

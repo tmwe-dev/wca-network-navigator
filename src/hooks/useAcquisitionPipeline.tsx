@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
@@ -9,6 +10,9 @@ import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBrid
 import { useScrapingSettings, calcDelay, getPatternPause, ensureMinDuration } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAcquisitionPipeline");
 
 export type PipelineStatus = "idle" | "scanning" | "running" | "paused" | "done";
 export type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -268,7 +272,7 @@ export function useAcquisitionPipeline() {
             setCanvasData({ ...canvas });
           }
         } catch (extErr) {
-          console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
+          log.warn("extension call failed", { wcaId: item.wca_id, message: extErr instanceof Error ? extErr.message : String(extErr) });
         }
 
         // Fallback: check DB for contacts saved by extension
@@ -414,7 +418,7 @@ export function useAcquisitionPipeline() {
                 } catch { /* fallback to server-side fetch */ }
               }
 
-              const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
+              const enrichResult = await invokeEdge<any>("enrich-partner-website", { body: enrichBody, context: "useAcquisitionPipeline.enrich_partner_website" });
               if (enrichResult?.enrichment) {
                 const ed = enrichResult.enrichment;
                 setCanvasData((prev) =>
@@ -430,7 +434,7 @@ export function useAcquisitionPipeline() {
         parallelTasks.push(
           (async () => {
             try {
-              const { data: deepResult } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId } });
+              const deepResult = await invokeEdge<any>("deep-search-partner", { body: { partnerId }, context: "useAcquisitionPipeline.deep_search_partner" });
               if (deepResult) {
                 const [{ data: updatedPartner }, { data: socialLinks }] = await Promise.all([
                   supabase.from("partners").select("logo_url").eq("id", partnerId!).maybeSingle(),
@@ -612,7 +616,7 @@ export function useAcquisitionPipeline() {
           .eq("id", jobId);
       }
     } catch (err) {
-      console.error("Failed to create/update acquisition job:", err);
+      log.error("create/update acquisition job failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
     }
 
     const localStats = await runExtensionLoop(jobId!, items);

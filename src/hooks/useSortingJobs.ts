@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 
 export interface SortingJob {
@@ -115,15 +116,15 @@ export function useSendJob() {
       if (!email) throw new Error("Nessuna email per questo contatto");
       if (!job.email_subject || !job.email_body) throw new Error("Subject o body mancante");
 
-      const { data, error: fnError } = await supabase.functions.invoke("send-email", {
+      const data = await invokeEdge<{ error?: string }>("send-email", {
         body: {
           to: email,
           subject: job.email_subject,
           html: job.email_body,
           partner_id: job.partner_id,
         },
+        context: "useSortingJobs.sendEmail",
       });
-      if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
       const now = new Date().toISOString();

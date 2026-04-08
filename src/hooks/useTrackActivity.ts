@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useTrackActivity");
 
 interface TrackActivityParams {
   activityType: "send_email" | "whatsapp_message" | "linkedin_message" | "phone_call";
@@ -35,7 +38,7 @@ export function useTrackActivity() {
         email_subject: params.emailSubject || null,
         description: params.description || null,
       } as any);
-      if (actErr) console.error("Track activity insert error:", actErr);
+      if (actErr) log.error("track activity insert failed", { message: actErr.message, code: actErr.code });
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {

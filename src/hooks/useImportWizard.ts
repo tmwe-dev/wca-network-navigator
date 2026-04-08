@@ -5,6 +5,9 @@ import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useImportWizard");
 import {
   useImportLogs,
   useImportLog,
@@ -206,7 +209,7 @@ export function useImportWizard() {
         });
       }
     } catch (err) {
-      console.error(err);
+      log.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
@@ -224,7 +227,7 @@ export function useImportWizard() {
       });
       setAiMapping(result);
       toast({ title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)` });
-    } catch {}
+    } catch { /* intentionally ignored: best-effort cleanup */ }
   }, [pasteText, analyzeStructure]);
 
   // ── Drag & Drop ──
@@ -272,7 +275,10 @@ export function useImportWizard() {
           return { ...mapped, _raw: row };
         });
         const nonEmptyCount = finalRows.filter(r =>
-          TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+          TARGET_COLUMNS.some(col => {
+            const val = (r as Record<string, unknown>)[col];
+            return val != null && String(val).trim();
+          })
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
         if (fillRate < 0.1) {

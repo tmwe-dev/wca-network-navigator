@@ -1,4 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useContinuousSpeech");
 
 /**
  * Continuous Speech-to-Text hook.
@@ -51,7 +54,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
 
     recognition.onerror = (e: any) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
-      console.warn("Speech error:", e.error);
+      log.warn("speech error", { error: e.error });
     };
 
     recognition.onend = () => {

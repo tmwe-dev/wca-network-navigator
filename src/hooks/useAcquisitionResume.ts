@@ -6,6 +6,9 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { QueueItem } from "@/components/acquisition/types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAcquisitionResume");
 import type { PipelineStatus, LiveStats } from "./useAcquisitionPipeline";
 
 interface ResumeSetters {
@@ -124,7 +127,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 }
               }
             } catch (scanErr) {
-              console.warn("Re-scan directory for names failed:", scanErr);
+              log.warn("re-scan directory failed", { message: scanErr instanceof Error ? scanErr.message : String(scanErr) });
             }
           }
 
@@ -162,7 +165,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }
         }
       } catch (err) {
-        console.error("Failed to check active acquisition jobs:", err);
+        log.error("check active acquisition jobs failed", { message: err instanceof Error ? err.message : String(err) });
       } finally {
         setResumeLoading(false);
       }

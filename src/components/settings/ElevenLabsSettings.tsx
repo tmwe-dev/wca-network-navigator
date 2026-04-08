@@ -11,6 +11,7 @@ import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { useAgents } from "@/hooks/useAgents";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 interface Voice {
   voice_id: string;
@@ -82,8 +83,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   const loadVoices = async () => {
     setLoadingVoices(true);
     try {
-      const { data, error } = await supabase.functions.invoke("list-elevenlabs-voices");
-      if (error) throw error;
+      const data = await invokeEdge<any>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
       setApiStatus(data.status || "error");
       if (data.voices?.length > 0) setVoices(data.voices);
     } catch {
