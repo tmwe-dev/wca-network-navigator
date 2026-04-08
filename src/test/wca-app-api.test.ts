@@ -87,9 +87,17 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
       expect(body.page).toBe(2);
     });
 
-    it("throws su risposta HTTP non-ok", async () => {
+    it("throws ApiError SERVER_ERROR su 500 (Vol. II §5.3)", async () => {
       global.fetch = mockFetch({}, false, 500) as any;
-      await expect(wcaDiscover("IT")).rejects.toThrow(/Discover failed: 500/);
+      try {
+        await wcaDiscover("IT");
+        throw new Error("expected to throw");
+      } catch (err: any) {
+        expect(err.name).toBe("ApiError");
+        expect(err.code).toBe("SERVER_ERROR");
+        expect(err.httpStatus).toBe(500);
+        expect(err.details?.context).toBe("wcaDiscover");
+      }
     });
   });
 

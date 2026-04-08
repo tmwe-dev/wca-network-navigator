@@ -907,3 +907,79 @@ Tutte le ondate strutturali (1-5) sono state eseguite:
 **Vol. I chiuso operativamente.** Restano due voci esplicitamente
 deferred (PR open + remote sink) che richiedono asset esterni alla
 sandbox.
+
+---
+
+## Sessione #20 — Vol. II "Il Metodo Enterprise" come guida (2026-04-08)
+
+Riapertura del codebase con Vol. II come fonte normativa. Lettura
+integrale dei capitoli §4.4 (errori), §4.5 (logging), §5.1-5.3 (API
+contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
+
+### Modifiche concrete
+
+**§5.3 — `ApiError` standardizzato come unico errore lanciato dalle API**
+- Nuovo `src/lib/api/apiError.ts`: classe `ApiError` con discriminator
+  `code: ApiErrorCode` (UNAUTHENTICATED/FORBIDDEN/NOT_FOUND/
+  VALIDATION_FAILED/RATE_LIMITED/SERVER_ERROR/NETWORK_ERROR/
+  SCHEMA_MISMATCH/UNKNOWN_ERROR), `httpStatus`, `details`, `toJSON()`
+  serializzabile.
+- Fabbriche `ApiError.fromResponse(res, ctx)` (mappa status → code,
+  estrae body.error/body.message) e `ApiError.from(err, ctx)`
+  (TypeError/fetch → NETWORK_ERROR).
+- Type guard `isApiError(err)` per i call-site.
+- Test `src/test/api-error.test.ts` (23 test): costruttore, toJSON,
+  type guard, from, fromResponse per ogni codice HTTP, body parsing,
+  context propagation.
+
+**§5.3 — Migrazione `wcaAppApi.ts` ad `ApiError`**
+- Helper privato `assertOk(res, context)` centralizza la conversione
+  `Response → ApiError` per tutti i 14 endpoint.
+- Sostituite tutte le `throw new Error("X failed: ${status}")` con
+  `await assertOk(res, "wcaX")`. I chiamanti possono ora discriminare
+  per `err.code` senza parsing di stringhe.
+- `getOrRefreshCookie` lancia `ApiError({ code: "UNAUTHENTICATED" })`
+  invece di `Error` generico.
+- Test `wca-app-api.test.ts` aggiornato: il test 500 ora asserta
+  `err.name === "ApiError"`, `err.code === "SERVER_ERROR"`,
+  `err.httpStatus === 500`.
+
+**§5.1 strangler — `checkInbox` con zod + `ApiError`**
+- Nuovo `src/lib/api/checkInbox.schemas.ts`: `CheckInboxMessageSchema`
+  + `CheckInboxResultSchema` con `.passthrough()`, `safeParseCheckInboxResult`
+  che logga warn e ritorna null senza throw.
+- `src/lib/checkInbox.ts` riscritto: `Promise<unknown>`, lancia
+  `ApiError` (UNAUTHENTICATED se sessione assente), passa la risposta
+  per `safeParseCheckInboxResult` come pre-allarme.
+- Test `check-inbox-schemas.test.ts` (12 test): parse/reject + invariante
+  never-throw.
+
+**§16.5 — ADR introdotti**
+- `docs/adr/README.md`: convenzione + indice.
+- `docs/adr/0001-strangler-zod-api-contracts.md`: pattern strangler
+  per zod sui contratti API remoti.
+- `docs/adr/0002-api-error-standard.md`: classe `ApiError` come unica
+  eccezione lanciata dai moduli API.
+- `docs/adr/0003-structured-logger.md`: `createLogger` come unico
+  punto di logging dell'app, regola d'oro `no-console`.
+
+### 4-check finale Vol. II
+- `tsc --noEmit`: **0 errori**
+- `vitest run`: **413/413 test verdi** (26 file, +35 test vs sess #18)
+- `vite build`: **OK** (17.18s)
+- coverage moduli puri: invariata ≥70%
+
+### Conseguenze
+La normalizzazione `ApiError` è stata pensata per essere zero-touch
+per i call-site esistenti: cambia solo il tipo dell'eccezione lanciata,
+non l'API pubblica. I componenti UI che già fanno `try/catch` continuano
+a funzionare; chi vuole iniziare a discriminare per codice può farlo
+incrementalmente. Gli ADR rendono permanenti le tre decisioni che
+altrimenti si dimenticherebbero entro fine trimestre (Vol. II §16.5).
+
+### Pending (deferred motivati)
+- Migrazione `WCAFunctionUnified.ts` e altri client API legacy ad
+  `ApiError`: rinviata per evitare big-bang refactor (Vol. II §16.7).
+- Remote sink Sentry/Logtail: ancora bloccato su credenziali esterne.
+- Refactor componenti monolite (FiltersDrawer 1300 LOC, BusinessCardsHub
+  1084 LOC): richiede E2E test scaffolding non ancora presente.
