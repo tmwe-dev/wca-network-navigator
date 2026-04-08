@@ -63,7 +63,7 @@ export function makeEntityPaginated<TRow, TFilters extends { sort?: string }>(
 
   return function useEntityPaginatedHook(
     filters?: TFilters,
-    options?: Partial<UseInfiniteQueryOptions<PaginatedPage<TRow>, Error, InfiniteData<PaginatedPage<TRow>, unknown>, PaginatedPage<TRow>, readonly unknown[], number>>
+    options?: Record<string, unknown>
   ) {
     return useInfiniteQuery({
       queryKey: [`${config.entity}-paginated`, filters ?? null] as const,
