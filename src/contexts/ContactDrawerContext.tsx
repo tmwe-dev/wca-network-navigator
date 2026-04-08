@@ -1,10 +1,20 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-export type RecordSourceType = "partner" | "contact" | "prospect" | "bca";
+export type RecordSourceType =
+  | "partner"
+  | "contact"
+  | "prospect"
+  | "bca"
+  | "business_card"
+  | "voice_session"
+  | "campaign"
+  | "task";
 
 export interface DrawerTarget {
   sourceType: RecordSourceType;
   sourceId: string;
+  /** Optional title for breadcrumb display */
+  title?: string;
 }
 
 interface ContactDrawerContextValue {
@@ -71,4 +81,19 @@ export function useContactDrawer() {
   const ctx = useContext(ContactDrawerContext);
   if (!ctx) throw new Error("useContactDrawer must be used within ContactDrawerProvider");
   return ctx;
+}
+
+/**
+ * Unified entity drawer alias. Same backing context as useContactDrawer
+ * but exposes a friendlier API for any entity type:
+ *   const { openEntity, close, target } = useEntityDrawer();
+ *   openEntity('partner', partnerId, partnerName);
+ */
+export function useEntityDrawer() {
+  const ctx = useContactDrawer();
+  return {
+    ...ctx,
+    openEntity: (sourceType: RecordSourceType, sourceId: string, title?: string) =>
+      ctx.open({ sourceType, sourceId, title }),
+  };
 }

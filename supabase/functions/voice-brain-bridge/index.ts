@@ -221,9 +221,78 @@ function safeJsonParse(raw: string): Record<string, unknown> | null {
   }
 }
 
+async function logRequest(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    trace_id: string;
+    user_id: string | null;
+    function_name: string;
+    status: "ok" | "error" | "timeout";
+    http_status?: number;
+    latency_ms: number;
+    error_code?: string | null;
+    error_message?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  try {
+    await supabase.from("request_logs").insert({
+      trace_id: payload.trace_id,
+      user_id: payload.user_id,
+      function_name: payload.function_name,
+      channel: "voice",
+      http_status: payload.http_status ?? null,
+      status: payload.status,
+      latency_ms: payload.latency_ms,
+      error_code: payload.error_code ?? null,
+      error_message: payload.error_message ?? null,
+      metadata: payload.metadata ?? {},
+    });
+  } catch (e) {
+    console.warn("request_logs insert failed:", (e as Error).message);
+  }
+}
+
+async function logAiRequest(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    trace_id: string;
+    user_id: string | null;
+    agent_code: string;
+    model: string;
+    latency_ms: number;
+    status: "ok" | "error" | "timeout";
+    intent?: string | null;
+    error_message?: string | null;
+    total_tokens?: number | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  try {
+    await supabase.from("ai_request_log").insert({
+      trace_id: payload.trace_id,
+      user_id: payload.user_id,
+      agent_code: payload.agent_code,
+      channel: "voice",
+      model: payload.model,
+      latency_ms: payload.latency_ms,
+      status: payload.status,
+      intent: payload.intent ?? null,
+      error_message: payload.error_message ?? null,
+      total_tokens: payload.total_tokens ?? null,
+      routed_to: "voice-brain-bridge",
+      metadata: payload.metadata ?? {},
+    });
+  } catch (e) {
+    console.warn("ai_request_log insert failed:", (e as Error).message);
+  }
+}
+
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+  const t0 = Date.now();
+  const traceId = crypto.randomUUID();
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), {
@@ -315,6 +384,9 @@ serve(async (req) => {
 
   let parsed: Record<string, unknown> | null = null;
   let modelUsed = "";
+  let aiStatus: "ok" | "error" | "timeout" = "ok";
+  let aiErrorMessage: string | null = null;
+  const aiT0 = Date.now();
   try {
     const result = await aiChat({
       models: ["google/gemini-2.5-flash", "openai/gpt-4o-mini"],
@@ -331,13 +403,30 @@ serve(async (req) => {
     modelUsed = result.modelUsed || "";
     parsed = safeJsonParse(result.content || "");
   } catch (e) {
+    aiStatus = "error";
     if (e instanceof AiGatewayError) {
       console.error("aiChat failed:", e.message, e.kind);
+      aiErrorMessage = `${e.kind}: ${e.message}`;
+      if (e.kind === "timeout") aiStatus = "timeout";
     } else {
       console.error("aiChat unknown error:", (e as Error).message);
+      aiErrorMessage = (e as Error).message;
     }
     // Fall through to fallback reply
   }
+  const aiLatency = Date.now() - aiT0;
+  // Fire-and-forget AI request log
+  void logAiRequest(supabase, {
+    trace_id: traceId,
+    user_id: BRIDGE_USER_ID || null,
+    agent_code: turn.agent_id || "voice_unknown",
+    model: modelUsed || "unknown",
+    latency_ms: aiLatency,
+    status: aiStatus,
+    intent: turn.intent || null,
+    error_message: aiErrorMessage,
+    metadata: { external_call_id: turn.external_call_id || null },
+  });
 
   const reply = makeSafeReply(
     parsed || {},
@@ -377,11 +466,35 @@ serve(async (req) => {
     console.warn("voice post-actions failed:", (e as Error).message);
   }
 
+  const totalLatency = Date.now() - t0;
+  void logRequest(supabase, {
+    trace_id: traceId,
+    user_id: BRIDGE_USER_ID || null,
+    function_name: "voice-brain-bridge",
+    status: aiStatus === "ok" ? "ok" : aiStatus,
+    http_status: 200,
+    latency_ms: totalLatency,
+    error_code: aiStatus === "ok" ? null : aiStatus,
+    error_message: aiErrorMessage,
+    metadata: {
+      external_call_id: turn.external_call_id || null,
+      agent_id: turn.agent_id || null,
+      session_id: sessionId,
+    },
+  });
+
   return new Response(
-    JSON.stringify({ ...reply, _meta: { session_id: sessionId, model: modelUsed } }),
+    JSON.stringify({
+      ...reply,
+      _meta: { session_id: sessionId, model: modelUsed, trace_id: traceId },
+    }),
     {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "x-trace-id": traceId,
+      },
     },
   );
 });
