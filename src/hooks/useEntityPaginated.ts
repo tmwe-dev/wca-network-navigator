@@ -22,9 +22,10 @@
  *
  *   const { data, fetchNextPage, hasNextPage } = usePartners(filters);
  */
-import { useInfiniteQuery, type UseInfiniteQueryOptions } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PostgrestQB = any; // supabase types are messy with chaining
 
 export interface EntityPaginatedConfig<TFilters> {
@@ -63,7 +64,8 @@ export function makeEntityPaginated<TRow, TFilters extends { sort?: string }>(
 
   return function useEntityPaginatedHook(
     filters?: TFilters,
-    options?: Partial<UseInfiniteQueryOptions<PaginatedPage<TRow>>>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options?: Record<string, any>
   ) {
     return useInfiniteQuery<PaginatedPage<TRow>>({
       queryKey: [`${config.entity}-paginated`, filters ?? null],
@@ -73,7 +75,12 @@ export function makeEntityPaginated<TRow, TFilters extends { sort?: string }>(
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        let q: PostgrestQB = supabase
+        // Supabase client has a `from(string)` signature that narrows to a
+        // union of known tables — when `config.table` is a plain `string`
+        // the compiler rejects it. Cast the client to bypass this narrowing:
+        // the generic factory is intentionally polymorphic over table name.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: PostgrestQB = (supabase as any)
           .from(config.table)
           .select(config.selectFields, {
             count: config.exactCount === false ? "estimated" : "exact",

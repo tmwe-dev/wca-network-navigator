@@ -67,7 +67,11 @@ async function insert(
       duration_ms: opts.durationMs ?? null,
     };
     // intentionally not awaited in caller — fire and forget
-    await supabase.from("page_events").insert(payload as any);
+    // NOTE: `page_events` table added in Wave 6 migration; Supabase types
+    // not yet regenerated locally. Cast is a temporary workaround — will
+    // be removed once `supabase gen types` is re-run in CI.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("page_events").insert(payload);
   } catch (e) {
     if (typeof console !== "undefined") {
       console.debug("[telemetry] insert failed", e);

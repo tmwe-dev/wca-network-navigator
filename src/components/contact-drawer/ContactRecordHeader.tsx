@@ -9,6 +9,10 @@ const SOURCE_LABELS: Record<RecordSourceType, { label: string; color: string }> 
   contact: { label: "Contatto", color: "bg-chart-3/15 text-chart-3 border-chart-3/30" },
   prospect: { label: "Prospect RA", color: "bg-chart-4/15 text-chart-4 border-chart-4/30" },
   bca: { label: "Biglietto", color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+  business_card: { label: "Biglietto da visita", color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+  voice_session: { label: "Sessione Voice", color: "bg-violet-500/15 text-violet-500 border-violet-500/30" },
+  campaign: { label: "Campagna", color: "bg-pink-500/15 text-pink-500 border-pink-500/30" },
+  task: { label: "Task", color: "bg-blue-500/15 text-blue-500 border-blue-500/30" },
 };
 
 interface Props {
