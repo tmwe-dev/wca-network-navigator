@@ -2580,7 +2580,30 @@ async function loadMissionHistory(userId: string): Promise<string> {
 // LOAD KB ENTRIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadKBContext(): Promise<string> {
+async function loadKBContext(query?: string): Promise<string> {
+  // ── Wave3 RAG: se c'è una query, prova retrieval semantico via embeddings ──
+  if (query && query.trim().length >= 8) {
+    try {
+      const { ragSearchKb } = await import("../_shared/embeddings.ts");
+      const matches = await ragSearchKb(supabase, query, {
+        matchCount: 8,
+        matchThreshold: 0.25,
+        minPriority: 3,
+        onlyActive: true,
+      });
+      if (matches.length > 0) {
+        const entries = matches
+          .map((e) => `### ${e.title} [sim=${e.similarity.toFixed(2)} · ${(e.tags || []).join(", ") || e.category}]\n${e.content}`)
+          .join("\n\n");
+        return `\n\nKNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`;
+      }
+      // Se RAG non trova nulla rilevante, fallback a top-priority
+    } catch (e) {
+      console.warn("RAG retrieval failed, falling back to top-priority:", e);
+    }
+  }
+
+  // ── Fallback: top-priority statico ──
   const { data } = await supabase
     .from("kb_entries")
     .select("title, content, category, tags")
@@ -2828,11 +2851,16 @@ serve(async (req) => {
     // Build system prompt with all context injections
     let systemPrompt = SYSTEM_PROMPT;
 
+    // Estrai l'ultima domanda user per RAG retrieval semantico sulla KB.
+    const lastUserMsg: string | undefined = Array.isArray(messages)
+      ? [...messages].reverse().find((m: any) => m?.role === "user" && typeof m.content === "string")?.content
+      : undefined;
+
     // Load all context in parallel
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
       loadUserProfile(),
-      loadKBContext(),
+      loadKBContext(lastUserMsg),
       loadOperativePrompts(userId),
       loadMissionHistory(userId),
     ]);

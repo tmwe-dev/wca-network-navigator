@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, AiGatewayError, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -13,7 +9,8 @@ const supabase = createClient(
 );
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
 
   try {
     const now = new Date();
@@ -111,15 +108,11 @@ serve(async (req) => {
       email: { pending: pendingEmails ?? 0, sent24h: sentEmails ?? 0 },
     };
 
-    // Call LLM
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const llmRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+    // Call LLM via centralized gateway
+    let content = "{}";
+    try {
+      const r = await aiChat({
+        models: ["google/gemini-2.5-flash-lite", "openai/gpt-4o-mini"],
         messages: [
           {
             role: "system",
@@ -130,16 +123,17 @@ Rispondi SOLO con un JSON valido, senza markdown o backtick. Formato:
   "actions": [array di max 3 oggetti {"label": "testo bottone corto", "agentName": "nome agente o null", "prompt": "prompt completo da inviare all'AI"}]
 }
 I nomi degli agenti disponibili sono: ${agents?.map(a => a.name).join(", ")}.
-Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci azioni proattive.`
+Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci azioni proattive.`,
           },
-          { role: "user", content: `Dati operativi attuali:\n${JSON.stringify(context, null, 2)}` }
+          { role: "user", content: `Dati operativi attuali:\n${JSON.stringify(context, null, 2)}` },
         ],
-      }),
-    });
-
-    if (!llmRes.ok) {
-      const errText = await llmRes.text();
-      console.error("LLM error:", llmRes.status, errText);
+        timeoutMs: 25000,
+        maxRetries: 1,
+        context: "daily-briefing",
+      });
+      content = r.content || "{}";
+    } catch (err) {
+      console.error("daily-briefing LLM error:", err instanceof AiGatewayError ? err.kind : err);
       // Fallback: return raw data without AI summary
       return new Response(JSON.stringify({
         summary: `• **${activeJobs.length}** download attivi, **${completedJobs.length}** completati nelle ultime 24h\n• **${noEmailCount ?? 0}** partner senza email\n• **${overdue.length}** attività scadute, **${dueToday.length}** in scadenza oggi\n• **${pendingEmails ?? 0}** email in coda`,
@@ -147,9 +141,6 @@ Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci 
         agentStatus,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const llmData = await llmRes.json();
-    const content = llmData.choices?.[0]?.message?.content || "{}";
 
     let parsed: { summary: string; actions: any[] };
     try {

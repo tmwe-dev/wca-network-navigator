@@ -1,38 +1,26 @@
 /**
  * ai-deep-search-helper — server-side wrapper per chiamate AI Gateway leggere
- * usate dal Deep Search client (useDeepSearchLocal). Sostituisce l'uso del
- * Bearer Lovable lato client (Vol. II §6.2 secrets management).
+ * usate dal Deep Search client (useDeepSearchLocal).
+ *
+ * Vol. II §6.2 (secrets), §10.3 (resilience).
  *
  * Input: { prompt: string, model?: string }
- * Output: { content: string | null }
+ * Output: { content: string | null, usage, modelUsed, latencyMs }
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, AiGatewayError, ALLOWED_MODELS, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
-const ALLOWED_MODELS = new Set([
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-flash",
-  "google/gemini-3-flash-preview",
-  "openai/gpt-4o-mini",
-]);
-
 const MAX_PROMPT_LEN = 8000;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
 
   try {
-    // ── Auth (bearer JWT del cliente Supabase) ──
+    // ── Auth (JWT del cliente Supabase) ──
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
@@ -56,11 +44,10 @@ serve(async (req) => {
     // ── Input validation ──
     const body = await req.json().catch(() => ({}));
     const prompt = typeof body.prompt === "string" ? body.prompt : "";
-    const model = typeof body.model === "string" && ALLOWED_MODELS.has(body.model)
-      ? body.model
-      : DEFAULT_MODEL;
+    const requestedModel = typeof body.model === "string" ? body.model : DEFAULT_MODEL;
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
 
-    if (!prompt || prompt.length === 0) {
+    if (!prompt) {
       return new Response(JSON.stringify({ error: "Empty prompt" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -73,59 +60,26 @@ serve(async (req) => {
       });
     }
 
-    // ── Server-side gateway call ──
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) {
-      console.error("[ai-deep-search-helper] LOVABLE_API_KEY missing");
-      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const resp = await fetch(AI_GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 256,
-      }),
+    // ── Centralized gateway call (retry, timeout, fallback) ──
+    const result = await aiChat({
+      models: [model, "openai/gpt-4o-mini"],
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 256,
+      timeoutMs: 20000,
+      maxRetries: 1,
+      context: `deep-search-helper:${user.id.substring(0, 8)}`,
     });
 
-    if (resp.status === 429) {
-      return new Response(JSON.stringify({ error: "rate_limited", content: null }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (resp.status === 402) {
-      return new Response(JSON.stringify({ error: "credits_exhausted", content: null }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.error(`[ai-deep-search-helper] gateway ${resp.status}:`, errText.substring(0, 300));
-      return new Response(JSON.stringify({ error: "gateway_error", content: null }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await resp.json();
-    const content: string | null = data?.choices?.[0]?.message?.content?.trim() || null;
-    return new Response(JSON.stringify({ content }), {
+    return new Response(JSON.stringify({
+      content: result.content,
+      usage: result.usage,
+      modelUsed: result.modelUsed,
+      latencyMs: result.latencyMs,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[ai-deep-search-helper] unexpected:", msg);
-    return new Response(JSON.stringify({ error: "internal", message: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return mapErrorToResponse(err, corsHeaders);
   }
 });
