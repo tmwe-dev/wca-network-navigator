@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { useTrackPage } from "@/hooks/useTrackPage";
 
 const Operations = lazy(() => import("./Operations"));
 
@@ -7,6 +8,7 @@ function TabFallback() {
 }
 
 export default function Network() {
+  useTrackPage("network");
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       <Suspense fallback={<TabFallback />}>

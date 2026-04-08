@@ -3,6 +3,8 @@ import { UserCheck, ContactRound, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useUrlState } from "@/hooks/useUrlState";
+import { useTrackPage } from "@/hooks/useTrackPage";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -12,9 +14,12 @@ function TabFallback() {
 }
 
 export default function CRM() {
-  const [tab, setTab] = useState("contatti");
+  // URL-synced tab: /crm?tab=contatti|biglietti (shareable + refresh-safe)
+  const [tab, setTab] = useUrlState<string>("tab", "contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();
+
+  useTrackPage("crm", { tab });
 
   useEffect(() => {
     setCrmActiveTab(tab);
