@@ -710,3 +710,32 @@ serializzazione valori nested, throw su JSON malformato/vuoto.
 - Test totali: **313** (+249 vs baseline 64)
 - File test: **20**
 - Vol. II §8.3 (≥70% sui flussi critici): **abbondantemente raggiunto**
+
+---
+
+## Sessione #15 — Coverage businessCardFileParser (2026-04-08)
+
+### Delta
+- Nuovo file: `src/test/business-card-parser.test.ts` (15 test)
+- `src/test/setup.ts`: aggiunto polyfill `File.prototype.text` per jsdom
+  (necessario per parser che usano l'API moderna).
+
+### Casi coperti
+**isImageFile/isDataFile**: detection per mime type ed estensione, false
+su tipi non target.
+**parseBusinessCardFile - VCF**: parsing vCard 3.0 completo (FN/N/ORG/
+TITLE/EMAIL/TEL CELL+WORK/NOTE), fallback `N` se manca `FN`, multiple
+vCard nello stesso file, scarto record vuoti, popolamento `raw_data`.
+**parseBusinessCardFile - CSV**: mapping headers IT/EN ai campi business
+card via FIELD_MAP, scarto righe vuote, throw se nessuna colonna
+riconosciuta, popolamento raw_data con tutte le celle.
+**Estensioni**: throw su formato non supportato.
+
+### 4-check
+- `tsc --noEmit`: 0 errori
+- `vitest run`: **21 file, 328/328 test passati** (+15 da #14)
+- `vite build`: ✅
+
+### Stato cumulativo
+- Test totali: **328** (+264 vs baseline 64)
+- File test: **21**
