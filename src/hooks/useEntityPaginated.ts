@@ -22,7 +22,7 @@
  *
  *   const { data, fetchNextPage, hasNextPage } = usePartners(filters);
  */
-import { useInfiniteQuery, type UseInfiniteQueryOptions } from "@tanstack/react-query";
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 type PostgrestQB = any; // supabase types are messy with chaining
