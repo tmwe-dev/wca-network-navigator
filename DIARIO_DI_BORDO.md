@@ -843,3 +843,67 @@ fallimento (con retryDelay piccolo).
 | email helpers | email-utils |
 | contact helpers | contact-helpers |
 
+
+---
+
+## Sessione #19 — Chiusura Vol. I (recap finale) (2026-04-08)
+
+### Stato finale post-recovery
+- **Branch**: `recovery/wca-network-navigator` (HEAD `9d0a4287`)
+- **Test totali**: 378 in 24 file (+314 vs baseline 64 della prima
+  ricostruzione post-incident)
+- **4-check stabile**: tsc 0 errori, vitest 378/378, build ~16-29s, eslint
+  pulito
+- **Vol. II §5.3** (zod runtime, strangler pattern): attivo su tutti i
+  call-site di `wcaAppApi` (`safeParseDiscover`, `safeParseScrape`,
+  `safeParseCheckIds`, `safeParseJobStart`)
+- **Vol. II §8.3** (≥70% coverage critici): superato su tutti i moduli
+  puri identificati (vedi mappa sess #18)
+
+### Refactor monoliti — stato (Vol. I Ondata 2 / Vol. II §16.7)
+Top-N file > 500 LOC al termine della recovery:
+
+| File | LOC |
+|---|---|
+| FiltersDrawer | 1300 |
+| BusinessCardsHub | 1084 |
+| AddContactDialog | 794 |
+| useAcquisitionPipeline | 747 |
+| MissionStepRenderer | 700 |
+| EmailComposerContactPicker | 685 |
+| EmailComposer | 663 |
+| WhatsAppInboxView | 639 |
+| sidebar (shadcn) | 637 |
+| ImportWizard | 625 |
+| useImportLogs | 621 |
+| TestExtensions | 605 |
+| useLinkedInFlow | 592 |
+
+I monoliti pre-recovery (Campaigns 860KB, AgentChatHub 500KB) sono già
+stati ridotti durante le sessioni precedenti: Campaigns 379, AgentChatHub
+278, MissionBuilder 396 → ✅ entro soglia.
+
+Refactor dei file rimanenti **rinviato a una recovery successiva** —
+richiede analisi React component splitting con preservazione
+comportamentale (test E2E necessari prima dell'estrazione).
+
+### PR aperta — stato
+gh CLI **non disponibile** in questo sandbox. Branch già pushed su
+origin: il merge va aperto manualmente da
+`https://github.com/tmwe-dev/wca-network-navigator/compare/main...recovery/wca-network-navigator?expand=1`
+
+### Remote sink logger (Vol. II §11.4) — stato
+`createLogger` è già il punto di iniezione. Sentry/Logtail
+**rinviato pending credenziali** (DSN non disponibile in sandbox).
+
+### Conclusione Vol. I "Il Protocollo del Recupero"
+Tutte le ondate strutturali (1-5) sono state eseguite:
+- Ondata 1: ricostruzione baseline + smoke test
+- Ondata 2: riduzione monoliti principali
+- Ondata 3: error boundary + structured logging
+- Ondata 4: snapshot strict mode + tsc 0 errori
+- Ondata 5: coverage test pure modules ≥70% (378 test)
+
+**Vol. I chiuso operativamente.** Restano due voci esplicitamente
+deferred (PR open + remote sink) che richiedono asset esterni alla
+sandbox.
