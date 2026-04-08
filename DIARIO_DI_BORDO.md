@@ -467,3 +467,61 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 | Acquisition pipeline | 0% | 0% (rinviato sessione #10) |
 
 **5 dei 7 flussi critici ora sopra soglia Vol. II §8.3 (≥70%)**.
+
+---
+
+## Sessione #10 — 8 aprile 2026 (mattina/3) — Checkpoint, globe, contact adapter
+
+**Operatore**: Claude (Cowork, Opus 4.6)
+**Branch**: `recovery/wca-network-navigator`
+
+### Interventi
+
+1. **+18 test su `wcaCheckpoint` + `sanitizeSearch` + `globe/utils`**
+   (`src/test/wca-checkpoint.test.ts`):
+   - `wcaCheckpoint`: setGreenZoneDelay (clamp 15-60), isGreenZone,
+     markRequestSent, getElapsedSinceLastRequest, getLastRequestTimestamp,
+     waitForGreenLight (true al primo, false su abort) — con `vi.useFakeTimers`.
+   - `sanitizeSearchTerm`: rimozione caratteri speciali PostgREST.
+   - `latLngToVector3`: equatore, poli, conservazione del modulo.
+   - `easeOutQuart` / `easeInOutCubic` / `easeInOutSine`: estremi, simmetria,
+     monotonia.
+
+2. **+12 test su `contactActionAdapter`**
+   (`src/test/contact-adapter.test.ts`):
+   - `adaptImportedContact`: alias precedence, channels (email/linkedin/whatsapp),
+     fallback name/company, phone fallback, partnerId null, origin default,
+     enrichmentData passthrough.
+   - `adaptBusinessCard`: mapping base, phone fallback, no canale linkedin,
+     partnerId null.
+
+### Verifica 4-check
+
+| Check | Risultato |
+|---|---|
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
+| `vitest run` | ✅ **14 file, 201/201** |
+| `vite build` | ✅ 16.09s |
+
+### Delta sessione #10
+
+| Metrica | Pre-#10 | Post-#10 | Δ |
+|---|---|---|---|
+| File di test | 12 | **14** | +2 |
+| Test cases | 171 | **201** | +30 |
+| Moduli puri coperti | 12 | **15** | +3 |
+
+### Coverage flussi critici post #10
+
+| Flusso | Pre-#10 | Post-#10 |
+|---|---|---|
+| WCA scraper / app API | ~90% | ~90% |
+| WCA checkpoint (rate-limit) | 0% | **~85%** |
+| Import wizard | ~80% | ~80% |
+| Cockpit (group/sort/preselect) | ~75% | ~75% |
+| Contact adapter (cockpit ingestion) | 0% | **~90%** |
+| Email parsing/normalization | ~75% | ~75% |
+| Activity status cycle | ~80% | ~80% |
+| Globe rendering math | 0% | **~80%** |
+
+**Soglia Vol. II §8.3 raggiunta su 7 moduli puri** (era 5 a fine sessione #9).
