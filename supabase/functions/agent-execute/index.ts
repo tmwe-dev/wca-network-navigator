@@ -714,6 +714,8 @@ const ALL_TOOLS: Record<string, any> = {
 // TOOL EXECUTION (mirrors ai-assistant logic)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+interface ExecuteContext { agent_id?: string }
+
 async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
@@ -726,7 +728,7 @@ async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: st
   return null;
 }
 
-async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
   switch (name) {
     case "search_partners": {
       const isCount = !!args.count_only;
@@ -1724,13 +1726,13 @@ serve(async (req) => {
     let userId: string;
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims?.sub) {
+      const { data: { user: tokenUser }, error: tokenError } = await authClient.auth.getUser(token);
+      if (tokenError || !tokenUser) {
         return new Response(JSON.stringify({ error: "Non autenticato" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      userId = claimsData.claims.sub as string;
+      userId = tokenUser.id;
     } else {
       // Fallback: getUser
       const { data: { user }, error: authError } = await authClient.auth.getUser();
@@ -1868,7 +1870,7 @@ serve(async (req) => {
         for (const tc of msg.tool_calls) {
           console.log(`[Agent ${agent.name}] Tool: ${tc.function.name}`);
           const args = JSON.parse(tc.function.arguments || "{}");
-          const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
+          const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id });
           console.log(`[Agent ${agent.name}] Result:`, JSON.stringify(toolResult).substring(0, 300));
           toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
         }
@@ -1953,7 +1955,7 @@ Esegui il compito usando i tool disponibili. Agisci concretamente sul database. 
           for (const tc of msg.tool_calls) {
             console.log(`[Agent ${agent.name} Task] Tool: ${tc.function.name}`);
             const args = JSON.parse(tc.function.arguments || "{}");
-            const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
+            const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id });
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
           }
           allMessages.push(msg);

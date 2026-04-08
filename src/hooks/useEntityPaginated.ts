@@ -22,7 +22,7 @@
  *
  *   const { data, fetchNextPage, hasNextPage } = usePartners(filters);
  */
-import { useInfiniteQuery, type UseInfiniteQueryOptions } from "@tanstack/react-query";
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 type PostgrestQB = any; // supabase types are messy with chaining
@@ -63,17 +63,17 @@ export function makeEntityPaginated<TRow, TFilters extends { sort?: string }>(
 
   return function useEntityPaginatedHook(
     filters?: TFilters,
-    options?: Partial<UseInfiniteQueryOptions<PaginatedPage<TRow>>>
+    options?: Record<string, unknown>
   ) {
-    return useInfiniteQuery<PaginatedPage<TRow>>({
-      queryKey: [`${config.entity}-paginated`, filters ?? null],
+    return useInfiniteQuery({
+      queryKey: [`${config.entity}-paginated`, filters ?? null] as const,
       initialPageParam: 0,
       queryFn: async ({ pageParam = 0 }) => {
         const page = pageParam as number;
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        let q: PostgrestQB = supabase
+        let q: PostgrestQB = (supabase as any)
           .from(config.table)
           .select(config.selectFields, {
             count: config.exactCount === false ? "estimated" : "exact",

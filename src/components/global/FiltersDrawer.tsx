@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
 import { capitalizeFirst } from "@/lib/capitalize";
-import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
