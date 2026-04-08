@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function ContactRecordHeader({ sourceType, companyName, contactName, currentIndex, totalCount, onPrev, onNext, onClose }: Props) {
-  const src = SOURCE_LABELS[sourceType];
+  const src = SOURCE_LABELS[sourceType] || { label: sourceType, color: "bg-muted text-muted-foreground border-border" };
   const hasList = totalCount > 1;
 
   return (
