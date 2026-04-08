@@ -1726,13 +1726,13 @@ serve(async (req) => {
     let userId: string;
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims?.sub) {
+      const { data: { user: tokenUser }, error: tokenError } = await authClient.auth.getUser(token);
+      if (tokenError || !tokenUser) {
         return new Response(JSON.stringify({ error: "Non autenticato" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      userId = claimsData.claims.sub as string;
+      userId = tokenUser.id;
     } else {
       // Fallback: getUser
       const { data: { user }, error: authError } = await authClient.auth.getUser();
