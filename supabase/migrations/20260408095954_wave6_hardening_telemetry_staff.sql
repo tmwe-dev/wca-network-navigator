@@ -226,61 +226,56 @@ CREATE POLICY "ai_request_log_service_insert" ON public.ai_request_log
 -- background agents can write on behalf of the operator without needing
 -- service_role bypass for every call.
 
--- partners: keep public read/write (it's the directory) but block anon
-DROP POLICY IF EXISTS "block_anon_partners" ON public.partners;
-CREATE POLICY "block_anon_partners" ON public.partners
-  FOR ALL
-  USING (auth.role() <> 'anon')
-  WITH CHECK (auth.role() <> 'anon');
+-- All policy blocks are wrapped with to_regclass guards so the migration
+-- is safe even if a table is not (yet) present in this environment.
 
--- imported_contacts: ensure service user can act
-DROP POLICY IF EXISTS "service_imported_contacts" ON public.imported_contacts;
-CREATE POLICY "service_imported_contacts" ON public.imported_contacts
-  FOR ALL
-  USING (auth.uid() = public.get_service_user_id())
-  WITH CHECK (auth.uid() = public.get_service_user_id());
+DO $wave6_rls$
+DECLARE
+  svc_uid_expr text := 'auth.uid() = public.get_service_user_id()';
+BEGIN
+  -- partners: block anon
+  IF to_regclass('public.partners') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "block_anon_partners" ON public.partners';
+    EXECUTE 'CREATE POLICY "block_anon_partners" ON public.partners FOR ALL USING (auth.role() <> ''anon'') WITH CHECK (auth.role() <> ''anon'')';
+  END IF;
 
--- business_cards
-DROP POLICY IF EXISTS "service_business_cards" ON public.business_cards;
-CREATE POLICY "service_business_cards" ON public.business_cards
-  FOR ALL
-  USING (auth.uid() = public.get_service_user_id())
-  WITH CHECK (auth.uid() = public.get_service_user_id());
+  -- imported_contacts
+  IF to_regclass('public.imported_contacts') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "service_imported_contacts" ON public.imported_contacts';
+    EXECUTE 'CREATE POLICY "service_imported_contacts" ON public.imported_contacts FOR ALL USING (' || svc_uid_expr || ') WITH CHECK (' || svc_uid_expr || ')';
+  END IF;
 
--- voice_call_sessions
-DROP POLICY IF EXISTS "service_voice_call_sessions" ON public.voice_call_sessions;
-CREATE POLICY "service_voice_call_sessions" ON public.voice_call_sessions
-  FOR ALL
-  USING (auth.uid() = public.get_service_user_id())
-  WITH CHECK (auth.uid() = public.get_service_user_id());
+  -- business_cards
+  IF to_regclass('public.business_cards') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "service_business_cards" ON public.business_cards';
+    EXECUTE 'CREATE POLICY "service_business_cards" ON public.business_cards FOR ALL USING (' || svc_uid_expr || ') WITH CHECK (' || svc_uid_expr || ')';
+  END IF;
 
--- ai_memory
-DROP POLICY IF EXISTS "service_ai_memory" ON public.ai_memory;
-CREATE POLICY "service_ai_memory" ON public.ai_memory
-  FOR ALL
-  USING (auth.uid() = public.get_service_user_id())
-  WITH CHECK (auth.uid() = public.get_service_user_id());
+  -- voice_call_sessions
+  IF to_regclass('public.voice_call_sessions') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "service_voice_call_sessions" ON public.voice_call_sessions';
+    EXECUTE 'CREATE POLICY "service_voice_call_sessions" ON public.voice_call_sessions FOR ALL USING (' || svc_uid_expr || ') WITH CHECK (' || svc_uid_expr || ')';
+  END IF;
 
--- kb_entries: templates are readable by all authed users, writes require ownership or service
-DROP POLICY IF EXISTS "kb_entries_template_read" ON public.kb_entries;
-CREATE POLICY "kb_entries_template_read" ON public.kb_entries
-  FOR SELECT
-  USING (
-    user_id IS NULL  -- system templates seeded via migration
-    OR auth.uid() = user_id
-    OR auth.uid() = public.get_service_user_id()
-  );
+  -- ai_memory
+  IF to_regclass('public.ai_memory') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "service_ai_memory" ON public.ai_memory';
+    EXECUTE 'CREATE POLICY "service_ai_memory" ON public.ai_memory FOR ALL USING (' || svc_uid_expr || ') WITH CHECK (' || svc_uid_expr || ')';
+  END IF;
 
--- commercial_playbooks: same pattern
-DROP POLICY IF EXISTS "playbooks_template_read" ON public.commercial_playbooks;
-CREATE POLICY "playbooks_template_read" ON public.commercial_playbooks
-  FOR SELECT
-  USING (
-    is_template = true
-    OR user_id IS NULL
-    OR auth.uid() = user_id
-    OR auth.uid() = public.get_service_user_id()
-  );
+  -- kb_entries template read
+  IF to_regclass('public.kb_entries') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "kb_entries_template_read" ON public.kb_entries';
+    EXECUTE 'CREATE POLICY "kb_entries_template_read" ON public.kb_entries FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id OR auth.uid() = public.get_service_user_id())';
+  END IF;
+
+  -- commercial_playbooks template read
+  IF to_regclass('public.commercial_playbooks') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "playbooks_template_read" ON public.commercial_playbooks';
+    EXECUTE 'CREATE POLICY "playbooks_template_read" ON public.commercial_playbooks FOR SELECT USING (is_template = true OR user_id IS NULL OR auth.uid() = user_id OR auth.uid() = public.get_service_user_id())';
+  END IF;
+END
+$wave6_rls$;
 
 -- ---------------------------------------------------------------------
 -- D) STAFF DIREZIONALE — virtual C-level (Margot, Sage, Atlas, Mira)
@@ -288,6 +283,11 @@ CREATE POLICY "playbooks_template_read" ON public.commercial_playbooks
 -- These playbooks describe AI agents that report ONLY to Luca and never
 -- talk to clients or operators directly. They are async strategists.
 
+DO $wave6_staff$
+BEGIN
+IF to_regclass('public.commercial_playbooks') IS NULL THEN
+  RAISE NOTICE 'Skipping staff playbooks seed: public.commercial_playbooks not found';
+ELSE
 INSERT INTO public.commercial_playbooks
   (user_id, code, name, description, workflow_code, kb_tags, prompt_template, suggested_actions, is_active, is_template, priority, trigger_conditions)
 VALUES
@@ -390,8 +390,16 @@ SET name = EXCLUDED.name,
     suggested_actions = EXCLUDED.suggested_actions,
     trigger_conditions = EXCLUDED.trigger_conditions,
     updated_at = now();
+END IF;
+END
+$wave6_staff$;
 
 -- Seed staff doctrine KB entry so all 4 share a common protocol
+DO $wave6_kb$
+BEGIN
+IF to_regclass('public.kb_entries') IS NULL THEN
+  RAISE NOTICE 'Skipping STAFF-01 KB seed: public.kb_entries not found';
+ELSE
 INSERT INTO public.kb_entries (user_id, category, chapter, title, content, tags, priority, is_active)
 VALUES (
   NULL,
@@ -417,6 +425,9 @@ Luca decide. Sempre.$kb$,
   true
 )
 ON CONFLICT DO NOTHING;
+END IF;
+END
+$wave6_kb$;
 
 -- =====================================================================
 -- END WAVE 6
