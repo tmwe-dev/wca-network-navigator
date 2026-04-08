@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeLike } from "../_shared/sqlEscape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -291,6 +292,130 @@ SISTEMA:
 - generate_aliases: Generazione alias AI. Tags: alias, nome, etichetta. Steps: seleziona target → genera → verifica.
 - blacklist_check: Verifica blacklist. Tags: blacklist, affidabilità, rischio. Steps: cerca → mostra risultati.
 - bulk_update: Aggiornamento massivo. Tags: bulk, massivo, batch. Steps: filtra → conferma (OBBLIGATORIO) → aggiorna → verifica.`;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ENTERPRISE DOCTRINE — Wave 4
+// Vol. II "Il Metodo Enterprise" — pattern operativi per AI direzionale.
+// Iniettati IN TESTA al system prompt (massima priorità di interpretazione).
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const IDENTITY_AND_MISSION = `🎯 IDENTITÀ E MISSIONE OPERATIVA
+
+Sei il DIRETTORE OPERATIVO virtuale dell'azienda — non un assistente generico.
+Le tue funzioni includono:
+• GENERAL MANAGER: orchestri operazioni, agenti, attività e priorità
+• SALES MANAGER: guidi i percorsi commerciali (qualifica → discovery → proposta → closing → onboarding)
+• KNOWLEDGE OFFICER: arricchisci la KB e la memoria di sistema ad ogni sessione
+
+Il tuo lavoro NON è rispondere a domande — è PORTARE A TERMINE processi commerciali e operativi che generano valore misurabile per l'azienda.
+
+DIRETTIVA DI AUTONOMIA:
+• Esplora i dati, proponi soluzioni, agisci. NON aspettare che l'utente ti guidi: SEI TU la guida.
+• Se hai abbastanza informazioni per procedere, PROCEDI. Chiedi solo quando STRETTAMENTE necessario.
+• Se completi un'azione ma non produci output utile per l'utente (lista, file, suggerimenti azionabili), il lavoro è INCOMPLETO.
+• Termina ogni risposta con 2-4 azioni suggerite concrete e cliccabili.`;
+
+const REASONING_FRAMEWORK = `🧭 FRAMEWORK DI RAGIONAMENTO (applica SEMPRE, in ordine):
+
+1. COMPRENDI — qual è la vera intenzione dell'utente? (non interpretare letteralmente: cerca il GOAL di business)
+2. VALUTA — ho già le informazioni? (controlla KB → memoria → contesto → tool result; se sì, NON chiedere)
+3. ESEGUI — usa i tool nell'ordine giusto. Una sola azione alla volta se ad alto impatto, batch se bulk.
+4. VERIFICA — dopo ogni azione, controlla l'esito reale (check_job_status, search di conferma)
+5. CONFERMA — riporta all'utente cosa hai fatto, con dati reali (non promesse)
+6. PROPONI — il passo successivo logico, sotto forma di azione cliccabile
+
+AUTO-DIAGNOSI in caso di dato ambiguo o mancante:
+1. Identifica esattamente l'ambiguità (cita la fonte, il campo, il record)
+2. Cerca nella KB e nelle memorie se è già stata risolta in passato
+3. Solo se nulla → fai UNA domanda mirata all'utente (non un elenco di domande)
+4. Salva la risposta dell'utente come memoria con tag specifici, in modo da non chiedere mai più`;
+
+const INFO_SEARCH_HIERARCHY = `🔍 GERARCHIA DI RICERCA INFORMAZIONI (in ordine OBBLIGATORIO):
+
+PRIMO  — REGOLE KB attive (sezione "KNOWLEDGE BASE AZIENDALE" iniettata sotto)
+SECONDO — MEMORIE di sistema (sezione "MEMORIA TIERED" iniettata sotto, e tool search_memory per query mirate)
+TERZO  — CRONOLOGIA INTERAZIONI con il partner/contatto (tool list_activities, get_partner_detail)
+QUARTO  — CONTESTO PAGINA dell'utente (sezione "CONTESTO CORRENTE" iniettata sotto)
+QUINTO  — TOOL DI LETTURA (search_partners, search_contacts, scan_directory, ecc.)
+SESTO  — Solo se NIENTE dei precedenti contiene la risposta: CHIEDI all'utente
+
+REGOLA D'ORO: Non fare MAI domande la cui risposta è già nella KB, nella memoria, o ottenibile con un tool.
+Se chiedi qualcosa che potresti scoprire da solo, stai sprecando il tempo dell'utente.`;
+
+const LEARNING_PROTOCOL = `🧠 PROTOCOLLO DI APPRENDIMENTO CONTINUO
+
+La KB e la memoria sono il tuo CERVELLO PERSISTENTE. Ogni sessione DEVE arricchirle.
+
+QUANDO SALVARE IN MEMORIA (save_memory):
+1. Dopo ogni CONFERMA dell'utente su una decisione non ovvia → memory_type="learning", importance 4-5
+2. Dopo ogni CORREZIONE dell'utente ("no, in realtà…", "non così, fai…") → SEMPRE, importance 5, tag specifici
+3. Quando l'utente esprime una PREFERENZA ("preferisco X", "d'ora in poi…", "ricorda che…") → memory_type="preference", importance 5
+4. Dopo aver scoperto un FATTO importante su un partner ("è cliente di X", "ha sede secondaria a Y") → memory_type="reference", tag con nome partner
+5. A FINE PROCESSO COMPLESSO → memory_type="history", riassunto dell'esperienza (cosa ha funzionato, cosa no)
+
+QUANDO SALVARE COME REGOLA KB (save_kb_rule):
+1. Pattern che si ripete su 2+ partner/contatti dello stesso tipo
+2. Procedura operativa che l'utente vuole standardizzare
+3. Standard di formato/tono/approccio per uno specifico segmento (paese, settore, network)
+
+QUANDO PROPORRE UN OPERATIVE PROMPT (save_operative_prompt):
+Se rilevi uno SCENARIO RICORRENTE complesso (3+ passi, decisioni condizionali), proponi all'utente di salvarlo come prompt operativo strutturato (Obiettivo / Procedura / Criteri / Esempi).
+
+REGOLA: meglio salvare in eccesso che perdere conoscenza. Una memoria tagged-in-modo-utile non costa nulla.`;
+
+const GOLDEN_RULES = `⚖️ REGOLE D'ORO (NON NEGOZIABILI)
+
+1. ZERO ALLUCINAZIONI: NON inventare MAI nomi di clienti, network, fiere, eventi, statistiche, certificazioni, contatti. Solo ciò che è nei tool result o in KB.
+2. ZERO DOMANDE INUTILI: Se la risposta è nella KB / memoria / tool, USA quello. Non chiedere.
+3. ZERO AZIONI ALLA CIECA: Dopo ogni azione che modifica il sistema → check_job_status o tool di verifica.
+4. ZERO BULK SENZA CONFERMA: Operazioni su >5 record richiedono SEMPRE conferma esplicita dell'utente con conteggio preciso.
+5. ZERO RISPOSTE SENZA AZIONE: Ogni risposta termina con 2-4 azioni cliccabili (sezione "🎯 Azioni Suggerite").
+6. ZERO ABBANDONO DEL WORKFLOW: Se è attivo un workflow gate (sezione "WORKFLOW ATTIVO" sotto), NON saltare gate, NON ignorare exit criteria.`;
+
+const WORKFLOW_GATE_DOCTRINE = `🚦 DOTTRINA DEI WORKFLOW GATE
+
+Quando un partner/contatto ha un WORKFLOW ATTIVO (commerciale, recovery, onboarding…), il sistema inietta sotto la sezione "WORKFLOW ATTIVO" con: nome workflow, gate corrente, exit criteria.
+
+REGOLE OBBLIGATORIE:
+1. MAI saltare un gate. Avanzamento massimo +1 per volta.
+2. MAI avanzare gate senza che gli exit criteria siano TUTTI verificati.
+3. Ogni risposta su un partner con workflow attivo INIZIA con: "📍 Workflow {nome} — Gate {N}: {nome gate}"
+4. Per avanzare usa il tool advance_workflow_gate con il partner_id e il nuovo gate.
+5. Se l'utente vuole forzare il salto, AVVISA dei rischi e chiedi conferma esplicita.
+6. Ogni decisione presa in un gate → save_memory con tag "workflow:{nome}" e "gate:{N}".`;
+
+/**
+ * Compose il system prompt dinamico per l'ai-assistant.
+ * Aggiunge i blocchi enterprise in testa, seguiti dal SYSTEM_PROMPT operativo,
+ * e dal blocco operator briefing se presente.
+ */
+function composeSystemPrompt(opts: { operatorBriefing?: string; activeWorkflow?: string }): string {
+  const parts: string[] = [
+    IDENTITY_AND_MISSION,
+    REASONING_FRAMEWORK,
+    INFO_SEARCH_HIERARCHY,
+    LEARNING_PROTOCOL,
+    GOLDEN_RULES,
+    WORKFLOW_GATE_DOCTRINE,
+  ];
+
+  if (opts.operatorBriefing && opts.operatorBriefing.trim().length > 0) {
+    parts.push(`⚡ BRIEFING OPERATORE (PRIORITÀ MASSIMA)
+
+L'operatore ha fornito queste istruzioni PRIMA di interagire con te. Applicale con priorità su tutto il resto:
+
+${opts.operatorBriefing.trim()}`);
+  }
+
+  if (opts.activeWorkflow && opts.activeWorkflow.trim().length > 0) {
+    parts.push(`🚦 WORKFLOW ATTIVO
+
+${opts.activeWorkflow.trim()}`);
+  }
+
+  parts.push(SYSTEM_PROMPT);
+  return parts.join("\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TOOL DEFINITIONS
@@ -1102,6 +1227,145 @@ const tools = [
       },
     },
   },
+  // ── Wave 4 — Enterprise tools ────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "search_kb",
+      description: "Search the Knowledge Base for active rules/articles matching a free-text query (semantic via RAG). Use to RECALL existing knowledge BEFORE asking the user. Returns matching KB entries with similarity score.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Free-text query to match against KB entries" },
+          categories: { type: "array", items: { type: "string" }, description: "Optional category filter (e.g. ['cold_outreach','negoziazione'])" },
+          limit: { type: "number", description: "Max results (default 6, max 20)" },
+        },
+        required: ["query"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_kb_rule",
+      description: "Save a reusable rule to the Knowledge Base. Use when you detect a repeated pattern, standard procedure, or correction that should apply to FUTURE interactions (not just this session). Triggers: user correction, repeated pattern across 2+ partners, explicit user 'always do X' instruction.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Short descriptive title" },
+          content: { type: "string", description: "Rule body (full text the AI will read)" },
+          category: { type: "string", description: "Category (e.g. 'cold_outreach','negoziazione','filosofia','regole_sistema')" },
+          tags: { type: "array", items: { type: "string" }, description: "Tags for filtering" },
+          priority: { type: "number", description: "Priority 1-10 (default 5)" },
+          chapter: { type: "string", description: "Optional chapter/section label" },
+        },
+        required: ["title", "content", "category"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_operative_prompt",
+      description: "Save a structured operative prompt for a recurring complex scenario. Use when you've executed a 3+ step process that the user might want to standardize and replay (e.g. 'partner onboarding checklist', 'silent client recovery'). Schema: name, objective, procedure (steps array), criteria (success criteria array).",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Prompt name (e.g. 'Recovery Cliente Silente')" },
+          objective: { type: "string", description: "What this prompt achieves" },
+          procedure: { type: "string", description: "Step-by-step procedure (numbered list as text)" },
+          criteria: { type: "string", description: "Success criteria / exit conditions" },
+          priority: { type: "number", description: "Priority 1-10 (default 7)" },
+        },
+        required: ["name", "objective", "procedure", "criteria"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_workflows",
+      description: "List available commercial workflow templates and active workflows on partners. Use when the user asks 'what workflows do I have' or before starting/advancing a workflow.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "If provided, return active workflow state for this partner" },
+          templates_only: { type: "boolean", description: "If true, return only template definitions" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "start_workflow",
+      description: "Start a commercial workflow for a partner (or contact). Use when the user wants to formally begin a structured process like 'lead qualification', 'recovery silent partner', 'post event followup'.",
+      parameters: {
+        type: "object",
+        properties: {
+          workflow_code: { type: "string", description: "Workflow code (e.g. 'lead_qualification','recovery_silent_partner','post_event_followup')" },
+          partner_id: { type: "string", description: "Target partner UUID" },
+          contact_id: { type: "string", description: "Optional target contact UUID" },
+          notes: { type: "string", description: "Initial context notes" },
+        },
+        required: ["workflow_code", "partner_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "advance_workflow_gate",
+      description: "Advance a partner's active workflow to the next gate (or back to a previous one). VINCOLO: avanzamento massimo +1 alla volta. NON usare se gli exit criteria del gate corrente non sono soddisfatti — informa l'utente invece.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "Partner UUID with active workflow" },
+          new_gate: { type: "number", description: "New gate index (max current+1, or any lower for rollback)" },
+          gate_notes: { type: "string", description: "Notes/decisions taken in this gate" },
+          status: { type: "string", enum: ["active","paused","completed","aborted"], description: "Optional new status" },
+        },
+        required: ["partner_id", "new_gate"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_playbooks",
+      description: "List active commercial playbooks. Use to discover applicable playbooks for the current situation, or when the user asks 'what playbooks do I have'.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "Optional ISO country code to match trigger conditions" },
+          lead_status: { type: "string", description: "Optional lead status filter" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "apply_playbook",
+      description: "Apply a commercial playbook for a partner. Loads the playbook prompt template, KB tags, and suggested actions into the current context. Use when the situation matches a playbook's trigger conditions or when the user explicitly requests it.",
+      parameters: {
+        type: "object",
+        properties: {
+          playbook_code: { type: "string", description: "Playbook code" },
+          partner_id: { type: "string", description: "Target partner UUID (optional)" },
+        },
+        required: ["playbook_code"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1124,7 +1388,7 @@ async function executeSearchPartners(args: Record<string, unknown>) {
     if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
   }
   if (args.network_name) {
-    const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${args.network_name}%`);
+    const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
     const netIds = (data || []).map((r: any) => r.partner_id);
     partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
     if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
@@ -1143,8 +1407,8 @@ async function executeSearchPartners(args: Record<string, unknown>) {
 
   if (partnerIdFilter) query = query.in("id", partnerIdFilter.slice(0, 500));
   if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
-  if (args.city) query = query.ilike("city", `%${args.city}%`);
-  if (args.search_name) query = query.ilike("company_name", `%${args.search_name}%`);
+  if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+  if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name)}%`);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_email === false) query = query.is("email", null);
   if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
@@ -1249,7 +1513,7 @@ async function executePartnerDetail(args: Record<string, unknown>) {
     const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
     partner = data;
   } else if (args.company_name) {
-    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
     partner = data;
   }
   if (!partner) return { error: "Partner non trovato" };
@@ -1306,8 +1570,8 @@ async function executeGlobalSummary() {
 
 async function executeCheckBlacklist(args: Record<string, unknown>) {
   let query = supabase.from("blacklist_entries").select("company_name, country, city, total_owed_amount, claims, status, blacklist_no, matched_partner_id");
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
   query = query.order("total_owed_amount", { ascending: false, nullsFirst: false }).limit(20);
   const { data, error } = await query;
   if (error) return { error: error.message };
@@ -1443,9 +1707,9 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 
   // Step 1: Try to find the partner in the DB
   if (!wcaId) {
-    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${companyName}%`);
+    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${escapeLike(companyName)}%`);
     if (countryCode) query = query.eq("country_code", countryCode);
-    if (city) query = query.ilike("city", `%${city}%`);
+    if (city) query = query.ilike("city", `%${escapeLike(city)}%`);
     const { data: found } = await query.limit(5);
     
     if (found && found.length > 0) {
@@ -1590,7 +1854,7 @@ async function executeSearchMemory(args: Record<string, unknown>, userId: string
 
   if (args.memory_type) query = query.eq("memory_type", args.memory_type);
   if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-  if (args.search_text) query = query.ilike("content", `%${args.search_text}%`);
+  if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text)}%`);
 
   // Filter out expired
   query = query.or("expires_at.is.null,expires_at.gt.now()");
@@ -1722,7 +1986,7 @@ async function executeSearchTemplates(args: Record<string, unknown>, userId: str
   let query = supabase.from("ai_plan_templates").select("id, name, description, steps_template, tags, use_count, last_used_at")
     .eq("user_id", userId).order("use_count", { ascending: false }).limit(10);
   if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
+  if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
   const { data, error } = await query;
   if (error) return { error: error.message };
   return {
@@ -1759,7 +2023,7 @@ async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: st
     return data ? { id: data.id, name: data.company_name } : null;
   }
   if (args.company_name) {
-    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
     return data ? { id: data.id, name: data.company_name } : null;
   }
   return null;
@@ -1831,8 +2095,8 @@ async function executeUpdateLeadStatus(args: Record<string, unknown>) {
 
   // Filter-based update
   let query = supabase.from("imported_contacts").select("id", { count: "exact" });
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
 
   const { data: matches, count } = await query.limit(200);
   if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
@@ -1890,9 +2154,9 @@ async function executeSearchBusinessCards(args: Record<string, unknown>) {
     .order("created_at", { ascending: false })
     .limit(Number(args.limit) || 20);
 
-  if (args.event_name) query = query.ilike("event_name", `%${args.event_name}%`);
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.contact_name) query = query.ilike("contact_name", `%${args.contact_name}%`);
+  if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name)}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.contact_name) query = query.ilike("contact_name", `%${escapeLike(args.contact_name)}%`);
   if (args.match_status) query = query.eq("match_status", args.match_status);
 
   const { data, error } = await query;
@@ -1939,11 +2203,11 @@ async function executeSearchContacts(args: Record<string, unknown>) {
     isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
     isCount ? { count: "exact", head: true } : undefined
   );
-  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.country) query = query.ilike("country", `%${args.country}%`);
-  if (args.email) query = query.ilike("email", `%${args.email}%`);
-  if (args.origin) query = query.ilike("origin", `%${args.origin}%`);
+  if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
+  if (args.email) query = query.ilike("email", `%${escapeLike(args.email)}%`);
+  if (args.origin) query = query.ilike("origin", `%${escapeLike(args.origin)}%`);
   if (args.lead_status) query = query.eq("lead_status", args.lead_status);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_email === false) query = query.is("email", null);
@@ -1963,7 +2227,7 @@ async function executeGetContactDetail(args: Record<string, unknown>) {
     const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
     contact = data;
   } else if (args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
     contact = data;
   }
   if (!contact) return { error: "Contatto non trovato" };
@@ -1977,11 +2241,11 @@ async function executeSearchProspects(args: Record<string, unknown>) {
     isCount ? "id" : "id, company_name, city, province, region, codice_ateco, descrizione_ateco, fatturato, dipendenti, email, phone, pec, website, lead_status, partita_iva, forma_giuridica, rating_affidabilita, created_at",
     isCount ? { count: "exact", head: true } : undefined
   );
-  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-  if (args.city) query = query.ilike("city", `%${args.city}%`);
-  if (args.province) query = query.ilike("province", `%${args.province}%`);
-  if (args.region) query = query.ilike("region", `%${args.region}%`);
-  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${args.codice_ateco}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+  if (args.province) query = query.ilike("province", `%${escapeLike(args.province)}%`);
+  if (args.region) query = query.ilike("region", `%${escapeLike(args.region)}%`);
+  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${escapeLike(args.codice_ateco)}%`);
   if (args.min_fatturato) query = query.gte("fatturato", Number(args.min_fatturato));
   if (args.max_fatturato) query = query.lte("fatturato", Number(args.max_fatturato));
   if (args.lead_status) query = query.eq("lead_status", args.lead_status);
@@ -2100,7 +2364,7 @@ async function executeDeepSearchPartner(args: Record<string, unknown>, authHeade
 async function executeDeepSearchContact(args: Record<string, unknown>, authHeader: string) {
   let contactId = args.contact_id as string;
   if (!contactId && args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
     if (data) contactId = data.id;
   }
   if (!contactId) return { error: "Contatto non trovato" };
@@ -2429,8 +2693,319 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "update_reminder": return executeUpdateReminder(args);
     case "delete_records": return executeDeleteRecords(args);
     case "get_procedure": return executeGetProcedure(args);
+    // ── Wave 4 Enterprise tools ──
+    case "search_kb": return executeSearchKb(args);
+    case "save_kb_rule": return userId ? executeSaveKbRule(args, userId) : { error: "Auth required" };
+    case "save_operative_prompt": return userId ? executeSaveOperativePrompt(args, userId) : { error: "Auth required" };
+    case "list_workflows": return userId ? executeListWorkflows(args, userId) : { error: "Auth required" };
+    case "start_workflow": return userId ? executeStartWorkflow(args, userId) : { error: "Auth required" };
+    case "advance_workflow_gate": return userId ? executeAdvanceWorkflowGate(args, userId) : { error: "Auth required" };
+    case "list_playbooks": return userId ? executeListPlaybooks(args, userId) : { error: "Auth required" };
+    case "apply_playbook": return userId ? executeApplyPlaybook(args, userId) : { error: "Auth required" };
     default: return { error: `Tool sconosciuto: ${name}` };
   }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WAVE 4 — ENTERPRISE TOOL EXECUTORS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function executeSearchKb(args: Record<string, unknown>) {
+  const query = String(args.query || "").trim();
+  if (!query) return { error: "query è obbligatoria" };
+  const limit = Math.min(Math.max(Number(args.limit) || 6, 1), 20);
+  const categories = Array.isArray(args.categories) ? (args.categories as string[]) : undefined;
+  try {
+    const { ragSearchKb } = await import("../_shared/embeddings.ts");
+    const matches = await ragSearchKb(supabase, query, {
+      matchCount: limit,
+      matchThreshold: 0.2,
+      categories,
+      onlyActive: true,
+    });
+    if (matches.length === 0) {
+      // Fallback testuale ilike
+      const { data } = await supabase
+        .from("kb_entries")
+        .select("id, title, content, category, chapter, tags, priority")
+        .eq("is_active", true)
+        .ilike("content", `%${escapeLike(query)}%`)
+        .order("priority", { ascending: false })
+        .limit(limit);
+      return { matches: data || [], method: "fallback_text" };
+    }
+    return {
+      matches: matches.map((m) => ({
+        id: m.id, title: m.title, content: m.content.slice(0, 800),
+        category: m.category, chapter: m.chapter, tags: m.tags,
+        similarity: Number(m.similarity.toFixed(3)),
+      })),
+      method: "rag_semantic",
+    };
+  } catch (e) {
+    console.error("search_kb error:", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+async function executeSaveKbRule(args: Record<string, unknown>, userId: string) {
+  const title = String(args.title || "").trim();
+  const content = String(args.content || "").trim();
+  const category = String(args.category || "").trim();
+  if (!title || !content || !category) {
+    return { error: "title, content, category obbligatori" };
+  }
+  const tags = Array.isArray(args.tags) ? (args.tags as string[]) : [];
+  const priority = Math.min(Math.max(Number(args.priority) || 5, 1), 10);
+  const chapter = args.chapter ? String(args.chapter) : null;
+
+  const { data, error } = await supabase
+    .from("kb_entries")
+    .insert({
+      user_id: userId,
+      title, content, category, tags, priority,
+      chapter: chapter || "",
+      is_active: true,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("save_kb_rule error:", error);
+    return { error: error.message };
+  }
+  return {
+    success: true,
+    rule_id: data?.id,
+    message: `Regola "${title}" salvata in KB (categoria=${category}, priority=${priority})`,
+    needs_embedding: true,
+  };
+}
+
+async function executeSaveOperativePrompt(args: Record<string, unknown>, userId: string) {
+  const name = String(args.name || "").trim();
+  const objective = String(args.objective || "").trim();
+  const procedure = String(args.procedure || "").trim();
+  const criteria = String(args.criteria || "").trim();
+  if (!name || !objective || !procedure || !criteria) {
+    return { error: "name, objective, procedure, criteria obbligatori" };
+  }
+  const priority = Math.min(Math.max(Number(args.priority) || 7, 1), 10);
+
+  const { data, error } = await supabase
+    .from("operative_prompts")
+    .insert({
+      user_id: userId,
+      name, objective, procedure, criteria,
+      priority, is_active: true,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("save_operative_prompt error:", error);
+    return { error: error.message };
+  }
+  return {
+    success: true,
+    prompt_id: data?.id,
+    message: `Prompt operativo "${name}" salvato (priority=${priority}). Verrà iniettato automaticamente nelle prossime sessioni.`,
+  };
+}
+
+async function executeListWorkflows(args: Record<string, unknown>, userId: string) {
+  const partnerId = args.partner_id ? String(args.partner_id) : null;
+  const templatesOnly = args.templates_only === true;
+
+  if (partnerId && !templatesOnly) {
+    const { data: state } = await supabase
+      .from("partner_workflow_state")
+      .select("id, current_gate, status, started_at, notes, commercial_workflows(code, name, description, gates)")
+      .eq("user_id", userId)
+      .eq("partner_id", partnerId)
+      .order("started_at", { ascending: false });
+    return { partner_id: partnerId, states: state || [] };
+  }
+
+  const { data: workflows } = await supabase
+    .from("commercial_workflows")
+    .select("id, code, name, description, category, gates, is_template")
+    .or(`user_id.eq.${userId},is_template.eq.true`)
+    .eq("is_active", true)
+    .order("is_template", { ascending: false });
+  return { workflows: workflows || [] };
+}
+
+async function executeStartWorkflow(args: Record<string, unknown>, userId: string) {
+  const code = String(args.workflow_code || "").trim();
+  const partnerId = String(args.partner_id || "").trim();
+  if (!code || !partnerId) return { error: "workflow_code e partner_id obbligatori" };
+
+  // Trova workflow (template o user-owned)
+  const { data: wf } = await supabase
+    .from("commercial_workflows")
+    .select("id, name, gates")
+    .or(`user_id.eq.${userId},is_template.eq.true`)
+    .eq("code", code)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!wf) return { error: `Workflow "${code}" non trovato` };
+
+  // Chiudi eventuale workflow attivo precedente per questo partner
+  await supabase
+    .from("partner_workflow_state")
+    .update({ status: "paused" })
+    .eq("user_id", userId)
+    .eq("partner_id", partnerId)
+    .eq("status", "active");
+
+  const { data: state, error } = await supabase
+    .from("partner_workflow_state")
+    .insert({
+      user_id: userId,
+      partner_id: partnerId,
+      contact_id: args.contact_id ? String(args.contact_id) : null,
+      workflow_id: (wf as any).id,
+      current_gate: 0,
+      status: "active",
+      notes: args.notes ? String(args.notes) : null,
+    })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  const gates = Array.isArray((wf as any).gates) ? (wf as any).gates : [];
+  const firstGate = gates[0] || {};
+  return {
+    success: true,
+    state_id: state?.id,
+    workflow_name: (wf as any).name,
+    current_gate: 0,
+    gate_name: firstGate.name || "Gate 0",
+    gate_objective: firstGate.objective,
+    exit_criteria: firstGate.exit_criteria || [],
+    suggested_tools: firstGate.suggested_tools || [],
+    message: `Workflow "${(wf as any).name}" avviato. Gate 0: ${firstGate.name || ""}`,
+  };
+}
+
+async function executeAdvanceWorkflowGate(args: Record<string, unknown>, userId: string) {
+  const partnerId = String(args.partner_id || "").trim();
+  const newGate = Number(args.new_gate);
+  if (!partnerId || Number.isNaN(newGate)) return { error: "partner_id e new_gate obbligatori" };
+
+  const { data: state } = await supabase
+    .from("partner_workflow_state")
+    .select("id, current_gate, status, commercial_workflows(name, gates)")
+    .eq("user_id", userId)
+    .eq("partner_id", partnerId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!state) return { error: "Nessun workflow attivo per questo partner" };
+
+  const gates = Array.isArray((state as any).commercial_workflows?.gates)
+    ? (state as any).commercial_workflows.gates : [];
+  const cur = (state as any).current_gate;
+
+  // Vincolo: avanzamento massimo +1, rollback consentito
+  if (newGate > cur + 1) {
+    return {
+      error: `Avanzamento non valido: gate corrente ${cur}, target ${newGate}. Massimo +1 alla volta.`,
+      current_gate: cur,
+    };
+  }
+  if (newGate >= gates.length) {
+    return { error: `Gate ${newGate} fuori range (max ${gates.length - 1})` };
+  }
+
+  const status = args.status ? String(args.status) : (newGate === gates.length - 1 ? "active" : "active");
+  const update: Record<string, unknown> = { current_gate: newGate, status };
+  if (args.gate_notes) {
+    const existing = (state as any).notes || "";
+    update.notes = (existing ? existing + "\n\n" : "") + `[Gate ${newGate}] ${args.gate_notes}`;
+  }
+  if (status === "completed") update.completed_at = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("partner_workflow_state")
+    .update(update)
+    .eq("id", (state as any).id);
+  if (error) return { error: error.message };
+
+  const targetGate = gates[newGate] || {};
+  return {
+    success: true,
+    workflow_name: (state as any).commercial_workflows?.name,
+    previous_gate: cur,
+    current_gate: newGate,
+    gate_name: targetGate.name,
+    gate_objective: targetGate.objective,
+    exit_criteria: targetGate.exit_criteria || [],
+    suggested_tools: targetGate.suggested_tools || [],
+    message: `Workflow avanzato a Gate ${newGate}: ${targetGate.name || ""}`,
+  };
+}
+
+async function executeListPlaybooks(args: Record<string, unknown>, userId: string) {
+  const { data } = await supabase
+    .from("commercial_playbooks")
+    .select("id, code, name, description, trigger_conditions, workflow_code, kb_tags, priority, is_template")
+    .or(`user_id.eq.${userId},is_template.eq.true`)
+    .eq("is_active", true)
+    .order("priority", { ascending: false });
+
+  let filtered = data || [];
+  const cc = args.country_code ? String(args.country_code).toUpperCase() : null;
+  const ls = args.lead_status ? String(args.lead_status) : null;
+  if (cc || ls) {
+    filtered = filtered.filter((p: any) => {
+      const tc = p.trigger_conditions || {};
+      if (cc && Array.isArray(tc.country_codes) && !tc.country_codes.includes(cc)) return false;
+      if (ls && Array.isArray(tc.lead_status) && !tc.lead_status.includes(ls)) return false;
+      return true;
+    });
+  }
+  return { playbooks: filtered, count: filtered.length };
+}
+
+async function executeApplyPlaybook(args: Record<string, unknown>, userId: string) {
+  const code = String(args.playbook_code || "").trim();
+  if (!code) return { error: "playbook_code obbligatorio" };
+
+  const { data: pb } = await supabase
+    .from("commercial_playbooks")
+    .select("*")
+    .or(`user_id.eq.${userId},is_template.eq.true`)
+    .eq("code", code)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!pb) return { error: `Playbook "${code}" non trovato` };
+
+  // Carica KB entries collegate ai tag del playbook (top 6)
+  let kbContext: any[] = [];
+  if (Array.isArray((pb as any).kb_tags) && (pb as any).kb_tags.length > 0) {
+    const { data: kb } = await supabase
+      .from("kb_entries")
+      .select("title, content, category")
+      .eq("is_active", true)
+      .overlaps("tags", (pb as any).kb_tags)
+      .order("priority", { ascending: false })
+      .limit(6);
+    kbContext = kb || [];
+  }
+
+  return {
+    success: true,
+    playbook: {
+      code: (pb as any).code,
+      name: (pb as any).name,
+      description: (pb as any).description,
+      workflow_code: (pb as any).workflow_code,
+      prompt_template: (pb as any).prompt_template,
+      suggested_actions: (pb as any).suggested_actions,
+    },
+    kb_loaded: kbContext.length,
+    kb_entries: kbContext,
+    message: `Playbook "${(pb as any).name}" attivato. Applica le sue regole nelle prossime risposte di questa conversazione.`,
+  };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2579,7 +3154,30 @@ async function loadMissionHistory(userId: string): Promise<string> {
 // LOAD KB ENTRIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadKBContext(): Promise<string> {
+async function loadKBContext(query?: string): Promise<string> {
+  // ── Wave3 RAG: se c'è una query, prova retrieval semantico via embeddings ──
+  if (query && query.trim().length >= 8) {
+    try {
+      const { ragSearchKb } = await import("../_shared/embeddings.ts");
+      const matches = await ragSearchKb(supabase, query, {
+        matchCount: 8,
+        matchThreshold: 0.25,
+        minPriority: 3,
+        onlyActive: true,
+      });
+      if (matches.length > 0) {
+        const entries = matches
+          .map((e) => `### ${e.title} [sim=${e.similarity.toFixed(2)} · ${(e.tags || []).join(", ") || e.category}]\n${e.content}`)
+          .join("\n\n");
+        return `\n\nKNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`;
+      }
+      // Se RAG non trova nulla rilevante, fallback a top-priority
+    } catch (e) {
+      console.warn("RAG retrieval failed, falling back to top-priority:", e);
+    }
+  }
+
+  // ── Fallback: top-priority statico ──
   const { data } = await supabase
     .from("kb_entries")
     .select("title, content, category, tags")
@@ -2824,14 +3422,50 @@ serve(async (req) => {
 
     const { messages, context } = await req.json();
 
-    // Build system prompt with all context injections
-    let systemPrompt = SYSTEM_PROMPT;
+    // Estrai l'ultima domanda user per RAG retrieval semantico sulla KB.
+    const lastUserMsg: string | undefined = Array.isArray(messages)
+      ? [...messages].reverse().find((m: any) => m?.role === "user" && typeof m.content === "string")?.content
+      : undefined;
+
+    // ── Wave4: operator briefing + active workflow detection ──
+    const operatorBriefing: string | undefined =
+      typeof context?.operatorBriefing === "string" ? context.operatorBriefing : undefined;
+    let activeWorkflowBlock = "";
+    if (context?.partnerId && typeof context.partnerId === "string") {
+      try {
+        const { data: ws } = await supabase
+          .from("partner_workflow_state")
+          .select("current_gate, status, started_at, commercial_workflows(name, gates)")
+          .eq("partner_id", context.partnerId)
+          .eq("status", "active")
+          .maybeSingle();
+        if (ws && (ws as any).commercial_workflows) {
+          const wf = (ws as any).commercial_workflows;
+          const gates = Array.isArray(wf.gates) ? wf.gates : [];
+          const cur = gates[(ws as any).current_gate] || {};
+          activeWorkflowBlock = `Workflow: ${wf.name}
+Gate corrente: ${(ws as any).current_gate} — ${cur.name || "(senza nome)"}
+Obiettivo gate: ${cur.objective || "(non definito)"}
+Exit criteria:
+${(cur.exit_criteria || []).map((c: string) => "  • " + c).join("\n") || "  • (non definiti)"}
+Iniziato: ${(ws as any).started_at}`;
+        }
+      } catch (e) {
+        console.warn("Workflow state load failed:", e);
+      }
+    }
+
+    // Build system prompt with all enterprise blocks + context injections
+    let systemPrompt = composeSystemPrompt({
+      operatorBriefing,
+      activeWorkflow: activeWorkflowBlock,
+    });
 
     // Load all context in parallel
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
       loadUserProfile(),
-      loadKBContext(),
+      loadKBContext(lastUserMsg),
       loadOperativePrompts(userId),
       loadMissionHistory(userId),
     ]);
@@ -2904,9 +3538,11 @@ DATI DISPONIBILI:`;
 
     // First call with tools — with retry and model fallback
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    // Cascade fallback: ogni modello deve esistere realmente sul gateway.
+    // 'gpt-5-mini' è stato rimosso (modello inesistente).
     const fallbackModels = provider.isUserKey
       ? [provider.model]
-      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-4o-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {
@@ -2959,7 +3595,25 @@ DATI DISPONIBILI:`;
 
       for (const tc of assistantMessage.tool_calls) {
         console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
-        const args = JSON.parse(tc.function.arguments || "{}");
+        // SAFE PARSE: LLM occasionally emits malformed JSON. Don't crash the whole request.
+        let args: any;
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch (parseErr) {
+          const errMsg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+          console.error(`[ai-assistant] tool args parse failed for ${tc.function.name}:`, errMsg);
+          toolResults.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify({
+              success: false,
+              error: "INVALID_TOOL_ARGS",
+              message: `Tool arguments were not valid JSON: ${errMsg}. Please retry with valid JSON.`,
+              raw_arguments_snippet: String(tc.function.arguments || "").substring(0, 200),
+            }),
+          });
+          continue;
+        }
         const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
         console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
@@ -3014,7 +3668,7 @@ DATI DISPONIBILI:`;
                 .select("id")
                 .eq("user_id", userId)
                 .eq("source", "auto_tool")
-                .ilike("content", `%${content.substring(0, 40)}%`)
+                .ilike("content", `%${escapeLike(content.substring(0, 40))}%`)
                 .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
                 .limit(1);
               

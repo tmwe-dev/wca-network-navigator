@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeLike } from "../_shared/sqlEscape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -719,7 +720,7 @@ async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: st
     return data ? { id: data.id, name: data.company_name } : null;
   }
   if (args.company_name) {
-    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
     return data ? { id: data.id, name: data.company_name } : null;
   }
   return null;
@@ -734,8 +735,8 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
         isCount ? { count: "exact", head: true } : undefined
       );
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
-      if (args.city) query = query.ilike("city", `%${args.city}%`);
-      if (args.search_name) query = query.ilike("company_name", `%${args.search_name}%`);
+      if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+      if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name)}%`);
       if (args.has_email === true) query = query.not("email", "is", null);
       if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
       if (args.has_profile === false) query = query.is("raw_profile_html", null);
@@ -752,7 +753,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "get_partner_detail": {
       let partner: any = null;
       if (args.partner_id) { const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single(); partner = data; }
-      else if (args.company_name) { const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${args.company_name}%`).limit(1).single(); partner = data; }
+      else if (args.company_name) { const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single(); partner = data; }
       if (!partner) return { error: "Partner non trovato" };
       const [contactsRes, networksRes, servicesRes] = await Promise.all([
         supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", partner.id),
@@ -816,8 +817,8 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
 
     case "check_blacklist": {
       let query = supabase.from("blacklist_entries").select("company_name, country, total_owed_amount, claims, status");
-      if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-      if (args.country) query = query.ilike("country", `%${args.country}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
       const { data, error } = await query.limit(20);
       if (error) return { error: error.message };
       return { count: data?.length || 0, entries: data || [] };
@@ -869,7 +870,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "download_single_partner": {
       const name = String(args.company_name || "").trim();
       if (!name) return { error: "Nome azienda obbligatorio" };
-      const { data: found } = await supabase.from("partners").select("id, wca_id, company_name, country_code, country_name, raw_profile_html").ilike("company_name", `%${name}%`).limit(1);
+      const { data: found } = await supabase.from("partners").select("id, wca_id, company_name, country_code, country_name, raw_profile_html").ilike("company_name", `%${escapeLike(name)}%`).limit(1);
       if (!found || found.length === 0) return { error: `"${name}" non trovata nel database.` };
       const p = found[0];
       if (p.raw_profile_html) return { success: true, already_downloaded: true, message: `"${p.company_name}" ha già il profilo.` };
@@ -892,7 +893,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "search_memory": {
       let query = supabase.from("ai_memory").select("content, memory_type, tags, importance, created_at").eq("user_id", userId).order("importance", { ascending: false }).limit(Number(args.limit) || 10);
       if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-      if (args.search_text) query = query.ilike("content", `%${args.search_text}%`);
+      if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text)}%`);
       const { data, error } = await query;
       if (error) return { error: error.message };
       return { count: data?.length || 0, memories: data || [] };
@@ -966,9 +967,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "search_contacts": {
       const isCount = !!args.count_only;
       let query = supabase.from("imported_contacts").select(isCount ? "id" : "id, name, company_name, email, phone, country, lead_status, created_at", isCount ? { count: "exact", head: true } : undefined);
-      if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
-      if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-      if (args.country) query = query.ilike("country", `%${args.country}%`);
+      if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
       if (args.lead_status) query = query.eq("lead_status", args.lead_status);
       if (args.has_email === true) query = query.not("email", "is", null);
       query = query.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
@@ -982,16 +983,16 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "get_contact_detail": {
       let contact: any = null;
       if (args.contact_id) { const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single(); contact = data; }
-      else if (args.contact_name) { const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${args.contact_name}%`).limit(1).single(); contact = data; }
+      else if (args.contact_name) { const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single(); contact = data; }
       if (!contact) return { error: "Contatto non trovato" };
       return contact;
     }
 
     case "search_prospects": {
       let query = supabase.from("prospects").select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
-      if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-      if (args.city) query = query.ilike("city", `%${args.city}%`);
-      if (args.codice_ateco) query = query.ilike("codice_ateco", `%${args.codice_ateco}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
+      if (args.codice_ateco) query = query.ilike("codice_ateco", `%${escapeLike(args.codice_ateco)}%`);
       if (args.lead_status) query = query.eq("lead_status", args.lead_status);
       query = query.order("fatturato", { ascending: false, nullsFirst: false }).limit(Math.min(Number(args.limit) || 20, 50));
       const { data, error } = await query;
@@ -1066,7 +1067,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
 
     case "deep_search_contact": {
       let cid = args.contact_id as string;
-      if (!cid && args.contact_name) { const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${args.contact_name}%`).limit(1).single(); if (data) cid = data.id; }
+      if (!cid && args.contact_name) { const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single(); if (data) cid = data.id; }
       if (!cid) return { error: "Contatto non trovato" };
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
@@ -1168,8 +1169,8 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
 
     case "search_business_cards": {
       let query = supabase.from("business_cards").select("id, company_name, contact_name, email, event_name, match_status, created_at").order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
-      if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-      if (args.event_name) query = query.ilike("event_name", `%${args.event_name}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name)}%`);
       const { data, error } = await query;
       return error ? { error: error.message } : { count: data?.length || 0, cards: data || [] };
     }
@@ -1260,7 +1261,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     case "create_agent_task": {
       // Find agent by name or role
       let agentQuery = supabase.from("agents").select("id, name").eq("user_id", userId);
-      if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${args.agent_name}%`);
+      if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${escapeLike(args.agent_name)}%`);
       else if (args.agent_role) agentQuery = agentQuery.eq("role", args.agent_role);
       const { data: agents } = await agentQuery.limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name || args.agent_role}" non trovato.` };
@@ -1313,7 +1314,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     }
 
     case "update_agent_prompt": {
-      const { data: agents } = await supabase.from("agents").select("id, name, system_prompt").eq("user_id", userId).ilike("name", `%${args.agent_name}%`).limit(1);
+      const { data: agents } = await supabase.from("agents").select("id, name, system_prompt").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name)}%`).limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
       const agent = agents[0];
       let newPrompt = agent.system_prompt;
@@ -1325,7 +1326,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
     }
 
     case "add_agent_kb_entry": {
-      const { data: agents } = await supabase.from("agents").select("id, name, knowledge_base").eq("user_id", userId).ilike("name", `%${args.agent_name}%`).limit(1);
+      const { data: agents } = await supabase.from("agents").select("id, name, knowledge_base").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name)}%`).limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
       const agent = agents[0];
       const kb = (agent.knowledge_base as any[]) || [];
@@ -1646,7 +1647,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
 
     case "assign_contacts_to_agent": {
       // Find agent
-      const { data: agents } = await supabase.from("agents").select("id, name").eq("user_id", userId).ilike("name", `%${args.agent_name}%`).limit(1);
+      const { data: agents } = await supabase.from("agents").select("id, name").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name)}%`).limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
       const targetAgent = agents[0];
       // Get contacts to assign

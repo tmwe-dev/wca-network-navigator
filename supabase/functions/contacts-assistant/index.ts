@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeLike } from "../_shared/sqlEscape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -158,11 +159,11 @@ function buildContactQuery(args: Record<string, unknown>, selectCols: string, op
   // Quality filter
   q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
-  if (args.company_name) q = q.ilike("company_name", `%${args.company_name}%`);
-  if (args.name) q = q.ilike("name", `%${args.name}%`);
-  if (args.email) q = q.ilike("email", `%${args.email}%`);
+  if (args.company_name) q = q.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+  if (args.name) q = q.ilike("name", `%${escapeLike(args.name)}%`);
+  if (args.email) q = q.ilike("email", `%${escapeLike(args.email)}%`);
   if (args.country) q = q.eq("country", args.country);
-  if (args.city) q = q.ilike("city", `%${args.city}%`);
+  if (args.city) q = q.ilike("city", `%${escapeLike(args.city)}%`);
   if (args.origin) q = q.eq("origin", args.origin);
   if (args.lead_status) q = q.eq("lead_status", args.lead_status);
   if (args.holding_pattern === "out") q = q.eq("interaction_count", 0);

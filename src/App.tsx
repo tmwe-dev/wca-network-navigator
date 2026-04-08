@@ -57,6 +57,8 @@ const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const AILab = lazyRetry(() => import("./pages/AILab"));
 const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
+const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
+const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -124,6 +126,8 @@ const App = () => (
                   <Route path="/guida" element={<Guida />} />
                    <Route path="/ai-lab" element={<AILab />} />
                    <Route path="/mission-builder" element={<MissionBuilder />} />
+                   <Route path="/telemetry" element={<Telemetry />} />
+                   <Route path="/staff-direzionale" element={<StaffDirezionale />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />

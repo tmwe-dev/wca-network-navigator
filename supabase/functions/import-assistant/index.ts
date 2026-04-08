@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeLike } from "../_shared/sqlEscape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -266,8 +267,8 @@ async function executeTool(name: string, args: any): Promise<any> {
       if (args.has_email === true) query = query.not("email", "is", null);
       if (args.has_email === false) query = query.is("email", null);
       if (args.has_phone === true) query = query.or("phone.not.is.null,mobile.not.is.null");
-      if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
-      if (args.country) query = query.ilike("country", `%${args.country}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
       
       if (args.count_only) {
         query = query.limit(0);
@@ -302,7 +303,7 @@ async function executeTool(name: string, args: any): Promise<any> {
         .eq("is_transferred", false);
       
       if (args.only_selected) query = query.eq("is_selected", true);
-      if (args.filter_country) query = query.ilike("country", `%${args.filter_country}%`);
+      if (args.filter_country) query = query.ilike("country", `%${escapeLike(args.filter_country)}%`);
       if (args.filter_has_email) query = query.not("email", "is", null);
       
       const { data: contacts, error } = await query;
@@ -431,8 +432,8 @@ async function executeTool(name: string, args: any): Promise<any> {
         .eq("is_transferred", false);
       
       if (args.filter_has_email) query = query.not("email", "is", null);
-      if (args.filter_country) query = query.ilike("country", `%${args.filter_country}%`);
-      if (args.filter_company_name) query = query.ilike("company_name", `%${args.filter_company_name}%`);
+      if (args.filter_country) query = query.ilike("country", `%${escapeLike(args.filter_country)}%`);
+      if (args.filter_company_name) query = query.ilike("company_name", `%${escapeLike(args.filter_company_name)}%`);
       
       const { data, error } = await query;
       if (error) return { error: error.message };

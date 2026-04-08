@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 /** Fetch KB entries optimized for email improvement — focus on style and techniques */
 async function fetchKbEntriesForImprove(supabase: any): Promise<{ text: string; sections: string[] }> {
@@ -51,7 +47,8 @@ function getKBSliceLegacy(fullKB: string): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -73,9 +70,7 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const userId = claimsData.claims.sub;
 
     const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb } = await req.json();
     if (!html_body) throw new Error("html_body is required");
@@ -146,40 +141,18 @@ ${subject ? `Oggetto originale: ${subject}\n` : ""}
 Corpo:
 ${html_body}`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.4,
-      }),
+    const result = await aiChat({
+      models: ["google/gemini-3-flash-preview", "openai/gpt-4o-mini"],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.4,
+      timeoutMs: 30000,
+      maxRetries: 1,
+      context: `improve-email:${userId.substring(0, 8)}`,
     });
-
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.error("AI gateway error:", resp.status, errText);
-      if (resp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (resp.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI error: ${resp.status}`);
-    }
-
-    const result = await resp.json();
-    const rawText = result.choices?.[0]?.message?.content || "";
+    const rawText = result.content || "";
 
     // Parse subject and body
     let improvedSubject = subject || "";
@@ -199,8 +172,6 @@ ${html_body}`;
     });
   } catch (e) {
     console.error("improve-email error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return mapErrorToResponse(e, corsHeaders);
   }
 });

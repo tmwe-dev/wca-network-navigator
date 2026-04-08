@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 type Quality = "fast" | "standard" | "premium";
@@ -163,7 +159,8 @@ function cleanCompanyName(name: string): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
 
   try {
     // Auth check
@@ -204,9 +201,6 @@ serve(async (req) => {
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ─── Recipient Intelligence: query DB for real data ───
@@ -227,10 +221,12 @@ serve(async (req) => {
     intelligence.sources_checked.push("partners");
     let partnerId: string | null = null;
     if (company_name) {
+      // Escape SQL LIKE wildcards (%, _) per evitare wildcard injection.
+      const safeName = company_name.replace(/[\\%_]/g, (c: string) => `\\${c}`);
       const { data: partnerRows } = await supabase
         .from("partners")
         .select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
-        .ilike("company_name", `%${company_name}%`)
+        .ilike("company_name", `%${safeName}%`)
         .limit(1);
       const partner = partnerRows?.[0];
       if (partner) {
@@ -540,40 +536,22 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
 
     const model = getModel(quality);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+    const result = await aiChat({
+      models: [model, "openai/gpt-4o-mini"],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      timeoutMs: 40000,
+      maxRetries: 1,
+      context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
     });
-
-    if (!response.ok) {
-      const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit, riprova tra poco." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const text = await response.text();
-      console.error("AI error:", status, text);
-      throw new Error("AI gateway error");
-    }
-
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || "";
+    const content = result.content || "";
 
     // Deduct credits
-    if (result.usage) {
-      const inputTokens = result.usage.prompt_tokens || 0;
-      const outputTokens = result.usage.completion_tokens || 0;
+    {
+      const inputTokens = result.usage.promptTokens;
+      const outputTokens = result.usage.completionTokens;
       const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 2) / 1000));
       await supabase.rpc("deduct_credits", {
         p_user_id: userId,
@@ -629,9 +607,11 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
       sales_kb_sections: kbResult.sections.join(", ") || (quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8"),
       goal_used: goal || "(default)",
       proposal_used: base_proposal || "(default)",
-      tokens_input: result.usage?.prompt_tokens || 0,
-      tokens_output: result.usage?.completion_tokens || 0,
-      credits_consumed: result.usage ? Math.max(1, Math.ceil(((result.usage.prompt_tokens || 0) + (result.usage.completion_tokens || 0) * 2) / 1000)) : 0,
+      tokens_input: result.usage.promptTokens,
+      tokens_output: result.usage.completionTokens,
+      credits_consumed: Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000)),
+      model_used: result.modelUsed,
+      ai_attempts: result.attempts,
       channel_instructions: ch.toUpperCase(),
       settings_keys_found: Object.keys(settings),
       recipient_intelligence: intelligence,
@@ -658,9 +638,6 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
     );
   } catch (e) {
     console.error("generate-outreach error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return mapErrorToResponse(e, corsHeaders);
   }
 });
