@@ -18,7 +18,7 @@ interface Message {
   content: string;
 }
 
-  const { agents, isLoading } = useAgents();
+  export default function AgentChatHub() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
