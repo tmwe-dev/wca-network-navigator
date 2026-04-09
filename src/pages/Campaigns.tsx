@@ -300,6 +300,7 @@ function FloatingCampaignPartners({
 export default function Campaigns() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [source, setSource] = useState<CampaignSource>("partners");
@@ -366,6 +367,16 @@ export default function Campaigns() {
 
   const handleDeselectAll = useCallback(() => {
     setSelectedPartnerIds(new Set());
+    setSelectedContactIds(new Set());
+  }, []);
+
+  const handleToggleContact = useCallback((contactId: string) => {
+    setSelectedContactIds(prev => {
+      const next = new Set(prev);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
+    });
   }, []);
 
   const handleAddToCampaign = useCallback(() => {
@@ -479,6 +490,8 @@ export default function Campaigns() {
             countryName={countryName}
             bcaPartnerIds={bcaPartnerIds}
             source={source}
+            selectedContacts={selectedContactIds}
+            onToggleContact={handleToggleContact}
           />
         </div>
       </div>
