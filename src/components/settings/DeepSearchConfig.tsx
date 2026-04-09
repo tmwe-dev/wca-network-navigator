@@ -84,7 +84,10 @@ export function DeepSearchConfig() {
           <Card key={key}>
             <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">{meta.label}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <meta.icon className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm">{meta.label}</CardTitle>
+                </div>
                 <Badge variant="secondary" className="text-[10px]">{activeCount(config[key])} / 4</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground">{meta.description}</p>
