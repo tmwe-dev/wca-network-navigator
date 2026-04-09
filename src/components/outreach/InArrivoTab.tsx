@@ -44,6 +44,13 @@ export function InArrivoTab() {
   const waSync = useWhatsAppAdaptiveSync();
   const waBackfill = useWhatsAppBackfill();
 
+  // Auto-trigger deep backfill on WhatsApp reconnection
+  useEffect(() => {
+    waSync.onReconnect(() => {
+      waBackfill.startBackfill();
+    });
+  }, [waSync.onReconnect, waBackfill.startBackfill]);
+
   // Lift Email hooks
   const checkInbox = useCheckInbox();
   const emailSync = useContinuousSync();
