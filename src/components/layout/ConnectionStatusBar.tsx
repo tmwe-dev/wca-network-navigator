@@ -50,7 +50,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
   const [status, setStatus] = useState<ChannelStatus>(loadCachedStatus);
   const [connecting, setConnecting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
