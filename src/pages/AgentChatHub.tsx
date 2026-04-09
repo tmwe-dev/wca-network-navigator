@@ -13,7 +13,11 @@ import { cn } from "@/lib/utils";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
-export default function AgentChatHub() {
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
   const { agents, isLoading } = useAgents();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
