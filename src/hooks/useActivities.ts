@@ -160,8 +160,8 @@ export function useAllActivities() {
       if (error) throw error;
       return (data || []) as unknown as AllActivity[];
     },
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 }
 
