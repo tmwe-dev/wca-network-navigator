@@ -34,6 +34,7 @@ export function AppLayout() {
   const [missionOpen, setMissionOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [testExtOpen, setTestExtOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
