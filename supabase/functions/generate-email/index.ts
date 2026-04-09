@@ -697,6 +697,30 @@ serve(async (req) => {
     // ─── Interlocutor Type (Partner vs End Client) ───
     interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
 
+    // ─── "Met in Person" Context from Business Cards ───
+    let metInPersonContext = "";
+    if (effectivePartnerId) {
+      const { data: bcaRows } = await supabase
+        .from("business_cards")
+        .select("contact_name, event_name, met_at, location")
+        .eq("matched_partner_id", effectivePartnerId)
+        .limit(3);
+      if (bcaRows && bcaRows.length > 0) {
+        const encounters = bcaRows.map((bc: any) => {
+          const parts: string[] = [];
+          if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
+          if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
+          if (bc.met_at) parts.push(`Data: ${bc.met_at}`);
+          if (bc.location) parts.push(`Luogo: ${bc.location}`);
+          return parts.join(", ");
+        }).join("\n");
+        metInPersonContext = `\nINCONTRO DI PERSONA — IMPORTANTE:
+Hai incontrato questa azienda di persona. Questo cambia il tono della comunicazione.
+${encounters}
+ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di persona ("È stato un piacere incontrarvi a [evento]..."). NON trattare come un contatto freddo.\n`;
+      }
+    }
+
     // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
     let cachedEnrichmentContext = "";
     if (isPartnerSource && activity?.partner_id) {
@@ -891,6 +915,7 @@ ${interlocutorBlock}
 ${relationshipBlock}
 ${historyContext}
 ${branchBlock}
+${metInPersonContext}
 ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
