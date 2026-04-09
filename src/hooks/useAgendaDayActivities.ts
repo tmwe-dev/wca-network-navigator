@@ -111,7 +111,7 @@ const MOCK_REMINDERS: Reminder[] = [
 
 function isMockEnabled(): boolean {
   try {
-    return localStorage.getItem("outreach-mock-enabled") === "true";
+    return localStorage.getItem("demo-data-enabled") === "true" || localStorage.getItem("outreach-mock-enabled") === "true";
   } catch {
     return false;
   }
