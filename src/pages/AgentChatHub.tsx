@@ -166,6 +166,32 @@ export default function AgentChatHub() {
                 </span>
               </div>
             </div>
+            <Button
+              size="sm"
+              variant={directoryOpen ? "default" : "outline"}
+              onClick={() => setDirectoryOpen(!directoryOpen)}
+              className="rounded-lg text-xs gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Directory
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* System Directory Panel */}
+      <AnimatePresence>
+        {directoryOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-b border-border/30"
+          >
+            <div className="max-h-[40vh] overflow-y-auto px-4 py-3">
+              <AgentSystemDirectory />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
