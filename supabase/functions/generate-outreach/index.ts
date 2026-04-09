@@ -583,6 +583,7 @@ ${recipientContext}
 ${interlocutorBlock}
 ${relationshipBlock}
 ${branchBlock}
+${metInPersonContext}
 ${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
