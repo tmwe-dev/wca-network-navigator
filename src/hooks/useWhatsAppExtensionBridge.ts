@@ -191,5 +191,5 @@ export function useWhatsAppExtensionBridge() {
     sidebarChangedCbRef.current = cb;
   }, []);
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
+  return { isAvailable, isAuthenticated, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
 }

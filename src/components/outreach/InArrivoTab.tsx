@@ -79,6 +79,7 @@ export function InArrivoTab() {
               toggle={waSync.toggle}
               isReading={waSync.isReading}
               isAvailable={waSync.isAvailable}
+              isAuthenticated={waSync.isAuthenticated}
               readNow={waSync.readNow}
               bfProgress={waBackfill.progress}
               startBackfill={waBackfill.startBackfill}

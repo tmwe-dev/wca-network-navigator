@@ -49,11 +49,11 @@ export function WhatsAppToolbar({
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-1">
-        <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading || !isAvailable} className="gap-1 h-6 text-[10px] px-1.5">
+        <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading || !canAct} className="gap-1 h-6 text-[10px] px-1.5">
           {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Leggi
         </Button>
-        <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-6 text-[10px] px-1.5">
+        <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5">
           {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
           {enabled ? "ON" : "OFF"}
         </Button>
@@ -62,13 +62,13 @@ export function WhatsAppToolbar({
             <Square className="w-3 h-3" /> Stop
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi">
+          <Button size="sm" variant="outline" onClick={startBackfill} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi">
             <Download className="w-3 h-3" /> Backfill
           </Button>
         )}
-        <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5 cursor-default">
-          {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-          {isAvailable ? "On" : "Off"}
+        <Badge variant={badgeState.variant} className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", badgeState.color)}>
+          {isAvailable ? (isAuthenticated ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />) : <WifiOff className="w-2.5 h-2.5" />}
+          {badgeState.label}
         </Badge>
         {enabled && (
           <Badge className={cn("text-[9px] gap-0.5 h-5 px-1.5 border-0 cursor-default", levelCfg.color)}>

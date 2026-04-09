@@ -353,6 +353,7 @@ export function useWhatsAppAdaptiveSync() {
     setEnabled,
     isReading,
     isAvailable,
+    isAuthenticated,
     focusedChat,
     focusOn,
     readNow,
