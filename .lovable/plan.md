@@ -1,63 +1,62 @@
 
-Obiettivo: riallineare Campaigns e Global alla fonte di verità dei dati, come da documento: prima si decide dove vive la verità, poi si costruisce la UI.
 
-Cosa ho verificato
-- Nel database `partners`, Albania (`AL`) ha davvero 12 partner attivi.
-- Oggi il dropdown di `Campaigns` non è guidato in modo puro dalla tabella `partners`: passa da `usePartnersForGlobe()`, che costruisce la lista paesi partendo da `src/data/wcaCountries.ts` e poi innesta i conteggi.
-- Quindi la UI sta mescolando due fonti:
-  - `partners` = dati operativi reali
-  - `wcaCountries.ts` = riferimento statico geografico
-- La sidebar porta “Global” dentro “Campagne” perché in `src/App.tsx` c’è un redirect esplicito:
-  - `/global` → `/campaigns`
-- Non esiste oggi una pagina `Global` dedicata; la base distinta già presente nel repo è `src/pages/Operations.tsx`.
+# Piano: Ordinamento + Contatti Raggruppati per Azienda in CompanyList
 
-Piano di correzione
+## Situazione Attuale
 
-1. Rendere `partners` la fonte di verità del dropdown Campaigns
-- Creare una logica dedicata per aggregare da `partners`:
-  - `country_code`
-  - `country_name`
-  - count partner reali
-- Il dropdown Partner userà questi dati reali, non il dataset statico come fonte primaria.
+- `CompanyList` mostra un partner per riga, con solo nome azienda, città, email, tipo
+- Non carica i contatti (`partner_contacts`) — non si vedono i contatti multipli
+- Ordinamento solo implicito (alfabetico per nome, dal DB)
+- SBA Albania ha 25 contatti, Pelikan 20, ecc. — dati reali nel DB
 
-2. Tenere la lista completa dei paesi, ma con overlay reale
-- Mantengo tutti i paesi visibili.
-- Per i paesi presenti nel DB:
-  - nome e count arrivano da `partners`
-- Per i paesi assenti:
-  - count = `0`, in grigio
-- In questo modo Albania dovrà mostrare `12`.
+## Interventi
 
-3. Separare responsabilità: globo vs dropdown
-- `wcaCountries.ts` resta solo per:
-  - coordinate
-  - flag/fallback geografici
-  - supporto al globo 3D
-- `usePartnersForGlobe` continua a servire il globo.
-- `Campaigns.tsx` smette di usare il hook del globo come fonte del dropdown/header.
+### 1. Caricare contatti per ogni partner visibile
 
-4. Ripristinare Global come maschera distinta
-- Rimuovere il redirect `/global -> /campaigns`.
-- Collegare `/global` alla pagina distinta già esistente nel progetto (`Operations`) oppure a un wrapper `Global` dedicato basato su quella pagina.
-- `Campagne` resta la pagina globo/campagne.
-- `Global` torna a essere una pagina separata, come richiesto.
+**File: `src/components/campaigns/CompanyList.tsx`**
 
-5. Chiarire i contatori in header
-- Rendere espliciti i badge per evitare ambiguità:
-  - Paesi totali
-  - Paesi attivi
-  - Partner
-- Così non si confonde più la lunghezza della lista con il numero reale di partner.
+- Aggiungere un hook `usePartnerContacts(partnerIds)` che fa query su `partner_contacts` per tutti i partner nella vista corrente
+- Ritorna una mappa `Record<string, PartnerContact[]>` raggruppata per `partner_id`
+- Ogni contatto ha: `id, name, title, email, direct_phone, mobile, is_primary, contact_alias`
 
-File coinvolti
-- `src/hooks/usePartnersForGlobe.ts`
-- `src/pages/Campaigns.tsx`
-- `src/App.tsx`
-- `src/pages/Operations.tsx` oppure nuovo `src/pages/Global.tsx`
+### 2. Aggiungere controlli di ordinamento
 
-Risultato atteso
-- In `Campaigns`, il dropdown Partner mostra i numeri reali della tabella `partners`
-- Albania mostra `12`
-- I paesi a zero restano visibili in grigio
-- `Global` e `Campagne` tornano a essere due maschere diverse
-- La sidebar non manda più “Global” dentro “Campagne”
+**File: `src/components/campaigns/CompanyList.tsx`**
+
+- Aggiungere pulsanti di ordinamento nella header: **Nome** (A→Z) e **Città** (A→Z)
+- Aggiungere ordinamento per **N° contatti** (decrescente) per trovare subito le aziende con più contatti
+- Il sort si applica alla lista `filteredPartners` nel memo
+
+### 3. Card azienda espandibile con contatti raggruppati
+
+Per ogni partner che ha più contatti:
+- Mostrare badge con conteggio contatti (es. `👥 25 contatti`)
+- Click sulla card espande/collassa la lista contatti sotto
+- Ogni contatto mostra: nome, titolo, email, telefono
+- Il contatto primario (`is_primary`) è evidenziato in cima
+- Checkbox individuale per ogni contatto → permette selezione specifica
+
+### 4. Selezione multipla a livello contatto
+
+- Stato di selezione attuale: `Set<string>` di partner IDs
+- Aggiungere un secondo livello: `Set<string>` di contact IDs selezionati
+- Checkbox sul partner = seleziona/deseleziona tutti i suoi contatti
+- Checkbox sul singolo contatto = selezione granulare
+- Il footer "Aggiungi alla campagna" mostra sia partner che contatti selezionati
+- Quando si aggiunge alla campagna, il `selected_contact_id` viene passato per il cockpit
+
+## File coinvolti
+
+| File | Modifica |
+|------|----------|
+| `src/components/campaigns/CompanyList.tsx` | Sort controls, contatti espandibili, selezione contatti |
+| `src/pages/Campaigns.tsx` | Passare stato selezione contatti, propagare al cockpit |
+
+## Risultato atteso
+
+- Posso ordinare per nome, città o numero contatti
+- Ogni azienda mostra quanti contatti ha
+- Espandendo una card vedo tutti i contatti con i loro dati
+- Posso selezionare contatti specifici per la campagna
+- Il contatto scelto viene associato all'attività nel cockpit
+
