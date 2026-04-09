@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone } from "lucide-react";
+import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAgents, type Agent } from "@/hooks/useAgents";
