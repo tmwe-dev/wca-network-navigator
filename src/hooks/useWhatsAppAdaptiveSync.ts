@@ -325,6 +325,18 @@ export function useWhatsAppAdaptiveSync() {
     };
   }, []);
 
+  // ── Auto-trigger backfill on reconnection (false → true) ──
+  useEffect(() => {
+    if (prevAuthRef.current === false && isAuthenticated === true) {
+      log.info("reconnection_detected", { triggering: "deep_backfill" });
+      // Small delay to let WhatsApp Web stabilize
+      setTimeout(() => {
+        onReconnectRef.current?.();
+      }, 5000);
+    }
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   // ── Manual focus on a chat ──
   const focusOn = useCallback((contact: string) => {
     setFocusedChat(contact);
@@ -347,6 +359,11 @@ export function useWhatsAppAdaptiveSync() {
     }
   }, [level]);
 
+  // Allow external code to register a reconnection callback
+  const onReconnect = useCallback((cb: () => void) => {
+    onReconnectRef.current = cb;
+  }, []);
+
   return {
     level,
     levelLabel,
@@ -359,6 +376,7 @@ export function useWhatsAppAdaptiveSync() {
     focusedChat,
     focusOn,
     readNow,
+    onReconnect,
     domIsStale,
     lastLearnedAt,
     forceRelearn,
