@@ -78,7 +78,7 @@ export function useExtensionBridge() {
 
   const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<RawResponse> => {
     return new Promise((resolve) => {
-      const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const requestId = `${action}_${crypto.randomUUID()}`;
       const timer = setTimeout(() => {
         pendingRef.current.delete(requestId);
         resolve({ success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_TIMEOUT", error: "Timeout" } as RawResponse);

@@ -88,7 +88,7 @@ export function useLinkedInExtensionBridge() {
   const sendMessage = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<LiExtensionResponse> => {
       return new Promise((resolve) => {
-        const requestId = `li_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `li_${action}_${crypto.randomUUID()}`;
 
         log.debug("→ request", { action, requestId, payloadKeys: payload ? Object.keys(payload) : [] });
 

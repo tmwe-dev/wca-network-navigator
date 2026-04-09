@@ -109,7 +109,7 @@ export function useWhatsAppExtensionBridge() {
 
     const checkAuth = async () => {
       try {
-        const requestId = `wa_verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `wa_verifySession_${crypto.randomUUID()}`;
         const result = await new Promise<WaExtensionResponse>((resolve) => {
           const timer = setTimeout(() => {
             pendingRef.current.delete(requestId);
@@ -136,7 +136,7 @@ export function useWhatsAppExtensionBridge() {
   const sendMsg = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<WaExtensionResponse> => {
       return new Promise((resolve) => {
-        const requestId = `wa_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `wa_${action}_${crypto.randomUUID()}`;
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);

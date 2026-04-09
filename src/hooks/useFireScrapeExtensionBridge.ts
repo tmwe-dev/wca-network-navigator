@@ -74,7 +74,7 @@ export function useFireScrapeExtensionBridge() {
   const sendMessage = useCallback(
     <T = any>(action: string, payload?: Record<string, any>, timeoutMs = 30000): Promise<FsResponse<T>> =>
       new Promise((resolve) => {
-        const requestId = `fs_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `fs_${action}_${crypto.randomUUID()}`;
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
           resolve({ success: false, error: "Timeout" } as FsResponse<T>);
