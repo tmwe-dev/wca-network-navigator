@@ -2733,42 +2733,12 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
-  const query = String(args.query || "").trim();
-  if (!query) return { error: "query è obbligatoria" };
-  const limit = Math.min(Math.max(Number(args.limit) || 6, 1), 20);
-  const categories = Array.isArray(args.categories) ? (args.categories as string[]) : undefined;
-  try {
-    const { ragSearchKb } = await import("../_shared/embeddings.ts");
-    const matches = await ragSearchKb(supabase, query, {
-      matchCount: limit,
-      matchThreshold: 0.2,
-      categories,
-      onlyActive: true,
-    });
-    if (matches.length === 0) {
-      // Fallback testuale ilike
-      const { data } = await supabase
-        .from("kb_entries")
-        .select("id, title, content, category, chapter, tags, priority")
-        .eq("is_active", true)
-        .ilike("content", `%${escapeLike(query)}%`)
-        .order("priority", { ascending: false })
-        .limit(limit);
-      return { matches: data || [], method: "fallback_text" };
-    }
-    return {
-      matches: matches.map((m) => ({
-        id: m.id, title: m.title, content: m.content.slice(0, 800),
-        category: m.category, chapter: m.chapter, tags: m.tags,
-        similarity: Number(m.similarity.toFixed(3)),
-      })),
-      method: "rag_semantic",
-    };
-  } catch (e) {
-    console.error("search_kb error:", e);
-    return { error: e instanceof Error ? e.message : "Unknown error" };
-  }
-}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WAVE 4 — ENTERPRISE TOOL EXECUTORS (now delegated to shared modules)
+// The inline implementations below are kept as dead code for reference.
+// Active dispatch is handled by shared modules via executeTool above.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function executeSaveKbRule(args: Record<string, unknown>, userId: string) {
   const title = String(args.title || "").trim();
