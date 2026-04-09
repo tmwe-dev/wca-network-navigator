@@ -223,14 +223,14 @@ export default function AgentChatHub() {
           {/* STT mic */}
           <Button
             size="icon"
-            variant={listening ? "destructive" : "outline"}
-            onClick={toggleSTT}
+            variant={speech.listening ? "destructive" : "outline"}
+            onClick={speech.toggle}
             disabled={!activeAgent}
-            className={cn("rounded-xl relative", listening && "animate-pulse")}
-            title={listening ? "Stop dettatura" : "Dettatura vocale"}
+            className={cn("rounded-xl relative", speech.listening && "animate-pulse")}
+            title={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
           >
-            {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            {listening && (
+            {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {speech.listening && (
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-ping" />
             )}
           </Button>
