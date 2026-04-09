@@ -1,44 +1,62 @@
 
+# Piano: Evoluzione Inbox Email — Layout, Auto-Sync, Enrichment e Reply
 
-# Piano: Rilevamento Continuo Sessione WhatsApp Web
+## 7 Interventi
 
-## Problema
+### 1. Layout Compatto Inbox Email
+- Spostare "Nuove", "Scarica Tutto", "Reset" nel **top bar** della pagina (accanto ai tab Email/WhatsApp/LinkedIn)
+- Le info "3891 email in database · pag. 1 · 50 visualizzate" diventano una riga compatta orizzontale sotto i tab, non sopra la lista
 
-Il sistema distingue solo se l'**estensione Chrome** è installata (`isAvailable`), ma NON verifica se **WhatsApp Web è autenticato** (sessione attiva, QR non mostrato). Il controllo `verifySession` viene fatto solo una volta all'avvio. Se WhatsApp Web si disconnette, il badge resta verde e i bottoni Leggi/Backfill falliscono silenziosamente.
+### 2. Auto-Sync Email (ogni 2-3 minuti)
+- Aggiungere un **toggle ON/OFF** nel top bar per l'auto-sync
+- Quando attivo: chiamata `check-inbox` ogni 2 minuti in background
+- Lo stato del toggle persiste in localStorage
+- Badge animato durante il download
 
-## Soluzione
+### 3. Loghi Aziendali Migliorati
+- Rimuovere lo sfondo bianco → usare `object-contain` con sfondo trasparente
+- Se non c'è logo/favicon: **nessuna icona placeholder**, solo spazio vuoto o iniziale
+- Non tagliare mai l'immagine: adattare lo spazio al logo (aspect-ratio libero)
+- Arrotondamento leggero, ombra sottile
 
-Aggiungere un **heartbeat di sessione** nel bridge WhatsApp che chiama `verifySession` periodicamente (ogni 30s) e espone un nuovo stato `isAuthenticated` separato da `isAvailable`.
+### 4. Bandiere Paese sulle Email
+- Analizzare il dominio dell'email o il TLD per dedurre il paese (`.ae` → 🇦🇪, `.us`/`.com` → tentativo)
+- Se il contatto è nel database con country code → usare quello
+- Mostrare una mini-bandiera (16px) accanto al logo/avatar
 
-## Modifiche
+### 5. Toggle Enrichment AI (Google Search)
+- Toggle in alto "🔍 AI Enrich" che attiva/disattiva l'arricchimento automatico
+- Quando attivo: per ogni email nuova da mittente sconosciuto, chiama un edge function leggero che fa una ricerca rapida (dominio → nome azienda, settore, paese)
+- Salva il risultato nel database (tabella `email_address_rules` o nuova `sender_profiles`) così la prossima volta non serve ricalcolare
+- Costo minimo: usa Gemini Flash Lite con pochi token
 
-### 1. `src/hooks/useWhatsAppExtensionBridge.ts`
-- Aggiungere stato `isAuthenticated` (boolean) — indica se WhatsApp Web ha sessione attiva
-- Nel polling esistente (ogni 3s per `ping`), aggiungere un check `verifySession` ogni 30s
-- Se `verifySession` ritorna `authenticated: false` → `isAuthenticated = false`
-- Esporre `isAuthenticated` nel return del hook
+### 6. Filtro Circuito d'Attesa
+- Verificare se il mittente è nel circuito d'attesa (match su email in `imported_contacts` con `lead_status = 'contacted'`)
+- Badge "✈️ Circuito" sulla card email se match
+- Filtro rapido nel top bar: "Mostra solo Circuito d'Attesa"
 
-### 2. `src/components/outreach/WhatsAppToolbar.tsx`
-- Ricevere `isAuthenticated` nelle props
-- Il badge connessione mostra 3 stati:
-  - 🟢 **Connesso** — estensione OK + sessione attiva
-  - 🟡 **Sessione chiusa** — estensione OK ma WhatsApp Web non autenticato
-  - 🔴 **Estensione Off** — estensione non disponibile
-- Disabilitare Leggi/Backfill quando `isAuthenticated === false`
+### 7. Reply Inline → Email Composer
+- Aggiungere tasti "Rispondi" / "Rispondi a tutti" / "Inoltra" sopra il corpo email
+- Click apre un **Dialog/Sheet** con l'Email Composer precompilato (destinatario, subject con "Re:", quote del messaggio originale)
+- Il messaggio originale è visibile in un pannello laterale o in basso (collassabile)
 
-### 3. `src/components/outreach/InArrivoTab.tsx`
-- Passare `isAuthenticated` dal bridge alla toolbar
+## Ordine di esecuzione
 
-### 4. `src/hooks/useWhatsAppAdaptiveSync.ts`
-- Prima di ogni scan, controllare `isAuthenticated`
-- Se false, saltare il tick e mostrare toast "WhatsApp Web disconnesso"
+1. **Layout compatto** (intervento 1) — impatto visivo immediato
+2. **Loghi migliorati** (intervento 3) — qualità grafica
+3. **Bandiere paese** (intervento 4) — info visiva rapida
+4. **Filtro circuito d'attesa** (intervento 6) — funzionalità operativa
+5. **Reply inline** (intervento 7) — produttività
+6. **Auto-sync** (intervento 2) — automazione
+7. **Enrichment AI** (intervento 5) — richiede edge function + possibile nuova tabella
 
-## File coinvolti
+## File principali coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/hooks/useWhatsAppExtensionBridge.ts` | +stato `isAuthenticated`, heartbeat 30s con `verifySession` |
-| `src/components/outreach/WhatsAppToolbar.tsx` | Badge a 3 stati, disabilita azioni se non autenticato |
-| `src/components/outreach/InArrivoTab.tsx` | Passa `isAuthenticated` |
-| `src/hooks/useWhatsAppAdaptiveSync.ts` | Check autenticazione prima di ogni scan |
-
+| `src/components/outreach/InArrivoTab.tsx` | Riorganizzare toolbar, aggiungere toggle auto-sync |
+| `src/components/outreach/EmailInboxView.tsx` | Layout compatto, loghi, bandiere, badge circuito |
+| `src/components/outreach/EmailMessageCard.tsx` o simile | Logo trasparente, bandiera, badge ✈️ |
+| `src/components/outreach/EmailReplyDialog.tsx` | Nuovo — dialog reply con composer |
+| `src/hooks/useEmailAutoSync.ts` | Nuovo — polling check-inbox ogni 2min |
+| Edge function enrichment | Eventuale — ricerca rapida mittente |
