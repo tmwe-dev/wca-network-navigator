@@ -48,6 +48,7 @@ export default function Settings() {
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+    { value: "timing", label: "Timing & Schedule", icon: Clock },
   ];
 
   return (
