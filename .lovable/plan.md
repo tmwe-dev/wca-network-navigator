@@ -1,56 +1,53 @@
 
 
-# Piano: Logo a destra del nome + Bandiera grande a destra della card
-
-## Problema attuale
-- `CompanyLogo` è usato come avatar a sinistra con la bandiera sovrapposta in piccolo
-- L'utente vuole: **logo reale (solo Clearbit)** inline accanto al nome del mittente, **bandiera grande** sul lato destro della riga
+# Piano: Deep Backfill WhatsApp con Delay 15-20s
 
 ## Cosa cambia
 
-### 1. Separare Logo e Bandiera nel `CompanyLogo`
-Creare due sotto-componenti esportati:
-- **`CompanyLogoInline`** — solo il logo Clearbit, piccolo (16-20px), senza fallback visivo (se non trova il logo, non renderizza nulla). Da mettere accanto al nome del mittente.
-- **`CountryFlag`** — solo la bandiera dal TLD, dimensione grande (20-24px), da posizionare sul lato destro della card.
+### 1. Riscrittura `useWhatsAppBackfill.ts` — Backfill a 2 fasi
 
-Il componente `CompanyLogo` esistente (con InitialsAvatar) resta come avatar a sinistra.
+**Fase 1 — Discovery (sidebar scan)**
+- Chiama `readUnread()` per ottenere la lista contatti con messaggi
+- Per ogni contatto, cerca nel DB l'ultimo messaggio salvato (query `channel_messages` filtrata per contact + channel=whatsapp, ordinata per `created_at DESC`)
+- Identifica i contatti con potenziali gap (hanno messaggi nuovi nella sidebar rispetto all'ultimo salvato)
 
-### 2. Layout `EmailMessageList.tsx`
-```text
-Attuale:
-[Logo+Flag]  Nome         Data
-             Oggetto
-             Email
+**Fase 2 — Deep Recovery (chat per chat)**
+- Per ogni contatto con gap (max 10 chat per sessione), chiama `readThread(contact, 50)` per leggere i messaggi visibili nella chat
+- Se il gap è grande, usa `backfillChat(contact, lastKnownText, 30)` per scrollare verso l'alto fino a trovare l'ultimo messaggio già salvato
+- **Pausa di 15-20 secondi** (jitter randomico) tra una chat e l'altra
+- Salva ogni messaggio con ID deterministico (dedup automatica)
+- Mostra progresso: "Recupero chat 3/8 — 47 messaggi recuperati"
 
-Nuovo:
-[Iniziali]  Nome [Logo🔹]        🇻🇳  Data
-            Oggetto                    ✈️
-            Email
-```
-- A sinistra: `InitialsAvatar` (sempre, con le iniziali del brand)
-- Dopo il nome: `CompanyLogoInline` (solo se Clearbit trova il logo reale, altrimenti niente)
-- A destra: `CountryFlag` grande (20-24px) estratta dal TLD dell'email
-- Rimuovere `showFlag` dal `CompanyLogo` nella lista (la bandiera è ora separata)
+### 2. Trigger automatico in `useWhatsAppAdaptiveSync.ts`
 
-### 3. Layout `DownloadedEmailList.tsx`
-Stesso schema: iniziali a sinistra, logo inline dopo il nome, bandiera grande a destra.
+- Traccia lo stato precedente di `isAuthenticated` con un ref
+- Quando passa da `false` → `true` (riconnessione), lancia automaticamente il deep backfill
+- Il backfill gira in background senza bloccare la sync normale
 
-### 4. `EmailDetailView.tsx`
-Stesso approccio nel header del dettaglio email: logo inline accanto al nome, bandiera grande a destra.
+### 3. Progress UI aggiornata
+
+Il tipo `BackfillProgress` si arricchisce con:
+- `phase: "discovery" | "deep" | "idle"`
+- `currentChat: string | null` — nome del contatto in corso
+- `chatsProcessed / chatsTotal` — contatore chat
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/ui/CompanyLogo.tsx` | Esportare `CompanyLogoInline` (solo logo, nessun fallback) e `CountryFlag` (solo bandiera, grande) |
-| `src/components/outreach/EmailMessageList.tsx` | Nuovo layout: iniziali sx, logo inline dopo nome, bandiera dx grande |
-| `src/components/outreach/download/DownloadedEmailList.tsx` | Stesso nuovo layout |
-| `src/components/outreach/download/DownloadedEmailPreview.tsx` | Logo inline + bandiera separata |
-| `src/components/outreach/EmailDetailView.tsx` | Logo inline + bandiera separata |
+| `src/hooks/useWhatsAppBackfill.ts` | Riscrittura completa: Fase 1 discovery + Fase 2 deep con readThread/backfillChat, pause 15-20s, max 10 chat |
+| `src/hooks/useWhatsAppAdaptiveSync.ts` | Aggiungere ref `prevAuthRef`, trigger backfill su riconnessione (false→true) |
+| `src/components/outreach/InArrivoTab.tsx` | Passare il trigger di backfill dal sync, mostrare progress aggiornato |
+
+## Costanti chiave
+- `MAX_CHATS_PER_SESSION = 10`
+- `PAUSE_BETWEEN_CHATS_MS = 17500` (15-20s con jitter ±15%)
+- `MAX_SCROLLS_PER_CHAT = 30`
+- `MAX_MESSAGES_PER_THREAD = 50`
 
 ## Risultato
-- Logo reale Clearbit: appare piccolo accanto al nome del mittente, solo se esiste
-- Nessun logo inventato, nessun fallback generico vicino al nome
-- Bandiera del paese: grande, posizionata chiaramente a destra della riga
-- InitialsAvatar: resta come identificativo visivo a sinistra
+- Alla riconnessione WhatsApp: backfill automatico chat per chat
+- Delay 15-20s tra ogni chat per sicurezza
+- Max 10 chat per sessione, max 30 scroll per chat
+- Deduplicazione garantita, interrompibile in qualsiasi momento
 
