@@ -2167,6 +2167,7 @@ export type Database = {
           is_admin: boolean
           linkedin_profile_url: string | null
           name: string
+          reply_to_email: string | null
           smtp_host: string | null
           smtp_password_encrypted: string | null
           smtp_port: number | null
@@ -2189,6 +2190,7 @@ export type Database = {
           is_admin?: boolean
           linkedin_profile_url?: string | null
           name: string
+          reply_to_email?: string | null
           smtp_host?: string | null
           smtp_password_encrypted?: string | null
           smtp_port?: number | null
@@ -2211,6 +2213,7 @@ export type Database = {
           is_admin?: boolean
           linkedin_profile_url?: string | null
           name?: string
+          reply_to_email?: string | null
           smtp_host?: string | null
           smtp_password_encrypted?: string | null
           smtp_port?: number | null

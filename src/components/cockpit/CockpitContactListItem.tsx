@@ -64,6 +64,18 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         transition={{ delay: index * 0.03, duration: 0.2 }}
         draggable
         onDragStart={onDragStart}
+        onDragStartCapture={(e: React.DragEvent) => {
+          const el = e.currentTarget as HTMLElement;
+          const clone = el.cloneNode(true) as HTMLElement;
+          clone.style.transform = "scale(0.5)";
+          clone.style.transformOrigin = "top left";
+          clone.style.position = "absolute";
+          clone.style.top = "-9999px";
+          clone.style.width = `${el.offsetWidth}px`;
+          document.body.appendChild(clone);
+          e.dataTransfer.setDragImage(clone, el.offsetWidth * 0.25, 10);
+          requestAnimationFrame(() => document.body.removeChild(clone));
+        }}
         onDragEnd={onDragEnd}
         className={cn(
           "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",

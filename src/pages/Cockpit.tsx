@@ -112,7 +112,7 @@ const Cockpit = () => {
             assignmentMap={assignmentInfoMap}
           />
         </div>
-        <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
+        <div className="flex-1 flex items-stretch justify-center p-6 min-w-[320px]">
           {showLinkedInFlow && selection.count > 0 ? (
             <LinkedInFlowPanel
               selectedContacts={contacts.filter(c => selection.selectedIds.has(c.id)).map(c => ({ id: c.id, name: c.name, company: c.company, linkedinUrl: c.linkedinUrl }))}
