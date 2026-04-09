@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 import {
   normalizeEmailContent,
@@ -13,16 +13,8 @@ import type { DownloadedEmail } from "@/lib/backgroundSync";
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
@@ -37,7 +29,6 @@ export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
     [bodyHtml, bodyText],
   );
   const hasContent = Boolean(content.bodyHtml || content.bodyText);
-
   const htmlContent = content.bodyHtml ?? renderEmailTextAsHtml(content.bodyText);
 
   return (
@@ -45,12 +36,16 @@ export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
       <div className="flex flex-shrink-0 items-center gap-3 border-b border-border bg-card px-5 py-3">
         <CompanyLogo email={email.from} name={brand} size={36} className="flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-bold text-primary">{brand}</div>
+          <div className="flex items-center gap-2">
+            <span className="truncate text-base font-bold text-primary">{brand}</span>
+            <CompanyLogoInline email={email.from} size={20} />
+          </div>
           <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{email.subject}</div>
           <div className="mt-0.5 truncate text-xs text-muted-foreground">
             {detail || email.from} — {formatTime(email.date)}
           </div>
         </div>
+        <CountryFlag email={email.from} size={24} className="flex-shrink-0" />
       </div>
 
       <ScrollArea className="flex-1 min-h-0 bg-background">

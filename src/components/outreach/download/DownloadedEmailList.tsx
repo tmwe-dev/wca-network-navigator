@@ -1,23 +1,15 @@
 import { useRef } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
 import { cn } from "@/lib/utils";
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 type Props = {
@@ -31,14 +23,7 @@ type Props = {
 
 const ROW_HEIGHT = 64;
 
-export function DownloadedEmailList({
-  emails,
-  selectedEmailId,
-  onSelect,
-  isRunning,
-  isLoading = false,
-  emailCount,
-}: Props) {
+export function DownloadedEmailList({ emails, selectedEmailId, onSelect, isRunning, isLoading = false, emailCount }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -48,9 +33,7 @@ export function DownloadedEmailList({
     overscan: 5,
   });
 
-  const visibleLabel = emailCount > emails.length
-    ? `ultime ${emails.length} visibili`
-    : `${emails.length} visibili`;
+  const visibleLabel = emailCount > emails.length ? `ultime ${emails.length} visibili` : `${emails.length} visibili`;
 
   return (
     <div className="flex w-[320px] flex-shrink-0 flex-col overflow-hidden border-r border-border bg-background">
@@ -70,9 +53,7 @@ export function DownloadedEmailList({
         </div>
       ) : (
         <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
-          <div
-            style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}
-          >
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const email = emails[virtualRow.index];
               const { brand } = extractSenderBrand(email.from);
@@ -94,16 +75,22 @@ export function DownloadedEmailList({
                   className={cn(
                     "flex w-full items-start gap-2 px-3 py-2 text-left transition-all duration-150",
                     "hover:bg-accent/50",
-                    isSelected
-                      ? "border-l-2 border-primary bg-primary/10"
-                      : "border-l-2 border-transparent",
+                    isSelected ? "border-l-2 border-primary bg-primary/10" : "border-l-2 border-transparent",
                   )}
                 >
                   <CompanyLogo email={email.from} name={brand} size={24} className="mt-0.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[11px] font-bold leading-tight text-primary">{brand}</div>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate text-[11px] font-bold leading-tight text-primary flex items-center gap-1">
+                        {brand}
+                        <CompanyLogoInline email={email.from} size={14} />
+                      </span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <CountryFlag email={email.from} size={16} />
+                        <span className="text-[10px] text-muted-foreground/70">{formatTime(email.date)}</span>
+                      </div>
+                    </div>
                     <div className="mt-0.5 truncate text-xs leading-tight text-foreground">{email.subject}</div>
-                    <div className="mt-0.5 text-[10px] text-muted-foreground/70">{formatTime(email.date)}</div>
                   </div>
                 </button>
               );

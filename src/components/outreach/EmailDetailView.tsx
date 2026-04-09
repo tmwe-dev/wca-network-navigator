@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useMessageAttachments, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { supabase } from "@/integrations/supabase/client";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";
 import { EmailHtmlFrame } from "./email/EmailHtmlFrame";
