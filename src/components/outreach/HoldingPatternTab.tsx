@@ -135,10 +135,16 @@ export function HoldingPatternTab() {
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{item.name}</div>
+                          <div className="font-medium truncate">{item.name}</div>
                           <div className="text-[10px] text-muted-foreground truncate">
                             {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
+                          {(item.agentEmoji || item.tutorName) && (
+                            <div className="text-[9px] text-muted-foreground/70 truncate mt-0.5 flex items-center gap-1">
+                              {item.agentEmoji && <span>{item.agentEmoji}</span>}
+                              {item.tutorName && <span className="truncate">{item.tutorName}</span>}
+                            </div>
+                          )}
                         </div>
                         <HoldingPatternIndicator status={item.leadStatus as LeadStatus} />
                       </button>
@@ -165,6 +171,18 @@ export function HoldingPatternTab() {
             <div className="px-4 py-3 border-b border-border/40">
               <h3 className="text-sm font-semibold">{selected.name}</h3>
               <p className="text-xs text-muted-foreground">{selected.email || "Nessun contatto"}</p>
+              {(selected.agentEmoji || selected.tutorName) && (
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground/80">
+                  {selected.agentEmoji && <span className="text-sm">{selected.agentEmoji}</span>}
+                  {selected.agentName && <span className="font-medium">{selected.agentName}</span>}
+                  {selected.tutorName && (
+                    <>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span>Tutor: {selected.tutorName}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">

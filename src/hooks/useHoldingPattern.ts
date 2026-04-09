@@ -14,6 +14,12 @@ export interface HoldingItem {
   leadStatus: string;
   lastInteractionAt: string | null;
   interactionCount: number;
+  /** Tutor (operator) display name */
+  tutorName?: string | null;
+  /** Agent AI emoji */
+  agentEmoji?: string | null;
+  /** Agent AI name */
+  agentName?: string | null;
 }
 
 export interface TimelineEntry {
@@ -97,6 +103,64 @@ export function useHoldingPatternList() {
           interactionCount: c.interaction_count,
         })
       );
+
+      // ── Enrich with tutor + agent info from activities ──
+      if (items.length > 0) {
+        const allIds = items.map((i) => i.id);
+        // Fetch most recent activity per source_id with user and agent info
+        const { data: activities } = await supabase
+          .from("activities")
+          .select("source_id, user_id, executed_by_agent_id")
+          .in("source_id", allIds)
+          .order("created_at", { ascending: false });
+
+        if (activities && activities.length > 0) {
+          // Build map: source_id → first (most recent) activity
+          const actMap = new Map<string, { userId: string | null; agentId: string | null }>();
+          for (const a of activities) {
+            if (!actMap.has(a.source_id)) {
+              actMap.set(a.source_id, { userId: a.user_id, agentId: a.executed_by_agent_id });
+            }
+          }
+
+          // Fetch unique user profiles
+          const userIds = [...new Set([...actMap.values()].map((v) => v.userId).filter(Boolean))] as string[];
+          const profileMap = new Map<string, string>();
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("user_id, display_name")
+              .in("user_id", userIds);
+            (profiles || []).forEach((p) => profileMap.set(p.user_id, p.display_name || "Operatore"));
+          }
+
+          // Fetch unique agents
+          const agentIds = [...new Set([...actMap.values()].map((v) => v.agentId).filter(Boolean))] as string[];
+          const agentMap = new Map<string, { emoji: string; name: string }>();
+          if (agentIds.length > 0) {
+            const { data: agents } = await supabase
+              .from("agents")
+              .select("id, avatar_emoji, name")
+              .in("id", agentIds);
+            (agents || []).forEach((a) => agentMap.set(a.id, { emoji: a.avatar_emoji, name: a.name }));
+          }
+
+          // Assign to items
+          for (const item of items) {
+            const act = actMap.get(item.id);
+            if (act) {
+              if (act.userId) item.tutorName = profileMap.get(act.userId) || null;
+              if (act.agentId) {
+                const ag = agentMap.get(act.agentId);
+                if (ag) {
+                  item.agentEmoji = ag.emoji;
+                  item.agentName = ag.name;
+                }
+              }
+            }
+          }
+        }
+      }
 
       return items;
     },
