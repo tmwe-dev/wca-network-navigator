@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWcaSession } from "@/hooks/useWcaSession";
+import { usePendingTaskCount } from "@/hooks/usePendingTaskCount";
 import { useState } from "react";
 
 function getNavSections(pathname: string) {
@@ -71,6 +72,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     () => document.documentElement.classList.contains("dark")
   );
   const { isSessionActive } = useWcaSession();
+  const pendingCount = usePendingTaskCount();
   const wcaStatus =
     isSessionActive === true ? "ok"
     : isSessionActive === false ? "expired"
@@ -142,6 +144,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                         )}
                       />
                       <span className="truncate">{item.title}</span>
+                      {item.url === "/outreach" && pendingCount > 0 && (
+                        <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
+                          {pendingCount > 99 ? "99+" : pendingCount}
+                        </span>
+                      )}
                       {isActive && (
                         <motion.span
                           layoutId="sidebar-indicator"
