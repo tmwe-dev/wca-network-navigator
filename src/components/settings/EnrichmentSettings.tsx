@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import {
   Building2, Mail, CheckCircle2, Linkedin, Search, LayoutDashboard,
   Users, SortAsc, SortDesc, MoreVertical, Globe, ImageOff, XCircle,
-  Filter, Brain, Download,
+  Filter, Brain, Download, CreditCard, Image,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { DeepSearchOptionsDialog } from "./enrichment/DeepSearchOptionsDialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +35,11 @@ export interface EnrichedRow {
   linkedinUrl?: string;
   email?: string;
   country?: string;
+  /** Real DB id for actions (strip "cockpit-"/"email-" prefixes) */
+  realId?: string;
 }
 
-type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit";
+type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
 type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
 type SortField = "name" | "domain" | "source";
 type SortDir = "asc" | "desc";
@@ -44,6 +48,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: ReactNode }[] = [
   { value: "all", label: "Tutti", icon: <Users className="w-3.5 h-3.5" /> },
   { value: "wca", label: "WCA", icon: <Building2 className="w-3.5 h-3.5" /> },
   { value: "contacts", label: "Contatti", icon: <Search className="w-3.5 h-3.5" /> },
+  { value: "bca", label: "BCA", icon: <CreditCard className="w-3.5 h-3.5" /> },
   { value: "email", label: "Email", icon: <Mail className="w-3.5 h-3.5" /> },
   { value: "cockpit", label: "Cockpit", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
 ];
@@ -63,6 +68,7 @@ const ORIGIN_ACCENT: Record<string, string> = {
   contacts: "border-l-green-500",
   email: "border-l-amber-500",
   cockpit: "border-l-teal-500",
+  bca: "border-l-purple-500",
 };
 
 const ORIGIN_BADGE_CLASS: Record<string, string> = {
@@ -70,6 +76,7 @@ const ORIGIN_BADGE_CLASS: Record<string, string> = {
   contacts: "bg-green-500/10 text-green-700 border-green-200",
   email: "bg-amber-500/10 text-amber-700 border-amber-200",
   cockpit: "bg-teal-500/10 text-teal-700 border-teal-200",
+  bca: "bg-purple-500/10 text-purple-700 border-purple-200",
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -90,8 +97,36 @@ function getFlag(code?: string): string {
   return COUNTRY_FLAGS[code.toUpperCase()] || "";
 }
 
+/** Iterative batch loader — fetches ALL rows from a table, 2000 at a time */
+async function loadAllRows<T>(
+  table: string,
+  select: string,
+  filters?: (q: any) => any,
+  batchSize = 2000
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 0;
+  while (true) {
+    let q = (supabase as any).from(table).select(select);
+    if (filters) q = filters(q);
+    q = q.range(page * batchSize, (page + 1) * batchSize - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    if (data) all.push(...data);
+    if (!data || data.length < batchSize) break;
+    page++;
+  }
+  return all;
+}
+
+function openGoogleLogoSearch(name: string) {
+  const query = encodeURIComponent(`${name} company logo`);
+  window.open(`https://www.google.com/search?tbm=isch&q=${query}`, "_blank");
+}
+
 export default function EnrichmentSettings() {
   const linkedInLookup = useLinkedInLookup();
+  const deepSearch = useDeepSearch();
 
   // Internal filter state
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
@@ -100,38 +135,41 @@ export default function EnrichmentSettings() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dsDialogOpen, setDsDialogOpen] = useState(false);
+  const [dsTargetIds, setDsTargetIds] = useState<string[]>([]);
+  const [dsMode, setDsMode] = useState<"partner" | "contact">("partner");
 
   const toggleSort = useCallback((field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
   }, [sortField]);
 
-  // Data queries
+  // ── Data queries with iterative batch loading ──
+
   const { data: partners = [] } = useQuery({
     queryKey: ["enrichment-partners"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, email, website, country_code, logo_url")
-        .order("company_name").limit(1000);
-      return (data || []).map((p): EnrichedRow => ({
+      const data = await loadAllRows<any>("partners", "id, company_name, email, website, country_code, logo_url");
+      return data.map((p: any): EnrichedRow => ({
         id: p.id, name: p.company_name,
         domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
         source: "wca", hasLogo: !!p.logo_url, hasLinkedin: false,
         email: p.email || undefined, country: p.country_code || undefined,
+        realId: p.id,
       }));
     },
+    staleTime: 60_000,
   });
 
   const { data: contacts = [], refetch: refetchContacts } = useQuery({
     queryKey: ["enrichment-contacts"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, enrichment_data, country")
-        .or("name.not.is.null,company_name.not.is.null,email.not.is.null")
-        .limit(1000);
-      return (data || []).map((c): EnrichedRow => {
+      const data = await loadAllRows<any>(
+        "imported_contacts",
+        "id, name, company_name, email, enrichment_data, country",
+        (q: any) => q.or("name.not.is.null,company_name.not.is.null,email.not.is.null")
+      );
+      return data.map((c: any): EnrichedRow => {
         const ed = (c.enrichment_data as Record<string, any>) || {};
         const liUrl = ed.linkedin_profile_url || ed.linkedin_url || ed.social_links?.linkedin || null;
         return {
@@ -139,20 +177,45 @@ export default function EnrichmentSettings() {
           domain: extractDomainFromEmail(c.email || ""),
           source: "contacts", hasLogo: false, hasLinkedin: !!liUrl,
           linkedinUrl: liUrl || undefined, email: c.email || undefined,
-          country: c.country || undefined,
+          country: c.country || undefined, realId: c.id,
         };
       });
     },
+    staleTime: 60_000,
+  });
+
+  const { data: bcaItems = [] } = useQuery({
+    queryKey: ["enrichment-bca"],
+    queryFn: async () => {
+      const data = await loadAllRows<any>(
+        "business_cards",
+        "id, company_name, contact_name, email, phone, mobile, location, matched_partner_id"
+      );
+      return data.map((b: any): EnrichedRow => {
+        const name = b.company_name || b.contact_name || b.email || "?";
+        return {
+          id: b.id, name,
+          domain: extractDomainFromEmail(b.email || ""),
+          source: "bca", hasLogo: false, hasLinkedin: false,
+          email: b.email || undefined,
+          country: undefined,
+          realId: b.id,
+        };
+      });
+    },
+    staleTime: 60_000,
   });
 
   const { data: emailSenders = [] } = useQuery({
     queryKey: ["enrichment-email-senders"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("channel_messages").select("from_address")
-        .not("from_address", "is", null).limit(1000);
+      const data = await loadAllRows<any>(
+        "channel_messages",
+        "from_address",
+        (q: any) => q.not("from_address", "is", null)
+      );
       const domainMap = new Map<string, { from: string; domain: string }>();
-      for (const row of data || []) {
+      for (const row of data) {
         const domain = extractDomainFromEmail(row.from_address || "");
         if (domain && !isPersonalEmail(domain) && !domainMap.has(domain))
           domainMap.set(domain, { from: row.from_address!, domain });
@@ -163,23 +226,41 @@ export default function EnrichmentSettings() {
         domain: s.domain, source: "email", hasLogo: false, hasLinkedin: false, email: s.from,
       }));
     },
+    staleTime: 60_000,
   });
 
   const { data: cockpitItems = [] } = useQuery({
     queryKey: ["enrichment-cockpit"],
     queryFn: async () => {
-      const { data: queue } = await supabase
-        .from("cockpit_queue").select("id, source_id, source_type, partner_id, status").limit(1000);
-      if (!queue?.length) return [];
-      const partnerIds = [...new Set(queue.filter(q => q.partner_id).map(q => q.partner_id!))];
-      const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];
-      const [{ data: pData }, { data: cData }] = await Promise.all([
-        partnerIds.length ? supabase.from("partners").select("id, company_name, email, website").in("id", partnerIds) : Promise.resolve({ data: [] as any[] }),
-        contactIds.length ? supabase.from("imported_contacts").select("id, name, company_name, email").in("id", contactIds) : Promise.resolve({ data: [] as any[] }),
+      const queue = await loadAllRows<any>("cockpit_queue", "id, source_id, source_type, partner_id, status");
+      if (!queue.length) return [];
+      const partnerIds = [...new Set(queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id!))];
+      const contactIds = [...new Set(queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id))];
+
+      const fetchPartnerBatch = async (ids: string[]) => {
+        const all: any[] = [];
+        for (let i = 0; i < ids.length; i += 100) {
+          const { data } = await supabase.from("partners").select("id, company_name, email, website").in("id", ids.slice(i, i + 100));
+          if (data) all.push(...data);
+        }
+        return all;
+      };
+      const fetchContactBatch = async (ids: string[]) => {
+        const all: any[] = [];
+        for (let i = 0; i < ids.length; i += 100) {
+          const { data } = await supabase.from("imported_contacts").select("id, name, company_name, email").in("id", ids.slice(i, i + 100));
+          if (data) all.push(...data);
+        }
+        return all;
+      };
+
+      const [pData, cData] = await Promise.all([
+        partnerIds.length ? fetchPartnerBatch(partnerIds) : [],
+        contactIds.length ? fetchContactBatch(contactIds) : [],
       ]);
-      const pMap = new Map((pData || []).map(p => [p.id, p]));
-      const cMap = new Map((cData || []).map(c => [c.id, c]));
-      return queue.map((q): EnrichedRow => {
+      const pMap = new Map(pData.map((p: any) => [p.id, p]));
+      const cMap = new Map(cData.map((c: any) => [c.id, c]));
+      return queue.map((q: any): EnrichedRow => {
         const partner = q.partner_id ? pMap.get(q.partner_id) : null;
         const contact = q.source_type === "contact" ? cMap.get(q.source_id) : null;
         const name = partner?.company_name || contact?.name || contact?.company_name || q.source_id.slice(0, 8);
@@ -188,22 +269,25 @@ export default function EnrichmentSettings() {
         return { id: `cockpit-${q.id}`, name, domain: domain || null, source: "cockpit", hasLogo: false, hasLinkedin: false, email };
       });
     },
+    staleTime: 60_000,
   });
 
   // Counts per source (unfiltered)
   const sourceCounts = useMemo(() => ({
-    all: partners.length + contacts.length + emailSenders.length + cockpitItems.length,
+    all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
     wca: partners.length,
     contacts: contacts.length,
+    bca: bcaItems.length,
     email: emailSenders.length,
     cockpit: cockpitItems.length,
-  }), [partners, contacts, emailSenders, cockpitItems]);
+  }), [partners, contacts, bcaItems, emailSenders, cockpitItems]);
 
   // Filtered rows
   const allRows = useMemo(() => {
     let rows: EnrichedRow[] = [];
     if (sourceTab === "all" || sourceTab === "wca") rows.push(...partners);
     if (sourceTab === "all" || sourceTab === "contacts") rows.push(...contacts);
+    if (sourceTab === "all" || sourceTab === "bca") rows.push(...bcaItems);
     if (sourceTab === "all" || sourceTab === "email") rows.push(...emailSenders);
     if (sourceTab === "all" || sourceTab === "cockpit") rows.push(...cockpitItems);
     if (search) {
@@ -226,7 +310,7 @@ export default function EnrichmentSettings() {
       return sortDir === "desc" ? -cmp : cmp;
     });
     return rows;
-  }, [partners, contacts, emailSenders, cockpitItems, sourceTab, search, enrichFilter, sortField, sortDir]);
+  }, [partners, contacts, bcaItems, emailSenders, cockpitItems, sourceTab, search, enrichFilter, sortField, sortDir]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -254,16 +338,46 @@ export default function EnrichmentSettings() {
     });
   };
 
-  // Bulk actions
+  // ── Actions ──
+
+  const getSelectedRows = () => allRows.filter(r => selected.has(r.id));
+
+  const openDeepSearchDialog = (rows: EnrichedRow[]) => {
+    // Determine mode based on source
+    const ids = rows.map(r => r.realId || r.id);
+    const isContact = rows.some(r => r.source === "contacts" || r.source === "bca");
+    setDsTargetIds(ids);
+    setDsMode(isContact ? "contact" : "partner");
+    setDsDialogOpen(true);
+  };
+
+  const handleDeepSearchConfirm = (_options: Record<string, boolean>) => {
+    setDsDialogOpen(false);
+    if (dsTargetIds.length > 0) {
+      deepSearch.start(dsTargetIds, true, dsMode);
+    }
+  };
+
   const handleLinkedInBatch = async () => {
-    const without = contacts.filter(c => !c.hasLinkedin);
-    if (!without.length) { toast({ title: "Tutti i contatti hanno già un profilo LinkedIn" }); return; }
+    const rows = getSelectedRows().filter(r => r.source === "contacts" && !r.hasLinkedin);
+    if (!rows.length) { toast({ title: "Nessun contatto senza LinkedIn nella selezione" }); return; }
     if (!linkedInLookup.isAvailable) { toast({ title: "Partner Connect non disponibile", variant: "destructive" }); return; }
-    await linkedInLookup.lookupBatch(without.map(c => c.id));
+    await linkedInLookup.lookupBatch(rows.map(r => r.realId || r.id));
     refetchContacts();
   };
 
-  const sourceLabel = (s: string) => ({ wca: "WCA", contacts: "Contatti", email: "Email", cockpit: "Cockpit" }[s] || s);
+  const handleBulkLogoSearch = () => {
+    const rows = getSelectedRows();
+    if (!rows.length) return;
+    // Open Google for each (max 5 to avoid popup blocker)
+    const toOpen = rows.slice(0, 5);
+    toOpen.forEach(r => openGoogleLogoSearch(r.name));
+    if (rows.length > 5) {
+      toast({ title: `Aperte ${toOpen.length} ricerche, ${rows.length - 5} rimanenti (limite browser)` });
+    }
+  };
+
+  const sourceLabel = (s: string) => ({ wca: "WCA", contacts: "Contatti", email: "Email", cockpit: "Cockpit", bca: "BCA" }[s] || s);
 
   return (
     <div className="flex-1 min-w-0 space-y-3">
@@ -340,7 +454,10 @@ export default function EnrichmentSettings() {
             <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={handleLinkedInBatch}>
               <Linkedin className="w-3 h-3" /> LinkedIn Batch
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1">
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={handleBulkLogoSearch}>
+              <Image className="w-3 h-3" /> Logo Google
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => openDeepSearchDialog(getSelectedRows())}>
               <Brain className="w-3 h-3" /> Deep Search
             </Button>
             <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1">
@@ -446,9 +563,12 @@ export default function EnrichmentSettings() {
                       <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[140px]">
-                    <DropdownMenuItem className="text-xs gap-2">
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    <DropdownMenuItem className="text-xs gap-2" onClick={() => openDeepSearchDialog([row])}>
                       <Brain className="w-3.5 h-3.5" /> Deep Search
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-xs gap-2" onClick={() => openGoogleLogoSearch(row.name)}>
+                      <Image className="w-3.5 h-3.5" /> Cerca Logo Google
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs gap-2">
                       <Linkedin className="w-3.5 h-3.5" /> Cerca LinkedIn
@@ -470,8 +590,17 @@ export default function EnrichmentSettings() {
       </ScrollArea>
 
       <p className="text-[10px] text-muted-foreground">
-        Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect
+        Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect · Deep Search configurabile per record
       </p>
+
+      {/* Deep Search Options Dialog */}
+      <DeepSearchOptionsDialog
+        open={dsDialogOpen}
+        onOpenChange={setDsDialogOpen}
+        count={dsTargetIds.length}
+        onConfirm={handleDeepSearchConfirm}
+        loading={deepSearch.running}
+      />
     </div>
   );
 }
