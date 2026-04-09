@@ -35,7 +35,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: messages = [], isLoading } = useChannelMessages("linkedin");
+  const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
   const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
