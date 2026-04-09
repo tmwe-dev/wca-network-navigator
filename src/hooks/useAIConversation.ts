@@ -69,7 +69,7 @@ export function useAIConversation(pageContext: string) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
         const update: Record<string, unknown> = {
-          messages: JSON.parse(JSON.stringify(msgs)),
+          messages: structuredClone(msgs),
           updated_at: new Date().toISOString(),
         };
         if (title) update.title = title;

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -290,7 +291,7 @@ export default function AILab() {
                     {result.subject && <p className="text-sm font-semibold mb-2">📧 Subject: {result.subject}</p>}
                     <div 
                       className="text-sm border rounded p-3 bg-muted/30 max-h-64 overflow-auto prose prose-sm"
-                      dangerouslySetInnerHTML={{ __html: result.output.replace(/<script/gi, "&lt;script") }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(result.output) }}
                     />
                     {result.debug && (
                       <details className="mt-2">

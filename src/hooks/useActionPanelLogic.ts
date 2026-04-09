@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -219,16 +220,12 @@ export function useActionPanelLogic({
     }
 
     try {
-      let cookie: string | null = null;
-      try {
-        const cached = localStorage.getItem("wca_session_cookie");
-        if (cached) { const parsed = JSON.parse(cached); if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) cookie = parsed.cookie; }
-      } catch { /* intentionally ignored: best-effort cleanup */ }
+      let cookie = getWcaCookie();
       if (!cookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         const data = await res.json();
         if (!data.success || !data.cookies) { toast({ title: "Login WCA fallito", description: data.error || "Riprova.", variant: "destructive" }); return; }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* intentionally ignored: best-effort cleanup */ }
+        setWcaCookie(data.cookies);
       }
     } catch { toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
 

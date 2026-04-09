@@ -73,7 +73,7 @@ export function useRAExtensionBridge() {
   const sendMessage = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 600000): Promise<RAResponse> => {
       return new Promise((resolve) => {
-        const requestId = `ra_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `ra_${action}_${crypto.randomUUID()}`;
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);

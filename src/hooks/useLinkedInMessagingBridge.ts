@@ -39,7 +39,7 @@ function ensureLiMsgConfig() {
 function sendToLinkedInExt(action: string, data: Record<string, any> = {}, timeoutMs = 15000): Promise<BridgeResponse> {
   ensureLiMsgConfig();
   return new Promise((resolve) => {
-    const requestId = `li_msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = `li_msg_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {
       window.removeEventListener("message", handler);
       resolve({ success: false, error: "timeout" });
@@ -62,7 +62,7 @@ function sendToLinkedInExt(action: string, data: Record<string, any> = {}, timeo
 // ── FireScrape bridge (for reading pages) ──
 function sendToFireScrape(action: string, data: Record<string, any> = {}, timeoutMs = 30000): Promise<any> {
   return new Promise((resolve) => {
-    const requestId = `fs_li_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = `fs_li_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {
       window.removeEventListener("message", handler);
       resolve({ success: false, error: "timeout" });

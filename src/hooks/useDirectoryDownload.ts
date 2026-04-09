@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { hasWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -230,14 +231,7 @@ export function useDirectoryDownload({
 
     // 🤖 Claude Engine V8: login preventivo prima della scan directory
     try {
-      let hasCookie = false;
-      try {
-        const cached = localStorage.getItem("wca_session_cookie");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) hasCookie = true;
-        }
-      } catch { /* intentionally ignored: best-effort cleanup */ }
+      const hasCookie = hasWcaCookie();
       if (!hasCookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", {
           method: "POST",
@@ -250,7 +244,7 @@ export function useDirectoryDownload({
           setIsScanning(false);
           return;
         }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* intentionally ignored: best-effort cleanup */ }
+        setWcaCookie(data.cookies);
       }
     } catch {
       setScanError("Connessione WCA fallita");

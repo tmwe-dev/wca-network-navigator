@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -175,7 +176,7 @@ export function AttivitaTab() {
                           {item.email_body && (
                             <div
                               className="text-xs border rounded-md p-2.5 max-h-[180px] overflow-auto bg-background"
-                              dangerouslySetInnerHTML={{ __html: item.email_body }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.email_body) }}
                             />
                           )}
                         </div>

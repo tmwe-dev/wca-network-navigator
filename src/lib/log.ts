@@ -120,7 +120,7 @@ function getSessionIdSafe(): string | undefined {
     if (typeof sessionStorage === "undefined") return undefined;
     let id = sessionStorage.getItem("wca.session_id");
     if (!id) {
-      id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      id = crypto.randomUUID();
       sessionStorage.setItem("wca.session_id", id);
     }
     return id;
