@@ -234,7 +234,10 @@ var Auth = (function () {
     var existingCookie = await getLiAtCookie();
     if (existingCookie) {
       var sessionCheck = await verifySession();
-      if (sessionCheck.authenticated) return Config.successResponse({ authenticated: true, reason: "already_logged_in", cookieSynced: true });
+      if (sessionCheck.authenticated) {
+        var syncAlready = await syncCookieToServer();
+        return Config.successResponse({ authenticated: true, reason: "already_logged_in", cookieSynced: !!syncAlready.success });
+      }
     }
 
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione non impostata");

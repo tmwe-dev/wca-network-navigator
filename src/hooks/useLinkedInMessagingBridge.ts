@@ -17,8 +17,27 @@ type BridgeResponse = {
   [key: string]: any;
 };
 
+// ── Ensure LinkedIn extension has Supabase config ──
+let liMsgConfigSent = false;
+function ensureLiMsgConfig() {
+  if (liMsgConfigSent) return;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return;
+  liMsgConfigSent = true;
+  log.debug("→ sending setConfig to LinkedIn extension");
+  window.postMessage({
+    direction: "from-webapp-li",
+    action: "setConfig",
+    requestId: `li_setConfig_${Date.now()}`,
+    supabaseUrl: url,
+    supabaseAnonKey: key,
+  }, window.location.origin);
+}
+
 // ── LinkedIn extension bridge (for ping, send, verify) ──
 function sendToLinkedInExt(action: string, data: Record<string, any> = {}, timeoutMs = 15000): Promise<BridgeResponse> {
+  ensureLiMsgConfig();
   return new Promise((resolve) => {
     const requestId = `li_msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const timer = setTimeout(() => {

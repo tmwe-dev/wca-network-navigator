@@ -46,8 +46,27 @@ const waMsg = (action: string, payload = {}, timeout = 60000) =>
 const fsMsg = (action: string, payload = {}, timeout = 30000) =>
   sendToExtension("from-webapp-fs", "from-extension-fs", action, payload, timeout);
 
-const liMsg = (action: string, payload = {}, timeout = 30000) =>
-  sendToExtension("from-webapp-li", "from-extension-li", action, payload, timeout);
+// Ensure LinkedIn extension has Supabase config before any action
+let liConfigSent = false;
+function ensureLiConfig() {
+  if (liConfigSent) return;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return;
+  liConfigSent = true;
+  window.postMessage({
+    direction: "from-webapp-li",
+    action: "setConfig",
+    requestId: `li_setConfig_${Date.now()}`,
+    supabaseUrl: url,
+    supabaseAnonKey: key,
+  }, window.location.origin);
+}
+
+const liMsg = (action: string, payload = {}, timeout = 30000) => {
+  ensureLiConfig();
+  return sendToExtension("from-webapp-li", "from-extension-li", action, payload, timeout);
+};
 
 // ━━━━━━━━━━━━ Terminal Component ━━━━━━━━━━━━
 function Terminal({ logs }: { logs: LogEntry[] }) {
