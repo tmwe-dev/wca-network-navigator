@@ -34,6 +34,8 @@ interface MissionState {
   savePreset: (name: string, id?: string) => void;
   deletePreset: (id: string) => void;
   loadPreset: (preset: WorkspacePreset) => void;
+  context: string;
+  setContext: (v: string) => void;
   quality: EmailQuality;
   setQuality: (q: EmailQuality) => void;
   recipients: SelectedRecipient[];
