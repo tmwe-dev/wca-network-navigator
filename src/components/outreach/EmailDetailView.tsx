@@ -157,7 +157,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               const quoteText = normalizedContent.bodyText
                 ? `\n\n---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\n\n${normalizedContent.bodyText}`
                 : "";
-              navigate("/outreach", {
+              navigate("/email-composer", {
                 state: {
                   prefilledRecipient: {
                     email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
@@ -179,7 +179,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               className="h-7 gap-1.5 text-xs"
               onClick={() => {
                 const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-                navigate("/outreach", {
+                navigate("/email-composer", {
                   state: {
                     prefilledRecipient: {
                       email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
@@ -200,7 +200,7 @@ export function EmailDetailView({ message, onClose }: Props) {
             className="h-7 gap-1.5 text-xs"
             onClick={() => {
               const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
-              navigate("/outreach", {
+              navigate("/email-composer", {
                 state: {
                   prefilledSubject: fwdSubject,
                   prefilledBody: normalizedContent.bodyText
