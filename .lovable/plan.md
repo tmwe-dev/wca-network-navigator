@@ -1,80 +1,51 @@
 
-Obiettivo
 
-- Correggere i 3 problemi emersi dai log LinkedIn:
-  1. `ERR_NO_CONFIG` durante `syncCookie`
-  2. `cookieSynced: true` mostrato anche quando il sync non è stato realmente verificato
-  3. inbox LinkedIn letta come vuota (`threads: []`) nonostante la pagina messaging sia aperta
+# Piano: Fix ERR_NO_CONFIG + cookieSynced + Inbox LinkedIn
 
-Fonte di verità
+Il fix `sendConfig` esiste già in `useLinkedInExtensionBridge.ts` ma viene bypassato da due punti che usano canali separati.
 
-- Nel frontend deve esistere un solo bridge LinkedIn condiviso: stesso handshake `setConfig`, stessa logica di ping, stessi timeout, stessa gestione delle risposte.
-- Per la lettura inbox, la fonte di verità non può più essere il vecchio pattern `a[href*="/messaging/thread/"]`, ma la struttura reale della pagina LinkedIn attuale (AX tree + elementi conversazione reali).
+## Problema 1: ERR_NO_CONFIG
 
-Cosa ho verificato
+`TestExtensions.tsx` usa `liMsg()` (riga 49) e `useLinkedInMessagingBridge.ts` usa `sendToLinkedInExt()` (riga 21) — entrambi inviano postMessage direttamente senza mai chiamare `setConfig`. L'hook con il fix non viene usato in questi contesti.
 
-- `src/hooks/useLinkedInExtensionBridge.ts` contiene già il fix `sendConfig()`.
-- Il problema attuale nasce perché non tutti i percorsi usano quel hook:
-  - `src/pages/TestExtensions.tsx` usa `liMsg(...)` diretto
-  - `src/hooks/useLinkedInMessagingBridge.ts` usa `sendToLinkedInExt(...)` diretto
-- Quindi il test che hai mostrato può ancora chiamare `syncCookie` senza aver prima inviato `setConfig`.
-- In `public/linkedin-extension/auth.js`, il ramo `already_logged_in` restituisce `cookieSynced: true` in modo hardcoded: è un falso positivo.
-- In `public/linkedin-extension/actions.js` e `public/linkedin-extension/ax-tree.js`, la lettura inbox dipende ancora troppo da link `/messaging/thread/`, che sulla UI corrente non bastano più; per questo ottieni `success: true` ma nessun thread.
+**Fix**: Aggiungere invio `setConfig` in entrambi i punti prima di qualsiasi azione.
 
-Piano di correzione
+### File: `src/pages/TestExtensions.tsx`
+- Nel tab LinkedIn, prima del primo `liMsg()`, inviare `setConfig` con le credenziali Supabase
+- Aggiungere una funzione `ensureLiConfig()` che invia setConfig una volta e la chiama prima di ogni test
 
-1. Unificare tutto il bridge LinkedIn nel frontend
-- Estrarre una base condivisa per:
-  - `postMessage`
-  - request/response
-  - timeout
-  - ping
-  - `setConfig`
-  - availability
-- Riutilizzarla in:
-  - `useLinkedInExtensionBridge`
-  - `useLinkedInMessagingBridge`
-  - `src/pages/TestExtensions.tsx`
+### File: `src/hooks/useLinkedInMessagingBridge.ts`
+- Nel listener `contentScriptReady` / `ping` success (riga 233), inviare `setConfig` come fa il bridge principale
+- Aggiungere `configSentRef` e la stessa logica di `sendConfig()`
 
-2. Sistemare il test page
-- Fare in modo che la tab LinkedIn di `/test-extensions` non usi più un canale “grezzo” separato.
-- Il test dovrà passare dallo stesso bootstrap del bridge ufficiale, così `syncCookie`, `autoLogin` e test futuri partono sempre con config pronta.
+## Problema 2: cookieSynced hardcoded
 
-3. Rendere veritiero `cookieSynced`
-- In `public/linkedin-extension/auth.js`:
-  - rimuovere il `cookieSynced: true` hardcoded
-  - valorizzare `cookieSynced` solo dal risultato reale di `syncCookieToServer()`
-  - se la sessione è valida ma il sync fallisce, restituire stato coerente (`authenticated: true`, `cookieSynced: false`, motivo esplicito)
+### File: `public/linkedin-extension/auth.js`
+- Riga 237: `cookieSynced: true` è hardcoded nel ramo `already_logged_in`
+- Fix: chiamare `syncCookieToServer()` e usare il risultato reale: `cookieSynced: !!syncResult.success`
 
-4. Rifare la lettura inbox sulla UI LinkedIn attuale
-- Aggiornare `AXTree.readInbox` e `Actions.readInbox` per cercare:
-  - righe conversazione reali
-  - nome contatto
-  - preview ultimo messaggio
-  - stato unread
-  - identificatore / URL thread disponibile
-- Non usare più come criterio primario i soli anchor `/messaging/thread/`.
-- Tenere fallback multipli, ma costruiti sulla struttura reale della messaging sidebar.
+## Problema 3: Inbox vuota
 
-5. Migliorare la diagnostica
-- Quando non trova thread, la risposta non deve essere solo `success: true` con array vuoto.
-- Restituire anche dettagli utili: metodo usato, candidati analizzati, perché sono stati scartati.
-- Questo aiuta sia `/test-extensions` sia i flussi veri (`useLinkedInSync`, `useLinkedInBackfill`, reply inbox).
+### File: `public/linkedin-extension/actions.js`
+- La lettura inbox restituisce `threads: []` perché i selettori DOM sono obsoleti
+- Aggiungere fallback basato su elementi lista conversazione reali (`li` items nella sidebar messaging)
+- Quando zero thread trovati, restituire metadata diagnostica (metodo usato, candidati trovati, motivo esclusione)
 
-File coinvolti
+### File: `public/linkedin-extension/ax-tree.js`
+- Stessa logica: aggiornare i selettori per la struttura DOM attuale di LinkedIn messaging
 
-- `src/hooks/useLinkedInExtensionBridge.ts`
-- `src/hooks/useLinkedInMessagingBridge.ts`
-- `src/pages/TestExtensions.tsx`
-- `public/linkedin-extension/auth.js`
-- `public/linkedin-extension/actions.js`
-- `public/linkedin-extension/ax-tree.js`
-- opzionale: nuovo modulo condiviso tipo `src/lib/linkedinBridge/*`
+## File coinvolti
 
-Risultato atteso
+| File | Modifica |
+|------|----------|
+| `src/pages/TestExtensions.tsx` | Aggiungere `ensureLiConfig()` prima dei test LinkedIn |
+| `src/hooks/useLinkedInMessagingBridge.ts` | Aggiungere `sendConfig` su detection estensione |
+| `public/linkedin-extension/auth.js` | Rimuovere `cookieSynced: true` hardcoded, usare risultato reale |
+| `public/linkedin-extension/actions.js` | Aggiornare selettori inbox + diagnostica |
+| `public/linkedin-extension/ax-tree.js` | Aggiornare selettori inbox fallback |
 
-- `syncCookie` non mostra più `ERR_NO_CONFIG`
-- tutti i punti dell’app che parlano con l’estensione LinkedIn usano lo stesso codice
-- `autoLogin` non dichiara più `cookieSynced: true` quando non è vero
-- l’inbox LinkedIn torna a trovare conversazioni reali
-- sync manuale, backfill e reply LinkedIn tornano coerenti con la stessa fonte di verità
+## Risultato
+- `syncCookie` non mostra più `ERR_NO_CONFIG` da nessun punto dell'app
+- `cookieSynced` riflette lo stato reale del sync
+- Inbox LinkedIn torna a trovare conversazioni con selettori aggiornati
+
