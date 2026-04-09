@@ -601,8 +601,6 @@ export function WhatsAppInboxView() {
   );
 }
 
-/** Live countdown for backfill pauses */
-function BackfillCountdown({ endsAt }: { endsAt: number }) {
   const [remaining, setRemaining] = useState("");
 
   useEffect(() => {
