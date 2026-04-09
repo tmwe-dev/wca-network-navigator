@@ -486,6 +486,16 @@ function LinkedInTest() {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
     }
   });
+
+  const testSendMessage = () => runWithCooldown(async () => {
+    if (!sendUrl.trim()) {
+      log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn");
+      return;
+    }
+    if (!sendText.trim()) {
+      log("⚠️ Inserisci il testo del messaggio", "warn");
+      return;
+    }
     log(`📤 Invio messaggio LinkedIn...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
@@ -499,11 +509,9 @@ function LinkedInTest() {
         log("💡 Suggerimento: assicurati che il tab LinkedIn sia attivo e visibile", "warn");
       }
     }
-    setRunning(false);
-  };
+  });
 
-  const testDiagnosticDom = async () => {
-    setRunning(true);
+  const testDiagnosticDom = () => runWithCooldown(async () => {
     log("🔬 Diagnostica DOM LinkedIn Messaging...");
     const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
     if (r?.success) {
@@ -528,8 +536,7 @@ function LinkedInTest() {
     } else {
       log(`❌ Diagnostica fallita: ${r?.error || JSON.stringify(r)}`, "error");
     }
-    setRunning(false);
-  };
+  });
 
   return (
     <div className="space-y-4">
