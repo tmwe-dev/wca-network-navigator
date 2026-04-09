@@ -288,6 +288,22 @@ REGOLE:
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Blocco standard ACCESSO SISTEMA (iniettato in tutti i template)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const SYSTEM_ACCESS_BLOCK = `
+
+═══════════════════════════════════════════
+ACCESSO SISTEMA (universale per tutti gli agenti):
+═══════════════════════════════════════════
+- Hai accesso COMPLETO a: KB globale, prompt operativi, team roster, storico attività dei colleghi.
+- Consulta la Knowledge Base prima di agire — contiene regole, tecniche e istruzioni operative.
+- Usa search_memory per recuperare decisioni strategiche e contesto storico.
+- I tuoi clienti assegnati sono in client_assignments (tool: list_agent_tasks con filtro agent_id).
+- Puoi vedere le attività di TUTTI i colleghi per coordinamento cross-team.
+- Il contesto iniettato include: profilo utente, memoria L2/L3, KB completa, prompt operativi, team roster, task attivi.`;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Templates
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
