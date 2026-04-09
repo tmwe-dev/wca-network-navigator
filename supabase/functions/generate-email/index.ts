@@ -347,7 +347,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
@@ -366,8 +366,55 @@ serve(async (req) => {
     let sourceType = "partner";
     let activity: any = null;
 
-    if (standalone) {
-      // ── STANDALONE MODE: detect language from recipient_countries ──
+    if (standalone && partner_id) {
+      // ── STANDALONE + PARTNER_ID MODE: load real partner data from DB ──
+      console.log(`Standalone mode with real partner_id: ${partner_id}`);
+      const { data: realPartner } = await supabase
+        .from("partners")
+        .select("id, company_name, company_alias, country_code, country_name, city, email, phone, website, profile_description, rating, raw_profile_markdown, enrichment_data, office_type, lead_status")
+        .eq("id", partner_id)
+        .single();
+
+      if (realPartner) {
+        partner = realPartner;
+        sourceType = "partner";
+
+        // Load contacts for this partner
+        const { data: contacts } = await supabase
+          .from("partner_contacts")
+          .select("id, name, email, direct_phone, mobile, title, contact_alias")
+          .eq("partner_id", partner_id)
+          .limit(5);
+
+        if (contacts?.length) {
+          // Find contact matching recipient_name if possible
+          const matchedContact = recipient_name
+            ? contacts.find((c: any) => 
+                c.name?.toLowerCase().includes(recipient_name.toLowerCase()) ||
+                c.contact_alias?.toLowerCase().includes(recipient_name.toLowerCase())
+              ) || contacts[0]
+            : contacts[0];
+          contact = matchedContact;
+          contactEmail = contact.email || partner.email;
+        } else {
+          contactEmail = partner.email;
+        }
+      } else {
+        // Fallback to synthetic partner if not found
+        partner = {
+          id: partner_id,
+          company_name: recipient_company || "Destinatario",
+          company_alias: recipient_company || null,
+          country_code: "IT",
+          country_name: recipient_countries || "",
+          city: "",
+          email: null, phone: null, website: null,
+          profile_description: null, rating: null, raw_profile_markdown: null,
+        };
+        sourceType = "standalone";
+      }
+    } else if (standalone) {
+      // ── STANDALONE MODE (no partner_id): generic/synthetic partner ──
       const firstCountry = (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
       partner = {
         id: null,
@@ -383,15 +430,11 @@ serve(async (req) => {
         rating: null,
         raw_profile_markdown: null,
       };
-      // If a recipient name was provided (e.g. manual entry), create a synthetic contact
       if (recipient_name) {
         contact = {
           name: recipient_name,
           contact_alias: recipient_name,
-          title: null,
-          email: null,
-          direct_phone: null,
-          mobile: null,
+          title: null, email: null, direct_phone: null, mobile: null,
         };
       } else {
         contact = null;
@@ -578,7 +621,7 @@ serve(async (req) => {
     }
 
     // Fetch partner networks, services, social links, settings in parallel
-    const isPartnerSource = !standalone && sourceType === "partner" && activity?.partner_id;
+    const isPartnerSource = (sourceType === "partner" && partner?.id) && (!standalone || partner_id);
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       isPartnerSource
         ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id)
