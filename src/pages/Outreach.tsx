@@ -7,7 +7,7 @@ import { lazyRetry } from "@/lib/lazyRetry";
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
-const HoldingPatternTab = lazyRetry(() => import("@/components/outreach/HoldingPatternTab").then(m => ({ default: m.HoldingPatternTab })));
+const HoldingPatternTab = lazyRetry(() => import("@/components/outreach/HoldingPatternCommandCenter").then(m => ({ default: m.HoldingPatternCommandCenter })));
 const CodaAITab = lazyRetry(() => import("@/components/outreach/CodaAITab").then(m => ({ default: m.CodaAITab })));
 
 function TabFallback() {
