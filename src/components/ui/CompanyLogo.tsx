@@ -42,6 +42,18 @@ export function getFlagFromDomain(domain: string): string | null {
   return TLD_TO_FLAG[tld] || null;
 }
 
+/** Extract root domain (drop subdomains): news.armani.com → armani.com */
+function getRootDomain(domain: string): string {
+  const parts = domain.split(".");
+  if (parts.length <= 2) return domain;
+  // Handle co.uk, com.au style TLDs
+  const sld = parts[parts.length - 2];
+  if (["co", "com", "org", "net", "ac", "gov"].includes(sld) && parts.length > 2) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+}
+
 const logoCache = new Map<string, "clearbit" | "none">();
 
 interface CompanyLogoProps {
