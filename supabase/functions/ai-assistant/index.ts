@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "../_shared/sqlEscape.ts";
+import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
+import { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
+import { createEnterpriseHandlers } from "../_shared/toolHandlersEnterprise.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +15,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
+
+// ━━━ Shared handler modules ━━━
+const readH = createReadHandlers(supabase);
+const writeH = createWriteHandlers(supabase);
+const entH = createEnterpriseHandlers(supabase);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SYSTEM PROMPT
@@ -2643,110 +2651,94 @@ async function executeCheckJobStatus(args: Record<string, unknown>) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function executeTool(name: string, args: Record<string, unknown>, userId?: string, authHeader?: string): Promise<unknown> {
+  // ── Read handlers (shared module) ──
+  const readMap: Record<string, () => Promise<unknown>> = {
+    search_partners: () => readH.executeSearchPartners(args),
+    get_country_overview: () => readH.executeCountryOverview(args),
+    get_directory_status: () => readH.executeDirectoryStatus(args),
+    list_jobs: () => readH.executeListJobs(args),
+    get_partner_detail: () => readH.executePartnerDetail(args),
+    get_global_summary: () => readH.executeGlobalSummary(),
+    check_blacklist: () => readH.executeCheckBlacklist(args),
+    list_reminders: () => readH.executeListReminders(args),
+    get_partners_without_contacts: () => readH.executePartnersWithoutContacts(args),
+    search_contacts: () => readH.executeSearchContacts(args),
+    get_contact_detail: () => readH.executeGetContactDetail(args),
+    search_prospects: () => readH.executeSearchProspects(args),
+    list_activities: () => readH.executeListActivities(args),
+    search_business_cards: () => readH.executeSearchBusinessCards(args),
+    check_job_status: () => readH.executeCheckJobStatus(args),
+  };
+  if (readMap[name]) return readMap[name]();
+
+  // ── Write handlers (shared module) ──
+  const writeMap: Record<string, () => Promise<unknown>> = {
+    update_partner: () => writeH.executeUpdatePartner(args),
+    add_partner_note: () => writeH.executeAddPartnerNote(args),
+    create_reminder: () => writeH.executeCreateReminder(args),
+    update_lead_status: () => writeH.executeUpdateLeadStatus(args),
+    bulk_update_partners: () => writeH.executeBulkUpdatePartners(args),
+    link_business_card: () => writeH.executeLinkBusinessCard(args),
+    create_activity: () => writeH.executeCreateActivity(args),
+    update_activity: () => writeH.executeUpdateActivity(args),
+    manage_partner_contact: () => writeH.executeManagePartnerContact(args),
+    update_reminder: () => writeH.executeUpdateReminder(args),
+    delete_records: () => writeH.executeDeleteRecords(args),
+  };
+  if (writeMap[name]) return writeMap[name]();
+
+  // Write handlers needing authHeader
+  const writeAuthMap: Record<string, () => Promise<unknown>> = {
+    generate_outreach: () => writeH.executeGenerateOutreach(args, authHeader!),
+    send_email: () => writeH.executeSendEmail(args, authHeader!),
+    deep_search_partner: () => writeH.executeDeepSearchPartner(args, authHeader!),
+    deep_search_contact: () => writeH.executeDeepSearchContact(args, authHeader!),
+    enrich_partner_website: () => writeH.executeEnrichPartnerWebsite(args, authHeader!),
+    scan_directory: () => writeH.executeScanDirectory(args, authHeader!),
+    generate_aliases: () => writeH.executeGenerateAliases(args, authHeader!),
+  };
+  if (writeAuthMap[name]) return authHeader ? writeAuthMap[name]() : { error: "Auth required" };
+
+  // ── Enterprise handlers (shared module) ──
+  const entAuthMap: Record<string, () => Promise<unknown>> = {
+    save_memory: () => entH.executeSaveMemory(args, userId!),
+    search_memory: () => entH.executeSearchMemory(args, userId!),
+    create_work_plan: () => entH.executeCreateWorkPlan(args, userId!),
+    execute_plan_step: () => entH.executeExecutePlanStep(args, userId!, authHeader),
+    get_active_plans: () => entH.executeGetActivePlans(userId!),
+    save_as_template: () => entH.executeSaveAsTemplate(args, userId!),
+    search_templates: () => entH.executeSearchTemplates(args, userId!),
+    save_kb_rule: () => entH.executeSaveKbRule(args, userId!),
+    save_operative_prompt: () => entH.executeSaveOperativePrompt(args, userId!),
+    list_workflows: () => entH.executeListWorkflows(args, userId!),
+    start_workflow: () => entH.executeStartWorkflow(args, userId!),
+    advance_workflow_gate: () => entH.executeAdvanceWorkflowGate(args, userId!),
+    list_playbooks: () => entH.executeListPlaybooks(args, userId!),
+    apply_playbook: () => entH.executeApplyPlaybook(args, userId!),
+  };
+  if (entAuthMap[name]) return userId ? entAuthMap[name]() : { error: "Auth required" };
+
+  // Enterprise handlers without user requirement
+  const entMap: Record<string, () => Promise<unknown>> = {
+    execute_ui_action: () => entH.executeUiAction(args),
+    search_kb: () => entH.executeSearchKb(args),
+  };
+  if (entMap[name]) return entMap[name]();
+
+  // ── Inline handlers (not yet extracted) ──
   switch (name) {
-    case "search_partners": return executeSearchPartners(args);
-    case "get_country_overview": return executeCountryOverview(args);
-    case "get_directory_status": return executeDirectoryStatus(args);
-    case "list_jobs": return executeListJobs(args);
-    case "get_partner_detail": return executePartnerDetail(args);
-    case "get_global_summary": return executeGlobalSummary();
-    case "check_blacklist": return executeCheckBlacklist(args);
-    case "list_reminders": return executeListReminders(args);
-    case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
     case "create_download_job": return executeCreateDownloadJob(args);
     case "download_single_partner": return executeDownloadSinglePartner(args);
-    // Memory & plan tools
-    case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
-    case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
-    case "create_work_plan": return userId ? executeCreateWorkPlan(args, userId) : { error: "Auth required" };
-    case "execute_plan_step": return userId ? executeExecutePlanStep(args, userId, authHeader) : { error: "Auth required" };
-    case "get_active_plans": return userId ? executeGetActivePlans(userId) : { error: "Auth required" };
-    case "save_as_template": return userId ? executeSaveAsTemplate(args, userId) : { error: "Auth required" };
-    case "search_templates": return userId ? executeSearchTemplates(args, userId) : { error: "Auth required" };
-    case "execute_ui_action": return executeUiAction(args);
-    // Writing tools
-    case "update_partner": return executeUpdatePartner(args);
-    case "add_partner_note": return executeAddPartnerNote(args);
-    case "create_reminder": return executeCreateReminder(args);
-    case "update_lead_status": return executeUpdateLeadStatus(args);
-    case "bulk_update_partners": return executeBulkUpdatePartners(args);
-    // Business card tools
-    case "search_business_cards": return executeSearchBusinessCards(args);
-    case "link_business_card": return executeLinkBusinessCard(args);
-    // Verification tool
-    case "check_job_status": return executeCheckJobStatus(args);
-    // ━━━ NEW: Contacts, Prospects, Activities, Email, Deep Search, Directory, Aliases ━━━
-    case "search_contacts": return executeSearchContacts(args);
-    case "get_contact_detail": return executeGetContactDetail(args);
-    case "search_prospects": return executeSearchProspects(args);
-    case "list_activities": return executeListActivities(args);
-    case "create_activity": return executeCreateActivity(args);
-    case "update_activity": return executeUpdateActivity(args);
-    case "generate_outreach": return authHeader ? executeGenerateOutreach(args, authHeader) : { error: "Auth required" };
-    case "send_email": return authHeader ? executeSendEmail(args, authHeader) : { error: "Auth required" };
-    case "deep_search_partner": return authHeader ? executeDeepSearchPartner(args, authHeader) : { error: "Auth required" };
-    case "deep_search_contact": return authHeader ? executeDeepSearchContact(args, authHeader) : { error: "Auth required" };
-    case "enrich_partner_website": return authHeader ? executeEnrichPartnerWebsite(args, authHeader) : { error: "Auth required" };
-    case "scan_directory": return authHeader ? executeScanDirectory(args, authHeader) : { error: "Auth required" };
-    case "generate_aliases": return authHeader ? executeGenerateAliases(args, authHeader) : { error: "Auth required" };
-    case "manage_partner_contact": return executeManagePartnerContact(args);
-    case "update_reminder": return executeUpdateReminder(args);
-    case "delete_records": return executeDeleteRecords(args);
     case "get_procedure": return executeGetProcedure(args);
-    // ── Wave 4 Enterprise tools ──
-    case "search_kb": return executeSearchKb(args);
-    case "save_kb_rule": return userId ? executeSaveKbRule(args, userId) : { error: "Auth required" };
-    case "save_operative_prompt": return userId ? executeSaveOperativePrompt(args, userId) : { error: "Auth required" };
-    case "list_workflows": return userId ? executeListWorkflows(args, userId) : { error: "Auth required" };
-    case "start_workflow": return userId ? executeStartWorkflow(args, userId) : { error: "Auth required" };
-    case "advance_workflow_gate": return userId ? executeAdvanceWorkflowGate(args, userId) : { error: "Auth required" };
-    case "list_playbooks": return userId ? executeListPlaybooks(args, userId) : { error: "Auth required" };
-    case "apply_playbook": return userId ? executeApplyPlaybook(args, userId) : { error: "Auth required" };
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// WAVE 4 — ENTERPRISE TOOL EXECUTORS
+// WAVE 4 — ENTERPRISE TOOL EXECUTORS (now delegated to shared modules)
+// The inline implementations below are kept as dead code for reference.
+// Active dispatch is handled by shared modules via executeTool above.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-async function executeSearchKb(args: Record<string, unknown>) {
-  const query = String(args.query || "").trim();
-  if (!query) return { error: "query è obbligatoria" };
-  const limit = Math.min(Math.max(Number(args.limit) || 6, 1), 20);
-  const categories = Array.isArray(args.categories) ? (args.categories as string[]) : undefined;
-  try {
-    const { ragSearchKb } = await import("../_shared/embeddings.ts");
-    const matches = await ragSearchKb(supabase, query, {
-      matchCount: limit,
-      matchThreshold: 0.2,
-      categories,
-      onlyActive: true,
-    });
-    if (matches.length === 0) {
-      // Fallback testuale ilike
-      const { data } = await supabase
-        .from("kb_entries")
-        .select("id, title, content, category, chapter, tags, priority")
-        .eq("is_active", true)
-        .ilike("content", `%${escapeLike(query)}%`)
-        .order("priority", { ascending: false })
-        .limit(limit);
-      return { matches: data || [], method: "fallback_text" };
-    }
-    return {
-      matches: matches.map((m) => ({
-        id: m.id, title: m.title, content: m.content.slice(0, 800),
-        category: m.category, chapter: m.chapter, tags: m.tags,
-        similarity: Number(m.similarity.toFixed(3)),
-      })),
-      method: "rag_semantic",
-    };
-  } catch (e) {
-    console.error("search_kb error:", e);
-    return { error: e instanceof Error ? e.message : "Unknown error" };
-  }
-}
 
 async function executeSaveKbRule(args: Record<string, unknown>, userId: string) {
   const title = String(args.title || "").trim();
