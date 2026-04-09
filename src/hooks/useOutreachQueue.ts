@@ -6,6 +6,26 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { toast } from "@/hooks/use-toast";
 
+/** Track activity after successful queue send (mirrors useTrackActivity logic) */
+async function trackQueueActivity(item: QueueItem, channel: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const activityType = channel === "email" ? "send_email" : channel === "whatsapp" ? "whatsapp_message" : "linkedin_message";
+    const now = new Date().toISOString();
+    await supabase.from("activities").insert({
+      activity_type: activityType as any,
+      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
+      source_type: "imported_contact",
+      source_id: item.created_by || crypto.randomUUID(),
+      status: "completed" as any,
+      user_id: user.id,
+      description: `Messaggio ${channel} inviato dalla coda automatica`,
+      email_subject: item.subject,
+    });
+  } catch { /* best-effort tracking */ }
+}
+
 interface QueueItem {
   id: string;
   channel: string;
