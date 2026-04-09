@@ -37,11 +37,13 @@ export interface EnrichedRow {
   country?: string;
   /** Real DB id for actions (strip "cockpit-"/"email-" prefixes) */
   realId?: string;
+  /** Number of emails received (for email senders) */
+  emailCount?: number;
 }
 
 type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
 type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
-type SortField = "name" | "domain" | "source";
+type SortField = "name" | "domain" | "source" | "emailCount";
 type SortDir = "asc" | "desc";
 
 const SOURCE_TABS: { value: SourceTab; label: string; icon: ReactNode }[] = [
@@ -49,7 +51,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: ReactNode }[] = [
   { value: "wca", label: "WCA", icon: <Building2 className="w-3.5 h-3.5" /> },
   { value: "contacts", label: "Contatti", icon: <Search className="w-3.5 h-3.5" /> },
   { value: "bca", label: "BCA", icon: <CreditCard className="w-3.5 h-3.5" /> },
-  { value: "email", label: "Email", icon: <Mail className="w-3.5 h-3.5" /> },
+  { value: "email", label: "Email Sender", icon: <Mail className="w-3.5 h-3.5" /> },
   { value: "cockpit", label: "Cockpit", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
 ];
 
@@ -214,17 +216,34 @@ export default function EnrichmentSettings() {
         "from_address",
         (q: any) => q.not("from_address", "is", null)
       );
-      const domainMap = new Map<string, { from: string; domain: string }>();
+      // Aggregate: count emails per from_address
+      const addressMap = new Map<string, number>();
       for (const row of data) {
-        const domain = extractDomainFromEmail(row.from_address || "");
-        if (domain && !isPersonalEmail(domain) && !domainMap.has(domain))
-          domainMap.set(domain, { from: row.from_address!, domain });
+        const addr = (row.from_address || "").toLowerCase().trim();
+        if (addr) addressMap.set(addr, (addressMap.get(addr) || 0) + 1);
       }
-      return Array.from(domainMap.values()).map((s): EnrichedRow => ({
-        id: `email-${s.domain}`,
-        name: s.domain.split(".")[0].replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        domain: s.domain, source: "email", hasLogo: false, hasLinkedin: false, email: s.from,
-      }));
+      // Deduplicate by domain but keep individual senders with their counts
+      const senderRows: EnrichedRow[] = [];
+      const seen = new Set<string>();
+      // Sort by count descending for deduplication priority
+      const sorted = [...addressMap.entries()].sort((a, b) => b[1] - a[1]);
+      for (const [addr, count] of sorted) {
+        const domain = extractDomainFromEmail(addr);
+        if (!domain || isPersonalEmail(domain)) continue;
+        if (seen.has(addr)) continue;
+        seen.add(addr);
+        senderRows.push({
+          id: `email-${addr}`,
+          name: addr.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+          domain,
+          source: "email",
+          hasLogo: false,
+          hasLinkedin: false,
+          email: addr,
+          emailCount: count,
+        });
+      }
+      return senderRows;
     },
     staleTime: 60_000,
   });
@@ -273,14 +292,18 @@ export default function EnrichmentSettings() {
   });
 
   // Counts per source (unfiltered)
-  const sourceCounts = useMemo(() => ({
-    all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
-    wca: partners.length,
-    contacts: contacts.length,
-    bca: bcaItems.length,
-    email: emailSenders.length,
-    cockpit: cockpitItems.length,
-  }), [partners, contacts, bcaItems, emailSenders, cockpitItems]);
+  const sourceCounts = useMemo(() => {
+    const emailTotal = emailSenders.reduce((sum, r) => sum + (r.emailCount || 0), 0);
+    return {
+      all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
+      wca: partners.length,
+      contacts: contacts.length,
+      bca: bcaItems.length,
+      email: emailSenders.length,
+      emailTotal,
+      cockpit: cockpitItems.length,
+    };
+  }, [partners, contacts, bcaItems, emailSenders, cockpitItems]);
 
   // Filtered rows
   const allRows = useMemo(() => {
@@ -307,6 +330,7 @@ export default function EnrichmentSettings() {
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else if (sortField === "domain") cmp = (a.domain || "").localeCompare(b.domain || "");
       else if (sortField === "source") cmp = a.source.localeCompare(b.source);
+      else if (sortField === "emailCount") cmp = (a.emailCount || 0) - (b.emailCount || 0);
       return sortDir === "desc" ? -cmp : cmp;
     });
     return rows;
@@ -402,6 +426,9 @@ export default function EnrichmentSettings() {
             )}>
               {sourceCounts[tab.value]}
             </span>
+            {tab.value === "email" && sourceTab === "email" && (
+              <span className="text-[9px] text-muted-foreground ml-0.5">({sourceCounts.emailTotal} email)</span>
+            )}
           </button>
         ))}
       </div>
@@ -468,7 +495,7 @@ export default function EnrichmentSettings() {
       )}
 
       {/* List Header */}
-      <div className="grid grid-cols-[32px_28px_1fr_1fr_70px_70px_60px_28px] items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-t-lg border border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-t-lg border border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         <div className="flex justify-center">
           <Checkbox
             checked={allSelected}
@@ -484,6 +511,9 @@ export default function EnrichmentSettings() {
           Dominio {sortField === "domain" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
         </button>
         <div>Paese</div>
+        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("emailCount")}>
+          <Mail className="w-3 h-3" /> {sortField === "emailCount" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
+        </button>
         <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("source")}>
           Fonte {sortField === "source" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
         </button>
@@ -501,7 +531,7 @@ export default function EnrichmentSettings() {
               <div
                 key={row.id}
                 className={cn(
-                  "grid grid-cols-[32px_28px_1fr_1fr_70px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px]",
+                  "grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px]",
                   ORIGIN_ACCENT[row.source] || "border-l-transparent",
                   isSelected ? "bg-primary/5" : "hover:bg-accent/30"
                 )}
@@ -535,6 +565,15 @@ export default function EnrichmentSettings() {
                 <div className="flex items-center gap-1">
                   {flag && <span className="text-lg leading-none">{flag}</span>}
                   {row.country && <span className="text-[10px] text-muted-foreground uppercase">{row.country}</span>}
+                </div>
+
+                {/* Email count */}
+                <div className="text-center">
+                  {row.emailCount ? (
+                    <span className="text-[10px] font-semibold text-foreground">{row.emailCount}</span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/30">—</span>
+                  )}
                 </div>
 
                 {/* Source badge */}
