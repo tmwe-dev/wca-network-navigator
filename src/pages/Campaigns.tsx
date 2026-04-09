@@ -307,20 +307,20 @@ export default function Campaigns() {
   const [selectedGoal, setSelectedGoal] = useState("primo_contatto");
   const navigate = useNavigate();
 
-  // Fetch partners data
-  const { data: globeData } = usePartnersForGlobe();
+  // Fetch partners data — real counts from partners table
+  const { data: countryData } = useCountryPartnerCounts();
   const { data: countryPartnersData = [] } = usePartnersByCountryForGlobe(selectedCountry);
   const { data: bcaPartnerIds } = useBusinessCardPartnerMatches();
   const { data: bcaCountryData = [] } = useBusinessCardsForCampaign(source === "bca" ? selectedCountry : null);
   const { data: bcaCountryCounts = {} } = useBcaCountryCounts();
 
-  const countries = globeData?.countries || [];
+  const countries = countryData?.countries || [];
   const totalPartners = source === "bca" 
     ? Object.values(bcaCountryCounts).reduce((a, b) => a + b, 0)
-    : (globeData?.partners.length || 0);
+    : (countryData?.totalPartners || 0);
   const countriesWithPartners = source === "bca"
     ? Object.keys(bcaCountryCounts).length
-    : countries.filter(c => c.count > 0).length;
+    : (countryData?.activeCountries || 0);
 
   // Get partners for selected country
   const countryPartners = useMemo(() => {
