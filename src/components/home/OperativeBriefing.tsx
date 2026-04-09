@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bot, Loader2, RefreshCw, Zap, CheckCircle2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bot, Loader2, RefreshCw, Zap, CheckCircle2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
