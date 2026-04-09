@@ -43,8 +43,18 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   
   const holdingSet = useHoldingPatternEmails(sourceIds);
 
+  // Filter messages if holdingFilter is active
+  const displayMessages = useMemo(() => {
+    if (!holdingFilter) return messages;
+    return messages.filter(msg => {
+      if (msg.partner_id && holdingSet.has(`p:${msg.partner_id}`)) return true;
+      if (msg.source_type === "imported_contact" && msg.source_id && holdingSet.has(`c:${msg.source_id}`)) return true;
+      return false;
+    });
+  }, [messages, holdingFilter, holdingSet]);
+
   const virtualizer = useVirtualizer({
-    count: messages.length,
+    count: displayMessages.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
