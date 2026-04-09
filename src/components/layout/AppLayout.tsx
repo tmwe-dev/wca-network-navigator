@@ -191,6 +191,16 @@ export function AppLayout() {
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
         </Suspense>
         <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+        <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>🧪 Test Estensioni</DialogTitle>
+            </DialogHeader>
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+              <TestExtensionsContent />
+            </Suspense>
+          </DialogContent>
+        </Dialog>
       </div>
     <ClaudeBadge />
         </GlobalFiltersProvider>
