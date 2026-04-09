@@ -127,7 +127,38 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
 
         {/* === TIPI TAB === */}
         <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0">
-          <ScrollArea className="flex-1 px-2 py-1.5">
+          {/* Custom Goal field with voice dictation */}
+          <div className="px-2 pt-2 pb-1 shrink-0">
+            <div className="relative">
+              <Textarea
+                value={speech.listening ? (customGoal + (speech.interimText ? " " + speech.interimText : "")) : customGoal}
+                onChange={(e) => setCustomGoal(e.target.value)}
+                placeholder="Descrivi l'obiettivo o il contesto... (es: ci siamo incontrati a Genova, parlato di pezzi di ricambio)"
+                className={cn(
+                  "text-[11px] min-h-[56px] max-h-[100px] resize-none pr-8",
+                  speech.listening && "ring-1 ring-red-400/50"
+                )}
+                rows={2}
+              />
+              {speech.hasSpeechAPI && (
+                <button
+                  type="button"
+                  onClick={speech.toggle}
+                  className={cn(
+                    "absolute right-1.5 top-1.5 p-1 rounded-full transition-colors",
+                    speech.listening
+                      ? "bg-red-500/10 text-red-500 animate-pulse"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                  title={speech.listening ? "Ferma registrazione" : "Dettatura vocale"}
+                >
+                  {speech.listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 px-2 py-1.5 overflow-auto">
             <div className="space-y-1">
               {allTypes.map((t) => {
                 const isCustom = customTypes.some(c => c.id === t.id);
