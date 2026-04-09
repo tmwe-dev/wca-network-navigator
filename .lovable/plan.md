@@ -1,27 +1,37 @@
 
 
-# Fix: Pagina bianca in produzione
+# Fix: Operatore non visibile — user_id disallineato
 
-## Causa
-Il `manualChunks` in `vite.config.ts` separa `@radix-ui` in un chunk (`vendor-radix`) diverso da React (`vendor-react`). In produzione, quando il browser carica `vendor-radix` prima che `vendor-react` sia inizializzato, `React.createContext` è `undefined` → crash → pagina bianca.
-
-Lo stesso problema può colpire anche `vendor-tanstack`, `vendor-motion`, `vendor-markdown`, `vendor-resizable`, `vendor-ui-misc` — tutti usano React internamente.
+## Problema
+L'utente `luca@tmwe.it` ha attualmente l'ID auth `ae35ad39-de57-45df-9d24-538cdbbd5e87`, ma il record operatore nel database punta al vecchio ID `1d51961d-da81-4914-b229-511cdce43e55` (che non esiste più in auth.users). Le RLS policy richiedono `user_id = auth.uid()` per vedere i dati — quindi l'utente vede tutto vuoto.
 
 ## Soluzione
-**Rimuovere completamente la funzione `manualChunks`**. Vite/Rollup gestisce già il code-splitting automatico in modo sicuro, rispettando l'ordine delle dipendenze. Il manualChunks custom rompe queste garanzie.
 
-### File modificato
+### Migrazione SQL
+Una singola migrazione che:
 
-| File | Modifica |
-|---|---|
-| `vite.config.ts` | Rimuovere `rollupOptions.output.manualChunks` e il commento associato. Mantenere solo `chunkSizeWarningLimit: 600` |
+1. **Aggiorna `operators.user_id`** da `1d51961d...` a `ae35ad39...` per luca@tmwe.it
+2. **Elimina il vecchio profilo** con user_id `1d51961d...` (orfano, non ha più un utente auth)
+3. **Aggiorna il profilo nuovo** (`ae35ad39...`) impostando `onboarding_completed = true` e `display_name = 'Luca Arcanà'`
 
-Il risultato sarà:
-```typescript
-build: {
-  chunkSizeWarningLimit: 600,
-},
+```sql
+UPDATE operators 
+SET user_id = 'ae35ad39-de57-45df-9d24-538cdbbd5e87' 
+WHERE id = '1d194ab7-89f9-48fc-a777-9f2bb30a0bbf';
+
+DELETE FROM profiles 
+WHERE user_id = '1d51961d-da81-4914-b229-511cdce43e55';
+
+UPDATE profiles 
+SET display_name = 'Luca Arcanà', onboarding_completed = true 
+WHERE user_id = 'ae35ad39-de57-45df-9d24-538cdbbd5e87';
 ```
 
-Dopo la modifica, l'app va ri-pubblicata per applicare il fix in produzione.
+### Risultato
+Dopo la migrazione, l'utente luca@tmwe.it potrà:
+- Vedere il proprio operatore
+- Essere riconosciuto come admin
+- Gestire utenti autorizzati e tutte le impostazioni
+
+Nessun file di codice modificato.
 
