@@ -601,7 +601,6 @@ export function WhatsAppInboxView() {
   );
 }
 
-
     const tick = () => {
       const diff = Math.max(0, endsAt - Date.now());
       const m = Math.floor(diff / 60000);
