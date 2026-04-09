@@ -26,8 +26,26 @@ export function useLinkedInExtensionBridge() {
   const pendingRef = useRef<Map<string, (response: LiExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const availableRef = useRef(false);
+  const configSentRef = useRef(false);
 
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+
+  // Send Supabase config to extension when it becomes available
+  const sendConfig = useCallback(() => {
+    if (configSentRef.current) return;
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) return;
+    configSentRef.current = true;
+    log.debug("→ sending setConfig to extension");
+    window.postMessage({
+      direction: "from-webapp-li",
+      action: "setConfig",
+      requestId: `li_setConfig_${Date.now()}`,
+      supabaseUrl: url,
+      supabaseAnonKey: key,
+    }, window.location.origin);
+  }, []);
 
   // Listen for responses from the content script
   useEffect(() => {
