@@ -1,14 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
-import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
+import { usePartnersByCountryForGlobe, usePartnersForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
-import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -58,65 +57,6 @@ interface CampaignPartner {
   country_name: string;
   email: string | null;
   has_bca?: boolean;
-}
-
-// Hook: BCA grouped by country for campaign mode
-function useBusinessCardsForCampaign(countryCode: string | null) {
-  return useQuery({
-    queryKey: ["bca-campaign", countryCode],
-    queryFn: async () => {
-      if (!countryCode) return [];
-      // BCA with partner join
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      // Filter by country: either from partner or from location
-      return (data ?? []).filter((bc: any) => {
-        if (bc.partner?.country_code === countryCode) return true;
-        if (bc.location?.toUpperCase().includes(countryCode)) return true;
-        return false;
-      }).map((bc: any) => ({
-        id: bc.matched_partner_id || bc.id,
-        company_name: bc.partner?.company_name || bc.company_name || "N/A",
-        city: bc.partner?.city || bc.location || "",
-        country_code: bc.partner?.country_code || countryCode,
-        country_name: bc.partner?.country_name || "",
-        email: bc.partner?.email || bc.email,
-        partner_type: null,
-        partner_certifications: [],
-        partner_services: [],
-        is_bca: true,
-        bca_event: bc.event_name,
-        bca_contact: bc.contact_name,
-        bca_met_at: bc.met_at,
-      }));
-    },
-    enabled: !!countryCode,
-    staleTime: 30_000,
-  });
-}
-
-// Hook: BCA country counts
-function useBcaCountryCounts() {
-  return useQuery({
-    queryKey: ["bca-country-counts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("matched_partner_id, partner:matched_partner_id(country_code)")
-        .not("matched_partner_id", "is", null);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      (data ?? []).forEach((r: any) => {
-        const cc = r.partner?.country_code;
-        if (cc) counts[cc] = (counts[cc] || 0) + 1;
-      });
-      return counts;
-    },
-    staleTime: 60_000,
-  });
 }
 
 // Header controls component to be portaled
