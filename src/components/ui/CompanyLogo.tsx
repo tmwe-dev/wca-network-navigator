@@ -99,7 +99,13 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
     logoCache.set(domain, "none");
   };
 
-  const handleLoad = () => {
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    // Reject tiny placeholder images (likely generic/broken logos)
+    if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+      handleError();
+      return;
+    }
     logoCache.set(domain, src);
   };
 
@@ -110,7 +116,7 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
         alt={domain}
         width={size}
         height={size}
-        className="rounded object-contain"
+        className="rounded object-contain bg-transparent"
         onError={handleError}
         onLoad={handleLoad}
         loading="lazy"
