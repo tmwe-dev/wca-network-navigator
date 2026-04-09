@@ -51,9 +51,8 @@ export function useCheckInbox() {
 
       if (total > 0) {
         toast.success(`📬 ${total} email scaricate (${matched} con contatto)`);
-      } else {
-        toast.info("Nessuna nuova email");
       }
+      window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "email" } }));
     },
     onError: (err: Error) => {
       toast.error(`Errore scaricamento posta: ${err.message}`);

@@ -32,6 +32,20 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "em
 
 export function InArrivoTab() {
   const [channel, setChannel] = useState<Channel>("email");
+  const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
+
+  // Listen for sync-done events and pulse the corresponding tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ch = (e as CustomEvent).detail?.channel as Channel;
+      if (ch) {
+        setPulsingChannel(ch);
+        setTimeout(() => setPulsingChannel(null), 800);
+      }
+    };
+    window.addEventListener("channel-sync-done", handler);
+    return () => window.removeEventListener("channel-sync-done", handler);
+  }, []);
   const { data: emailUnread = 0 } = useUnreadCount("email");
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
@@ -73,7 +87,8 @@ export function InArrivoTab() {
                 "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap",
                 channel === ch.value
                   ? "bg-primary/15 text-primary border border-primary/30"
-                  : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
+                  : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40",
+                pulsingChannel === ch.value && "animate-pulse-once"
               )}
             >
               <ch.icon className="w-3 h-3" />
