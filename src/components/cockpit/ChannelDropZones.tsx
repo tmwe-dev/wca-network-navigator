@@ -64,6 +64,11 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           {channels.map((ch) => {
             const Icon = ch.icon;
             const isHovered = hoveredChannel === ch.id;
+            const isMissing = contactAvailability && hasActiveContact
+              ? (ch.requiredField === "email" && !contactAvailability.hasEmail) ||
+                (ch.requiredField === "phone" && !contactAvailability.hasPhone) ||
+                (ch.requiredField === "linkedinUrl" && !contactAvailability.hasLinkedinUrl)
+              : false;
             return (
               <div
                 key={ch.id}
@@ -78,6 +83,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
                   !isHovered && "border-border/40 bg-card/40 text-muted-foreground/60",
                   isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder, ch.hoverText),
+                  isMissing && !isHovered && "opacity-50",
                 )}
               >
                 <div className={cn(
@@ -87,7 +93,13 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={cn("text-sm font-semibold", isHovered && "text-foreground")}>{ch.label}</span>
-                {isHovered && (
+                {isMissing && (
+                  <span className="ml-auto flex items-center gap-1 text-[10px] text-warning">
+                    <AlertTriangle className="w-3 h-3" />
+                    Dato mancante
+                  </span>
+                )}
+                {isHovered && !isMissing && (
                   <span className={cn("text-xs font-medium ml-auto", ch.hoverText)}>
                     Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
                   </span>
