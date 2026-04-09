@@ -20,13 +20,7 @@ function getInitialState(): boolean {
 }
 
 export function useOutreachMock() {
-  const [mockEnabled, setMockEnabled] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [mockEnabled, setMockEnabled] = useState(getInitialState);
 
   useEffect(() => {
     try {
