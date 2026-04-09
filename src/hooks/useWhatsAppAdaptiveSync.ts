@@ -230,6 +230,7 @@ export function useWhatsAppAdaptiveSync() {
         if (newCount > 0) {
           toast.success(`📱 ${newCount} nuovi messaggi WhatsApp`, { duration: 2000 });
         }
+        window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "whatsapp" } }));
       }
     } catch (err) {
       log.warn("sidebar_scan.failed", { error: err instanceof Error ? err.message : String(err) });
