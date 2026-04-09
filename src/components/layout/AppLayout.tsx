@@ -21,8 +21,10 @@ import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionDrawer } from "@/components/global/MissionDrawer";
 import { FiltersDrawer } from "@/components/global/FiltersDrawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions").then(m => ({ default: m.TestExtensionsContent })));
 import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 
 export function AppLayout() {
