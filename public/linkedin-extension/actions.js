@@ -93,25 +93,32 @@ var Actions = (function () {
     await TabManager.sleep(5000);
 
     // Level 1: AX Tree
+    var axError = null;
     try {
       var axResult = await AXTree.readInbox(tab.id);
       if (axResult && axResult.threads && axResult.threads.length > 0) return axResult;
-    } catch (e) { console.warn("[LI-Hybrid] AX inbox failed:", e.message || e); }
+      axError = "ax_tree returned 0 threads";
+    } catch (e) { axError = e.message || String(e); console.warn("[LI-Hybrid] AX inbox failed:", axError); }
 
-    // Level 3: Structural fallback
+    // Level 2: Structural fallback — multiple strategies
     try {
       var results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: function () {
           var threads = [];
           var seen = {};
+          var diagnostics = { methods: [], candidatesFound: 0, candidatesRejected: 0 };
+
+          // Strategy 1: thread links
           var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
+          diagnostics.methods.push("thread_links:" + threadLinks.length);
           threadLinks.forEach(function (link) {
             var threadUrl = link.href || "";
             if (seen[threadUrl]) return;
             seen[threadUrl] = true;
             var container = link.closest("li") || link.parentElement;
             if (!container) return;
+            diagnostics.candidatesFound++;
             var name = "";
             var lastMsg = "";
             var unread = false;
@@ -123,14 +130,58 @@ var Actions = (function () {
             if (msgP) lastMsg = msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
             var badge = container.querySelector("[class*='unread'], [class*='badge']");
             if (badge) unread = true;
-            if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) return;
+            if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) { diagnostics.candidatesRejected++; return; }
             threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
           });
-          return { success: true, threads: threads, method: "structural_fallback" };
+
+          // Strategy 2: if no thread links, try list items in messaging sidebar
+          if (threads.length === 0) {
+            var listItems = document.querySelectorAll("ul li, [role='list'] [role='listitem'], [class*='msg-conversation-listitem'], [class*='conversation-list'] li");
+            diagnostics.methods.push("list_items:" + listItems.length);
+            listItems.forEach(function (li) {
+              diagnostics.candidatesFound++;
+              var link = li.querySelector("a[href*='/messaging/'], a[href*='thread']");
+              var threadUrl = link ? (link.href || "") : "";
+              if (seen[threadUrl] && threadUrl) return;
+              if (threadUrl) seen[threadUrl] = true;
+              var name = "";
+              var h3 = li.querySelector("h3");
+              if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
+              if (!name) { var img = li.querySelector("img[alt]"); if (img) { var alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar|placeholder/i.test(alt)) name = alt; } }
+              if (!name) { var spans = li.querySelectorAll("span, p"); for (var s = 0; s < Math.min(spans.length, 10); s++) { var t = (spans[s].textContent || "").trim(); if (t.length > 1 && t.length < 60 && !/^\d/.test(t) && !/^(passa|go to|details|scrivi|messaggistica)/i.test(t)) { name = t; break; } } }
+              if (!name || name.length < 2) { diagnostics.candidatesRejected++; return; }
+              var lastMsg = "";
+              var msgEl = li.querySelector("p, [class*='snippet'], [class*='preview']");
+              if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
+              var unread = !!li.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
+              threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+            });
+          }
+
+          // Strategy 3: conversation cards by img alt text
+          if (threads.length === 0) {
+            var imgs = document.querySelectorAll("img[alt]");
+            diagnostics.methods.push("img_alt:" + imgs.length);
+            imgs.forEach(function (img) {
+              var alt = (img.getAttribute("alt") || "").trim();
+              if (alt.length < 2 || alt.length > 60) return;
+              if (/photo|foto|avatar|placeholder|logo|linkedin/i.test(alt)) return;
+              var container = img.closest("li, a, [role='listitem']");
+              if (!container) return;
+              diagnostics.candidatesFound++;
+              if (seen[alt]) return;
+              seen[alt] = true;
+              var link = container.querySelector("a[href*='/messaging/']") || (container.tagName === "A" ? container : null);
+              var threadUrl = link ? (link.href || "") : "";
+              threads.push({ name: alt, threadUrl: threadUrl, unread: false, lastMessage: "" });
+            });
+          }
+
+          return { success: true, threads: threads, method: "structural_fallback", diagnostics: diagnostics };
         },
       });
       return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No inbox data");
-    } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message); }
+    } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message + (axError ? " | AX: " + axError : "")); }
   }
 
   async function readThread(threadUrl) {
