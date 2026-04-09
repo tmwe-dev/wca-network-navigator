@@ -74,9 +74,9 @@ describe("ApiError completezza", () => {
       path.resolve(__dirname, "../lib/api/invokeEdge.ts"),
       "utf-8"
     );
-    const expectedStatuses = [401, 403, 404, 422, 429, 500];
-    for (const status of expectedStatuses) {
-      expect(invokeSource).toContain(`status === ${status}`);
+    const expectedPatterns = ["status === 401", "status === 403", "status === 404", "status === 422", "status === 429", "status >= 500"];
+    for (const pattern of expectedPatterns) {
+      expect(invokeSource).toContain(pattern);
     }
   });
 });
