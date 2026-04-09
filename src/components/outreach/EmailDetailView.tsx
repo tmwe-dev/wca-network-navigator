@@ -145,6 +145,74 @@ export function EmailDetailView({ message, onClose }: Props) {
             Associato: {brand}
           </Badge>
         )}
+
+        {/* Reply / Forward actions */}
+        <div className="ml-12 flex items-center gap-1 mt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+              const quoteText = normalizedContent.bodyText
+                ? `\n\n---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\n\n${normalizedContent.bodyText}`
+                : "";
+              navigate("/outreach", {
+                state: {
+                  prefilledRecipient: {
+                    email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                    name: brand,
+                    company: brand,
+                  },
+                  prefilledSubject: replySubject,
+                  prefilledBody: quoteText,
+                },
+              });
+            }}
+          >
+            <Reply className="h-3 w-3" /> Rispondi
+          </Button>
+          {message.cc_addresses && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => {
+                const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                navigate("/outreach", {
+                  state: {
+                    prefilledRecipient: {
+                      email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                      name: brand,
+                      company: brand,
+                    },
+                    prefilledSubject: replySubject,
+                  },
+                });
+              }}
+            >
+              <ReplyAll className="h-3 w-3" /> Tutti
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
+              navigate("/outreach", {
+                state: {
+                  prefilledSubject: fwdSubject,
+                  prefilledBody: normalizedContent.bodyText
+                    ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
+                    : "",
+                },
+              });
+            }}
+          >
+            <Forward className="h-3 w-3" /> Inoltra
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
