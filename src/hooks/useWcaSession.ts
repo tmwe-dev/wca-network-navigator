@@ -31,15 +31,7 @@ export function useWcaSession() {
       if (data.success && data.cookies) {
         setExtensionAvailable(true);
         setSessionActive(true);
-        // Cache cookie
-        try {
-          localStorage.setItem("wca_session_cookie", JSON.stringify({
-            cookie: data.cookies,
-            savedAt: Date.now(),
-          }));
-        } catch (err) {
-          log.warn("session cache write failed", { message: err instanceof Error ? err.message : String(err) });
-        }
+        setWcaCookie(data.cookies);
         return true;
       }
       setSessionActive(false);
