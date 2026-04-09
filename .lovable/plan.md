@@ -1,48 +1,66 @@
 
 
-# Piano: Attivazione del Ciclo Autonomo degli Agenti
+# Piano: Presentazione Istituzionale + Tutorial Magazine-Style
 
-## Problema
-Tutta l'infrastruttura agenti è costruita ma **mai attivata**. Serve:
-1. Schedulare il ciclo autonomo via cron
-2. Aggiungere lo screening dei messaggi in arrivo (email + WhatsApp)
-3. Rendere visibile il flusso nell'interfaccia
+## Cosa si costruisce
 
-## Cosa fare
+Trasformazione completa di `Guida.tsx` in una presentazione HTML scrollabile full-screen, stile rivista istituzionale, con ~45 sezioni/pagine.
 
-### 1. Creare cron job per il ciclo autonomo
-- Migrazione SQL: `SELECT cron.schedule('agent-autonomous-cycle', '*/10 * * * *', ...)` — ogni 10 minuti chiama la edge function
-- Solo durante ore attive (06:00-00:00 ora locale, rispettando la pausa notturna già implementata)
+## Struttura file
 
-### 2. Aggiungere screening messaggi in arrivo nel ciclo
-- Modificare `agent-autonomous-cycle/index.ts` per:
-  - Fase 1: Leggere `channel_messages` non letti (email + WhatsApp) degli ultimi cicli
-  - Fase 2: Per ogni messaggio, chiamare `analyze_incoming_email` per rilevare intent/sentiment
-  - Fase 3: Creare `agent_tasks` con assegnazione automatica:
-    - Messaggi da partner con agente assegnato → assegna a quell'agente
-    - Messaggi nuovi → assegna all'agente outreach/sales del territorio corrispondente
-    - Messaggi ad alto impatto (ex-clienti, lead caldi) → status "proposed" (richiede approvazione)
+### Componenti nuovi in `src/components/guida/`
 
-### 3. Aggiungere creazione automatica di attività di follow-up
-- Quando un agente completa un task (status → "completed"), creare automaticamente la prossima attività nel circuito d'attesa secondo le regole del holding pattern (reminder +5gg, escalation +7gg, etc.)
-- Implementare come trigger DB o logica nell'edge function `agent-execute`
+| Componente | Contenuto |
+|---|---|
+| `GuidaLayout.tsx` | Container principale: scroll snap, nav dots laterali, progress bar top |
+| `CoverSection.tsx` | Copertina: titolo cinematografico, animazione particelle, tagline |
+| `VisionSection.tsx` | Il problema → la soluzione, layout split con icone animate |
+| `PerformanceSection.tsx` | Contatori animati giganti con dati live dal DB |
+| `AgentTeamSection.tsx` | Cards agenti con avatar, ruolo, stats in tempo reale |
+| `AutonomousCycleSection.tsx` | Diagramma del ciclo con animazione step-by-step |
+| `OutreachSection.tsx` | AI email generation spiegata con esempio visivo |
+| `GlobalNetworkSection.tsx` | Mappa paesi con contatori |
+| `DeepSearchSection.tsx` | Flusso arricchimento con timeline visiva |
+| `MultichannelSection.tsx` | Email + WhatsApp + LinkedIn unified |
+| `ProspectSection.tsx` | Discovery autonomo clienti |
+| `SecuritySection.tsx` | Pausa notturna, rate limits, comportamento umano |
+| `ResultsSection.tsx` | Metriche di successo, statistiche aggregate |
+| `RoadmapSection.tsx` | Funzionalità future con timeline |
+| `ClosingSection.tsx` | Chiusura emozionale |
+| `TutorialSection.tsx` | Template riusabile per ogni sezione tutorial |
+| `ScreenshotFrame.tsx` | Frame macOS-style per screenshot con effetto lente |
+| `AnnotatedScreenshot.tsx` | Screenshot con callout/frecce che puntano a funzionalità |
+| `ScrollIndicator.tsx` | Nav dots laterali + progress bar |
 
-### 4. Migliorare visibilità nella Home
-- Aggiungere un badge/contatore nella sidebar per "Coda AI" con il numero di task in attesa di approvazione
-- Aggiungere notifica toast quando nuovi task vengono creati dal ciclo autonomo (via realtime già collegato)
-
-## File coinvolti
+### Pagina rinnovata
 
 | File | Modifica |
-|------|----------|
-| Migrazione SQL | Cron job `*/10 * * * *` per `agent-autonomous-cycle` |
-| `supabase/functions/agent-autonomous-cycle/index.ts` | Aggiungere Fase screening messaggi + assegnazione intelligente |
-| `src/components/layout/AppSidebar.tsx` | Badge contatore task pending su "Coda AI" |
-| `src/components/home/AgentStatusPanel.tsx` | Toast notification su nuovi task |
+|---|---|
+| `src/pages/Guida.tsx` | Riscrittura completa: diventa orchestratore delle sezioni |
+
+## Design
+
+- **Full-screen sections** con `scroll-snap-type: y mandatory`
+- **Palette premium dark**: sfondo `#0a0a0f` con gradients blu/viola, accenti `hsl(var(--primary))`
+- **Tipografia magazine**: titoli 48-64px font-bold, body 18-20px, ampio leading
+- **Screenshot frames**: bordo macOS-style con traffic lights, ombra diffusa
+- **Lente di ingrandimento**: cerchio CSS con `clip-path: circle()` + `scale(2.5)` su dettagli chiave
+- **Callout annotazioni**: linee SVG con pallino + label che puntano a elementi nello screenshot
+- **Animazioni scroll**: `IntersectionObserver` per fade-in, slide-up, counter animation
+- **Nav laterale**: dots cliccabili con label on hover, posizione fissa a destra
+
+## Contenuti screenshot
+
+Per ora inserisco placeholder visivi (gradient + overlay con wireframe dell'interfaccia reale) con la struttura pronta. Ogni screenshot mostra il layout reale della sezione descritta, ricostruito con componenti semplificati. In un secondo momento si possono sostituire con screenshot reali.
+
+## Dati live
+
+Le sezioni Performance e Results faranno query al DB per mostrare numeri reali:
+- Totale partner, contatti, email inviate, paesi coperti
+- Task agenti completati, email generate dall'AI
+- Attività aperte, prospect importati
 
 ## Risultato
-- Ogni 10 minuti il sistema scansiona nuovi messaggi e follow-up scaduti
-- Gli agenti si auto-assegnano il lavoro in base a territorio e responsabilità
-- L'utente vede in "Coda AI" le azioni da approvare e in "Team Agenti" chi sta lavorando
-- Nessuna azione critica parte senza approvazione umana
+
+~45 sezioni scrollabili full-screen che raccontano WCA Network Navigator come prodotto istituzionale e contemporaneamente guidano l'utente nell'uso di ogni funzionalità, con screenshot annotati, lenti di ingrandimento e callout descrittivi.
 
