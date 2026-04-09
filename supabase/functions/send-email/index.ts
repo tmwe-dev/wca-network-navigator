@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { to, subject, html, from, partner_id, agent_id } = await req.json();
+    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id } = await req.json();
 
     if (!to || !subject || !html) {
       return new Response(
@@ -149,13 +149,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    await client.send({
+    // Resolve Reply-To: explicit > operator > commercial global > none
+    let resolvedReplyTo = reply_to || null;
+    if (!resolvedReplyTo && operator_id) {
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("reply_to_email")
+        .eq("id", operator_id)
+        .single();
+      if (opRow?.reply_to_email) resolvedReplyTo = opRow.reply_to_email;
+    }
+    if (!resolvedReplyTo) {
+      const commercialReply = s["commercial_reply_to_email"];
+      if (commercialReply) resolvedReplyTo = commercialReply;
+    }
+
+    const sendOptions: any = {
       from: senderEmail,
       to: to,
       subject: subject,
       content: "auto",
       html: finalHtml,
-    });
+    };
+    if (resolvedReplyTo) {
+      sendOptions.replyTo = resolvedReplyTo;
+    }
+
+    await client.send(sendOptions);
 
     await client.close();
 

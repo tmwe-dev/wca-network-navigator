@@ -116,9 +116,9 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
     );
   }
 
-  // Expanded mode: full drop zones during drag
+  // Expanded mode: full drop zones during drag — tall and prominent
   return (
-    <div className="flex flex-col gap-3 w-full max-w-[360px]">
+    <div className="flex flex-col gap-3 w-full max-w-[400px] h-full">
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
@@ -129,7 +129,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{
               opacity: 1,
-              scale: isHovered ? 1.03 : 1,
+              scale: isHovered ? 1.05 : 1,
             }}
             transition={{ delay: i * 0.04, duration: 0.2, type: "spring", stiffness: 300, damping: 20 }}
             onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
@@ -140,40 +140,40 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               if (draggedContactId) onDrop(ch.id, draggedContactId, "Contact");
             }}
             className={cn(
-              "relative flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed transition-all duration-200",
+              "relative flex flex-1 items-center justify-center gap-4 px-6 py-6 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[100px]",
               !isHovered && "border-muted-foreground/30 bg-card/40",
-              isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder),
+              isHovered && cn("border-[4px] border-solid shadow-xl", ch.hoverBg, ch.hoverBorder),
             )}
           >
             {isHovered && (
               <motion.div
-                className={cn("absolute inset-0 rounded-xl opacity-20", ch.hoverBg)}
+                className={cn("absolute inset-0 rounded-xl", ch.hoverBg)}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.2 }}
+                animate={{ opacity: 0.3 }}
               />
             )}
 
             <div className={cn(
-              "relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-              isHovered ? cn(ch.hoverBg, ch.hoverText) : "bg-muted/40 text-muted-foreground/60"
+              "relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+              isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground/60"
             )}>
-              <Icon className="w-5 h-5" />
+              <Icon className={cn("transition-all", isHovered ? "w-7 h-7" : "w-5 h-5")} />
             </div>
 
             <span className={cn(
-              "text-sm font-semibold transition-colors",
-              isHovered ? "text-foreground" : "text-muted-foreground"
+              "font-semibold transition-all",
+              isHovered ? "text-lg text-foreground" : "text-sm text-muted-foreground"
             )}>
               {ch.label}
             </span>
 
             {isHovered && (
               <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={cn("text-xs font-medium ml-auto", ch.hoverText)}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={cn("text-sm font-bold ml-auto", ch.hoverText)}
               >
-                Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
+                Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""} ↓
               </motion.span>
             )}
           </motion.div>
