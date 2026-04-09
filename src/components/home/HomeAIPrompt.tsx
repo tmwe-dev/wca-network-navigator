@@ -131,6 +131,26 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     }
   }, [input, loading, history, agents]);
 
+  const playTTS = async (text: string) => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: "FGY2WhTYpPnrIDTdsKH5" }),
+        }
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      new Audio(URL.createObjectURL(blob)).play();
+    } catch { /* best-effort */ }
+  };
+
   return (
     <div className={cn("w-full max-w-2xl mx-auto space-y-3", className)}>
       {/* Response panel */}
