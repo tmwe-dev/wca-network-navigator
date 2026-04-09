@@ -181,7 +181,14 @@ serve(async (req) => {
     // Build system prompt
     let systemPrompt = agent.system_prompt || "Sei un agente AI.";
     systemPrompt += contextBlock;
-    systemPrompt += "\n\nRispondi SEMPRE in italiano. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.";
+    systemPrompt += `\n\nACCESSO SISTEMA:
+- Hai accesso COMPLETO a: tutti i tool operativi, KB globale, prompt operativi, team roster, storico attività dei colleghi, i tuoi clienti assegnati.
+- Consulta la KB e i prompt operativi prima di agire.
+- Usa search_memory per recuperare decisioni e contesto storico.
+- I tuoi clienti assegnati sono nel contesto sopra. Usa list_agent_tasks per i tuoi task.
+- Puoi vedere le attività di TUTTI i colleghi per coordinamento.
+
+Rispondi SEMPRE in italiano. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.`;
     const kb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
     if (kb?.length) {
       systemPrompt += "\n\n--- KNOWLEDGE BASE ---\n";
