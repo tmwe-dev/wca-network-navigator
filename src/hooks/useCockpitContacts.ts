@@ -32,7 +32,7 @@ export interface CockpitContact {
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
   deepSearchAt?: string;
-  enrichmentData?: any;
+  enrichmentData?: Record<string, unknown>;
   memberSince?: string;
   memberYears?: number;
   networks?: string[];
@@ -66,21 +66,35 @@ function computePriority(email?: string | null, phone?: string | null, mobile?: 
   return Math.min(p, 10);
 }
 
-function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
+interface PartnerRow {
+  member_since?: string;
+  enrichment_data?: Record<string, unknown>;
+  company_name?: string;
+  country_code?: string;
+  company_alias?: string;
+  enriched_at?: string;
+  ai_parsed_at?: string;
+  lead_status?: string;
+  id: string;
+}
+
+function extractPartnerMeta(partner: PartnerRow | undefined): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
   if (!partner) return {};
-  const meta: any = {};
+  const meta: { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } = {};
   if (partner.member_since) {
     meta.memberSince = partner.member_since;
     const y = new Date().getFullYear() - new Date(partner.member_since).getFullYear();
     if (y >= 0) meta.memberYears = y;
   }
-  const ed = partner.enrichment_data;
+  const ed = partner.enrichment_data as Record<string, unknown> | undefined;
   if (ed) {
-    if (ed.company_profile?.specialties?.length) meta.specialties = ed.company_profile.specialties.slice(0, 4);
-    if (ed.contact_profile?.seniority) meta.seniority = ed.contact_profile.seniority;
+    const companyProfile = ed.company_profile as Record<string, unknown> | undefined;
+    const contactProfile = ed.contact_profile as Record<string, unknown> | undefined;
+    if (companyProfile?.specialties && Array.isArray(companyProfile.specialties)) meta.specialties = (companyProfile.specialties as string[]).slice(0, 4);
+    if (contactProfile?.seniority && typeof contactProfile.seniority === "string") meta.seniority = contactProfile.seniority;
     const nets: string[] = [];
-    if (ed.networks && Array.isArray(ed.networks)) nets.push(...ed.networks);
-    if (ed.company_profile?.networks && Array.isArray(ed.company_profile.networks)) nets.push(...ed.company_profile.networks);
+    if (ed.networks && Array.isArray(ed.networks)) nets.push(...(ed.networks as string[]));
+    if (companyProfile?.networks && Array.isArray(companyProfile.networks)) nets.push(...(companyProfile.networks as string[]));
     if (nets.length) meta.networks = [...new Set(nets)];
   }
   return meta;
@@ -116,10 +130,10 @@ export function useCockpitContacts() {
       if (!queue || queue.length === 0) return [];
 
       // Group source_ids by source_type
-      const pcIds = queue.filter((q: any) => q.source_type === "partner_contact").map((q: any) => q.source_id);
-      const bcIds = queue.filter((q: any) => q.source_type === "business_card").map((q: any) => q.source_id);
-      const prcIds = queue.filter((q: any) => q.source_type === "prospect_contact").map((q: any) => q.source_id);
-      const icIds = queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id);
+      const pcIds = queue.filter(q => q.source_type === "partner_contact").map(q => q.source_id);
+      const bcIds = queue.filter(q => q.source_type === "business_card").map(q => q.source_id);
+      const prcIds = queue.filter(q => q.source_type === "prospect_contact").map(q => q.source_id);
+      const icIds = queue.filter(q => q.source_type === "contact").map(q => q.source_id);
 
       // Fetch source data in parallel
       const [pcData, bcData, prcData, icData] = await Promise.all([
@@ -138,10 +152,10 @@ export function useCockpitContacts() {
       ]);
 
       // Fetch social links (LinkedIn) for partner contacts
-      const allPartnerIdsForSocial = [
-        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
-        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
-      ];
+      const allPartnerIdsForSocial: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
       let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
       let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
@@ -161,26 +175,26 @@ export function useCockpitContacts() {
       }
 
       // Also fetch partner names for partner_contacts
-      const partnerIds = [
-        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
-        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
-      ];
+      const partnerIds: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniquePartnerIds = [...new Set(partnerIds)];
-      let partnersMap: Record<string, any> = {};
+      let partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
         const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status").in("id", uniquePartnerIds);
-        for (const p of pData || []) partnersMap[p.id] = p;
+        for (const p of pData || []) partnersMap[p.id] = p as unknown as PartnerRow;
       }
 
       // Build lookup maps
-      const pcMap: Record<string, any> = {};
-      for (const c of pcData as any[]) pcMap[c.id] = c;
-      const bcMap: Record<string, any> = {};
-      for (const c of bcData as any[]) bcMap[c.id] = c;
-      const prcMap: Record<string, any> = {};
-      for (const c of prcData as any[]) prcMap[c.id] = c;
-      const icMap: Record<string, any> = {};
-      for (const c of icData as any[]) icMap[c.id] = c;
+      const pcMap: Record<string, (typeof pcData)[number]> = {};
+      for (const c of pcData) pcMap[c.id] = c;
+      const bcMap: Record<string, (typeof bcData)[number]> = {};
+      for (const c of bcData) bcMap[c.id] = c;
+      const prcMap: Record<string, (typeof prcData)[number]> = {};
+      for (const c of prcData) prcMap[c.id] = c;
+      const icMap: Record<string, (typeof icData)[number]> = {};
+      for (const c of icData) icMap[c.id] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");
@@ -218,7 +232,7 @@ export function useCockpitContacts() {
           company: partner?.company_name || "—",
           role: pc.title || "",
           country: partner?.country_code || "",
-          language: inferLanguage(partner?.country_code),
+          language: inferLanguage(partner?.country_code ?? null),
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
@@ -233,7 +247,7 @@ export function useCockpitContacts() {
           contactAlias: pc.contact_alias || undefined,
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
-          enrichmentData: partner?.enrichment_data || undefined,
+          enrichmentData: (partner?.enrichment_data as Record<string, unknown>) || undefined,
           leadStatus: partner?.lead_status || "new",
           ...pMeta,
         });
@@ -330,7 +344,7 @@ export function useCockpitContacts() {
           contactAlias: ic.contact_alias || undefined,
           companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
-          enrichmentData: ic.enrichment_data || undefined,
+          enrichmentData: (ic.enrichment_data as Record<string, unknown>) || undefined,
           ...icMeta,
         });
       }

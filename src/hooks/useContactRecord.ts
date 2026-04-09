@@ -17,7 +17,7 @@ export interface UnifiedRecord {
   website: string | null;
   leadStatus: string;
   note: string | null;
-  enrichmentData: any;
+  enrichmentData: unknown;
   deepSearchAt: string | null;
   createdAt: string;
   lastInteractionAt: string | null;
@@ -26,7 +26,7 @@ export interface UnifiedRecord {
   companyAlias: string | null;
   contactAlias: string | null;
   partnerId: string | null;
-  raw: any;
+  raw: unknown;
 }
 
 export function useContactRecord(sourceType: RecordSourceType | null, sourceId: string | null) {
@@ -42,19 +42,21 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !p) return null;
-        const primary = (p as any).partner_contacts?.find((c: any) => c.is_primary) || (p as any).partner_contacts?.[0];
-        const liLink = (p as any).partner_social_links?.find((l: any) => l.platform === "linkedin");
+        const contacts = (p as Record<string, unknown>).partner_contacts as Array<Record<string, unknown>> | undefined;
+        const socialLinks = (p as Record<string, unknown>).partner_social_links as Array<Record<string, unknown>> | undefined;
+        const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
+        const liLink = socialLinks?.find(l => l.platform === "linkedin");
         return {
           sourceType: "partner", sourceId,
           companyName: p.company_name,
-          contactName: primary?.name || "",
-          email: primary?.email || p.email,
-          phone: primary?.direct_phone || p.phone,
-          mobile: primary?.mobile || p.mobile,
+          contactName: (primary?.name as string) || "",
+          email: (primary?.email as string) || p.email,
+          phone: (primary?.direct_phone as string) || p.phone,
+          mobile: (primary?.mobile as string) || p.mobile,
           country: p.country_name,
           city: p.city,
           address: p.address,
-          position: primary?.title || null,
+          position: (primary?.title as string) || null,
           website: p.website,
           leadStatus: p.lead_status,
           note: p.profile_description,
@@ -63,9 +65,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           createdAt: p.created_at || "",
           lastInteractionAt: p.last_interaction_at,
           interactionCount: p.interaction_count,
-          linkedinUrl: liLink?.url || (p.enrichment_data as any)?.linkedin_profile_url || null,
+          linkedinUrl: (liLink?.url as string) || null,
           companyAlias: p.company_alias,
-          contactAlias: primary?.contact_alias || null,
+          contactAlias: (primary?.contact_alias as string) || null,
           partnerId: p.id,
           raw: p,
         };
