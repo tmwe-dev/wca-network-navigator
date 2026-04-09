@@ -329,6 +329,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={docsDialogOpen} onOpenChange={setDocsDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-sm flex items-center gap-2"><Paperclip className="w-4 h-4 text-amber-500" /> Documenti ({m.documents.length})</DialogTitle>
