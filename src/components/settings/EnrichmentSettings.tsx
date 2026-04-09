@@ -43,7 +43,7 @@ export interface EnrichedRow {
 
 type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
 type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
-type SortField = "name" | "domain" | "source";
+type SortField = "name" | "domain" | "source" | "emailCount";
 type SortDir = "asc" | "desc";
 
 const SOURCE_TABS: { value: SourceTab; label: string; icon: ReactNode }[] = [
