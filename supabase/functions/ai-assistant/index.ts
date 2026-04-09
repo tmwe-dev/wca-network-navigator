@@ -16,6 +16,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+// ━━━ Shared handler modules ━━━
+const readH = createReadHandlers(supabase);
+const writeH = createWriteHandlers(supabase);
+const entH = createEnterpriseHandlers(supabase);
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SYSTEM PROMPT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
