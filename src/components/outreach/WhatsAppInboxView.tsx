@@ -236,6 +236,21 @@ export function WhatsAppInboxView({ syncState }: WhatsAppInboxViewProps = {}) {
       const result = await sendWhatsAppUnified({ recipient: contactToSend, text }, bridgeSender);
       if (!result.success) { toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`); setReplyText(text); return; }
       toast.success("Inviato ✓");
+      // Track activity for WA reply from inbox
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("activities").insert({
+            activity_type: "whatsapp_message" as any,
+            title: `WhatsApp reply — ${activeTab}`,
+            source_type: "imported_contact",
+            source_id: crypto.randomUUID(),
+            status: "completed" as any,
+            user_id: user.id,
+            description: `Risposta WhatsApp a ${activeTab}`,
+          });
+        }
+      } catch { /* best-effort */ }
     } catch (err: any) { toast.error(err.message); setReplyText(text); } finally { setIsSending(false); }
   };
 
