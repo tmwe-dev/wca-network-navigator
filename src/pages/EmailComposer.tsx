@@ -444,7 +444,7 @@ export default function EmailComposer() {
         <div className="flex max-w-[1060px] w-full min-h-0">
         {/* LEFT: email editor */}
         <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex-1 min-h-0 p-4 pb-0 w-full">
+          <div className="flex-1 min-h-0 p-4 pb-0 w-full overflow-y-auto">
             {/* Recipients bar with manual email input */}
             <div className="flex items-center gap-1.5 mb-2 flex-wrap">
               <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
