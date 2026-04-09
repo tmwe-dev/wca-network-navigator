@@ -1,62 +1,43 @@
 
 
-# Piano: Ordinamento + Contatti Raggruppati per Azienda in CompanyList
+# Piano: Fix LinkedIn Extension `ERR_NO_CONFIG` — Inviare `setConfig` all'estensione
 
-## Situazione Attuale
+## Problema
 
-- `CompanyList` mostra un partner per riga, con solo nome azienda, città, email, tipo
-- Non carica i contatti (`partner_contacts`) — non si vedono i contatti multipli
-- Ordinamento solo implicito (alfabetico per nome, dal DB)
-- SBA Albania ha 25 contatti, Pelikan 20, ecc. — dati reali nel DB
+Il syncCookie fallisce con `ERR_NO_CONFIG` perché il bridge LinkedIn (`useLinkedInExtensionBridge.ts`) **non invia mai** l'azione `setConfig` con le credenziali Supabase all'estensione. Il bridge WhatsApp lo fa correttamente (righe 55-78 di `useWhatsAppExtensionBridge.ts`), quello LinkedIn no.
 
-## Interventi
+L'estensione supporta `setConfig` — è già gestita in `background.js` (riga 30) e listata nelle azioni valide in `content.js` (riga 19). Manca solo il lato webapp.
 
-### 1. Caricare contatti per ogni partner visibile
+## Intervento
 
-**File: `src/components/campaigns/CompanyList.tsx`**
+**File: `src/hooks/useLinkedInExtensionBridge.ts`**
 
-- Aggiungere un hook `usePartnerContacts(partnerIds)` che fa query su `partner_contacts` per tutti i partner nella vista corrente
-- Ritorna una mappa `Record<string, PartnerContact[]>` raggruppata per `partner_id`
-- Ogni contatto ha: `id, name, title, email, direct_phone, mobile, is_primary, contact_alias`
+1. Aggiungere un `configSentRef` come nel bridge WhatsApp
+2. Creare una funzione `sendConfig()` che invia `setConfig` con `supabaseUrl` e `supabaseAnonKey` via `postMessage` con direction `from-webapp-li`
+3. Chiamare `sendConfig()` non appena l'estensione viene rilevata come disponibile (nel listener del ping o nel `contentScriptReady`)
+4. Pattern identico a quello già funzionante in `useWhatsAppExtensionBridge.ts` righe 50-78
 
-### 2. Aggiungere controlli di ordinamento
+## Dettaglio tecnico
 
-**File: `src/components/campaigns/CompanyList.tsx`**
-
-- Aggiungere pulsanti di ordinamento nella header: **Nome** (A→Z) e **Città** (A→Z)
-- Aggiungere ordinamento per **N° contatti** (decrescente) per trovare subito le aziende con più contatti
-- Il sort si applica alla lista `filteredPartners` nel memo
-
-### 3. Card azienda espandibile con contatti raggruppati
-
-Per ogni partner che ha più contatti:
-- Mostrare badge con conteggio contatti (es. `👥 25 contatti`)
-- Click sulla card espande/collassa la lista contatti sotto
-- Ogni contatto mostra: nome, titolo, email, telefono
-- Il contatto primario (`is_primary`) è evidenziato in cima
-- Checkbox individuale per ogni contatto → permette selezione specifica
-
-### 4. Selezione multipla a livello contatto
-
-- Stato di selezione attuale: `Set<string>` di partner IDs
-- Aggiungere un secondo livello: `Set<string>` di contact IDs selezionati
-- Checkbox sul partner = seleziona/deseleziona tutti i suoi contatti
-- Checkbox sul singolo contatto = selezione granulare
-- Il footer "Aggiungi alla campagna" mostra sia partner che contatti selezionati
-- Quando si aggiunge alla campagna, il `selected_contact_id` viene passato per il cockpit
+```
+// Quando isAvailable diventa true → invia config
+window.postMessage({
+  direction: "from-webapp-li",
+  action: "setConfig",
+  requestId: `li_setConfig_${Date.now()}`,
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+  supabaseAnonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+}, window.location.origin);
+```
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/campaigns/CompanyList.tsx` | Sort controls, contatti espandibili, selezione contatti |
-| `src/pages/Campaigns.tsx` | Passare stato selezione contatti, propagare al cockpit |
+| `src/hooks/useLinkedInExtensionBridge.ts` | Aggiungere invio `setConfig` su detection estensione |
 
-## Risultato atteso
+## Risultato
 
-- Posso ordinare per nome, città o numero contatti
-- Ogni azienda mostra quanti contatti ha
-- Espandendo una card vedo tutti i contatti con i loro dati
-- Posso selezionare contatti specifici per la campagna
-- Il contatto scelto viene associato all'attività nel cockpit
+- syncCookie non restituirà più `ERR_NO_CONFIG`
+- L'estensione avrà le credenziali per salvare il cookie `li_at` nel database
 
