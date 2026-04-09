@@ -426,6 +426,9 @@ export default function EnrichmentSettings() {
             )}>
               {sourceCounts[tab.value]}
             </span>
+            {tab.value === "email" && sourceTab === "email" && (
+              <span className="text-[9px] text-muted-foreground ml-0.5">({sourceCounts.emailTotal} email)</span>
+            )}
           </button>
         ))}
       </div>
