@@ -63,7 +63,7 @@ export function useWhatsAppExtensionBridge() {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.auth.getSession();
       authToken = data.session?.access_token || "";
-    } catch (_) {}
+    } catch (err) { console.warn("[WA Bridge] Failed to get auth session:", err); }
 
     const requestId = `wa_setConfig_${Date.now()}`;
     window.postMessage({
