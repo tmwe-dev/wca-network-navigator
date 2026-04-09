@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { supabase } from "@/integrations/supabase/client";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 export interface HoldingStrategy {
