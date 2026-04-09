@@ -66,6 +66,19 @@ serve(async (req) => {
         for (const s of settings) { const label = s.key.replace("ai_", "").replace(/_/g, " ").toUpperCase(); if (s.value) contextBlock += `${label}: ${s.value}\n`; }
       }
 
+      // 1b. Timing & scheduling config
+      const timingKeys = ["email_send_delay","email_batch_size","whatsapp_send_delay","linkedin_send_delay","scraping_base_delay","deep_search_delay","agent_cycle_interval","agent_max_actions_per_cycle","agent_cooldown_after_error","agent_work_start_hour","agent_work_end_hour","agent_work_days","agent_require_approval"];
+      const { data: timingSettings } = await supabase.from("app_settings").select("key, value").in("key", timingKeys);
+      if (timingSettings?.length) {
+        contextBlock += "\n--- TIMING & SCHEDULING ---\n";
+        for (const s of timingSettings) { if (s.value) contextBlock += `${s.key}: ${s.value}\n`; }
+        contextBlock += "IMPORTANTE: Rispetta SEMPRE questi timing nelle operazioni. Non superare il max azioni per ciclo. Opera solo negli orari di lavoro configurati.\n";
+        const approvalSetting = timingSettings.find(s => s.key === "agent_require_approval");
+        if (approvalSetting?.value === "true") {
+          contextBlock += "APPROVAZIONE OBBLIGATORIA: Ogni azione (email, WhatsApp, LinkedIn) DEVE essere messa in coda con status 'pending' per approvazione umana. Non eseguire direttamente.\n";
+        }
+      }
+
       // 2. Memoria operativa L2/L3
       const { data: memories } = await supabase.from("ai_memory").select("content, memory_type, tags, level, importance")
         .eq("user_id", userId).in("level", [2, 3]).order("importance", { ascending: false }).limit(10);
