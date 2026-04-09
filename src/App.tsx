@@ -39,7 +39,7 @@ if (typeof window !== "undefined") {
       import("./pages/Network");
       import("./pages/Outreach");
       import("./pages/CRM");
-    }, 3000);
+    }, 8000);
   }, { once: true });
 }
 
