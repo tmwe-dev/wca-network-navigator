@@ -126,7 +126,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsList>
 
         {/* === TIPI TAB === */}
-        <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           {/* Custom Goal field with voice dictation */}
           <div className="px-2 pt-2 pb-1 shrink-0">
             <div className="relative">
@@ -158,7 +158,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             </div>
           </div>
 
-          <ScrollArea className="flex-1 px-2 py-1.5 overflow-auto">
+          <ScrollArea className="h-0 flex-1 px-2 py-1.5">
             <div className="space-y-1">
               {allTypes.map((t) => {
                 const isCustom = customTypes.some(c => c.id === t.id);
@@ -222,7 +222,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsContent>
 
         {/* === TEMPLATE TAB === */}
-        <TabsContent value="template" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="template" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           <ScrollArea className="flex-1 px-2 py-1.5">
             {templates.length === 0 ? (
               <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">Nessun template disponibile</p>
@@ -250,7 +250,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsContent>
 
         {/* === IMMAGINI TAB === */}
-        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           <ImageGalleryTab onInsertImage={onInsertImage || (() => {})} />
         </TabsContent>
       </Tabs>
