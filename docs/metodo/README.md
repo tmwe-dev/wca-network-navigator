@@ -7,7 +7,18 @@ I volumi valgono sia per **Claude** (sessioni Cowork / Claude Code) sia per **Lo
 
 ---
 
-## I due volumi
+## I tre volumi
+
+### 📘 Documento 2 — Come Costruire da Zero un Software Perfetto con AI
+*Guida enterprise per costruire un prodotto vendibile, stabile e scalabile senza cadere nel caos tipico dei builder AI.*
+
+**REGOLA SUPREMA**: Qualsiasi cosa venga costruita a livello di codice deve seguire assolutamente, tassativamente, inderogabilmente le regole di questo documento.
+
+File:
+- [`Documento_2_Software_Perfetto_da_Zero_con_AI.md`](./Documento_2_Software_Perfetto_da_Zero_con_AI.md) — testo integrale leggibile e ricercabile
+- `Documento_2_Software_Perfetto_da_Zero_con_AI.docx` — originale consegnato dal proprietario
+
+**Struttura**: 11 sezioni — dalla definizione di software perfetto alla formula conclusiva, passando per 6 regole fondanti, 10 fasi di costruzione, 5 regole di prompting enterprise e la checklist di costruzione perfetta.
 
 ### 📕 Volume I — Il Protocollo del Recupero
 *Manuale operativo per il ripristino di sistemi software complessi.*
