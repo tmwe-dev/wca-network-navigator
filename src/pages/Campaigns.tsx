@@ -202,6 +202,17 @@ function CampaignHeaderControls({
         <PopoverContent className="w-64 p-0 bg-black/95 backdrop-blur-xl border-amber-500/30 z-50" align="start">
           <Command className="bg-transparent">
             <CommandInput placeholder="Cerca paese..." className="text-amber-100" />
+            <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30">
+              <span className="text-[10px] text-muted-foreground mr-1">Ordina:</span>
+              <button
+                onClick={() => setCountrySortBy("name")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "name" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+              >A→Z</button>
+              <button
+                onClick={() => setCountrySortBy("count")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "count" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+              >#Partner</button>
+            </div>
             <CommandList className="max-h-60">
               <CommandEmpty className="text-slate-400">Nessun paese trovato</CommandEmpty>
               <CommandGroup>
