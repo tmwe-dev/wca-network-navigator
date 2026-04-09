@@ -9,7 +9,7 @@ import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
   Check, ExternalLink, Globe, Sparkles, ArrowUpFromLine,
-  Settings, Database, Rocket,
+  Settings, Database, Rocket, MessageSquareText,
 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
