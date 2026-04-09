@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, BookOpen } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -13,6 +13,7 @@ import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
+import OperativeGuideSettings from "@/components/settings/OperativeGuideSettings";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export default function Settings() {
   const tabs: VerticalTab[] = [
     { value: "generale", label: "Generale", icon: SettingsIcon },
     { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
+    { value: "guida-operativa", label: "Guida Operativa", icon: BookOpen },
     
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
@@ -132,6 +134,11 @@ export default function Settings() {
             {tab === "memoria-ai" && (
               <div className="float-panel p-5">
                 <MemoryDashboard />
+              </div>
+            )}
+            {tab === "guida-operativa" && (
+              <div className="float-panel p-5">
+                <OperativeGuideSettings />
               </div>
             )}
           </div>
