@@ -31,11 +31,20 @@ export type WhatsAppToolbarProps = {
 };
 
 export function WhatsAppToolbar({
-  level, enabled, toggle, isReading, isAvailable, readNow,
+  level, enabled, toggle, isReading, isAvailable, isAuthenticated, readNow,
   bfProgress, startBackfill, stopBackfill,
 }: WhatsAppToolbarProps) {
   const levelCfg = LEVEL_CONFIG[level];
   const LevelIcon = levelCfg.icon;
+
+  // 3-state badge: green=connected+auth, yellow=extension ok but no session, red=extension off
+  const badgeState = !isAvailable
+    ? { variant: "destructive" as const, label: "Ext Off", color: "" }
+    : !isAuthenticated
+      ? { variant: "outline" as const, label: "Sessione", color: "border-yellow-500 text-yellow-600 bg-yellow-500/10" }
+      : { variant: "default" as const, label: "On", color: "" };
+
+  const canAct = isAvailable && isAuthenticated;
 
   return (
     <div className="flex flex-col">
