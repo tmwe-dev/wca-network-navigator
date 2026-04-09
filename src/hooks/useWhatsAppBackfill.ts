@@ -1,7 +1,8 @@
 /**
- * WhatsApp Backfill Orchestrator
- * Recovers missed messages when extension was offline.
- * Anti-detection: random delays, session limits, circuit breaker.
+ * WhatsApp Progressive Read (ex-Backfill)
+ * Uses the same reliable `readUnread` method as the test panel.
+ * Loops readUnread with pauses, deduplicates via deterministic IDs.
+ * Stops when 2 consecutive cycles return 0 new messages.
  */
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,55 +14,22 @@ type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 
 type BackfillProgress = {
   status: BackfillStatus;
-  currentChat: string | null;
-  nextChat: string | null;
-  processedChats: number;
-  totalChats: number;
+  cycle: number;
+  totalCycles: number;
   recoveredMessages: number;
-  errors: number;
-  pauseReason: string | null;
-  pauseEndsAt: number | null; // timestamp ms
   lastError: string | null;
 };
 
 const INITIAL_PROGRESS: BackfillProgress = {
-  status: "idle", currentChat: null, nextChat: null,
-  processedChats: 0, totalChats: 0, recoveredMessages: 0, errors: 0,
-  pauseReason: null, pauseEndsAt: null, lastError: null,
+  status: "idle",
+  cycle: 0,
+  totalCycles: 10,
+  recoveredMessages: 0,
+  lastError: null,
 };
 
-// Human-like delay pattern (seconds)
-const CHAT_DELAYS = [3, 8, 2, 5, 12, 4, 7, 3, 15, 5, 4, 9, 3, 6, 11, 4];
-const LONG_PAUSE_EVERY = 10;
-const LONG_PAUSE_MIN = 60;
-const LONG_PAUSE_MAX = 120;
-const MAX_CHATS_PER_SESSION = 25;
-const MAX_SESSION_MINUTES = 45;
-const CIRCUIT_BREAKER_THRESHOLD = 3;
-const CIRCUIT_BREAKER_PAUSE_MS = 10 * 60 * 1000; // 10 min
-
-function randomBetween(min: number, max: number) {
-  return min + Math.random() * (max - min);
-}
-
-function sleepWithCountdown(
-  ms: number,
-  setProgress: React.Dispatch<React.SetStateAction<BackfillProgress>>,
-  abortRef: React.MutableRefObject<boolean>
-): Promise<void> {
-  return new Promise((resolve) => {
-    const endsAt = Date.now() + ms;
-    setProgress(p => ({ ...p, pauseEndsAt: endsAt }));
-
-    const interval = setInterval(() => {
-      if (abortRef.current || Date.now() >= endsAt) {
-        clearInterval(interval);
-        setProgress(p => ({ ...p, pauseEndsAt: null }));
-        resolve();
-      }
-    }, 500);
-  });
-}
+const MAX_CYCLES = 10;
+const PAUSE_BETWEEN_CYCLES_MS = 7000; // 7s between reads
 
 function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
   return new Promise((resolve) => {
@@ -90,155 +58,88 @@ export function useWhatsAppBackfill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
-      // Get last known messages per contact
-      const { data: lastMessages } = await supabase
-        .from("channel_messages")
-        .select("from_address, to_address, body_text, created_at, direction")
-        .eq("channel", "whatsapp")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-
-      const contactLastMsg = new Map<string, string>();
-      for (const msg of (lastMessages || [])) {
-        const contact = msg.direction === "inbound" ? msg.from_address : msg.to_address;
-        if (contact && !contactLastMsg.has(contact)) {
-          contactLastMsg.set(contact, msg.body_text || "");
-        }
-      }
-
-      // Read sidebar
-      const sidebarResult = await bridge.readUnread();
-      if (!sidebarResult.success) {
-        toast.error("Impossibile leggere la sidebar WhatsApp");
-        setProgress(p => ({ ...p, status: "error", lastError: "Sidebar non leggibile" }));
-        return;
-      }
-
-      const chats = Array.from(
-        new Map(
-          ((sidebarResult.messages || []) as Array<any>)
-            .filter(chat =>
-              typeof chat?.contact === "string" &&
-              chat.contact.trim() &&
-              chat.contact !== "Sconosciuto" &&
-              chat.isVerify !== true
-            )
-            .map(chat => [chat.contact.trim().toLowerCase(), { ...chat, contact: chat.contact.trim() }])
-        ).values()
-      );
-      const totalChats = Math.min(chats.length, MAX_CHATS_PER_SESSION);
-      setProgress(p => ({ ...p, totalChats }));
-
-      const sessionStart = Date.now();
-      let consecutiveErrors = 0;
       let totalRecovered = 0;
+      let emptyStreak = 0;
 
-      for (let i = 0; i < totalChats; i++) {
+      for (let cycle = 1; cycle <= MAX_CYCLES; cycle++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused", pauseReason: "Interrotto manualmente" }));
-          toast.info("Backfill interrotto");
+          setProgress(p => ({ ...p, status: "paused" }));
+          toast.info("Lettura progressiva interrotta");
           return;
         }
 
-        // Session time limit
-        if (Date.now() - sessionStart > MAX_SESSION_MINUTES * 60 * 1000) {
-          toast.info("Sessione massima raggiunta (45 min)");
-          break;
+        setProgress(p => ({ ...p, cycle, totalCycles: MAX_CYCLES }));
+
+        // Call readUnread — same as test panel
+        const result = await bridge.readUnread();
+
+        if (!result.success) {
+          setProgress(p => ({ ...p, status: "error", lastError: result.error || "Errore lettura sidebar" }));
+          toast.error("Errore lettura WhatsApp");
+          return;
         }
 
-        // Circuit breaker
-        if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
-          const pauseMs = CIRCUIT_BREAKER_PAUSE_MS;
-          setProgress(p => ({
-            ...p,
-            status: "paused",
-            pauseReason: `${consecutiveErrors} errori consecutivi — pausa di sicurezza`,
-          }));
-          toast.warning(`Pausa di sicurezza: riprendo tra ${Math.round(pauseMs / 60000)} min`);
-          await sleepWithCountdown(pauseMs, setProgress, abortRef);
-          if (abortRef.current) return;
-          consecutiveErrors = 0;
-          setProgress(p => ({ ...p, status: "running", pauseReason: null }));
+        const messages = (result.messages || []) as Array<any>;
+        const validMessages = messages.filter(
+          (m: any) =>
+            typeof m?.contact === "string" &&
+            m.contact.trim() &&
+            m.contact !== "Sconosciuto" &&
+            m.isVerify !== true &&
+            m.text?.trim()
+        );
+
+        // Save each message with upsert (ignoreDuplicates via deterministic ID)
+        let newInCycle = 0;
+        for (const msg of validMessages) {
+          const contact = msg.contact.trim();
+          const externalId = buildDeterministicId("wa", contact, msg.text || "", msg.timestamp);
+
+          const { error } = await supabase.from("channel_messages").upsert(
+            {
+              user_id: user.id,
+              channel: "whatsapp",
+              direction: msg.direction || "inbound",
+              from_address: msg.direction === "outbound" ? undefined : contact,
+              to_address: msg.direction === "outbound" ? contact : undefined,
+              body_text: msg.text,
+              message_id_external: externalId,
+            },
+            { onConflict: "message_id_external", ignoreDuplicates: true }
+          );
+
+          if (!error) newInCycle++;
         }
 
-        const chat = chats[i];
-        const contact = chat.contact;
-        const nextContact = i + 1 < totalChats ? chats[i + 1].contact : null;
-        setProgress(p => ({
-          ...p,
-          currentChat: contact,
-          nextChat: nextContact,
-          processedChats: i,
-        }));
+        totalRecovered += newInCycle;
+        setProgress(p => ({ ...p, recoveredMessages: totalRecovered, lastError: null }));
 
-        try {
-          const lastKnown = contactLastMsg.get(contact) || "";
-          const result = await bridge.backfillChat(contact, lastKnown, 30);
+        // Exit condition: 2 consecutive cycles with 0 new
+        if (newInCycle === 0) {
+          emptyStreak++;
+          if (emptyStreak >= 2) break;
+        } else {
+          emptyStreak = 0;
+        }
 
-          if (result.success && result.messages?.length) {
-            let saved = 0;
-            for (const msg of result.messages) {
-              const { error } = await supabase.from("channel_messages").insert({
-                user_id: user.id,
-                channel: "whatsapp",
-                direction: msg.direction || "inbound",
-                from_address: msg.direction === "outbound" ? undefined : contact,
-                to_address: msg.direction === "outbound" ? contact : undefined,
-                body_text: msg.text,
-                message_id_external: buildDeterministicId("wa", contact, msg.text || "", msg.timestamp),
-              });
-              if (!error) saved++;
-            }
-            totalRecovered += saved;
-            consecutiveErrors = 0;
-            setProgress(p => ({ ...p, recoveredMessages: totalRecovered, lastError: null }));
-          } else if (!result.success) {
-            consecutiveErrors++;
-            const errMsg = result.error || "Errore lettura chat";
-            setProgress(p => ({ ...p, errors: p.errors + 1, lastError: `${contact}: ${errMsg}` }));
-          } else {
-            consecutiveErrors = 0;
+        // Pause between cycles (skip after last)
+        if (cycle < MAX_CYCLES) {
+          setProgress(p => ({ ...p, status: "paused" }));
+          const aborted = await sleepAbortable(PAUSE_BETWEEN_CYCLES_MS, abortRef);
+          if (aborted) {
+            setProgress(p => ({ ...p, status: "paused" }));
+            toast.info("Lettura progressiva interrotta");
+            return;
           }
-        } catch (err: any) {
-          consecutiveErrors++;
-          setProgress(p => ({
-            ...p, errors: p.errors + 1,
-            lastError: `${contact}: ${err?.message || "Errore sconosciuto"}`,
-          }));
-        }
-
-        // Human-like delay between chats (abortable)
-        const delayIdx = i % CHAT_DELAYS.length;
-        const delaySec = CHAT_DELAYS[delayIdx] + randomBetween(-1, 2);
-        const aborted = await sleepAbortable(delaySec * 1000, abortRef);
-        if (aborted) {
-          setProgress(p => ({ ...p, status: "paused", pauseReason: "Interrotto manualmente" }));
-          toast.info("Backfill interrotto");
-          return;
-        }
-
-        // Long pause every N chats
-        if ((i + 1) % LONG_PAUSE_EVERY === 0 && i < totalChats - 1) {
-          const pauseSec = randomBetween(LONG_PAUSE_MIN, LONG_PAUSE_MAX);
-          setProgress(p => ({
-            ...p,
-            status: "paused",
-            pauseReason: `Pausa anti-detection (ogni ${LONG_PAUSE_EVERY} chat)`,
-          }));
-          await sleepWithCountdown(pauseSec * 1000, setProgress, abortRef);
-          if (abortRef.current) return;
-          setProgress(p => ({ ...p, status: "running", pauseReason: null }));
+          setProgress(p => ({ ...p, status: "running" }));
         }
       }
 
-      setProgress(p => ({
-        ...p, status: "done", currentChat: null, nextChat: null,
-        processedChats: totalChats, pauseReason: null, pauseEndsAt: null,
-      }));
-      toast.success(`Backfill completato: ${totalRecovered} messaggi recuperati da ${totalChats} chat`);
+      setProgress(p => ({ ...p, status: "done", cycle: p.cycle }));
+      toast.success(`Lettura completata: ${totalRecovered} nuovi messaggi`);
     } catch (err: any) {
       setProgress(p => ({ ...p, status: "error", lastError: err.message }));
-      toast.error(`Errore backfill: ${err.message}`);
+      toast.error(`Errore: ${err.message}`);
     }
   }, [progress.status, bridge]);
 
