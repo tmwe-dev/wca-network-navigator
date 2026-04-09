@@ -286,28 +286,17 @@ export function WhatsAppInboxView() {
                   </Button>
                 )}
               </div>
-              {/* Backfill progress panel */}
+              {/* Progressive read progress */}
               {(bfProgress.status === "running" || bfProgress.status === "paused") && (
                 <div className="space-y-1.5 bg-muted/30 rounded-md p-2 border border-border">
-                  <Progress value={bfProgress.totalChats > 0 ? (bfProgress.processedChats / bfProgress.totalChats) * 100 : 0} className="h-1.5" />
+                  <Progress value={bfProgress.totalCycles > 0 ? (bfProgress.cycle / bfProgress.totalCycles) * 100 : 0} className="h-1.5" />
                   <div className="text-[9px] text-muted-foreground space-y-0.5">
-                    <p className="truncate">
-                      {bfProgress.status === "paused" ? "⏸ " : "▶ "}
-                      <span className="text-foreground font-medium">{bfProgress.currentChat || "Preparazione..."}</span>
-                      {" "}({bfProgress.processedChats}/{bfProgress.totalChats})
-                    </p>
-                    {bfProgress.nextChat && (
-                      <p className="truncate">Prossima: {bfProgress.nextChat}</p>
-                    )}
-                    {bfProgress.status === "paused" && bfProgress.pauseReason && (
-                      <p className="text-yellow-600 dark:text-yellow-400">⚠ {bfProgress.pauseReason}</p>
-                    )}
-                    {bfProgress.pauseEndsAt && (
-                      <BackfillCountdown endsAt={bfProgress.pauseEndsAt} />
-                    )}
                     <p>
-                      ✓ {bfProgress.recoveredMessages} recuperati
-                      {bfProgress.errors > 0 && <span className="text-red-500 ml-1">• {bfProgress.errors} errori</span>}
+                      {bfProgress.status === "paused" ? "⏸ Pausa..." : "▶ Lettura..."}
+                      {" "}Ciclo {bfProgress.cycle}/{bfProgress.totalCycles}
+                    </p>
+                    <p>
+                      ✓ {bfProgress.recoveredMessages} nuovi messaggi
                     </p>
                     {bfProgress.lastError && (
                       <p className="text-red-400 truncate" title={bfProgress.lastError}>❌ {bfProgress.lastError}</p>
@@ -609,28 +598,5 @@ export function WhatsAppInboxView() {
         )}
       </div>
     </div>
-  );
-}
-
-/** Live countdown for backfill pauses */
-function BackfillCountdown({ endsAt }: { endsAt: number }) {
-  const [remaining, setRemaining] = useState("");
-
-  useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, endsAt - Date.now());
-      const m = Math.floor(diff / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setRemaining(`${m}:${s.toString().padStart(2, "0")}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [endsAt]);
-
-  return (
-    <p className="text-yellow-600 dark:text-yellow-400 font-mono font-semibold">
-      ⏱ Riprende tra: {remaining}
-    </p>
   );
 }
