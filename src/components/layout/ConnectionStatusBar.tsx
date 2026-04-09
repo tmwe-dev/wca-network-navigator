@@ -22,6 +22,10 @@ interface Props {
   onAiClick?: () => void;
   outreachQueue?: OutreachQueueState;
   nightPause?: boolean;
+  isNightTime?: boolean;
+  manualOverride?: boolean;
+  onToggleNightPause?: () => void;
+  resumeMinutes?: number;
 }
 
 type ChannelStatus = { li: boolean; wa: boolean; fs: boolean; ai: boolean };
@@ -40,7 +44,7 @@ function saveCachedStatus(s: ChannelStatus) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* intentionally ignored: best-effort cleanup */ }
 }
 
-export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause }: Props) {
+export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
   const navigate = useNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
@@ -232,14 +236,33 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause }: Pr
         </Tooltip>
 
         {/* Night pause badge */}
-        {nightPause && (
+        {isNight && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="h-7 px-2 flex items-center gap-1 rounded-lg bg-indigo-500/15 text-indigo-400 text-[10px] font-semibold">
-                🌙
-              </span>
+              <button
+                onClick={onToggleNightPause}
+                className={cn(
+                  "h-7 px-2 flex items-center gap-1 rounded-lg text-[10px] font-semibold transition-all",
+                  nightPause
+                    ? "bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25"
+                    : "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                )}
+              >
+                {nightPause ? "🌙" : "☀️"}
+                {nightPause && (
+                  <span className="tabular-nums">
+                    {resumeMinutes >= 60
+                      ? `${Math.floor(resumeMinutes / 60)}h${String(resumeMinutes % 60).padStart(2, "0")}m`
+                      : `${resumeMinutes}m`}
+                  </span>
+                )}
+              </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">Pausa notturna attiva (00:00–06:00)</TooltipContent>
+            <TooltipContent side="bottom" className="text-xs">
+              {nightPause
+                ? `Pausa notturna — riattivazione tra ${resumeMinutes >= 60 ? `${Math.floor(resumeMinutes / 60)}h ${resumeMinutes % 60}m` : `${resumeMinutes}m`}. Clicca per riattivare ora.`
+                : "Pausa notturna disattivata manualmente. Clicca per riattivare."}
+            </TooltipContent>
           </Tooltip>
         )}
 
