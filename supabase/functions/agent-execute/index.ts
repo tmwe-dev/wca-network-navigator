@@ -56,32 +56,126 @@ serve(async (req) => {
       });
     }
 
-    // ━━━ Context Injection ━━━
+    // ━━━ Context Injection (Universal) ━━━
     let contextBlock = "";
     try {
+      // 1. Profilo utente
       const { data: settings } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
       if (settings?.length) {
         contextBlock += "\n\n--- PROFILO UTENTE ---\n";
         for (const s of settings) { const label = s.key.replace("ai_", "").replace(/_/g, " ").toUpperCase(); if (s.value) contextBlock += `${label}: ${s.value}\n`; }
       }
+
+      // 2. Memoria operativa L2/L3
       const { data: memories } = await supabase.from("ai_memory").select("content, memory_type, tags, level, importance")
-        .eq("user_id", userId).in("level", [2, 3]).order("importance", { ascending: false }).limit(5);
+        .eq("user_id", userId).in("level", [2, 3]).order("importance", { ascending: false }).limit(10);
       if (memories?.length) {
         contextBlock += "\n--- MEMORIA OPERATIVA ---\n";
         for (const m of memories) contextBlock += `- [L${m.level}/${m.memory_type}] ${m.content}\n`;
       }
-      const { data: kbEntries } = await supabase.from("kb_entries").select("title, content")
-        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false }).limit(5);
+
+      // 3. KB globale COMPLETA (tutte le entries attive, non solo top 5)
+      const { data: kbEntries } = await supabase.from("kb_entries").select("title, content, chapter, category")
+        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false });
       if (kbEntries?.length) {
         contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
-        for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 500)}\n\n`;
+        for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
       }
-      const { data: missions } = await supabase.from("outreach_missions").select("title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary")
-        .eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
-      if (missions?.length) {
-        contextBlock += "\n--- STORICO MISSIONI ---\n";
-        for (const m of missions) { const f = m.target_filters as any; contextBlock += `- "${m.title}" [${m.status}] ${m.channel} — ${m.processed_contacts}/${m.total_contacts} — Paesi: ${f?.countries?.join(", ") || "N/D"}\n`; }
+
+      // 4. Prompt Operativi (tutti, come fa ai-assistant)
+      const { data: opPrompts } = await supabase.from("operative_prompts").select("name, objective, procedure, criteria, tags, priority")
+        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false });
+      if (opPrompts?.length) {
+        contextBlock += "\n--- PROMPT OPERATIVI ---\n";
+        for (const p of opPrompts) {
+          contextBlock += `### ${p.name} (priorità: ${p.priority})\n`;
+          if (p.objective) contextBlock += `Obiettivo: ${p.objective}\n`;
+          if (p.procedure) contextBlock += `Procedura: ${p.procedure.substring(0, 300)}\n`;
+          if (p.criteria) contextBlock += `Criteri: ${p.criteria.substring(0, 200)}\n`;
+          contextBlock += "\n";
+        }
       }
+
+      // 5. Team Roster — tutti gli agenti con stats
+      const { data: allAgents } = await supabase.from("agents").select("id, name, role, is_active, stats, avatar_emoji")
+        .eq("user_id", userId);
+      if (allAgents?.length) {
+        // Count client assignments per agent
+        const { data: allAssignments } = await supabase.from("client_assignments").select("agent_id, source_id")
+          .eq("user_id", userId);
+        const assignMap = new Map<string, number>();
+        if (allAssignments) {
+          for (const a of allAssignments) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
+        }
+        // Count active tasks per agent
+        const { data: activeTasks } = await supabase.from("agent_tasks").select("agent_id, status")
+          .eq("user_id", userId).in("status", ["pending", "running"]);
+        const taskMap = new Map<string, number>();
+        if (activeTasks) {
+          for (const t of activeTasks) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
+        }
+
+        contextBlock += "\n--- TEAM AGENTI ---\n";
+        for (const a of allAgents) {
+          const s = a.stats as any || {};
+          const clients = assignMap.get(a.id) || 0;
+          const tasks = taskMap.get(a.id) || 0;
+          const self = a.id === agent_id ? " ← TU" : "";
+          contextBlock += `- ${a.avatar_emoji} ${a.name} (${a.role}) ${a.is_active ? "✅" : "⏸"} — ${clients} clienti, ${tasks} task attivi, ${s.tasks_completed || 0} completati${self}\n`;
+        }
+      }
+
+      // 6. Propri clienti assegnati
+      const { data: myClients } = await supabase.from("client_assignments").select("source_id, source_type, assigned_at")
+        .eq("agent_id", agent_id).eq("user_id", userId);
+      if (myClients?.length) {
+        contextBlock += `\n--- I TUOI CLIENTI ASSEGNATI (${myClients.length}) ---\n`;
+        contextBlock += `Tipi: ${myClients.filter(c => c.source_type === 'partner').length} partner, ${myClients.filter(c => c.source_type === 'contact').length} contatti\n`;
+      }
+
+      // 7. Task attivi di TUTTI i colleghi (visibilità cross-team)
+      const { data: teamTasks } = await supabase.from("agent_tasks").select("agent_id, task_type, description, status")
+        .eq("user_id", userId).in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(20);
+      if (teamTasks?.length) {
+        contextBlock += "\n--- TASK ATTIVI TEAM ---\n";
+        const agentNameMap = new Map<string, string>();
+        if (allAgents) for (const a of allAgents) agentNameMap.set(a.id, a.name);
+        for (const t of teamTasks) {
+          const who = agentNameMap.get(t.agent_id) || "?";
+          contextBlock += `- [${t.status}] ${who}: ${t.description.substring(0, 100)}\n`;
+        }
+      }
+
+      // 8. Storico missioni
+      try {
+        const { data: missions } = await supabase.from("outreach_missions").select("title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
+        if (missions?.length) {
+          contextBlock += "\n--- STORICO MISSIONI ---\n";
+          for (const m of missions) { const f = m.target_filters as any; contextBlock += `- "${m.title}" [${m.status}] ${m.channel} — ${m.processed_contacts}/${m.total_contacts} — Paesi: ${f?.countries?.join(", ") || "N/D"}\n`; }
+        }
+      } catch (_) { /* outreach_missions may not exist */ }
+
+      // 9. Director-only: system_prompt di tutti gli agenti + prompt operativi completi
+      if (agent.role === "account" || agent.role === "director") {
+        if (allAgents?.length) {
+          contextBlock += "\n--- PROMPT AGENTI (Director View) ---\n";
+          for (const a of allAgents) {
+            if (a.id === agent_id) continue;
+            const { data: agentDetail } = await supabase.from("agents").select("system_prompt").eq("id", a.id).single();
+            if (agentDetail?.system_prompt) {
+              contextBlock += `\n### ${a.name} (${a.role})\n${agentDetail.system_prompt.substring(0, 500)}\n...\n`;
+            }
+          }
+        }
+        if (opPrompts?.length) {
+          contextBlock += "\n--- PROMPT OPERATIVI COMPLETI (Director View) ---\n";
+          for (const p of opPrompts) {
+            contextBlock += `\n### ${p.name}\nObiettivo: ${p.objective || "N/D"}\nProcedura: ${p.procedure || "N/D"}\nCriteri: ${p.criteria || "N/D"}\n`;
+          }
+        }
+      }
+
     } catch (e) { console.error("Context injection error:", e); }
 
     // Build system prompt
