@@ -89,8 +89,25 @@ var Actions = (function () {
   }
 
   async function readInbox() {
-    var tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
-    await TabManager.sleep(5000);
+    // Force navigation to inbox list (not a specific thread)
+    var tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+
+    // Smart wait: up to 8s, checking for conversation elements every 500ms
+    var waited = 0;
+    var maxWait = 8000;
+    while (waited < maxWait) {
+      await TabManager.sleep(500);
+      waited += 500;
+      try {
+        var readyCheck = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            return document.querySelectorAll('a[href*="/messaging/thread/"], [class*="msg-conversation"], [class*="msg-convo"], li[class*="msg-"]').length;
+          },
+        });
+        if (readyCheck[0] && readyCheck[0].result > 0) break;
+      } catch (_) {}
+    }
 
     // Level 1: AX Tree
     var axError = null;
@@ -107,34 +124,57 @@ var Actions = (function () {
         func: function () {
           var threads = [];
           var seen = {};
-          var diagnostics = { methods: [], candidatesFound: 0, candidatesRejected: 0 };
+          var diagnostics = { methods: [], candidatesFound: 0, candidatesRejected: 0, url: window.location.href, bodyLength: (document.body.innerText || "").length };
 
-          // Strategy 1: thread links
-          var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
-          diagnostics.methods.push("thread_links:" + threadLinks.length);
-          threadLinks.forEach(function (link) {
-            var threadUrl = link.href || "";
-            if (seen[threadUrl]) return;
-            seen[threadUrl] = true;
-            var container = link.closest("li") || link.parentElement;
-            if (!container) return;
+          // Strategy 0: Modern selectors (2025-2026 LinkedIn layout)
+          var modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"], [class*="msg-overlay-conversation-bubble"]');
+          diagnostics.methods.push("modern_cards:" + modernCards.length);
+          modernCards.forEach(function (card) {
             diagnostics.candidatesFound++;
+            var link = card.querySelector("a[href*='/messaging/']") || card.closest("a[href*='/messaging/']");
+            var threadUrl = link ? (link.href || "") : "";
+            if (seen[threadUrl] && threadUrl) return;
+            if (threadUrl) seen[threadUrl] = true;
             var name = "";
+            var h3 = card.querySelector("h3");
+            if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
+            if (!name) { var spans = card.querySelectorAll("span"); for (var s = 0; s < Math.min(spans.length, 10); s++) { var t = (spans[s].textContent || "").trim(); if (t.length > 1 && t.length < 60 && !/^\d{1,2}[\/:\.]/.test(t) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(t)) { name = t; break; } } }
+            if (!name || name.length < 2) { diagnostics.candidatesRejected++; return; }
             var lastMsg = "";
-            var unread = false;
-            var h3 = container.querySelector("h3");
-            if (h3) { var h3t = h3.textContent.replace(/\s+/g, " ").trim(); if (h3t.length > 1 && h3t.length < 80) name = h3t; }
-            if (!name) { var spans = container.querySelectorAll("span"); for (var si = 0; si < spans.length; si++) { var st = (spans[si].textContent || "").trim(); if (st.length > 1 && st.length < 60 && !/^\d{1,2}[\/:\.]/.test(st) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(st) && !/^(passa|go to|details)/i.test(st)) { name = st; break; } } }
-            if (!name) { var img = container.querySelector("img[alt]"); if (img) { var alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar/i.test(alt)) name = alt; } }
-            var msgP = container.querySelector("p, [class*='snippet']");
-            if (msgP) lastMsg = msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
-            var badge = container.querySelector("[class*='unread'], [class*='badge']");
-            if (badge) unread = true;
-            if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) { diagnostics.candidatesRejected++; return; }
+            var msgEl = card.querySelector("p, [class*='snippet'], [class*='preview']");
+            if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
+            var unread = !!card.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
             threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
           });
 
-          // Strategy 2: if no thread links, try list items in messaging sidebar
+          // Strategy 1: thread links
+          if (threads.length === 0) {
+            var threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
+            diagnostics.methods.push("thread_links:" + threadLinks.length);
+            threadLinks.forEach(function (link) {
+              var threadUrl = link.href || "";
+              if (seen[threadUrl]) return;
+              seen[threadUrl] = true;
+              var container = link.closest("li") || link.parentElement;
+              if (!container) return;
+              diagnostics.candidatesFound++;
+              var name = "";
+              var lastMsg = "";
+              var unread = false;
+              var h3 = container.querySelector("h3");
+              if (h3) { var h3t = h3.textContent.replace(/\s+/g, " ").trim(); if (h3t.length > 1 && h3t.length < 80) name = h3t; }
+              if (!name) { var spans = container.querySelectorAll("span"); for (var si = 0; si < spans.length; si++) { var st = (spans[si].textContent || "").trim(); if (st.length > 1 && st.length < 60 && !/^\d{1,2}[\/:\.]/.test(st) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(st) && !/^(passa|go to|details)/i.test(st)) { name = st; break; } } }
+              if (!name) { var img = container.querySelector("img[alt]"); if (img) { var alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar/i.test(alt)) name = alt; } }
+              var msgP = container.querySelector("p, [class*='snippet']");
+              if (msgP) lastMsg = msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
+              var badge = container.querySelector("[class*='unread'], [class*='badge']");
+              if (badge) unread = true;
+              if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) { diagnostics.candidatesRejected++; return; }
+              threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+            });
+          }
+
+          // Strategy 2: list items in messaging sidebar
           if (threads.length === 0) {
             var listItems = document.querySelectorAll("ul li, [role='list'] [role='listitem'], [class*='msg-conversation-listitem'], [class*='conversation-list'] li");
             diagnostics.methods.push("list_items:" + listItems.length);
@@ -175,6 +215,36 @@ var Actions = (function () {
               var threadUrl = link ? (link.href || "") : "";
               threads.push({ name: alt, threadUrl: threadUrl, unread: false, lastMessage: "" });
             });
+          }
+
+          // Strategy 4: Generic anchor scan for messaging links with text
+          if (threads.length === 0) {
+            var allAnchors = document.querySelectorAll("a[href*='/messaging/']");
+            diagnostics.methods.push("generic_anchors:" + allAnchors.length);
+            allAnchors.forEach(function (a) {
+              var href = a.href || "";
+              if (!/\/messaging\/thread\//.test(href)) return;
+              if (seen[href]) return;
+              seen[href] = true;
+              diagnostics.candidatesFound++;
+              var text = a.textContent.replace(/\s+/g, " ").trim();
+              // Extract first plausible name from text
+              var parts = text.split(/\n/).map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 1 && p.length < 60; });
+              var name = "";
+              for (var p = 0; p < parts.length; p++) {
+                if (!/^\d/.test(parts[p]) && !/^(passa|go to|details|scrivi|messaggistica|today|yesterday|oggi|ieri)/i.test(parts[p])) { name = parts[p]; break; }
+              }
+              if (name) threads.push({ name: name, threadUrl: href, unread: false, lastMessage: "" });
+            });
+          }
+
+          // Enhanced diagnostics if 0 threads
+          if (threads.length === 0) {
+            diagnostics.aCount = document.querySelectorAll("a").length;
+            diagnostics.liCount = document.querySelectorAll("li").length;
+            diagnostics.h3Count = document.querySelectorAll("h3").length;
+            diagnostics.imgCount = document.querySelectorAll("img").length;
+            diagnostics.bodyTextPreview = (document.body.innerText || "").substring(0, 500);
           }
 
           return { success: true, threads: threads, method: "structural_fallback", diagnostics: diagnostics };

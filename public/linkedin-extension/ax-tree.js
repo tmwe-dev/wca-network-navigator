@@ -267,7 +267,7 @@ var AXTree = (function () {
       var threads = [];
       var seen = {};
 
-      // Find all list items or links that represent conversations
+      // Strategy A: Find links containing /messaging/thread/
       var links = findByRole(nodes, "link");
       for (var i = 0; i < links.length; i++) {
         var link = links[i];
@@ -293,6 +293,50 @@ var AXTree = (function () {
               }
             }
           } catch (_) {}
+        }
+      }
+
+      // Strategy B: Find listitem nodes that may represent conversations
+      if (threads.length === 0) {
+        var listItems = findByRole(nodes, "listitem");
+        for (var li = 0; li < listItems.length; li++) {
+          var item = listItems[li];
+          if (!item.childIds || item.childIds.length === 0) continue;
+          // Look for a link child with messaging href
+          var threadUrl = "";
+          var name = "";
+          for (var c = 0; c < item.childIds.length; c++) {
+            var childId = item.childIds[c];
+            var child = nodes.find(function (n) { return n.nodeId === childId; });
+            if (!child) continue;
+            if (child.role && child.role.value === "link" && child.backendDOMNodeId) {
+              try {
+                var res2 = await cdp(tid, "DOM.resolveNode", { backendNodeId: child.backendDOMNodeId });
+                if (res2 && res2.object) {
+                  var hr = await cdp(tid, "Runtime.callFunctionOn", {
+                    objectId: res2.object.objectId,
+                    functionDeclaration: "function() { return this.href || ''; }",
+                    returnByValue: true,
+                  });
+                  if (hr && hr.result && hr.result.value && /\/messaging\/thread\//.test(hr.result.value)) {
+                    threadUrl = hr.result.value;
+                  }
+                }
+              } catch (_) {}
+              if (!name && child.name && child.name.value) {
+                var cn = child.name.value.trim();
+                if (cn.length > 1 && cn.length < 60 && !/^(passa|go to|details)/i.test(cn)) name = cn;
+              }
+            }
+            if (!name && child.role && child.role.value === "StaticText" && child.name && child.name.value) {
+              var sv = child.name.value.trim();
+              if (sv.length > 1 && sv.length < 60 && !/^\d/.test(sv)) name = sv;
+            }
+          }
+          if (name && threadUrl && !seen[threadUrl]) {
+            seen[threadUrl] = true;
+            threads.push({ name: name, threadUrl: threadUrl, unread: false, lastMessage: "" });
+          }
         }
       }
 
