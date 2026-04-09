@@ -560,6 +560,11 @@ function LinkedInTest() {
           </span>
         </div>
       </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={profileUrl}
+          onChange={(e) => setProfileUrl(e.target.value)}
           placeholder="https://www.linkedin.com/in/nome-profilo"
           className="flex-1"
         />
