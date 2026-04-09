@@ -567,6 +567,15 @@ export default function EnrichmentSettings() {
                   {row.country && <span className="text-[10px] text-muted-foreground uppercase">{row.country}</span>}
                 </div>
 
+                {/* Email count */}
+                <div className="text-center">
+                  {row.emailCount ? (
+                    <span className="text-[10px] font-semibold text-foreground">{row.emailCount}</span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/30">—</span>
+                  )}
+                </div>
+
                 {/* Source badge */}
                 <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", ORIGIN_BADGE_CLASS[row.source])}>
                   {sourceLabel(row.source)}
