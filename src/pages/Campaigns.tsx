@@ -490,6 +490,8 @@ export default function Campaigns() {
             countryName={countryName}
             bcaPartnerIds={bcaPartnerIds}
             source={source}
+            selectedContacts={selectedContactIds}
+            onToggleContact={handleToggleContact}
           />
         </div>
       </div>
