@@ -107,6 +107,11 @@ export default function Settings() {
                 <OperativeJobsBoard />
               </div>
             )}
+            {tab === "timing" && (
+              <div className="float-panel p-5">
+                <TimingSettings />
+              </div>
+            )}
           </div>
         )}
       </div>
