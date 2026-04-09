@@ -355,9 +355,7 @@ export default function EmailComposer() {
     } catch { toast.error("Errore nel salvataggio"); }
   };
 
-  const handleEnqueue = async () => {
-    if (!subject || !htmlBody) { toast.error("Compila oggetto e corpo email"); return; }
-    if (recipientsWithEmail.length === 0) { toast.error("Nessun destinatario con email valida"); return; }
+  const executeEnqueue = async () => {
     setSending(true);
     try {
       const { data: savedDraft, error: draftError } = await supabase
@@ -389,6 +387,38 @@ export default function EmailComposer() {
       toast.error("Errore nell'accodamento");
     }
     setSending(false);
+  };
+
+  const handleEnqueue = async () => {
+    if (!subject || !htmlBody) { toast.error("Compila oggetto e corpo email"); return; }
+    if (recipientsWithEmail.length === 0) { toast.error("Nessun destinatario con email valida"); return; }
+
+    // If AI-generated content was edited, analyze the diff
+    if (isEditedAfterGeneration && aiGeneratedBody) {
+      setPendingSend(true);
+      try {
+        const result = await invokeEdge<EditAnalysis>("analyze-email-edit", {
+          body: {
+            original_html: aiGeneratedBody,
+            edited_html: htmlBody,
+            recipient_country: recipients[0]?.countryCode || "",
+            email_type: "email",
+          },
+          context: "EmailComposer.analyzeEdit",
+        });
+        if (result.significance === "medium" || result.significance === "high") {
+          setEditAnalysis(result);
+          setLearningDialogOpen(true);
+          setPendingSend(false);
+          return; // Dialog will handle send
+        }
+      } catch (err) {
+        log.warn("Edit analysis failed, proceeding with send", { error: err instanceof Error ? err.message : String(err) });
+      }
+      setPendingSend(false);
+    }
+
+    await executeEnqueue();
   };
 
   const templatesByCategory = useMemo(() => {
