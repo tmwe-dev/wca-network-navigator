@@ -1,110 +1,86 @@
 
 
-# Piano: Sistema di Supervisione AI, Briefing a 3 Tab e Strategia Operativa
+# Piano: Da "Guida Operativa" a "Jobs Board" con Prompt AI Auto-Generati
 
-## Panoramica
+## Concetto
 
-Tre interventi interconnessi:
+Trasformare la sezione "Guida Operativa" nei Settings in un **Jobs Board** — un elenco di attività operative attive (jobs) che il Supervisor AI gestisce in parallelo. Ogni job ha istruzioni, scadenza, canali, e un **prompt AI auto-generato** visibile con un'icona accanto alla riga.
 
-1. **Agente Supervisor (Gigi/Felice)** — Assegnare il ruolo di supervisore che verifica contenuti, approva strategie e controlla il rispetto della "Guida Operativa" nella KB.
-2. **Briefing Operativo a 3 Tab** — Riprogettare il briefing nella Home con: Effettuato, Da Effettuare, Sospesi/Strategia.
-3. **Strategia Operativa nei Settings** — Nuova sezione "Guida Operativa" che definisce regole, quantità, canali, etica — il "manuale" che il Supervisor AI segue.
+## Struttura di un Job
 
----
+Ogni job contiene:
+- **Titolo** (es. "Promozione FindAir ai partner WCA")
+- **Istruzioni libere** dell'utente (cosa fare, come, con quali documenti)
+- **Scadenza** (data entro cui completare)
+- **Canali** (email, WhatsApp, LinkedIn, telefono)
+- **Stato** (attivo, completato, in pausa)
+- **Prompt AI generato** — creato automaticamente dall'AI analizzando le istruzioni, visibile con icona ⚡ accanto alla riga
 
-## A. Agente Supervisor e Guida Operativa KB
+## Persistenza
 
-**A1. Guida Operativa nella KB (`kb_entries`)**
-- Inserire un set di card KB predefinite (categoria `operative_guide`) con le regole del circuito d'attesa: fonti dati, quantità giornaliere, canali preferiti, regole etiche, toni, timing follow-up.
-- Il Supervisor AI le carica come contesto prima di validare ogni azione degli agenti venditori.
+Usiamo la tabella `ai_work_plans` già esistente:
+- `title` → nome del job
+- `description` → istruzioni libere dell'utente
+- `steps` → JSON con canali, scadenza, target
+- `metadata` → contiene il `generated_prompt` (testo del prompt AI auto-generato)
+- `status` → draft/running/paused/completed
+- `tags` → categorizzazione (campagna, telefonate, email, ricerca)
 
-**A2. Sezione Settings "Guida Operativa"**
-- Nuovo tab nel Settings: "Guida Operativa" con editor strutturato per le regole (fonti dati, limiti giornalieri, canali, regole etiche, template messaggi).
-- Salvataggio come `app_settings` con chiave `operative_strategy` (JSON strutturato).
-- Il Supervisor e tutti gli agenti leggono queste regole prima di eseguire.
+Nessuna migrazione necessaria — la struttura attuale copre tutto.
 
-**A3. Ruolo Supervisor nell'agent-execute**
-- Quando un agente Sales genera un draft/azione, prima dell'esecuzione viene creato un task di review per il Supervisor.
-- Il Supervisor analizza: conformità alla Guida Operativa, qualità del messaggio, coerenza con la storia del contatto.
-- Output: `approved`, `needs_edit` (con suggerimenti), `rejected` (con motivazione).
-- L'utente vede il risultato della review nel Command Center e decide se inviare.
+## Implementazione
 
----
+### 1. Nuovo componente `OperativeJobsBoard.tsx`
+Sostituisce `OperativeGuideSettings.tsx` nel tab Settings "Guida Operativa" (rinominato "Jobs Operativi").
 
-## B. Briefing Operativo a 3 Tab
+**Layout:**
+- Lista dei jobs attivi con: titolo, scadenza, stato (badge), canali (chip), icona ⚡ per vedere il prompt generato
+- Bottone "Nuovo Job" che apre un form inline
+- Click su ⚡ → dialog/popover che mostra il prompt AI generato
+- Azioni per riga: pausa, completa, elimina, rigenera prompt
 
-Riprogettare `OperativeBriefing.tsx` con tabs:
+**Form nuovo job:**
+- Titolo (input)
+- Istruzioni (textarea — l'utente scrive cosa vuole in linguaggio naturale)
+- Scadenza (date picker)
+- Canali (toggle buttons come ora)
+- Al salvataggio → chiama AI per generare il prompt strutturato
 
-```text
-┌──────────────────────────────────────────────────┐
-│  Briefing Operativo                              │
-│  [✅ Effettuato] [📋 Da Effettuare] [⏸ Sospesi] │
-├──────────────────────────────────────────────────┤
-│                                                  │
-│  Tab Effettuato:                                 │
-│  - Lavoro svolto dagli agenti (ultime 24h)       │
-│  - Mail/messaggi inviati dal circuito            │
-│  - Contatti totali e copertura                   │
-│                                                  │
-│  Tab Da Effettuare:                              │
-│  - Contatti assegnati per oggi                   │
-│  - Task programmati per gli agenti               │
-│  - Contatti non ancora nel circuito              │
-│                                                  │
-│  Tab Sospesi:                                    │
-│  - Strategia per domani e futura                 │
-│  - Messaggi in attesa di revisione Supervisor    │
-│  - Programmazione attività e ricerca             │
-│                                                  │
-└──────────────────────────────────────────────────┘
-```
+### 2. Generazione prompt AI
+Quando l'utente salva un job, invochiamo l'AI (via `agent-execute` o direttamente il gateway) con:
+- Le istruzioni dell'utente
+- Il profilo aziendale (da `app_settings`)
+- La KB attiva
+- Il tono di voce configurato
 
-**B1. Aggiornare `daily-briefing` edge function**
-- Aggiungere al contesto: contatti nel circuito d'attesa (count), contatti non ancora nel circuito (count per lead_status), task programmati per oggi, messaggi in arrivo non letti.
-- L'LLM genera 3 sezioni separate: `completed`, `todo`, `suspended`.
+L'AI produce un prompt strutturato (obiettivo, procedura, criteri, esempi) che viene salvato nel campo `metadata.generated_prompt` del job.
 
-**B2. Aggiornare `useDailyBriefing` + tipi**
-- `DailyBriefing` → aggiungere `completed`, `todo`, `suspended` come sezioni markdown separate.
+### 3. Visualizzazione prompt (icona ⚡)
+Accanto a ogni riga del job, un'icona ⚡ che al click apre un Dialog con:
+- Il prompt generato in formato leggibile
+- Bottone "Rigenera" per ricalcolarlo
+- Bottone "Modifica" per editing manuale
 
-**B3. Nuovo `OperativeBriefing` con Tabs**
-- 3 tab con contenuto specifico per sezione.
-- Ogni tab ha le sue azioni contestuali.
-- Statistiche in alto: totale contatti, nel circuito, da contattare, programmati oggi.
+### 4. Aggiornamento Settings.tsx
+- Rinominare il tab da "Guida Operativa" a "Jobs Operativi" (icona `Briefcase`)
+- Importare `OperativeJobsBoard` al posto di `OperativeGuideSettings`
 
----
-
-## C. Missione con Task Progressivi
-
-**C1. Estendere il Mission Builder**
-- Quando l'utente descrive una missione complessa ("scrivi a tutti entro un mese, usa FindAir..."), il sistema genera automaticamente task progressivi:
-  1. Crea lista contatti nel Cockpit
-  2. Prepara documenti/allegati
-  3. Genera draft per batch
-  4. Review Supervisor
-  5. Approvazione utente
-  6. Invio programmato
-- Questi step vengono salvati in `ai_work_plans` con progressione tracciabile.
-
----
+### 5. Conservare le regole operative
+Le regole generali (limiti contatti/giorno, tono, regole etiche) restano come sezione collassabile in cima al Jobs Board — sono le "regole globali" che si applicano a tutti i jobs.
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/home/OperativeBriefing.tsx` | Riscrittura con 3 tab |
-| `src/hooks/useDailyBriefing.ts` | Nuovi tipi per 3 sezioni |
-| `supabase/functions/daily-briefing/index.ts` | +query circuito, 3 sezioni LLM |
-| `src/pages/Settings.tsx` | +tab "Guida Operativa" |
-| `src/components/settings/OperativeGuideSettings.tsx` | Nuovo — editor regole |
-| `src/components/home/BriefingStatsBar.tsx` | Nuovo — barra statistiche |
-
----
+| `src/components/settings/OperativeJobsBoard.tsx` | Nuovo — lista jobs + form + prompt viewer |
+| `src/components/settings/OperativeGuideSettings.tsx` | Mantenuto come sezione regole globali dentro il board |
+| `src/pages/Settings.tsx` | Tab rinominato, nuovo import |
+| `src/hooks/useOperativeJobs.ts` | Nuovo — CRUD su `ai_work_plans` filtrato per tag "operative_job" |
 
 ## Ordine di esecuzione
 
-1. **A2**: Sezione Guida Operativa nei Settings (base per tutto)
-2. **B1-B3**: Briefing a 3 tab + edge function aggiornata
-3. **A1**: Card KB predefinite per la guida operativa
-4. **A3**: Logica Supervisor nella review dei draft
-5. **C1**: Task progressivi nel Mission Builder
+1. Hook `useOperativeJobs` (CRUD su ai_work_plans)
+2. Componente `OperativeJobsBoard` con lista, form, prompt viewer
+3. Integrazione AI per generazione prompt al salvataggio
+4. Aggiornamento Settings.tsx
 
