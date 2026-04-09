@@ -26,8 +26,26 @@ export function useLinkedInExtensionBridge() {
   const pendingRef = useRef<Map<string, (response: LiExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const availableRef = useRef(false);
+  const configSentRef = useRef(false);
 
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+
+  // Send Supabase config to extension when it becomes available
+  const sendConfig = useCallback(() => {
+    if (configSentRef.current) return;
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) return;
+    configSentRef.current = true;
+    log.debug("→ sending setConfig to extension");
+    window.postMessage({
+      direction: "from-webapp-li",
+      action: "setConfig",
+      requestId: `li_setConfig_${Date.now()}`,
+      supabaseUrl: url,
+      supabaseAnonKey: key,
+    }, window.location.origin);
+  }, []);
 
   // Listen for responses from the content script
   useEffect(() => {
@@ -36,10 +54,10 @@ export function useLinkedInExtensionBridge() {
       const data = event.data;
       if (!data || data.direction !== "from-extension-li") return;
 
-      if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-      if (data.action === "extensionDead") { setIsAvailable(false); return; }
-      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
-      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
+      if (data.action === "contentScriptReady") { setIsAvailable(true); sendConfig(); return; }
+      if (data.action === "extensionDead") { setIsAvailable(false); configSentRef.current = false; return; }
+      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); sendConfig(); return; }
+      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); configSentRef.current = false; return; }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
