@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
+import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 
 interface Message {
   role: "user" | "assistant";
