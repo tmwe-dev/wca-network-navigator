@@ -71,7 +71,7 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
           value={value}
           onChange={(e) => handleSourceChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 min-h-[280px] h-full text-xs font-mono bg-muted/10 resize-y border-border/40 focus:border-primary/50"
+          className="flex-1 min-h-[200px] max-h-[60vh] h-full text-xs font-mono bg-muted/10 resize-none border-border/40 focus:border-primary/50 overflow-y-auto"
         />
       ) : (
         <div className="relative flex-1 min-h-[200px] max-h-[60vh]">
