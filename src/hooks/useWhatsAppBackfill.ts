@@ -1,8 +1,8 @@
 /**
- * WhatsApp Progressive Read (ex-Backfill)
- * Uses the same reliable `readUnread` method as the test panel.
- * Loops readUnread with pauses, deduplicates via deterministic IDs.
- * Stops when 2 consecutive cycles return 0 new messages.
+ * WhatsApp Deep Backfill — Two-Phase Recovery
+ * Phase 1: Sidebar discovery → find contacts with potential gaps
+ * Phase 2: Deep recovery → readThread/backfillChat per contact with 15-20s delays
+ * Triggered automatically on WhatsApp reconnection or manually.
  */
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,25 +11,37 @@ import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
+type BackfillPhase = "idle" | "discovery" | "deep";
 
 type BackfillProgress = {
   status: BackfillStatus;
-  cycle: number;
-  totalCycles: number;
+  phase: BackfillPhase;
+  currentChat: string | null;
+  chatsProcessed: number;
+  chatsTotal: number;
   recoveredMessages: number;
   lastError: string | null;
 };
 
 const INITIAL_PROGRESS: BackfillProgress = {
   status: "idle",
-  cycle: 0,
-  totalCycles: 10,
+  phase: "idle",
+  currentChat: null,
+  chatsProcessed: 0,
+  chatsTotal: 0,
   recoveredMessages: 0,
   lastError: null,
 };
 
-const MAX_CYCLES = 10;
-const PAUSE_BETWEEN_CYCLES_MS = 7000; // 7s between reads
+const MAX_CHATS_PER_SESSION = 10;
+const PAUSE_BETWEEN_CHATS_MS = 17500; // 15-20s with jitter ±15%
+const MAX_SCROLLS_PER_CHAT = 30;
+const MAX_MESSAGES_PER_THREAD = 50;
+
+// Jitter ±15% on the pause
+function jitteredPause(base: number): number {
+  return base * (0.85 + Math.random() * 0.30);
+}
 
 function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
   return new Promise((resolve) => {
@@ -43,105 +55,192 @@ function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): 
   });
 }
 
+// Outbound detection (same as adaptive sync)
+const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: "];
+function detectDirection(text: string): { direction: "inbound" | "outbound"; cleanText: string } {
+  const lower = text.toLowerCase();
+  for (const prefix of OUTBOUND_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      return { direction: "outbound", cleanText: text.slice(prefix.length) };
+    }
+  }
+  return { direction: "inbound", cleanText: text };
+}
+
 export function useWhatsAppBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
+  const runningRef = useRef(false);
   const bridge = useWhatsAppExtensionBridge();
 
   const startBackfill = useCallback(async () => {
-    if (progress.status === "running") return;
+    if (runningRef.current) return;
+    runningRef.current = true;
     abortRef.current = false;
 
-    setProgress({ ...INITIAL_PROGRESS, status: "running" });
+    setProgress({ ...INITIAL_PROGRESS, status: "running", phase: "discovery" });
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
+      // ── PHASE 1: Discovery ──
+      const sidebarResult = await bridge.readUnread();
+      if (!sidebarResult.success || !sidebarResult.messages?.length) {
+        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        toast.info("Nessun contatto da recuperare");
+        return;
+      }
+
+      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle" })); return; }
+
+      // Get unique contacts from sidebar
+      const sidebarContacts = new Map<string, any>();
+      for (const msg of sidebarResult.messages as any[]) {
+        const contact = String(msg.contact || msg.from || "").trim();
+        if (!contact || contact === "Sconosciuto" || msg.isVerify) continue;
+        if (!sidebarContacts.has(contact.toLowerCase())) {
+          sidebarContacts.set(contact.toLowerCase(), { name: contact, lastMessage: msg.lastMessage || msg.text || "", time: msg.time || msg.timestamp || "" });
+        }
+      }
+
+      // For each contact, check if we have a gap (compare last DB message)
+      const contactsWithGap: { name: string; lastDbText: string | null }[] = [];
+
+      for (const [, info] of sidebarContacts) {
+        if (contactsWithGap.length >= MAX_CHATS_PER_SESSION) break;
+
+        const { data: lastMsg } = await supabase
+          .from("channel_messages")
+          .select("body_text, created_at")
+          .eq("user_id", user.id)
+          .eq("channel", "whatsapp")
+          .or(`from_address.ilike.%${info.name}%,to_address.ilike.%${info.name}%`)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // If sidebar shows a different last message than what we have, there's a gap
+        const sidebarText = info.lastMessage.trim().toLowerCase();
+        const dbText = (lastMsg?.body_text || "").trim().toLowerCase();
+
+        if (!lastMsg || (sidebarText && sidebarText !== dbText)) {
+          contactsWithGap.push({ name: info.name, lastDbText: lastMsg?.body_text || null });
+        }
+      }
+
+      if (contactsWithGap.length === 0) {
+        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        toast.success("Tutte le chat sono aggiornate ✅");
+        return;
+      }
+
+      // ── PHASE 2: Deep Recovery ──
+      setProgress(p => ({
+        ...p,
+        phase: "deep",
+        chatsTotal: contactsWithGap.length,
+        chatsProcessed: 0,
+      }));
+
       let totalRecovered = 0;
-      let emptyStreak = 0;
 
-      for (let cycle = 1; cycle <= MAX_CYCLES; cycle++) {
+      for (let i = 0; i < contactsWithGap.length; i++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused" }));
-          toast.info("Lettura progressiva interrotta");
+          setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+          toast.info("Recupero interrotto");
           return;
         }
 
-        setProgress(p => ({ ...p, cycle, totalCycles: MAX_CYCLES }));
+        const chat = contactsWithGap[i];
+        setProgress(p => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
 
-        // Call readUnread — same as test panel
-        const result = await bridge.readUnread();
+        let messages: any[] = [];
 
-        if (!result.success) {
-          setProgress(p => ({ ...p, status: "error", lastError: result.error || "Errore lettura sidebar" }));
-          toast.error("Errore lettura WhatsApp");
-          return;
+        // Try readThread first (reads visible messages in chat)
+        const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
+        if (threadResult.success && threadResult.messages?.length) {
+          messages = threadResult.messages as any[];
         }
 
-        const messages = (result.messages || []) as Array<any>;
-        const validMessages = messages.filter(
-          (m: any) =>
-            typeof m?.contact === "string" &&
-            m.contact.trim() &&
-            m.contact !== "Sconosciuto" &&
-            m.isVerify !== true &&
-            m.text?.trim()
-        );
+        // If we have a last known message and got messages, check if we need deeper scroll
+        if (chat.lastDbText && messages.length > 0) {
+          const foundAnchor = messages.some((m: any) => {
+            const t = String(m.text || m.lastMessage || "").trim().toLowerCase();
+            return t === chat.lastDbText!.trim().toLowerCase();
+          });
 
-        // Save each message with upsert (ignoreDuplicates via deterministic ID)
-        let newInCycle = 0;
-        for (const msg of validMessages) {
-          const contact = msg.contact.trim();
-          const externalId = buildDeterministicId("wa", contact, msg.text || "", msg.timestamp);
+          // If anchor not found in visible messages, do deep backfill scroll
+          if (!foundAnchor) {
+            const backfillResult = await bridge.backfillChat(chat.name, chat.lastDbText, MAX_SCROLLS_PER_CHAT);
+            if (backfillResult.success && backfillResult.messages?.length) {
+              // Merge, dedup will handle overlaps
+              messages = [...messages, ...(backfillResult.messages as any[])];
+            }
+          }
+        }
 
-          const { error } = await supabase.from("channel_messages").upsert(
-            {
+        // Save all messages
+        let chatRecovered = 0;
+        for (const msg of messages) {
+          const contact = String(msg.contact || msg.from || chat.name).trim();
+          const rawText = String(msg.text || msg.lastMessage || "");
+          if (!rawText.trim()) continue;
+
+          const { direction, cleanText } = detectDirection(rawText);
+          const finalDirection = msg.direction || direction;
+          const text = cleanText.trim();
+          if (!text) continue;
+
+          const rawTime = String(msg.time || msg.timestamp || "");
+          const extId = buildDeterministicId("wa", contact, text, rawTime || new Date().toISOString());
+
+          const { error, status } = await supabase
+            .from("channel_messages")
+            .upsert({
               user_id: user.id,
               channel: "whatsapp",
-              direction: msg.direction || "inbound",
-              from_address: msg.direction === "outbound" ? undefined : contact,
-              to_address: msg.direction === "outbound" ? contact : undefined,
-              body_text: msg.text,
-              message_id_external: externalId,
-            },
-            { onConflict: "message_id_external", ignoreDuplicates: true }
-          );
+              direction: finalDirection,
+              from_address: finalDirection === "outbound" ? undefined : contact,
+              to_address: finalDirection === "outbound" ? contact : undefined,
+              body_text: text,
+              message_id_external: extId,
+              raw_payload: msg as any,
+            }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
-          if (!error) newInCycle++;
+          if (!error && status === 201) chatRecovered++;
         }
 
-        totalRecovered += newInCycle;
-        setProgress(p => ({ ...p, recoveredMessages: totalRecovered, lastError: null }));
+        totalRecovered += chatRecovered;
+        setProgress(p => ({
+          ...p,
+          chatsProcessed: i + 1,
+          recoveredMessages: totalRecovered,
+        }));
 
-        // Exit condition: 2 consecutive cycles with 0 new
-        if (newInCycle === 0) {
-          emptyStreak++;
-          if (emptyStreak >= 2) break;
-        } else {
-          emptyStreak = 0;
-        }
-
-        // Pause between cycles (skip after last)
-        if (cycle < MAX_CYCLES) {
+        // Pause between chats (skip after last)
+        if (i < contactsWithGap.length - 1) {
+          const pause = jitteredPause(PAUSE_BETWEEN_CHATS_MS);
           setProgress(p => ({ ...p, status: "paused" }));
-          const aborted = await sleepAbortable(PAUSE_BETWEEN_CYCLES_MS, abortRef);
+          const aborted = await sleepAbortable(pause, abortRef);
           if (aborted) {
-            setProgress(p => ({ ...p, status: "paused" }));
-            toast.info("Lettura progressiva interrotta");
+            setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+            toast.info("Recupero interrotto");
             return;
           }
           setProgress(p => ({ ...p, status: "running" }));
         }
       }
 
-      setProgress(p => ({ ...p, status: "done", cycle: p.cycle }));
-      toast.success(`Lettura completata: ${totalRecovered} nuovi messaggi`);
+      setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
+      toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
     } catch (err: any) {
-      setProgress(p => ({ ...p, status: "error", lastError: err.message }));
-      toast.error(`Errore: ${err.message}`);
+      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: err.message }));
+      toast.error(`Errore recupero: ${err.message}`);
+    } finally {
+      runningRef.current = false;
     }
-  }, [progress.status, bridge]);
+  }, [bridge]);
 
   const stopBackfill = useCallback(() => {
     abortRef.current = true;
