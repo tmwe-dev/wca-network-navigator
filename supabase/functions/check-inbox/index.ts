@@ -729,9 +729,10 @@ Deno.serve(async (req) => {
         global: { headers: { Authorization: authHeader } },
       });
       supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !user) throw new Error("Unauthorized");
-      userId = user.id;
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims?.sub) throw new Error("Unauthorized");
+      userId = claimsData.claims.sub as string;
     }
 
     const imapHost = Deno.env.get("IMAP_HOST") || "";
