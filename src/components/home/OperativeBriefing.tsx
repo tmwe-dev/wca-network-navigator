@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bot, Loader2, RefreshCw, Zap, CheckCircle2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bot, Loader2, RefreshCw, Zap, CheckCircle2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
@@ -14,7 +15,6 @@ interface Props {
   completed: string | undefined;
   todo: string | undefined;
   suspended: string | undefined;
-  /** Legacy fallback */
   summary?: string;
   actions: BriefingAction[];
   stats: BriefingStats | undefined;
@@ -30,6 +30,7 @@ export function OperativeBriefing({
   const [executingIdx, setExecutingIdx] = useState<number | null>(null);
   const [completedIdx, setCompletedIdx] = useState<Set<number>>(new Set());
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const executeAction = async (action: BriefingAction, idx: number) => {
     setExecutingIdx(idx);
@@ -98,7 +99,6 @@ export function OperativeBriefing({
   const hasContent = completed || todo || suspended || summary;
   if (!hasContent) return null;
 
-  // Fallback: if only legacy summary exists, show single view
   const showTabs = !!(completed || todo || suspended);
 
   return (
@@ -126,6 +126,17 @@ export function OperativeBriefing({
           scheduledToday={stats.scheduledToday}
         />
       )}
+
+      {/* Quick access to Jobs Board */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full h-7 text-[11px] gap-1.5 border-primary/20 text-primary hover:bg-primary/10"
+        onClick={() => navigate("/settings?tab=guida-operativa")}
+      >
+        <Briefcase className="h-3 w-3" />
+        Jobs Operativi — Gestisci attività
+      </Button>
 
       {showTabs ? (
         <Tabs defaultValue="todo" className="w-full">
