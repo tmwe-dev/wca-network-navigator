@@ -63,8 +63,8 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.03, duration: 0.2 }}
         draggable
-        onDragStart={(e) => {
-          onDragStart();
+        onDragStart={onDragStart}
+        onDragStartCapture={(e: React.DragEvent) => {
           const el = e.currentTarget as HTMLElement;
           const clone = el.cloneNode(true) as HTMLElement;
           clone.style.transform = "scale(0.5)";
