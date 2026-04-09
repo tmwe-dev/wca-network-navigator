@@ -540,21 +540,26 @@ function LinkedInTest() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
-        <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
-        <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
-        <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
-        <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
-        <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
-        <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
-        <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
+          <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
+          <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
+          <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
+          <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
+          <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
+          <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
+          <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          {cooldown > 0 && (
+            <span className="text-xs font-mono text-yellow-500 animate-pulse">⏳ {cooldown}s</span>
+          )}
+          <span className={`text-xs font-mono px-2 py-0.5 rounded ${actionsLastHour > 15 ? "bg-red-500/20 text-red-400" : actionsLastHour > 8 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"}`}>
+            LI: {actionsLastHour}/h
+          </span>
+        </div>
       </div>
-
-      <div className="flex gap-2">
-        <Input
-          value={profileUrl}
-          onChange={(e) => setProfileUrl(e.target.value)}
           placeholder="https://www.linkedin.com/in/nome-profilo"
           className="flex-1"
         />
