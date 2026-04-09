@@ -60,7 +60,12 @@ function isSidebarGhostMessage(msg: ChannelMessage) {
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf", "image/gif"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export function WhatsAppInboxView() {
+type WhatsAppInboxViewProps = {
+  syncState?: ReturnType<typeof import("@/hooks/useWhatsAppAdaptiveSync").useWhatsAppAdaptiveSync>;
+  backfillState?: ReturnType<typeof import("@/hooks/useWhatsAppBackfill").useWhatsAppBackfill>;
+};
+
+export function WhatsAppInboxView({ syncState, backfillState }: WhatsAppInboxViewProps = {}) {
   const [search, setSearch] = useState("");
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -76,7 +81,11 @@ export function WhatsAppInboxView() {
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
   const markAsRead = useMarkAsRead();
   const { sendWhatsApp } = useWhatsAppExtensionBridge();
-  const { enabled, focusedChat, focusOn } = useWhatsAppAdaptiveSync();
+  
+  // Use passed-in sync state (from parent) or fall back to own hook
+  const ownSync = useWhatsAppAdaptiveSync();
+  const sync = syncState || ownSync;
+  const { enabled, focusedChat, focusOn } = sync;
 
   // Group messages by contact
   const threads = useMemo(() => {
