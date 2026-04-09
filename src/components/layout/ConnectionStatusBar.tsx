@@ -230,22 +230,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           </TooltipContent>
         </Tooltip>
 
-        {/* Sync button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted/60 transition-colors"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", syncing && "animate-spin text-primary")} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            {syncing ? "Sincronizzazione..." : "Sincronizza tutto (WCA + Email)"}
-          </TooltipContent>
-        </Tooltip>
-
         {/* Divider */}
         <div className="w-px h-5 bg-border/50 mx-0.5" />
 
