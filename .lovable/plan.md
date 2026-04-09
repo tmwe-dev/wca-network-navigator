@@ -1,49 +1,56 @@
 
 
-# Piano: Auto-Attivazione Globale + Pausa Notturna
+# Piano: Logo a destra del nome + Bandiera grande a destra della card
+
+## Problema attuale
+- `CompanyLogo` è usato come avatar a sinistra con la bandiera sovrapposta in piccolo
+- L'utente vuole: **logo reale (solo Clearbit)** inline accanto al nome del mittente, **bandiera grande** sul lato destro della riga
 
 ## Cosa cambia
 
-### 1. Hook centralizzato `useGlobalAutoSync` (nuovo)
-Un unico hook in `AppLayout` che all'avvio:
-- Chiama `useAutoConnect()` (verifica LinkedIn + WhatsApp)
-- Attiva automaticamente l'email auto-sync (oggi parte disattivato, default `false` in localStorage)
-- Attiva automaticamente il WhatsApp adaptive sync (oggi parte con `enabled = false`)
-- Rispetta la **pausa notturna** basata sul fuso orario locale del browser
+### 1. Separare Logo e Bandiera nel `CompanyLogo`
+Creare due sotto-componenti esportati:
+- **`CompanyLogoInline`** — solo il logo Clearbit, piccolo (16-20px), senza fallback visivo (se non trova il logo, non renderizza nulla). Da mettere accanto al nome del mittente.
+- **`CountryFlag`** — solo la bandiera dal TLD, dimensione grande (20-24px), da posizionare sul lato destro della card.
 
-### 2. Pausa Notturna automatica
-- Rileva il fuso orario con `Intl.DateTimeFormat().resolvedOptions().timeZone`
-- Se l'ora locale è tra **00:00 e 06:00** → tutti i sync sono sospesi
-- Un timer controlla ogni 5 minuti se siamo usciti dalla fascia notturna e riattiva
-- Nessuna chiamata WhatsApp, LinkedIn o email durante la pausa
-- Badge discreto nell'header: "🌙 Pausa notturna" quando attivo
+Il componente `CompanyLogo` esistente (con InitialsAvatar) resta come avatar a sinistra.
 
-### 3. Modifiche ai sync esistenti
+### 2. Layout `EmailMessageList.tsx`
+```text
+Attuale:
+[Logo+Flag]  Nome         Data
+             Oggetto
+             Email
 
-**Email (`useEmailAutoSync`)**: default cambia da `false` a `true`. Intervallo resta 2 minuti. Aggiunge check pausa notturna.
+Nuovo:
+[Iniziali]  Nome [Logo🔹]        🇻🇳  Data
+            Oggetto                    ✈️
+            Email
+```
+- A sinistra: `InitialsAvatar` (sempre, con le iniziali del brand)
+- Dopo il nome: `CompanyLogoInline` (solo se Clearbit trova il logo reale, altrimenti niente)
+- A destra: `CountryFlag` grande (20-24px) estratta dal TLD dell'email
+- Rimuovere `showFlag` dal `CompanyLogo` nella lista (la bandiera è ora separata)
 
-**WhatsApp (`useWhatsAppAdaptiveSync`)**: `enabled` inizializzato a `true` invece di `false`. Il timer tick controlla se è notte prima di eseguire.
+### 3. Layout `DownloadedEmailList.tsx`
+Stesso schema: iniziali a sinistra, logo inline dopo il nome, bandiera grande a destra.
 
-**Auto-connect (`useAutoConnect`)**: spostato da `useCockpitLogic` ad `AppLayout` così parte su qualsiasi pagina, non solo dal Cockpit.
-
-### 4. Integrazione in AppLayout
-`AppLayout.tsx` chiama `useGlobalAutoSync()` che orchestra tutto. Nessun cambio necessario nelle singole pagine.
+### 4. `EmailDetailView.tsx`
+Stesso approccio nel header del dettaglio email: logo inline accanto al nome, bandiera grande a destra.
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/hooks/useGlobalAutoSync.ts` | **Nuovo** — orchestra auto-connect, email sync, WA sync, pausa notturna |
-| `src/hooks/useEmailAutoSync.ts` | Default `true`, accetta `paused` prop esterno |
-| `src/hooks/useWhatsAppAdaptiveSync.ts` | Default `true`, accetta `paused` prop esterno |
-| `src/hooks/useAutoConnect.ts` | Nessuna modifica (già funzionante) |
-| `src/hooks/useCockpitLogic.ts` | Rimuovere `useAutoConnect()` (spostato in AppLayout) |
-| `src/components/layout/AppLayout.tsx` | Aggiungere `useGlobalAutoSync()` |
-| `src/components/layout/ConnectionStatusBar.tsx` | Badge "🌙" durante pausa notturna |
+| `src/components/ui/CompanyLogo.tsx` | Esportare `CompanyLogoInline` (solo logo, nessun fallback) e `CountryFlag` (solo bandiera, grande) |
+| `src/components/outreach/EmailMessageList.tsx` | Nuovo layout: iniziali sx, logo inline dopo nome, bandiera dx grande |
+| `src/components/outreach/download/DownloadedEmailList.tsx` | Stesso nuovo layout |
+| `src/components/outreach/download/DownloadedEmailPreview.tsx` | Logo inline + bandiera separata |
+| `src/components/outreach/EmailDetailView.tsx` | Logo inline + bandiera separata |
 
 ## Risultato
-- All'apertura dell'app: WhatsApp, LinkedIn ed email si attivano automaticamente
-- Email scaricate ogni 2 minuti, WhatsApp scansionato ogni 75 secondi (idle)
-- Tra mezzanotte e le 6 del mattino (ora locale del computer): tutto in pausa
-- L'utente non deve premere nessun pulsante
+- Logo reale Clearbit: appare piccolo accanto al nome del mittente, solo se esiste
+- Nessun logo inventato, nessun fallback generico vicino al nome
+- Bandiera del paese: grande, posizionata chiaramente a destra della riga
+- InitialsAvatar: resta come identificativo visivo a sinistra
 
