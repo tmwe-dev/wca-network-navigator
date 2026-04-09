@@ -1,83 +1,59 @@
 
 
-# Piano: Auto-Apprendimento Stile Email dall'Editing Utente
+# Piano: Fix Sezione Arricchimento — Dati Completi + BCA + Logo Google + Deep Search Configurabile
 
-## Concetto
+## Problemi identificati
 
-Quando l'utente modifica un draft generato dall'AI e clicca "Invia", il sistema intercetta la differenza tra il testo originale AI e quello finale modificato. Un'analisi semantica rapida (via Edge Function) identifica i pattern di modifica (tono più informale, testo accorciato, struttura cambiata) e propone all'utente di salvare queste preferenze come memoria L1 → futura promozione a L2/L3.
+1. **Ogni query ha `.limit(1000)`** — mostra max 1000 WCA, 1000 contatti, etc. In realtà ci sono 12.286 partner, 11.461 contatti, 383 BCA
+2. **Manca il tab BCA (Biglietti da Visita)** — 383 record non visibili
+3. **Manca "Cerca Logo Google" nelle azioni bulk e singole** — presente in Contatti e BCA ma non in Enrichment
+4. **Deep Search non apre dialog di configurazione** — i bottoni Deep Search (bulk e singolo) non fanno nulla e non permettono di scegliere quali operazioni eseguire
+5. **Manca il DeepSearchOptionsDialog** — il componente non esiste ancora; serve una mascherina che mostri i default della sezione (da `deep_search_config`) e permetta di modificarli al volo prima di lanciare
 
-Il tutto avviene con un **dialog di conferma pre-invio** — non blocca il flusso, l'utente può ignorarlo e inviare direttamente.
+## Modifiche
 
-## Flusso
+### 1. Caricamento dati completo — loop iterativo con `.range()`
 
-```text
-AI genera draft → utente modifica → click "Invia"
-  ↓
-[isEditedAfterGeneration = true?]
-  ↓ sì
-Calcolo diff (% riduzione, cambi strutturali)
-  ↓
-Se diff significativo (>15% testo o >3 modifiche semantiche):
-  → Mostra dialog "Apprendimento Stile"
-    • Mostra: "Hai ridotto il testo del 30%", "Tono più informale"
-    • Opzioni: [Salva preferenza] [Ignora e invia] [Invia senza salvare]
-  ↓
-Se [Salva]: chiama Edge Function → analisi semantica → salva in ai_memory L1
-  ↓
-Procedi con invio normale
-```
+Sostituire le 4 query con `.limit(1000)` con funzioni di caricamento batch (2000 per volta, loop fino a esaurimento), come già fatto nel Mission Builder e nel Globo. Ogni sorgente caricherà tutti i record.
 
-## Dettaglio tecnico
+### 2. Aggiungere tab BCA
 
-### 1. Edge Function `analyze-email-edit` (nuova)
+- Nuovo tab "BCA" con icona CreditCard e conteggio
+- Query su `business_cards` con join su partner (come `useBusinessCards`)
+- Mappa a `EnrichedRow` con: company_name, email, country da location/partner, source = "bca"
+- Bordo sinistro viola (`border-l-purple-500`)
 
-Riceve `{ original_html, edited_html, recipient_country, email_type }` e restituisce:
-- `length_change_pct`: percentuale riduzione/aumento testo
-- `tone_shift`: es. "formal→informal", "neutral→friendly"
-- `structural_changes`: es. "removed_greeting", "simplified_cta", "shortened_paragraphs"
-- `suggested_memory`: frase sintetica da salvare come memoria (es. "L'utente preferisce email brevi e informali per contatti italiani")
-- `significance`: "low" | "medium" | "high"
+### 3. Aggiungere "Cerca Logo Google" 
 
-Usa un modello leggero (gemini-2.5-flash-lite) per l'analisi — costo minimo per invio.
+**Azione singola**: nel menu ⋮ di ogni riga, aggiungere "Cerca Logo Google" che apre Google Immagini (stessa logica di ContactDetailPanel e BusinessCardsHub)
 
-### 2. Dialog `EmailEditLearningDialog.tsx` (nuovo)
+**Azione bulk**: nella barra di selezione, aggiungere bottone "Logo Google" accanto a LinkedIn Batch e Deep Search. Apre Google Immagini per il primo selezionato (o batch futuro)
 
-Appare **solo** quando `isEditedAfterGeneration = true` e la diff è significativa.
-Mostra:
-- Badge con le modifiche rilevate (es. "−30% testo", "Tono informale")
-- Il suggerimento di memoria proposto dall'AI
-- 3 pulsanti: **Salva e invia** / **Invia senza salvare** / **Annulla**
+### 4. Creare `DeepSearchOptionsDialog` 
 
-Se l'utente salva, inserisce in `ai_memory` con:
-- `level: 1`, `tag: "style_preference"`, `source: "email_edit_learning"`
-- `content`: la frase suggerita dall'AI
-- `context_key`: tipo email + paese destinatario (per preferenze granulari)
+Nuovo componente dialog che:
+- Carica i default dalla configurazione `deep_search_config` per il contesto "enrichment" (o fallback a "contacts")
+- Mostra 4 checkbox: Scrape sito web, Scrape LinkedIn, Verifica WhatsApp, Analisi AI
+- L'utente può attivare/disattivare ogni opzione prima del lancio
+- Pulsanti: "Avvia" / "Annulla"
+- Si apre sia dall'azione singola (menu ⋮ → Deep Search) che dall'azione bulk
 
-### 3. Integrazione in `EmailComposer.tsx`
+### 5. Collegare Deep Search reale
 
-- `handleEnqueue` già ha accesso a `isEditedAfterGeneration`, `aiGeneratedBody`, `htmlBody`
-- Prima di procedere con l'invio, se `isEditedAfterGeneration`:
-  1. Chiama `analyze-email-edit`
-  2. Se `significance >= "medium"`, mostra il dialog
-  3. Dopo la scelta utente, procede con l'invio esistente
-
-### 4. Consumo delle preferenze nel prompt AI
-
-In `generate-email` Edge Function, le memorie con tag `style_preference` vengono iniettate nel prompt come regole addizionali, così l'AI genera direttamente nel tono preferito dall'utente.
+Integrare `useDeepSearchRunner` per lanciare effettivamente il Deep Search con le opzioni selezionate dall'utente nel dialog.
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/analyze-email-edit/index.ts` | Nuova — analisi semantica diff via AI |
-| `src/components/email/EmailEditLearningDialog.tsx` | Nuovo — dialog conferma apprendimento |
-| `src/pages/EmailComposer.tsx` | Intercettare pre-invio, mostrare dialog se diff significativa |
-| `supabase/functions/generate-email/index.ts` | Iniettare memorie `style_preference` nel prompt |
+| `src/components/settings/EnrichmentSettings.tsx` | Rimuovere `.limit(1000)`, implementare loop batch `.range()`, aggiungere tab BCA, aggiungere Logo Google singolo/bulk, collegare Deep Search al dialog |
+| `src/components/settings/enrichment/DeepSearchOptionsDialog.tsx` | **Nuovo** — dialog con checkbox per opzioni Deep Search, carica default da `deep_search_config` |
 
 ## Ordine di esecuzione
 
-1. Creare Edge Function `analyze-email-edit`
-2. Creare `EmailEditLearningDialog`
-3. Integrare nel flusso di invio di EmailComposer
-4. Aggiornare `generate-email` per consumare le preferenze salvate
+1. Creare `DeepSearchOptionsDialog`
+2. Riscrivere le query di caricamento con loop iterativo
+3. Aggiungere tab BCA e dati
+4. Aggiungere Logo Google (singolo + bulk)
+5. Collegare Deep Search al dialog + runner
 
