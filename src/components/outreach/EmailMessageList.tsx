@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Building2, User, Plane } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { CompanyLogo, CompanyLogoInline, CountryFlag, extractDomainFromEmail } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { cn } from "@/lib/utils";
@@ -24,14 +24,12 @@ function formatListDate(value: string): string {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-
   return format(date, "dd/MM HH:mm", { locale: it });
 }
 
 export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   
-  // Collect all source IDs to check holding pattern status
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
     messages.forEach(msg => {
@@ -43,7 +41,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   
   const holdingSet = useHoldingPatternEmails(sourceIds);
 
-  // Filter messages if holdingFilter is active
   const displayMessages = useMemo(() => {
     if (!holdingFilter) return messages;
     return messages.filter(msg => {
@@ -60,7 +57,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
     overscan: 5,
   });
 
-  // Scroll to selected item when selection changes
   useEffect(() => {
     if (!selectedId) return;
     const idx = displayMessages.findIndex((m) => m.id === selectedId);
@@ -80,7 +76,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const displayDate = msg.email_date || msg.created_at;
           const secondaryLine = msg.from_address || msg.to_address || "(mittente sconosciuto)";
           
-          // Check if this message sender is in the holding pattern
           const isInHolding = msg.partner_id 
             ? holdingSet.has(`p:${msg.partner_id}`)
             : (msg.source_type === "imported_contact" && msg.source_id)
@@ -108,14 +103,18 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               )}
             >
               <div className="flex items-start gap-2.5">
-                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" showFlag />
+                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className={cn("truncate text-sm", isUnread ? "font-semibold text-primary" : "font-medium")}>{brand}</span>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={cn("truncate text-sm flex items-center gap-1.5", isUnread ? "font-semibold text-primary" : "font-medium")}>
+                      {brand}
+                      <CompanyLogoInline email={msg.from_address} size={16} />
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       {isInHolding && (
                         <Plane className="w-3 h-3 text-warning animate-pulse" />
                       )}
+                      <CountryFlag email={msg.from_address} size={20} />
                       <span className="text-[10px] text-muted-foreground">
                         {formatListDate(displayDate)}
                       </span>
