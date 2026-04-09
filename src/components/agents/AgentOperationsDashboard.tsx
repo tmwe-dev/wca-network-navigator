@@ -110,7 +110,7 @@ function AgentCard({ agent }: { agent: AgentWithTasks }) {
     )}>
       <div className="flex items-center gap-2.5 mb-2">
         {avatarSrc ? (
-          <Avatar className="h-8 w-8 ring-2 ring-offset-1 ring-offset-background" style={{ ringColor: isWorking ? "hsl(var(--primary))" : "transparent" }}>
+          <Avatar className={cn("h-8 w-8 ring-2 ring-offset-1 ring-offset-background", isWorking ? "ring-primary" : "ring-transparent")}>
             <AvatarImage src={avatarSrc} alt={agent.name} />
             <AvatarFallback className="text-xs">{agent.avatar_emoji}</AvatarFallback>
           </Avatar>
