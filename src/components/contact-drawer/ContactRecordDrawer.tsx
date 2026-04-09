@@ -41,11 +41,12 @@ export function ContactRecordDrawer() {
     );
   };
 
-  const hasEnrichment = record?.enrichmentData && (
-    record.enrichmentData.contact_profile ||
-    record.enrichmentData.company_profile ||
-    record.enrichmentData.linkedin_url ||
-    record.enrichmentData.linkedin_profile_url
+  const ed = record?.enrichmentData as Record<string, unknown> | null | undefined;
+  const hasEnrichment = ed && (
+    ed.contact_profile ||
+    ed.company_profile ||
+    ed.linkedin_url ||
+    ed.linkedin_profile_url
   );
 
   return (
