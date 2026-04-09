@@ -599,6 +599,20 @@ serve(async (req) => {
     const settings: Record<string, string> = {};
     (settingsRes.data || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
 
+    // ─── Style Preferences from AI Memory (learned from user edits) ───
+    let stylePreferencesContext = "";
+    const { data: styleMemories } = await supabase
+      .from("ai_memory")
+      .select("content, confidence, access_count")
+      .eq("user_id", userId)
+      .contains("tags", ["style_preference"])
+      .gte("confidence", 30)
+      .order("access_count", { ascending: false })
+      .limit(5);
+    if (styleMemories && styleMemories.length > 0) {
+      stylePreferencesContext = `\nPREFERENZE DI STILE APPRESE (dall'editing dell'utente):\n${styleMemories.map((m: any) => `- ${m.content}`).join("\n")}\nAPPLICA queste preferenze nella generazione.\n`;
+    }
+
     // ─── Interaction History (batch-safe: DB only, no live scraping) ───
     let historyContext = "";
     if (isPartnerSource && activity?.partner_id) {
@@ -821,6 +835,7 @@ ${historyContext}
 ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
+${stylePreferencesContext}
 GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 

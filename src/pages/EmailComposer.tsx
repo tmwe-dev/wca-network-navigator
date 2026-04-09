@@ -28,6 +28,7 @@ import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonito
 import { useMission } from "@/contexts/MissionContext";
 import OraclePanel, { type OracleConfig } from "@/components/email/OraclePanel";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
+import EmailEditLearningDialog, { type EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 
 import { cn } from "@/lib/utils";
 
@@ -109,6 +110,11 @@ export default function EmailComposer() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [manualContactName, setManualContactName] = useState("");
   const [manualCompanyName, setManualCompanyName] = useState("");
+
+  // AI style learning dialog
+  const [learningDialogOpen, setLearningDialogOpen] = useState(false);
+  const [editAnalysis, setEditAnalysis] = useState<EditAnalysis | null>(null);
+  const [pendingSend, setPendingSend] = useState(false);
 
   const enqueueCampaign = useEnqueueCampaign();
   const { processing, startProcessing } = useProcessQueue();
@@ -349,9 +355,7 @@ export default function EmailComposer() {
     } catch { toast.error("Errore nel salvataggio"); }
   };
 
-  const handleEnqueue = async () => {
-    if (!subject || !htmlBody) { toast.error("Compila oggetto e corpo email"); return; }
-    if (recipientsWithEmail.length === 0) { toast.error("Nessun destinatario con email valida"); return; }
+  const executeEnqueue = async () => {
     setSending(true);
     try {
       const { data: savedDraft, error: draftError } = await supabase
@@ -383,6 +387,38 @@ export default function EmailComposer() {
       toast.error("Errore nell'accodamento");
     }
     setSending(false);
+  };
+
+  const handleEnqueue = async () => {
+    if (!subject || !htmlBody) { toast.error("Compila oggetto e corpo email"); return; }
+    if (recipientsWithEmail.length === 0) { toast.error("Nessun destinatario con email valida"); return; }
+
+    // If AI-generated content was edited, analyze the diff
+    if (isEditedAfterGeneration && aiGeneratedBody) {
+      setPendingSend(true);
+      try {
+        const result = await invokeEdge<EditAnalysis>("analyze-email-edit", {
+          body: {
+            original_html: aiGeneratedBody,
+            edited_html: htmlBody,
+            recipient_country: recipients[0]?.countryCode || "",
+            email_type: "email",
+          },
+          context: "EmailComposer.analyzeEdit",
+        });
+        if (result.significance === "medium" || result.significance === "high") {
+          setEditAnalysis(result);
+          setLearningDialogOpen(true);
+          setPendingSend(false);
+          return; // Dialog will handle send
+        }
+      } catch (err) {
+        log.warn("Edit analysis failed, proceeding with send", { error: err instanceof Error ? err.message : String(err) });
+      }
+      setPendingSend(false);
+    }
+
+    await executeEnqueue();
   };
 
   const templatesByCategory = useMemo(() => {
@@ -668,6 +704,17 @@ export default function EmailComposer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Style Learning Dialog */}
+      {editAnalysis && (
+        <EmailEditLearningDialog
+          open={learningDialogOpen}
+          onClose={() => { setLearningDialogOpen(false); setEditAnalysis(null); }}
+          analysis={editAnalysis}
+          onSendAndSave={() => { setLearningDialogOpen(false); setEditAnalysis(null); executeEnqueue(); }}
+          onSendWithoutSaving={() => { setLearningDialogOpen(false); setEditAnalysis(null); executeEnqueue(); }}
+        />
+      )}
     </div>
   );
 }
