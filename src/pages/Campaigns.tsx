@@ -144,19 +144,25 @@ function CampaignHeaderControls({
   bcaCountryCounts: Record<string, number>;
 }) {
   const [comboOpen, setComboOpen] = useState(false);
+  const [countrySortBy, setCountrySortBy] = useState<"name" | "count">("name");
 
   const sortedCountries = useMemo(() => {
+    let list: { code: string; name: string; count: number }[];
     if (source === "bca") {
-      return Object.entries(bcaCountryCounts)
+      list = Object.entries(bcaCountryCounts)
         .map(([code, count]) => ({
           code,
           name: WCA_COUNTRIES_MAP[code]?.name || code,
           count,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        }));
+    } else {
+      list = [...countries];
     }
-    return [...countries].sort((a, b) => a.name.localeCompare(b.name));
-  }, [countries, source, bcaCountryCounts]);
+    if (countrySortBy === "count") {
+      return list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [countries, source, bcaCountryCounts, countrySortBy]);
 
   const selectedName = selectedCountry ? WCA_COUNTRIES_MAP[selectedCountry]?.name : null;
   const totalWithEmail = campaignPartners.filter(p => p.email).length;
@@ -196,6 +202,17 @@ function CampaignHeaderControls({
         <PopoverContent className="w-64 p-0 bg-black/95 backdrop-blur-xl border-amber-500/30 z-50" align="start">
           <Command className="bg-transparent">
             <CommandInput placeholder="Cerca paese..." className="text-amber-100" />
+            <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30">
+              <span className="text-[10px] text-muted-foreground mr-1">Ordina:</span>
+              <button
+                onClick={() => setCountrySortBy("name")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "name" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+              >A→Z</button>
+              <button
+                onClick={() => setCountrySortBy("count")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "count" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+              >#Partner</button>
+            </div>
             <CommandList className="max-h-60">
               <CommandEmpty className="text-slate-400">Nessun paese trovato</CommandEmpty>
               <CommandGroup>
@@ -229,7 +246,7 @@ function CampaignHeaderControls({
       {/* Stats badges */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
-          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : TOTAL_WCA_COUNTRIES}</span>
+          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.length}</span>
           <span className="text-slate-400 text-xs">Paesi</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
