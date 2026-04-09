@@ -915,6 +915,7 @@ ${interlocutorBlock}
 ${relationshipBlock}
 ${historyContext}
 ${branchBlock}
+${metInPersonContext}
 ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
