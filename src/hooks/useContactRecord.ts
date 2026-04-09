@@ -17,7 +17,7 @@ export interface UnifiedRecord {
   website: string | null;
   leadStatus: string;
   note: string | null;
-  enrichmentData: Record<string, unknown> | null;
+  enrichmentData: unknown;
   deepSearchAt: string | null;
   createdAt: string;
   lastInteractionAt: string | null;
@@ -26,7 +26,7 @@ export interface UnifiedRecord {
   companyAlias: string | null;
   contactAlias: string | null;
   partnerId: string | null;
-  raw: Record<string, unknown>;
+  raw: unknown;
 }
 
 export function useContactRecord(sourceType: RecordSourceType | null, sourceId: string | null) {
@@ -53,11 +53,10 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           email: (primary?.email as string) || p.email,
           phone: (primary?.direct_phone as string) || p.phone,
           mobile: (primary?.mobile as string) || p.mobile,
-          mobile: (primary?.mobile as string) || p.mobile,
           country: p.country_name,
           city: p.city,
           address: p.address,
-          position: primary?.title || null,
+          position: (primary?.title as string) || null,
           website: p.website,
           leadStatus: p.lead_status,
           note: p.profile_description,
@@ -66,9 +65,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           createdAt: p.created_at || "",
           lastInteractionAt: p.last_interaction_at,
           interactionCount: p.interaction_count,
-          linkedinUrl: liLink?.url || (p.enrichment_data as any)?.linkedin_profile_url || null,
+          linkedinUrl: (liLink?.url as string) || null,
           companyAlias: p.company_alias,
-          contactAlias: primary?.contact_alias || null,
+          contactAlias: (primary?.contact_alias as string) || null,
           partnerId: p.id,
           raw: p,
         };
