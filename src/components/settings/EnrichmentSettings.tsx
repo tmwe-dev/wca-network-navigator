@@ -37,6 +37,8 @@ export interface EnrichedRow {
   country?: string;
   /** Real DB id for actions (strip "cockpit-"/"email-" prefixes) */
   realId?: string;
+  /** Number of emails received (for email senders) */
+  emailCount?: number;
 }
 
 type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
