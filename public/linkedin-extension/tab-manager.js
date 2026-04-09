@@ -53,13 +53,26 @@ var TabManager = (function () {
   }
 
   // ── Get or create the main LinkedIn tab ──
+  // Check if tab URL matches the requested URL (not just domain)
+  function urlMatchesTarget(tabUrl, targetUrl) {
+    if (!tabUrl || !targetUrl) return false;
+    try {
+      var current = new URL(tabUrl);
+      var target = new URL(targetUrl);
+      // Exact pathname match (e.g. /messaging/ vs /messaging/thread/xxx)
+      var currentPath = current.pathname.replace(/\/$/, "");
+      var targetPath = target.pathname.replace(/\/$/, "");
+      return current.hostname === target.hostname && currentPath === targetPath;
+    } catch (_) { return false; }
+  }
+
   async function getLinkedInTab(url, skipNavigateIfSameDomain) {
     // Try reusing cached tab
     if (_liTabId !== null) {
       try {
         var existing = await chrome.tabs.get(_liTabId);
         if (existing) {
-          if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url)) {
+          if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url) && urlMatchesTarget(existing.url, url)) {
             if (existing.status !== "complete") await waitForLoad(_liTabId, 15000);
             return { id: _liTabId, reused: true };
           }
@@ -77,7 +90,7 @@ var TabManager = (function () {
       var existingTabs = await chrome.tabs.query({ url: "https://*.linkedin.com/*" });
       if (existingTabs && existingTabs.length > 0) {
         _liTabId = existingTabs[0].id;
-        if (skipNavigateIfSameDomain) {
+        if (skipNavigateIfSameDomain && urlMatchesTarget(existingTabs[0].url, url)) {
           if (existingTabs[0].status !== "complete") await waitForLoad(_liTabId, 15000);
           return { id: _liTabId, reused: true };
         }
