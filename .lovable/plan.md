@@ -1,73 +1,46 @@
 
 
-# Piano: Reply-To Email + Drop Zone Cockpit Migliorate
+# Piano: Dropdown Admin Globale per Cambio Operatore
 
-## 1. Reply-To configurabile (singolo vs bulk)
+## Situazione attuale
 
-### Logica
-Quando l'email parte dal cockpit:
-- **Invio singolo** (drop su casella Email): la mail va dall'account dell'operatore, Reply-To = email diretta dell'operatore (o non impostato, il client risponde al From)
-- **Invio bulk** (campagna/batch): la mail parte dall'account operatore ma il Reply-To viene forzato alla **email commerciale aziendale** (configurabile in `app_settings` con chiave `commercial_reply_to_email`)
-- **Override manuale**: nel composer si potrà specificare un Reply-To diverso
+- `OperatorSelector` nel header esiste già ma è visibile a tutti (non solo admin) e non ha effetto sulle sezioni inbox
+- `InArrivoTab` ha il proprio filtro operatore locale (tab orizzontali) indipendente dal selettore header
+- Il contesto `ActiveOperatorContext` gestisce `activeOperator` ma non è usato come filtro globale nelle inbox
 
-### Modifiche
+## Piano
 
-**Database**: Aggiungere in `app_settings` la chiave `commercial_reply_to_email` (es. `commerciale@tmwe.it`). Aggiungere campo `reply_to_email` nella tabella `operators` per override per operatore.
+### 1. Rendere il selettore header solo per admin
 
-**Edge Function `send-email/index.ts`**:
-- Accettare nuovo parametro `reply_to` dal body JSON
-- Gerarchia: `reply_to` esplicito → `operators.reply_to_email` → `app_settings.commercial_reply_to_email` → nessuno
-- Aggiungere header `replyTo` nella chiamata `client.send()`
+**File: `src/components/header/OperatorSelector.tsx`**
+- Aggiungere check `useCurrentOperator()` → mostrare solo se `is_admin`
+- Aggiungere opzione "Tutti gli operatori" come primo item
+- Evidenziare visivamente quando si sta visualizzando un altro operatore (bordo colorato, badge "Viewing as...")
+- Mostrare icona Shield/Crown per distinguere la modalità admin
 
-**UI — Cockpit `handleDrop`**: 
-- Quando `dragCount > 1` (bulk), passare automaticamente `reply_to` = email commerciale
-- Quando singolo, non passare reply_to (risposta va al From dell'operatore)
+### 2. Propagare la selezione globale alle inbox
 
-### File coinvolti
+**File: `src/components/outreach/InArrivoTab.tsx`**
+- Rimuovere i tab orizzontali locali per operatore (sono ridondanti col selettore header)
+- Usare `activeOperator` dal context come filtro, passando `activeOperator.user_id` ai componenti inbox
+- Se admin ha selezionato "Tutti", passare `undefined` (nessun filtro)
 
-| File | Modifica |
-|------|----------|
-| Migration SQL | Inserire `commercial_reply_to_email` in `app_settings` |
-| `supabase/functions/send-email/index.ts` | Aggiungere parametro `reply_to`, leggere da settings/operators, header `replyTo` |
-| `src/hooks/useCockpitLogic.ts` | Passare `reply_to` nel draft state quando bulk |
+### 3. Aggiornare il context per supportare "Tutti"
 
----
-
-## 2. Drop Zone più grandi e visibili
-
-### Problema attuale
-Le caselle hanno `min-h-[72px]` e `py-4/py-5` — troppo piccole. Durante il drag la card mantiene dimensioni originali e copre le zone.
-
-### Soluzione
-
-**ChannelDropZones.tsx — Modo espanso (durante drag)**:
-- Aumentare altezza: `min-h-[100px] py-6` → zone molto più alte, occupano tutto lo spazio verticale disponibile con `flex-1`
-- Hover più evidente: bordo `border-[4px]`, background più intenso (`/30` invece di `/10`), ombra `shadow-xl`, scale `1.05`
-- Testo più grande durante hover con icona animata (pulse)
-- Container usa `h-full flex flex-col` per distribuire le zone su tutta l'altezza disponibile
-
-**Card durante drag — Riduzione al 50%**:
-- In `CockpitContactCard.tsx` e `CockpitContactListItem.tsx`: aggiungere CSS per l'elemento drag ghost
-- Usare `onDragStart` per impostare `e.dataTransfer.setDragImage()` con un elemento clonato ridotto al 50%
-- Alternativa più semplice: aggiungere `opacity-50 scale-50` alla card che viene trascinata (tramite prop `isDragging`)
-
-**Cockpit.tsx**: 
-- Il container centrale delle drop zone passa da `items-center justify-center` a `items-stretch` per dare tutto lo spazio verticale alle zone
+**File: `src/contexts/ActiveOperatorContext.tsx`**
+- Aggiungere stato `viewingAll: boolean` quando admin seleziona "tutti"
+- Esporre `isImpersonating: boolean` per sapere se si sta guardando un altro operatore
 
 ### File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/cockpit/ChannelDropZones.tsx` | Zone più alte, flex-1, hover più evidente, bordi più spessi |
-| `src/components/cockpit/CockpitContactCard.tsx` | Drag ghost al 50% via setDragImage |
-| `src/components/cockpit/CockpitContactListItem.tsx` | Drag ghost al 50% |
-| `src/pages/Cockpit.tsx` | Container drop zone stretch verticale |
-
----
+| `src/components/header/OperatorSelector.tsx` | Solo admin, opzione "Tutti", badge impersonation |
+| `src/contexts/ActiveOperatorContext.tsx` | `viewingAll` flag, `isImpersonating` |
+| `src/components/outreach/InArrivoTab.tsx` | Rimuovere tab operatore locali, usare context globale |
 
 ## Risultato
-- Invio singolo → risposta torna all'operatore direttamente
-- Invio bulk → risposta va alla mail commerciale aziendale
-- Drop zone visivamente dominanti durante il drag, feedback immediato
-- Card trascinata ridotta al 50% per non coprire le zone di rilascio
+- L'admin ha un unico dropdown nel header per navigare tra gli operatori
+- La selezione si propaga a tutte le sezioni (inbox, outreach, holding pattern)
+- Gli operatori normali non vedono il selettore
 
