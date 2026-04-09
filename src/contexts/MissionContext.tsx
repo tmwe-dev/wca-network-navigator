@@ -82,6 +82,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setGoal(preset.goal || "");
     setBaseProposal(preset.base_proposal || "");
     setReferenceLinks(preset.reference_links || []);
+    setContext((preset as any).context || "");
     setActivePresetId(preset.id);
   };
 
