@@ -87,12 +87,16 @@ export function EmailDetailView({ message, onClose }: Props) {
       <div className="flex-shrink-0 space-y-1 border-b border-border p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" showFlag />
+            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-base font-bold text-primary">{brand}</div>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-base font-bold text-primary">{brand}</span>
+                <CompanyLogoInline email={message.from_address} size={20} />
+              </div>
               <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
             </div>
           </div>
+          <CountryFlag email={message.from_address} size={24} className="flex-shrink-0" />
 
           <div className="flex flex-shrink-0 items-center gap-1">
             <Button
