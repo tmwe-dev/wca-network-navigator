@@ -1,59 +1,103 @@
 
 
-# Piano: Fix Sezione Arricchimento — Dati Completi + BCA + Logo Google + Deep Search Configurabile
+# Piano: Regole Commerciali AI — Sede Unica, History Obbligatoria, Tono per Tipologia
 
-## Problemi identificati
+## Analisi Situazione Attuale
 
-1. **Ogni query ha `.limit(1000)`** — mostra max 1000 WCA, 1000 contatti, etc. In realtà ci sono 12.286 partner, 11.461 contatti, 383 BCA
-2. **Manca il tab BCA (Biglietti da Visita)** — 383 record non visibili
-3. **Manca "Cerca Logo Google" nelle azioni bulk e singole** — presente in Contatti e BCA ma non in Enrichment
-4. **Deep Search non apre dialog di configurazione** — i bottoni Deep Search (bulk e singolo) non fanno nulla e non permettono di scegliere quali operazioni eseguire
-5. **Manca il DeepSearchOptionsDialog** — il componente non esiste ancora; serve una mascherina che mostri i default della sezione (da `deep_search_config`) e permetta di modificarli al volo prima di lanciare
+**Cosa esiste già:**
+- History delle interazioni viene iniettata nei prompt (`generate-email` e `generate-outreach`) — ma solo ultime 5 interazioni e senza analisi semantica (tono, aperture, silenzi)
+- Assegnazione agente esclusiva funziona (`client_assignments` + `exclusive_agent_id`)
+- Knowledge Base strategica con tecniche di vendita
+- Style preferences apprese dall'editing utente
 
-## Modifiche
+**Cosa manca:**
+1. **Nessun filtro anti-duplicazione per sede** — bulk e campagne possono contattare 3 persone della stessa azienda/sede contemporaneamente
+2. **History non analizzata semanticamente** — il prompt riceve raw data ma non "comprende" che dopo 5 tentativi senza risposta serve un cambio strategia
+3. **Nessuna distinzione partner vs cliente finale** — il sistema usa lo stesso tono per tutti (partners = `freight_forwarder` nella tabella `partners`, clienti finali = `imported_contacts` da fiere/settori industriali)
+4. **Nessuna regola per sedi multiple della stessa azienda** — esistono duplicati (es. HP Global in Ho Chi Minh City e Hanoi) senza logica di coordinamento
 
-### 1. Caricamento dati completo — loop iterativo con `.range()`
+## Modifiche Previste
 
-Sostituire le 4 query con `.limit(1000)` con funzioni di caricamento batch (2000 per volta, loop fino a esaurimento), come già fatto nel Mission Builder e nel Globo. Ogni sorgente caricherà tutti i record.
+### 1. Guardia Anti-Duplicazione per Sede (nuovo modulo)
 
-### 2. Aggiungere tab BCA
+Creare `supabase/functions/_shared/sameLocationGuard.ts`:
+- Funzione `checkSameLocationContacts(companyName, city, contactId, userId)` che:
+  - Cerca tutti i partner con stesso `company_name` (o simile) e stessa `city`
+  - Controlla se negli ultimi 7 giorni è stata inviata una comunicazione a un altro contatto della stessa sede
+  - Restituisce `{ allowed: boolean, reason?: string, otherContacts?: [...] }`
+- Funzione `getSameCompanyBranches(companyName, userId)` che:
+  - Restituisce tutte le sedi diverse della stessa azienda
+  - Usata dal prompt per dire "la comunicazione è stata estesa anche alla sede di X"
 
-- Nuovo tab "BCA" con icona CreditCard e conteggio
-- Query su `business_cards` con join su partner (come `useBusinessCards`)
-- Mappa a `EnrichedRow` con: company_name, email, country da location/partner, source = "bca"
-- Bordo sinistro viola (`border-l-purple-500`)
+Integrazione:
+- `generate-email`: prima di generare, chiama il guard → se bloccato, ritorna errore 422 con messaggio chiaro
+- `generate-outreach`: stessa logica
+- Campagne bulk: il guard filtra i duplicati prima di inserire nella coda
 
-### 3. Aggiungere "Cerca Logo Google" 
+### 2. Analisi History Semantica nel Prompt
 
-**Azione singola**: nel menu ⋮ di ogni riga, aggiungere "Cerca Logo Google" che apre Google Immagini (stessa logica di ContactDetailPanel e BusinessCardsHub)
+Potenziare la sezione history in `generate-email/index.ts` e `generate-outreach/index.ts`:
+- Aumentare il limite da 5 a 15 interazioni
+- Aggiungere `channel_messages` (email ricevute/inviate) alla history
+- Calcolare metriche pre-prompt:
+  - `total_contacts_sent`: quante comunicazioni inviate
+  - `last_response_date`: ultima risposta ricevuta (o null)
+  - `days_since_last_contact`: giorni dall'ultimo contatto
+  - `unanswered_count`: numero di email senza risposta
+  - `tone_progression`: da formale a colloquiale se ci sono state risposte
+- Iniettare nel prompt un blocco `ANALISI RELAZIONE` con queste metriche + istruzioni specifiche:
+  - Se `unanswered_count >= 3`: "Cambia approccio, usa tecniche di re-engagement"
+  - Se ci sono risposte positive: "Mantieni tono colloquiale, referenzia conversazione precedente"
 
-**Azione bulk**: nella barra di selezione, aggiungere bottone "Logo Google" accanto a LinkedIn Batch e Deep Search. Apre Google Immagini per il primo selezionato (o batch futuro)
+### 3. Differenziazione Tono Partner vs Cliente Finale
 
-### 4. Creare `DeepSearchOptionsDialog` 
+Nel prompt system, aggiungere blocco `TIPOLOGIA INTERLOCUTORE`:
 
-Nuovo componente dialog che:
-- Carica i default dalla configurazione `deep_search_config` per il contesto "enrichment" (o fallback a "contacts")
-- Mostra 4 checkbox: Scrape sito web, Scrape LinkedIn, Verifica WhatsApp, Analisi AI
-- L'utente può attivare/disattivare ogni opzione prima del lancio
-- Pulsanti: "Avvia" / "Annulla"
-- Si apre sia dall'azione singola (menu ⋮ → Deep Search) che dall'azione bulk
+**Per partner** (source_type = "partner" + partner_type = "freight_forwarder"):
+```
+INTERLOCUTORE: PARTNER LOGISTICO
+Questo è un potenziale partner commerciale, non un cliente finale.
+Usa tono collaborativo, da alleanza commerciale.
+Parla di: sinergie operative, network condivisi, complementarità dei servizi.
+Proponi: integrazione sistemi, accesso tariffe partner, collaborazione strutturata.
+```
 
-### 5. Collegare Deep Search reale
+**Per clienti finali** (source_type = "contact" o "prospect"):
+```
+INTERLOCUTORE: CLIENTE FINALE
+Questo è un'azienda che necessita servizi di spedizione/logistica.
+Usa tono commerciale orientato ai benefici.
+Parla di: semplicità, risparmio, velocità, accesso diretto ai servizi.
+Proponi: apertura account, accesso piattaforma, tariffe privilegiate.
+```
 
-Integrare `useDeepSearchRunner` per lanciare effettivamente il Deep Search con le opzioni selezionate dall'utente nel dialog.
+### 4. Blocco Istruzioni Commerciali nella KB
 
-## File coinvolti
+Aggiungere una KB entry con le regole commerciali dalla richiesta utente come prompt operativo — così l'AI ha sempre accesso a:
+- Obiettivo finale: convertire lead in cliente
+- Leve: account, tariffe, semplificazione operativa
+- Flusso: classificazione → assegnamento → follow-up → conversione
+
+### 5. Coordinamento Sedi Multiple nel Prompt
+
+Quando `getSameCompanyBranches` trova altre sedi:
+- Iniettare nel prompt: "Questa azienda ha sedi anche a [city1, city2]. Stai scrivendo alla sede di [city]. Se opportuno, menziona che la comunicazione è stata estesa anche ad altri referenti in sedi diverse."
+- Non bloccare l'invio, ma fornire contesto
+
+## File Coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/settings/EnrichmentSettings.tsx` | Rimuovere `.limit(1000)`, implementare loop batch `.range()`, aggiungere tab BCA, aggiungere Logo Google singolo/bulk, collegare Deep Search al dialog |
-| `src/components/settings/enrichment/DeepSearchOptionsDialog.tsx` | **Nuovo** — dialog con checkbox per opzioni Deep Search, carica default da `deep_search_config` |
+| `supabase/functions/_shared/sameLocationGuard.ts` | **Nuovo** — guardia anti-duplicazione per sede |
+| `supabase/functions/generate-email/index.ts` | Integrare guard, history estesa, tono per tipologia, coordinamento sedi |
+| `supabase/functions/generate-outreach/index.ts` | Stessa integrazione |
+| `supabase/functions/agent-execute/index.ts` | Aggiungere regole commerciali nel context injection |
 
-## Ordine di esecuzione
+## Ordine di Esecuzione
 
-1. Creare `DeepSearchOptionsDialog`
-2. Riscrivere le query di caricamento con loop iterativo
-3. Aggiungere tab BCA e dati
-4. Aggiungere Logo Google (singolo + bulk)
-5. Collegare Deep Search al dialog + runner
+1. Creare `sameLocationGuard.ts` (guardia anti-duplicazione)
+2. Potenziare history in `generate-email` (analisi semantica + metriche)
+3. Aggiungere differenziazione tono partner/cliente in entrambe le Edge Function
+4. Integrare coordinamento sedi multiple
+5. Aggiungere regole commerciali nel context injection di `agent-execute`
 
