@@ -86,7 +86,7 @@ export function useWhatsAppAdaptiveSync() {
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
 
-  const { isAvailable, readUnread, readThread, onSidebarChanged } = useWhatsAppExtensionBridge();
+  const { isAvailable, isAuthenticated, readUnread, readThread, onSidebarChanged } = useWhatsAppExtensionBridge();
   const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
@@ -272,12 +272,16 @@ export function useWhatsAppAdaptiveSync() {
 
   // ── Main tick ──
   const tick = useCallback(async () => {
+    if (!isAuthenticated) {
+      log.warn("tick.skipped", { reason: "WhatsApp Web not authenticated" });
+      return;
+    }
     if (levelRef.current === 6 && focusedChatRef.current) {
       await threadScan();
     } else {
       await sidebarScan();
     }
-  }, [sidebarScan, threadScan]);
+  }, [sidebarScan, threadScan, isAuthenticated]);
 
   // ── Adaptive timer ──
   useEffect(() => {
@@ -349,6 +353,7 @@ export function useWhatsAppAdaptiveSync() {
     setEnabled,
     isReading,
     isAvailable,
+    isAuthenticated,
     focusedChat,
     focusOn,
     readNow,

@@ -13,7 +13,9 @@ type WaExtensionResponse = {
 
 export function useWhatsAppExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
+  const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
   const sidebarChangedCbRef = useRef<(() => void) | null>(null);
@@ -97,6 +99,40 @@ export function useWhatsAppExtensionBridge() {
     }
   }, [isAvailable, sendConfig]);
 
+  // Session authentication heartbeat every 30s
+  useEffect(() => {
+    if (authCheckRef.current) clearInterval(authCheckRef.current);
+    if (!isAvailable) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const checkAuth = async () => {
+      try {
+        const requestId = `wa_verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const result = await new Promise<WaExtensionResponse>((resolve) => {
+          const timer = setTimeout(() => {
+            pendingRef.current.delete(requestId);
+            resolve({ success: false, error: "Timeout" });
+          }, 10000);
+          pendingRef.current.set(requestId, (response) => {
+            clearTimeout(timer);
+            resolve(response);
+          });
+          window.postMessage({ direction: "from-webapp-wa", action: "verifySession", requestId }, window.location.origin);
+        });
+        setIsAuthenticated(result.success === true && result.authenticated === true);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    };
+
+    // Check immediately, then every 30s
+    checkAuth();
+    authCheckRef.current = setInterval(checkAuth, 30000);
+    return () => { if (authCheckRef.current) clearInterval(authCheckRef.current); };
+  }, [isAvailable]);
+
   const sendMsg = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<WaExtensionResponse> => {
       return new Promise((resolve) => {
@@ -155,5 +191,5 @@ export function useWhatsAppExtensionBridge() {
     sidebarChangedCbRef.current = cb;
   }, []);
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
+  return { isAvailable, isAuthenticated, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
 }
