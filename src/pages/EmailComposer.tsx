@@ -704,6 +704,17 @@ export default function EmailComposer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Style Learning Dialog */}
+      {editAnalysis && (
+        <EmailEditLearningDialog
+          open={learningDialogOpen}
+          onClose={() => { setLearningDialogOpen(false); setEditAnalysis(null); }}
+          analysis={editAnalysis}
+          onSendAndSave={() => { setLearningDialogOpen(false); setEditAnalysis(null); executeEnqueue(); }}
+          onSendWithoutSaving={() => { setLearningDialogOpen(false); setEditAnalysis(null); executeEnqueue(); }}
+        />
+      )}
     </div>
   );
 }
