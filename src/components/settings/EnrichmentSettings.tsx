@@ -51,7 +51,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: ReactNode }[] = [
   { value: "wca", label: "WCA", icon: <Building2 className="w-3.5 h-3.5" /> },
   { value: "contacts", label: "Contatti", icon: <Search className="w-3.5 h-3.5" /> },
   { value: "bca", label: "BCA", icon: <CreditCard className="w-3.5 h-3.5" /> },
-  { value: "email", label: "Email", icon: <Mail className="w-3.5 h-3.5" /> },
+  { value: "email", label: "Email Sender", icon: <Mail className="w-3.5 h-3.5" /> },
   { value: "cockpit", label: "Cockpit", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
 ];
 
