@@ -1,18 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import type { TrackActivityParams } from "@/types/tracking";
 
 const log = createLogger("useTrackActivity");
-
-interface TrackActivityParams {
-  activityType: "send_email" | "whatsapp_message" | "linkedin_message" | "phone_call";
-  title: string;
-  sourceId: string;
-  sourceType: "partner" | "imported_contact" | "business_card";
-  partnerId?: string;
-  emailSubject?: string;
-  description?: string;
-}
 
 export function useTrackActivity() {
   const qc = useQueryClient();
