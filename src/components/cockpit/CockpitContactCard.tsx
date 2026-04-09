@@ -201,20 +201,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.3 }}
         draggable={!isProcessing}
-        onDragStart={(e) => {
-          onDragStart();
-          // Create 50% scaled drag ghost
-          const el = e.currentTarget as HTMLElement;
-          const clone = el.cloneNode(true) as HTMLElement;
-          clone.style.transform = "scale(0.5)";
-          clone.style.transformOrigin = "top left";
-          clone.style.position = "absolute";
-          clone.style.top = "-9999px";
-          clone.style.width = `${el.offsetWidth}px`;
-          document.body.appendChild(clone);
-          e.dataTransfer.setDragImage(clone, el.offsetWidth * 0.25, 20);
-          requestAnimationFrame(() => document.body.removeChild(clone));
-        }}
+        onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         whileHover={isProcessing ? {} : { scale: 1.02, y: -2 }}
         whileTap={isProcessing ? {} : { scale: 0.98 }}
