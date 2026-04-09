@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { setWcaCookie } from "@/lib/wcaCookieStore";
 import { Button } from "@/components/ui/button";
 import { Globe, CheckCircle2, Loader2, XCircle } from "lucide-react";
 
@@ -27,9 +28,7 @@ export function StepWCA({ onNext, onSkip }: StepWCAProps) {
       const data = await res.json();
       if (data.success && data.cookies) {
         setStatus("ok");
-        try {
-          localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() }));
-        } catch { /* intentionally ignored: best-effort cleanup */ }
+        setWcaCookie(data.cookies);
       } else {
         setStatus("fail");
       }

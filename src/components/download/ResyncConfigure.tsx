@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, createContext } from "react";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -66,12 +67,9 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   // 🤖 Claude Engine V8: verifica connessione wca-app (non più cookie DB)
   async function checkCookie() {
     try {
-      const cached = localStorage.getItem("wca_session_cookie");
+      const cached = getWcaCookie();
       if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) {
-          setHasCookie(true); return;
-        }
+        setHasCookie(true); return;
       }
       // Try a fresh login to verify
       const res = await fetch("https://wca-app.vercel.app/api/login", {
@@ -82,7 +80,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       const data = await res.json();
       setHasCookie(data.success && !!data.cookies);
       if (data.success && data.cookies) {
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch { /* intentionally ignored: best-effort cleanup */ }
+        setWcaCookie(data.cookies);
       }
     } catch { setHasCookie(false); }
   }
