@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Plus } from "lucide-react";
+import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Plus, FlaskConical } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
@@ -21,8 +21,10 @@ import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionDrawer } from "@/components/global/MissionDrawer";
 import { FiltersDrawer } from "@/components/global/FiltersDrawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions").then(m => ({ default: m.TestExtensionsContent })));
 import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 
 export function AppLayout() {
@@ -32,6 +34,7 @@ export function AppLayout() {
   const [missionOpen, setMissionOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [testExtOpen, setTestExtOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
@@ -167,6 +170,7 @@ export function AppLayout() {
               <div className="flex items-center gap-0.5 sm:gap-1">
                 <OperatorSelector />
                 <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
+                <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
                 <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
               </div>
             </div>
@@ -187,6 +191,16 @@ export function AppLayout() {
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
         </Suspense>
         <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+        <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>🧪 Test Estensioni</DialogTitle>
+            </DialogHeader>
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+              <TestExtensionsContent />
+            </Suspense>
+          </DialogContent>
+        </Dialog>
       </div>
     <ClaudeBadge />
         </GlobalFiltersProvider>
