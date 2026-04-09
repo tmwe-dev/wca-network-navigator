@@ -108,7 +108,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               )}
             >
               <div className="flex items-start gap-2.5">
-                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" />
+                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" showFlag />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className={cn("truncate text-sm", isUnread ? "font-semibold text-primary" : "font-medium")}>{brand}</span>

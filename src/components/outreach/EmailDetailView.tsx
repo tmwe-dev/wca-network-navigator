@@ -87,7 +87,7 @@ export function EmailDetailView({ message, onClose }: Props) {
       <div className="flex-shrink-0 space-y-1 border-b border-border p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
+            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" showFlag />
             <div className="min-w-0 flex-1">
               <div className="truncate text-base font-bold text-primary">{brand}</div>
               <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
