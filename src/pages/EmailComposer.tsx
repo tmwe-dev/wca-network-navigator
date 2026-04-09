@@ -28,6 +28,7 @@ import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonito
 import { useMission } from "@/contexts/MissionContext";
 import OraclePanel, { type OracleConfig } from "@/components/email/OraclePanel";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
+import EmailEditLearningDialog, { type EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 
 import { cn } from "@/lib/utils";
 
