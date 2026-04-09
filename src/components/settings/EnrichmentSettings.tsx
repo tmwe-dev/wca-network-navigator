@@ -326,6 +326,7 @@ export default function EnrichmentSettings() {
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else if (sortField === "domain") cmp = (a.domain || "").localeCompare(b.domain || "");
       else if (sortField === "source") cmp = a.source.localeCompare(b.source);
+      else if (sortField === "emailCount") cmp = (a.emailCount || 0) - (b.emailCount || 0);
       return sortDir === "desc" ? -cmp : cmp;
     });
     return rows;
