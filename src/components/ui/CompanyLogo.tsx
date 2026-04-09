@@ -70,7 +70,11 @@ interface CompanyLogoProps {
  * Optionally shows a country flag based on the email TLD.
  */
 export function CompanyLogo({ domain: domainProp, email, name, size = 32, className, showFlag = false }: CompanyLogoProps) {
-  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const rawDomain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const rootDomain = rawDomain ? getRootDomain(rawDomain) : null;
+  // Try root domain for logo lookup (better Clearbit hit rate)
+  const domain = rootDomain || rawDomain;
+
   const cached = domain ? logoCache.get(domain) : undefined;
   const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
 
@@ -82,9 +86,10 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
     }
   }, [domain]);
 
-  const flag = showFlag && domain ? getFlagFromDomain(domain) : null;
+  const flag = showFlag && rawDomain ? getFlagFromDomain(rawDomain) : null;
+  const personal = rawDomain ? isPersonalEmail(rawDomain) : true;
 
-  if (!domain || isPersonalEmail(domain)) {
+  if (!domain || personal) {
     return (
       <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
         <InitialsAvatar name={name || domain || "?"} size={size} />
@@ -115,7 +120,7 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
       handleError();
       return;
     }
-    logoCache.set(domain, src);
+    logoCache.set(domain, "clearbit");
   };
 
   return (
@@ -177,7 +182,8 @@ export function CompanyLogoInline({ domain: domainProp, email, size = 18, classN
   size?: number;
   className?: string;
 }) {
-  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const rawDomain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const domain = rawDomain ? getRootDomain(rawDomain) : null;
   const cached = domain ? logoCache.get(domain) : undefined;
   const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
 
@@ -189,7 +195,8 @@ export function CompanyLogoInline({ domain: domainProp, email, size = 18, classN
     }
   }, [domain]);
 
-  if (!domain || isPersonalEmail(domain) || src === "none") return null;
+  const personal = rawDomain ? isPersonalEmail(rawDomain) : true;
+  if (!domain || personal || src === "none") return null;
 
   return (
     <img
