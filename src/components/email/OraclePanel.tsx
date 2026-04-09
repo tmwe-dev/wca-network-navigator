@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,12 +8,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, ImageIcon } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, ImageIcon, Mic, MicOff } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { ImageGalleryTab } from "./ImageGalleryTab";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { cn } from "@/lib/utils";
 
 export interface OracleConfig {
@@ -21,6 +22,7 @@ export interface OracleConfig {
   tone: string;
   useKB: boolean;
   deepSearch: boolean;
+  customGoal: string;
 }
 
 interface OraclePanelProps {
