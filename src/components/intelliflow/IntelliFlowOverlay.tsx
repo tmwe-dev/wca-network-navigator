@@ -347,21 +347,21 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
                               {msg.role === "assistant" && (
                                 <div className="flex items-center gap-1.5 mb-2 text-[10px] text-primary font-mono tracking-[0.2em] uppercase font-semibold">
                                   <Bot className="w-3 h-3" />Segretario Operativo
+                                  <button
+                                    onClick={() => {
+                                      const text = msg.content.slice(0, 3000);
+                                      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+                                        body: JSON.stringify({ text, voiceId: "FGY2WhTYpPnrIDTdsKH5" }),
+                                      }).then(r => r.ok ? r.blob() : null).then(b => b && new Audio(URL.createObjectURL(b)).play()).catch(() => {});
+                                    }}
+                                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                                    title="Ascolta risposta"
+                                  >
+                                    <Volume2 className="w-3 h-3" />
+                                  </button>
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    const text = msg.content.slice(0, 3000);
-                                    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-                                      body: JSON.stringify({ text, voiceId: "FGY2WhTYpPnrIDTdsKH5" }),
-                                    }).then(r => r.ok ? r.blob() : null).then(b => b && new Audio(URL.createObjectURL(b)).play()).catch(() => {});
-                                  }}
-                                  className="ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5"
-                                  title="Ascolta risposta"
-                                >
-                                  <Volume2 className="w-3 h-3" />
-                                </button>
                               )}
                               <div className="ai-prose max-w-none">
                                 {msg.role === "assistant" ? (() => {
