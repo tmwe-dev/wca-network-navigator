@@ -144,19 +144,25 @@ function CampaignHeaderControls({
   bcaCountryCounts: Record<string, number>;
 }) {
   const [comboOpen, setComboOpen] = useState(false);
+  const [countrySortBy, setCountrySortBy] = useState<"name" | "count">("name");
 
   const sortedCountries = useMemo(() => {
+    let list: { code: string; name: string; count: number }[];
     if (source === "bca") {
-      return Object.entries(bcaCountryCounts)
+      list = Object.entries(bcaCountryCounts)
         .map(([code, count]) => ({
           code,
           name: WCA_COUNTRIES_MAP[code]?.name || code,
           count,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        }));
+    } else {
+      list = [...countries];
     }
-    return [...countries].sort((a, b) => a.name.localeCompare(b.name));
-  }, [countries, source, bcaCountryCounts]);
+    if (countrySortBy === "count") {
+      return list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [countries, source, bcaCountryCounts, countrySortBy]);
 
   const selectedName = selectedCountry ? WCA_COUNTRIES_MAP[selectedCountry]?.name : null;
   const totalWithEmail = campaignPartners.filter(p => p.email).length;
