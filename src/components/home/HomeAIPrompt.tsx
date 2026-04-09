@@ -167,9 +167,14 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
                 <Bot className="h-3.5 w-3.5" />
                 Segretario Operativo
               </div>
-              <button onClick={() => setResponse(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => playTTS(response!)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                  <Volume2 className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setResponse(null)} className="text-muted-foreground hover:text-foreground p-1">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             <div className="ai-prose max-w-none">
               <AIMarkdown content={response} />
