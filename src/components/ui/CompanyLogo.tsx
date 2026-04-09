@@ -122,10 +122,10 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
 }
 
 function FlagBadge({ flag, size }: { flag: string; size: number }) {
-  const flagSize = Math.max(10, Math.round(size * 0.4));
+  const flagSize = Math.max(14, Math.round(size * 0.55));
   return (
     <span
-      className="absolute -bottom-0.5 -left-0.5 leading-none"
+      className="absolute -bottom-1 -right-1 leading-none"
       style={{ fontSize: flagSize }}
     >
       {flag}
