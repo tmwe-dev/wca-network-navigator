@@ -138,7 +138,7 @@ export default function Settings() {
             )}
             {tab === "guida-operativa" && (
               <div className="float-panel p-5">
-                <OperativeGuideSettings />
+                <OperativeJobsBoard />
               </div>
             )}
           </div>
