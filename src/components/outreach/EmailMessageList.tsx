@@ -14,6 +14,7 @@ type Props = {
   messages: ChannelMessage[];
   selectedId: string | null;
   onSelect: (msg: ChannelMessage) => void;
+  holdingFilter?: boolean;
 };
 
 const ROW_HEIGHT = 72;
@@ -27,7 +28,7 @@ function formatListDate(value: string): string {
   return format(date, "dd/MM HH:mm", { locale: it });
 }
 
-export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
+export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   
   // Collect all source IDs to check holding pattern status
@@ -42,8 +43,18 @@ export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
   
   const holdingSet = useHoldingPatternEmails(sourceIds);
 
+  // Filter messages if holdingFilter is active
+  const displayMessages = useMemo(() => {
+    if (!holdingFilter) return messages;
+    return messages.filter(msg => {
+      if (msg.partner_id && holdingSet.has(`p:${msg.partner_id}`)) return true;
+      if (msg.source_type === "imported_contact" && msg.source_id && holdingSet.has(`c:${msg.source_id}`)) return true;
+      return false;
+    });
+  }, [messages, holdingFilter, holdingSet]);
+
   const virtualizer = useVirtualizer({
-    count: messages.length,
+    count: displayMessages.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
@@ -52,17 +63,17 @@ export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
   // Scroll to selected item when selection changes
   useEffect(() => {
     if (!selectedId) return;
-    const idx = messages.findIndex((m) => m.id === selectedId);
+    const idx = displayMessages.findIndex((m) => m.id === selectedId);
     if (idx >= 0) {
       virtualizer.scrollToIndex(idx, { align: "auto" });
     }
-  }, [selectedId, messages, virtualizer]);
+  }, [selectedId, displayMessages, virtualizer]);
 
   return (
     <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const msg = messages[virtualRow.index];
+          const msg = displayMessages[virtualRow.index];
           const isUnread = !msg.read_at;
           const isSelected = msg.id === selectedId;
           const { brand } = extractSenderBrand(msg.from_address || "");
@@ -97,7 +108,7 @@ export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
               )}
             >
               <div className="flex items-start gap-2.5">
-                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" />
+                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" showFlag />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className={cn("truncate text-sm", isUnread ? "font-semibold text-primary" : "font-medium")}>{brand}</span>

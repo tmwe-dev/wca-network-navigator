@@ -5,7 +5,8 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Shield, User, Users } from "lucide-react";
+import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, Shield, User, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ function formatDisplayDate(value: string): string {
 }
 
 export function EmailDetailView({ message, onClose }: Props) {
+  const navigate = useNavigate();
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
@@ -85,7 +87,7 @@ export function EmailDetailView({ message, onClose }: Props) {
       <div className="flex-shrink-0 space-y-1 border-b border-border p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
+            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" showFlag />
             <div className="min-w-0 flex-1">
               <div className="truncate text-base font-bold text-primary">{brand}</div>
               <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
@@ -143,6 +145,74 @@ export function EmailDetailView({ message, onClose }: Props) {
             Associato: {brand}
           </Badge>
         )}
+
+        {/* Reply / Forward actions */}
+        <div className="ml-12 flex items-center gap-1 mt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+              const quoteText = normalizedContent.bodyText
+                ? `\n\n---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\n\n${normalizedContent.bodyText}`
+                : "";
+              navigate("/outreach", {
+                state: {
+                  prefilledRecipient: {
+                    email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                    name: brand,
+                    company: brand,
+                  },
+                  prefilledSubject: replySubject,
+                  prefilledBody: quoteText,
+                },
+              });
+            }}
+          >
+            <Reply className="h-3 w-3" /> Rispondi
+          </Button>
+          {message.cc_addresses && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => {
+                const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                navigate("/outreach", {
+                  state: {
+                    prefilledRecipient: {
+                      email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                      name: brand,
+                      company: brand,
+                    },
+                    prefilledSubject: replySubject,
+                  },
+                });
+              }}
+            >
+              <ReplyAll className="h-3 w-3" /> Tutti
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
+              navigate("/outreach", {
+                state: {
+                  prefilledSubject: fwdSubject,
+                  prefilledBody: normalizedContent.bodyText
+                    ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
+                    : "",
+                },
+              });
+            }}
+          >
+            <Forward className="h-3 w-3" /> Inoltra
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
