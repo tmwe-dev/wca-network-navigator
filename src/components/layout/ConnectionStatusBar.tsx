@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Loader2, CheckCircle2, Mail, MessageCircle, Linkedin, Plane, ListTodo, RefreshCw } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, Mail, MessageCircle, Linkedin, Plane, ListTodo } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
@@ -50,7 +50,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
   const [status, setStatus] = useState<ChannelStatus>(loadCachedStatus);
   const [connecting, setConnecting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
@@ -144,16 +143,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     }
   }, [li, wa, fsExt, settings, updateSetting, downloadPartnerConnectExtension]);
 
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
-    // Also trigger email check if available
-    try {
-      const { callCheckInbox } = await import("@/lib/checkInbox");
-      await callCheckInbox();
-    } catch { /* intentionally ignored: best-effort cleanup */ }
-    setTimeout(() => setSyncing(false), 3000);
-  }, []);
 
   const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
   const allActive = activeCount === 4;
@@ -238,22 +227,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> Partner Connect</div>
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI Agent</div>
             <div className="text-muted-foreground pt-1">Clicca per verificare</div>
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Sync button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted/60 transition-colors"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", syncing && "animate-spin text-primary")} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            {syncing ? "Sincronizzazione..." : "Sincronizza tutto (WCA + Email)"}
           </TooltipContent>
         </Tooltip>
 
