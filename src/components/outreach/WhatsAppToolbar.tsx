@@ -21,8 +21,10 @@ export type WhatsAppToolbarProps = {
   readNow: () => void;
   bfProgress: {
     status: string;
-    cycle: number;
-    totalCycles: number;
+    phase: string;
+    currentChat: string | null;
+    chatsProcessed: number;
+    chatsTotal: number;
     recoveredMessages: number;
     lastError: string | null;
   };
@@ -37,7 +39,6 @@ export function WhatsAppToolbar({
   const levelCfg = LEVEL_CONFIG[level];
   const LevelIcon = levelCfg.icon;
 
-  // 3-state badge: green=connected+auth, yellow=extension ok but no session, red=extension off
   const badgeState = !isAvailable
     ? { variant: "destructive" as const, label: "Ext Off", color: "" }
     : !isAuthenticated
@@ -45,6 +46,7 @@ export function WhatsAppToolbar({
       : { variant: "default" as const, label: "On", color: "" };
 
   const canAct = isAvailable && isAuthenticated;
+  const isBfActive = bfProgress.status === "running" || bfProgress.status === "paused";
 
   return (
     <div className="flex flex-col">
@@ -57,12 +59,12 @@ export function WhatsAppToolbar({
           {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
           {enabled ? "ON" : "OFF"}
         </Button>
-        {bfProgress.status === "running" || bfProgress.status === "paused" ? (
+        {isBfActive ? (
           <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-6 text-[10px] px-1.5">
             <Square className="w-3 h-3" /> Stop
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={startBackfill} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi">
+          <Button size="sm" variant="outline" onClick={startBackfill} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi persi">
             <Download className="w-3 h-3" /> Backfill
           </Button>
         )}
@@ -77,16 +79,22 @@ export function WhatsAppToolbar({
           </Badge>
         )}
       </div>
-      {(bfProgress.status === "running" || bfProgress.status === "paused") && (
+      {isBfActive && (
         <div className="flex items-center gap-2 mt-1">
-          <Progress value={bfProgress.totalCycles > 0 ? (bfProgress.cycle / bfProgress.totalCycles) * 100 : 0} className="h-1 flex-1 max-w-[120px]" />
-          <span className="text-[9px] text-muted-foreground whitespace-nowrap">
-            {bfProgress.cycle}/{bfProgress.totalCycles} • {bfProgress.recoveredMessages} nuovi
+          <Progress value={bfProgress.chatsTotal > 0 ? (bfProgress.chatsProcessed / bfProgress.chatsTotal) * 100 : 0} className="h-1 flex-1 max-w-[120px]" />
+          <span className="text-[9px] text-muted-foreground whitespace-nowrap truncate max-w-[200px]">
+            {bfProgress.phase === "discovery" ? "🔍 Analisi chat..." : (
+              <>
+                {bfProgress.status === "paused" ? "⏸ " : "▶ "}
+                {bfProgress.currentChat ? `${bfProgress.currentChat} ` : ""}
+                {bfProgress.chatsProcessed}/{bfProgress.chatsTotal} • {bfProgress.recoveredMessages} nuovi
+              </>
+            )}
           </span>
         </div>
       )}
       {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
-        <span className="text-[9px] text-green-600 mt-0.5">✓ {bfProgress.recoveredMessages} recuperati</span>
+        <span className="text-[9px] text-green-600 mt-0.5">✓ {bfProgress.recoveredMessages} recuperati da {bfProgress.chatsTotal} chat</span>
       )}
     </div>
   );

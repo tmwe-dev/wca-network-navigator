@@ -1,4 +1,4 @@
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Mail, MessageCircle, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
@@ -43,6 +43,13 @@ export function InArrivoTab() {
   // Lift WhatsApp hooks
   const waSync = useWhatsAppAdaptiveSync();
   const waBackfill = useWhatsAppBackfill();
+
+  // Auto-trigger deep backfill on WhatsApp reconnection
+  useEffect(() => {
+    waSync.onReconnect(() => {
+      waBackfill.startBackfill();
+    });
+  }, [waSync.onReconnect, waBackfill.startBackfill]);
 
   // Lift Email hooks
   const checkInbox = useCheckInbox();
