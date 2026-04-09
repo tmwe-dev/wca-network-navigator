@@ -1,93 +1,89 @@
 
 
-# Piano: Centro Operativo Circuito d'Attesa + Contesto Outreach
+# Piano: Sistema di Supervisione AI, Briefing a 3 Tab e Strategia Operativa
 
 ## Panoramica
 
-Due interventi collegati:
+Tre interventi interconnessi:
 
-1. **Holding Pattern Command Center** — Riprogettare il tab "Circuito" (✈️) come centro operativo con messaggi in arrivo a sinistra (3 tab: Email/WhatsApp/LinkedIn) e strategia AI a destra (3 tab: Messaggio proposto / Strategia / Azioni), con approvazione singola e bulk.
-
-2. **Contesto Outreach** — Aggiungere un campo "Contesto" al MissionContext (perché stiamo scrivendo: fiera, trovato online, referral, ecc.) che l'AI usa per generare messaggi pertinenti e personalizzati.
+1. **Agente Supervisor (Gigi/Felice)** — Assegnare il ruolo di supervisore che verifica contenuti, approva strategie e controlla il rispetto della "Guida Operativa" nella KB.
+2. **Briefing Operativo a 3 Tab** — Riprogettare il briefing nella Home con: Effettuato, Da Effettuare, Sospesi/Strategia.
+3. **Strategia Operativa nei Settings** — Nuova sezione "Guida Operativa" che definisce regole, quantità, canali, etica — il "manuale" che il Supervisor AI segue.
 
 ---
 
-## Struttura UI del Circuito rinnovato
+## A. Agente Supervisor e Guida Operativa KB
+
+**A1. Guida Operativa nella KB (`kb_entries`)**
+- Inserire un set di card KB predefinite (categoria `operative_guide`) con le regole del circuito d'attesa: fonti dati, quantità giornaliere, canali preferiti, regole etiche, toni, timing follow-up.
+- Il Supervisor AI le carica come contesto prima di validare ogni azione degli agenti venditori.
+
+**A2. Sezione Settings "Guida Operativa"**
+- Nuovo tab nel Settings: "Guida Operativa" con editor strutturato per le regole (fonti dati, limiti giornalieri, canali, regole etiche, template messaggi).
+- Salvataggio come `app_settings` con chiave `operative_strategy` (JSON strutturato).
+- Il Supervisor e tutti gli agenti leggono queste regole prima di eseguire.
+
+**A3. Ruolo Supervisor nell'agent-execute**
+- Quando un agente Sales genera un draft/azione, prima dell'esecuzione viene creato un task di review per il Supervisor.
+- Il Supervisor analizza: conformità alla Guida Operativa, qualità del messaggio, coerenza con la storia del contatto.
+- Output: `approved`, `needs_edit` (con suggerimenti), `rejected` (con motivazione).
+- L'utente vede il risultato della review nel Command Center e decide se inviare.
+
+---
+
+## B. Briefing Operativo a 3 Tab
+
+Riprogettare `OperativeBriefing.tsx` con tabs:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  Circuito di Attesa (✈️)                    [Approva Tutti] │
-├────────────────────────┬────────────────────────────────────┤
-│  ┌──────────────────┐  │  ┌──────────────────────────────┐  │
-│  │ Email│WA│LinkedIn│  │  │ Risposta│Strategia│Azioni    │  │
-│  ├──────────────────┤  │  ├──────────────────────────────┤  │
-│  │                  │  │  │                              │  │
-│  │ Lista messaggi   │  │  │ Draft AI proposto            │  │
-│  │ in arrivo dai    │  │  │ + analisi sentiment/intent   │  │
-│  │ contatti nel     │  │  │ + history conversazione      │  │
-│  │ circuito         │  │  │                              │  │
-│  │                  │  │  │ [✓ Approva] [✎ Modifica]     │  │
-│  │ (badge: nuovo,   │  │  │ [✗ Ignora]  [→ Escalation]  │  │
-│  │  circuito ✈️)    │  │  │                              │  │
-│  └──────────────────┘  │  └──────────────────────────────┘  │
-└────────────────────────┴────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  Briefing Operativo                              │
+│  [✅ Effettuato] [📋 Da Effettuare] [⏸ Sospesi] │
+├──────────────────────────────────────────────────┤
+│                                                  │
+│  Tab Effettuato:                                 │
+│  - Lavoro svolto dagli agenti (ultime 24h)       │
+│  - Mail/messaggi inviati dal circuito            │
+│  - Contatti totali e copertura                   │
+│                                                  │
+│  Tab Da Effettuare:                              │
+│  - Contatti assegnati per oggi                   │
+│  - Task programmati per gli agenti               │
+│  - Contatti non ancora nel circuito              │
+│                                                  │
+│  Tab Sospesi:                                    │
+│  - Strategia per domani e futura                 │
+│  - Messaggi in attesa di revisione Supervisor    │
+│  - Programmazione attività e ricerca             │
+│                                                  │
+└──────────────────────────────────────────────────┘
 ```
+
+**B1. Aggiornare `daily-briefing` edge function**
+- Aggiungere al contesto: contatti nel circuito d'attesa (count), contatti non ancora nel circuito (count per lead_status), task programmati per oggi, messaggi in arrivo non letti.
+- L'LLM genera 3 sezioni separate: `completed`, `todo`, `suspended`.
+
+**B2. Aggiornare `useDailyBriefing` + tipi**
+- `DailyBriefing` → aggiungere `completed`, `todo`, `suspended` come sezioni markdown separate.
+
+**B3. Nuovo `OperativeBriefing` con Tabs**
+- 3 tab con contenuto specifico per sezione.
+- Ogni tab ha le sue azioni contestuali.
+- Statistiche in alto: totale contatti, nel circuito, da contattare, programmati oggi.
 
 ---
 
-## Dettaglio implementativo
+## C. Missione con Task Progressivi
 
-### A. Holding Pattern Command Center
-
-**A1. Nuovo componente `HoldingPatternCommandCenter.tsx`**
-- Sostituisce l'attuale `HoldingPatternTab` (che resta come fallback)
-- Layout split 50/50: pannello messaggi + pannello strategia AI
-
-**A2. Pannello sinistro — Messaggi in arrivo**
-- 3 sub-tab (Email / WhatsApp / LinkedIn) filtrati per contatti che hanno `lead_status` in holding pattern
-- Query su `channel_messages` con JOIN verso `partners` e `imported_contacts` per verificare appartenenza al circuito
-- Badge conteggio non letti per tab
-- Click su messaggio → carica history conversazione e trigger analisi AI
-
-**A3. Pannello destro — Strategia AI (3 sub-tab)**
-- **Risposta**: Draft di risposta generato dall'AI basato su history, KB, profilo contatto
-- **Strategia**: Analisi AI (sentiment del messaggio ricevuto, intent rilevato, suggerimento prossimo step nel workflow holding pattern)
-- **Azioni**: Bottoni operativi (Approva e Invia, Modifica, Ignora, Cambia stato, Escalation)
-
-**A4. Bulk Approval**
-- Toolbar superiore con "Approva tutti" che approva le risposte AI pending
-- Checkbox per selezione multipla dei messaggi
-
-**A5. Hook `useHoldingMessages`**
-- Recupera messaggi da `channel_messages` dove il contatto è nel circuito
-- Incrocia `partner_id` / `source_id` con la lista holding pattern
-- Ordina per data, raggruppa per contatto
-
-**A6. Hook `useHoldingStrategy`**
-- Dato un messaggio selezionato, invoca edge function (o AI gateway) per generare:
-  - Risposta proposta
-  - Analisi sentiment/intent
-  - Suggerimento azione successiva basato sulle regole del circuito (reminder +5gg, escalation +7gg, ecc.)
-
-### B. Contesto Outreach
-
-**B1. Estendere `MissionContext`**
-- Nuovo campo `context: string` + `setContext`
-- Esempi: "Incontrato alla fiera di Milano del 15 marzo", "Trovato online nel settore logistica", "Referral da partner XYZ"
-
-**B2. Aggiornare `MissionDrawer`**
-- Nuova sezione "Contesto" con textarea + suggerimenti rapidi (chip cliccabili: "Fiera", "Trovato online", "Referral", "Ex-cliente", "Cold outreach")
-
-**B3. Iniettare contesto nelle Edge Function**
-- `generate-outreach` e `agent-execute` ricevono il campo `context` nel payload
-- Il prompt AI include il contesto come istruzione primaria: "Stai scrivendo perché: {context}"
-
-**B4. Aggiornare `WorkspacePreset`**
-- Salvare/caricare il campo `context` nei preset per riuso
-
-### C. Persistenza (opzionale, fase 2)
-- Colonna `context` nella tabella `outreach_missions` (già esistente) per storicizzare il contesto per missione
-- Le risposte AI approvate dal Command Center vengono inserite in `activities` + `outreach_queue`
+**C1. Estendere il Mission Builder**
+- Quando l'utente descrive una missione complessa ("scrivi a tutti entro un mese, usa FindAir..."), il sistema genera automaticamente task progressivi:
+  1. Crea lista contatti nel Cockpit
+  2. Prepara documenti/allegati
+  3. Genera draft per batch
+  4. Review Supervisor
+  5. Approvazione utente
+  6. Invio programmato
+- Questi step vengono salvati in `ai_work_plans` con progressione tracciabile.
 
 ---
 
@@ -95,21 +91,20 @@ Due interventi collegati:
 
 | File | Azione |
 |------|--------|
-| `src/components/outreach/HoldingPatternCommandCenter.tsx` | Nuovo — layout split |
-| `src/hooks/useHoldingMessages.ts` | Nuovo — query messaggi circuito |
-| `src/hooks/useHoldingStrategy.ts` | Nuovo — AI strategy per messaggio |
-| `src/components/outreach/HoldingPatternTab.tsx` | Sostituito dall'import del nuovo componente |
-| `src/contexts/MissionContext.tsx` | +campo `context` |
-| `src/components/global/MissionDrawer.tsx` | +sezione Contesto |
-| `src/hooks/useOutreachGenerator.ts` | Passare `context` al payload AI |
+| `src/components/home/OperativeBriefing.tsx` | Riscrittura con 3 tab |
+| `src/hooks/useDailyBriefing.ts` | Nuovi tipi per 3 sezioni |
+| `supabase/functions/daily-briefing/index.ts` | +query circuito, 3 sezioni LLM |
+| `src/pages/Settings.tsx` | +tab "Guida Operativa" |
+| `src/components/settings/OperativeGuideSettings.tsx` | Nuovo — editor regole |
+| `src/components/home/BriefingStatsBar.tsx` | Nuovo — barra statistiche |
 
 ---
 
 ## Ordine di esecuzione
 
-1. **B1-B2**: Contesto nel MissionContext + MissionDrawer (veloce, impatto immediato)
-2. **B3**: Iniezione contesto nelle edge function
-3. **A1-A2**: Pannello messaggi holding pattern
-4. **A3-A4**: Pannello strategia AI + bulk approval
-5. **A5-A6**: Hook dati e AI strategy
+1. **A2**: Sezione Guida Operativa nei Settings (base per tutto)
+2. **B1-B3**: Briefing a 3 tab + edge function aggiornata
+3. **A1**: Card KB predefinite per la guida operativa
+4. **A3**: Logica Supervisor nella review dei draft
+5. **C1**: Task progressivi nel Mission Builder
 
