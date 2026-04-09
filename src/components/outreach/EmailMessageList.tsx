@@ -67,7 +67,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
     if (idx >= 0) {
       virtualizer.scrollToIndex(idx, { align: "auto" });
     }
-  }, [selectedId, messages, virtualizer]);
+  }, [selectedId, displayMessages, virtualizer]);
 
   return (
     <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
