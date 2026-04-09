@@ -26,7 +26,7 @@ type ChatThread = {
   messages: ChannelMessage[];
 };
 
-export function LinkedInInboxView() {
+export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string } = {}) {
   const [search, setSearch] = useState("");
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function LinkedInInboxView() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: messages = [], isLoading } = useChannelMessages("linkedin");
+  const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
   const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();

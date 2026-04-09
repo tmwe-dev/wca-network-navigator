@@ -16,13 +16,14 @@ import type { ChatThread } from "./whatsappTypes";
 type WhatsAppInboxViewProps = {
   syncState?: { enabled: boolean; focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
   backfillState?: unknown;
+  operatorUserId?: string;
 };
 
-export function WhatsAppInboxView({ syncState }: WhatsAppInboxViewProps = {}) {
+export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxViewProps = {}) {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
-  const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
+  const { data: messages = [], isLoading } = useChannelMessages("whatsapp", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendWhatsApp } = useWhatsAppExtensionBridge();
 
