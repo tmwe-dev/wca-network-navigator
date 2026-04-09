@@ -255,8 +255,8 @@ export default function EnrichmentSettings() {
       };
 
       const [pData, cData] = await Promise.all([
-        partnerIds.length ? fetchBatch("partners", "id, company_name, email, website", partnerIds) : [],
-        contactIds.length ? fetchBatch("imported_contacts", "id, name, company_name, email", contactIds) : [],
+        partnerIds.length ? fetchPartnerBatch(partnerIds) : [],
+        contactIds.length ? fetchContactBatch(contactIds) : [],
       ]);
       const pMap = new Map(pData.map((p: any) => [p.id, p]));
       const cMap = new Map(cData.map((c: any) => [c.id, c]));
