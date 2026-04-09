@@ -1,71 +1,73 @@
 
 
-# Piano: Inbox Multi-Operatore + Campagne Distribuite per Tutor
+# Piano: Reply-To Email + Drop Zone Cockpit Migliorate
 
-## 1. Inbox Multi-Operatore per Admin
+## 1. Reply-To configurabile (singolo vs bulk)
+
+### Logica
+Quando l'email parte dal cockpit:
+- **Invio singolo** (drop su casella Email): la mail va dall'account dell'operatore, Reply-To = email diretta dell'operatore (o non impostato, il client risponde al From)
+- **Invio bulk** (campagna/batch): la mail parte dall'account operatore ma il Reply-To viene forzato alla **email commerciale aziendale** (configurabile in `app_settings` con chiave `commercial_reply_to_email`)
+- **Override manuale**: nel composer si potrà specificare un Reply-To diverso
+
+### Modifiche
+
+**Database**: Aggiungere in `app_settings` la chiave `commercial_reply_to_email` (es. `commerciale@tmwe.it`). Aggiungere campo `reply_to_email` nella tabella `operators` per override per operatore.
+
+**Edge Function `send-email/index.ts`**:
+- Accettare nuovo parametro `reply_to` dal body JSON
+- Gerarchia: `reply_to` esplicito → `operators.reply_to_email` → `app_settings.commercial_reply_to_email` → nessuno
+- Aggiungere header `replyTo` nella chiamata `client.send()`
+
+**UI — Cockpit `handleDrop`**: 
+- Quando `dragCount > 1` (bulk), passare automaticamente `reply_to` = email commerciale
+- Quando singolo, non passare reply_to (risposta va al From dell'operatore)
+
+### File coinvolti
+
+| File | Modifica |
+|------|----------|
+| Migration SQL | Inserire `commercial_reply_to_email` in `app_settings` |
+| `supabase/functions/send-email/index.ts` | Aggiungere parametro `reply_to`, leggere da settings/operators, header `replyTo` |
+| `src/hooks/useCockpitLogic.ts` | Passare `reply_to` nel draft state quando bulk |
+
+---
+
+## 2. Drop Zone più grandi e visibili
 
 ### Problema attuale
-La RLS su `channel_messages` filtra per `user_id = auth.uid()`. L'admin vede solo le proprie email.
+Le caselle hanno `min-h-[72px]` e `py-4/py-5` — troppo piccole. Durante il drag la card mantiene dimensioni originali e copre le zone.
 
 ### Soluzione
 
-**Database** — Aggiornare la policy RLS SELECT su `channel_messages`:
-```sql
--- L'admin vede tutti i messaggi, l'operatore solo i propri
-user_id = auth.uid() OR public.is_operator_admin()
-```
+**ChannelDropZones.tsx — Modo espanso (durante drag)**:
+- Aumentare altezza: `min-h-[100px] py-6` → zone molto più alte, occupano tutto lo spazio verticale disponibile con `flex-1`
+- Hover più evidente: bordo `border-[4px]`, background più intenso (`/30` invece di `/10`), ombra `shadow-xl`, scale `1.05`
+- Testo più grande durante hover con icona animata (pulse)
+- Container usa `h-full flex flex-col` per distribuire le zone su tutta l'altezza disponibile
 
-**UI** — Modificare `InArrivoTab.tsx`:
-- Se `currentOp.is_admin`: mostrare una barra di tab orizzontali sopra il canale (Email/WA/LI) con il nome di ogni operatore attivo + tab "Tutti"
-- Passare un filtro `operatorUserId` a `EmailInboxView` / `WhatsAppInboxView` / `LinkedInInboxView`
-- Ogni messaggio mostra un piccolo badge con il nome del tutor proprietario
+**Card durante drag — Riduzione al 50%**:
+- In `CockpitContactCard.tsx` e `CockpitContactListItem.tsx`: aggiungere CSS per l'elemento drag ghost
+- Usare `onDragStart` per impostare `e.dataTransfer.setDragImage()` con un elemento clonato ridotto al 50%
+- Alternativa più semplice: aggiungere `opacity-50 scale-50` alla card che viene trascinata (tramite prop `isDragging`)
 
-**Hook** — Modificare `useChannelMessages.ts`:
-- Aggiungere parametro opzionale `operatorUserId?: string`
-- Se presente, filtrare `.eq("user_id", operatorUserId)` invece di usare solo RLS
-- Se "Tutti", non aggiungere filtro (la RLS admin permette già tutto)
+**Cockpit.tsx**: 
+- Il container centrale delle drop zone passa da `items-center justify-center` a `items-stretch` per dare tutto lo spazio verticale alle zone
 
 ### File coinvolti
+
 | File | Modifica |
 |------|----------|
-| Migration SQL | Aggiornare policy RLS SELECT su `channel_messages` |
-| `src/components/outreach/InArrivoTab.tsx` | Tab orizzontali per operatore (solo admin) |
-| `src/hooks/useChannelMessages.ts` | Filtro `operatorUserId` opzionale |
-| `src/components/outreach/EmailInboxView.tsx` | Accettare prop `operatorUserId`, mostrare badge tutor |
+| `src/components/cockpit/ChannelDropZones.tsx` | Zone più alte, flex-1, hover più evidente, bordi più spessi |
+| `src/components/cockpit/CockpitContactCard.tsx` | Drag ghost al 50% via setDragImage |
+| `src/components/cockpit/CockpitContactListItem.tsx` | Drag ghost al 50% |
+| `src/pages/Cockpit.tsx` | Container drop zone stretch verticale |
 
 ---
 
-## 2. Campagne Multi-Tutor per Admin
-
-### Logica
-Quando il master lancia una campagna:
-1. Seleziona i target (paesi, contatti, filtri)
-2. Il sistema raggruppa i contatti per operatore assegnato (o per territorio se non assegnato)
-3. Per ogni operatore crea batch separati di `campaign_jobs` con `assigned_to = operator.user_id`
-4. L'outreach queue processa ogni batch usando le credenziali SMTP/WA/LI dell'operatore assegnato
-
-### Struttura dati
-`campaign_jobs` ha già `assigned_to` — verrà popolato con il `user_id` dell'operatore.
-L'edge function `send-email` dovrà risolvere le credenziali SMTP dal `user_id` del job, non dall'utente che ha lanciato la campagna.
-
-### File coinvolti
-| File | Modifica |
-|------|----------|
-| `src/hooks/useCampaignJobs.ts` | Funzione di distribuzione contatti per operatore |
-| Mission Builder (cockpit) | Aggiungere step "Distribuzione per Tutor" con preview della suddivisione |
-| `supabase/functions/send-email/index.ts` | Risolvere credenziali SMTP da `assigned_to` (operator) invece che da auth.uid() |
-
----
-
-## 3. Visibilità Campagne per Ruolo
-
-- **Operatore normale**: vede solo i job con `assigned_to = proprio user_id`
-- **Admin/Master**: vede tutti i job, raggruppati per operatore, con contatore per tutor
-
-### Risultato
-- L'admin naviga le inbox di tutti gli operatori con tab orizzontali
-- Ogni messaggio mostra a chi appartiene (tutor + agente AI)
-- Le campagne vengono distribuite automaticamente per operatore
-- Ogni operatore usa le proprie credenziali per l'invio
-- L'operatore normale continua a vedere solo i propri dati
+## Risultato
+- Invio singolo → risposta torna all'operatore direttamente
+- Invio bulk → risposta va alla mail commerciale aziendale
+- Drop zone visivamente dominanti durante il drag, feedback immediato
+- Card trascinata ridotta al 50% per non coprire le zone di rilascio
 
