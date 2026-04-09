@@ -107,7 +107,7 @@ export function ContactRecordDrawer() {
                           Dati Arricchimento AI
                         </div>
                         <ContactEnrichmentCard
-                          enrichmentData={record.enrichmentData}
+                          enrichmentData={record.enrichmentData as Record<string, unknown>}
                           deepSearchAt={record.deepSearchAt}
                         />
                       </div>
