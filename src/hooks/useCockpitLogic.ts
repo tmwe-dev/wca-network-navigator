@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAutoConnect } from "@/hooks/useAutoConnect";
+
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
@@ -21,7 +21,6 @@ import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/
 
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
-  useAutoConnect();
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<import("@/pages/Cockpit").CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);

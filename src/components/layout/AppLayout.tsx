@@ -14,6 +14,7 @@ import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { useWcaSync } from "@/hooks/useWcaSync";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
+import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -41,6 +42,7 @@ export function AppLayout() {
   const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
   useWcaSync();
+  const globalSync = useGlobalAutoSync();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
@@ -164,7 +166,7 @@ export function AppLayout() {
                 )}
 
                 <ActiveProcessIndicator />
-                <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} />
+                <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
