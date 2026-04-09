@@ -31,6 +31,7 @@ export function OperativeBriefing({
   const [executingIdx, setExecutingIdx] = useState<number | null>(null);
   const [completedIdx, setCompletedIdx] = useState<Set<number>>(new Set());
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const executeAction = async (action: BriefingAction, idx: number) => {
     setExecutingIdx(idx);
