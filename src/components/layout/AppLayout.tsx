@@ -207,6 +207,7 @@ export function AppLayout() {
             </Suspense>
           </DialogContent>
         </Dialog>
+        <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
       </div>
     <ClaudeBadge />
         </GlobalFiltersProvider>
