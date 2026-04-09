@@ -4,8 +4,12 @@ import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
+import { EmailToolbar } from "@/components/outreach/EmailToolbar";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
+import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
+import { useResetSync } from "@/hooks/useEmailSync";
+import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 
 const EmailInboxView = lazyRetry(() =>
   import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
@@ -31,9 +35,15 @@ export function InArrivoTab() {
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
-  // Lift WhatsApp hooks here so toolbar + view share the same state
+  // Lift WhatsApp hooks
   const waSync = useWhatsAppAdaptiveSync();
   const waBackfill = useWhatsAppBackfill();
+
+  // Lift Email hooks
+  const checkInbox = useCheckInbox();
+  const emailSync = useContinuousSync();
+  const resetSync = useResetSync();
+  const emailAutoSync = useEmailAutoSync();
 
   const badges: Record<string, number> = { email: emailUnread, whatsapp: waUnread, linkedin: liUnread };
 
@@ -70,9 +80,23 @@ export function InArrivoTab() {
           );
         })}
 
-        {/* WhatsApp controls inline — using lifted hooks */}
-        {channel === "whatsapp" && (
-          <div className="ml-auto">
+        {/* Channel-specific toolbar inline */}
+        <div className="ml-auto">
+          {channel === "email" && (
+            <EmailToolbar
+              onCheckNew={() => checkInbox.mutate()}
+              isCheckingNew={checkInbox.isPending}
+              onStartSync={emailSync.startSync}
+              onStopSync={emailSync.stopSync}
+              isSyncing={emailSync.isSyncing}
+              syncDownloaded={emailSync.progress.downloaded}
+              onReset={() => resetSync.mutate()}
+              isResetting={resetSync.isPending}
+              autoSyncEnabled={emailAutoSync.enabled}
+              onToggleAutoSync={emailAutoSync.toggle}
+            />
+          )}
+          {channel === "whatsapp" && (
             <WhatsAppToolbar
               level={waSync.level}
               enabled={waSync.enabled}
@@ -85,8 +109,8 @@ export function InArrivoTab() {
               startBackfill={waBackfill.startBackfill}
               stopBackfill={waBackfill.stopBackfill}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Content */}
