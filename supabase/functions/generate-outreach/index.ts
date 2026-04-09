@@ -557,10 +557,16 @@ REGOLE CRITICHE:
 
     const userPrompt = `${senderContext}
 ${recipientContext}
+${interlocutorBlock}
+${relationshipBlock}
+${branchBlock}
 ${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
+
+OBIETTIVO COMMERCIALE FINALE:
+Convertire il lead in cliente attivo. Leve: apertura account, tariffe privilegiate, semplificazione operativa.
 
 Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
