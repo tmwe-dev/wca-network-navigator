@@ -388,17 +388,42 @@ function FireScrapeTest() {
 }
 
 // ━━━━━━━━━━━━ LinkedIn Tab ━━━━━━━━━━━━
+const LI_COOLDOWN_MS = 5000;
+
 function LinkedInTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
   const [foundThreads, setFoundThreads] = useState<Array<{ name: string; threadUrl?: string }>>([]);
+  const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
+
+  const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
+
+  const runWithCooldown = useCallback(async (fn: () => Promise<void>) => {
+    setRunning(true);
+    actionTimesRef.current.push(Date.now());
+    // prune old entries
+    actionTimesRef.current = actionTimesRef.current.filter(t => Date.now() - t < 3600000);
+    try {
+      await fn();
+    } finally {
+      log(`⏳ Cooldown ${LI_COOLDOWN_MS / 1000}s...`, "info");
+      setCooldown(LI_COOLDOWN_MS / 1000);
+      const interval = setInterval(() => {
+        setCooldown(prev => {
+          if (prev <= 1) { clearInterval(interval); setRunning(false); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  }, [log]);
 
   const testPing = async () => {
     setRunning(true);
