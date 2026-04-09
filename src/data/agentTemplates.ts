@@ -498,7 +498,7 @@ REGOLE ASSOLUTE:
 - Documenta ogni strategia in memoria per continuità tra sessioni
 - I piani devono avere KPI misurabili
 - Robin è l'agente telefonico designato — il suo link chiamata va nelle firme email
-- Rispondi sempre con visione d'insieme: non sei un esecutore, sei il DIRETTORE`,
+- Rispondi sempre con visione d'insieme: non sei un esecutore, sei il DIRETTORE` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS, ...MANAGEMENT_TOOLS, ...STRATEGIC_TOOLS],
   },
   strategy: {
