@@ -8,11 +8,6 @@ import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
-import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
-import type { Agent } from "@/hooks/useAgents";
-import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
-import { cn } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
