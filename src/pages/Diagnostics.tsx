@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { getWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle2, XCircle, Loader2, Play, RotateCcw,
@@ -358,14 +359,11 @@ export default function Diagnostics() {
     const id3 = "bridge-local-cookie";
     upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "running" });
     try {
-      const cached = localStorage.getItem("wca_session_cookie");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        const ageMin = Math.round((Date.now() - parsed.savedAt) / 60000);
-        const valid = parsed.cookie && ageMin < 8;
-        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: valid ? "pass" : "warn", message: valid ? `Valido (${ageMin}min)` : `Scaduto (${ageMin}min)` });
+      const cookie = getWcaCookie();
+      if (cookie) {
+        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "pass", message: "Valido" });
       } else {
-        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "warn", message: "Non presente" });
+        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "warn", message: "Non presente o scaduto" });
       }
     } catch (e: any) {
       upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "fail", message: e.message });
