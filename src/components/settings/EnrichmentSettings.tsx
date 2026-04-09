@@ -531,7 +531,7 @@ export default function EnrichmentSettings() {
               <div
                 key={row.id}
                 className={cn(
-                  "grid grid-cols-[32px_28px_1fr_1fr_70px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px]",
+                  "grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px]",
                   ORIGIN_ACCENT[row.source] || "border-l-transparent",
                   isSelected ? "bg-primary/5" : "hover:bg-accent/30"
                 )}
