@@ -28,7 +28,7 @@ function formatListDate(value: string): string {
   return format(date, "dd/MM HH:mm", { locale: it });
 }
 
-export function EmailMessageList({ messages, selectedId, onSelect }: Props) {
+export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   
   // Collect all source IDs to check holding pattern status
