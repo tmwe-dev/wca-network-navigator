@@ -1,0 +1,106 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+/**
+ * Email Cron Sync — runs every 5 minutes via pg_cron.
+ * Finds all users with IMAP sync state and calls check-inbox for each.
+ * This ensures emails are downloaded even when no browser tab is open.
+ */
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  try {
+    // Night pause check: skip between 00:00-06:00 UTC+1 (CET rough approximation)
+    // The main app handles local night pause, but server-side we use a broad window
+    const now = new Date();
+    const hour = now.getUTCHours();
+    // Skip 23:00-05:00 UTC (roughly midnight-6am CET)
+    if (hour >= 23 || hour < 5) {
+      return new Response(JSON.stringify({ message: "Night pause active, skipping" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Find all users with sync state (they have IMAP configured)
+    const { data: syncUsers, error: syncErr } = await supabase
+      .from("email_sync_state")
+      .select("user_id")
+      .order("last_sync_at", { ascending: true, nullsFirst: true })
+      .limit(10);
+
+    if (syncErr) throw syncErr;
+    if (!syncUsers || syncUsers.length === 0) {
+      return new Response(JSON.stringify({ message: "No users with IMAP configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const results: { userId: string; status: string; downloaded?: number }[] = [];
+
+    for (const { user_id } of syncUsers) {
+      try {
+        const checkRes = await fetch(`${supabaseUrl}/functions/v1/check-inbox`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceRoleKey}`,
+            "x-sync-user-id": user_id,
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (checkRes.ok) {
+          const data = await checkRes.json();
+          results.push({
+            userId: user_id,
+            status: "ok",
+            downloaded: data.downloaded || 0,
+          });
+        } else {
+          const errText = await checkRes.text();
+          console.error(`[email-cron-sync] check-inbox failed for ${user_id}: ${checkRes.status} ${errText}`);
+          results.push({ userId: user_id, status: `error: ${checkRes.status}` });
+        }
+      } catch (err: any) {
+        console.error(`[email-cron-sync] Error for user ${user_id}:`, err.message);
+        results.push({ userId: user_id, status: `error: ${err.message}` });
+      }
+    }
+
+    // Update last_sync_at for processed users
+    for (const r of results) {
+      if (r.status === "ok") {
+        await supabase
+          .from("email_sync_state")
+          .update({ last_sync_at: new Date().toISOString() })
+          .eq("user_id", r.userId);
+      }
+    }
+
+    console.log(`[email-cron-sync] Processed ${results.length} users:`, JSON.stringify(results));
+
+    return new Response(JSON.stringify({ processed: results.length, results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    console.error("[email-cron-sync] Fatal error:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
