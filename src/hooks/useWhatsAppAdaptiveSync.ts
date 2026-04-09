@@ -272,12 +272,16 @@ export function useWhatsAppAdaptiveSync() {
 
   // ── Main tick ──
   const tick = useCallback(async () => {
+    if (!isAuthenticated) {
+      log.warn("tick.skipped", { reason: "WhatsApp Web not authenticated" });
+      return;
+    }
     if (levelRef.current === 6 && focusedChatRef.current) {
       await threadScan();
     } else {
       await sidebarScan();
     }
-  }, [sidebarScan, threadScan]);
+  }, [sidebarScan, threadScan, isAuthenticated]);
 
   // ── Adaptive timer ──
   useEffect(() => {
