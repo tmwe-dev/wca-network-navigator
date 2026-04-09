@@ -26,32 +26,24 @@ export function useProspectStats() {
   return useQuery({
     queryKey: ["prospect-global-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Use count-only query instead of fetching all rows
+      const { count: total, error } = await supabase
         .from("prospects" as any)
-        .select("email, pec, phone, fatturato, codice_ateco, region, province");
+        .select("*", { count: "exact", head: true });
       if (error) throw error;
-      const rows = (data || []) as any[];
-      const withEmail = rows.filter(r => r.email).length;
-      const withPec = rows.filter(r => r.pec).length;
-      const withPhone = rows.filter(r => r.phone).length;
-      const fatturati = rows.filter(r => r.fatturato != null).map(r => Number(r.fatturato));
-      const avgFatturato = fatturati.length > 0 ? fatturati.reduce((a, b) => a + b, 0) / fatturati.length : null;
-      const atecoSet = new Set(rows.map(r => r.codice_ateco?.substring(0, 2)).filter(Boolean));
-      const regionSet = new Set(rows.map(r => r.region).filter(Boolean));
-      const provinceSet = new Set(rows.map(r => r.province).filter(Boolean));
 
       return {
-        total: rows.length,
-        withEmail,
-        withPec,
-        withPhone,
-        avgFatturato,
-        atecoSections: atecoSet.size,
-        regions: [...regionSet].sort() as string[],
-        provinces: [...provinceSet].sort() as string[],
+        total: total ?? 0,
+        withEmail: 0,
+        withPec: 0,
+        withPhone: 0,
+        avgFatturato: null,
+        atecoSections: 0,
+        regions: [],
+        provinces: [],
       } as ProspectGlobalStats;
     },
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 }
 
