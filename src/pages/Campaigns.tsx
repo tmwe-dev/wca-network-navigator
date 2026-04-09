@@ -246,7 +246,7 @@ function CampaignHeaderControls({
       {/* Stats badges */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
-          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : TOTAL_WCA_COUNTRIES}</span>
+          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.length}</span>
           <span className="text-slate-400 text-xs">Paesi</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
