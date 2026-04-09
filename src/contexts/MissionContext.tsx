@@ -57,6 +57,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [baseProposal, setBaseProposal] = useState("");
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [context, setContext] = useState("");
   const [quality, setQuality] = useState<EmailQuality>("standard");
   const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
 
