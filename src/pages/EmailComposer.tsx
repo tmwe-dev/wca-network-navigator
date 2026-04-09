@@ -43,7 +43,9 @@ export default function EmailComposer() {
 
   useEffect(() => {
     const state = location.state as any;
-    if (state?.prefilledRecipient) {
+    if (!state) return;
+
+    if (state.prefilledRecipient) {
       const r = state.prefilledRecipient;
       addRecipient({
         partnerId: r.partnerId || "",
@@ -58,8 +60,21 @@ export default function EmailComposer() {
         countryCode: r.countryCode,
         isEnriched: false,
       });
-      navigate(location.pathname, { replace: true, state: {} });
     }
+
+    if (state.prefilledSubject) {
+      setSubject(state.prefilledSubject);
+    }
+
+    if (state.prefilledBody) {
+      const escaped = state.prefilledBody
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      setHtmlBody(`<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>`);
+    }
+
+    navigate(location.pathname, { replace: true, state: {} });
   }, []);
 
   const [subject, setSubject] = useState("");
