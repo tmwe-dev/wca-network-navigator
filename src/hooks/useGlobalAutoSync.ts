@@ -3,61 +3,73 @@ import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 
-/**
- * Returns true if local time is between 00:00 and 06:00.
- */
 function isNightTime(): boolean {
   const hour = new Date().getHours();
   return hour >= 0 && hour < 6;
 }
 
-/**
- * Centralised auto-sync orchestrator.
- * - Auto-activates email sync and WhatsApp adaptive sync on mount
- * - Pauses everything during night hours (00:00–06:00 local time)
- * - Calls useAutoConnect for LinkedIn/WhatsApp session verification
- */
+/** Minutes remaining until 06:00 local time */
+function minutesUntilResume(): number {
+  const now = new Date();
+  const resume = new Date(now);
+  resume.setHours(6, 0, 0, 0);
+  if (resume <= now) resume.setDate(resume.getDate() + 1);
+  return Math.max(0, Math.ceil((resume.getTime() - now.getTime()) / 60_000));
+}
+
 export function useGlobalAutoSync() {
   useAutoConnect();
 
   const [nightPause, setNightPause] = useState(isNightTime);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [resumeMinutes, setResumeMinutes] = useState(minutesUntilResume);
   const nightCheckRef = useRef<ReturnType<typeof setInterval>>();
 
-  // Check night status every 5 minutes
+  // Check night status every minute (for countdown accuracy)
   useEffect(() => {
     nightCheckRef.current = setInterval(() => {
-      setNightPause(isNightTime());
-    }, 5 * 60 * 1000);
+      const isNight = isNightTime();
+      setNightPause(isNight);
+      setResumeMinutes(minutesUntilResume());
+      // Reset manual override when night ends naturally
+      if (!isNight) setManualOverride(false);
+    }, 60 * 1000);
     return () => { if (nightCheckRef.current) clearInterval(nightCheckRef.current); };
   }, []);
 
-  // Email auto-sync — always enabled, paused at night
-  const emailSync = useEmailAutoSync({ paused: nightPause });
+  const effectivePause = nightPause && !manualOverride;
 
-  // WhatsApp adaptive sync — always enabled, paused at night
+  const toggleNightPause = useCallback(() => {
+    setManualOverride(prev => !prev);
+  }, []);
+
+  // Email auto-sync
+  const emailSync = useEmailAutoSync({ paused: effectivePause });
+
+  // WhatsApp adaptive sync
   const waSync = useWhatsAppAdaptiveSync();
 
-  // Auto-enable WhatsApp sync on mount (once)
   const waInitDone = useRef(false);
   useEffect(() => {
     if (waInitDone.current) return;
     waInitDone.current = true;
-    if (!waSync.enabled) {
-      waSync.setEnabled(true);
-    }
+    if (!waSync.enabled) waSync.setEnabled(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pause/resume WA sync based on night status
   useEffect(() => {
-    if (nightPause && waSync.enabled) {
+    if (effectivePause && waSync.enabled) {
       waSync.setEnabled(false);
-    } else if (!nightPause && !waSync.enabled && waInitDone.current) {
+    } else if (!effectivePause && !waSync.enabled && waInitDone.current) {
       waSync.setEnabled(true);
     }
-  }, [nightPause]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [effectivePause]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    nightPause,
+    nightPause: effectivePause,
+    isNightTime: nightPause,
+    manualOverride,
+    toggleNightPause,
+    resumeMinutes,
     emailSync,
     waSync,
   };
