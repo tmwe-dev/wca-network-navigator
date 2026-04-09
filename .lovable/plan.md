@@ -1,43 +1,80 @@
 
+Obiettivo
 
-# Piano: Fix LinkedIn Extension `ERR_NO_CONFIG` — Inviare `setConfig` all'estensione
+- Correggere i 3 problemi emersi dai log LinkedIn:
+  1. `ERR_NO_CONFIG` durante `syncCookie`
+  2. `cookieSynced: true` mostrato anche quando il sync non è stato realmente verificato
+  3. inbox LinkedIn letta come vuota (`threads: []`) nonostante la pagina messaging sia aperta
 
-## Problema
+Fonte di verità
 
-Il syncCookie fallisce con `ERR_NO_CONFIG` perché il bridge LinkedIn (`useLinkedInExtensionBridge.ts`) **non invia mai** l'azione `setConfig` con le credenziali Supabase all'estensione. Il bridge WhatsApp lo fa correttamente (righe 55-78 di `useWhatsAppExtensionBridge.ts`), quello LinkedIn no.
+- Nel frontend deve esistere un solo bridge LinkedIn condiviso: stesso handshake `setConfig`, stessa logica di ping, stessi timeout, stessa gestione delle risposte.
+- Per la lettura inbox, la fonte di verità non può più essere il vecchio pattern `a[href*="/messaging/thread/"]`, ma la struttura reale della pagina LinkedIn attuale (AX tree + elementi conversazione reali).
 
-L'estensione supporta `setConfig` — è già gestita in `background.js` (riga 30) e listata nelle azioni valide in `content.js` (riga 19). Manca solo il lato webapp.
+Cosa ho verificato
 
-## Intervento
+- `src/hooks/useLinkedInExtensionBridge.ts` contiene già il fix `sendConfig()`.
+- Il problema attuale nasce perché non tutti i percorsi usano quel hook:
+  - `src/pages/TestExtensions.tsx` usa `liMsg(...)` diretto
+  - `src/hooks/useLinkedInMessagingBridge.ts` usa `sendToLinkedInExt(...)` diretto
+- Quindi il test che hai mostrato può ancora chiamare `syncCookie` senza aver prima inviato `setConfig`.
+- In `public/linkedin-extension/auth.js`, il ramo `already_logged_in` restituisce `cookieSynced: true` in modo hardcoded: è un falso positivo.
+- In `public/linkedin-extension/actions.js` e `public/linkedin-extension/ax-tree.js`, la lettura inbox dipende ancora troppo da link `/messaging/thread/`, che sulla UI corrente non bastano più; per questo ottieni `success: true` ma nessun thread.
 
-**File: `src/hooks/useLinkedInExtensionBridge.ts`**
+Piano di correzione
 
-1. Aggiungere un `configSentRef` come nel bridge WhatsApp
-2. Creare una funzione `sendConfig()` che invia `setConfig` con `supabaseUrl` e `supabaseAnonKey` via `postMessage` con direction `from-webapp-li`
-3. Chiamare `sendConfig()` non appena l'estensione viene rilevata come disponibile (nel listener del ping o nel `contentScriptReady`)
-4. Pattern identico a quello già funzionante in `useWhatsAppExtensionBridge.ts` righe 50-78
+1. Unificare tutto il bridge LinkedIn nel frontend
+- Estrarre una base condivisa per:
+  - `postMessage`
+  - request/response
+  - timeout
+  - ping
+  - `setConfig`
+  - availability
+- Riutilizzarla in:
+  - `useLinkedInExtensionBridge`
+  - `useLinkedInMessagingBridge`
+  - `src/pages/TestExtensions.tsx`
 
-## Dettaglio tecnico
+2. Sistemare il test page
+- Fare in modo che la tab LinkedIn di `/test-extensions` non usi più un canale “grezzo” separato.
+- Il test dovrà passare dallo stesso bootstrap del bridge ufficiale, così `syncCookie`, `autoLogin` e test futuri partono sempre con config pronta.
 
-```
-// Quando isAvailable diventa true → invia config
-window.postMessage({
-  direction: "from-webapp-li",
-  action: "setConfig",
-  requestId: `li_setConfig_${Date.now()}`,
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-  supabaseAnonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-}, window.location.origin);
-```
+3. Rendere veritiero `cookieSynced`
+- In `public/linkedin-extension/auth.js`:
+  - rimuovere il `cookieSynced: true` hardcoded
+  - valorizzare `cookieSynced` solo dal risultato reale di `syncCookieToServer()`
+  - se la sessione è valida ma il sync fallisce, restituire stato coerente (`authenticated: true`, `cookieSynced: false`, motivo esplicito)
 
-## File coinvolti
+4. Rifare la lettura inbox sulla UI LinkedIn attuale
+- Aggiornare `AXTree.readInbox` e `Actions.readInbox` per cercare:
+  - righe conversazione reali
+  - nome contatto
+  - preview ultimo messaggio
+  - stato unread
+  - identificatore / URL thread disponibile
+- Non usare più come criterio primario i soli anchor `/messaging/thread/`.
+- Tenere fallback multipli, ma costruiti sulla struttura reale della messaging sidebar.
 
-| File | Modifica |
-|------|----------|
-| `src/hooks/useLinkedInExtensionBridge.ts` | Aggiungere invio `setConfig` su detection estensione |
+5. Migliorare la diagnostica
+- Quando non trova thread, la risposta non deve essere solo `success: true` con array vuoto.
+- Restituire anche dettagli utili: metodo usato, candidati analizzati, perché sono stati scartati.
+- Questo aiuta sia `/test-extensions` sia i flussi veri (`useLinkedInSync`, `useLinkedInBackfill`, reply inbox).
 
-## Risultato
+File coinvolti
 
-- syncCookie non restituirà più `ERR_NO_CONFIG`
-- L'estensione avrà le credenziali per salvare il cookie `li_at` nel database
+- `src/hooks/useLinkedInExtensionBridge.ts`
+- `src/hooks/useLinkedInMessagingBridge.ts`
+- `src/pages/TestExtensions.tsx`
+- `public/linkedin-extension/auth.js`
+- `public/linkedin-extension/actions.js`
+- `public/linkedin-extension/ax-tree.js`
+- opzionale: nuovo modulo condiviso tipo `src/lib/linkedinBridge/*`
 
+Risultato atteso
+
+- `syncCookie` non mostra più `ERR_NO_CONFIG`
+- tutti i punti dell’app che parlano con l’estensione LinkedIn usano lo stesso codice
+- `autoLogin` non dichiara più `cookieSynced: true` quando non è vero
+- l’inbox LinkedIn torna a trovare conversazioni reali
+- sync manuale, backfill e reply LinkedIn tornano coerenti con la stessa fonte di verità
