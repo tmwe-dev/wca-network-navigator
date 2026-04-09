@@ -250,7 +250,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsContent>
 
         {/* === IMMAGINI TAB === */}
-        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="immagini" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           <ImageGalleryTab onInsertImage={onInsertImage || (() => {})} />
         </TabsContent>
       </Tabs>
