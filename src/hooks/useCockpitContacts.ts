@@ -152,10 +152,10 @@ export function useCockpitContacts() {
       ]);
 
       // Fetch social links (LinkedIn) for partner contacts
-      const allPartnerIdsForSocial = [
-        ...queue.filter(q => q.partner_id).map(q => q.partner_id),
-        ...pcData.filter(c => c.partner_id).map(c => c.partner_id),
-      ];
+      const allPartnerIdsForSocial: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
       let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
       let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
@@ -175,10 +175,10 @@ export function useCockpitContacts() {
       }
 
       // Also fetch partner names for partner_contacts
-      const partnerIds = [
-        ...queue.filter(q => q.partner_id).map(q => q.partner_id),
-        ...pcData.filter(c => c.partner_id).map(c => c.partner_id),
-      ];
+      const partnerIds: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniquePartnerIds = [...new Set(partnerIds)];
       let partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
@@ -232,7 +232,7 @@ export function useCockpitContacts() {
           company: partner?.company_name || "—",
           role: pc.title || "",
           country: partner?.country_code || "",
-          language: inferLanguage(partner?.country_code),
+          language: inferLanguage(partner?.country_code ?? null),
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
@@ -247,7 +247,7 @@ export function useCockpitContacts() {
           contactAlias: pc.contact_alias || undefined,
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
-          enrichmentData: partner?.enrichment_data || undefined,
+          enrichmentData: (partner?.enrichment_data as Record<string, unknown>) || undefined,
           leadStatus: partner?.lead_status || "new",
           ...pMeta,
         });
@@ -344,7 +344,7 @@ export function useCockpitContacts() {
           contactAlias: ic.contact_alias || undefined,
           companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
-          enrichmentData: ic.enrichment_data || undefined,
+          enrichmentData: (ic.enrichment_data as Record<string, unknown>) || undefined,
           ...icMeta,
         });
       }
