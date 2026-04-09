@@ -388,57 +388,73 @@ function FireScrapeTest() {
 }
 
 // ━━━━━━━━━━━━ LinkedIn Tab ━━━━━━━━━━━━
+const LI_COOLDOWN_MS = 5000;
+
 function LinkedInTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
   const [foundThreads, setFoundThreads] = useState<Array<{ name: string; threadUrl?: string }>>([]);
+  const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
-  const testPing = async () => {
+  const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
+
+  const runWithCooldown = useCallback(async (fn: () => Promise<void>) => {
     setRunning(true);
+    actionTimesRef.current.push(Date.now());
+    // prune old entries
+    actionTimesRef.current = actionTimesRef.current.filter(t => Date.now() - t < 3600000);
+    try {
+      await fn();
+    } finally {
+      log(`⏳ Cooldown ${LI_COOLDOWN_MS / 1000}s...`, "info");
+      setCooldown(LI_COOLDOWN_MS / 1000);
+      const interval = setInterval(() => {
+        setCooldown(prev => {
+          if (prev <= 1) { clearInterval(interval); setRunning(false); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  }, [log]);
+
+  const testPing = () => runWithCooldown(async () => {
     log("🔌 Ping estensione LinkedIn...");
     const r = await liMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
-    setRunning(false);
-  };
+  });
 
-  const testSession = async () => {
-    setRunning(true);
+  const testSession = () => runWithCooldown(async () => {
     log("🔑 Verifica sessione LinkedIn...");
     const r = await liMsg("verifySession", {}, 30000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
-    setRunning(false);
-  };
+  });
 
-  const testSyncCookie = async () => {
-    setRunning(true);
+  const testSyncCookie = () => runWithCooldown(async () => {
     log("🍪 Sync cookie li_at...");
     const r = await liMsg("syncCookie", {}, 15000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testAutoLogin = async () => {
-    setRunning(true);
+  const testAutoLogin = () => runWithCooldown(async () => {
     log("🔐 Auto-login LinkedIn...");
     const r = await liMsg("autoLogin", {}, 60000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testExtractProfile = async () => {
+  const testExtractProfile = () => runWithCooldown(async () => {
     if (!profileUrl || profileUrl === "https://www.linkedin.com/in/") {
       log("⚠️ Inserisci un URL profilo valido", "warn");
       return;
     }
-    setRunning(true);
     log(`👤 Estrazione profilo: ${profileUrl}`);
     const r = await liMsg("extractProfile", { url: profileUrl }, 30000);
     if (r?.success && r?.profile) {
@@ -450,20 +466,16 @@ function LinkedInTest() {
     } else {
       log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
-    setRunning(false);
-  };
+  });
 
-  const testSearchProfile = async () => {
-    setRunning(true);
+  const testSearchProfile = () => runWithCooldown(async () => {
     const query = "Mario Rossi CEO";
     log(`🔎 Ricerca profilo: "${query}"`);
     const r = await liMsg("searchProfile", { query }, 30000);
     log(`Risultato: ${JSON.stringify(r, null, 2).slice(0, 1000)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testReadInbox = async () => {
-    setRunning(true);
+  const testReadInbox = () => runWithCooldown(async () => {
     log("📨 Lettura inbox LinkedIn (30s timeout)...");
     const r = await liMsg("readLinkedInInbox", {}, 35000);
     if (r?.success && r?.threads?.length) {
@@ -473,10 +485,9 @@ function LinkedInTest() {
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
     }
-    setRunning(false);
-  };
+  });
 
-  const testSendMessage = async () => {
+  const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) {
       log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn");
       return;
@@ -485,7 +496,6 @@ function LinkedInTest() {
       log("⚠️ Inserisci il testo del messaggio", "warn");
       return;
     }
-    setRunning(true);
     log(`📤 Invio messaggio LinkedIn...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
@@ -499,11 +509,9 @@ function LinkedInTest() {
         log("💡 Suggerimento: assicurati che il tab LinkedIn sia attivo e visibile", "warn");
       }
     }
-    setRunning(false);
-  };
+  });
 
-  const testDiagnosticDom = async () => {
-    setRunning(true);
+  const testDiagnosticDom = () => runWithCooldown(async () => {
     log("🔬 Diagnostica DOM LinkedIn Messaging...");
     const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
     if (r?.success) {
@@ -528,20 +536,29 @@ function LinkedInTest() {
     } else {
       log(`❌ Diagnostica fallita: ${r?.error || JSON.stringify(r)}`, "error");
     }
-    setRunning(false);
-  };
+  });
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
-        <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
-        <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
-        <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
-        <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
-        <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
-        <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
-        <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
+          <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
+          <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
+          <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
+          <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
+          <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
+          <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
+          <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          {cooldown > 0 && (
+            <span className="text-xs font-mono text-yellow-500 animate-pulse">⏳ {cooldown}s</span>
+          )}
+          <span className={`text-xs font-mono px-2 py-0.5 rounded ${actionsLastHour > 15 ? "bg-red-500/20 text-red-400" : actionsLastHour > 8 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"}`}>
+            LI: {actionsLastHour}/h
+          </span>
+        </div>
       </div>
 
       <div className="flex gap-2">
