@@ -14,6 +14,7 @@ type Props = {
   messages: ChannelMessage[];
   selectedId: string | null;
   onSelect: (msg: ChannelMessage) => void;
+  holdingFilter?: boolean;
 };
 
 const ROW_HEIGHT = 72;
