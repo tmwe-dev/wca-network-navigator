@@ -62,7 +62,7 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
   const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
 
   const cached = domain ? logoCache.get(domain) : undefined;
-  const [src, setSrc] = useState<"clearbit" | "google" | "none">(cached || "clearbit");
+  const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
 
   useEffect(() => {
     if (domain) {
