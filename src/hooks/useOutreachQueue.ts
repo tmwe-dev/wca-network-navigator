@@ -6,6 +6,26 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { toast } from "@/hooks/use-toast";
 
+/** Track activity after successful queue send (mirrors useTrackActivity logic) */
+async function trackQueueActivity(item: QueueItem, channel: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const activityType = channel === "email" ? "send_email" : channel === "whatsapp" ? "whatsapp_message" : "linkedin_message";
+    const now = new Date().toISOString();
+    await supabase.from("activities").insert({
+      activity_type: activityType as any,
+      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
+      source_type: "imported_contact",
+      source_id: item.created_by || crypto.randomUUID(),
+      status: "completed" as any,
+      user_id: user.id,
+      description: `Messaggio ${channel} inviato dalla coda automatica`,
+      email_subject: item.subject,
+    });
+  } catch { /* best-effort tracking */ }
+}
+
 interface QueueItem {
   id: string;
   channel: string;
@@ -65,11 +85,16 @@ export function useOutreachQueue() {
             await updateStatus(item.id, "failed", "Estensione WhatsApp non disponibile");
             return false;
           }
+          if (!wa.isAuthenticated) {
+            await updateStatus(item.id, "pending", "WhatsApp Web non autenticato");
+            return false;
+          }
           const phone = item.recipient_phone?.replace(/[^0-9+]/g, "").replace(/^\+/, "") || "";
           if (!phone) { await updateStatus(item.id, "failed", "Numero telefono mancante"); return false; }
           const res = await wa.sendWhatsApp(phone, item.body);
           if (res.success) {
             await updateStatus(item.id, "sent");
+            await trackQueueActivity(item, "whatsapp");
             toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` });
             return true;
           }
@@ -94,6 +119,7 @@ export function useOutreachQueue() {
 
           if (liRes.success) {
             await updateStatus(item.id, "sent");
+            await trackQueueActivity(item, "linkedin");
             toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` });
             return true;
           }
@@ -113,6 +139,7 @@ export function useOutreachQueue() {
             return false;
           }
           await updateStatus(item.id, "sent");
+          await trackQueueActivity(item, "email");
           toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` });
           return true;
         }

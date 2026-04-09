@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search } from "lucide-react";
+import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DraftChannel } from "@/pages/Cockpit";
 
-const channels: { id: DraftChannel; label: string; icon: any; hoverBg: string; hoverBorder: string; hoverText: string }[] = [
-  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary" },
-  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]" },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]" },
-  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground" },
+const channels: { id: DraftChannel; label: string; icon: any; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
+  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary", requiredField: "email" },
+  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]", requiredField: "linkedinUrl" },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]", requiredField: "phone" },
+  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground", requiredField: "phone" },
 ];
+
+export interface ContactAvailability {
+  hasEmail?: boolean;
+  hasPhone?: boolean;
+  hasLinkedinUrl?: boolean;
+}
 
 interface ChannelDropZonesProps {
   isDragging: boolean;
@@ -19,9 +25,10 @@ interface ChannelDropZonesProps {
   onReadProfile?: () => void;
   onDeepSearch?: () => void;
   hasActiveContact?: boolean;
+  contactAvailability?: ContactAvailability;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact }: ChannelDropZonesProps) {
+export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact, contactAvailability }: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   // Compact mode: show horizontal row of buttons when not dragging
@@ -57,6 +64,11 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           {channels.map((ch) => {
             const Icon = ch.icon;
             const isHovered = hoveredChannel === ch.id;
+            const isMissing = contactAvailability && hasActiveContact
+              ? (ch.requiredField === "email" && !contactAvailability.hasEmail) ||
+                (ch.requiredField === "phone" && !contactAvailability.hasPhone) ||
+                (ch.requiredField === "linkedinUrl" && !contactAvailability.hasLinkedinUrl)
+              : false;
             return (
               <div
                 key={ch.id}
@@ -71,6 +83,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
                   !isHovered && "border-border/40 bg-card/40 text-muted-foreground/60",
                   isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder, ch.hoverText),
+                  isMissing && !isHovered && "opacity-50",
                 )}
               >
                 <div className={cn(
@@ -80,7 +93,13 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={cn("text-sm font-semibold", isHovered && "text-foreground")}>{ch.label}</span>
-                {isHovered && (
+                {isMissing && (
+                  <span className="ml-auto flex items-center gap-1 text-[10px] text-warning">
+                    <AlertTriangle className="w-3 h-3" />
+                    Dato mancante
+                  </span>
+                )}
+                {isHovered && !isMissing && (
                   <span className={cn("text-xs font-medium ml-auto", ch.hoverText)}>
                     Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
                   </span>

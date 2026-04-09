@@ -1,18 +1,19 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useTrackActivity } from "@/hooks/useTrackActivity";
 import { toast } from "sonner";
 
 /**
  * Shared hook for direct contact communication actions (email composer, WhatsApp bridge).
- * Creates activities and enters the holding pattern on success.
+ * Uses trackActivity for full tracking: activities, contact_interactions, lead_status escalation.
  * Used across Network, BCA, Contacts, Prospects, and Drawer.
  */
 export function useDirectContactActions() {
   const navigate = useNavigate();
-  const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
+  const { sendWhatsApp, isAvailable: waAvailable, isAuthenticated: waAuthenticated } = useWhatsAppExtensionBridge();
   const [waSending, setWaSending] = useState<string | null>(null);
+  const trackActivity = useTrackActivity();
 
   const handleSendEmail = useCallback(
     (opts: {
@@ -53,6 +54,12 @@ export function useDirectContactActions() {
         toast.error("Estensione WhatsApp non connessa. Apri WhatsApp Web e ricarica.");
         return false;
       }
+
+      if (!waAuthenticated) {
+        toast.error("⚠️ WhatsApp Web non autenticato. Scansiona il QR code.");
+        return false;
+      }
+
       const key = opts.contactId || opts.phone;
       setWaSending(key);
       try {
@@ -60,20 +67,14 @@ export function useDirectContactActions() {
         const result = await sendWhatsApp(cleanPhone, "");
         if (result?.success) {
           toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from("activities").insert({
-              activity_type: "whatsapp_message" as any,
-              title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
-              source_type: opts.sourceType || "partner",
-              source_id: opts.sourceId || opts.partnerId || opts.contactId || "",
-              partner_id: opts.partnerId || null,
-              selected_contact_id: opts.contactId || null,
-              status: "completed" as any,
-              user_id: user.id,
-              description: "Messaggio WhatsApp inviato",
-            });
-          }
+          // Use trackActivity for full tracking (activities + contact_interactions + lead_status)
+          trackActivity.mutate({
+            activityType: "whatsapp_message",
+            title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
+            sourceId: opts.sourceId || opts.contactId || opts.partnerId || crypto.randomUUID(),
+            sourceType: opts.sourceType === "contact" ? "imported_contact" : opts.sourceType === "prospect" ? "imported_contact" : (opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card",
+            description: "Messaggio WhatsApp inviato",
+          });
           opts.onSuccess?.();
           return true;
         } else {
@@ -87,7 +88,7 @@ export function useDirectContactActions() {
         setWaSending(null);
       }
     },
-    [waAvailable, sendWhatsApp]
+    [waAvailable, waAuthenticated, sendWhatsApp, trackActivity]
   );
 
   return { handleSendEmail, handleSendWhatsApp, waSending, waAvailable };

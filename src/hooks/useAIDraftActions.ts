@@ -8,6 +8,7 @@ import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import type { DraftState } from "@/pages/Cockpit";
 import { useTrackActivity } from "@/hooks/useTrackActivity";
+
 export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftState) => void) {
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
@@ -15,6 +16,7 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
   const trackActivity = useTrackActivity();
+
   const handleCopy = () => {
     const text = draft.channel === "email"
       ? `Subject: ${draft.subject}\n\n${draft.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/?[^>]+(>|$)/g, "")}`
@@ -29,30 +31,42 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
       toast({ title: "Numero di telefono mancante", variant: "destructive" });
       return;
     }
-    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
 
-    if (waBridge.isAvailable) {
-      setSending(true);
-      try {
-        const res = await waBridge.sendWhatsApp(phone, plainText);
-        if (res.success) {
-          toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
-        } else {
-          toast({ title: "Errore WhatsApp", description: res.error, variant: "destructive" });
-        }
-      } catch {
-        toast({ title: "Errore invio WhatsApp", variant: "destructive" });
-      } finally {
-        setSending(false);
-      }
-    } else {
-      navigator.clipboard.writeText(plainText);
-      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
-      toast({
-        title: "📋 Messaggio copiato!",
-        description: "Estensione WA non rilevata. Clicca per aprire WhatsApp.",
-      });
+    // Check authentication before sending
+    if (!waBridge.isAvailable) {
+      navigator.clipboard.writeText(draft.body.replace(/<[^>]+>/g, "").trim());
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(draft.body.replace(/<[^>]+>/g, "").trim())}`;
+      toast({ title: "📋 Messaggio copiato!", description: "Estensione WA non rilevata." });
       window.open(waUrl, "_blank");
+      return;
+    }
+
+    if (!waBridge.isAuthenticated) {
+      toast({ title: "⚠️ WhatsApp Web non autenticato", description: "Apri WhatsApp Web e scansiona il QR code.", variant: "destructive" });
+      return;
+    }
+
+    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+    setSending(true);
+    try {
+      const res = await waBridge.sendWhatsApp(phone, plainText);
+      if (res.success) {
+        toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
+        // Track activity + holding pattern
+        trackActivity.mutate({
+          activityType: "whatsapp_message",
+          title: `${draft.companyName || "—"} — ${draft.contactName || phone}`,
+          sourceId: draft.contactId || crypto.randomUUID(),
+          sourceType: "imported_contact",
+          description: `Messaggio WhatsApp inviato a ${draft.contactName || phone}`,
+        });
+      } else {
+        toast({ title: "Errore WhatsApp", description: res.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Errore invio WhatsApp", variant: "destructive" });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -116,6 +130,14 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
+          // Track activity + holding pattern
+          trackActivity.mutate({
+            activityType: "linkedin_message",
+            title: `${draft.companyName || "—"} — ${draft.contactName || "contatto"}`,
+            sourceId: draft.contactId || crypto.randomUUID(),
+            sourceType: "imported_contact",
+            description: `Messaggio LinkedIn inviato a ${draft.contactName || profileUrl}`,
+          });
         } else {
           navigator.clipboard.writeText(plainText);
           toast({ title: "📋 Messaggio copiato", description: "Apri il profilo LinkedIn e incolla il messaggio." });
@@ -195,6 +217,13 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
       const res = await liBridge.sendConnectionRequest(url, draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300));
       if (res.success) {
         toast({ title: "✅ Richiesta di collegamento inviata!" });
+        trackActivity.mutate({
+          activityType: "linkedin_message",
+          title: `LinkedIn Connect — ${draft.contactName || "contatto"}`,
+          sourceId: draft.contactId || crypto.randomUUID(),
+          sourceType: "imported_contact",
+          description: `Richiesta collegamento LinkedIn inviata`,
+        });
       } else {
         toast({ title: "Errore connessione", description: res.error, variant: "destructive" });
       }

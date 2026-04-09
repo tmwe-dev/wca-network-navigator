@@ -138,6 +138,14 @@ const Cockpit = () => {
               isDragging={!!draggedContactId} draggedContactId={draggedContactId}
               dragCount={dragCount} onDrop={handleDrop}
               hasActiveContact={!!draftState.contactId}
+              contactAvailability={draftState.contactId ? (() => {
+                const c = contactsMap[draftState.contactId!];
+                return c ? {
+                  hasEmail: !!c.email,
+                  hasPhone: !!c.phone,
+                  hasLinkedinUrl: !!c.linkedinUrl,
+                } : undefined;
+              })() : undefined}
               onReadProfile={() => {
                 if (draftState.contactId) {
                   const c = contactsMap[draftState.contactId];
