@@ -85,6 +85,10 @@ export function useOutreachQueue() {
             await updateStatus(item.id, "failed", "Estensione WhatsApp non disponibile");
             return false;
           }
+          if (!wa.isAuthenticated) {
+            await updateStatus(item.id, "pending", "WhatsApp Web non autenticato");
+            return false;
+          }
           const phone = item.recipient_phone?.replace(/[^0-9+]/g, "").replace(/^\+/, "") || "";
           if (!phone) { await updateStatus(item.id, "failed", "Numero telefono mancante"); return false; }
           const res = await wa.sendWhatsApp(phone, item.body);
