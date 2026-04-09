@@ -1,52 +1,60 @@
 
 
-# Verifica Timing e Stato WhatsApp/LinkedIn
+# Piano: Isolamento Dati Personali per Operatore
 
-## Stato Attuale
+## Architettura attuale — cosa è già isolato e cosa no
 
-### Timing nella Coda di Produzione (`useOutreachQueue.ts`) — OK
-I delay tra invii esistono già e sono corretti:
-- **WhatsApp**: 5 secondi tra un messaggio e l'altro
-- **LinkedIn**: 10 secondi tra un messaggio e l'altro
-- **Email**: 2 secondi
-- La coda processa max 5 item per ciclo, con pausa tra ognuno
+### GIA' ISOLATO per user_id (RLS `user_id = auth.uid()`)
+- `channel_messages` (email, WhatsApp, LinkedIn) — ogni utente vede solo i suoi
+- `activities` — ogni utente vede solo le sue
+- `outreach_queue` — ogni utente vede solo la sua coda
+- `email_sync_state`, `email_sync_jobs` — configurazione IMAP per utente
+- `operators` — credenziali IMAP/SMTP/WhatsApp/LinkedIn per operatore
 
-### Maschera Test (`TestExtensions.tsx`) — PROBLEMA
-La maschera test **non ha alcun delay tra le azioni**. Ogni pulsante è manuale, ma nulla impedisce di cliccare rapidamente in sequenza (Ping → Sessione → SyncCookie → AutoLogin → Search → Inbox). Questo genera 6+ interazioni con LinkedIn in pochi secondi — esattamente il comportamento rischioso.
+### CONDIVISO (tutti vedono tutto) — corretto, da mantenere
+- `partners` — database aziendale condiviso
+- `business_cards` — BCA condivisa (select = `true`)
+- `imported_contacts` — contatti condivisi
+- `partner_contacts` — contatti dei partner condivisi
 
-### WhatsApp — FUNZIONA
-Dai log: sessione autenticata, 67 chat visibili, invio messaggi operativo.
+### PROBLEMA: Circuito di attesa (Holding Pattern)
+Il hook `useHoldingPatternList` carica partners/prospects/contatti in stati attivi (`contacted`, `in_progress`, `negotiation`) **senza filtrare per operatore**. Questo significa che un operatore vede nel circuito anche contatti lavorati da un collega.
 
-### LinkedIn — FUNZIONA PARZIALMENTE
-- Ping, sessione, syncCookie, autoLogin, searchProfile: **tutti OK**
-- Inbox (`readLinkedInInbox`): **restituisce 0 thread** — i selettori DOM dell'estensione non trovano le conversazioni (problema nell'estensione, non nel codice webapp)
+## Cosa va modificato
 
-## Fix Proposti
+### 1. Circuito di Attesa — filtrare per operatore
+Il circuito deve mostrare solo i contatti che **l'operatore corrente ha effettivamente contattato**. La logica: un contatto appare nel mio circuito solo se esiste almeno un'attività (`activities`) mia (`user_id = auth.uid()`) per quel source_id.
 
-### 1. Aggiungere delay obbligatorio nella maschera Test
-Dopo ogni azione LinkedIn nella maschera test, disabilitare i pulsanti per **5 secondi** con countdown visibile. Impedisce clic rapidi in sequenza.
+**File:** `src/hooks/useHoldingPattern.ts`
+- Dopo aver caricato i partner/prospect/contatti in stati attivi, cross-referenziare con `activities` dell'utente corrente
+- Filtrare: mostra solo quelli per cui esiste almeno un record in `activities` con `user_id = auth.uid()` e `source_id = item.id`
 
-```
-// Concetto: dopo ogni azione LinkedIn
-setRunning(true);
-// ... esegui azione ...
-log("⏳ Cooldown 5s...", "info");
-await new Promise(r => setTimeout(r, 5000));
-setRunning(false);
-```
+### 2. Contatore messaggi non letti — già OK
+`useUnreadCounts` interroga `channel_messages` che ha RLS su `user_id` — ogni operatore vede solo i suoi non letti.
 
-### 2. Aggiungere contatore azioni LinkedIn nell'ora
-Mostrare nella maschera test un badge: "Azioni LI nell'ultima ora: N". Serve come indicatore visuale di rischio.
+### 3. Inreach (inbox) — già OK
+`useChannelMessages` interroga `channel_messages` con RLS `user_id = auth.uid()` — ogni operatore vede solo la propria inbox.
 
-### File coinvolti
+### 4. Nessuna modifica RLS necessaria
+Le policy RLS esistenti sono già corrette. Il problema è solo lato frontend nel circuito di attesa.
+
+## Limiti del sistema attuale
+
+1. **Partner condivisi ma lead_status globale**: se operatore A mette un partner in `contacted`, operatore B lo vede in quello stato. Il `lead_status` è una proprietà del partner, non dell'operatore. Questo è corretto per un CRM aziendale condiviso.
+
+2. **Account "Global/Master"**: per il futuro, il master dovrà bypassare il filtro sul circuito. Si implementerà con un flag `is_admin` sull'operatore — se admin, non applica il filtro `activities.user_id`.
+
+3. **Attività cross-operatore**: se operatore A crea un'attività per un partner e poi operatore B ne crea un'altra, entrambi vedranno quel partner nel proprio circuito — comportamento corretto.
+
+## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/pages/TestExtensions.tsx` | Cooldown 5s dopo ogni azione LinkedIn, badge contatore |
+| `src/hooks/useHoldingPattern.ts` | Aggiungere filtro: mostra solo item per cui l'utente ha almeno un'attività propria |
 
 ## Risultato
-- La maschera test non può più generare burst di richieste LinkedIn
-- Il codice di produzione (outreach queue) già rispetta i delay
-- WhatsApp funziona
-- LinkedIn funziona (tranne inbox che è un problema di selettori nell'estensione)
+- Email/WhatsApp/LinkedIn: ogni operatore vede solo i propri messaggi (già funzionante)
+- Circuito di attesa: ogni operatore vede solo i contatti che ha lavorato personalmente
+- Partners/BCA/Contatti: restano condivisi (dati aziendali)
+- Futuro account master: vedrà tutto senza filtro
 
