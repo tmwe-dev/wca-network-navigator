@@ -17,7 +17,7 @@ export interface UnifiedRecord {
   website: string | null;
   leadStatus: string;
   note: string | null;
-  enrichmentData: unknown;
+  enrichmentData: Record<string, unknown> | null;
   deepSearchAt: string | null;
   createdAt: string;
   lastInteractionAt: string | null;
@@ -26,7 +26,7 @@ export interface UnifiedRecord {
   companyAlias: string | null;
   contactAlias: string | null;
   partnerId: string | null;
-  raw: unknown;
+  raw: Record<string, unknown> | null;
 }
 
 export function useContactRecord(sourceType: RecordSourceType | null, sourceId: string | null) {
