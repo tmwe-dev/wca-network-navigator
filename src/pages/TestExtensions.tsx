@@ -425,45 +425,36 @@ function LinkedInTest() {
     }
   }, [log]);
 
-  const testPing = async () => {
-    setRunning(true);
+  const testPing = () => runWithCooldown(async () => {
     log("🔌 Ping estensione LinkedIn...");
     const r = await liMsg("ping", {}, 5000);
     if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
     else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
-    setRunning(false);
-  };
+  });
 
-  const testSession = async () => {
-    setRunning(true);
+  const testSession = () => runWithCooldown(async () => {
     log("🔑 Verifica sessione LinkedIn...");
     const r = await liMsg("verifySession", {}, 30000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
-    setRunning(false);
-  };
+  });
 
-  const testSyncCookie = async () => {
-    setRunning(true);
+  const testSyncCookie = () => runWithCooldown(async () => {
     log("🍪 Sync cookie li_at...");
     const r = await liMsg("syncCookie", {}, 15000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testAutoLogin = async () => {
-    setRunning(true);
+  const testAutoLogin = () => runWithCooldown(async () => {
     log("🔐 Auto-login LinkedIn...");
     const r = await liMsg("autoLogin", {}, 60000);
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testExtractProfile = async () => {
+  const testExtractProfile = () => runWithCooldown(async () => {
     if (!profileUrl || profileUrl === "https://www.linkedin.com/in/") {
       log("⚠️ Inserisci un URL profilo valido", "warn");
       return;
     }
-    setRunning(true);
     log(`👤 Estrazione profilo: ${profileUrl}`);
     const r = await liMsg("extractProfile", { url: profileUrl }, 30000);
     if (r?.success && r?.profile) {
@@ -475,20 +466,16 @@ function LinkedInTest() {
     } else {
       log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
-    setRunning(false);
-  };
+  });
 
-  const testSearchProfile = async () => {
-    setRunning(true);
+  const testSearchProfile = () => runWithCooldown(async () => {
     const query = "Mario Rossi CEO";
     log(`🔎 Ricerca profilo: "${query}"`);
     const r = await liMsg("searchProfile", { query }, 30000);
     log(`Risultato: ${JSON.stringify(r, null, 2).slice(0, 1000)}`, r?.success ? "ok" : "error");
-    setRunning(false);
-  };
+  });
 
-  const testReadInbox = async () => {
-    setRunning(true);
+  const testReadInbox = () => runWithCooldown(async () => {
     log("📨 Lettura inbox LinkedIn (30s timeout)...");
     const r = await liMsg("readLinkedInInbox", {}, 35000);
     if (r?.success && r?.threads?.length) {
@@ -498,19 +485,7 @@ function LinkedInTest() {
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
     }
-    setRunning(false);
-  };
-
-  const testSendMessage = async () => {
-    if (!sendUrl.trim()) {
-      log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn");
-      return;
-    }
-    if (!sendText.trim()) {
-      log("⚠️ Inserisci il testo del messaggio", "warn");
-      return;
-    }
-    setRunning(true);
+  });
     log(`📤 Invio messaggio LinkedIn...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
