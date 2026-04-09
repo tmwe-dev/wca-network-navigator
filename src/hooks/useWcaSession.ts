@@ -6,6 +6,7 @@
  * Testa la connessione chiamando wca-app.vercel.app/api/login.
  */
 import { useState, useCallback } from "react";
+import { setWcaCookie } from "@/lib/wcaCookieStore";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useWcaSession");
