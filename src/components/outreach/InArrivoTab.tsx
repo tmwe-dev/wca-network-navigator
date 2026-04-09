@@ -1,4 +1,4 @@
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Mail, MessageCircle, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
