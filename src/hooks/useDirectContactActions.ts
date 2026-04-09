@@ -72,7 +72,7 @@ export function useDirectContactActions() {
             activityType: "whatsapp_message",
             title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
             sourceId: opts.sourceId || opts.contactId || opts.partnerId || crypto.randomUUID(),
-            sourceType: (opts.sourceType === "contact" ? "imported_contact" : opts.sourceType) || "partner",
+            sourceType: opts.sourceType === "contact" ? "imported_contact" : opts.sourceType === "prospect" ? "imported_contact" : (opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card",
             description: "Messaggio WhatsApp inviato",
           });
           opts.onSuccess?.();
