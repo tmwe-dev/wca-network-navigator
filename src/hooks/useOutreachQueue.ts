@@ -90,6 +90,7 @@ export function useOutreachQueue() {
           const res = await wa.sendWhatsApp(phone, item.body);
           if (res.success) {
             await updateStatus(item.id, "sent");
+            await trackQueueActivity(item, "whatsapp");
             toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` });
             return true;
           }
