@@ -54,13 +54,11 @@ interface CompanyLogoProps {
 }
 
 /**
- * Displays a company logo from Clearbit with Google Favicon fallback.
- * Shows nothing (empty space) when no logo is found — never a white box.
+ * Displays a company logo from Clearbit with InitialsAvatar fallback.
  * Optionally shows a country flag based on the email TLD.
  */
 export function CompanyLogo({ domain: domainProp, email, name, size = 32, className, showFlag = false }: CompanyLogoProps) {
   const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
-
   const cached = domain ? logoCache.get(domain) : undefined;
   const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
 
@@ -101,7 +99,6 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    // Reject tiny placeholder images (likely generic/broken logos)
     if (img.naturalWidth < 16 || img.naturalHeight < 16) {
       handleError();
       return;
@@ -130,10 +127,7 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
 function FlagBadge({ flag, size }: { flag: string; size: number }) {
   const flagSize = Math.max(14, Math.round(size * 0.55));
   return (
-    <span
-      className="absolute -bottom-1 -right-1 leading-none"
-      style={{ fontSize: flagSize }}
-    >
+    <span className="absolute -bottom-1 -right-1 leading-none" style={{ fontSize: flagSize }}>
       {flag}
     </span>
   );
@@ -159,4 +153,65 @@ function InitialsAvatar({ name, size, className }: { name: string; size: number;
       {initials || "?"}
     </div>
   );
+}
+
+/**
+ * Inline company logo — only renders if Clearbit has a real logo.
+ * No fallback, no placeholder. Returns null if no logo found.
+ */
+export function CompanyLogoInline({ domain: domainProp, email, size = 18, className }: {
+  domain?: string | null;
+  email?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const cached = domain ? logoCache.get(domain) : undefined;
+  const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
+
+  useEffect(() => {
+    if (domain) {
+      const c = logoCache.get(domain);
+      if (c) setSrc(c);
+      else setSrc("clearbit");
+    }
+  }, [domain]);
+
+  if (!domain || isPersonalEmail(domain) || src === "none") return null;
+
+  return (
+    <img
+      src={`https://logo.clearbit.com/${domain}`}
+      alt=""
+      width={size}
+      height={size}
+      className={cn("rounded object-contain inline-block", className)}
+      onError={() => { setSrc("none"); logoCache.set(domain, "none"); }}
+      onLoad={(e) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+          setSrc("none"); logoCache.set(domain, "none");
+        } else {
+          logoCache.set(domain, "clearbit");
+        }
+      }}
+      loading="lazy"
+      style={{ maxWidth: size, maxHeight: size }}
+    />
+  );
+}
+
+/**
+ * Standalone country flag from email TLD. Returns null if no flag found.
+ */
+export function CountryFlag({ domain: domainProp, email, size = 22, className }: {
+  domain?: string | null;
+  email?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const flag = domain ? getFlagFromDomain(domain) : null;
+  if (!flag) return null;
+  return <span className={cn("leading-none", className)} style={{ fontSize: size }}>{flag}</span>;
 }
