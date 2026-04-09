@@ -29,7 +29,7 @@ function formatElapsed(seconds: number): string {
   return minutes > 0 ? `${minutes}m ${secs}s` : `${secs}s`;
 }
 
-export function EmailInboxView() {
+export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function EmailInboxView() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: messages = [], isLoading, pageSize } = useChannelMessages("email", debouncedSearch, page);
+  const { data: messages = [], isLoading, pageSize } = useChannelMessages("email", debouncedSearch, page, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { isSyncing, progress } = useContinuousSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);

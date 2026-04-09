@@ -1,5 +1,5 @@
 import { useState, Suspense } from "react";
-import { Mail, MessageCircle, Linkedin } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
@@ -10,6 +10,9 @@ import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
+import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
+import { useCurrentOperator } from "@/hooks/useOperators";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const EmailInboxView = lazyRetry(() =>
   import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
@@ -35,6 +38,17 @@ export function InArrivoTab() {
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
+  // Admin multi-operator support
+  const { operators } = useActiveOperator();
+  const { data: currentOp } = useCurrentOperator();
+  const isAdmin = currentOp?.is_admin ?? false;
+  const activeOperators = operators.filter(o => o.is_active && o.user_id);
+
+  // "all" = no filter (admin sees everything), or specific user_id
+  const [selectedOperatorUserId, setSelectedOperatorUserId] = useState<string | null>(null);
+  // operatorUserId to pass to hooks: null means "all" (RLS handles visibility)
+  const operatorUserId = selectedOperatorUserId || undefined;
+
   // Lift WhatsApp hooks
   const waSync = useWhatsAppAdaptiveSync();
   const waBackfill = useWhatsAppBackfill();
@@ -49,6 +63,38 @@ export function InArrivoTab() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      {/* Admin: operator tabs */}
+      {isAdmin && activeOperators.length > 1 && (
+        <div className="px-3 py-1 border-b border-border/30 flex items-center gap-1 overflow-x-auto">
+          <Users className="w-3 h-3 text-muted-foreground shrink-0" />
+          <button
+            onClick={() => setSelectedOperatorUserId(null)}
+            className={cn(
+              "px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-all",
+              !selectedOperatorUserId
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
+            )}
+          >
+            Tutti
+          </button>
+          {activeOperators.map(op => (
+            <button
+              key={op.id}
+              onClick={() => setSelectedOperatorUserId(op.user_id!)}
+              className={cn(
+                "px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-all",
+                selectedOperatorUserId === op.user_id
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
+              )}
+            >
+              {op.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Channel filter bar + channel-specific controls */}
       <div className="px-3 py-1.5 border-b border-border/30 flex items-center gap-1 flex-wrap">
         {CHANNELS.map(ch => {
@@ -116,14 +162,15 @@ export function InArrivoTab() {
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<div className="h-full animate-pulse bg-muted/20 rounded-lg" />}>
-          {channel === "email" && <EmailInboxView />}
+          {channel === "email" && <EmailInboxView operatorUserId={operatorUserId} />}
           {channel === "whatsapp" && (
             <WhatsAppInboxView
               syncState={waSync}
               backfillState={waBackfill}
+              operatorUserId={operatorUserId}
             />
           )}
-          {channel === "linkedin" && <LinkedInInboxView />}
+          {channel === "linkedin" && <LinkedInInboxView operatorUserId={operatorUserId} />}
         </Suspense>
       </div>
     </div>
