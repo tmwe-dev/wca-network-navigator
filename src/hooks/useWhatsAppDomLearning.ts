@@ -44,7 +44,7 @@ export function useWhatsAppDomLearning() {
         lastLearnRef.current = parsed.learnedAt || 0;
         return parsed;
       }
-    } catch (_) {}
+    } catch (err) { console.warn("[WA DOM] Failed to load schema:", err); }
     return null;
   }, []);
 
