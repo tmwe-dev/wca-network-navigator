@@ -216,17 +216,34 @@ export default function EnrichmentSettings() {
         "from_address",
         (q: any) => q.not("from_address", "is", null)
       );
-      const domainMap = new Map<string, { from: string; domain: string }>();
+      // Aggregate: count emails per from_address
+      const addressMap = new Map<string, number>();
       for (const row of data) {
-        const domain = extractDomainFromEmail(row.from_address || "");
-        if (domain && !isPersonalEmail(domain) && !domainMap.has(domain))
-          domainMap.set(domain, { from: row.from_address!, domain });
+        const addr = (row.from_address || "").toLowerCase().trim();
+        if (addr) addressMap.set(addr, (addressMap.get(addr) || 0) + 1);
       }
-      return Array.from(domainMap.values()).map((s): EnrichedRow => ({
-        id: `email-${s.domain}`,
-        name: s.domain.split(".")[0].replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        domain: s.domain, source: "email", hasLogo: false, hasLinkedin: false, email: s.from,
-      }));
+      // Deduplicate by domain but keep individual senders with their counts
+      const senderRows: EnrichedRow[] = [];
+      const seen = new Set<string>();
+      // Sort by count descending for deduplication priority
+      const sorted = [...addressMap.entries()].sort((a, b) => b[1] - a[1]);
+      for (const [addr, count] of sorted) {
+        const domain = extractDomainFromEmail(addr);
+        if (!domain || isPersonalEmail(domain)) continue;
+        if (seen.has(addr)) continue;
+        seen.add(addr);
+        senderRows.push({
+          id: `email-${addr}`,
+          name: addr.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+          domain,
+          source: "email",
+          hasLogo: false,
+          hasLinkedin: false,
+          email: addr,
+          emailCount: count,
+        });
+      }
+      return senderRows;
     },
     staleTime: 60_000,
   });
