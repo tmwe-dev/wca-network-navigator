@@ -179,7 +179,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               className="h-7 gap-1.5 text-xs"
               onClick={() => {
                 const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-                navigate("/outreach", {
+                navigate("/email-composer", {
                   state: {
                     prefilledRecipient: {
                       email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
