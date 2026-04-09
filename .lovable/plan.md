@@ -1,60 +1,71 @@
 
 
-# Piano: Isolamento Dati Personali per Operatore
+# Piano: Inbox Multi-Operatore + Campagne Distribuite per Tutor
 
-## Architettura attuale — cosa è già isolato e cosa no
+## 1. Inbox Multi-Operatore per Admin
 
-### GIA' ISOLATO per user_id (RLS `user_id = auth.uid()`)
-- `channel_messages` (email, WhatsApp, LinkedIn) — ogni utente vede solo i suoi
-- `activities` — ogni utente vede solo le sue
-- `outreach_queue` — ogni utente vede solo la sua coda
-- `email_sync_state`, `email_sync_jobs` — configurazione IMAP per utente
-- `operators` — credenziali IMAP/SMTP/WhatsApp/LinkedIn per operatore
+### Problema attuale
+La RLS su `channel_messages` filtra per `user_id = auth.uid()`. L'admin vede solo le proprie email.
 
-### CONDIVISO (tutti vedono tutto) — corretto, da mantenere
-- `partners` — database aziendale condiviso
-- `business_cards` — BCA condivisa (select = `true`)
-- `imported_contacts` — contatti condivisi
-- `partner_contacts` — contatti dei partner condivisi
+### Soluzione
 
-### PROBLEMA: Circuito di attesa (Holding Pattern)
-Il hook `useHoldingPatternList` carica partners/prospects/contatti in stati attivi (`contacted`, `in_progress`, `negotiation`) **senza filtrare per operatore**. Questo significa che un operatore vede nel circuito anche contatti lavorati da un collega.
+**Database** — Aggiornare la policy RLS SELECT su `channel_messages`:
+```sql
+-- L'admin vede tutti i messaggi, l'operatore solo i propri
+user_id = auth.uid() OR public.is_operator_admin()
+```
 
-## Cosa va modificato
+**UI** — Modificare `InArrivoTab.tsx`:
+- Se `currentOp.is_admin`: mostrare una barra di tab orizzontali sopra il canale (Email/WA/LI) con il nome di ogni operatore attivo + tab "Tutti"
+- Passare un filtro `operatorUserId` a `EmailInboxView` / `WhatsAppInboxView` / `LinkedInInboxView`
+- Ogni messaggio mostra un piccolo badge con il nome del tutor proprietario
 
-### 1. Circuito di Attesa — filtrare per operatore
-Il circuito deve mostrare solo i contatti che **l'operatore corrente ha effettivamente contattato**. La logica: un contatto appare nel mio circuito solo se esiste almeno un'attività (`activities`) mia (`user_id = auth.uid()`) per quel source_id.
+**Hook** — Modificare `useChannelMessages.ts`:
+- Aggiungere parametro opzionale `operatorUserId?: string`
+- Se presente, filtrare `.eq("user_id", operatorUserId)` invece di usare solo RLS
+- Se "Tutti", non aggiungere filtro (la RLS admin permette già tutto)
 
-**File:** `src/hooks/useHoldingPattern.ts`
-- Dopo aver caricato i partner/prospect/contatti in stati attivi, cross-referenziare con `activities` dell'utente corrente
-- Filtrare: mostra solo quelli per cui esiste almeno un record in `activities` con `user_id = auth.uid()` e `source_id = item.id`
-
-### 2. Contatore messaggi non letti — già OK
-`useUnreadCounts` interroga `channel_messages` che ha RLS su `user_id` — ogni operatore vede solo i suoi non letti.
-
-### 3. Inreach (inbox) — già OK
-`useChannelMessages` interroga `channel_messages` con RLS `user_id = auth.uid()` — ogni operatore vede solo la propria inbox.
-
-### 4. Nessuna modifica RLS necessaria
-Le policy RLS esistenti sono già corrette. Il problema è solo lato frontend nel circuito di attesa.
-
-## Limiti del sistema attuale
-
-1. **Partner condivisi ma lead_status globale**: se operatore A mette un partner in `contacted`, operatore B lo vede in quello stato. Il `lead_status` è una proprietà del partner, non dell'operatore. Questo è corretto per un CRM aziendale condiviso.
-
-2. **Account "Global/Master"**: per il futuro, il master dovrà bypassare il filtro sul circuito. Si implementerà con un flag `is_admin` sull'operatore — se admin, non applica il filtro `activities.user_id`.
-
-3. **Attività cross-operatore**: se operatore A crea un'attività per un partner e poi operatore B ne crea un'altra, entrambi vedranno quel partner nel proprio circuito — comportamento corretto.
-
-## File coinvolti
-
+### File coinvolti
 | File | Modifica |
 |------|----------|
-| `src/hooks/useHoldingPattern.ts` | Aggiungere filtro: mostra solo item per cui l'utente ha almeno un'attività propria |
+| Migration SQL | Aggiornare policy RLS SELECT su `channel_messages` |
+| `src/components/outreach/InArrivoTab.tsx` | Tab orizzontali per operatore (solo admin) |
+| `src/hooks/useChannelMessages.ts` | Filtro `operatorUserId` opzionale |
+| `src/components/outreach/EmailInboxView.tsx` | Accettare prop `operatorUserId`, mostrare badge tutor |
 
-## Risultato
-- Email/WhatsApp/LinkedIn: ogni operatore vede solo i propri messaggi (già funzionante)
-- Circuito di attesa: ogni operatore vede solo i contatti che ha lavorato personalmente
-- Partners/BCA/Contatti: restano condivisi (dati aziendali)
-- Futuro account master: vedrà tutto senza filtro
+---
+
+## 2. Campagne Multi-Tutor per Admin
+
+### Logica
+Quando il master lancia una campagna:
+1. Seleziona i target (paesi, contatti, filtri)
+2. Il sistema raggruppa i contatti per operatore assegnato (o per territorio se non assegnato)
+3. Per ogni operatore crea batch separati di `campaign_jobs` con `assigned_to = operator.user_id`
+4. L'outreach queue processa ogni batch usando le credenziali SMTP/WA/LI dell'operatore assegnato
+
+### Struttura dati
+`campaign_jobs` ha già `assigned_to` — verrà popolato con il `user_id` dell'operatore.
+L'edge function `send-email` dovrà risolvere le credenziali SMTP dal `user_id` del job, non dall'utente che ha lanciato la campagna.
+
+### File coinvolti
+| File | Modifica |
+|------|----------|
+| `src/hooks/useCampaignJobs.ts` | Funzione di distribuzione contatti per operatore |
+| Mission Builder (cockpit) | Aggiungere step "Distribuzione per Tutor" con preview della suddivisione |
+| `supabase/functions/send-email/index.ts` | Risolvere credenziali SMTP da `assigned_to` (operator) invece che da auth.uid() |
+
+---
+
+## 3. Visibilità Campagne per Ruolo
+
+- **Operatore normale**: vede solo i job con `assigned_to = proprio user_id`
+- **Admin/Master**: vede tutti i job, raggruppati per operatore, con contatore per tutor
+
+### Risultato
+- L'admin naviga le inbox di tutti gli operatori con tab orizzontali
+- Ogni messaggio mostra a chi appartiene (tutor + agente AI)
+- Le campagne vengono distribuite automaticamente per operatore
+- Ogni operatore usa le proprie credenziali per l'invio
+- L'operatore normale continua a vedere solo i propri dati
 
