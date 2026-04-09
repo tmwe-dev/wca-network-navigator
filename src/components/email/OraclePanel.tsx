@@ -47,7 +47,13 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
   const [newPrompt, setNewPrompt] = useState("");
   const [detailType, setDetailType] = useState<EmailType | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  
+  const [customGoal, setCustomGoal] = useState("");
+
+  // Voice dictation for custom goal
+  const onVoiceText = useCallback((text: string) => {
+    setCustomGoal(text);
+  }, []);
+  const speech = useContinuousSpeech(onVoiceText);
 
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
