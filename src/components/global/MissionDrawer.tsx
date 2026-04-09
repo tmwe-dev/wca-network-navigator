@@ -54,6 +54,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [presetName, setPresetName] = useState("");
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [contextDialogOpen, setContextDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
   const [linksDialogOpen, setLinksDialogOpen] = useState(false);
   const [newLink, setNewLink] = useState("");
