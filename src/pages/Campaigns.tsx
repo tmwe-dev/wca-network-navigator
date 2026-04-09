@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
-import { usePartnersByCountryForGlobe, usePartnersForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
+import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
+import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -186,7 +187,7 @@ function CampaignHeaderControls({
       {/* Stats badges */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
-          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.length}</span>
+          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.filter(c => c.count > 0).length}</span>
           <span className="text-slate-400 text-xs">Paesi</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
@@ -306,20 +307,20 @@ export default function Campaigns() {
   const [selectedGoal, setSelectedGoal] = useState("primo_contatto");
   const navigate = useNavigate();
 
-  // Fetch partners data
-  const { data: globeData } = usePartnersForGlobe();
+  // Fetch partners data — real counts from partners table
+  const { data: countryData } = useCountryPartnerCounts();
   const { data: countryPartnersData = [] } = usePartnersByCountryForGlobe(selectedCountry);
   const { data: bcaPartnerIds } = useBusinessCardPartnerMatches();
   const { data: bcaCountryData = [] } = useBusinessCardsForCampaign(source === "bca" ? selectedCountry : null);
   const { data: bcaCountryCounts = {} } = useBcaCountryCounts();
 
-  const countries = globeData?.countries || [];
+  const countries = countryData?.countries || [];
   const totalPartners = source === "bca" 
     ? Object.values(bcaCountryCounts).reduce((a, b) => a + b, 0)
-    : (globeData?.partners.length || 0);
+    : (countryData?.totalPartners || 0);
   const countriesWithPartners = source === "bca"
     ? Object.keys(bcaCountryCounts).length
-    : countries.filter(c => c.count > 0).length;
+    : (countryData?.activeCountries || 0);
 
   // Get partners for selected country
   const countryPartners = useMemo(() => {
