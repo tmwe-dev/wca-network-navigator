@@ -399,7 +399,7 @@ REGOLE:
 - Non creare job se ce n'è già uno attivo per lo stesso paese
 - Prioritizza paesi con più partner ma meno profili scaricati
 - Il delay pattern è gestito automaticamente dal V8 engine
-- Dopo ogni download, verifica che i dati siano stati salvati correttamente`,
+- Dopo ogni download, verifica che i dati siano stati salvati correttamente` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   research: {
