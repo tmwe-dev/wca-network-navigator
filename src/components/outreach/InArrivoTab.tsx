@@ -1,8 +1,9 @@
 import { useState, Suspense } from "react";
-import { Mail, MessageCircle, Linkedin, Inbox } from "lucide-react";
+import { Mail, MessageCircle, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
+import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
 
 const EmailInboxView = lazyRetry(() =>
   import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
@@ -29,14 +30,13 @@ export function InArrivoTab() {
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
   const badges: Record<string, number> = { email: emailUnread, whatsapp: waUnread, linkedin: liUnread };
-  const totalUnread = emailUnread + waUnread + liUnread;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Channel filter bar */}
-      <div className="px-3 py-1.5 border-b border-border/30 flex items-center gap-1">
+      {/* Channel filter bar + channel-specific controls */}
+      <div className="px-3 py-1.5 border-b border-border/30 flex items-center gap-1 flex-wrap">
         {CHANNELS.map(ch => {
-          const badge = ch.channel ? badges[ch.channel] : totalUnread;
+          const badge = badges[ch.channel];
           return (
             <button
               key={ch.value}
@@ -63,6 +63,13 @@ export function InArrivoTab() {
             </button>
           );
         })}
+
+        {/* WhatsApp controls inline */}
+        {channel === "whatsapp" && (
+          <div className="ml-auto">
+            <WhatsAppToolbar />
+          </div>
+        )}
       </div>
 
       {/* Content */}
