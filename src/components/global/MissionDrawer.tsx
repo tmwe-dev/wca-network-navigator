@@ -239,6 +239,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <div className="flex items-center gap-2">
                 <ActionIcon icon={Target} label="Obiettivo" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
                 <ActionIcon icon={FileText} label="Proposta" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-blue-500/25 to-blue-500/5" iconColor="text-blue-500" onClick={() => setProposalDialogOpen(true)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <ActionIcon icon={MessageSquareText} label="Contesto" active={!!m.context} activeName={m.context ? (m.context.length > 18 ? m.context.slice(0, 18) + "…" : m.context) : undefined} color="from-violet-500/25 to-violet-500/5" iconColor="text-violet-500" onClick={() => setContextDialogOpen(true)} />
                 <ActionIcon icon={Paperclip} label="Docs" active={m.documents.length > 0} count={m.documents.length} color="from-amber-500/25 to-amber-500/5" iconColor="text-amber-500" onClick={() => setDocsDialogOpen(true)} />
                 <ActionIcon icon={Link2} label="Link" active={m.referenceLinks.length > 0} count={m.referenceLinks.length} color="from-emerald-500/25 to-emerald-500/5" iconColor="text-emerald-500" onClick={() => setLinksDialogOpen(true)} />
               </div>
