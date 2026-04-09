@@ -82,11 +82,8 @@ export function useLinkedInSync() {
       if (newMsgs > 0) {
         queryClient.invalidateQueries({ queryKey: ["channel-messages", "linkedin"] });
         toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
-      } else if (dupes > 0) {
-        toast.info("Messaggi LinkedIn già sincronizzati");
-      } else {
-        toast.info(`${result.threads.length} thread letti, nessun nuovo messaggio`);
       }
+      window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
       setLastSyncAt(Date.now());
     } catch (err: any) {
       log.warn("sync error", { message: err instanceof Error ? err.message : String(err) });

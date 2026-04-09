@@ -32,6 +32,20 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "em
 
 export function InArrivoTab() {
   const [channel, setChannel] = useState<Channel>("email");
+  const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
+
+  // Listen for sync-done events and pulse the corresponding tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ch = (e as CustomEvent).detail?.channel as Channel;
+      if (ch) {
+        setPulsingChannel(ch);
+        setTimeout(() => setPulsingChannel(null), 800);
+      }
+    };
+    window.addEventListener("channel-sync-done", handler);
+    return () => window.removeEventListener("channel-sync-done", handler);
+  }, []);
   const { data: emailUnread = 0 } = useUnreadCount("email");
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
