@@ -80,16 +80,28 @@ File:
 
 ## Stato attuale del progetto rispetto al metodo
 
-Secondo l'[AUDIT_2026-04-08.md](../../AUDIT_2026-04-08.md), il progetto si trova **nella Fase 0 del Protocollo del Recupero** (Vol. I, cap. II). Voto attuale: **4.150/10.000**. Il piano di ristrutturazione in 5 ondate descritto nell'audit è la **concretizzazione** delle fasi 1-10 del Vol. I applicate a questo specifico codebase.
+Secondo l'[AUDIT_2026-04-08.md](../../AUDIT_2026-04-08.md), il progetto si trova **nella Fase 1 del Protocollo del Recupero** (Vol. I, cap. III). Voto attuale: **4.150/10.000** (audit iniziale). Il piano di ristrutturazione in 5 ondate descritto nell'audit è la **concretizzazione** delle fasi 1-10 del Vol. I applicate a questo specifico codebase.
+
+### Test implementati (Sessione 2026-04-09)
+
+| File test | Tipo | Test | Cosa verifica |
+|---|---|---|---|
+| `src/test/apiError.test.ts` | Vitest | 16 | ApiError: costruzione, toJSON, isApiError, from(), fromResponse() per tutti gli status |
+| `src/test/invokeEdge.test.ts` | Vitest | 14 | invokeEdge: successo, propagazione body/headers, mapping status→code, body extraction |
+| `src/test/platformTools-integrity.test.ts` | Vitest | 7 | Integrità PLATFORM_TOOLS: ≥30 tool, nomi unici, handler↔definizione, struttura parametri |
+| `supabase/functions/_shared/platformTools_test.ts` | Deno | 5 | Stesse verifiche lato Deno (snake_case, unicità, completezza) |
+| `supabase/functions/check-inbox/index_test.ts` | Deno | 2 | CORS preflight 200, POST senza auth → 401 |
+
+**Totale: 44 test passanti** (37 Vitest + 7 Deno)
 
 | Fase Vol. I | Corrispondenza nel piano audit |
 |---|---|
 | Fase 0 — Fotografia | ✅ AUDIT_2026-04-08.md (eseguito) |
-| Fase 1 — Contenimento del degrado | ⏳ Ondata 1 — Stabilizzazione |
+| Fase 1 — Contenimento del degrado | ✅ Parziale — test guardrails implementati |
 | Fase 2 — Radiografia | ✅ sezioni 1-6 dell'audit |
 | Fase 3 — Asse di verità | ⏳ Ondata 1 (consolidamento bridge WCA) |
 | Fase 4 — Classificazione 3 colori | ⏳ Ondata 2 (split file giganti) |
-| Fase 5 — Guardrails | ⏳ Ondata 3 (type safety + lint + test) |
+| Fase 5 — Guardrails | ✅ Parziale — test suite API + integrità tool |
 | Fase 6 — Debugging sistematico | ⏳ continuo |
 | Fase 7 — Recupero verticale | ⏳ Ondata 2+ (un flusso alla volta) |
 | Fase 8 — Strangler pattern | ⏳ Ondata 4 (edge fn + tabelle) |
