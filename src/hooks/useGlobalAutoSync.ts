@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react"; // v2
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
