@@ -28,7 +28,7 @@ interface ChannelDropZonesProps {
   contactAvailability?: ContactAvailability;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact }: ChannelDropZonesProps) {
+export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact, contactAvailability }: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   // Compact mode: show horizontal row of buttons when not dragging
