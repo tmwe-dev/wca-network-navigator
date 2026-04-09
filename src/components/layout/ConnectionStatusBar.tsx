@@ -143,16 +143,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     }
   }, [li, wa, fsExt, settings, updateSetting, downloadPartnerConnectExtension]);
 
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    window.dispatchEvent(new CustomEvent("sync-wca-trigger"));
-    // Also trigger email check if available
-    try {
-      const { callCheckInbox } = await import("@/lib/checkInbox");
-      await callCheckInbox();
-    } catch { /* intentionally ignored: best-effort cleanup */ }
-    setTimeout(() => setSyncing(false), 3000);
-  }, []);
 
   const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
   const allActive = activeCount === 4;
