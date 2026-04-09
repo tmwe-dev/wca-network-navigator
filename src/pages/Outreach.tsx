@@ -1,8 +1,12 @@
 import { Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useOutreachMock } from "@/hooks/useOutreachMock";
+import { cn } from "@/lib/utils";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
@@ -17,6 +21,7 @@ function TabFallback() {
 export default function Outreach() {
   const [tab, setTab] = useState("cockpit");
   const { setOutreachTab } = useGlobalFilters();
+  const { mockEnabled, toggleMock } = useOutreachMock();
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
@@ -30,6 +35,24 @@ export default function Outreach() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Mock toggle header */}
+      <div className="shrink-0 flex items-center justify-end px-3 py-1 border-b border-border/30">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={mockEnabled ? "default" : "ghost"}
+              className={cn("h-6 text-[10px] gap-1 px-2", mockEnabled && "bg-amber-500 hover:bg-amber-600 text-white")}
+              onClick={toggleMock}
+            >
+              <TestTube2 className="w-3 h-3" />
+              {mockEnabled ? "Mock ON" : "Mock"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom"><p className="text-xs">Mostra/nascondi dati demo temporanei</p></TooltipContent>
+        </Tooltip>
+      </div>
+
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">
