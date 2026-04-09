@@ -11,46 +11,11 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
-}
-
-// STT hook
-function useSpeechRecognition(onResult: (text: string) => void) {
-  const [listening, setListening] = useState(false);
-  const recRef = useRef<any>(null);
-
-  const toggle = useCallback(() => {
-    if (listening && recRef.current) {
-      recRef.current.stop();
-      setListening(false);
-      return;
-    }
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.lang = "it-IT";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onresult = (e: any) => {
-      let final = "";
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript;
-      }
-      if (final) onResult(final);
-    };
-    rec.onerror = () => setListening(false);
-    rec.onend = () => setListening(false);
-    rec.start();
-    recRef.current = rec;
-    setListening(true);
-  }, [listening, onResult]);
-
-  useEffect(() => () => { recRef.current?.stop(); }, []);
-
-  return { listening, toggle };
 }
 
 export default function AgentChatHub() {
@@ -64,10 +29,9 @@ export default function AgentChatHub() {
   const [, forceRender] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const appendInput = useCallback((text: string) => {
+  const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
-  }, []);
-  const { listening, toggle: toggleSTT } = useSpeechRecognition(appendInput);
+  });
 
   useEffect(() => {
     if (!activeId && agents.length > 0) setActiveId(agents[0].id);
@@ -264,14 +228,14 @@ export default function AgentChatHub() {
           {/* STT mic */}
           <Button
             size="icon"
-            variant={listening ? "destructive" : "outline"}
-            onClick={toggleSTT}
+            variant={speech.listening ? "destructive" : "outline"}
+            onClick={speech.toggle}
             disabled={!activeAgent}
-            className={cn("rounded-xl relative", listening && "animate-pulse")}
-            title={listening ? "Stop dettatura" : "Dettatura vocale"}
+            className={cn("rounded-xl relative", speech.listening && "animate-pulse")}
+            title={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
           >
-            {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            {listening && (
+            {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {speech.listening && (
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-ping" />
             )}
           </Button>

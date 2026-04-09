@@ -7,6 +7,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,6 +23,10 @@ export function AgentChat({ agent }: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const speech = useContinuousSpeech((text) => {
+    setInput((prev) => (prev ? prev + " " + text : text));
+  });
 
   useEffect(() => { setMessages([]); }, [agent.id]);
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
@@ -113,13 +118,25 @@ export function AgentChat({ agent }: Props) {
       {/* Input */}
       <div className="flex gap-2 mt-2">
         <Input
-          value={input}
+          value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder={`Parla con ${agent.name}...`}
+          placeholder={speech.listening ? "🎙 Sto ascoltando…" : `Parla con ${agent.name}...`}
           className="text-sm"
           disabled={loading}
         />
+        <Button
+          size="icon"
+          variant={speech.listening ? "destructive" : "outline"}
+          onClick={speech.toggle}
+          className={cn("relative", speech.listening && "animate-pulse")}
+          title={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
+        >
+          {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          {speech.listening && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />
+          )}
+        </Button>
         <Button size="icon" onClick={send} disabled={!input.trim() || loading}>
           <Send className="w-4 h-4" />
         </Button>
