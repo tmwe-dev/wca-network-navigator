@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, MessageSquare, PanelRightOpen, PanelRightClose, Search, Users, FileText, BarChart3 } from "lucide-react";
+import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, MessageSquare, PanelRightOpen, PanelRightClose, Search, Users, FileText, BarChart3, Volume2 } from "lucide-react";
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
