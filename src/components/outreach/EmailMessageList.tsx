@@ -63,7 +63,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   // Scroll to selected item when selection changes
   useEffect(() => {
     if (!selectedId) return;
-    const idx = messages.findIndex((m) => m.id === selectedId);
+    const idx = displayMessages.findIndex((m) => m.id === selectedId);
     if (idx >= 0) {
       virtualizer.scrollToIndex(idx, { align: "auto" });
     }
