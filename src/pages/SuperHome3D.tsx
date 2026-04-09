@@ -104,8 +104,12 @@ export default function SuperHome3D() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3">
             <OperativeBriefing
+              completed={briefing?.completed}
+              todo={briefing?.todo}
+              suspended={briefing?.suspended}
               summary={briefing?.summary}
               actions={briefing?.actions ?? []}
+              stats={briefing?.stats}
               isLoading={briefingLoading}
               onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
               onAction={handleBriefingAction}
