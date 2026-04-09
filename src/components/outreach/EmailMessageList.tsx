@@ -73,7 +73,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
     <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const msg = messages[virtualRow.index];
+          const msg = displayMessages[virtualRow.index];
           const isUnread = !msg.read_at;
           const isSelected = msg.id === selectedId;
           const { brand } = extractSenderBrand(msg.from_address || "");
