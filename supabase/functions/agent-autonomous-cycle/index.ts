@@ -13,6 +13,7 @@ const supabase = createClient(
 
 const BUDGET_PER_AGENT = 10;
 const DELAY_BETWEEN_AGENTS_MS = 3000;
+const CYCLE_LOOKBACK_MINUTES = 12; // slightly more than 10min interval
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -23,10 +24,134 @@ function isHighStakes(item: any): boolean {
   return false;
 }
 
+function isNightTime(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 0 && hour < 6;
+}
+
+async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
+  // Check client_assignments first
+  const { data: assignment } = await supabase
+    .from("client_assignments")
+    .select("agent_id")
+    .eq("source_id", partnerId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (assignment?.agent_id) {
+    return agents.find(a => a.id === assignment.agent_id) || null;
+  }
+
+  // Check territory match via partner country
+  const { data: partner } = await supabase
+    .from("partners")
+    .select("country_code")
+    .eq("id", partnerId)
+    .single();
+
+  if (partner?.country_code) {
+    const cc = partner.country_code.toUpperCase();
+    const territoryAgent = agents.find(a =>
+      Array.isArray(a.territory_codes) && a.territory_codes.some((t: string) => t.toUpperCase() === cc)
+    );
+    if (territoryAgent) return territoryAgent;
+  }
+
+  return null;
+}
+
+async function screenIncomingMessages(userId: string, agents: any[]): Promise<number> {
+  let actionsCreated = 0;
+  const lookback = new Date(Date.now() - CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
+
+  // Get unread inbound messages from last cycle window
+  const { data: messages } = await supabase
+    .from("channel_messages")
+    .select("id, from_address, subject, body_text, partner_id, channel, email_date, created_at")
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .is("read_at", null)
+    .gte("created_at", lookback)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (!messages || messages.length === 0) return 0;
+
+  // Filter out messages that already have agent_tasks
+  const msgIds = messages.map(m => m.id);
+  const { data: existingTasks } = await supabase
+    .from("agent_tasks")
+    .select("target_filters")
+    .eq("user_id", userId)
+    .in("task_type", ["analysis", "screening"]);
+
+  const alreadyProcessedIds = new Set(
+    (existingTasks || [])
+      .map(t => (t.target_filters as any)?.message_id)
+      .filter(Boolean)
+  );
+
+  const salesAgents = agents.filter(a => ["outreach", "sales", "account"].includes(a.role));
+  const fallbackAgent = salesAgents[0] || agents[0];
+
+  for (const msg of messages) {
+    if (alreadyProcessedIds.has(msg.id)) continue;
+    if (actionsCreated >= BUDGET_PER_AGENT) break;
+
+    let assignedAgent = fallbackAgent;
+    let stakes = false;
+
+    // Find the right agent for this message
+    if (msg.partner_id) {
+      const found = await findAgentForPartner(userId, msg.partner_id, salesAgents);
+      if (found) assignedAgent = found;
+
+      // Check if high stakes
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status, rating")
+        .eq("id", msg.partner_id)
+        .single();
+
+      if (partner) {
+        stakes = isHighStakes(partner);
+      }
+    }
+
+    const channelLabel = msg.channel === "whatsapp" ? "WhatsApp" : "Email";
+    const senderInfo = msg.from_address || "sconosciuto";
+    const subjectInfo = msg.subject ? `"${msg.subject}"` : "(nessun oggetto)";
+
+    await supabase.from("agent_tasks").insert({
+      agent_id: assignedAgent.id,
+      user_id: userId,
+      task_type: "screening",
+      description: `📨 ${channelLabel} da ${senderInfo}: ${subjectInfo}. ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Analisi e risposta suggerita."}`,
+      target_filters: {
+        message_id: msg.id,
+        partner_id: msg.partner_id,
+        channel: msg.channel,
+        auto_approved: !stakes,
+      } as any,
+      status: stakes ? "proposed" : "pending",
+    });
+    actionsCreated++;
+  }
+
+  return actionsCreated;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Night pause check
+    if (isNightTime()) {
+      return new Response(JSON.stringify({ message: "Night pause active (00:00-06:00)", skipped: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get all users with active agents
     const { data: allAgents } = await supabase.from("agents").select("id, user_id, name, role, territory_codes, is_active").eq("is_active", true);
     if (!allAgents || allAgents.length === 0) {
@@ -43,13 +168,20 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const [userId, agents] of Object.entries(userAgents)) {
-      // Process agents sequentially (cascade)
+      // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
+      const screeningCount = await screenIncomingMessages(userId, agents);
+      if (screeningCount > 0) {
+        results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
+        await sleep(DELAY_BETWEEN_AGENTS_MS);
+      }
+
+      // ═══ PHASE 2: Process agents sequentially (existing logic) ═══
       for (const agent of agents) {
         if (!["outreach", "sales", "account"].includes(agent.role)) continue;
 
         let actionsCreated = 0;
 
-        // 1. Check for unread replies from contacts in holding pattern
+        // Check for unread replies from contacts in holding pattern
         const { data: unreadMessages } = await supabase.from("channel_messages")
           .select("id, from_address, subject, body_text, partner_id, email_date")
           .eq("user_id", userId).eq("direction", "inbound").is("read_at", null)
@@ -58,7 +190,6 @@ serve(async (req) => {
         for (const msg of (unreadMessages || [])) {
           if (actionsCreated >= BUDGET_PER_AGENT) break;
 
-          // Check if this is from a contact in holding pattern
           if (msg.partner_id) {
             const { data: partner } = await supabase.from("partners")
               .select("id, company_name, lead_status, rating")
@@ -68,18 +199,28 @@ serve(async (req) => {
               const stakes = isHighStakes({ ...partner, source: "wca" });
               const taskStatus = stakes ? "proposed" : "pending";
 
-              await supabase.from("agent_tasks").insert({
-                agent_id: agent.id, user_id: userId, task_type: "analysis",
-                description: `Analizza risposta da ${partner.company_name}: "${msg.subject}". ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Auto-approvato: esegui follow-up."}`,
-                target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes } as any,
-                status: taskStatus,
-              });
-              actionsCreated++;
+              // Check if task already exists for this message
+              const { data: existingTask } = await supabase.from("agent_tasks")
+                .select("id")
+                .eq("agent_id", agent.id)
+                .eq("user_id", userId)
+                .contains("target_filters", { message_id: msg.id } as any)
+                .maybeSingle();
+
+              if (!existingTask) {
+                await supabase.from("agent_tasks").insert({
+                  agent_id: agent.id, user_id: userId, task_type: "analysis",
+                  description: `Analizza risposta da ${partner.company_name}: "${msg.subject}". ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Auto-approvato: esegui follow-up."}`,
+                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes } as any,
+                  status: taskStatus,
+                });
+                actionsCreated++;
+              }
             }
           }
         }
 
-        // 2. Check for overdue follow-ups
+        // Check for overdue follow-ups
         const { data: overdueFups } = await supabase.from("activities")
           .select("id, title, partner_id, source_meta, due_date")
           .eq("user_id", userId).eq("status", "pending").eq("activity_type", "follow_up")
@@ -88,6 +229,15 @@ serve(async (req) => {
 
         for (const fup of (overdueFups || [])) {
           if (actionsCreated >= BUDGET_PER_AGENT) break;
+
+          // Check if task already exists
+          const { data: existingTask } = await supabase.from("agent_tasks")
+            .select("id")
+            .eq("agent_id", agent.id)
+            .contains("target_filters", { activity_id: fup.id } as any)
+            .maybeSingle();
+
+          if (existingTask) continue;
 
           let stakes = false;
           if (fup.partner_id) {
@@ -106,7 +256,6 @@ serve(async (req) => {
 
         results.push({ agent: agent.name, role: agent.role, actions_created: actionsCreated });
 
-        // Cascade delay between agents
         if (actionsCreated > 0) await sleep(DELAY_BETWEEN_AGENTS_MS);
       }
     }
