@@ -61,11 +61,11 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pd
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 type WhatsAppInboxViewProps = {
-  syncState?: ReturnType<typeof import("@/hooks/useWhatsAppAdaptiveSync").useWhatsAppAdaptiveSync>;
-  backfillState?: ReturnType<typeof import("@/hooks/useWhatsAppBackfill").useWhatsAppBackfill>;
+  syncState?: { enabled: boolean; focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
+  backfillState?: unknown;
 };
 
-export function WhatsAppInboxView({ syncState, backfillState }: WhatsAppInboxViewProps = {}) {
+export function WhatsAppInboxView({ syncState }: WhatsAppInboxViewProps = {}) {
   const [search, setSearch] = useState("");
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
