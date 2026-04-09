@@ -16,8 +16,8 @@ import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPan
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
-import SuperHome3D from "./pages/SuperHome3D";
-import Auth from "./pages/Auth";
+const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
+const Auth = lazyRetry(() => import("./pages/Auth"));
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
