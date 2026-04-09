@@ -84,28 +84,19 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
   }
 
   const clearbitUrl = `https://logo.clearbit.com/${domain}`;
-  const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${Math.min(size * 2, 256)}`;
 
   if (src === "none") {
-    // No logo found — show empty space, no white box
     return (
       <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
-        <div
-          className="rounded flex items-center justify-center"
-          style={{ width: size, height: size }}
-        />
+        <InitialsAvatar name={name || domain || "?"} size={size} />
         {flag && <FlagBadge flag={flag} size={size} />}
       </div>
     );
   }
 
   const handleError = () => {
-    if (src === "clearbit") {
-      setSrc("google");
-    } else {
-      setSrc("none");
-      logoCache.set(domain, "none");
-    }
+    setSrc("none");
+    logoCache.set(domain, "none");
   };
 
   const handleLoad = () => {
@@ -115,7 +106,7 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
   return (
     <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
       <img
-        src={src === "clearbit" ? clearbitUrl : googleUrl}
+        src={clearbitUrl}
         alt={domain}
         width={size}
         height={size}
