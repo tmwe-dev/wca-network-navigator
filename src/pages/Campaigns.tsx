@@ -367,6 +367,16 @@ export default function Campaigns() {
 
   const handleDeselectAll = useCallback(() => {
     setSelectedPartnerIds(new Set());
+    setSelectedContactIds(new Set());
+  }, []);
+
+  const handleToggleContact = useCallback((contactId: string) => {
+    setSelectedContactIds(prev => {
+      const next = new Set(prev);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
+    });
   }, []);
 
   const handleAddToCampaign = useCallback(() => {
