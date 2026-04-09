@@ -29,6 +29,10 @@ export function AgentChat({ agent }: Props) {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const speech = useContinuousSpeech((text) => {
+    setInput((prev) => (prev ? prev + " " + text : text));
+  });
+
   useEffect(() => { setMessages([]); }, [agent.id]);
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
