@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
 import type { AgentStatusItem } from "@/hooks/useDailyBriefing";
 
 interface Props {
@@ -31,6 +32,9 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
             prev.map(a => {
               if (a.id !== row.agent_id) return a;
               if (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status))) {
+                if (payload.eventType === "INSERT") {
+                  toast.info(`🤖 ${a.name}: nuovo task`, { description: row.description?.slice(0, 80) || "Task assegnato", duration: 5000 });
+                }
                 return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: row.description || a.lastTask };
               }
               if (payload.eventType === "UPDATE" && row.status === "completed") {
