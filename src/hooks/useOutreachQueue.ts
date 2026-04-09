@@ -115,6 +115,7 @@ export function useOutreachQueue() {
 
           if (liRes.success) {
             await updateStatus(item.id, "sent");
+            await trackQueueActivity(item, "linkedin");
             toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` });
             return true;
           }
