@@ -17,6 +17,7 @@ export type WhatsAppToolbarProps = {
   toggle: () => void;
   isReading: boolean;
   isAvailable: boolean;
+  isAuthenticated: boolean;
   readNow: () => void;
   bfProgress: {
     status: string;
