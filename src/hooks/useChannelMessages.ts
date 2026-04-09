@@ -78,11 +78,11 @@ const MESSAGE_LIST_SELECT = [
   "references_header",
 ].join(", ");
 
-export function useChannelMessages(channel?: string, searchQuery?: string, page = 0) {
+export function useChannelMessages(channel?: string, searchQuery?: string, page = 0, operatorUserId?: string) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["channel-messages", channel, searchQuery, page],
+    queryKey: ["channel-messages", channel, searchQuery, page, operatorUserId],
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -93,6 +93,11 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
 
       if (channel && channel !== "all") {
         q = q.eq("channel", channel);
+      }
+
+      // Admin filtering by specific operator
+      if (operatorUserId) {
+        q = q.eq("user_id", operatorUserId);
       }
 
       if (searchQuery && searchQuery.trim()) {
