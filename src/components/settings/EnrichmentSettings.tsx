@@ -292,14 +292,18 @@ export default function EnrichmentSettings() {
   });
 
   // Counts per source (unfiltered)
-  const sourceCounts = useMemo(() => ({
-    all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
-    wca: partners.length,
-    contacts: contacts.length,
-    bca: bcaItems.length,
-    email: emailSenders.length,
-    cockpit: cockpitItems.length,
-  }), [partners, contacts, bcaItems, emailSenders, cockpitItems]);
+  const sourceCounts = useMemo(() => {
+    const emailTotal = emailSenders.reduce((sum, r) => sum + (r.emailCount || 0), 0);
+    return {
+      all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
+      wca: partners.length,
+      contacts: contacts.length,
+      bca: bcaItems.length,
+      email: emailSenders.length,
+      emailTotal,
+      cockpit: cockpitItems.length,
+    };
+  }, [partners, contacts, bcaItems, emailSenders, cockpitItems]);
 
   // Filtered rows
   const allRows = useMemo(() => {
