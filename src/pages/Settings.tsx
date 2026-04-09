@@ -15,6 +15,7 @@ import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
 import OperativeJobsBoard from "@/components/settings/OperativeJobsBoard";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
+import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
 
