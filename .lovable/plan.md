@@ -1,60 +1,72 @@
 
 
-# Piano: Oracolo Universale — Fix Layout, Contesto Reale, Campo Goal con Dettatura Vocale
+# Piano: Circuito Migliorato + Dettaglio Attivita + Dati Mock
 
-## Problemi da risolvere
+## 4 Interventi
 
-1. **Spazio nero sopra Opzioni AI**: ScrollArea con `flex-1` nel tab Tipi si espande oltre il contenuto
-2. **Standalone mode cieco**: quando il Composer ha un destinatario con `partnerId` reale, non carica dati dal DB (history, enrichment, tipo interlocutore)
-3. **Manca campo Goal libero**: l'utente vuole poter scrivere istruzioni specifiche ("ci siamo incontrati a Genova, parlato di pezzi di ricambio...") che guidino l'AI
-4. **Manca dettatura vocale**: il campo goal deve supportare registrazione microfono con trascrizione automatica
+### 1. Circuito — Pannello sinistro migliorato
 
-## Modifiche
+Ogni messaggio nella lista mostra attualmente solo subject troncato + data. Migliorare con:
+- **Logo azienda** (da `logo_url` in partners) o iniziale colorata
+- **Nome contatto** sotto il nome azienda
+- **Badge canale** (icona mail/WA/LinkedIn colorata)
+- **Preview corpo** piu leggibile (2 righe, non troncata a 80 char)
+- **Indicatore direzione** piu chiaro (freccia colorata verde=ricevuto, blu=inviato)
+- **Separatore visivo** tra gruppi azienda con bordo sinistro colorato
+- Riutilizzare pattern gia presenti nelle card contatti (bandiera paese, timeline marker)
 
-### 1. OraclePanel.tsx — Fix layout + Campo Goal con microfono
+### 2. Circuito — Pannello destro: azioni fuori dai tab
 
-**Fix spazio nero**: Cambiare il tab Tipi da `flex-1` a dimensione naturale con overflow scroll solo se necessario.
+Attualmente ci sono 3 tab: Risposta, Strategia, Azioni. Cambiare a:
+- **4 icone azione rapida** in riga orizzontale sopra i tab (sotto l'header messaggio):
+  - ✅ Approva e Invia (verde)
+  - ✕ Ignora (grigio)
+  - 📞 Escalation Chiamata (ambra)
+  - ✨ Rigenera AI (primary)
+- **Solo 2 tab** sotto: Risposta e Strategia (rimuovere tab Azioni)
 
-**Nuovo campo Goal** sopra la lista tipi:
-- Textarea con placeholder "Descrivi l'obiettivo o il contesto della comunicazione..."
-- Pulsante microfono (🎙️) a destra per dettatura vocale
-- Il goal viene passato a `onGenerate` insieme al tipo selezionato
-- Se c'e' sia goal scritto che tipo selezionato, entrambi vengono iniettati nel prompt
+### 3. Attivita — Dettaglio espandibile
 
-**Dettatura vocale**: Usa la Web Speech API (`SpeechRecognition`) nativa del browser — zero costi, zero API key. Quando l'utente clicca il microfono:
-- Inizia la registrazione continua
-- Il testo trascritto si appende al campo goal in tempo reale
-- Click di nuovo per fermare
+Attualmente le righe sono solo lista piatta senza interazione. Aggiungere:
+- **Click su riga** → espande un pannello inline (accordion) con:
+  - Contenuto email (subject + body HTML) se tipo email
+  - Contenuto messaggio se WA/LinkedIn
+  - Note associate
+  - Pulsante "Riprogramma" con date picker per creare follow-up
+  - Pulsante "Aggiungi nota" inline
+- Alternativa: pannello laterale destro (slide-in) per il dettaglio — piu coerente con il resto del sistema
 
-**Aggiornare `OracleConfig`** per includere `customGoal: string`.
+### 4. Dati Mock temporanei con toggle globale
 
-### 2. EmailComposer.tsx — Passare il customGoal + caricare partner reale
-
-**Custom Goal**: `handleAIGenerate` usa `config.customGoal` come goal primario. Se presente sia customGoal che emailType.prompt, li combina: `"${emailType.prompt}\n\nISTRUZIONI SPECIFICHE: ${customGoal}"`.
-
-**Partner reale in standalone**: Quando c'e' un solo destinatario con `partnerId` valido (non UUID generato):
-- Passare `partner_id` nel payload a `generate-email`
-- Rimuovere `standalone: true` per quel caso
-- L'edge function carichera' partner reale, history, enrichment, guard
-
-### 3. generate-email/index.ts — Supporto partner_id senza activity_id
-
-Aggiungere una terza modalita' oltre "standalone" e "activity":
-- Se `partner_id` e' presente e `standalone` e' true → caricare partner reale dal DB, contacts, history, enrichment
-- Usare la stessa logica del mode "activity" ma senza richiedere un'attivita' CRM
-- Questo unifica il ragionamento AI: dal Composer hai lo stesso contesto del Cockpit
+Creare un sistema mock data per mostrare la grafica finale:
+- **Pulsante nell'header** di Outreach (icona `TestTube` o `Database`) che attiva/disattiva i mock
+- Stato salvato in `localStorage` (`outreach-mock-enabled`)
+- Quando attivo, ogni tab (In Uscita, Attivita, Circuito, Coda AI) mostra dati finti mescolati o al posto dei dati reali
+- **File dedicato** `src/lib/outreachMockData.ts` con:
+  - 8-10 sorting jobs mock (In Uscita)
+  - 12-15 attivita mock con tipi vari, priorita, date (Attivita)
+  - 6-8 messaggi holding pattern mock con aziende/contatti (Circuito)
+  - 5-6 azioni AI pendenti mock (Coda AI)
+- I dati mock includono nomi realistici italiani, aziende di logistica, email con subject credibili
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/email/OraclePanel.tsx` | Fix ScrollArea, aggiungere campo goal con textarea + microfono, aggiornare OracleConfig |
-| `src/pages/EmailComposer.tsx` | Passare customGoal, usare partner_id reale quando disponibile |
-| `supabase/functions/generate-email/index.ts` | Aggiungere mode "standalone con partner_id" per caricare dati reali |
+| `src/components/outreach/HoldingPatternCommandCenter.tsx` | Migliorare lista SX (logo, contatto, preview), ristrutturare DX (azioni in alto, 2 tab) |
+| `src/components/outreach/AttivitaTab.tsx` | Aggiungere dettaglio espandibile/slide-in con contenuto, note, riprogrammazione |
+| `src/lib/outreachMockData.ts` | **Nuovo** — dati mock per tutte e 4 le sezioni |
+| `src/hooks/useOutreachMock.ts` | **Nuovo** — hook per toggle mock (localStorage) |
+| `src/pages/Outreach.tsx` | Aggiungere pulsante mock toggle nell'header |
+| `src/components/outreach/InUscitaTab.tsx` | Integrare mock data quando attivo |
+| `src/components/outreach/CodaAITab.tsx` | Integrare mock data quando attivo |
 
 ## Ordine di esecuzione
 
-1. Fix OraclePanel (layout + campo goal + microfono)
-2. Aggiornare EmailComposer per passare customGoal e partner_id
-3. Aggiornare Edge Function per supportare il nuovo mode
+1. Creare `outreachMockData.ts` + `useOutreachMock.ts`
+2. Riscrivere pannello sinistro Circuito (grafica migliorata)
+3. Ristrutturare pannello destro Circuito (azioni sopra + 2 tab)
+4. Aggiungere dettaglio espandibile in Attivita
+5. Aggiungere toggle mock in header Outreach
+6. Integrare mock in tutte le 4 sezioni
 
