@@ -13,7 +13,9 @@ type WaExtensionResponse = {
 
 export function useWhatsAppExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
+  const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
   const sidebarChangedCbRef = useRef<(() => void) | null>(null);
