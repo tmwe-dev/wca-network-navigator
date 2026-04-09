@@ -9,7 +9,7 @@ import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
   Check, ExternalLink, Globe, Sparkles, ArrowUpFromLine,
-  Settings, Database, Rocket,
+  Settings, Database, Rocket, MessageSquareText,
 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [presetName, setPresetName] = useState("");
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [contextDialogOpen, setContextDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
   const [linksDialogOpen, setLinksDialogOpen] = useState(false);
   const [newLink, setNewLink] = useState("");
@@ -238,6 +239,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <div className="flex items-center gap-2">
                 <ActionIcon icon={Target} label="Obiettivo" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
                 <ActionIcon icon={FileText} label="Proposta" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-blue-500/25 to-blue-500/5" iconColor="text-blue-500" onClick={() => setProposalDialogOpen(true)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <ActionIcon icon={MessageSquareText} label="Contesto" active={!!m.context} activeName={m.context ? (m.context.length > 18 ? m.context.slice(0, 18) + "…" : m.context) : undefined} color="from-violet-500/25 to-violet-500/5" iconColor="text-violet-500" onClick={() => setContextDialogOpen(true)} />
                 <ActionIcon icon={Paperclip} label="Docs" active={m.documents.length > 0} count={m.documents.length} color="from-amber-500/25 to-amber-500/5" iconColor="text-amber-500" onClick={() => setDocsDialogOpen(true)} />
                 <ActionIcon icon={Link2} label="Link" active={m.referenceLinks.length > 0} count={m.referenceLinks.length} color="from-emerald-500/25 to-emerald-500/5" iconColor="text-emerald-500" onClick={() => setLinksDialogOpen(true)} />
               </div>
@@ -288,6 +292,40 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               <Textarea value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)} placeholder="La proposta commerciale..." className="min-h-[100px] text-sm resize-none" />
             </div>
             <DialogFooter><Button size="sm" onClick={() => setProposalDialogOpen(false)}>Chiudi</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={contextDialogOpen} onOpenChange={setContextDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-sm flex items-center gap-2"><MessageSquareText className="w-4 h-4 text-violet-500" /> Contesto</DialogTitle>
+              <DialogDescription className="text-xs">Perché stai scrivendo? Il contesto guida l'AI nella personalizzazione</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto space-y-3 py-2">
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Fiera / Evento", value: "Incontrato a una fiera/evento di settore" },
+                  { label: "Trovato online", value: "Trovato online attraverso ricerca di mercato" },
+                  { label: "Referral", value: "Segnalato da un partner/contatto comune" },
+                  { label: "Ex-cliente", value: "Ricontatto di un ex-cliente per nuova collaborazione" },
+                  { label: "Cold outreach", value: "Primo contatto a freddo basato sul profilo aziendale" },
+                  { label: "Follow-up", value: "Follow-up dopo un primo contatto precedente" },
+                ].map(chip => (
+                  <button
+                    key={chip.label}
+                    onClick={() => m.setContext(m.context ? `${m.context}. ${chip.value}` : chip.value)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-border/40 bg-muted/20 hover:border-violet-500/40 hover:bg-violet-500/5 transition-colors"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              <Textarea value={m.context} onChange={e => m.setContext(e.target.value)} placeholder="Es: Abbiamo incontrato il sig. Rossi alla fiera di Milano il 15 marzo. La sua azienda opera nel settore logistico e cerca partner per spedizioni aeree..." className="min-h-[120px] text-sm resize-none" />
+            </div>
+            <DialogFooter>
+              {m.context && <Button variant="ghost" size="sm" onClick={() => m.setContext("")}>Cancella</Button>}
+              <Button size="sm" onClick={() => setContextDialogOpen(false)}>Chiudi</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

@@ -34,6 +34,8 @@ interface MissionState {
   savePreset: (name: string, id?: string) => void;
   deletePreset: (id: string) => void;
   loadPreset: (preset: WorkspacePreset) => void;
+  context: string;
+  setContext: (v: string) => void;
   quality: EmailQuality;
   setQuality: (q: EmailQuality) => void;
   recipients: SelectedRecipient[];
@@ -55,6 +57,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [baseProposal, setBaseProposal] = useState("");
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [context, setContext] = useState("");
   const [quality, setQuality] = useState<EmailQuality>("standard");
   const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
 
@@ -79,6 +82,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setGoal(preset.goal || "");
     setBaseProposal(preset.base_proposal || "");
     setReferenceLinks(preset.reference_links || []);
+    setContext((preset as any).context || "");
     setActivePresetId(preset.id);
   };
 
@@ -101,7 +105,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   return (
     <MissionCtx.Provider value={{
       goal, setGoal, baseProposal, setBaseProposal,
-      referenceLinks, setReferenceLinks,
+      referenceLinks, setReferenceLinks, context, setContext,
       documents, uploading, upload, removeDocument: remove,
       presets, activePresetId, setActivePresetId,
       savePreset, deletePreset, loadPreset,
