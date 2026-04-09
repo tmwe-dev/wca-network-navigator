@@ -12,7 +12,7 @@ import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
-import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
+import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
 import OperativeJobsBoard from "@/components/settings/OperativeJobsBoard";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
 import AdminUsers from "@/pages/AdminUsers";
@@ -29,18 +29,6 @@ export default function Settings() {
     if (t) setTab(t);
   }, [searchParams]);
 
-  // Enrichment filter state — lifted here to pass into VerticalTabNav filterSlot
-  const [enrSource, setEnrSource] = useState<SourceFilter>("all");
-  const [enrFilter, setEnrFilter] = useState<EnrichFilter>("all");
-  const [enrSearch, setEnrSearch] = useState("");
-  const [enrSortField, setEnrSortField] = useState<SortField>("name");
-  const [enrSortDir, setEnrSortDir] = useState<SortDir>("asc");
-
-  const toggleEnrSort = (field: SortField) => {
-    if (enrSortField === field) setEnrSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setEnrSortField(field); setEnrSortDir("asc"); }
-  };
-
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -49,7 +37,6 @@ export default function Settings() {
     { value: "generale", label: "Generale", icon: SettingsIcon },
     { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
     { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
-    
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
     { value: "import-export", label: "Importa", icon: Download },
@@ -62,24 +49,9 @@ export default function Settings() {
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
   ];
 
-  // Dynamic filterSlot based on active tab
-  const filterSlot = tab === "enrichment" ? (
-    <EnrichmentFilters
-      search={enrSearch}
-      onSearchChange={setEnrSearch}
-      source={enrSource}
-      onSourceChange={setEnrSource}
-      enrichFilter={enrFilter}
-      onEnrichFilterChange={setEnrFilter}
-      sortField={enrSortField}
-      sortDir={enrSortDir}
-      onToggleSort={toggleEnrSort}
-    />
-  ) : undefined;
-
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} filterSlot={filterSlot} />
+      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
       <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
         {tab === "download-email" ? (
           <EmailDownloadPage />
@@ -122,15 +94,7 @@ export default function Settings() {
             )}
             {tab === "operatori" && <OperatorsSettings />}
             {tab === "utenti" && <AdminUsers />}
-            {tab === "enrichment" && (
-              <EnrichmentSettings
-                source={enrSource}
-                enrichFilter={enrFilter}
-                sortField={enrSortField}
-                sortDir={enrSortDir}
-                search={enrSearch}
-              />
-            )}
+            {tab === "enrichment" && <EnrichmentSettings />}
             {tab === "memoria-ai" && (
               <div className="float-panel p-5">
                 <MemoryDashboard />
