@@ -30,15 +30,19 @@ async function checkWhitelist(email: string): Promise<boolean> {
 async function recordLogin(email: string) {
   try {
     await supabase.rpc("record_user_login" as any, { p_email: email });
-  } catch { /* intentionally ignored: best-effort cleanup */ }
+  } catch {
+    // intentionally ignored: best-effort cleanup
+  }
 }
 
 export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const isBusy = loading || resettingPassword;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -72,41 +76,84 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    // Pre-check whitelist before attempting login
-    const allowed = await checkWhitelist(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const allowed = await checkWhitelist(normalizedEmail);
     if (!allowed) {
       toast.error("Email non autorizzata. Contatta l'amministratore.");
       setLoading(false);
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+    if (error) {
+      toast.error(
+        error.message === "Invalid login credentials"
+          ? "Credenziali non valide. Se non ricordi la password, usa “Password dimenticata?”."
+          : error.message,
+      );
+    }
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      toast.error("Inserisci prima la tua email.");
+      return;
+    }
+
+    setResettingPassword(true);
+
+    const allowed = await checkWhitelist(normalizedEmail);
+    if (!allowed) {
+      toast.error("Email non autorizzata. Contatta l'amministratore.");
+      setResettingPassword(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Ti ho inviato il link per reimpostare la password.");
+    }
+
+    setResettingPassword(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Pre-check whitelist
-    const allowed = await checkWhitelist(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const allowed = await checkWhitelist(normalizedEmail);
     if (!allowed) {
       toast.error("Email non autorizzata. Solo gli utenti invitati possono registrarsi.");
       setLoading(false);
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: window.location.origin,
         data: { full_name: displayName },
       },
     });
-    if (error) toast.error(error.message);
-    else toast.success("Controlla la tua email per confermare la registrazione");
+
+    if (error) {
+      toast.error(error.message);
+    } else if (!data.session && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      toast.info("Account già presente. Usa Accedi o “Password dimenticata?”.");
+    } else {
+      toast.success("Controlla la tua email per confermare la registrazione");
+    }
+
     setLoading(false);
   };
 
@@ -119,7 +166,6 @@ export default function Auth() {
       toast.error("Errore con Google Sign-In");
       setLoading(false);
     }
-    // Whitelist check happens in onAuthStateChange after Google redirect
   };
 
   return (
@@ -137,7 +183,7 @@ export default function Auth() {
             variant="outline"
             className="w-full gap-2"
             onClick={handleGoogleLogin}
-            disabled={loading}
+            disabled={isBusy}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -179,7 +225,13 @@ export default function Auth() {
                     <Input id="login-pw" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10" required />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <div className="flex justify-end">
+                  <Button type="button" variant="link" className="h-auto px-0 text-xs" onClick={handleForgotPassword} disabled={isBusy}>
+                    {resettingPassword && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+                    Password dimenticata?
+                  </Button>
+                </div>
+                <Button type="submit" className="w-full" disabled={isBusy}>
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Accedi
                 </Button>
               </form>
@@ -205,7 +257,7 @@ export default function Auth() {
                     <Input id="signup-pw" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10" minLength={6} required />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={isBusy}>
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Registrati
                 </Button>
               </form>

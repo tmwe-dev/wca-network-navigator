@@ -45,6 +45,7 @@ if (typeof window !== "undefined") {
 
 const EmailComposer = lazyRetry(() => import("./pages/EmailComposer"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
+const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
 const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
 const AdminUsers = lazyRetry(() => import("./pages/AdminUsers"));
@@ -101,6 +102,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
