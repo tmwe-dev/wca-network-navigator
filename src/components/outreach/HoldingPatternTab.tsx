@@ -135,10 +135,16 @@ export function HoldingPatternTab() {
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{item.name}</div>
+                          <div className="font-medium truncate">{item.name}</div>
                           <div className="text-[10px] text-muted-foreground truncate">
                             {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
+                          {(item.agentEmoji || item.tutorName) && (
+                            <div className="text-[9px] text-muted-foreground/70 truncate mt-0.5 flex items-center gap-1">
+                              {item.agentEmoji && <span>{item.agentEmoji}</span>}
+                              {item.tutorName && <span className="truncate">{item.tutorName}</span>}
+                            </div>
+                          )}
                         </div>
                         <HoldingPatternIndicator status={item.leadStatus as LeadStatus} />
                       </button>
