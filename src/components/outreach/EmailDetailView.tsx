@@ -157,7 +157,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               const quoteText = normalizedContent.bodyText
                 ? `\n\n---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\n\n${normalizedContent.bodyText}`
                 : "";
-              navigate("/outreach", {
+              navigate("/email-composer", {
                 state: {
                   prefilledRecipient: {
                     email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
