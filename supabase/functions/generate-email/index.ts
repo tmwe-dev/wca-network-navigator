@@ -613,33 +613,46 @@ serve(async (req) => {
       stylePreferencesContext = `\nPREFERENZE DI STILE APPRESE (dall'editing dell'utente):\n${styleMemories.map((m: any) => `- ${m.content}`).join("\n")}\nAPPLICA queste preferenze nella generazione.\n`;
     }
 
-    // ─── Interaction History (batch-safe: DB only, no live scraping) ───
-    let historyContext = "";
-    if (isPartnerSource && activity?.partner_id) {
-      const [interRes, prevActRes] = await Promise.all([
-        supabase
-          .from("interactions")
-          .select("interaction_type, subject, notes, interaction_date")
-          .eq("partner_id", activity.partner_id)
-          .order("interaction_date", { ascending: false })
-          .limit(5),
-        supabase
-          .from("activities")
-          .select("email_subject, sent_at, activity_type")
-          .eq("source_id", activity!.partner_id)
-          .in("status", ["completed"])
-          .order("created_at", { ascending: false })
-          .limit(5),
-      ]);
-      const inters = interRes.data || [];
-      const prevActs = prevActRes.data || [];
-      if (inters.length > 0) {
-        historyContext += `\nSTORIA INTERAZIONI PRECEDENTI:\n${inters.map((i: any) => `[${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}`).join("\n")}\n`;
-      }
-      if (prevActs.length > 0) {
-        historyContext += `\nEMAIL GIÀ INVIATE (NON ripetere lo stesso messaggio):\n${prevActs.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] "${a.email_subject || "N/A"}"`).join("\n")}\n`;
+    // ─── Import commercial intelligence modules ───
+    const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
+
+    // ─── Same-Location Guard: prevent duplicate comms to same branch ───
+    if (!standalone && partner?.company_name) {
+      const guardResult = await checkSameLocationContacts(
+        supabase, partner.company_name, partner.city || "", contactEmail, userId
+      );
+      if (!guardResult.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "duplicate_branch",
+            message: guardResult.reason,
+            recent_contact: guardResult.recentContact,
+          }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
+
+    // ─── Enhanced Relationship History (semantic analysis) ───
+    let historyContext = "";
+    let relationshipBlock = "";
+    let branchBlock = "";
+    let interlocutorBlock = "";
+    
+    const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;
+    
+    if (effectivePartnerId) {
+      const { metrics, historyText } = await analyzeRelationshipHistory(supabase, effectivePartnerId, userId);
+      if (historyText) historyContext = `\n${historyText}\n`;
+      relationshipBlock = buildRelationshipAnalysisBlock(metrics);
+      
+      // Branch coordination
+      const branches = await getSameCompanyBranches(supabase, partner.company_name, partner.city, userId);
+      branchBlock = buildBranchCoordinationBlock(branches, partner.city);
+    }
+    
+    // ─── Interlocutor Type (Partner vs End Client) ───
+    interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
 
     // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
     let cachedEnrichmentContext = "";
@@ -831,7 +844,10 @@ ${strategicAdvisor}
 ${partnerContext}
 
 ${contactContext}
+${interlocutorBlock}
+${relationshipBlock}
 ${historyContext}
+${branchBlock}
 ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
@@ -841,6 +857,11 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
+
+OBIETTIVO COMMERCIALE FINALE:
+L'obiettivo ultimo di ogni comunicazione è CONVERTIRE il lead in cliente attivo.
+Le leve principali sono: invitare ad usare i nostri sistemi, proporre apertura account,
+evidenziare tariffe privilegiate, mostrare come semplifichiamo tempi e operatività.
 
 ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
 ${goal || "Nessuna istruzione specifica — genera un'email professionale basata sul goal e la proposta."}

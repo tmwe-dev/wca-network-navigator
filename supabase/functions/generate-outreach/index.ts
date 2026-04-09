@@ -320,25 +320,55 @@ serve(async (req) => {
       }
     }
 
-    // 6) Interaction history
+    // 6) Enhanced Interaction history + Relationship Analysis
     intelligence.sources_checked.push("interactions");
     let interactionHistoryCount = 0;
+    let relationshipBlock = "";
+    let interlocutorBlock = "";
+    let branchBlock = "";
+    let historyText = "";
+
+    // Import commercial intelligence
+    const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
+
     if (partnerId) {
-      const { data: interRows } = await supabase
-        .from("interactions")
-        .select("interaction_type, subject, notes, interaction_date")
-        .eq("partner_id", partnerId)
-        .order("interaction_date", { ascending: false })
-        .limit(5);
-      if (interRows && interRows.length > 0) {
+      // Same-Location Guard
+      const guardResult = await checkSameLocationContacts(supabase, company_name, "", contact_email, userId);
+      if (!guardResult.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "duplicate_branch",
+            message: guardResult.reason,
+            recent_contact: guardResult.recentContact,
+          }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Semantic relationship analysis (replaces old 5-interaction fetch)
+      const { metrics, historyText: ht } = await analyzeRelationshipHistory(supabase, partnerId, userId);
+      historyText = ht;
+      interactionHistoryCount = metrics.total_interactions;
+      relationshipBlock = buildRelationshipAnalysisBlock(metrics);
+      
+      if (historyText) {
         intelligence.data_found.interactions = true;
-        interactionHistoryCount = interRows.length;
-        const hist = interRows.map((i: any) => `[${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}${i.notes ? ` — ${i.notes.slice(0, 100)}` : ""}`).join("\n");
-        contextParts.push(`[STORIA INTERAZIONI]\n${hist}`);
+        contextParts.push(`[STORIA INTERAZIONI]\n${historyText}`);
       } else {
         intelligence.data_found.interactions = false;
       }
+
+      // Branch coordination
+      const branches = await getSameCompanyBranches(supabase, company_name, "", userId);
+      branchBlock = buildBranchCoordinationBlock(branches, "");
+    } else {
+      intelligence.data_found.interactions = false;
     }
+
+    // Interlocutor type differentiation
+    // For outreach, if we found a partner in DB it's a logistics partner, otherwise end client
+    const sourceType = partnerId ? "partner" : "contact";
+    interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
 
     // 7) Completed activities (email sent previously)
     intelligence.sources_checked.push("activities");
@@ -350,7 +380,7 @@ serve(async (req) => {
         .eq("source_id", sourceIdForActivities)
         .in("status", ["completed"])
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
       if (actRows && actRows.length > 0) {
         intelligence.data_found.activities = true;
         const acts = actRows.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
@@ -527,10 +557,16 @@ REGOLE CRITICHE:
 
     const userPrompt = `${senderContext}
 ${recipientContext}
+${interlocutorBlock}
+${relationshipBlock}
+${branchBlock}
 ${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
+
+OBIETTIVO COMMERCIALE FINALE:
+Convertire il lead in cliente attivo. Leve: apertura account, tariffe privilegiate, semplificazione operativa.
 
 Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
