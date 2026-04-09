@@ -257,13 +257,21 @@ export default function EmailComposer() {
   };
 
   const handleAIGenerate = async (config: OracleConfig) => {
-    if (!goal && !baseProposal && !config.emailType) {
-      toast.error("Seleziona un tipo di email dall'Oracolo oppure configura un obiettivo dalla sidebar Mission");
+    if (!goal && !baseProposal && !config.emailType && !config.customGoal) {
+      toast.error("Seleziona un tipo di email dall'Oracolo oppure scrivi un obiettivo nel campo Goal");
       return;
     }
     setAiGenerating(true);
     try {
-      const effectiveGoal = config.emailType?.prompt || goal || "";
+      // Combine email type prompt + custom goal
+      const typePart = config.emailType?.prompt || "";
+      const goalPart = config.customGoal || goal || "";
+      const effectiveGoal = [typePart, goalPart].filter(Boolean).join("\n\nISTRUZIONI SPECIFICHE DELL'UTENTE:\n");
+
+      // Check if we have a single recipient with a real partnerId (not a random UUID)
+      const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
+      const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
+
       const data = await invokeEdge<any>("generate-email", { body: {
           goal: effectiveGoal,
           base_proposal: baseProposal,
@@ -273,10 +281,11 @@ export default function EmailComposer() {
           quality: "standard",
           activity_id: "00000000-0000-0000-0000-000000000000",
           standalone: true,
+          partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
           recipient_count: recipientsWithEmail.length,
           recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
-          recipient_name: recipientsWithEmail.length === 1 ? (recipientsWithEmail[0].contactAlias || recipientsWithEmail[0].contactName || "") : "",
-          recipient_company: recipientsWithEmail.length === 1 ? (recipientsWithEmail[0].companyAlias || recipientsWithEmail[0].companyName || "") : "",
+          recipient_name: singleRecipient ? (singleRecipient.contactAlias || singleRecipient.contactName || "") : "",
+          recipient_company: singleRecipient ? (singleRecipient.companyAlias || singleRecipient.companyName || "") : "",
           oracle_type: config.emailType?.id || null,
           oracle_tone: config.tone,
           use_kb: config.useKB,
