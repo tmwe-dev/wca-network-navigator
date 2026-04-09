@@ -105,7 +105,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   return (
     <MissionCtx.Provider value={{
       goal, setGoal, baseProposal, setBaseProposal,
-      referenceLinks, setReferenceLinks,
+      referenceLinks, setReferenceLinks, context, setContext,
       documents, uploading, upload, removeDocument: remove,
       presets, activePresetId, setActivePresetId,
       savePreset, deletePreset, loadPreset,
