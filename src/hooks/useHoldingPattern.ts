@@ -14,6 +14,12 @@ export interface HoldingItem {
   leadStatus: string;
   lastInteractionAt: string | null;
   interactionCount: number;
+  /** Tutor (operator) display name */
+  tutorName?: string | null;
+  /** Agent AI emoji */
+  agentEmoji?: string | null;
+  /** Agent AI name */
+  agentName?: string | null;
 }
 
 export interface TimelineEntry {
