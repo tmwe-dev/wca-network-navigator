@@ -11,47 +11,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-// STT hook
-function useSpeechRecognition(onResult: (text: string) => void) {
-  const [listening, setListening] = useState(false);
-  const recRef = useRef<any>(null);
-
-  const toggle = useCallback(() => {
-    if (listening && recRef.current) {
-      recRef.current.stop();
-      setListening(false);
-      return;
-    }
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.lang = "it-IT";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onresult = (e: any) => {
-      let final = "";
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript;
-      }
-      if (final) onResult(final);
-    };
-    rec.onerror = () => setListening(false);
-    rec.onend = () => setListening(false);
-    rec.start();
-    recRef.current = rec;
-    setListening(true);
-  }, [listening, onResult]);
-
-  useEffect(() => () => { recRef.current?.stop(); }, []);
-
-  return { listening, toggle };
-}
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 export default function AgentChatHub() {
   const { agents, isLoading } = useAgents();
