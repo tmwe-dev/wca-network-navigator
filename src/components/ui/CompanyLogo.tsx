@@ -42,7 +42,7 @@ export function getFlagFromDomain(domain: string): string | null {
   return TLD_TO_FLAG[tld] || null;
 }
 
-const logoCache = new Map<string, "clearbit" | "google" | "none">();
+const logoCache = new Map<string, "clearbit" | "none">();
 
 interface CompanyLogoProps {
   domain?: string | null;
