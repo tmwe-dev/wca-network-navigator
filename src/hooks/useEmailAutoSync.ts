@@ -4,9 +4,21 @@ import { useCheckInbox } from "@/hooks/useChannelMessages";
 const STORAGE_KEY = "email_auto_sync_enabled";
 const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
-export function useEmailAutoSync() {
+interface Options {
+  /** External pause signal (e.g. night pause) */
+  paused?: boolean;
+}
+
+export function useEmailAutoSync(options: Options = {}) {
+  const { paused = false } = options;
+
+  // Default to TRUE (auto-enabled)
   const [enabled, setEnabled] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      // If never set, default to true
+      return stored === null ? true : stored === "true";
+    } catch { return true; }
   });
   const checkInbox = useCheckInbox();
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -19,8 +31,10 @@ export function useEmailAutoSync() {
     });
   }, []);
 
+  const active = enabled && !paused;
+
   useEffect(() => {
-    if (!enabled) {
+    if (!active) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -35,7 +49,7 @@ export function useEmailAutoSync() {
     }, INTERVAL_MS);
 
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     enabled,
