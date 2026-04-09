@@ -295,7 +295,40 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={docsDialogOpen} onOpenChange={setDocsDialogOpen}>
+        <Dialog open={contextDialogOpen} onOpenChange={setContextDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-sm flex items-center gap-2"><MessageSquareText className="w-4 h-4 text-violet-500" /> Contesto</DialogTitle>
+              <DialogDescription className="text-xs">Perché stai scrivendo? Il contesto guida l'AI nella personalizzazione</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto space-y-3 py-2">
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Fiera / Evento", value: "Incontrato a una fiera/evento di settore" },
+                  { label: "Trovato online", value: "Trovato online attraverso ricerca di mercato" },
+                  { label: "Referral", value: "Segnalato da un partner/contatto comune" },
+                  { label: "Ex-cliente", value: "Ricontatto di un ex-cliente per nuova collaborazione" },
+                  { label: "Cold outreach", value: "Primo contatto a freddo basato sul profilo aziendale" },
+                  { label: "Follow-up", value: "Follow-up dopo un primo contatto precedente" },
+                ].map(chip => (
+                  <button
+                    key={chip.label}
+                    onClick={() => m.setContext(m.context ? `${m.context}. ${chip.value}` : chip.value)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-border/40 bg-muted/20 hover:border-violet-500/40 hover:bg-violet-500/5 transition-colors"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              <Textarea value={m.context} onChange={e => m.setContext(e.target.value)} placeholder="Es: Abbiamo incontrato il sig. Rossi alla fiera di Milano il 15 marzo. La sua azienda opera nel settore logistico e cerca partner per spedizioni aeree..." className="min-h-[120px] text-sm resize-none" />
+            </div>
+            <DialogFooter>
+              {m.context && <Button variant="ghost" size="sm" onClick={() => m.setContext("")}>Cancella</Button>}
+              <Button size="sm" onClick={() => setContextDialogOpen(false)}>Chiudi</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-sm flex items-center gap-2"><Paperclip className="w-4 h-4 text-amber-500" /> Documenti ({m.documents.length})</DialogTitle>
