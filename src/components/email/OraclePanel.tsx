@@ -222,7 +222,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsContent>
 
         {/* === TEMPLATE TAB === */}
-        <TabsContent value="template" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="template" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           <ScrollArea className="flex-1 px-2 py-1.5">
             {templates.length === 0 ? (
               <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">Nessun template disponibile</p>
