@@ -136,6 +136,11 @@ export default function Settings() {
                 <MemoryDashboard />
               </div>
             )}
+            {tab === "guida-operativa" && (
+              <div className="float-panel p-5">
+                <OperativeGuideSettings />
+              </div>
+            )}
           </div>
         )}
       </div>
