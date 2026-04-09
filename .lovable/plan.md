@@ -1,57 +1,58 @@
 
 
-# Piano: Pulsante Test Estensioni nel Header + Analisi Backfill vs Leggi
+# Piano: Sostituire Backfill con "Leggi Progressivo"
 
-## 1. Pulsante Test Estensioni nel Header globale
+## Concetto
 
-Aggiungere un'icona (🧪 `FlaskConical`) nella barra in alto a destra, accanto al "+" e a "IntelliFlow", che apre un **Dialog** con dentro il contenuto di `TestExtensions` (WhatsApp, LinkedIn, FireScrape tabs).
+Eliminare tutta la logica complessa del backfill (ricerca contatto, scroll, parsing bolle) e sostituirla con chiamate ripetute a `readUnread` — lo stesso metodo affidabile del test. Il sistema chiama `readUnread` più volte con pause tra una chiamata e l'altra, salvando ogni batch. La deduplicazione deterministica (`buildDeterministicId` + `upsert` con `ignoreDuplicates`) impedisce automaticamente i duplicati. Il processo si ferma quando un ciclo non produce nuovi messaggi (= siamo arrivati a ciò che avevamo già).
 
-**Implementazione:**
-- In `AppLayout.tsx`, aggiungere un bottone con icona `FlaskConical` (da lucide) nel gruppo di destra del header (riga 167-171)
-- Al click, apre un `Dialog` full-width che carica lazy il componente `TestExtensions`
-- Estrarre il contenuto tabs di `TestExtensions` in un sotto-componente `TestExtensionsContent` esportato separatamente, riusabile sia nella pagina `/test-extensions` che nel Dialog
-
-**File coinvolti:**
-| File | Azione |
-|------|--------|
-| `src/components/layout/AppLayout.tsx` | +stato `testOpen`, +bottone FlaskConical, +Dialog con lazy TestExtensions |
-| `src/pages/TestExtensions.tsx` | Estrarre `TestExtensionsContent` come export separato |
-
----
-
-## 2. Analisi: Perché Backfill non funziona bene vs Leggi
-
-Ecco la differenza tecnica tra i due:
-
-### `readUnread` (📨 Leggi — FUNZIONA)
-- Azione: `"readUnread"` inviata all'estensione
-- **Cosa fa**: Legge la sidebar di WhatsApp Web — la lista delle chat visibili
-- **Come**: Parsa il DOM statico della sidebar (nomi, ultimo messaggio, timestamp, badge non letti)
-- **Perché funziona**: È una lettura passiva di elementi già renderizzati nel DOM, nessuna interazione necessaria
-
-### `backfillChat` (🔄 Backfill — PROBLEMATICO)
-- Azione: `"backfillChat"` inviata all'estensione con `{ contact, lastKnownText, maxScrolls: 30 }`
-- **Cosa fa**: Per ogni contatto, deve:
-  1. **Cercare** il contatto nella sidebar (click sulla search box, digitare il nome)
-  2. **Aprire** la chat (click sul risultato)
-  3. **Scrollare verso l'alto** fino a 30 volte per caricare messaggi vecchi (lazy loading)
-  4. **Parsare** ogni singola bolla messaggio dal DOM
-  5. **Determinare** la direzione (inbound/outbound) per ogni messaggio
-- **Perché fallisce**:
-  - I selettori DOM per le bolle dei messaggi cambiano spesso (WhatsApp aggiorna le classi CSS)
-  - Lo scroll verso l'alto dipende dal lazy loading di WhatsApp che può non caricare
-  - La ricerca del contatto può fallire (nomi con suffissi, caratteri speciali)
-  - Ogni interazione (click, scroll) può essere rilevata come automazione
-  - Timeout di 120s può non bastare per 30 scroll + parsing
-
-### Confronto visuale
+## Come funziona
 
 ```text
-readUnread:     Sidebar DOM → parse → done        (1 step, passivo)
-backfillChat:   Search → Click → Scroll×30 → Parse (4+ step, attivo)
+Ciclo 1: readUnread → salva → 6 nuovi
+Ciclo 2: readUnread → salva → 3 nuovi  
+Ciclo 3: readUnread → salva → 0 nuovi → STOP (tutto allineato)
 ```
 
-Il backfill è 10x più complesso e ogni step può fallire. Il problema non è nel codice React (`useWhatsAppBackfill.ts`) che è ben strutturato con circuit breaker e retry, ma nell'**estensione stessa** — il handler `backfillChat` nell'estensione Chrome deve interagire con il DOM in modo molto più aggressivo.
+- Ogni `readUnread` legge la sidebar (passivo, affidabile)
+- I messaggi già importati vengono ignorati dal DB (unique constraint su `message_id_external`)
+- Dopo N cicli senza novità → completato
+- Pausa di 5-10s tra un ciclo e l'altro (anti-detection leggero)
+- Max 10 cicli per sessione (sicurezza)
 
-**Suggerimento**: Per diagnosticare meglio, aggiungeremo un test specifico "🔄 Test Backfill" nel pannello WhatsApp test che mostra i log dettagliati di ogni step (ricerca contatto, apertura chat, scroll, parsing bolle).
+## Dettagli tecnici
+
+### File modificato: `src/hooks/useWhatsAppBackfill.ts`
+Riscrittura completa — rimuovere:
+- Tutta la logica `backfillChat` (ricerca, scroll, parsing)
+- Le costanti `CHAT_DELAYS`, `LONG_PAUSE_*`, `MAX_CHATS_PER_SESSION`, `CIRCUIT_BREAKER_*`
+- Le funzioni `sleepWithCountdown`, `randomBetween`
+- Il loop per-contatto con sidebar parsing
+
+Sostituire con:
+- Loop semplice che chiama `readUnread()` ripetutamente
+- Usa `saveMessages()` identico a `useWhatsAppAdaptiveSync` (upsert + ignoreDuplicates)
+- Conta i nuovi per ciclo; se 0 per 2 cicli consecutivi → done
+- Mantiene `sleepAbortable` per le pause tra cicli
+- Progress semplificato: `{ status, cycle, totalCycles, recoveredMessages }`
+
+### Nessuna modifica all'estensione
+Il backfill ora usa solo `readUnread` — nessun nuovo action handler necessario.
+
+### File `src/hooks/useWhatsAppExtensionBridge.ts`
+Nessuna modifica — `readUnread` è già esposto e funzionante.
+
+### File `src/components/outreach/WhatsAppInboxView.tsx`
+Minima modifica: il bottone backfill (⬇️) resta, ma chiama il nuovo hook semplificato. I campi progress cambiano leggermente (da `currentChat/totalChats` a `cycle/totalCycles`).
+
+## Limitazione nota
+
+`readUnread` legge solo l'ultimo messaggio per chat dalla sidebar — non la cronologia completa. Ma è esattamente ciò che serve: cattura tutti i messaggi recenti che sono visibili nella sidebar, e il sistema li salva progressivamente. Per la cronologia profonda servirebbe comunque l'apertura delle singole chat.
+
+## File coinvolti
+
+| File | Azione |
+|------|--------|
+| `src/hooks/useWhatsAppBackfill.ts` | Riscrittura completa — loop readUnread progressivo |
+| `src/components/outreach/WhatsAppInboxView.tsx` | Adattare UI progress al nuovo formato |
 
