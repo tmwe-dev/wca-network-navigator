@@ -333,7 +333,7 @@ serve(async (req) => {
 
     if (partnerId) {
       // Same-Location Guard
-      const guardResult = await checkSameLocationContacts(supabase, company_name, "", contact_email, userId);
+      const guardResult = await checkSameLocationContacts(supabase, partnerId, contact_email, userId);
       if (!guardResult.allowed) {
         return new Response(
           JSON.stringify({
@@ -345,7 +345,7 @@ serve(async (req) => {
         );
       }
 
-      // Semantic relationship analysis (replaces old 5-interaction fetch)
+      // Semantic relationship analysis
       const { metrics, historyText: ht } = await analyzeRelationshipHistory(supabase, partnerId, userId);
       historyText = ht;
       interactionHistoryCount = metrics.total_interactions;
@@ -359,7 +359,7 @@ serve(async (req) => {
       }
 
       // Branch coordination
-      const branches = await getSameCompanyBranches(supabase, company_name, "", userId);
+      const branches = await getSameCompanyBranches(supabase, partnerId);
       branchBlock = buildBranchCoordinationBlock(branches, "");
     } else {
       intelligence.data_found.interactions = false;

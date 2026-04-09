@@ -617,9 +617,11 @@ serve(async (req) => {
     const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
 
     // ─── Same-Location Guard: prevent duplicate comms to same branch ───
-    if (!standalone && partner?.company_name) {
+    const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;
+    
+    if (!standalone && effectivePartnerId) {
       const guardResult = await checkSameLocationContacts(
-        supabase, partner.company_name, partner.city || "", contactEmail, userId
+        supabase, effectivePartnerId, contactEmail, userId
       );
       if (!guardResult.allowed) {
         return new Response(
@@ -639,16 +641,14 @@ serve(async (req) => {
     let branchBlock = "";
     let interlocutorBlock = "";
     
-    const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;
-    
     if (effectivePartnerId) {
       const { metrics, historyText } = await analyzeRelationshipHistory(supabase, effectivePartnerId, userId);
       if (historyText) historyContext = `\n${historyText}\n`;
       relationshipBlock = buildRelationshipAnalysisBlock(metrics);
       
       // Branch coordination
-      const branches = await getSameCompanyBranches(supabase, partner.company_name, partner.city, userId);
-      branchBlock = buildBranchCoordinationBlock(branches, partner.city);
+      const branches = await getSameCompanyBranches(supabase, effectivePartnerId);
+      branchBlock = buildBranchCoordinationBlock(branches, partner?.city);
     }
     
     // ─── Interlocutor Type (Partner vs End Client) ───
