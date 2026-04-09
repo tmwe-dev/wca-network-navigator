@@ -1,97 +1,60 @@
 
 
-# Piano: Agenda Operativa a Libro + Azioni Bulk da Agenda
+# Piano: Oracolo Universale — Fix Layout, Contesto Reale, Campo Goal con Dettatura Vocale
 
-## Cosa cambia
+## Problemi da risolvere
 
-L'agenda attuale e' un calendario mensile base con celle piccole e nessuna interattivita' operativa. L'utente vuole un'agenda a due pagine (stile libro aperto) dove cliccare un giorno apre il dettaglio completo delle attivita', con possibilita' di selezionare contatti, ricontattarli, e gestire azioni bulk — tutto canalizzato verso "In Uscita" per conferma.
+1. **Spazio nero sopra Opzioni AI**: ScrollArea con `flex-1` nel tab Tipi si espande oltre il contenuto
+2. **Standalone mode cieco**: quando il Composer ha un destinatario con `partnerId` reale, non carica dati dal DB (history, enrichment, tipo interlocutore)
+3. **Manca campo Goal libero**: l'utente vuole poter scrivere istruzioni specifiche ("ci siamo incontrati a Genova, parlato di pezzi di ricambio...") che guidino l'AI
+4. **Manca dettatura vocale**: il campo goal deve supportare registrazione microfono con trascrizione automatica
 
-## Architettura nuova
+## Modifiche
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  AGENDA (Reminders.tsx riscritta)                       │
-│                                                         │
-│  ┌──────────────┐  ┌──────────────────────────────────┐ │
-│  │  PAGINA SX   │  │  PAGINA DX                       │ │
-│  │              │  │                                   │ │
-│  │  Calendario  │  │  Dettaglio giorno selezionato     │ │
-│  │  mese con    │  │                                   │ │
-│  │  indicatori  │  │  Tab: Email | WhatsApp | LinkedIn │ │
-│  │  per giorno  │  │  + Tab: Reminder/Programmati      │ │
-│  │              │  │                                   │ │
-│  │  Click su    │  │  Lista contatti con:               │ │
-│  │  giorno →    │  │  - Checkbox selezione              │ │
-│  │  apre DX     │  │  - Bandiera + nome + azienda      │ │
-│  │              │  │  - Badge "ha risposto" evidenziato │ │
-│  │  Filtri SX   │  │  - Menu 3 pallini (call, note,    │ │
-│  │  (sidebar)   │  │    email singola, WhatsApp)        │ │
-│  │              │  │                                   │ │
-│  │              │  │  Bulk bar in alto:                 │ │
-│  │              │  │  - Seleziona tutti                 │ │
-│  │              │  │  - Goal picker (follow-up, etc.)   │ │
-│  │              │  │  - "Genera email bulk" → In Uscita │ │
-│  │              │  │  - "WhatsApp bulk" → In Uscita     │ │
-│  └──────────────┘  └──────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
+### 1. OraclePanel.tsx — Fix layout + Campo Goal con microfono
 
-## Dettagli implementativi
+**Fix spazio nero**: Cambiare il tab Tipi da `flex-1` a dimensione naturale con overflow scroll solo se necessario.
 
-### 1. Riscrittura `Reminders.tsx` — Layout a libro
+**Nuovo campo Goal** sopra la lista tipi:
+- Textarea con placeholder "Descrivi l'obiettivo o il contesto della comunicazione..."
+- Pulsante microfono (🎙️) a destra per dettatura vocale
+- Il goal viene passato a `onGenerate` insieme al tipo selezionato
+- Se c'e' sia goal scritto che tipo selezionato, entrambi vengono iniettati nel prompt
 
-- Eliminare i 4 tab attuali (calendario, in attesa, completati, attivita')
-- Layout split 40/60: pagina sinistra = calendario compatto + filtri, pagina destra = dettaglio giorno
-- Stato: `selectedDay` — click su giorno lo seleziona e popola la pagina destra
-- Aspetto "libro aperto": bordo centrale, ombra interna, sfondo leggermente diverso tra le due pagine
+**Dettatura vocale**: Usa la Web Speech API (`SpeechRecognition`) nativa del browser — zero costi, zero API key. Quando l'utente clicca il microfono:
+- Inizia la registrazione continua
+- Il testo trascritto si appende al campo goal in tempo reale
+- Click di nuovo per fermare
 
-### 2. `AgendaDayDetail.tsx` (nuovo componente)
+**Aggiornare `OracleConfig`** per includere `customGoal: string`.
 
-Pagina destra che mostra tutte le attivita' del giorno selezionato:
-- **Sub-tab**: Tutti | Email | WhatsApp | LinkedIn | Programmati
-- Carica da `activities` filtrate per `created_at` nel giorno + `reminders` con `due_date` nel giorno
-- Ogni riga mostra: checkbox, bandiera, nome contatto/azienda, tipo attivita', ora, badge "risposta ricevuta" (verde) se esiste un messaggio inbound successivo
-- **Menu 3 pallini** per riga: Chiama, Aggiungi nota, Nuova email, WhatsApp, LinkedIn — riutilizzando `useDirectContactActions`
-- **Highlight risposte**: query su `channel_messages` per verificare se c'e' un messaggio inbound dallo stesso contatto dopo l'invio
+### 2. EmailComposer.tsx — Passare il customGoal + caricare partner reale
 
-### 3. `AgendaBulkBar.tsx` (nuovo componente)
+**Custom Goal**: `handleAIGenerate` usa `config.customGoal` come goal primario. Se presente sia customGoal che emailType.prompt, li combina: `"${emailType.prompt}\n\nISTRUZIONI SPECIFICHE: ${customGoal}"`.
 
-Barra azioni bulk che appare quando ci sono selezioni:
-- **Goal picker**: dropdown con i tipi email esistenti (Primo contatto, Follow-up, Proposta servizi, etc.) + campo libero per nuovo obiettivo
-- **Azioni**:
-  - "Genera email" → crea sorting_jobs in `outreach_queue` con status pending → finiscono in "In Uscita"
-  - "WhatsApp bulk" → stessa logica → In Uscita
-  - "LinkedIn bulk" → stessa logica → In Uscita
-- **Regola fondamentale**: azione singola = esecuzione diretta. Azione bulk (2+ selezionati) = sempre In Uscita per conferma
+**Partner reale in standalone**: Quando c'e' un solo destinatario con `partnerId` valido (non UUID generato):
+- Passare `partner_id` nel payload a `generate-email`
+- Rimuovere `standalone: true` per quel caso
+- L'edge function carichera' partner reale, history, enrichment, guard
 
-### 4. Filtri sidebar (lato sinistro, sotto il calendario)
+### 3. generate-email/index.ts — Supporto partner_id senza activity_id
 
-- Filtro per tipo attivita' (email, whatsapp, linkedin, chiamata, nota)
-- Filtro per stato risposta (ha risposto / non ha risposto)
-- Filtro per agente assegnato
-- Filtro per priorita'
-
-### 5. Regola bulk → In Uscita
-
-Applicata ovunque nel sistema, non solo agenda:
-- Verificare che `EmailComposer`, Cockpit bulk actions, e agenda bulk actions rispettino: se destinatari > 1 → i job vengono creati come `sorting_jobs` con stato `pending` e finiscono nella tab "In Uscita > Invii Diretti" per revisione e conferma prima dell'invio
+Aggiungere una terza modalita' oltre "standalone" e "activity":
+- Se `partner_id` e' presente e `standalone` e' true → caricare partner reale dal DB, contacts, history, enrichment
+- Usare la stessa logica del mode "activity" ma senza richiedere un'attivita' CRM
+- Questo unifica il ragionamento AI: dal Composer hai lo stesso contesto del Cockpit
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/pages/Reminders.tsx` | Riscrittura completa — layout a libro, calendario SX, dettaglio DX |
-| `src/components/agenda/AgendaDayDetail.tsx` | **Nuovo** — dettaglio giorno con tab per canale, lista contatti, azioni |
-| `src/components/agenda/AgendaBulkBar.tsx` | **Nuovo** — barra bulk con goal picker, genera email/WA/LinkedIn → In Uscita |
-| `src/components/agenda/AgendaCalendarPage.tsx` | **Nuovo** — calendario compatto per pagina sinistra + filtri |
-| `src/components/agenda/ActivitiesTab.tsx` | Mantenuto come sotto-componente riutilizzabile |
-| `src/hooks/useAgendaDayActivities.ts` | **Nuovo** — query attivita' + reminder + risposte per un giorno specifico |
+| `src/components/email/OraclePanel.tsx` | Fix ScrollArea, aggiungere campo goal con textarea + microfono, aggiornare OracleConfig |
+| `src/pages/EmailComposer.tsx` | Passare customGoal, usare partner_id reale quando disponibile |
+| `supabase/functions/generate-email/index.ts` | Aggiungere mode "standalone con partner_id" per caricare dati reali |
 
 ## Ordine di esecuzione
 
-1. Creare hook `useAgendaDayActivities` (query per giorno)
-2. Creare `AgendaCalendarPage` (calendario compatto + filtri)
-3. Creare `AgendaDayDetail` (dettaglio giorno con tab e azioni)
-4. Creare `AgendaBulkBar` (selezione + goal + invio a In Uscita)
-5. Riscrivere `Reminders.tsx` per assemblare il layout a libro
+1. Fix OraclePanel (layout + campo goal + microfono)
+2. Aggiornare EmailComposer per passare customGoal e partner_id
+3. Aggiornare Edge Function per supportare il nuovo mode
 
