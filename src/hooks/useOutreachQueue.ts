@@ -1,30 +1,20 @@
+/**
+ * useOutreachQueue — coda automatica di invio outreach.
+ * Fix: rimosso trackQueueActivity duplicato, usa useTrackActivity come fonte unica.
+ * Fix: catch vuoti sostituiti con logging strutturato (Documento 2 §7).
+ */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
+import type { ActivityType } from "@/types/tracking";
 
-/** Track activity after successful queue send (mirrors useTrackActivity logic) */
-async function trackQueueActivity(item: QueueItem, channel: string) {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const activityType = channel === "email" ? "send_email" : channel === "whatsapp" ? "whatsapp_message" : "linkedin_message";
-    const now = new Date().toISOString();
-    await supabase.from("activities").insert({
-      activity_type: activityType as any,
-      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
-      source_type: "imported_contact",
-      source_id: item.created_by || crypto.randomUUID(),
-      status: "completed" as any,
-      user_id: user.id,
-      description: `Messaggio ${channel} inviato dalla coda automatica`,
-      email_subject: item.subject,
-    });
-  } catch { /* best-effort tracking */ }
-}
+const log = createLogger("useOutreachQueue");
 
 interface QueueItem {
   id: string;
@@ -49,6 +39,12 @@ const CHANNEL_DELAYS: Record<string, number> = {
   sms: 3000,
 };
 
+function channelToActivityType(channel: string): ActivityType {
+  if (channel === "email") return "send_email";
+  if (channel === "whatsapp") return "whatsapp_message";
+  return "linkedin_message";
+}
+
 export function useOutreachQueue() {
   const [pendingCount, setPendingCount] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -57,8 +53,8 @@ export function useOutreachQueue() {
   const pausedRef = useRef(false);
   const wa = useWhatsAppExtensionBridge();
   const li = useLinkedInExtensionBridge();
+  const trackActivity = useTrackActivity();
 
-  // Keep refs in sync
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   const updateStatus = async (id: string, status: string, error?: string) => {
@@ -73,6 +69,17 @@ export function useOutreachQueue() {
       await supabase.from("outreach_queue").update({ attempts: data.attempts + 1 }).eq("id", id);
     }
   };
+
+  const trackQueueItem = useCallback((item: QueueItem, channel: string) => {
+    trackActivity.mutate({
+      activityType: channelToActivityType(channel),
+      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
+      sourceId: item.created_by || crypto.randomUUID(),
+      sourceType: "imported_contact",
+      emailSubject: item.subject || undefined,
+      description: `Messaggio ${channel} inviato dalla coda automatica`,
+    });
+  }, [trackActivity]);
 
   const processItem = useCallback(async (item: QueueItem): Promise<boolean> => {
     await updateStatus(item.id, "processing");
@@ -94,7 +101,7 @@ export function useOutreachQueue() {
           const res = await wa.sendWhatsApp(phone, item.body);
           if (res.success) {
             await updateStatus(item.id, "sent");
-            await trackQueueActivity(item, "whatsapp");
+            trackQueueItem(item, "whatsapp");
             toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` });
             return true;
           }
@@ -109,17 +116,14 @@ export function useOutreachQueue() {
           }
           const profileUrl = item.recipient_linkedin_url || "";
           if (!profileUrl) { await updateStatus(item.id, "failed", "URL profilo LinkedIn mancante"); return false; }
-
-          // Retry up to 2 times on context invalidation
           let liRes = await li.sendDirectMessage(profileUrl, item.body);
           if (!liRes.success && liRes.error?.includes("context invalidated")) {
             await new Promise(r => setTimeout(r, 2000));
             liRes = await li.sendDirectMessage(profileUrl, item.body);
           }
-
           if (liRes.success) {
             await updateStatus(item.id, "sent");
-            await trackQueueActivity(item, "linkedin");
+            trackQueueItem(item, "linkedin");
             toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` });
             return true;
           }
@@ -135,11 +139,12 @@ export function useOutreachQueue() {
             });
           } catch (err) {
             const msg = isApiError(err) ? err.message : (err instanceof Error ? err.message : String(err));
+            log.error("queue email send failed", { error: msg, to: item.recipient_email });
             await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
             return false;
           }
           await updateStatus(item.id, "sent");
-          await trackQueueActivity(item, "email");
+          trackQueueItem(item, "email");
           toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` });
           return true;
         }
@@ -148,11 +153,13 @@ export function useOutreachQueue() {
           await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`);
           return false;
       }
-    } catch (err: any) {
-      await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error("queue processItem failed", { error: msg, channel: item.channel, id: item.id });
+      await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
       return false;
     }
-  }, [wa, li]);
+  }, [wa, li, trackQueueItem]);
 
   const processQueue = useCallback(async () => {
     if (processingRef.current || pausedRef.current) return;
@@ -181,23 +188,22 @@ export function useOutreachQueue() {
         const delay = CHANNEL_DELAYS[item.channel] || 3000;
         await new Promise(r => setTimeout(r, delay));
       }
+    } catch (err: unknown) {
+      log.error("processQueue failed", { error: err instanceof Error ? err.message : String(err) });
     } finally {
       processingRef.current = false;
       setProcessing(false);
     }
   }, [processItem]);
 
-  // Poll every 5s
   useEffect(() => {
     const interval = setInterval(() => {
       if (!pausedRef.current) processQueue();
     }, 5000);
-    // Initial check
     processQueue();
     return () => clearInterval(interval);
   }, [processQueue]);
 
-  // Realtime subscription for instant processing
   useEffect(() => {
     const channel = supabase
       .channel("outreach-queue-realtime")
@@ -207,14 +213,8 @@ export function useOutreachQueue() {
         }
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [processQueue]);
 
-  return {
-    pendingCount,
-    processing,
-    paused,
-    setPaused,
-  };
+  return { pendingCount, processing, paused, setPaused };
 }
