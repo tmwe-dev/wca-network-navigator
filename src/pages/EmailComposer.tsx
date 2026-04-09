@@ -111,6 +111,11 @@ export default function EmailComposer() {
   const [manualContactName, setManualContactName] = useState("");
   const [manualCompanyName, setManualCompanyName] = useState("");
 
+  // AI style learning dialog
+  const [learningDialogOpen, setLearningDialogOpen] = useState(false);
+  const [editAnalysis, setEditAnalysis] = useState<EditAnalysis | null>(null);
+  const [pendingSend, setPendingSend] = useState(false);
+
   const enqueueCampaign = useEnqueueCampaign();
   const { processing, startProcessing } = useProcessQueue();
   const saveDraft = useSaveEmailDraft();
