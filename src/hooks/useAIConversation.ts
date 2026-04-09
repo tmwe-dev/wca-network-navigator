@@ -69,7 +69,7 @@ export function useAIConversation(pageContext: string) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
         const update: Record<string, unknown> = {
-          messages: JSON.parse(JSON.stringify(msgs)),
+          messages: structuredClone(msgs),
           updated_at: new Date().toISOString(),
         };
         if (title) update.title = title;
@@ -101,7 +101,7 @@ export function useAIConversation(pageContext: string) {
             user_id: user.id,
             page_context: pageContext,
             title: title || "Nuova conversazione",
-            messages: JSON.parse(JSON.stringify(updated)),
+            messages: structuredClone(updated),
           }])
           .select("id")
           .single();

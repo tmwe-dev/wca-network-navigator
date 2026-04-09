@@ -182,7 +182,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         .maybeSingle();
 
       const existing = (data?.enrichment_data as Record<string, any>) || {};
-      payload.enrichment_data = JSON.parse(JSON.stringify({ ...existing, ...enrichmentPatch }));
+      payload.enrichment_data = structuredClone({ ...existing, ...enrichmentPatch });
     }
 
     if (Object.keys(payload).length === 0) return;
