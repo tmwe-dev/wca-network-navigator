@@ -495,7 +495,7 @@ export default function EnrichmentSettings() {
       )}
 
       {/* List Header */}
-      <div className="grid grid-cols-[32px_28px_1fr_1fr_70px_70px_60px_28px] items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-t-lg border border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-t-lg border border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         <div className="flex justify-center">
           <Checkbox
             checked={allSelected}
@@ -511,6 +511,9 @@ export default function EnrichmentSettings() {
           Dominio {sortField === "domain" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
         </button>
         <div>Paese</div>
+        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("emailCount")}>
+          <Mail className="w-3 h-3" /> {sortField === "emailCount" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
+        </button>
         <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("source")}>
           Fonte {sortField === "source" && (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
         </button>
