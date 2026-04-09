@@ -135,6 +135,7 @@ export function useOutreachQueue() {
             return false;
           }
           await updateStatus(item.id, "sent");
+          await trackQueueActivity(item, "email");
           toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` });
           return true;
         }
