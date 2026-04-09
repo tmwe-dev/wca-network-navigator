@@ -97,6 +97,8 @@ export function useWhatsAppAdaptiveSync() {
   const lastReplyAt = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deescalateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevAuthRef = useRef(false);
+  const onReconnectRef = useRef<(() => void) | null>(null);
 
   // Keep refs in sync
   useEffect(() => { levelRef.current = level; }, [level]);
