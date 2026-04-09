@@ -368,7 +368,7 @@ ARSENAL STRATEGICO:
 - Enfatizza rischi di lavorare con forwarder non certificati
 - Evidenzia il valore delle certificazioni WCA/network membership
 - Usa case study di successo come prova sociale
-- Proponi SEMPRE una chiamata vocale con Robin per lead caldi`,
+- Proponi SEMPRE una chiamata vocale con Robin per lead caldi` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   download: {
