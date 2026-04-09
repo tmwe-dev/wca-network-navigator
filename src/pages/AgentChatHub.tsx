@@ -24,10 +24,9 @@ export default function AgentChatHub() {
   const [, forceRender] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const appendInput = useCallback((text: string) => {
+  const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
-  }, []);
-  const { listening, toggle: toggleSTT } = useSpeechRecognition(appendInput);
+  });
 
   useEffect(() => {
     if (!activeId && agents.length > 0) setActiveId(agents[0].id);
