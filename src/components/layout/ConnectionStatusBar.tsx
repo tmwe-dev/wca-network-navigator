@@ -21,6 +21,7 @@ interface OutreachQueueState {
 interface Props {
   onAiClick?: () => void;
   outreachQueue?: OutreachQueueState;
+  nightPause?: boolean;
 }
 
 type ChannelStatus = { li: boolean; wa: boolean; fs: boolean; ai: boolean };
@@ -39,7 +40,7 @@ function saveCachedStatus(s: ChannelStatus) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* intentionally ignored: best-effort cleanup */ }
 }
 
-export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
+export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause }: Props) {
   const navigate = useNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
@@ -229,6 +230,18 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
             <div className="text-muted-foreground pt-1">Clicca per verificare</div>
           </TooltipContent>
         </Tooltip>
+
+        {/* Night pause badge */}
+        {nightPause && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="h-7 px-2 flex items-center gap-1 rounded-lg bg-indigo-500/15 text-indigo-400 text-[10px] font-semibold">
+                🌙
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">Pausa notturna attiva (00:00–06:00)</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Divider */}
         <div className="w-px h-5 bg-border/50 mx-0.5" />
