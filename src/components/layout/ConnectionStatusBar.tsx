@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Loader2, CheckCircle2, Mail, MessageCircle, Linkedin, Plane, ListTodo, RefreshCw } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, Mail, MessageCircle, Linkedin, Plane, ListTodo } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
