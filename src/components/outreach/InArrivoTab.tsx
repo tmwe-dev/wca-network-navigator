@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
+import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
+import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 
 const EmailInboxView = lazyRetry(() =>
   import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
@@ -28,6 +30,10 @@ export function InArrivoTab() {
   const { data: emailUnread = 0 } = useUnreadCount("email");
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
+
+  // Lift WhatsApp hooks here so toolbar + view share the same state
+  const waSync = useWhatsAppAdaptiveSync();
+  const waBackfill = useWhatsAppBackfill();
 
   const badges: Record<string, number> = { email: emailUnread, whatsapp: waUnread, linkedin: liUnread };
 
@@ -64,10 +70,20 @@ export function InArrivoTab() {
           );
         })}
 
-        {/* WhatsApp controls inline */}
+        {/* WhatsApp controls inline — using lifted hooks */}
         {channel === "whatsapp" && (
           <div className="ml-auto">
-            <WhatsAppToolbar />
+            <WhatsAppToolbar
+              level={waSync.level}
+              enabled={waSync.enabled}
+              toggle={waSync.toggle}
+              isReading={waSync.isReading}
+              isAvailable={waSync.isAvailable}
+              readNow={waSync.readNow}
+              bfProgress={waBackfill.progress}
+              startBackfill={waBackfill.startBackfill}
+              stopBackfill={waBackfill.stopBackfill}
+            />
           </div>
         )}
       </div>
@@ -76,7 +92,12 @@ export function InArrivoTab() {
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<div className="h-full animate-pulse bg-muted/20 rounded-lg" />}>
           {channel === "email" && <EmailInboxView />}
-          {channel === "whatsapp" && <WhatsAppInboxView />}
+          {channel === "whatsapp" && (
+            <WhatsAppInboxView
+              syncState={waSync}
+              backfillState={waBackfill}
+            />
+          )}
           {channel === "linkedin" && <LinkedInInboxView />}
         </Suspense>
       </div>

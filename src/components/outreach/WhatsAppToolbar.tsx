@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
-import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
+import type { AttentionLevel } from "@/hooks/useWhatsAppAdaptiveSync";
 
 const LEVEL_CONFIG = {
   0: { label: "Idle", color: "bg-muted text-muted-foreground", icon: Eye },
@@ -12,10 +11,28 @@ const LEVEL_CONFIG = {
   6: { label: "Live", color: "bg-green-500/20 text-green-700", icon: Radio },
 } as const;
 
-export function WhatsAppToolbar() {
-  const { level, enabled, toggle, isReading, isAvailable, readNow } = useWhatsAppAdaptiveSync();
-  const { progress: bfProgress, startBackfill, stopBackfill } = useWhatsAppBackfill();
+export type WhatsAppToolbarProps = {
+  level: AttentionLevel;
+  enabled: boolean;
+  toggle: () => void;
+  isReading: boolean;
+  isAvailable: boolean;
+  readNow: () => void;
+  bfProgress: {
+    status: string;
+    cycle: number;
+    totalCycles: number;
+    recoveredMessages: number;
+    lastError: string | null;
+  };
+  startBackfill: () => void;
+  stopBackfill: () => void;
+};
 
+export function WhatsAppToolbar({
+  level, enabled, toggle, isReading, isAvailable, readNow,
+  bfProgress, startBackfill, stopBackfill,
+}: WhatsAppToolbarProps) {
   const levelCfg = LEVEL_CONFIG[level];
   const LevelIcon = levelCfg.icon;
 
@@ -39,18 +56,17 @@ export function WhatsAppToolbar() {
             <Download className="w-3 h-3" /> Backfill
           </Button>
         )}
-        <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
+        <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5 cursor-default">
           {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
           {isAvailable ? "On" : "Off"}
         </Badge>
         {enabled && (
-          <Badge className={cn("text-[9px] gap-0.5 h-5 px-1.5 border-0", levelCfg.color)}>
+          <Badge className={cn("text-[9px] gap-0.5 h-5 px-1.5 border-0 cursor-default", levelCfg.color)}>
             <LevelIcon className="w-2.5 h-2.5" />
             L{level}
           </Badge>
         )}
       </div>
-      {/* Backfill progress bar */}
       {(bfProgress.status === "running" || bfProgress.status === "paused") && (
         <div className="flex items-center gap-2 mt-1">
           <Progress value={bfProgress.totalCycles > 0 ? (bfProgress.cycle / bfProgress.totalCycles) * 100 : 0} className="h-1 flex-1 max-w-[120px]" />
