@@ -1,94 +1,63 @@
 
+Obiettivo: riallineare Campaigns e Global alla fonte di verità dei dati, come da documento: prima si decide dove vive la verità, poi si costruisce la UI.
 
-# Piano: Campagne + Biglietti da Visita + Contesto "Incontrato di Persona" nelle Comunicazioni AI
+Cosa ho verificato
+- Nel database `partners`, Albania (`AL`) ha davvero 12 partner attivi.
+- Oggi il dropdown di `Campaigns` non è guidato in modo puro dalla tabella `partners`: passa da `usePartnersForGlobe()`, che costruisce la lista paesi partendo da `src/data/wcaCountries.ts` e poi innesta i conteggi.
+- Quindi la UI sta mescolando due fonti:
+  - `partners` = dati operativi reali
+  - `wcaCountries.ts` = riferimento statico geografico
+- La sidebar porta “Global” dentro “Campagne” perché in `src/App.tsx` c’è un redirect esplicito:
+  - `/global` → `/campaigns`
+- Non esiste oggi una pagina `Global` dedicata; la base distinta già presente nel repo è `src/pages/Operations.tsx`.
 
-## Problemi Identificati
+Piano di correzione
 
-1. **Dropdown paesi in Campagne** usa `WCA_COUNTRIES_MAP` (dati statici) — non la tabella `partners` reale. I conteggi vengono dai partner ma la lista paesi e' statica.
-2. **Nessun supporto biglietti da visita (BCA)** nella pagina Campagne — solo partner WCA.
-3. **Nessun contesto "incontrato di persona"** nelle Edge Function `generate-email` e `generate-outreach` — quando un partner ha un biglietto da visita associato (`business_cards.matched_partner_id`), l'AI non lo sa e non adatta il tono.
-4. **Partner con BCA associato** non sono evidenziati visivamente nella lista.
+1. Rendere `partners` la fonte di verità del dropdown Campaigns
+- Creare una logica dedicata per aggregare da `partners`:
+  - `country_code`
+  - `country_name`
+  - count partner reali
+- Il dropdown Partner userà questi dati reali, non il dataset statico come fonte primaria.
 
-## Interventi
+2. Tenere la lista completa dei paesi, ma con overlay reale
+- Mantengo tutti i paesi visibili.
+- Per i paesi presenti nel DB:
+  - nome e count arrivano da `partners`
+- Per i paesi assenti:
+  - count = `0`, in grigio
+- In questo modo Albania dovrà mostrare `12`.
 
-### 1. Doppia sorgente nella Campagne: Partner + Biglietti da Visita
+3. Separare responsabilità: globo vs dropdown
+- `wcaCountries.ts` resta solo per:
+  - coordinate
+  - flag/fallback geografici
+  - supporto al globo 3D
+- `usePartnersForGlobe` continua a servire il globo.
+- `Campaigns.tsx` smette di usare il hook del globo come fonte del dropdown/header.
 
-**File: `src/pages/Campaigns.tsx`**
+4. Ripristinare Global come maschera distinta
+- Rimuovere il redirect `/global -> /campaigns`.
+- Collegare `/global` alla pagina distinta già esistente nel progetto (`Operations`) oppure a un wrapper `Global` dedicato basato su quella pagina.
+- `Campagne` resta la pagina globo/campagne.
+- `Global` torna a essere una pagina separata, come richiesto.
 
-Aggiungere un tab/toggle nell'header (o nella dropdown paesi) per switchare tra:
-- **Partner** (comportamento attuale — query `partners`)
-- **Biglietti da Visita** (query `business_cards` con join su partner)
+5. Chiarire i contatori in header
+- Rendere espliciti i badge per evitare ambiguità:
+  - Paesi totali
+  - Paesi attivi
+  - Partner
+- Così non si confonde più la lunghezza della lista con il numero reale di partner.
 
-La dropdown paesi viene alimentata da entrambe le sorgenti a seconda del tab attivo:
-- Tab Partner: paesi dai partner (come ora)
-- Tab BCA: paesi estratti da `business_cards.location` o dal partner associato (`matched_partner_id → partners.country_code`)
+File coinvolti
+- `src/hooks/usePartnersForGlobe.ts`
+- `src/pages/Campaigns.tsx`
+- `src/App.tsx`
+- `src/pages/Operations.tsx` oppure nuovo `src/pages/Global.tsx`
 
-**File: `src/hooks/usePartnersForGlobe.ts`**
-
-Aggiungere un nuovo hook `useBusinessCardsForCampaign(countryCode)` che carica i biglietti da visita con il partner associato, raggruppati per paese.
-
-### 2. Evidenziare partner con BCA nella CompanyList
-
-**File: `src/components/campaigns/CompanyList.tsx`**
-
-- Query parallela: caricare i `matched_partner_id` dalla tabella `business_cards` (gia' disponibile via `useBusinessCardPartnerMatches`)
-- Se un partner ha un BCA associato: bordo sinistro viola/ambra + badge "🤝 Incontrato" con nome evento
-- Tooltip con dettagli: evento, data, nome contatto dal biglietto
-
-### 3. Flusso "Genera Jobs" → Cockpit con goal
-
-**File: `src/pages/Campaigns.tsx`** — funzione `onGenerateJobs`
-
-Attualmente inserisce in `activities` e naviga a `/reminders`. Modificare per:
-- Inserire in `cockpit_queue` (source_type: 'campaign') come fanno le altre sezioni
-- Aggiungere un campo goal selezionabile (Primo contatto, Follow-up, Partnership, ecc.) prima della conferma
-- I partner con BCA associato ricevono automaticamente il goal "Follow-up fiera" o simile
-
-### 4. Contesto "Incontrato di Persona" nelle Edge Function AI
-
-**Questo e' il punto critico: attualmente `generate-email` e `generate-outreach` NON sanno se il destinatario e' stato incontrato di persona.**
-
-**File: `supabase/functions/generate-email/index.ts`**
-
-Quando viene fornito un `partner_id`, fare una query aggiuntiva:
-```sql
-SELECT contact_name, event_name, met_at, location 
-FROM business_cards 
-WHERE matched_partner_id = $partner_id 
-LIMIT 3
-```
-
-Se ci sono risultati, iniettare nel system prompt:
-- "Hai incontrato questa azienda di persona a [evento] il [data] a [luogo]. Il contatto era [nome]. Usa un tono piu' caldo e familiare, fai riferimento all'incontro."
-
-**File: `supabase/functions/generate-outreach/index.ts`**
-
-Stessa logica: query `business_cards` per `matched_partner_id`, iniezione nel contesto.
-
-### 5. BCA nel Country Dropdown
-
-**File: `src/pages/Campaigns.tsx` — `CampaignHeaderControls`**
-
-Modificare la dropdown paesi con due sezioni:
-- Segmento superiore con toggle "Partner | BCA"
-- I conteggi si aggiornano in base alla selezione
-- Quando BCA e' attivo, il `CompanyList` mostra i biglietti da visita raggruppati per azienda
-
-## File Coinvolti
-
-| File | Azione |
-|------|--------|
-| `src/pages/Campaigns.tsx` | Toggle Partner/BCA, goal picker, flusso cockpit, highlight BCA |
-| `src/components/campaigns/CompanyList.tsx` | Badge "Incontrato", bordo colorato per BCA |
-| `src/hooks/usePartnersForGlobe.ts` | Nuovo hook per BCA per campagne |
-| `supabase/functions/generate-email/index.ts` | Query business_cards + iniezione contesto "met in person" |
-| `supabase/functions/generate-outreach/index.ts` | Stessa iniezione contesto |
-
-## Ordine di Esecuzione
-
-1. Aggiungere toggle Partner/BCA e hook BCA in Campaigns
-2. Evidenziare partner con BCA in CompanyList
-3. Aggiornare flusso "Genera Jobs" → cockpit con goal
-4. Iniettare contesto "incontrato di persona" in `generate-email`
-5. Iniettare contesto "incontrato di persona" in `generate-outreach`
-
+Risultato atteso
+- In `Campaigns`, il dropdown Partner mostra i numeri reali della tabella `partners`
+- Albania mostra `12`
+- I paesi a zero restano visibili in grigio
+- `Global` e `Campagne` tornano a essere due maschere diverse
+- La sidebar non manda più “Global” dentro “Campagne”
