@@ -1,22 +1,32 @@
 import { useState } from "react";
 import { Bot, Loader2, RefreshCw, Zap, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
+import { BriefingStatsBar } from "@/components/home/BriefingStatsBar";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { BriefingAction } from "@/hooks/useDailyBriefing";
+import type { BriefingAction, BriefingStats } from "@/hooks/useDailyBriefing";
 
 interface Props {
-  summary: string | undefined;
+  completed: string | undefined;
+  todo: string | undefined;
+  suspended: string | undefined;
+  /** Legacy fallback */
+  summary?: string;
   actions: BriefingAction[];
+  stats: BriefingStats | undefined;
   isLoading: boolean;
   onRefresh: () => void;
   onAction: (action: BriefingAction) => void;
 }
 
-export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAction }: Props) {
+export function OperativeBriefing({
+  completed, todo, suspended, summary,
+  actions, stats, isLoading, onRefresh, onAction,
+}: Props) {
   const [executingIdx, setExecutingIdx] = useState<number | null>(null);
   const [completedIdx, setCompletedIdx] = useState<Set<number>>(new Set());
   const qc = useQueryClient();
@@ -24,7 +34,6 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
   const executeAction = async (action: BriefingAction, idx: number) => {
     setExecutingIdx(idx);
     try {
-      // Find agent by name if specified
       let agentId: string | null = null;
       if (action.agentName) {
         const { data: agents } = await supabase
@@ -38,7 +47,6 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
       }
 
       if (agentId) {
-        // Create a real agent task and execute it
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Non autenticato");
 
@@ -55,20 +63,17 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
           .single();
         if (taskErr) throw taskErr;
 
-        // Fire agent-execute (lancia ApiError on failure, catturato dal try esterno)
         await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as any).id }, context: "OperativeBriefing.agent_execute" });
 
         toast.success(`Task assegnato a ${action.agentName}`);
         qc.invalidateQueries({ queryKey: ["agent-tasks"] });
       } else {
-        // Fallback: send to AI assistant and show response via prompt
         onAction(action);
       }
 
       setCompletedIdx(prev => new Set(prev).add(idx));
     } catch (e: any) {
       toast.error(e.message || "Errore nell'esecuzione");
-      // Fallback to prompt
       onAction(action);
     } finally {
       setExecutingIdx(null);
@@ -90,7 +95,11 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
     );
   }
 
-  if (!summary) return null;
+  const hasContent = completed || todo || suspended || summary;
+  if (!hasContent) return null;
+
+  // Fallback: if only legacy summary exists, show single view
+  const showTabs = !!(completed || todo || suspended);
 
   return (
     <section className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl p-5 space-y-3">
@@ -108,10 +117,46 @@ export function OperativeBriefing({ summary, actions, isLoading, onRefresh, onAc
         </button>
       </div>
 
-      <div className="ai-prose max-w-none text-sm">
-        <AIMarkdown content={summary} />
-      </div>
+      {/* Stats bar */}
+      {stats && (
+        <BriefingStatsBar
+          totalContacts={stats.totalContacts}
+          inHolding={stats.inHolding}
+          notContacted={stats.notContacted}
+          scheduledToday={stats.scheduledToday}
+        />
+      )}
 
+      {showTabs ? (
+        <Tabs defaultValue="todo" className="w-full">
+          <TabsList className="w-full grid grid-cols-3 h-8">
+            <TabsTrigger value="completed" className="text-[11px] gap-1">✅ Effettuato</TabsTrigger>
+            <TabsTrigger value="todo" className="text-[11px] gap-1">📋 Da fare</TabsTrigger>
+            <TabsTrigger value="suspended" className="text-[11px] gap-1">⏸ Sospesi</TabsTrigger>
+          </TabsList>
+          <TabsContent value="completed" className="mt-2">
+            <div className="ai-prose max-w-none text-sm">
+              <AIMarkdown content={completed || "_Nessun dato disponibile_"} />
+            </div>
+          </TabsContent>
+          <TabsContent value="todo" className="mt-2">
+            <div className="ai-prose max-w-none text-sm">
+              <AIMarkdown content={todo || "_Nessun task programmato_"} />
+            </div>
+          </TabsContent>
+          <TabsContent value="suspended" className="mt-2">
+            <div className="ai-prose max-w-none text-sm">
+              <AIMarkdown content={suspended || "_Nessuna attività sospesa_"} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="ai-prose max-w-none text-sm">
+          <AIMarkdown content={summary || ""} />
+        </div>
+      )}
+
+      {/* Actions */}
       {actions.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap pt-1">
           {actions.map((action, i) => {

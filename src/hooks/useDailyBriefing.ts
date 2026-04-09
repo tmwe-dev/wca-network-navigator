@@ -16,16 +16,29 @@ export interface AgentStatusItem {
   lastTask: string | null;
 }
 
+export interface BriefingStats {
+  totalContacts: number;
+  inHolding: number;
+  notContacted: number;
+  scheduledToday: number;
+}
+
 export interface DailyBriefing {
-  summary: string;
+  /** Legacy single summary (fallback) */
+  summary?: string;
+  /** 3-tab sections */
+  completed: string;
+  todo: string;
+  suspended: string;
   actions: BriefingAction[];
   agentStatus: AgentStatusItem[];
+  stats: BriefingStats;
 }
 
 export function useDailyBriefing() {
   return useQuery<DailyBriefing>({
     queryKey: ["daily-briefing"],
-    staleTime: 15 * 60 * 1000, // 15 min cache
+    staleTime: 15 * 60 * 1000,
     queryFn: async () => {
       return invokeEdge<DailyBriefing>("daily-briefing", { context: "useDailyBriefing" });
     },
