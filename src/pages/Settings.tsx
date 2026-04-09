@@ -13,6 +13,7 @@ import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings, { EnrichmentFilters, type SourceFilter, type EnrichFilter, type SortField, type SortDir } from "@/components/settings/EnrichmentSettings";
+import OperativeGuideSettings from "@/components/settings/OperativeGuideSettings";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
