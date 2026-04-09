@@ -175,7 +175,7 @@ export function AttivitaTab() {
                           {item.email_body && (
                             <div
                               className="text-xs border rounded-md p-2.5 max-h-[180px] overflow-auto bg-background"
-                              dangerouslySetInnerHTML={{ __html: item.email_body }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.email_body) }}
                             />
                           )}
                         </div>

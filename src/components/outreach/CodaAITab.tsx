@@ -236,7 +236,7 @@ export function CodaAITab() {
                   <p className="text-xs font-medium text-muted-foreground mb-1">Contenuto</p>
                   <div
                     className="text-sm border rounded-lg p-3 max-h-[300px] overflow-auto bg-muted/20"
-                    dangerouslySetInnerHTML={{ __html: previewAction.email_body }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewAction.email_body) }}
                   />
                 </div>
               )}

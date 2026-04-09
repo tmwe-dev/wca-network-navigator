@@ -591,7 +591,7 @@ export default function EmailComposer() {
                   <p className="text-[10px] text-muted-foreground mb-2">A: partner@example.com</p>
                   <div className="text-xs prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
-                      __html: buildFinalHtml(htmlBody, { companyName: "Acme Logistics", city: "Milano", countryName: "Italy" }, "John Doe"),
+                      __html: DOMPurify.sanitize(buildFinalHtml(htmlBody, { companyName: "Acme Logistics", city: "Milano", countryName: "Italy" }, "John Doe")),
                     }}
                   />
                 </div>

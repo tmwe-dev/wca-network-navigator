@@ -159,7 +159,7 @@ export function AgentSignatureConfig({ agent }: Props) {
       {showPreview && (
         <div className="border border-border/50 rounded-lg p-4 bg-white">
           <p className="text-[10px] text-muted-foreground mb-2">Anteprima firma:</p>
-          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
         </div>
       )}
 
