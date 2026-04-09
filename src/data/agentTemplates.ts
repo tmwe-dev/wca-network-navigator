@@ -427,7 +427,7 @@ REGOLE:
 - Verifica sempre la blacklist prima di proporre un partner
 - Valuta la qualità basandoti su: servizi, certificazioni, rating, completezza profilo
 - Crea report strutturati con ranking e motivazioni
-- Salva le scoperte importanti in memoria per riferimento futuro`,
+- Salva le scoperte importanti in memoria per riferimento futuro` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   account: {
