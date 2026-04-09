@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, Briefcase } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -15,6 +15,7 @@ import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
 import OperativeJobsBoard from "@/components/settings/OperativeJobsBoard";
 import MemoryDashboard from "@/components/ai/MemoryDashboard";
+import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ export default function Settings() {
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+    { value: "timing", label: "Timing & Schedule", icon: Clock },
   ];
 
   return (
@@ -103,6 +105,11 @@ export default function Settings() {
             {tab === "guida-operativa" && (
               <div className="float-panel p-5">
                 <OperativeJobsBoard />
+              </div>
+            )}
+            {tab === "timing" && (
+              <div className="float-panel p-5">
+                <TimingSettings />
               </div>
             )}
           </div>
