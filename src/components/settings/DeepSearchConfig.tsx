@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Loader2, Globe, Linkedin, Phone, Brain } from "lucide-react";
+import { Save, Loader2, Globe, Linkedin, Phone, Brain, Mail, LayoutDashboard, Users, CreditCard, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContextConfig {
@@ -21,11 +21,11 @@ const DEFAULT_CONFIG: Record<string, ContextConfig> = {
   bca: { scrapeWebsite: false, scrapeLinkedin: true, verifyWhatsapp: true, aiAnalysis: false },
 };
 
-const CONTEXT_LABELS: Record<string, { label: string; description: string }> = {
-  email_composer: { label: "Email Composer", description: "Quando generi email con l'Oracolo" },
-  cockpit: { label: "Cockpit", description: "Quando prepari messaggi dal Cockpit" },
-  contacts: { label: "Contatti", description: "Arricchimento nella sezione contatti" },
-  bca: { label: "Biglietti da Visita", description: "Arricchimento BCA" },
+const CONTEXT_LABELS: Record<string, { label: string; description: string; icon: LucideIcon }> = {
+  email_composer: { label: "Email Composer", description: "Quando generi email con l'Oracolo", icon: Mail },
+  cockpit: { label: "Cockpit", description: "Quando prepari messaggi dal Cockpit", icon: LayoutDashboard },
+  contacts: { label: "Contatti", description: "Arricchimento nella sezione contatti", icon: Users },
+  bca: { label: "Biglietti da Visita", description: "Arricchimento BCA", icon: CreditCard },
 };
 
 const OPTIONS = [
@@ -84,7 +84,10 @@ export function DeepSearchConfig() {
           <Card key={key}>
             <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">{meta.label}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <meta.icon className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm">{meta.label}</CardTitle>
+                </div>
                 <Badge variant="secondary" className="text-[10px]">{activeCount(config[key])} / 4</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground">{meta.description}</p>
