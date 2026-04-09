@@ -300,6 +300,7 @@ function FloatingCampaignPartners({
 export default function Campaigns() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [source, setSource] = useState<CampaignSource>("partners");
