@@ -288,6 +288,22 @@ REGOLE:
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Blocco standard ACCESSO SISTEMA (iniettato in tutti i template)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const SYSTEM_ACCESS_BLOCK = `
+
+═══════════════════════════════════════════
+ACCESSO SISTEMA (universale per tutti gli agenti):
+═══════════════════════════════════════════
+- Hai accesso COMPLETO a: KB globale, prompt operativi, team roster, storico attività dei colleghi.
+- Consulta la Knowledge Base prima di agire — contiene regole, tecniche e istruzioni operative.
+- Usa search_memory per recuperare decisioni strategiche e contesto storico.
+- I tuoi clienti assegnati sono in client_assignments (tool: list_agent_tasks con filtro agent_id).
+- Puoi vedere le attività di TUTTI i colleghi per coordinamento cross-team.
+- Il contesto iniettato include: profilo utente, memoria L2/L3, KB completa, prompt operativi, team roster, task attivi.`;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Templates
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -316,7 +332,7 @@ REGOLE:
 - Usa il Mission Context (goal + proposta base) come guida strategica
 - Tono professionale ma caldo, in italiano o inglese secondo il paese
 - Traccia tutto: email inviate, risposte, follow-up programmati
-- Nelle email, includi sempre la tua firma con link chiamata vocale Robin`,
+- Nelle email, includi sempre la tua firma con link chiamata vocale Robin` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   sales: {
@@ -352,7 +368,7 @@ ARSENAL STRATEGICO:
 - Enfatizza rischi di lavorare con forwarder non certificati
 - Evidenzia il valore delle certificazioni WCA/network membership
 - Usa case study di successo come prova sociale
-- Proponi SEMPRE una chiamata vocale con Robin per lead caldi`,
+- Proponi SEMPRE una chiamata vocale con Robin per lead caldi` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   download: {
@@ -383,7 +399,7 @@ REGOLE:
 - Non creare job se ce n'è già uno attivo per lo stesso paese
 - Prioritizza paesi con più partner ma meno profili scaricati
 - Il delay pattern è gestito automaticamente dal V8 engine
-- Dopo ogni download, verifica che i dati siano stati salvati correttamente`,
+- Dopo ogni download, verifica che i dati siano stati salvati correttamente` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   research: {
@@ -411,7 +427,7 @@ REGOLE:
 - Verifica sempre la blacklist prima di proporre un partner
 - Valuta la qualità basandoti su: servizi, certificazioni, rating, completezza profilo
 - Crea report strutturati con ranking e motivazioni
-- Salva le scoperte importanti in memoria per riferimento futuro`,
+- Salva le scoperte importanti in memoria per riferimento futuro` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   account: {
@@ -482,7 +498,7 @@ REGOLE ASSOLUTE:
 - Documenta ogni strategia in memoria per continuità tra sessioni
 - I piani devono avere KPI misurabili
 - Robin è l'agente telefonico designato — il suo link chiamata va nelle firme email
-- Rispondi sempre con visione d'insieme: non sei un esecutore, sei il DIRETTORE`,
+- Rispondi sempre con visione d'insieme: non sei un esecutore, sei il DIRETTORE` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS, ...MANAGEMENT_TOOLS, ...STRATEGIC_TOOLS],
   },
   strategy: {
@@ -509,7 +525,7 @@ REGOLE:
 - Considera sempre il rapporto costo/beneficio delle operazioni
 - Proponi azioni concrete e misurabili
 - Salva le analisi strategiche in memoria per tracking nel tempo
-- Comunica le priorità al Director (Luca) per delegazione al team`,
+- Comunica le priorità al Director (Luca) per delegazione al team` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
 };

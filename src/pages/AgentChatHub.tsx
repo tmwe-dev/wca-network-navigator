@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone } from "lucide-react";
+import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAgents, type Agent } from "@/hooks/useAgents";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
+import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 
 interface Message {
   role: "user" | "assistant";
@@ -58,6 +59,7 @@ export default function AgentChatHub() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [voiceCallOpen, setVoiceCallOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const chatMapRef = useRef<Map<string, Message[]>>(new Map());
   const [, forceRender] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -163,6 +165,32 @@ export default function AgentChatHub() {
                   {activeAgent.is_active ? "Attivo" : "Inattivo"}
                 </span>
               </div>
+            </div>
+            <Button
+              size="sm"
+              variant={directoryOpen ? "default" : "outline"}
+              onClick={() => setDirectoryOpen(!directoryOpen)}
+              className="rounded-lg text-xs gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Directory
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* System Directory Panel */}
+      <AnimatePresence>
+        {directoryOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-b border-border/30"
+          >
+            <div className="max-h-[40vh] overflow-y-auto px-4 py-3">
+              <AgentSystemDirectory />
             </div>
           </motion.div>
         )}
