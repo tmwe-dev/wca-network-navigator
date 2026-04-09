@@ -65,11 +65,16 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("embla-carousel") || id.includes("vaul") || id.includes("sonner") || id.includes("cmdk") || id.includes("input-otp")) {
             return "vendor-ui-misc";
           }
+          if (id.includes("next-themes")) return "vendor-react";
           if (
             id.includes("/react/") ||
             id.includes("/react-dom/") ||
-            id.includes("/react-router") ||
-            id.includes("scheduler")
+            id.includes("react-router") ||
+            id.includes("scheduler") ||
+            id.includes("use-sync-external-store") ||
+            id.includes("clsx") ||
+            id.includes("tailwind-merge") ||
+            id.includes("class-variance-authority")
           ) {
             return "vendor-react";
           }
