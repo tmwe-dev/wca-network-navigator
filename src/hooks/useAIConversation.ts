@@ -101,7 +101,7 @@ export function useAIConversation(pageContext: string) {
             user_id: user.id,
             page_context: pageContext,
             title: title || "Nuova conversazione",
-            messages: structuredClone(updated),
+            messages: JSON.parse(JSON.stringify(updated)),
           }])
           .select("id")
           .single();

@@ -162,14 +162,14 @@ export function useLinkedInLookup() {
           if (ic) {
             const existing = (ic.enrichment_data as Record<string, any>) || {};
             await (supabase.from("imported_contacts").update({
-              enrichment_data: structuredClone({
+              enrichment_data: JSON.parse(JSON.stringify({
                 ...existing,
                 linkedin_search_log: log,
                 linkedin_resolved_at: foundUrl ? new Date().toISOString() : null,
                 linkedin_resolved_method: resolvedMethod,
                 linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
                 ...(foundUrl ? { linkedin_url: foundUrl } : {}),
-              }),
+              })),
             }) as any).eq("id", contact.sourceId);
           }
         } catch (e) {
@@ -265,7 +265,7 @@ export function useLinkedInLookup() {
         ...(foundUrl ? { linkedin_profile_url: foundUrl, linkedin_url: foundUrl } : {}),
       };
 
-      await (supabase.from("imported_contacts").update({ enrichment_data: structuredClone(updated) }) as any).eq("id", c.id);
+      await (supabase.from("imported_contacts").update({ enrichment_data: JSON.parse(JSON.stringify(updated)) }) as any).eq("id", c.id);
 
       if (foundUrl) found++; else notFound++;
       setProgress(p => ({ ...p, found, notFound, currentMethod: undefined }));
