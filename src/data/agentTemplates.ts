@@ -525,7 +525,7 @@ REGOLE:
 - Considera sempre il rapporto costo/beneficio delle operazioni
 - Proponi azioni concrete e misurabili
 - Salva le analisi strategiche in memoria per tracking nel tempo
-- Comunica le priorità al Director (Luca) per delegazione al team`,
+- Comunica le priorità al Director (Luca) per delegazione al team` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
 };
