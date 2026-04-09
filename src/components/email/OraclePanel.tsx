@@ -158,7 +158,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             </div>
           </div>
 
-          <ScrollArea className="flex-1 px-2 py-1.5 overflow-auto">
+          <ScrollArea className="h-0 flex-1 px-2 py-1.5">
             <div className="space-y-1">
               {allTypes.map((t) => {
                 const isCustom = customTypes.some(c => c.id === t.id);
