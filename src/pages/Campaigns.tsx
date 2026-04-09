@@ -1,15 +1,15 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
-import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
+import { usePartnersByCountryForGlobe, usePartnersForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
-import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
 import {
   Command,
   CommandInput,
