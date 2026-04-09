@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useOutreachMock } from "@/hooks/useOutreachMock";
+import { MOCK_AGENT_ACTIONS } from "@/lib/outreachMockData";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +43,7 @@ const CHANNEL_ICONS: Record<string, typeof Mail> = {
 export function CodaAITab() {
   const queryClient = useQueryClient();
   const [previewAction, setPreviewAction] = useState<AgentAction | null>(null);
+  const { mockEnabled } = useOutreachMock();
 
   const { data: pendingActions = [], isLoading } = useQuery({
     queryKey: ["agent-pending-actions"],
@@ -58,11 +61,14 @@ export function CodaAITab() {
       return (data || []) as AgentAction[];
     },
     refetchInterval: 30000,
+    enabled: !mockEnabled,
   });
+
+  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as any as AgentAction[]) : pendingActions;
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
-      // Mark as approved → the outreach queue or direct send will pick it up
+      if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
         .update({ status: "approved" as any, reviewed: true })
@@ -77,6 +83,7 @@ export function CodaAITab() {
 
   const rejectAction = useMutation({
     mutationFn: async (actionId: string) => {
+      if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
         .update({ status: "cancelled" as any, reviewed: true })
@@ -91,6 +98,7 @@ export function CodaAITab() {
 
   const approveAll = useMutation({
     mutationFn: async () => {
+      if (mockEnabled) return;
       const ids = pendingActions.map(a => a.id);
       for (const id of ids) {
         await supabase.from("activities").update({ status: "approved" as any, reviewed: true }).eq("id", id);
@@ -98,7 +106,7 @@ export function CodaAITab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
-      toast.success(`${pendingActions.length} azioni approvate`);
+      toast.success(`${displayActions.length} azioni approvate`);
     },
   });
 
@@ -107,7 +115,7 @@ export function CodaAITab() {
     return <Icon className="w-3.5 h-3.5" />;
   };
 
-  if (isLoading) {
+  if (isLoading && !mockEnabled) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -122,12 +130,12 @@ export function CodaAITab() {
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Coda AI</span>
-          {pendingActions.length > 0 && (
-            <Badge variant="secondary" className="text-xs">{pendingActions.length}</Badge>
+          {displayActions.length > 0 && (
+            <Badge variant="secondary" className="text-xs">{displayActions.length}</Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {pendingActions.length > 1 && (
+          {displayActions.length > 1 && (
             <Button
               size="sm"
               variant="outline"
@@ -150,7 +158,7 @@ export function CodaAITab() {
       </div>
 
       {/* List */}
-      {pendingActions.length === 0 ? (
+      {displayActions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
           <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
           <p className="text-sm font-medium text-muted-foreground">Nessuna azione in attesa</p>
@@ -161,17 +169,14 @@ export function CodaAITab() {
       ) : (
         <ScrollArea className="flex-1 px-3 py-2">
           <div className="space-y-2">
-            {pendingActions.map(action => (
+            {displayActions.map(action => (
               <div
                 key={action.id}
                 className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border transition-colors bg-card"
               >
-                {/* Icon */}
                 <div className="shrink-0 mt-0.5 p-1.5 rounded-md bg-primary/10 text-primary">
                   {getChannelIcon(action.activity_type)}
                 </div>
-
-                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{action.title}</p>
                   {action.email_subject && (
@@ -190,36 +195,16 @@ export function CodaAITab() {
                     )}
                   </div>
                 </div>
-
-                {/* Actions */}
                 <div className="shrink-0 flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => setPreviewAction(action)}
-                    title="Anteprima"
-                  >
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPreviewAction(action)} title="Anteprima">
                     <Eye className="w-3.5 h-3.5" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                    onClick={() => approveAction.mutate(action.id)}
-                    disabled={approveAction.isPending}
-                    title="Approva"
-                  >
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                    onClick={() => approveAction.mutate(action.id)} disabled={approveAction.isPending} title="Approva">
                     <Check className="w-3.5 h-3.5" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                    onClick={() => rejectAction.mutate(action.id)}
-                    disabled={rejectAction.isPending}
-                    title="Rifiuta"
-                  >
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                    onClick={() => rejectAction.mutate(action.id)} disabled={rejectAction.isPending} title="Rifiuta">
                     <X className="w-3.5 h-3.5" />
                   </Button>
                 </div>
