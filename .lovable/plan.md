@@ -1,25 +1,52 @@
 
 
-# Fix: Spazio vuoto nell'Oracolo — Tipi email nascosti
+# Verifica Timing e Stato WhatsApp/LinkedIn
 
-## Problema
+## Stato Attuale
 
-Il `TabsContent` del componente Radix UI ha una classe default `mt-2` nel file `src/components/ui/tabs.tsx` (riga 45). Il pannello Oracolo passa `mt-0` per sovrascriverlo, ma il problema principale è che il `TabsContent` non propaga correttamente il layout flex — la `ScrollArea` interna non riceve l'altezza corretta e il contenuto (lista tipi email) viene tagliato/nascosto.
+### Timing nella Coda di Produzione (`useOutreachQueue.ts`) — OK
+I delay tra invii esistono già e sono corretti:
+- **WhatsApp**: 5 secondi tra un messaggio e l'altro
+- **LinkedIn**: 10 secondi tra un messaggio e l'altro
+- **Email**: 2 secondi
+- La coda processa max 5 item per ciclo, con pausa tra ognuno
 
-## Fix
+### Maschera Test (`TestExtensions.tsx`) — PROBLEMA
+La maschera test **non ha alcun delay tra le azioni**. Ogni pulsante è manuale, ma nulla impedisce di cliccare rapidamente in sequenza (Ping → Sessione → SyncCookie → AutoLogin → Search → Inbox). Questo genera 6+ interazioni con LinkedIn in pochi secondi — esattamente il comportamento rischioso.
 
-### File: `src/components/email/OraclePanel.tsx`
+### WhatsApp — FUNZIONA
+Dai log: sessione autenticata, 67 chat visibili, invio messaggi operativo.
 
-1. Sui tre `TabsContent`, assicurarsi che abbiano `flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex` — il problema è che Radix imposta `display: none` sulle tab inattive e solo `display: block` su quelle attive. Serve forzare `display: flex` quando attiva.
+### LinkedIn — FUNZIONA PARZIALMENTE
+- Ping, sessione, syncCookie, autoLogin, searchProfile: **tutti OK**
+- Inbox (`readLinkedInInbox`): **restituisce 0 thread** — i selettori DOM dell'estensione non trovano le conversazioni (problema nell'estensione, non nel codice webapp)
 
-2. Sulla `ScrollArea` (riga 161), aggiungere un'altezza esplicita `h-0 flex-1` per forzare il contenimento — `flex-1` da solo non basta senza un'altezza base.
+## Fix Proposti
 
-### File: `src/components/ui/tabs.tsx` (opzionale)
+### 1. Aggiungere delay obbligatorio nella maschera Test
+Dopo ogni azione LinkedIn nella maschera test, disabilitare i pulsanti per **5 secondi** con countdown visibile. Impedisce clic rapidi in sequenza.
 
-Aggiungere nel TabsContent base la classe `data-[state=active]:flex` in modo che quando è attivo usi flex layout, permettendo ai figli flex di funzionare correttamente.
+```
+// Concetto: dopo ogni azione LinkedIn
+setRunning(true);
+// ... esegui azione ...
+log("⏳ Cooldown 5s...", "info");
+await new Promise(r => setTimeout(r, 5000));
+setRunning(false);
+```
+
+### 2. Aggiungere contatore azioni LinkedIn nell'ora
+Mostrare nella maschera test un badge: "Azioni LI nell'ultima ora: N". Serve come indicatore visuale di rischio.
+
+### File coinvolti
+
+| File | Modifica |
+|------|----------|
+| `src/pages/TestExtensions.tsx` | Cooldown 5s dopo ogni azione LinkedIn, badge contatore |
 
 ## Risultato
-
-- Tutte le voci dei tipi email predefiniti sono visibili e scrollabili
-- Nessuno spazio vuoto tra il campo obiettivo e la lista tipi
+- La maschera test non può più generare burst di richieste LinkedIn
+- Il codice di produzione (outreach queue) già rispetta i delay
+- WhatsApp funziona
+- LinkedIn funziona (tranne inbox che è un problema di selettori nell'estensione)
 
