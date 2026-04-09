@@ -332,7 +332,7 @@ REGOLE:
 - Usa il Mission Context (goal + proposta base) come guida strategica
 - Tono professionale ma caldo, in italiano o inglese secondo il paese
 - Traccia tutto: email inviate, risposte, follow-up programmati
-- Nelle email, includi sempre la tua firma con link chiamata vocale Robin`,
+- Nelle email, includi sempre la tua firma con link chiamata vocale Robin` + SYSTEM_ACCESS_BLOCK,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   sales: {
