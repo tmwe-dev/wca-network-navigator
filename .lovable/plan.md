@@ -1,77 +1,83 @@
 
-# Piano: Riscrittura Completa Sezione Arricchimento
 
-## Problemi identificati dallo screenshot
-1. Lista piatta e brutta — nessun bordo colorato per origine, nessuna bandiera, nessun checkbox
-2. Nessuna selezione (singola o bulk) — impossibile operare su singoli record
-3. Nessuna azione contestuale per record (Deep Search, LinkedIn lookup, etc.)
-4. I filtri sono nella sidebar Settings (VerticalTabNav filterSlot) ma mancano tab per fonte come in CRM
-5. Manca header con "Seleziona tutti" e ordinamento inline
-6. Le stat cards in alto occupano troppo spazio
+# Piano: Auto-Apprendimento Stile Email dall'Editing Utente
 
-## Soluzione
+## Concetto
 
-Ricostruire EnrichmentSettings usando gli stessi pattern visivi di ContactCard/BusinessCardsHub:
-- Bordo sinistro colorato per origine (blu/viola WCA, verde contatti, ambra email, teal cockpit)
-- Checkbox per selezione singola e bulk
-- Bandiera paese grande
-- Tab orizzontali per fonte (Tutti, WCA, Contatti, Email, Cockpit) con conteggi
-- Header con "Seleziona tutti" + ordinamento
-- UnifiedBulkActionBar per azioni di massa
-- Azioni rapide per record singolo (Deep Search, LinkedIn, Logo)
+Quando l'utente modifica un draft generato dall'AI e clicca "Invia", il sistema intercetta la differenza tra il testo originale AI e quello finale modificato. Un'analisi semantica rapida (via Edge Function) identifica i pattern di modifica (tono più informale, testo accorciato, struttura cambiata) e propone all'utente di salvare queste preferenze come memoria L1 → futura promozione a L2/L3.
+
+Il tutto avviene con un **dialog di conferma pre-invio** — non blocca il flusso, l'utente può ignorarlo e inviare direttamente.
+
+## Flusso
+
+```text
+AI genera draft → utente modifica → click "Invia"
+  ↓
+[isEditedAfterGeneration = true?]
+  ↓ sì
+Calcolo diff (% riduzione, cambi strutturali)
+  ↓
+Se diff significativo (>15% testo o >3 modifiche semantiche):
+  → Mostra dialog "Apprendimento Stile"
+    • Mostra: "Hai ridotto il testo del 30%", "Tono più informale"
+    • Opzioni: [Salva preferenza] [Ignora e invia] [Invia senza salvare]
+  ↓
+Se [Salva]: chiama Edge Function → analisi semantica → salva in ai_memory L1
+  ↓
+Procedi con invio normale
+```
 
 ## Dettaglio tecnico
 
-### 1. EnrichmentSettings.tsx — Riscrittura completa
+### 1. Edge Function `analyze-email-edit` (nuova)
 
-**Tab orizzontali** in alto per fonte (sostituiscono il filtro sidebar):
-```
-[Tutti (2357)] [WCA (1200)] [Contatti (800)] [Email (235)] [Cockpit (122)]
-```
+Riceve `{ original_html, edited_html, recipient_country, email_type }` e restituisce:
+- `length_change_pct`: percentuale riduzione/aumento testo
+- `tone_shift`: es. "formal→informal", "neutral→friendly"
+- `structural_changes`: es. "removed_greeting", "simplified_cta", "shortened_paragraphs"
+- `suggested_memory`: frase sintetica da salvare come memoria (es. "L'utente preferisce email brevi e informali per contatti italiani")
+- `significance`: "low" | "medium" | "high"
 
-**Stats compatte** — riga orizzontale inline sotto i tab (non cards grandi)
+Usa un modello leggero (gemini-2.5-flash-lite) per l'analisi — costo minimo per invio.
 
-**Header lista** con:
-- Checkbox "Seleziona tutti"
-- Colonne: Nome | Dominio | Paese | Fonte | Stato
-- Click per ordinare
+### 2. Dialog `EmailEditLearningDialog.tsx` (nuovo)
 
-**Righe** stile ContactCard:
-- Bordo sinistro 3px colorato per origine
-- Checkbox di selezione
-- Bandiera paese (emoji, testo grande)
-- Nome azienda in grassetto
-- Dominio sotto
-- Badge fonte (WCA/Contatti/Email/Cockpit)
-- Icone stato (LinkedIn ✓, Logo ✓)
-- Menu azioni (⋮) per singolo record
+Appare **solo** quando `isEditedAfterGeneration = true` e la diff è significativa.
+Mostra:
+- Badge con le modifiche rilevate (es. "−30% testo", "Tono informale")
+- Il suggerimento di memoria proposto dall'AI
+- 3 pulsanti: **Salva e invia** / **Invia senza salvare** / **Annulla**
 
-**Bulk action bar** quando ci sono selezioni:
-- LinkedIn Batch (contatti)
-- Logo Batch (WCA)
-- Deep Search
-- Esporta
+Se l'utente salva, inserisce in `ai_memory` con:
+- `level: 1`, `tag: "style_preference"`, `source: "email_edit_learning"`
+- `content`: la frase suggerita dall'AI
+- `context_key`: tipo email + paese destinatario (per preferenze granulari)
 
-### 2. Settings.tsx — Rimuovere filterSlot per enrichment
+### 3. Integrazione in `EmailComposer.tsx`
 
-I filtri per fonte ora sono tab interni alla pagina, non nella sidebar. Rimuovere lo state dei filtri enrichment da Settings.tsx e spostarlo dentro EnrichmentSettings.
+- `handleEnqueue` già ha accesso a `isEditedAfterGeneration`, `aiGeneratedBody`, `htmlBody`
+- Prima di procedere con l'invio, se `isEditedAfterGeneration`:
+  1. Chiama `analyze-email-edit`
+  2. Se `significance >= "medium"`, mostra il dialog
+  3. Dopo la scelta utente, procede con l'invio esistente
 
-### 3. EnrichmentFilters.tsx — Semplificare
+### 4. Consumo delle preferenze nel prompt AI
 
-Resta nella sidebar solo: ricerca + filtro stato dati (con/senza logo, linkedin, dominio) + ordinamento. I filtri "Fonte" si spostano nei tab interni.
+In `generate-email` Edge Function, le memorie con tag `style_preference` vengono iniettate nel prompt come regole addizionali, così l'AI genera direttamente nel tono preferito dall'utente.
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/settings/EnrichmentSettings.tsx` | Riscrittura: tab fonte, header selezionabile, righe con bordo/bandiera/checkbox, bulk bar, azioni singole |
-| `src/pages/Settings.tsx` | Semplificare: rimuovere stato filtri enrichment da qui, passare meno props |
-| `src/components/settings/enrichment/EnrichmentFilters.tsx` | Rimuovere sezione "Fonte" (ora nei tab interni), mantenere solo stato dati + ordinamento |
-| `src/components/settings/enrichment/EnrichmentBatchActions.tsx` | Integrare nella bulk action bar o eliminare (logica spostata nel componente principale) |
+| `supabase/functions/analyze-email-edit/index.ts` | Nuova — analisi semantica diff via AI |
+| `src/components/email/EmailEditLearningDialog.tsx` | Nuovo — dialog conferma apprendimento |
+| `src/pages/EmailComposer.tsx` | Intercettare pre-invio, mostrare dialog se diff significativa |
+| `supabase/functions/generate-email/index.ts` | Iniettare memorie `style_preference` nel prompt |
 
 ## Ordine di esecuzione
 
-1. Riscrivere EnrichmentSettings con tab, selezione, righe styled
-2. Aggiornare Settings.tsx per rimuovere stato filtri ridondante
-3. Aggiornare EnrichmentFilters sidebar (solo stato dati)
-4. Integrare bulk actions nella nuova UI
+1. Creare Edge Function `analyze-email-edit`
+2. Creare `EmailEditLearningDialog`
+3. Integrare nel flusso di invio di EmailComposer
+4. Aggiornare `generate-email` per consumare le preferenze salvate
+
