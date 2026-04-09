@@ -601,8 +601,6 @@ export function WhatsAppInboxView() {
   );
 }
 
-  const [remaining, setRemaining] = useState("");
-
   useEffect(() => {
     const tick = () => {
       const diff = Math.max(0, endsAt - Date.now());
