@@ -200,7 +200,7 @@ export function EmailDetailView({ message, onClose }: Props) {
             className="h-7 gap-1.5 text-xs"
             onClick={() => {
               const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
-              navigate("/outreach", {
+              navigate("/email-composer", {
                 state: {
                   prefilledSubject: fwdSubject,
                   prefilledBody: normalizedContent.bodyText
