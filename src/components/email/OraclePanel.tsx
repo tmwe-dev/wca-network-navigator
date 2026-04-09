@@ -126,7 +126,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </TabsList>
 
         {/* === TIPI TAB === */}
-        <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0">
+        <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0 data-[state=active]:flex">
           {/* Custom Goal field with voice dictation */}
           <div className="px-2 pt-2 pb-1 shrink-0">
             <div className="relative">
