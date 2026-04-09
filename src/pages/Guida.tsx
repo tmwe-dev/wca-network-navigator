@@ -1,269 +1,285 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Globe, Users, Mail, Send, Sparkles, Building2, Calendar, Settings, BookOpen, Chrome, Search, Puzzle } from "lucide-react";
+import GuidaLayout from "@/components/guida/GuidaLayout";
+import CoverSection from "@/components/guida/CoverSection";
+import VisionSection from "@/components/guida/VisionSection";
+import PerformanceSection from "@/components/guida/PerformanceSection";
+import AgentTeamSection from "@/components/guida/AgentTeamSection";
+import AutonomousCycleSection from "@/components/guida/AutonomousCycleSection";
+import OutreachSection from "@/components/guida/OutreachSection";
+import GlobalNetworkSection from "@/components/guida/GlobalNetworkSection";
+import DeepSearchSection from "@/components/guida/DeepSearchSection";
+import MultichannelSection from "@/components/guida/MultichannelSection";
+import ProspectSection from "@/components/guida/ProspectSection";
+import SecuritySection from "@/components/guida/SecuritySection";
+import ResultsSection from "@/components/guida/ResultsSection";
+import RoadmapSection from "@/components/guida/RoadmapSection";
+import ClosingSection from "@/components/guida/ClosingSection";
+import TutorialSection from "@/components/guida/TutorialSection";
+import {
+  Globe, Users, Mail, Send, Sparkles, Building2, Calendar, Settings, Chrome, Search, Puzzle,
+} from "lucide-react";
 
-const sections = [
-  {
-    icon: Globe,
-    title: "Operations Center",
-    description: "Dashboard centrale per la gestione globale dei partner e dei download",
-    details: [
-      "Griglia paesi con statistiche: partner totali, email, telefoni, profili scaricati, copertura directory",
-      "Statistiche globali aggregate con contatori animati",
-      "Job di download in background con terminale live e monitoraggio progresso",
-      "Pannello partner per paese con dettaglio contatti e stato arricchimento",
-      "Strumenti avanzati: resync profili, WCA browser integrato, configurazione delay",
-      "Assistente AI integrato per analisi e suggerimenti operativi",
-      "Indicatore stato sessione WCA in tempo reale",
-    ],
-  },
-  {
-    icon: Users,
-    title: "Partner Hub",
-    description: "Navigazione a 3 livelli per esplorare e gestire i partner WCA",
-    details: [
-      "Navigazione: griglia paesi → workbench paese → lista partner flat",
-      "Filtri avanzati: network, certificazioni (IATA, ISO, AEO, BASC, C-TPAT), servizi, rating, anni WCA, scadenza membership",
-      "Deep Search bulk con barra progresso e possibilità di stop",
-      "Selezione multipla con azioni: invio email, creazione attività workspace, deep search",
-      "Dettaglio partner completo: contatti personali, social link, rating con breakdown, servizi offerti",
-      "Indicatore qualità contatti: verde (completo), ambra (parziale), rosso (mancante)",
-      "Mini-globo 3D nella scheda partner per visualizzare la posizione geografica",
-    ],
-  },
-  {
-    icon: Mail,
-    title: "Campaigns",
-    description: "Selezione partner tramite globo 3D interattivo e invio batch",
-    details: [
-      "Globo 3D interattivo con marker per paese e connessioni di rete animate",
-      "Selezione partner per paese con click sul globo",
-      "Filtro per network WCA attivo",
-      "Invio batch a Campaign Jobs per gestione coda email/call",
-      "Preview email personalizzata prima dell'invio",
-      "Aurora boreale animata come effetto visivo",
-    ],
-  },
-  {
-    icon: Send,
-    title: "Email Composer",
-    description: "Composizione e invio email HTML con variabili dinamiche",
-    details: [
-      "Editor email HTML con variabili dinamiche: {{company_name}}, {{contact_name}}, {{city}}, {{country}}",
-      "Selezione destinatari per paese, partner singolo o batch da campaign jobs",
-      "Allegati da template caricati nelle impostazioni (per categoria)",
-      "Link personalizzati configurabili",
-      "Anteprima live dell'email con dati reali del destinatario",
-      "Invio diretto tramite SMTP configurato nelle impostazioni",
-    ],
-  },
-  {
-    icon: Sparkles,
-    title: "Email Workspace",
-    description: "Generazione email AI personalizzate con arricchimento dati integrato",
-    details: [
-      "Generazione email AI personalizzate basate sul profilo del partner e documenti di riferimento",
-      "Lista contatti con indicatori arricchimento: enriched, website trovato, LinkedIn trovato",
-      "Deep Search integrata con barra progresso e possibilità di stop",
-      "Eliminazione bulk attività completate o selezionate",
-      "Filtri: enriched/non enriched, paese, tipo attività",
-      "Barra obiettivo con documenti di riferimento caricabili e link configurabili",
-      "Canvas email con anteprima e invio diretto",
-    ],
-  },
-  {
-    icon: Building2,
-    title: "Prospect Center",
-    description: "Gestione prospect italiani importati da Report Aziende",
-    details: [
-      "Griglia ATECO interattiva con ranking automatico basato su rilevanza settoriale",
-      "Filtri avanzati: fatturato, numero dipendenti, regione, provincia, codice ATECO",
-      "Importazione automatica tramite estensione Chrome Report Aziende",
-      "Ricerca rapida per nome azienda o partita IVA",
-      "Dettaglio prospect con dati finanziari, contatti e link social",
-      "Wizard di importazione con mappatura campi automatica",
-    ],
-  },
-  {
-    icon: Calendar,
-    title: "Agenda",
-    description: "Calendario reminder, attività e follow-up",
-    details: [
-      "Calendario con vista mensile e indicatori giornalieri",
-      "Reminder con priorità (alta, media, bassa) e data di scadenza",
-      "Tab attività con gestione batch: completamento, cancellazione, riassegnazione",
-      "Collegamento diretto al partner associato con apertura dettaglio",
-      "Vista per scadenza: oggi, questa settimana, in ritardo",
-      "Completamento con un click e segna come annullato",
-    ],
-  },
-  {
-    icon: Settings,
-    title: "Impostazioni",
-    description: "Configurazione completa del sistema in 9 tab",
-    details: [
-      "Generale: numero WhatsApp aziendale per link automatici",
-      "Email: configurazione SMTP (host, porta, utente, password) con test invio integrato",
-      "Connessioni: credenziali WCA (email/password) + estensione Chrome + credenziali LinkedIn (email/password) + estensione Chrome + cookie manuale li_at",
-      "Import/Export: caricamento e scaricamento dati in CSV e JSON con selezione campi",
-      "Blacklist: gestione aziende da escludere dalle campagne con sincronizzazione WCA",
-      "Report Aziende: credenziali (email/password) + estensione Chrome per importazione prospect",
-      "Template: upload allegati per categoria (presentazioni, listini, certificati)",
-      "Profilo AI: personalizzazione tono, stile e istruzioni per la generazione email",
-      "Abbonamento: visualizzazione piano attivo, crediti residui e storico consumi",
-    ],
-  },
+const sectionLabels = [
+  "Copertina", "Tagline", "La Sfida",
+  "Prima/Dopo", "Pilastri", "Stack",
+  "Performance", "Impatto",
+  "Team AI", "Ciclo Decisionale", "Ciclo Autonomo",
+  "Outreach AI",
+  "Rete Globale", "Deep Search", "Multi-Channel",
+  "Prospect", "Sicurezza", "Risultati", "Roadmap",
+  // Tutorial sections
+  "Operations Center", "Partner Hub", "Campaigns", "Email Composer",
+  "Email Workspace", "Agenda", "Estensioni Chrome", "Impostazioni",
+  // Closing
+  "Chiusura",
 ];
-
-const extensionSection = {
-  icon: Chrome,
-  title: "Estensioni Chrome",
-  description: "3 estensioni dedicate per automazione e raccolta dati",
-  subsections: [
-    {
-      name: "WCA World",
-      details: [
-        "Auto-login con credenziali salvate nelle impostazioni",
-        "Sincronizzazione automatica cookie di sessione WCA",
-        "Scraping directory WCA: lista membri per paese e network",
-        "Download profili partner con contatti privati",
-        "Comunicazione bidirezionale con la webapp tramite postMessage",
-      ],
-    },
-    {
-      name: "LinkedIn",
-      details: [
-        "Auto-login con credenziali email/password salvate",
-        "Sincronizzazione automatica cookie li_at",
-        "Estrazione dati profilo: nome, titolo, azienda, bio, foto",
-        "Verifica stato sessione LinkedIn attiva",
-        "Pagina download dedicata con istruzioni installazione",
-      ],
-    },
-    {
-      name: "Report Aziende",
-      details: [
-        "Auto-login al portale Report Aziende",
-        "Scraping automatico prospect con dati finanziari completi",
-        "Importazione diretta nel Prospect Center",
-        "Estrazione contatti aziendali e link social",
-      ],
-    },
-  ],
-};
-
-const deepSearchSection = {
-  icon: Search,
-  title: "Deep Search",
-  description: "Flusso di arricchimento automatico dei partner",
-  details: [
-    "Scoperta sito web: estrazione dominio dall'email aziendale o ricerca tramite Partner Connect",
-    "Scraping sito web: estrazione contenuti principali (about, servizi, contatti)",
-    "Analisi AI: elaborazione dei contenuti per generare descrizione, servizi e punti chiave",
-    "Logo automatico: recupero favicon tramite Google Favicon API (https://www.google.com/s2/favicons)",
-    "Link WhatsApp: generazione automatica del link wa.me dal numero di telefono",
-    "Social link: scoperta automatica profili LinkedIn, Facebook, Instagram, Twitter",
-    "Disponibile come azione singola o bulk (selezione multipla nel Partner Hub e Workspace)",
-    "Barra progresso con contatore e possibilità di stop durante l'esecuzione bulk",
-  ],
-};
 
 const Guida = () => {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-primary" />
-          Guida Progetto
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Panoramica completa di WCA Partners CRM — tutte le funzionalità e i moduli disponibili
-        </p>
-      </div>
+    <GuidaLayout sectionLabels={sectionLabels}>
+      {/* === PARTE 1: ISTITUZIONALE (~15 sezioni) === */}
+      <CoverSection />
+      <VisionSection />
+      <PerformanceSection />
+      <AgentTeamSection />
+      <AutonomousCycleSection />
+      <OutreachSection />
+      <GlobalNetworkSection />
+      <DeepSearchSection />
+      <MultichannelSection />
+      <ProspectSection />
+      <SecuritySection />
+      <ResultsSection />
+      <RoadmapSection />
 
-      {/* Sezioni principali */}
-      <div className="grid gap-4">
-        {sections.map((section) => (
-          <Card key={section.title} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-                  <section.icon className="w-5 h-5 text-primary" />
-                </div>
+      {/* === PARTE 2: TUTORIAL DETTAGLIATO === */}
+      <TutorialSection
+        badge="Tutorial"
+        icon={Globe}
+        title="Operations Center"
+        subtitle="Dashboard centrale per la gestione globale"
+        description="Il cuore operativo del sistema. Da qui controlli download, monitori job in background, e gestisci l'intera rete di partner con un colpo d'occhio."
+        features={[
+          { text: "Griglia paesi con statistiche: partner, email, telefoni, copertura" },
+          { text: "Job di download in background con terminale live" },
+          { text: "Pannello partner per paese con dettaglio contatti" },
+          { text: "Assistente AI integrato per analisi e suggerimenti" },
+          { text: "Indicatore stato sessione WCA in tempo reale" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              {["🇮🇹 Italy (324)", "🇩🇪 Germany (218)", "🇺🇸 USA (195)"].map(c => (
+                <div key={c} className="p-2 rounded bg-white/5 text-xs text-white/50 text-center">{c}</div>
+              ))}
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-white/10">
+              <span className="text-xs text-emerald-400">● Terminal Live</span>
+              <div className="mt-2 text-xs text-white/30 font-mono space-y-1">
+                <p>[14:32] Downloading IT partner 142/324...</p>
+                <p>[14:33] ✓ Found 3 contacts for ABC Srl</p>
+              </div>
+            </div>
+          </div>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Users}
+        title="Partner Hub"
+        subtitle="Navigazione e gestione partner WCA"
+        description="Navigazione a 3 livelli: dalla griglia paesi al workbench paese fino alla lista partner flat. Filtri avanzati per network, certificazioni, servizi e rating."
+        reversed
+        features={[
+          { text: "Filtri: IATA, ISO, AEO, BASC, C-TPAT, servizi, rating" },
+          { text: "Deep Search bulk con barra progresso e stop" },
+          { text: "Selezione multipla con azioni batch" },
+          { text: "Dettaglio partner: contatti, social, rating breakdown" },
+          { text: "Mini-globo 3D nella scheda partner" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              {["IATA ✓", "ISO 9001 ✓", "AEO", "BASC"].map(f => (
+                <span key={f} className="px-2 py-1 rounded-full bg-white/5 text-xs text-white/40">{f}</span>
+              ))}
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-white/10 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs text-primary">AL</span>
                 <div>
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
-                  <CardDescription>{section.description}</CardDescription>
+                  <p className="text-sm text-white font-medium">ABC Logistics</p>
+                  <p className="text-xs text-white/30">Istanbul, Turkey · ★★★★☆</p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-1.5">
-                {section.details.map((detail, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="text-primary mt-0.5">•</span>
-                    <span>{detail}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Estensioni Chrome */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <Puzzle className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{extensionSection.title}</CardTitle>
-              <CardDescription>{extensionSection.description}</CardDescription>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {extensionSection.subsections.map((sub) => (
-            <div key={sub.name}>
-              <h4 className="font-medium text-sm mb-1.5">{sub.name}</h4>
-              <ul className="space-y-1">
-                {sub.details.map((detail, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="text-primary mt-0.5">•</span>
-                    <span>{detail}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        }
+      />
 
-      {/* Deep Search */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <deepSearchSection.icon className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{deepSearchSection.title}</CardTitle>
-              <CardDescription>{deepSearchSection.description}</CardDescription>
+      <TutorialSection
+        badge="Tutorial"
+        icon={Mail}
+        title="Campaigns"
+        subtitle="Globo 3D interattivo per selezione partner"
+        description="Seleziona partner per paese cliccando direttamente sul globo 3D. Filtra per network WCA e invia batch alla coda campaign jobs."
+        features={[
+          { text: "Globo 3D con marker paese e connessioni animate" },
+          { text: "Selezione partner per paese con click sul globo" },
+          { text: "Invio batch a Campaign Jobs" },
+          { text: "Preview email personalizzata" },
+          { text: "Aurora boreale animata come effetto visivo" },
+        ]}
+        screenshotContent={
+          <div className="flex items-center justify-center min-h-[200px]">
+            <div className="w-40 h-40 rounded-full bg-gradient-to-br from-primary/20 via-blue-500/10 to-transparent border border-white/10 flex items-center justify-center">
+              <Globe className="w-16 h-16 text-primary/40" />
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-1.5">
-            {deepSearchSection.details.map((detail, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{detail}</span>
-              </li>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Send}
+        title="Email Composer"
+        subtitle="Composizione email HTML con variabili dinamiche"
+        reversed
+        description="Editor completo per comporre email HTML con variabili come {{company_name}}, {{contact_name}}. Selezione destinatari, allegati da template e anteprima live."
+        features={[
+          { text: "Variabili dinamiche: {{company_name}}, {{contact_name}}, {{city}}" },
+          { text: "Selezione destinatari: paese, partner singolo, batch" },
+          { text: "Allegati da template per categoria" },
+          { text: "Anteprima live con dati reali" },
+          { text: "Invio diretto via SMTP configurato" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            <div className="p-3 rounded bg-white/5 border border-white/10">
+              <p className="text-xs text-white/30 mb-2">To: info@abc-logistics.com</p>
+              <p className="text-xs text-white/50">Subject: Partnership — {"{{city}}"} corridor</p>
+            </div>
+            <div className="p-3 rounded bg-white/5 text-xs text-white/30">
+              Dear {"{{contact_name}}"},<br />
+              We would like to explore a partnership with {"{{company_name}}"}...
+            </div>
+          </div>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Sparkles}
+        title="Email Workspace"
+        subtitle="Generazione AI personalizzata"
+        description="Lo spazio di lavoro per generare email AI basate sul profilo completo del partner. Deep Search integrata, filtri avanzati e canvas email con invio diretto."
+        features={[
+          { text: "Generazione AI basata su profilo e documenti di riferimento" },
+          { text: "Lista contatti con indicatori arricchimento" },
+          { text: "Deep Search integrata con progress e stop" },
+          { text: "Barra obiettivo con documenti e link configurabili" },
+          { text: "Canvas email con anteprima e invio" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs">✓ Enriched</span>
+              <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs">🌐 Website</span>
+              <span className="px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs">in LinkedIn</span>
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-primary/20 text-xs text-white/40">
+              <Sparkles className="w-4 h-4 text-primary inline mr-1" />
+              Generating personalized email based on partner profile...
+            </div>
+          </div>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Calendar}
+        title="Agenda"
+        subtitle="Calendario reminder e follow-up"
+        reversed
+        description="Calendario con vista mensile, reminder con priorità e gestione batch delle attività. Collegamento diretto ai partner associati."
+        features={[
+          { text: "Vista mensile con indicatori giornalieri" },
+          { text: "Reminder con priorità: alta, media, bassa" },
+          { text: "Gestione batch: completamento, cancellazione" },
+          { text: "Vista scadenza: oggi, settimana, in ritardo" },
+          { text: "Completamento e annullamento con un click" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className={`p-2 rounded text-center text-xs ${i === 3 ? "bg-primary/20 text-primary" : "bg-white/5 text-white/30"}`}>
+                  {10 + i}
+                </div>
+              ))}
+            </div>
+            <div className="p-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+              ⚠️ 3 attività in scadenza oggi
+            </div>
+          </div>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Puzzle}
+        title="Estensioni Chrome"
+        subtitle="3 estensioni per automazione e raccolta dati"
+        description="WCA World, LinkedIn e Report Aziende. Auto-login, scraping directory, download profili e sincronizzazione cookie — tutto automatico."
+        features={[
+          { text: "WCA: auto-login, scraping directory, download profili" },
+          { text: "LinkedIn: sync cookie li_at, estrazione profili" },
+          { text: "Report Aziende: scraping prospect con dati finanziari" },
+          { text: "Comunicazione bidirezionale webapp ↔ estensione" },
+          { text: "Pagine download dedicate con istruzioni" },
+        ]}
+        screenshotContent={
+          <div className="space-y-3">
+            {["WCA World", "LinkedIn", "Report Aziende"].map(ext => (
+              <div key={ext} className="flex items-center gap-3 p-2 rounded bg-white/5">
+                <Chrome className="w-5 h-5 text-primary" />
+                <span className="text-sm text-white/60">{ext}</span>
+                <span className="ml-auto text-xs text-emerald-400">● Attiva</span>
+              </div>
             ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        }
+      />
+
+      <TutorialSection
+        badge="Tutorial"
+        icon={Settings}
+        title="Impostazioni"
+        subtitle="Configurazione completa in 9 tab"
+        reversed
+        description="Tutto il sistema si configura da qui: SMTP, credenziali WCA/LinkedIn, import/export, blacklist, template allegati, profilo AI e abbonamento."
+        features={[
+          { text: "Email: SMTP con test invio integrato" },
+          { text: "Connessioni: WCA + LinkedIn + cookie li_at" },
+          { text: "Import/Export: CSV e JSON con selezione campi" },
+          { text: "Blacklist: esclusione aziende con sync WCA" },
+          { text: "Profilo AI: tono, stile, istruzioni generazione" },
+          { text: "Abbonamento: piano attivo, crediti, storico" },
+        ]}
+        screenshotContent={
+          <div className="space-y-2">
+            {["Generale", "Email", "Connessioni", "Import/Export", "Blacklist", "Template", "Profilo AI"].map((tab, i) => (
+              <div key={tab} className={`px-3 py-1.5 rounded text-xs ${i === 1 ? "bg-primary/10 text-primary" : "bg-white/5 text-white/30"}`}>
+                {tab}
+              </div>
+            ))}
+          </div>
+        }
+      />
+
+      {/* === CHIUSURA === */}
+      <ClosingSection />
+    </GuidaLayout>
   );
 };
 
