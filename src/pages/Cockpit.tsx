@@ -142,7 +142,7 @@ const Cockpit = () => {
                 const c = contactsMap[draftState.contactId!];
                 return c ? {
                   hasEmail: !!c.email,
-                  hasPhone: !!(c.phone || c.mobile),
+                  hasPhone: !!c.phone,
                   hasLinkedinUrl: !!c.linkedinUrl,
                 } : undefined;
               })() : undefined}
