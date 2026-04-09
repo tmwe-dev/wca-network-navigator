@@ -844,7 +844,10 @@ ${strategicAdvisor}
 ${partnerContext}
 
 ${contactContext}
+${interlocutorBlock}
+${relationshipBlock}
 ${historyContext}
+${branchBlock}
 ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
@@ -854,6 +857,11 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
+
+OBIETTIVO COMMERCIALE FINALE:
+L'obiettivo ultimo di ogni comunicazione è CONVERTIRE il lead in cliente attivo.
+Le leve principali sono: invitare ad usare i nostri sistemi, proporre apertura account,
+evidenziare tariffe privilegiate, mostrare come semplifichiamo tempi e operatività.
 
 ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
 ${goal || "Nessuna istruzione specifica — genera un'email professionale basata sul goal e la proposta."}
