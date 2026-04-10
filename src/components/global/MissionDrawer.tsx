@@ -249,6 +249,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </>
           )}
 
+          {/* Active Missions */}
+          <ActiveMissionsPanel />
+
           {/* Recipients — only in outreach/email contexts */}
           {showRecipients && <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />}
         </div>
