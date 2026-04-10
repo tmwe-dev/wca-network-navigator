@@ -48,10 +48,27 @@ export function useHoldingMessages(channel: HoldingChannel) {
 
       if (error) throw error;
 
-      // Step 3: Group by partner
+      // Step 3: Deduplicate by message_id_external or subject+from+date
+      const seen = new Set<string>();
+      const deduped: ChannelMessage[] = [];
+      for (const msg of (messages || []) as unknown as ChannelMessage[]) {
+        // Primary dedup key: message_id_external
+        if (msg.message_id_external) {
+          if (seen.has(msg.message_id_external)) continue;
+          seen.add(msg.message_id_external);
+        } else {
+          // Fallback dedup key: subject + from + date
+          const fallbackKey = `${msg.subject || ""}|${msg.from_address || ""}|${msg.email_date || msg.created_at}`;
+          if (seen.has(fallbackKey)) continue;
+          seen.add(fallbackKey);
+        }
+        deduped.push(msg);
+      }
+
+      // Step 4: Group by partner
       const groupMap = new Map<string, HoldingMessageGroup>();
 
-      for (const msg of (messages || []) as unknown as ChannelMessage[]) {
+      for (const msg of deduped) {
         const pid = msg.partner_id;
         if (!pid || !partnerMap.has(pid)) continue;
 
