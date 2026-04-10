@@ -65,12 +65,12 @@ export function useHoldingPatternList() {
 
       // Prospects
       const { data: prospects } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("id, company_name, city, email, lead_status, last_interaction_at, interaction_count")
         .in("lead_status", ACTIVE_STATUSES)
         .order("last_interaction_at", { ascending: false, nullsFirst: false });
 
-      ((prospects as any[]) || []).forEach((p) =>
+      (prospects || []).forEach((p) =>
         items.push({
           id: p.id,
           source: "prospect",
