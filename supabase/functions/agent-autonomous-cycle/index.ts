@@ -23,10 +23,23 @@ function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 // getCETHour and isOutsideWorkHours are imported from _shared/timeUtils.ts (line 3)
 // No local redeclaration — single source of truth for work-hours logic
 
-function isHighStakes(item: any): boolean {
-  if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
-  if (item.source === "ex_client") return true;
-  if (item.rating && item.rating >= 4) return true;
+// Configurable high-stakes criteria — loaded from app_settings at runtime
+interface HighStakesCriteria {
+  statuses: string[];
+  sources: string[];
+  min_rating: number;
+}
+
+const DEFAULT_HIGH_STAKES: HighStakesCriteria = {
+  statuses: ["in_progress", "negotiation"],
+  sources: ["ex_client"],
+  min_rating: 4,
+};
+
+function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
+  if (criteria.statuses.includes(item.lead_status)) return true;
+  if (criteria.sources.includes(item.source)) return true;
+  if (item.rating && item.rating >= criteria.min_rating) return true;
   return false;
 }
 
