@@ -213,7 +213,7 @@ serve(async (req) => {
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
-      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval);
+      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval, highStakesCriteria);
       if (screeningCount > 0) {
         results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
         await sleep(DELAY_BETWEEN_AGENTS_MS);
@@ -240,7 +240,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes(partner) || forceApproval;
+              const stakes = isHighStakes(partner, highStakesCriteria) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
@@ -286,7 +286,7 @@ serve(async (req) => {
           let stakes = false;
           if (fup.partner_id) {
             const { data: p } = await supabase.from("partners").select("rating, lead_status").eq("id", fup.partner_id).single();
-            if (p) stakes = isHighStakes(p);
+            if (p) stakes = isHighStakes(p, highStakesCriteria);
           }
 
           const needsApproval = stakes || forceApproval;
