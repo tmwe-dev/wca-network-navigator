@@ -1,136 +1,120 @@
 
 
-# Audit Completo: Caccia al Tesoro — Bug, Errori di Architettura, Logica Sbagliata
+# Audit Completo — Caccia al Tesoro #2
 
-## 🔴 BUG CRITICI (Rottura funzionale)
+## 🔴 BUG CRITICI
 
-### 1. **app_settings: NESSUNA Edge Function filtra per user_id** 
-**Gravità: CRITICA** — Vanifica completamente la migrazione fatta 2 sessioni fa.
-
-Il frontend (`useAppSettings.ts`) filtra correttamente per `user_id`. Ma **TUTTE e 12 le Edge Function** che leggono `app_settings` usano il **service_role_key** (che bypassa RLS) e **NON filtrano mai per user_id**:
-
-- `generate-outreach`: `.like("key", "ai_%")` — legge le settings di TUTTI gli utenti
-- `generate-email`: `.like("key", "ai_%")` — idem
-- `agent-execute`: `.like("key", "ai_%")` — idem  
-- `send-email`: `.in("key", ["smtp_host", ...])` — prende la PRIMA riga, potrebbe essere di un altro utente
-- `process-email-queue`: stessa cosa per SMTP
-- `agent-autonomous-cycle`: `.in("key", [...])` — senza user_id
-- `daily-briefing`: `.eq("key", "operative_strategy")` — senza user_id
-- `improve-email`: `.like("key", "ai_%")` — senza user_id
-- `timeUtils.ts`: `.in("key", [...])` — senza user_id
-- `scrape-wca-blacklist`: legge E scrive senza user_id
-- `ai-assistant`: `.like("key", "ai_%")` — senza user_id
-- `super-assistant`: `.like("key", "ai_%")` — senza user_id
-
-**Risultato**: Un utente invia email con le credenziali SMTP di un altro, vede la KB di un altro, usa l'alias/firma di un altro.
-
-**Fix**: Aggiungere `.eq("user_id", userId)` in OGNI query su `app_settings` in tutte le edge function.
-
----
-
-### 2. **kb_entries: generate-outreach e generate-email NON filtrano per user_id**
-**Gravità: CRITICA**
-
-`fetchKbEntriesForOutreach()` e `fetchKbEntriesStrategic()` leggono tutte le kb_entries attive senza filtrare per user_id. L'utente A ottiene le tecniche di vendita dell'utente B nel suo prompt.
-
-Solo `agent-execute` (riga 90) filtra `.eq("user_id", userId)`.
-
-**Fix**: Aggiungere `.eq("user_id", userId)` alle query KB in outreach, email, improve-email, super-assistant, voice-brain-bridge, e ai-assistant (dove manca).
-
----
-
-### 3. **sameLocationGuard: `return true` blocca TUTTI gli invii**
-**Gravità: CRITICA**
-
-In `sameLocationGuard.ts` riga 66:
-```js
-const sentToOther = recentActs.find(a => {
-  return true; // any recent send to this partner counts
-});
+### 1. **generate-email riga 788-789: Riga duplicata causa errore di sintassi**
+Righe 788-789:
 ```
-La funzione `find()` con `return true` matcha SEMPRE il primo elemento. Questo significa che se c'è stata UNA QUALSIASI attività completata verso quel partner negli ultimi 7 giorni, **TUTTI i nuovi invii sono bloccati**, anche se era un follow-up alla stessa persona.
-
-La logica intendeva verificare se il contatto fosse diverso, ma il check è stato sostituito con `return true` — probabilmente un refactoring andato male.
-
-**Fix**: Implementare un check reale basato su `selected_contact_id` o `to_address` per distinguere follow-up (stesso contatto = ok) da invio a nuovo contatto (bloccare).
-
----
-
-### 4. **generate-outreach fallback model inesistente**
-**Gravità: MEDIA**
-
-Riga 493: `models: [model, "openai/gpt-4o-mini"]` — `gpt-4o-mini` NON è nella lista dei modelli supportati. Il fallback non funzionerà mai. Dovrebbe essere `openai/gpt-5-mini` o `openai/gpt-5-nano`.
+Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
+Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
+```
+La stessa riga di chiusura del template literal è presente DUE VOLTE. Questo produce un errore di sintassi JavaScript — la seconda riga è codice fuori dal template literal. **Il file potrebbe non funzionare affatto.**
 
 ---
 
-### 5. **scrape-wca-blacklist: upsert senza user_id rompe il vincolo**
-**Gravità: MEDIA**
+### 2. **agent-autonomous-cycle righe 177-178: Variabili dichiarate due volte**
+```js
+const workStartHour = parseInt(globalCfg["agent_work_start_hour"]...);  // riga 174
+const workEndHour = parseInt(globalCfg["agent_work_end_hour"]...);      // riga 175
+const workStartHour = parseInt(globalCfg["agent_work_start_hour"]...);  // riga 177 — DUPLICATO
+const workEndHour = parseInt(globalCfg["agent_work_end_hour"]...);      // riga 178 — DUPLICATO
+```
+Doppia dichiarazione `const` = errore runtime. **Il ciclo autonomo potrebbe crashare all'avvio.**
 
-Riga 127: `.upsert({ key: "blacklist_last_updated", value: ... }, { onConflict: "key" })` — Il vincolo unique ora è su `(user_id, key)`, non su `key` da solo. Questo upsert fallirà o creerà duplicati perché manca `user_id`.
+---
+
+### 3. **aiGateway.ts ALLOWED_MODELS: modelli obsoleti bloccano le chiamate**
+L'allowlist contiene `openai/gpt-4o-mini` e `openai/gpt-4o` che NON sono nella lista dei modelli supportati dalla piattaforma. Ma NON contiene `openai/gpt-5-mini` che è usato come fallback in `generate-outreach` (riga 495) e `agent-execute` (riga 218).
+
+**Risultato**: `generate-outreach` chiama `aiChat({ models: [model, "openai/gpt-5-mini"] })` → `aiGateway` lancia `AiGatewayError("invalid_model")` perché `gpt-5-mini` non è nell'allowlist. **Il fallback non funziona MAI.**
+
+Inoltre, `ai-assistant`, `ai-deep-search-helper` e `voice-brain-bridge` usano ancora `openai/gpt-4o-mini` come fallback.
+
+---
+
+### 4. **timeUtils.ts loadWorkHourSettings: query senza user_id**
+Riga 33-36: la funzione `loadWorkHourSettings()` legge `app_settings` SENZA filtrare per `user_id`. Usata da `email-cron-sync`, prende la prima riga trovata che potrebbe essere di qualsiasi utente. **Problema di isolamento dati.**
+
+---
+
+### 5. **agent-autonomous-cycle: query work-hours senza user_id (righe 166-172)**
+La query globale per work-hours non filtra per `user_id` — se due utenti hanno orari diversi, il sistema usa il primo trovato. Inoltre, gli orari di lavoro dovrebbero essere per-utente (un utente in Asia, uno in Europa), non globali per il cron job.
 
 ---
 
 ## 🟡 ERRORI DI ARCHITETTURA
 
-### 6. **agent-autonomous-cycle: settings globali, non per-utente**
-Il ciclo autonomo carica settings da `app_settings` SENZA user_id (riga 165-176), poi le applica a TUTTI gli utenti nel loop. Se utente A ha `agent_require_approval = true` e utente B no, il comportamento dipende da quale riga il DB restituisce per prima.
-
-**Fix**: Dentro il loop `for (const [userId, agents] of Object.entries(userAgents))`, caricare le settings per quel `userId` specifico.
-
-### 7. **send-email e process-email-queue: leggono SMTP senza user_id**
-Se due utenti hanno configurato SMTP diversi, il sistema usa il primo trovato nel DB. Un utente potrebbe inviare email tramite il server SMTP di un altro.
-
-### 8. **agent-execute: carica agent CON user_id, ma settings SENZA**
-Riga 51: `.eq("user_id", userId)` per l'agent — corretto. Ma riga 63: settings senza user_id — le settings caricate nel prompt dell'agente potrebbero essere di un altro utente.
+### 6. **logEmailSideEffects: race condition sul contatore interazioni**
+Righe 71-84: il codice fa un SELECT del `interaction_count`, poi un UPDATE con `count + 1`. Questo NON è atomico — se due email vengono inviate in parallelo per lo stesso partner, entrambe leggono lo stesso valore e incrementano a N+1 invece di N+2. Dovrebbe usare una `rpc` atomica o `interaction_count + 1` via SQL raw.
 
 ---
 
-## 🟠 LOGICA SBAGLIATA
-
-### 9. **sameLocationGuard: recentContact restituisce dati vuoti**
-Righe 72-76: `name: ""`, `email: ""` — il recentContact viene sempre restituito con dati vuoti, rendendo inutile l'informazione per l'utente nel messaggio di errore.
-
-### 10. **generate-email: effectivePartnerId incoerente in standalone mode**
-Riga 529: `const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;`
-In standalone mode con `partner_id`, `activity` è `undefined`, quindi `activity?.partner_id` è `undefined` anche se `isPartnerSource` è `true` (riga 490 lo imposta a true). Il guard e le relazioni vengono saltati anche quando i dati ci sono.
-
-### 11. **generate-email: "ISTRUZIONI DAL TIPO EMAIL SELEZIONATO" ripete il goal**
-Righe 785-786: 
+### 7. **generate-email riga 594: cachedEnrichmentContext usa `activity?.partner_id` in modo incoerente**
+```js
+if (isPartnerSource && activity?.partner_id) {
 ```
-ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
-${goal || "Nessuna istruzione specifica..."}
-```
-Questo è lo stesso `goal` già usato 3 righe sopra. L'AI riceve lo stesso testo due volte, sprecando token e confondendo il contesto.
+In standalone mode `activity` è `undefined`, quindi `activity?.partner_id` è sempre `undefined`. Ma `effectivePartnerId` (riga 531) è stato fixato per usare `partner?.id` quando `activity` non c'è. Qui però il blocco di enrichment NON usa `effectivePartnerId` — usa `activity!.partner_id` (riga 598). Risultato: in standalone mode, nessun enrichment data viene caricato anche se il partner esiste.
 
-### 12. **agent-autonomous-cycle: Phase 2 duplica Phase 1**
-Phase 1 (`screenIncomingMessages`) già processa tutti i messaggi inbound non letti. Phase 2 (riga 229-265) rifà la stessa query su `channel_messages` con un filtro aggiuntivo su `lead_status`. Risultato: messaggi duplicati se un partner ha lead_status "contacted" o "in_progress".
+---
 
-Il check anti-duplicazione (riga 247-252) usa `.contains("target_filters", { message_id: msg.id })` che dovrebbe funzionare, ma aggiunge complessità e query inutili.
+### 8. **Phase 2 di autonomous-cycle duplica Phase 1 (righe 232-275)**
+Phase 1 (`screenIncomingMessages`) processa TUTTI i messaggi inbound non letti con `is("read_at", null)`. Phase 2 (riga 239-242) fa la stessa query senza `gte("created_at", lookback)` — prende TUTTI i messaggi non letti, inclusi quelli già processati da Phase 1. Il check anti-duplicazione (riga 257-262) dovrebbe catturare i duplicati, ma genera query N inutili e spreca risorse.
+
+---
+
+### 9. **generate-outreach: partner query senza user_id (riga 139-141)**
+La query su `partners` usa solo `ilike("company_name", ...)` SENZA filtrare per utente. I partner sono condivisi per design, MA la query `partner_contacts`, `partner_networks`, `partner_services` ugualmente non filtra per user_id. Se i dati sono condivisi è ok, ma va verificato che questa sia la scelta intenzionale.
+
+---
+
+### 10. **getKBSlice e getKBSliceLegacy: codice duplicato in 3 file**
+La stessa funzione `getKBSlice`/`getKBSliceLegacy` esiste in:
+- `generate-outreach/index.ts` (righe 42-62)
+- `generate-email/index.ts` (righe 100-125)
+- `improve-email/index.ts` (righe 28+)
+
+Dovrebbe essere in `_shared/`.
+
+---
+
+## 🟠 LOGICA/PERFORMANCE
+
+### 11. **agent-execute: N+1 query per Director View (righe 171-181)**
+Per ogni agente nel team, viene eseguita una query separata per caricare il `system_prompt`. Se ci sono 10 agenti, sono 10 query separate. Dovrebbe fare una singola query `.in("id", agentIds)`.
+
+### 12. **generate-email: `deduct_credits` usa formula diversa**
+In `generate-email` (riga 834): `(inputTokens + outputTokens * 2) / 1000` — usa i campi `prompt_tokens`/`completion_tokens` dal response.
+In `generate-outreach` (riga 510): stessa formula ma usa `result.usage.promptTokens`/`result.usage.completionTokens` dal wrapper `aiGateway`.
+`generate-email` NON usa `aiGateway` — chiama `fetch` direttamente. Nessun retry, nessun fallback model, nessun timeout. **Meno resiliente di `generate-outreach`.**
 
 ---
 
 ## Piano di Fix
 
-### Step 1: Risolvere l'isolamento user_id nelle Edge Function (CRITICO)
-- Passare `userId` a tutte le query su `app_settings` e `kb_entries` in **12 file**
-- Per le edge function che ricevono auth header: estrarre userId e usarlo
-- Per le edge function cron (es. `agent-autonomous-cycle`): caricare settings per-utente dentro il loop
+### Step 1 — Bug critici immediati
+1. Rimuovere la riga duplicata in `generate-email` (788-789)
+2. Rimuovere le variabili duplicate in `agent-autonomous-cycle` (177-178)
+3. Aggiornare `ALLOWED_MODELS` in `aiGateway.ts`: rimuovere `openai/gpt-4o-mini` e `openai/gpt-4o`, aggiungere `openai/gpt-5-mini`, `openai/gpt-5`, `openai/gpt-5-nano`
+4. Aggiornare i fallback obsoleti in `ai-assistant`, `ai-deep-search-helper`, `voice-brain-bridge` da `gpt-4o-mini` → `gpt-5-mini`
 
-### Step 2: Fixare sameLocationGuard `return true`
-- Implementare il check reale: se `selected_contact_id` corrisponde al contatto attuale → `allowed: true`, altrimenti bloccare
+### Step 2 — Isolamento dati
+5. Aggiungere `user_id` a `loadWorkHourSettings()` in `timeUtils.ts`
+6. Fix query work-hours in `agent-autonomous-cycle` per caricarle per-utente
 
-### Step 3: Fixare il modello fallback in generate-outreach
-- `gpt-4o-mini` → `openai/gpt-5-mini`
+### Step 3 — Bug logici
+7. Fixare `cachedEnrichmentContext` in `generate-email` per usare `effectivePartnerId`
+8. Rendere atomico l'incremento `interaction_count` in `logEmailSideEffects`
+9. Eliminare la duplicazione Phase 1/Phase 2 in `autonomous-cycle`
 
-### Step 4: Fixare logica incoerente in generate-email standalone
-- `effectivePartnerId` dovrebbe usare `partner_id` (dal body) quando `isPartnerSource && !activity`
-
-### Step 5: Rimuovere la duplicazione ISTRUZIONI/GOAL in generate-email
-
-### Step 6: Fixare upsert in scrape-wca-blacklist
+### Step 4 — Pulizia e performance
+10. Centralizzare `getKBSliceLegacy` in `_shared/`
+11. Fixare N+1 query in Director View di `agent-execute`
 
 ### Stima
-- **12+ file da modificare**
-- Fix critici (Step 1-2): ~100 righe di codice
-- Fix architetturali (Step 3-6): ~30 righe
+- ~12 file da modificare
+- 2 bug sintattici bloccanti (crash runtime)
+- 1 bug di allowlist che disabilita tutti i fallback model
+- 4 fix logici/architetturali
 
