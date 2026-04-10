@@ -27,3 +27,29 @@ Deno.test("[B06] Returns 401 without auth", async () => {
   assertEquals(res.status, 401);
   assertExists(body.error);
 });
+
+Deno.test("[B06] Returns 401 with invalid Bearer token", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: ANON_KEY,
+      Authorization: "Bearer invalid-token-xyz",
+    },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  assertEquals(res.status, 401);
+  assertExists(body.error);
+});
+
+Deno.test("[B06] Error response shape is consistent", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  assertExists(body.error);
+  assertEquals(typeof body.error, "string");
+});

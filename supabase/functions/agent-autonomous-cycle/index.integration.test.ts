@@ -56,3 +56,30 @@ Deno.test("[D10] Night pause response shape", async () => {
     assertEquals(typeof body.message, "string");
   }
 });
+
+Deno.test("[D02] Response body is valid JSON with expected fields", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  // Must have at least one of these top-level keys
+  const hasKey = "success" in body || "skipped" in body || "message" in body || "error" in body;
+  assertEquals(hasKey, true);
+});
+
+Deno.test("[D03] Work hours response mentions time window", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  if (body.skipped && body.message) {
+    // Should mention the configured work hours
+    const mentionsHours = body.message.includes(":00");
+    assertEquals(mentionsHours, true);
+  }
+  assertExists(body);
+});
