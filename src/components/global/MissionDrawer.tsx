@@ -18,6 +18,7 @@ import ContentSelect from "@/components/shared/ContentSelect";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
+import ActiveMissionsPanel from "@/components/missions/ActiveMissionsPanel";
 
 interface MissionDrawerProps {
   open: boolean;
@@ -247,6 +248,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               </div>
             </>
           )}
+
+          {/* Active Missions */}
+          <ActiveMissionsPanel />
 
           {/* Recipients — only in outreach/email contexts */}
           {showRecipients && <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />}

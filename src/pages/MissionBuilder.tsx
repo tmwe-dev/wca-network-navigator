@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { MissionStepData } from "@/components/missions/MissionStepRenderer";
 import { extractWidgets, MissionWidgetRenderer, type WidgetConfig } from "@/components/missions/MissionChatWidgets";
+import MissionPlanReview from "@/components/missions/MissionPlanReview";
+import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("MissionBuilder");
@@ -31,6 +33,12 @@ export default function MissionBuilder() {
   const navigate = useNavigate();
   const [stepData, setStepData] = useState<MissionStepData>({ channel: "email", schedule: "immediate" });
   const [missionTitle, setMissionTitle] = useState("");
+
+  // Plan → Approve → Execute state
+  const [pendingPlan, setPendingPlan] = useState<MissionPlan | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [currentMissionId, setCurrentMissionId] = useState<string | undefined>();
+  const { createActions, approveAll, generateIdempotencyKey } = useMissionActions(currentMissionId);
 
   // Stats from DB
   const [countryStats, setCountryStats] = useState<{ code: string; name: string; count: number; withEmail: number }[]>([]);
@@ -216,24 +224,91 @@ export default function MissionBuilder() {
     setIsChatLoading(false);
   }, [messages, isChatLoading, stepData, countryStats]);
 
-  // Launch mission
+  // Generate plan (Plan phase)
+  const generatePlan = useCallback((): MissionPlan => {
+    const countries = stepData.targets?.countries || [];
+    const totalContacts = stepData.batching?.batches.reduce((s, b) => s + b.count, 0) || 0;
+    const channel = stepData.channel || "email";
+
+    const idempotencyKey = generateIdempotencyKey({
+      countries,
+      channel,
+      totalContacts,
+      day: new Date().toISOString().slice(0, 10),
+    });
+
+    const dangerLevel: MissionPlan["dangerLevel"] =
+      totalContacts > 500 ? "critical" : totalContacts > 100 ? "moderate" : "safe";
+
+    const actions: MissionPlan["actions"] = [];
+
+    if (stepData.deepSearch?.enabled) {
+      actions.push({ type: "deep_search", label: `Deep Search su ${countries.length} paesi`, details: `Scraping e arricchimento dati` });
+    }
+
+    countries.forEach(code => {
+      const stat = countryStats.find(c => c.code === code);
+      const batch = stepData.batching?.batches.find(b => b.country === code);
+      actions.push({
+        type: "outreach",
+        label: `${channel === "email" ? "📧" : "💬"} Outreach ${stat?.name || code}`,
+        details: `${batch?.count || 0} contatti via ${channel}`,
+      });
+    });
+
+    if (stepData.schedule !== "immediate") {
+      actions.push({ type: "schedule", label: "Pianifica invio", details: `Programmato per ${stepData.scheduleDate || "data da definire"}` });
+    }
+
+    return {
+      interpretation: `Missione di outreach via ${channel} verso ${totalContacts} contatti in ${countries.length} paesi.${stepData.deepSearch?.enabled ? " Include arricchimento dati." : ""}`,
+      dangerLevel,
+      actions,
+      summary: `${actions.length} azioni pianificate per ${totalContacts} contatti`,
+      totalContacts,
+      idempotencyKey,
+    };
+  }, [stepData, countryStats, generateIdempotencyKey]);
+
+  // Launch mission (called from confirm_summary widget — now generates plan first)
   const launchMission = useCallback(async () => {
+    const plan = generatePlan();
+    setPendingPlan(plan);
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: `📋 Ho generato il piano per la tua missione. Rivedi le **${plan.actions.length} azioni** pianificate e conferma per procedere.`,
+      widgets: [{ type: "plan_review" as const }],
+    }]);
+  }, [generatePlan]);
+
+  // Approve plan (Execute phase)
+  const handlePlanApprove = useCallback(async () => {
+    if (!pendingPlan) return;
+    setIsApproving(true);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Sessione scaduta"); return; }
 
-      const totalContacts = stepData.batching?.batches.reduce((s, b) => s + b.count, 0) || 0;
+      const totalContacts = pendingPlan.totalContacts;
       const title = missionTitle || `Missione ${new Date().toLocaleDateString("it-IT")}`;
+
+      // Recovery marker: log start
+      const recoveryLog = [{ phase: "mission_insert", at: new Date().toISOString() }];
 
       const { data: mission, error } = await supabase.from("outreach_missions" as any).insert({
         user_id: session.user.id,
         title,
-        status: stepData.schedule === "immediate" ? "active" : "draft",
+        status: "active",
         target_filters: stepData.targets || {},
         channel: stepData.channel || "email",
         total_contacts: totalContacts,
         agent_assignments: stepData.agents || [],
         schedule_config: { type: stepData.schedule, date: stepData.scheduleDate },
+        idempotency_key: pendingPlan.idempotencyKey,
+        plan_json: pendingPlan as any,
+        danger_level: pendingPlan.dangerLevel,
+        plan_status: "approved",
         metadata: {
           deepSearch: stepData.deepSearch || {},
           communication: stepData.communication || {},
@@ -243,10 +318,23 @@ export default function MissionBuilder() {
       }).select().single();
 
       if (error) throw error;
+      const missionId = (mission as any).id;
+      setCurrentMissionId(missionId);
 
-      toast.success(`🚀 Missione "${title}" creata con ${totalContacts} contatti!`);
+      // Recovery marker: log actions insert
+      recoveryLog.push({ phase: "actions_insert", at: new Date().toISOString() });
 
-      if (stepData.schedule === "immediate" && stepData.targets?.countries?.length) {
+      // Create tracked actions
+      await createActions.mutateAsync({ missionId, plan: pendingPlan });
+
+      // Approve all actions
+      await approveAll.mutateAsync(missionId);
+
+      // Recovery marker: log queue insert
+      recoveryLog.push({ phase: "queue_insert", at: new Date().toISOString() });
+
+      // Insert into cockpit queue
+      if (stepData.targets?.countries?.length) {
         const { data: partners } = await supabase
           .from("partners")
           .select("id")
@@ -258,20 +346,36 @@ export default function MissionBuilder() {
           const queueItems = partners.map(p => ({
             user_id: session.user.id,
             source_type: "mission",
-            source_id: (mission as any).id,
+            source_id: missionId,
             partner_id: p.id,
             status: "queued",
           }));
           await supabase.from("cockpit_queue").insert(queueItems);
-          toast.success(`📋 ${partners.length} contatti inseriti nel cockpit`);
         }
       }
 
-      navigate("/outreach");
+      toast.success(`🚀 Missione "${title}" lanciata con ${totalContacts} contatti!`);
+      setPendingPlan(null);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `✅ **Missione approvata e lanciata!**\n\n${pendingPlan.actions.length} azioni in esecuzione per ${totalContacts} contatti. Puoi monitorare lo stato nel pannello laterale.`,
+      }]);
+
+      setTimeout(() => navigate("/outreach"), 2000);
     } catch (e: any) {
-      toast.error("Errore nella creazione: " + (e.message || "Riprova"));
+      toast.error("Errore: " + (e.message || "Riprova"));
+    } finally {
+      setIsApproving(false);
     }
-  }, [stepData, missionTitle, navigate]);
+  }, [pendingPlan, stepData, missionTitle, navigate, createActions, approveAll]);
+
+  const handlePlanCancel = useCallback(() => {
+    setPendingPlan(null);
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: "❌ Piano annullato. Puoi modificare la configurazione e riprovare.",
+    }]);
+  }, []);
 
   // Progress calculation
   const filledFields = [
@@ -335,6 +439,9 @@ export default function MissionBuilder() {
                         onChange={setStepData}
                         countryStats={countryStats}
                         onLaunch={launchMission}
+                        onPlanApprove={handlePlanApprove}
+                        onPlanCancel={handlePlanCancel}
+                        planReviewProps={pendingPlan ? { plan: pendingPlan, isApproving } : undefined}
                       />
                     )}
                   </>

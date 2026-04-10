@@ -2068,6 +2068,63 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_actions: {
+        Row: {
+          action_label: string
+          action_type: string
+          completed_at: string | null
+          created_at: string
+          danger_level: string
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json | null
+          mission_id: string
+          position: number
+          recovery_log: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_label?: string
+          action_type?: string
+          completed_at?: string | null
+          created_at?: string
+          danger_level?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          mission_id: string
+          position?: number
+          recovery_log?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_label?: string
+          action_type?: string
+          completed_at?: string | null
+          created_at?: string
+          danger_level?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          mission_id?: string
+          position?: number
+          recovery_log?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       network_configs: {
         Row: {
           created_at: string
@@ -2234,9 +2291,13 @@ export type Database = {
           channel: string
           completed_at: string | null
           created_at: string
+          danger_level: string | null
           description: string | null
           id: string
+          idempotency_key: string | null
           metadata: Json | null
+          plan_json: Json | null
+          plan_status: string | null
           processed_contacts: number
           schedule_config: Json | null
           status: string
@@ -2252,9 +2313,13 @@ export type Database = {
           channel?: string
           completed_at?: string | null
           created_at?: string
+          danger_level?: string | null
           description?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
+          plan_json?: Json | null
+          plan_status?: string | null
           processed_contacts?: number
           schedule_config?: Json | null
           status?: string
@@ -2270,9 +2335,13 @@ export type Database = {
           channel?: string
           completed_at?: string | null
           created_at?: string
+          danger_level?: string | null
           description?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
+          plan_json?: Json | null
+          plan_status?: string | null
           processed_contacts?: number
           schedule_config?: Json | null
           status?: string

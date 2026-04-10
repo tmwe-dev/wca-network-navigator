@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MissionPlanReviewComponent from "./MissionPlanReview";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -9,7 +10,7 @@ import type { MissionStepData } from "@/components/missions/MissionStepRenderer"
 // ── Widget type definitions ──
 
 export interface WidgetConfig {
-  type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary";
+  type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary" | "plan_review";
   data?: any;
 }
 
@@ -21,6 +22,7 @@ const WIDGET_MARKERS: Record<string, WidgetConfig["type"]> = {
   "[WIDGET:slider_batch]": "slider_batch",
   "[WIDGET:toggle_group]": "toggle_group",
   "[WIDGET:confirm_summary]": "confirm_summary",
+  "[WIDGET:plan_review]": "plan_review",
 };
 
 export function extractWidgets(text: string): { cleanText: string; widgets: WidgetConfig[] } {
@@ -216,9 +218,12 @@ interface MissionWidgetRendererProps {
   onChange: (d: MissionStepData) => void;
   countryStats: { code: string; name: string; count: number; withEmail: number }[];
   onLaunch: () => void;
+  onPlanApprove?: () => void;
+  onPlanCancel?: () => void;
+  planReviewProps?: { plan: any; isApproving: boolean };
 }
 
-export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch }: MissionWidgetRendererProps) {
+export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
   if (widgets.length === 0) return null;
 
   return (
@@ -297,6 +302,21 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 onLaunch={onLaunch}
               />
             );
+
+          case "plan_review":
+            if (planReviewProps && onPlanApprove && onPlanCancel) {
+              return (
+                <MissionPlanReviewComponent
+                  key={i}
+                  plan={planReviewProps.plan}
+                  visible={true}
+                  isApproving={planReviewProps.isApproving}
+                  onApprove={onPlanApprove}
+                  onCancel={onPlanCancel}
+                />
+              );
+            }
+            return null;
 
           default:
             return null;
