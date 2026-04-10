@@ -220,10 +220,10 @@ serve(async (req) => {
         const { data: unreadMessages } = await supabase.from("channel_messages")
           .select("id, from_address, subject, body_text, partner_id, email_date")
           .eq("user_id", userId).eq("direction", "inbound").is("read_at", null)
-          .order("email_date", { ascending: false }).limit(BUDGET_PER_AGENT);
+          .order("email_date", { ascending: false }).limit(budgetPerAgent);
 
         for (const msg of (unreadMessages || [])) {
-          if (actionsCreated >= BUDGET_PER_AGENT) break;
+          if (actionsCreated >= budgetPerAgent) break;
 
           if (msg.partner_id) {
             const { data: partner } = await supabase.from("partners")
@@ -231,7 +231,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes({ ...partner, source: "wca" });
+              const stakes = isHighStakes({ ...partner, source: "wca" }) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
@@ -246,7 +246,7 @@ serve(async (req) => {
                 await supabase.from("agent_tasks").insert({
                   agent_id: agent.id, user_id: userId, task_type: "analysis",
                   description: `Analizza risposta da ${partner.company_name}: "${msg.subject}". ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Auto-approvato: esegui follow-up."}`,
-                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes } as any,
+                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes && !forceApproval } as any,
                   status: taskStatus,
                 });
                 actionsCreated++;
@@ -260,10 +260,10 @@ serve(async (req) => {
           .select("id, title, partner_id, source_meta, due_date")
           .eq("user_id", userId).eq("status", "pending").eq("activity_type", "follow_up")
           .lt("due_date", new Date().toISOString().split("T")[0])
-          .limit(BUDGET_PER_AGENT - actionsCreated);
+          .limit(budgetPerAgent - actionsCreated);
 
         for (const fup of (overdueFups || [])) {
-          if (actionsCreated >= BUDGET_PER_AGENT) break;
+          if (actionsCreated >= budgetPerAgent) break;
 
           // Check if task already exists
           const { data: existingTask } = await supabase.from("agent_tasks")
