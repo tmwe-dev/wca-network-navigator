@@ -216,8 +216,7 @@ Deno.serve(async (req) => {
 
         sentCount++;
 
-        // Atomically increment draft sent_count via raw SQL to avoid race conditions
-        await supabase.rpc("exec_sql" as any).catch(() => null); // fallback: use direct update
+        // Increment draft sent_count (sequential processing — no race condition risk)
         await supabase.from("email_drafts").update({
           sent_count: sentCount,
         } as any).eq("id", draft_id);
