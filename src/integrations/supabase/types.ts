@@ -395,6 +395,90 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_request_log: {
+        Row: {
+          agent_code: string | null
+          channel: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          intent: string | null
+          latency_ms: number | null
+          metadata: Json | null
+          model: string | null
+          routed_to: string | null
+          status: string | null
+          total_tokens: number | null
+          trace_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          agent_code?: string | null
+          channel?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          intent?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model?: string | null
+          routed_to?: string | null
+          status?: string | null
+          total_tokens?: number | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          agent_code?: string | null
+          channel?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          intent?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model?: string | null
+          routed_to?: string | null
+          status?: string | null
+          total_tokens?: number | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_session_briefings: {
+        Row: {
+          agent_code: string
+          briefing_type: string | null
+          content: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          agent_code: string
+          briefing_type?: string | null
+          content: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          agent_code?: string
+          briefing_type?: string | null
+          content?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_work_plans: {
         Row: {
           completed_at: string | null
@@ -919,6 +1003,105 @@ export type Database = {
           source_id?: string
           source_type?: string
           status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      commercial_playbooks: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_template: boolean | null
+          kb_tags: string[] | null
+          name: string
+          priority: number | null
+          prompt_template: string | null
+          suggested_actions: Json | null
+          trigger_conditions: Json | null
+          updated_at: string | null
+          user_id: string
+          workflow_code: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean | null
+          kb_tags?: string[] | null
+          name: string
+          priority?: number | null
+          prompt_template?: string | null
+          suggested_actions?: Json | null
+          trigger_conditions?: Json | null
+          updated_at?: string | null
+          user_id: string
+          workflow_code?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean | null
+          kb_tags?: string[] | null
+          name?: string
+          priority?: number | null
+          prompt_template?: string | null
+          suggested_actions?: Json | null
+          trigger_conditions?: Json | null
+          updated_at?: string | null
+          user_id?: string
+          workflow_code?: string | null
+        }
+        Relationships: []
+      }
+      commercial_workflows: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          description: string | null
+          gates: Json | null
+          id: string
+          is_active: boolean | null
+          is_template: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          gates?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          gates?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean | null
+          name?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2616,6 +2799,66 @@ export type Database = {
           },
         ]
       }
+      partner_workflow_state: {
+        Row: {
+          completed_at: string | null
+          contact_id: string | null
+          created_at: string | null
+          current_gate: number | null
+          id: string
+          notes: string | null
+          partner_id: string | null
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          workflow_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          current_gate?: number | null
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          workflow_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          current_gate?: number | null
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_workflow_state_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_workflow_state_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           address: string | null
@@ -3093,6 +3336,51 @@ export type Database = {
           },
         ]
       }
+      request_logs: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          function_name: string
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          metadata: Json | null
+          status: string | null
+          trace_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          function_name: string
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          metadata?: Json | null
+          status?: string | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          function_name?: string
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          metadata?: Json | null
+          status?: string | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           created_at: string
@@ -3198,6 +3486,57 @@ export type Database = {
           user_id?: string
           wca_password?: string | null
           wca_username?: string
+        }
+        Relationships: []
+      }
+      voice_call_sessions: {
+        Row: {
+          agent_id: string | null
+          caller_context: Json | null
+          contact_id: string | null
+          created_at: string | null
+          direction: string | null
+          ended_at: string | null
+          external_call_id: string | null
+          id: string
+          outcome: string | null
+          partner_id: string | null
+          status: string | null
+          transcript: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          caller_context?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          direction?: string | null
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          outcome?: string | null
+          partner_id?: string | null
+          status?: string | null
+          transcript?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          caller_context?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          direction?: string | null
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          outcome?: string | null
+          partner_id?: string | null
+          status?: string | null
+          transcript?: Json | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
