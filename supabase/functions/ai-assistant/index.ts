@@ -3480,7 +3480,7 @@ Iniziato: ${(ws as any).started_at}`;
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
       loadUserProfile(),
-      loadKBContext(lastUserMsg),
+      loadKBContext(lastUserMsg, userId),
       loadOperativePrompts(userId),
       loadMissionHistory(userId),
     ]);
