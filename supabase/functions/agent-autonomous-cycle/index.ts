@@ -20,23 +20,8 @@ const DEFAULT_WORK_END_HOUR = 24; // midnight
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
-function getCETHour(): number {
-  // CET = UTC+1, CEST = UTC+2. Use Intl to get the real Europe/Rome hour.
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Rome",
-    hour: "numeric",
-    hour12: false,
-  });
-  return parseInt(formatter.format(now), 10);
-}
-
-function isOutsideWorkHours(startHour: number, endHour: number): boolean {
-  const hour = getCETHour();
-  // endHour=24 means midnight, so hour < startHour means too early
-  if (endHour <= startHour) return false; // misconfigured → never pause
-  return hour < startHour || hour >= endHour;
-}
+// getCETHour and isOutsideWorkHours are imported from _shared/timeUtils.ts (line 3)
+// No local redeclaration — single source of truth for work-hours logic
 
 function isHighStakes(item: any): boolean {
   if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
@@ -232,7 +217,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes({ ...partner, source: "wca" }) || forceApproval;
+              const stakes = isHighStakes(partner) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
