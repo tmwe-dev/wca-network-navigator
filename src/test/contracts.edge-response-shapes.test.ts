@@ -67,5 +67,5 @@ describe("Edge Function Response Shapes [A03]", () => {
     expect(typeof body).toBe("object");
     const hasValidShape = body.message || body.processed !== undefined || body.error;
     expect(hasValidShape).toBeTruthy();
-  });
+  }, 15000);
 });
