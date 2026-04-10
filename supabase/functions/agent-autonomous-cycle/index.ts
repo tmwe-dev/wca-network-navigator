@@ -174,9 +174,6 @@ serve(async (req) => {
     const workStartHour = parseInt(globalCfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
     const workEndHour = parseInt(globalCfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
 
-    const workStartHour = parseInt(globalCfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
-    const workEndHour = parseInt(globalCfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
-
     // Work-hours check (CET timezone)
     if (isOutsideWorkHours(workStartHour, workEndHour)) {
       return new Response(JSON.stringify({ message: `Outside work hours (CET ${workStartHour}:00-${workEndHour}:00)`, skipped: true }), {

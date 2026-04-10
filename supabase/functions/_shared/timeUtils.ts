@@ -26,14 +26,17 @@ export function isOutsideWorkHours(startHour: number, endHour: number): boolean 
 }
 
 /** Load work-hour settings from app_settings, with defaults */
-export async function loadWorkHourSettings(supabase: SupabaseClient): Promise<{
+export async function loadWorkHourSettings(supabase: SupabaseClient, userId?: string): Promise<{
   workStartHour: number;
   workEndHour: number;
 }> {
-  const { data: rows } = await supabase
+  let query = supabase
     .from("app_settings")
     .select("key, value")
     .in("key", ["agent_work_start_hour", "agent_work_end_hour"]);
+  if (userId) query = query.eq("user_id", userId);
+
+  const { data: rows } = await query;
 
   const cfg: Record<string, string> = {};
   rows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });

@@ -26,8 +26,9 @@ export const ALLOWED_MODELS = new Set([
   "google/gemini-2.5-flash",
   "google/gemini-2.5-flash-lite",
   "google/gemini-3-flash-preview",
-  "openai/gpt-4o-mini",
-  "openai/gpt-4o",
+  "openai/gpt-5-mini",
+  "openai/gpt-5",
+  "openai/gpt-5-nano",
 ]);
 
 export type AiMessage = {

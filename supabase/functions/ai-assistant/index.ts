@@ -3058,7 +3058,7 @@ async function resolveAiProvider(userId: string): Promise<ResolvedAiProvider> {
       return {
         url: "https://api.openai.com/v1/chat/completions",
         apiKey: openaiKey.api_key,
-        model: "gpt-4o-mini",
+        model: "gpt-5-mini",
         isUserKey: true,
       };
     }
@@ -3559,7 +3559,7 @@ DATI DISPONIBILI:`;
     // 'gpt-5-mini' è stato rimosso (modello inesistente).
     const fallbackModels = provider.isUserKey
       ? [provider.model]
-      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-4o-mini"];
+      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {

@@ -312,7 +312,7 @@ serve(async (req) => {
   const aiT0 = Date.now();
   try {
     const result = await aiChat({
-      models: ["google/gemini-2.5-flash", "openai/gpt-4o-mini"],
+      models: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

@@ -67,20 +67,6 @@ export async function logEmailSideEffects({
     .eq("id", partner_id)
     .eq("lead_status", "new");
 
-  // 4. Increment interaction count
-  const { data: partnerData } = await supabase
-    .from("partners")
-    .select("interaction_count")
-    .eq("id", partner_id)
-    .single();
-
-  if (partnerData) {
-    await supabase
-      .from("partners")
-      .update({
-        interaction_count: ((partnerData as any).interaction_count || 0) + 1,
-        last_interaction_at: now,
-      })
-      .eq("id", partner_id);
-  }
+  // 4. Atomically increment interaction count (avoids race condition)
+  await supabase.rpc("increment_partner_interaction", { p_partner_id: partner_id });
 }

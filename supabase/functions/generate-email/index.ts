@@ -591,11 +591,11 @@ ${encounters}
 
     // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
     let cachedEnrichmentContext = "";
-    if (isPartnerSource && activity?.partner_id) {
+    if (effectivePartnerId) {
       const { data: partnerEd } = await supabase
         .from("partners")
         .select("enrichment_data")
-        .eq("id", activity!.partner_id)
+        .eq("id", effectivePartnerId)
         .single();
       if (partnerEd?.enrichment_data) {
         const ed = partnerEd.enrichment_data as Record<string, any>;
@@ -783,8 +783,6 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
-
-Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
 Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
