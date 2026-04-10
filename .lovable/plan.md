@@ -1,67 +1,121 @@
 
-Obiettivo: darti un’alternativa che non dipenda da GitHub e che riduca al minimo la gestione manuale del bridge.
 
-Cosa ho verificato nel codice:
-- Il blocco vero è in `supabase/functions/voice-brain-bridge/index.ts`: oggi il bridge risponde `401` se manca o non combacia `x-bridge-secret`, e `500` se manca `VOICE_BRIDGE_USER_ID`.
-- Però `VOICE_BRIDGE_USER_ID` in realtà è già risolvibile senza secret: una migrazione ha creato un service user fisso (`a0000000-0000-4000-a000-000000000b07`) e anche l’helper `public.get_service_user_id()`.
-- Quindi il secret `VOICE_BRIDGE_USER_ID` si può eliminare del tutto.
-- Il solo punto che non si può togliere “a zero” senza rischi è l’autenticazione del webhook: il bridge è pubblico e ElevenLabs non entra con il login dell’utente, quindi senza una protezione chiunque potrebbe colpirlo.
+# Test Gap Analysis — Da 7/10 a 10/10
 
-Soluzione consigliata:
-- Togliere completamente `VOICE_BRIDGE_USER_ID`.
-- Sostituire il secret statico del bridge con un token breve per singola chiamata, generato dal backend quando l’utente avvia la call.
-- Tenere compatibilità col vecchio schema solo come fallback.
+## Stato Attuale
 
-Piano di implementazione:
-1. Rendere il bridge indipendente da `VOICE_BRIDGE_USER_ID`
-   - usare il service user già seedato come fallback fisso;
-   - così non devi più recuperare nessun UUID manualmente.
+| Area | Copertura | Voto |
+|---|---|---|
+| Unit test Vitest (src/test/) | 660 test, 54 file — buona | 8/10 |
+| Integration test Deno (edge functions) | 44 test, 8 funzioni su 66 | 4/10 |
+| Component test (.test.tsx) | 0 componenti testati | 0/10 |
+| E2E Playwright | 12 spec, ma 7 hanno il test principale `skip` | 3/10 |
+| Hook/Context test | 0 | 0/10 |
 
-2. Introdurre un token “per-sessione”
-   - estendere `elevenlabs-conversation-token` oppure aggiungere un endpoint di init;
-   - quando parte la chiamata, il backend genera un token breve legato a `agent_id` e `external_call_id`.
+---
 
-3. Salvare il token in backend in modo sicuro
-   - nuova tabella per token bridge con hash, scadenza, agent, call id e creatore;
-   - mai salvare il token in chiaro.
+## I 6 Gap che Mancano per il 10/10
 
-4. Aggiornare il flusso frontend
-   - `AgentVoiceCall.tsx` richiederà sia il conversation token sia il bridge token;
-   - il token verrà passato alla sessione voce in modo che ElevenLabs lo inoltri al webhook.
+### GAP 1 — 58 Edge Functions senza integration test
+Solo 8 funzioni su 66 hanno integration test. Le piu critiche senza copertura:
 
-5. Aggiornare `voice-brain-bridge`
-   - accettare il token breve come autenticazione primaria;
-   - validare scadenza, match con agente/chiamata e uso consentito;
-   - continuare a loggare su `voice_call_sessions`, `request_logs`, `ai_request_log` e `ai_memory`.
+**Priorita alta (core business):**
+- `voice-brain-bridge` — appena riscritto, zero test
+- `elevenlabs-conversation-token` — appena riscritto, zero test
+- `ai-assistant` — cuore del sistema AI
+- `super-assistant` — assistente enterprise
+- `process-download-job` — download contatti WCA
+- `stripe-webhook` — pagamenti
+- `deep-search-partner` / `deep-search-contact` — enrichment
+- `extension-brain` — bridge estensioni browser
+- `memory-promoter` — promozione memoria AI
+- `kb-embed-backfill` — backfill embedding RAG
 
-6. Fallback pratico se ElevenLabs non supporta header/body dinamici
-   - manteniamo un solo secret statico per il bridge;
-   - ma eliminiamo comunque `VOICE_BRIDGE_USER_ID`;
-   - quindi resterebbe un solo valore da configurare, non due.
+**Priorita media:**
+- `import-assistant`, `contacts-assistant`, `cockpit-assistant`
+- `enrich-partner-website`, `analyze-partner`
+- Tutte le funzioni `save-*-cookie`, `get-*-credentials`
 
-Alternativa “zero secret” vera:
-- Disattivare del tutto il bridge e usare l’agente voce solo con prompt/KB dentro ElevenLabs.
-- Pro: niente secret, niente service user, setup più semplice.
-- Contro: perdi la parte intelligente del sistema, cioè contesto partner, workflow, memoria, log operativi e telemetria strutturata.
+### GAP 2 — Zero component test React
+Nessun componente UI ha un test dedicato `.test.tsx`. I monoliti piu critici:
+- `FiltersDrawer` (1300 LOC)
+- `BusinessCardsHub` (1084 LOC)
+- `AddContactDialog` (794 LOC)
+- `ImportWizard` (625 LOC)
+- `AgentVoiceCall` — appena modificato
+- `EmailEditLearningDialog` — appena fixato
 
-Scelta che ti consiglio:
-- Se vuoi mantenere il Brain vero del sistema: token breve per chiamata.
-- Se vuoi la soluzione più veloce e minimale: modalità voce senza bridge.
+### GAP 3 — Zero hook/context test
+Nessun test per:
+- `useAgents`, `usePartners`, `useEmailDrafts`
+- `ActiveOperatorContext`, `ContactDrawerContext`
+- Custom hooks di fetch/mutation
 
-Dettagli tecnici:
-- Il bridge oggi non può essere convertito banalmente a JWT utente, perché è chiamato da un sistema esterno.
-- `VOICE_BRIDGE_USER_ID` è superfluo grazie alla migrazione già presente.
-- Il modello più pulito è:
-```text
-Utente loggato -> avvio chiamata -> backend emette token breve
--> ElevenLabs chiama voice-brain-bridge con token breve
--> bridge valida token -> esegue logica + log
-```
+### GAP 4 — E2E quasi tutti `skip`
+7 spec su 12 hanno il test principale skippato. Servono:
+- Login helper riutilizzabile (fixture Playwright)
+- Almeno 5 flussi E2E reali non-skip
 
-Verifica finale prevista:
-- chiamata valida: `200`, sessione creata/aggiornata;
-- token scaduto o errato: `401`;
-- chiusura chiamata: outcome salvato e telemetria presente;
-- test end-to-end da UI con chiamata reale.
+### GAP 5 — Nessun test per il sistema di apprendimento
+Il ciclo Memory/KB/RAG appena fixato non ha test:
+- `save_memory` tool → verifica insert in `ai_memory`
+- `save_kb_rule` tool → verifica insert + embedding auto
+- `ragSearchKb` → verifica retrieval semantico
+- `memory-promoter` → verifica promozione L1→L2→L3
+- Feedback buttons → verifica boost/reduce confidence
 
-In sintesi: sì, c’è un’alternativa. Possiamo togliere del tutto lo `USER_ID` e, per evitare anche il secret statico, cambiare architettura del bridge verso token temporanei per chiamata. È la strada più pulita e non richiede GitHub.
+### GAP 6 — Nessun test per bridge_tokens (nuovo)
+La tabella `bridge_tokens` e il flusso token-per-sessione appena creati non hanno:
+- Test di creazione token + hash validation
+- Test di scadenza (token expired → 401)
+- Test di cleanup token usati
+
+---
+
+## Piano di Implementazione (prioritizzato)
+
+### Step 1: Integration test per le 10 edge function critiche
+Creare `index.integration.test.ts` per: `voice-brain-bridge`, `elevenlabs-conversation-token`, `ai-assistant`, `super-assistant`, `stripe-webhook`, `deep-search-partner`, `extension-brain`, `memory-promoter`, `kb-embed-backfill`, `process-download-job`.
+Pattern: CORS preflight + 401 senza auth + error shape.
+
+### Step 2: Test sistema apprendimento (Vitest)
+Nuovo file `src/test/ai-learning-system.test.ts`:
+- Simulazione ciclo memory save/retrieve/promote/decay
+- Validazione embedding auto-trigger dopo save_kb_rule
+- Validazione scale confidence (sempre 0-1)
+- RAG fallback behavior quando embedding manca
+
+### Step 3: Test bridge_tokens (Vitest + Deno)
+- Vitest: logica hash, scadenza, validazione
+- Deno integration: `voice-brain-bridge` con token valido/scaduto/mancante
+
+### Step 4: Component test per i 4 monoliti + 2 appena modificati
+- `AgentVoiceCall.test.tsx` — render, start/stop, token flow
+- `EmailEditLearningDialog.test.tsx` — render, submit, confidence value
+- `FiltersDrawer.test.tsx` — render, filtri base
+- `ImportWizard.test.tsx` — render, step navigation
+
+### Step 5: Hook/Context test
+- `useAgents.test.ts`, `usePartners.test.ts`
+- `ActiveOperatorContext.test.tsx`
+
+### Step 6: E2E login fixture + unskip 5 test
+- Creare `e2e/fixtures/auth.ts` con login riutilizzabile
+- Unskippare: `email-inbound-to-task`, `campaign-queue-lifecycle`, `agent-approval-flow`, `queue-ui-state-consistency`, `followup-mission`
+
+---
+
+## Stima
+
+- Step 1: ~10 file, ~50 test Deno
+- Step 2: ~1 file, ~15 test Vitest
+- Step 3: ~2 file, ~10 test
+- Step 4: ~6 file, ~25 test React
+- Step 5: ~3 file, ~15 test
+- Step 6: ~6 file, ~15 test reali
+
+**Totale: ~130 nuovi test**, portando il sistema da ~704 a ~834 test con copertura completa su tutti i layer.
+
+### Raccomandazione
+Iniziare da Step 1 + Step 2 + Step 3 (le aree appena modificate). Sono i piu urgenti perche coprono codice nuovo senza alcun test.
+
