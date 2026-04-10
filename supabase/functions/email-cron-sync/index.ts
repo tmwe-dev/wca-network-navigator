@@ -25,14 +25,6 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    // Night pause check: use shared CET-based work-hours logic + app_settings
-    const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase);
-    if (isOutsideWorkHours(workStartHour, workEndHour)) {
-      return new Response(JSON.stringify({ message: `Night pause active (CET outside ${workStartHour}:00-${workEndHour}:00)` }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Find all users with sync state (they have IMAP configured)
     const { data: syncUsers, error: syncErr } = await supabase
       .from("email_sync_state")
@@ -51,6 +43,12 @@ Deno.serve(async (req: Request) => {
 
     for (const { user_id } of syncUsers) {
       try {
+        // Per-user work-hours check
+        const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, user_id);
+        if (isOutsideWorkHours(workStartHour, workEndHour)) {
+          results.push({ userId: user_id, status: `skipped: outside work hours (${workStartHour}-${workEndHour})` });
+          continue;
+        }
         const checkRes = await fetch(`${supabaseUrl}/functions/v1/check-inbox`, {
           method: "POST",
           headers: {

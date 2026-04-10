@@ -85,9 +85,9 @@ serve(async (req) => {
         for (const m of memories) contextBlock += `- [L${m.level}/${m.memory_type}] ${m.content}\n`;
       }
 
-      // 3. KB globale COMPLETA (tutte le entries attive, non solo top 5)
+      // 3. KB globale (top 50 per priority, con contenuto troncato)
       const { data: kbEntries } = await supabase.from("kb_entries").select("title, content, chapter, category")
-        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false });
+        .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false }).limit(50);
       if (kbEntries?.length) {
         contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
         for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
@@ -230,9 +230,16 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
 
       let response: Response | null = null;
       for (const model of fallbackModels) {
-        response = await fetch(aiUrl, { method: "POST", headers: aiHeaders, body: JSON.stringify({ model, messages: allMessages, ...(agentTools.length > 0 ? { tools: agentTools } : {}), max_tokens: 4000 }) });
-        if (response.ok) break;
-        await response.text();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45_000);
+        try {
+          response = await fetch(aiUrl, { method: "POST", headers: aiHeaders, body: JSON.stringify({ model, messages: allMessages, ...(agentTools.length > 0 ? { tools: agentTools } : {}), max_tokens: 4000 }), signal: controller.signal });
+          if (response.ok) { clearTimeout(timeoutId); break; }
+          await response.text();
+        } catch (e: any) {
+          if (e.name === "AbortError") console.warn(`[agent-execute] Timeout on model ${model}`);
+          else throw e;
+        } finally { clearTimeout(timeoutId); }
       }
 
       if (!response || !response.ok) {
@@ -334,18 +341,11 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
         completed_at: new Date().toISOString(),
       }).eq("id", task_id);
 
-      // Update agent stats: only increment the correct counter based on outcome
-      const stats = (agent.stats as any) || {};
-      const updatedStats = { ...stats };
-      if (taskStatus === "completed") {
-        updatedStats.tasks_completed = (stats.tasks_completed || 0) + 1;
-      } else {
-        updatedStats.tasks_failed = (stats.tasks_failed || 0) + 1;
-      }
-      await supabase.from("agents").update({
-        stats: updatedStats as any,
-        updated_at: new Date().toISOString(),
-      }).eq("id", agent_id);
+      // Update agent stats atomically via RPC
+      await supabase.rpc("increment_agent_stat", {
+        p_agent_id: agent_id,
+        p_stat_key: taskStatus === "completed" ? "tasks_completed" : "tasks_failed",
+      });
 
       return new Response(JSON.stringify({ success: taskStatus === "completed", result: resultSummary }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
