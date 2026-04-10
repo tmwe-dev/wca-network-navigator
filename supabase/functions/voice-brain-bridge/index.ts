@@ -1,45 +1,29 @@
 /**
  * voice-brain-bridge — Webhook ElevenLabs ↔ Brain WCA
  *
- * Wave 5 — Vol. III "Voice Channel" §2 (Brain↔Voice contract).
- *
- * Architettura: Brain & Voice Skin
- * ────────────────────────────────
- * • L'agente ElevenLabs è solo uno SKIN vocale: non ha logica commerciale,
- *   non ha KB, non sa nulla del dominio WCA.
- * • Ad ogni turno utile (richiesta di senso, decisione, recupero info)
- *   l'agente 11Labs chiama questo webhook tramite la sua "Tool" Custom HTTP:
- *     POST /functions/v1/voice-brain-bridge
- *     Headers: x-bridge-secret: <VOICE_BRIDGE_SECRET>
- *     Body:    { intent, utterance, caller_context, transcript, external_call_id, agent_id }
- * • Il Brain WCA carica il playbook `voice_wca_partner_call` + le regole
- *   KB di canale voce (categoria voice_rules) e risponde con il contratto
- *   JSON definito in KB "Voice — Schema output JSON Brain→Voice":
- *     { say, actions, next_state, end_call, transfer_to_human, memory_to_save }
- * • L'agente 11Labs pronuncia `say` e ignora il resto (gli `actions` sono
- *   eseguiti server-side dal Brain in fire-and-forget).
- *
- * Auth: secret condiviso in header `x-bridge-secret` + service role per
- * scrittura `voice_call_sessions`. L'utente associato è
- * `VOICE_BRIDGE_USER_ID` (un service user dell'organizzazione).
+ * Auth: per-session bridge token (hash-validated) OR legacy shared secret.
+ * User ID: resolved from bridge_token creator or fallback service user.
  */
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { aiChat, AiGatewayError, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BRIDGE_SECRET = Deno.env.get("VOICE_BRIDGE_SECRET") || "";
-const BRIDGE_USER_ID = Deno.env.get("VOICE_BRIDGE_USER_ID") || "";
+
+// Deterministic service user fallback (seeded by migration)
+const SERVICE_USER_FALLBACK = "a0000000-0000-4000-a000-000000000b07";
 
 type IncomingTurn = {
   external_call_id?: string;
   agent_id?: string;
   intent?: string;
   utterance?: string;
+  bridge_token?: string;
   caller_context?: {
     partner_id?: string;
     contact_id?: string;
@@ -54,24 +38,14 @@ type IncomingTurn = {
 type VoiceReply = {
   say: string;
   actions: Array<{ tool: string; params: Record<string, unknown> }>;
-  next_state:
-    | "discovery"
-    | "qualification"
-    | "objection"
-    | "closing"
-    | "followup"
-    | "end";
+  next_state: "discovery" | "qualification" | "objection" | "closing" | "followup" | "end";
   end_call: boolean;
   transfer_to_human: boolean;
   memory_to_save: string | null;
 };
 
-function makeSafeReply(
-  partial: Partial<VoiceReply>,
-  fallbackSay: string,
-): VoiceReply {
+function makeSafeReply(partial: Partial<VoiceReply>, fallbackSay: string): VoiceReply {
   const sayRaw = (partial.say || fallbackSay || "").toString().trim();
-  // Strip markdown / URLs / code fences for TTS safety
   const say = sayRaw
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
@@ -94,10 +68,48 @@ function makeSafeReply(
   };
 }
 
-async function loadVoiceContext(
+/**
+ * Validate bridge_token by hashing and looking up in bridge_tokens table.
+ * Returns the created_by user_id if valid, null otherwise.
+ */
+async function validateBridgeToken(
   supabase: ReturnType<typeof createClient>,
-): Promise<string> {
-  // Load the voice playbook prompt + voice_rules KB entries (tutti template)
+  rawToken: string
+): Promise<string | null> {
+  if (!rawToken) return null;
+  try {
+    const hashBuffer = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(rawToken)
+    );
+    const tokenHash = Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    const { data } = await supabase
+      .from("bridge_tokens")
+      .select("id, created_by, expires_at, used")
+      .eq("token_hash", tokenHash)
+      .maybeSingle();
+
+    if (!data) return null;
+    if (data.used) return null;
+    if (new Date(data.expires_at as string) < new Date()) return null;
+
+    // Mark as used
+    await supabase
+      .from("bridge_tokens")
+      .update({ used: true })
+      .eq("id", data.id);
+
+    return data.created_by as string;
+  } catch (e) {
+    console.warn("bridge token validation failed:", (e as Error).message);
+    return null;
+  }
+}
+
+async function loadVoiceContext(supabase: ReturnType<typeof createClient>): Promise<string> {
   const [{ data: playbook }, { data: kb }] = await Promise.all([
     supabase
       .from("commercial_playbooks")
@@ -115,24 +127,14 @@ async function loadVoiceContext(
   ]);
 
   const parts: string[] = [];
-  if (playbook?.prompt_template) {
-    parts.push(`# PLAYBOOK\n${playbook.prompt_template}`);
-  }
+  if (playbook?.prompt_template) parts.push(`# PLAYBOOK\n${playbook.prompt_template}`);
   if (Array.isArray(kb) && kb.length > 0) {
-    parts.push(
-      "# KB VOICE RULES\n" +
-        kb
-          .map((k) => `## ${k.title}\n${k.content}`)
-          .join("\n\n"),
-    );
+    parts.push("# KB VOICE RULES\n" + kb.map((k) => `## ${k.title}\n${k.content}`).join("\n\n"));
   }
   return parts.join("\n\n");
 }
 
-async function loadPartnerSnippet(
-  supabase: ReturnType<typeof createClient>,
-  partnerId?: string,
-): Promise<string> {
+async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, partnerId?: string): Promise<string> {
   if (!partnerId) return "";
   try {
     const { data } = await supabase
@@ -149,12 +151,8 @@ async function loadPartnerSnippet(
       data.lead_status ? `Lead status: ${data.lead_status}` : "",
       data.rating ? `Rating: ${data.rating}` : "",
       data.notes ? `Note: ${String(data.notes).slice(0, 240)}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  } catch {
-    return "";
-  }
+    ].filter(Boolean).join("\n");
+  } catch { return ""; }
 }
 
 function buildSystemPrompt(voiceContext: string, partnerSnippet: string): string {
@@ -174,9 +172,7 @@ function buildSystemPrompt(voiceContext: string, partnerSnippet: string): string
     "",
     voiceContext,
     partnerSnippet,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 function buildUserPrompt(turn: IncomingTurn): string {
@@ -186,106 +182,30 @@ function buildUserPrompt(turn: IncomingTurn): string {
     .join("\n");
   return [
     turn.intent ? `INTENT RILEVATO: ${turn.intent}` : "INTENT: (non specificato)",
-    turn.caller_context?.operator_briefing
-      ? `BRIEFING OPERATORE: ${turn.caller_context.operator_briefing}`
-      : "",
+    turn.caller_context?.operator_briefing ? `BRIEFING OPERATORE: ${turn.caller_context.operator_briefing}` : "",
     transcript ? `CRONOLOGIA RECENTE:\n${transcript}` : "",
     turn.utterance ? `ULTIMO TURNO PARTNER: "${turn.utterance}"` : "",
     "",
     "Decidi il prossimo turno rispettando il contratto JSON. Una sola domanda. ≤40 parole nel campo say.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function safeJsonParse(raw: string): Record<string, unknown> | null {
   if (!raw) return null;
-  // Strip code fences if model wrapped it
-  const cleaned = raw
-    .replace(/```json\s*/gi, "")
-    .replace(/```/g, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    // Try to extract first {...} block
+  const cleaned = raw.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  try { return JSON.parse(cleaned); } catch {
     const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) {
-      try {
-        return JSON.parse(m[0]);
-      } catch {
-        return null;
-      }
-    }
+    if (m) { try { return JSON.parse(m[0]); } catch { return null; } }
     return null;
   }
 }
 
-async function logRequest(
-  supabase: ReturnType<typeof createClient>,
-  payload: {
-    trace_id: string;
-    user_id: string | null;
-    function_name: string;
-    status: "ok" | "error" | "timeout";
-    http_status?: number;
-    latency_ms: number;
-    error_code?: string | null;
-    error_message?: string | null;
-    metadata?: Record<string, unknown>;
-  },
-): Promise<void> {
-  try {
-    await supabase.from("request_logs").insert({
-      trace_id: payload.trace_id,
-      user_id: payload.user_id,
-      function_name: payload.function_name,
-      channel: "voice",
-      http_status: payload.http_status ?? null,
-      status: payload.status,
-      latency_ms: payload.latency_ms,
-      error_code: payload.error_code ?? null,
-      error_message: payload.error_message ?? null,
-      metadata: payload.metadata ?? {},
-    });
-  } catch (e) {
-    console.warn("request_logs insert failed:", (e as Error).message);
-  }
+async function logRequest(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>): Promise<void> {
+  try { await supabase.from("request_logs").insert(payload); } catch (e) { console.warn("request_logs insert failed:", (e as Error).message); }
 }
 
-async function logAiRequest(
-  supabase: ReturnType<typeof createClient>,
-  payload: {
-    trace_id: string;
-    user_id: string | null;
-    agent_code: string;
-    model: string;
-    latency_ms: number;
-    status: "ok" | "error" | "timeout";
-    intent?: string | null;
-    error_message?: string | null;
-    total_tokens?: number | null;
-    metadata?: Record<string, unknown>;
-  },
-): Promise<void> {
-  try {
-    await supabase.from("ai_request_log").insert({
-      trace_id: payload.trace_id,
-      user_id: payload.user_id,
-      agent_code: payload.agent_code,
-      channel: "voice",
-      model: payload.model,
-      latency_ms: payload.latency_ms,
-      status: payload.status,
-      intent: payload.intent ?? null,
-      error_message: payload.error_message ?? null,
-      total_tokens: payload.total_tokens ?? null,
-      routed_to: "voice-brain-bridge",
-      metadata: payload.metadata ?? {},
-    });
-  } catch (e) {
-    console.warn("ai_request_log insert failed:", (e as Error).message);
-  }
+async function logAiRequest(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>): Promise<void> {
+  try { await supabase.from("ai_request_log").insert(payload); } catch (e) { console.warn("ai_request_log insert failed:", (e as Error).message); }
 }
 
 serve(async (req) => {
@@ -301,24 +221,6 @@ serve(async (req) => {
     });
   }
 
-  // Shared-secret auth (11Labs non ha JWT utente)
-  const presented = req.headers.get("x-bridge-secret") || "";
-  if (!BRIDGE_SECRET || presented !== BRIDGE_SECRET) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  if (!BRIDGE_USER_ID) {
-    return new Response(
-      JSON.stringify({ error: "voice_bridge_user_not_configured" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
   let turn: IncomingTurn;
   try {
     turn = (await req.json()) as IncomingTurn;
@@ -331,6 +233,30 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+  // === AUTH: per-session bridge_token (primary) OR legacy shared secret (fallback) ===
+  let resolvedUserId: string = SERVICE_USER_FALLBACK;
+
+  if (turn.bridge_token) {
+    const tokenUserId = await validateBridgeToken(supabase, turn.bridge_token);
+    if (!tokenUserId) {
+      return new Response(JSON.stringify({ error: "invalid_or_expired_bridge_token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    resolvedUserId = tokenUserId;
+  } else {
+    // Legacy: shared secret in header
+    const presented = req.headers.get("x-bridge-secret") || "";
+    if (!BRIDGE_SECRET || presented !== BRIDGE_SECRET) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Use service user fallback for legacy auth
+  }
+
   // Upsert voice_call_sessions row
   let sessionId: string | null = null;
   try {
@@ -339,7 +265,7 @@ serve(async (req) => {
         .from("voice_call_sessions")
         .select("id, transcript")
         .eq("external_call_id", turn.external_call_id)
-        .eq("user_id", BRIDGE_USER_ID)
+        .eq("user_id", resolvedUserId)
         .maybeSingle();
       if (existing?.id) {
         sessionId = existing.id as string;
@@ -347,15 +273,12 @@ serve(async (req) => {
           ...((existing.transcript as unknown[]) || []),
           ...(turn.transcript || []),
         ].slice(-200);
-        await supabase
-          .from("voice_call_sessions")
-          .update({ transcript: newTranscript })
-          .eq("id", sessionId);
+        await supabase.from("voice_call_sessions").update({ transcript: newTranscript }).eq("id", sessionId);
       } else {
         const { data: created } = await supabase
           .from("voice_call_sessions")
           .insert({
-            user_id: BRIDGE_USER_ID,
+            user_id: resolvedUserId,
             external_call_id: turn.external_call_id,
             agent_id: turn.agent_id || null,
             partner_id: turn.caller_context?.partner_id || null,
@@ -412,19 +335,20 @@ serve(async (req) => {
       console.error("aiChat unknown error:", (e as Error).message);
       aiErrorMessage = (e as Error).message;
     }
-    // Fall through to fallback reply
   }
   const aiLatency = Date.now() - aiT0;
-  // Fire-and-forget AI request log
+
   void logAiRequest(supabase, {
     trace_id: traceId,
-    user_id: BRIDGE_USER_ID || null,
+    user_id: resolvedUserId,
     agent_code: turn.agent_id || "voice_unknown",
+    channel: "voice",
     model: modelUsed || "unknown",
     latency_ms: aiLatency,
     status: aiStatus,
     intent: turn.intent || null,
     error_message: aiErrorMessage,
+    routed_to: "voice-brain-bridge",
     metadata: { external_call_id: turn.external_call_id || null },
   });
 
@@ -433,7 +357,7 @@ serve(async (req) => {
     "Mi scuso, ho avuto un problema tecnico. Posso richiamarti tra qualche minuto?",
   );
 
-  // Persist memory if requested + advance session status if end_call
+  // Persist memory + advance session
   try {
     if (sessionId) {
       const patch: Record<string, unknown> = {};
@@ -451,11 +375,9 @@ serve(async (req) => {
     }
     if (reply.memory_to_save) {
       const memTags = ["voice", "elevenlabs"];
-      if (turn.caller_context?.partner_id) {
-        memTags.push(`partner:${turn.caller_context.partner_id}`);
-      }
+      if (turn.caller_context?.partner_id) memTags.push(`partner:${turn.caller_context.partner_id}`);
       await supabase.from("ai_memory").insert({
-        user_id: BRIDGE_USER_ID,
+        user_id: resolvedUserId,
         memory_type: "voice_call_outcome",
         content: reply.memory_to_save,
         tags: memTags,
@@ -469,10 +391,11 @@ serve(async (req) => {
   const totalLatency = Date.now() - t0;
   void logRequest(supabase, {
     trace_id: traceId,
-    user_id: BRIDGE_USER_ID || null,
+    user_id: resolvedUserId,
     function_name: "voice-brain-bridge",
-    status: aiStatus === "ok" ? "ok" : aiStatus,
+    channel: "voice",
     http_status: 200,
+    status: aiStatus === "ok" ? "ok" : aiStatus,
     latency_ms: totalLatency,
     error_code: aiStatus === "ok" ? null : aiStatus,
     error_message: aiErrorMessage,
