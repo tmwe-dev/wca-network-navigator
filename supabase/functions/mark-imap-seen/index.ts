@@ -200,8 +200,8 @@ Deno.serve(async (req) => {
 
     if (msgErr) throw msgErr;
     if (!msg) {
-      return new Response(JSON.stringify({ error: "Message not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ success: false, skipped: true, reason: "message_not_found" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!msg.imap_uid) {
