@@ -1,113 +1,123 @@
 
-# Audit Completo — Caccia al Tesoro #4
 
-## 🔴 BUG CRITICI
+# Analisi Audit Esterno + Stato Attuale Post-Fix — Sintesi e Piano
 
-### 1. **email-cron-sync riga 29: `loadWorkHourSettings(supabase)` senza userId**
-La funzione cron chiama `loadWorkHourSettings(supabase)` SENZA passare un userId. In `timeUtils.ts` riga 37: `if (userId) query = query.eq("user_id", userId)` — senza userId, prende la PRIMA riga trovata tra TUTTI gli utenti. Se l'utente A ha orari 6-24 e l'utente B ha 9-18, il cron potrebbe usare gli orari di A per decidere se fare sync per TUTTI.
-**Fix**: Il cron itera già gli utenti (riga 52). Spostare il check work-hours DENTRO il loop per-utente.
+## Documenti Memorizzati
 
-### 2. **agent-autonomous-cycle righe 166-176: work-hours globali senza user_id**
-Stessa identica problematica. Carica orari di lavoro GLOBALMENTE (senza user_id) e poi li applica PRIMA del loop per-utente (riga 199). Risultato: se il primo utente trovato ha orari 6-24, il sistema opera per tutti; se ha 9-18, blocca tutti alle 18 anche chi ha configurato 6-24.
-**Fix**: Spostare il work-hours check dentro il loop per-utente, usando il loro userId.
+**Documento 1**: Audit tecnico DOCX (Claude Opus 4.6, 10 Aprile 2026)
+- Punteggio: **37.600 / 100.000** (37.6%)
+- 10 assi di valutazione, 34 problemi catalogati + 1.597 lint
+- 4 vulnerabilità sicurezza critiche (SEC-01..04)
+- 4 problemi architetturali critici (ARC-01..04)
+- 11 problemi alti, 15 medi
 
-### 3. **generate-email: raw fetch() senza timeout/retry/fallback (riga 765)**
-`generate-email` chiama `fetch("https://ai.gateway.lovable.dev/...")` direttamente. NESSUN:
-- Timeout (AbortController)
-- Retry con backoff
-- Fallback model cascade
-In contrasto, `generate-outreach` usa `aiChat()` con tutto questo. Se il modello primario è sovraccarico, `generate-email` FALLISCE. L'utente riceve un errore 500 senza recupero.
-**Fix**: Migrare a `aiChat()` dal gateway condiviso.
+**Documento 2**: Analisi conversazionale (tua sintesi) 
+- Punteggio: **54.000 / 100.000** (54%)
+- Diagnosi filosofica: "più ricco che coerente"
+- 3 filosofie simultanee: enterprise, Lovable/prompt-driven, browser-assisted
+- Knowledge sprawl identificata come criticità principale
 
-### 4. **agent-execute: raw fetch() senza timeout (righe 232-236, 290-294)**
-Il loop di fallback models usa `fetch()` nudo. Se una chiamata si blocca, l'edge function resta in stallo fino al timeout del runtime (300s su Supabase). Nessun AbortController.
-**Fix**: Aggiungere AbortController con timeout 45s per ogni chiamata.
+## Confronto tra i Due Audit
 
----
+| Asse | Audit DOCX (Opus) | Tua Analisi | Differenza |
+|---|---|---|---|
+| **Punteggio globale** | 37.600 | 54.000 | +16.400 |
+| **Type Safety** | 1.800 (strict OFF) | Ora strict ON | DOCX è stale qui |
+| **Test** | 800 (5 file) | ~720 test | DOCX è stale qui |
+| **AI/Prompt** | 7.500 | 38.000 (incoerenza) | Diversa metrica |
+| **Sicurezza** | 3.200 | Non valutata | DOCX copre estensioni Chrome |
+| **Build** | 7.800 | CI rotta (npm ci) | Entrambi trovano problemi |
 
-## 🟡 RACE CONDITIONS
+## Cosa è Stato Fixato nelle 4 Cacce al Tesoro (Oggi)
 
-### 5. **agent-execute righe 338-348: stats update non atomico**
-```js
-const stats = (agent.stats as any) || {};
-const updatedStats = { ...stats };
-updatedStats.tasks_completed = (stats.tasks_completed || 0) + 1;
-await supabase.from("agents").update({ stats: updatedStats }).eq("id", agent_id);
-```
-Se due task dello stesso agente terminano in parallelo, entrambi leggono `stats.tasks_completed = 5`, entrambi scrivono `6` invece di `7`. Pattern identico al bug #6 del precedente audit (interaction_count).
-**Fix**: RPC atomica `increment_agent_stat`.
+1. **Multi-tenancy**: `.eq("user_id")` aggiunto a tutte le 12+ edge function per `app_settings` e `kb_entries`
+2. **sameLocationGuard**: `return true` bug eliminato
+3. **Modelli AI**: allowlist aggiornata (gpt-5 family), fallback obsoleti rimossi
+4. **Race condition**: `increment_partner_interaction` e `increment_agent_stat` ora atomici via RPC
+5. **Syntax crash**: righe duplicate in `generate-email` e `agent-autonomous-cycle` rimosse
+6. **AI resilience**: AbortController 45s + fallback model cascade in `generate-email`
+7. **KB centralizzata**: `_shared/kbSlice.ts` elimina duplicazione in 3 file
+8. **N+1 query**: Director View in `agent-execute` ora usa `.in("id", agentIds)`
+9. **Work hours per-utente**: `loadWorkHourSettings(supabase, userId)` in tutti i cron
 
-### 6. **process-email-queue righe 220-223: sent_count non atomico**
-```js
-const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count")...
-await supabase.from("email_drafts").update({ sent_count: (currentDraft?.sent_count || 0) + 1 })...
-```
-Non è un vero rischio perché il queue è processato sequenzialmente per draft. Ma se due invocazioni concorrenti elaborano lo stesso draft, il conteggio si perde.
+## Cosa Rimane Aperto (Convergenza dei Due Audit)
 
----
+### Blocco 0 — CI/Build (IMMEDIATO)
+- `npm ci` fallisce per lockfile fuori sync
+- `vitest/globals` non risolve nel typecheck
+- **Senza CI verde, niente è verificabile**
 
-## 🟠 SICUREZZA
+### Blocco 1 — Sicurezza Estensioni Chrome (dal DOCX)
+- SEC-02: `new Function()` in `pipeline.js` e `task-runner.js` (RCE)
+- SEC-03: `innerHTML` non sanitizzato in estensioni (XSS) — nel React app è OK, problema solo nelle estensioni
+- SEC-04: Password LinkedIn in chiaro
+- EXT-01: `host_permissions: <all_urls>`
+- **Queste sono FUORI dal perimetro Lovable** (file JS estensioni non in `src/`)
 
-### 7. **send-email riga 104-109: query agente senza filtro user_id**
-```js
-const { data: agentRow } = await supabase
-  .from("agents")
-  .select("signature_html, ...")
-  .eq("id", agent_id)
-  .single();
-```
-Un utente autenticato che passa un `agent_id` di un ALTRO utente caricherà la firma di quell'agente. Manca `.eq("user_id", userId)`.
+### Blocco 2 — Architettura (convergenza entrambi)
+- God components (FiltersDrawer 1.114 LOC, BusinessCardsHub 1.084 LOC)
+- useCockpitLogic con 11 useState
+- Dead code V8 (~2.000 LOC)
+- 23 route legacy redirect
+- 13 Edge Functions AI sovrapposte
+- app_settings come "registro universale"
 
-### 8. **agent-autonomous-cycle: findAgentForPartner riga 62-66 query partner senza user scope**
-```js
-const { data: partner } = await supabase
-  .from("partners")
-  .select("country_code")
-  .eq("id", partnerId)
-  .single();
-```
-I partner sono condivisi per design, ma la query successiva su `client_assignments` (riga 50-55) filtra correttamente per `user_id`. OK per architettura attuale, ma va documentato.
+### Blocco 3 — Qualità Codice
+- ~1.500 `any` espliciti (parzialmente ridotti)
+- 59 catch vuoti
+- 55 violazioni exhaustive-deps
+- Nessun optimistic update
+- JSON fields DB senza validazione runtime
 
----
+### Blocco 4 — Knowledge Architecture
+- KB monolitica in `app_settings` coesiste con `kb_entries` atomica
+- `operative_prompts` vs `agentPrompts.ts` vs prompt hardcoded
+- Nessuna versioning dei prompt
+- Source of truth multipla
 
-## 🟢 MIGLIORAMENTI ARCHITETTURALI
+## Piano Proposto — Prioritizzazione Post-Audit
 
-### 9. **generate-email duplica la logica di firma con generate-outreach**
-Entrambi costruiscono `signatureBlock` con la stessa logica (righe 668-680 in generate-email, righe 513-525 in generate-outreach). Dovrebbe essere in `_shared/`.
+### Fase 1: CI Verde (1 giorno)
+- Riallineare `package-lock.json`
+- Fix `vitest/globals` nel typecheck
+- Pipeline: `npm ci → typecheck → test → build`
 
-### 10. **agent-execute: KB globale caricata SENZA limit (riga 89-93)**
-```js
-const { data: kbEntries } = await supabase.from("kb_entries").select(...)
-  .eq("is_active", true).order("priority", { ascending: false });
-```
-Nessun `.limit()` — se un utente ha 200 KB entries, tutte vengono caricate nel context. Questo può superare il token limit del modello e rallentare drasticamente l'esecuzione.
-**Fix**: Aggiungere `.limit(50)` e/o troncare il contenuto.
+### Fase 2: Pulizia Immediata (2-3 giorni)
+- Eliminare dead code V8
+- Rimuovere le 23 route legacy
+- Eliminare le 9 edge functions WCA legacy
+- Ridurre `any` nei file più critici
 
----
+### Fase 3: Architettura AI (1 settimana)
+- Consolidare 13 AI edge functions in 4-5 con routing interno
+- Unificare KB: migrare `ai_sales_knowledge_base` monolitica → `kb_entries`
+- Stabilire gerarchia prompt: `operative_prompts` > `kb_entries` > defaults
+- Eliminare prompt hardcoded residui
 
-## Piano di Fix
+### Fase 4: God Components (1 settimana)
+- Spezzare FiltersDrawer, BusinessCardsHub, useCockpitLogic
+- Estrarre query DB da componenti → hook dominio
+- Introdurre optimistic updates su mutazioni critiche
 
-### Step 1 — Work-hours per-utente (Bug #1, #2)
-- email-cron-sync: spostare check inside per-user loop
-- agent-autonomous-cycle: spostare check inside per-user loop
+### Fase 5: Validazione e Resilienza (ongoing)
+- Zod per JSON fields DB
+- Catch vuoti → logging strutturato
+- Fix exhaustive-deps
 
-### Step 2 — Resilienza AI (Bug #3, #4)
-- generate-email: migrare a `aiChat()` dal gateway
-- agent-execute: aggiungere AbortController con timeout
+### Punteggio Atteso Post-Piano
+- Dopo Fase 1-2: **~50.000** (debito ridotto, CI affidabile)
+- Dopo Fase 3-4: **~65.000** (architettura coerente)
+- Dopo Fase 5: **~72.000** (qualità industriale)
 
-### Step 3 — Race conditions (Bug #5, #6)
-- agent-execute: creare RPC `increment_agent_stat`
-- process-email-queue: usare RPC per sent_count
+## Nota sulla Divergenza di Punteggio
 
-### Step 4 — Sicurezza (Bug #7)
-- send-email: aggiungere `.eq("user_id", userId)` alla query agente
+L'audit DOCX dà 37.600 perché:
+1. Valuta le estensioni Chrome (17.593 LOC con vulnerabilità gravi) — noi non le tocchiamo qui
+2. Era pre-fix multi-tenancy (il bug più grave è stato risolto oggi)
+3. Conta strict OFF — ora è strict ON
+4. Conta 5 test — ora ce ne sono 720+
 
-### Step 5 — Performance (Bug #10)
-- agent-execute: aggiungere limit alla query KB entries
+La tua stima di 54.000 è più accurata per lo stato attuale del codice `src/` + edge functions, ma non include le estensioni Chrome.
 
-### Stima
-- 5 file da modificare
-- 1 migrazione DB (RPC increment_agent_stat)
-- 2 bug di isolamento work-hours
-- 1 bug di resilienza AI critico
-- 1 bug di sicurezza cross-tenant
+**Punteggio realistico attuale (solo perimetro Lovable)**: ~52.000-55.000
+
