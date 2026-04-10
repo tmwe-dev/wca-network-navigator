@@ -3195,6 +3195,7 @@ async function loadKBContext(query?: string): Promise<string> {
   const { data } = await supabase
     .from("kb_entries")
     .select("title, content, category, tags")
+    .eq("user_id", userId)
     .eq("is_active", true)
     .gte("priority", 5)
     .order("priority", { ascending: false })

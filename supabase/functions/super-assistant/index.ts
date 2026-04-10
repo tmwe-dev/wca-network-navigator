@@ -112,6 +112,7 @@ serve(async (req) => {
         supabase
           .from("kb_entries")
           .select("title, content, category, tags")
+          .eq("user_id", userId)
           .eq("is_active", true)
           .gte("priority", 7)
           .order("priority", { ascending: false })
