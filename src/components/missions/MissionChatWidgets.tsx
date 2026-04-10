@@ -9,7 +9,7 @@ import type { MissionStepData } from "@/components/missions/MissionStepRenderer"
 // ── Widget type definitions ──
 
 export interface WidgetConfig {
-  type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary";
+  type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary" | "plan_review";
   data?: any;
 }
 
@@ -21,6 +21,7 @@ const WIDGET_MARKERS: Record<string, WidgetConfig["type"]> = {
   "[WIDGET:slider_batch]": "slider_batch",
   "[WIDGET:toggle_group]": "toggle_group",
   "[WIDGET:confirm_summary]": "confirm_summary",
+  "[WIDGET:plan_review]": "plan_review",
 };
 
 export function extractWidgets(text: string): { cleanText: string; widgets: WidgetConfig[] } {
