@@ -20,6 +20,7 @@ type Quality = "fast" | "standard" | "premium";
 async function fetchKbEntriesStrategic(
   supabase: any, 
   quality: Quality,
+  userId: string,
   context: {
     emailCategory?: string;
     hasInteractionHistory?: boolean;
@@ -50,6 +51,7 @@ async function fetchKbEntriesStrategic(
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
+    .eq("user_id", userId)
     .eq("is_active", true)
     .in("category", uniqueCategories)
     .order("priority", { ascending: false })
@@ -495,7 +497,7 @@ serve(async (req) => {
       isPartnerSource && quality !== "fast"
         ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id)
         : Promise.resolve({ data: [] }),
-      supabase.from("app_settings").select("key, value").like("key", "ai_%"),
+      supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%"),
       isPartnerSource && quality === "premium"
         ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id)
         : Promise.resolve({ data: [] }),
@@ -526,7 +528,7 @@ serve(async (req) => {
     const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
 
     // ─── Same-Location Guard: prevent duplicate comms to same branch ───
-    const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;
+    const effectivePartnerId = isPartnerSource ? (activity?.partner_id || partner?.id) : partner?.id;
     
     if (!standalone && effectivePartnerId) {
       const guardResult = await checkSameLocationContacts(
@@ -706,11 +708,11 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
     // Sales KB — Strategic contextual injection
     const emailCategory = oracle_type || "primo_contatto";
     const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
-    const kbResult = await fetchKbEntriesStrategic(supabase, quality, {
+    const kbResult = await fetchKbEntriesStrategic(supabase, quality, userId, {
       emailCategory,
       hasInteractionHistory: !!historyContext,
       isFollowUp: emailCategory === "follow_up" || prevActCount > 0,
-      kb_categories: undefined, // Will use emailCategory fallback
+      kb_categories: undefined,
     });
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB, quality);
@@ -782,8 +784,7 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
 
-ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
-${goal || "Nessuna istruzione specifica — genera un'email professionale basata sul goal e la proposta."}
+Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
 Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
