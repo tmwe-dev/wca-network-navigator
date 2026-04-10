@@ -74,7 +74,7 @@ serve(async (req) => {
     // Use granular kb_entries first, fallback to legacy monolithic
     const kbResult = await fetchKbEntriesForImprove(supabase, userId);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB);
+    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, "standard", 4000);
 
     const systemPrompt = `Sei un esperto copywriter, stratega di vendita B2B e consulente di comunicazione nel settore della logistica internazionale e del freight forwarding.
 

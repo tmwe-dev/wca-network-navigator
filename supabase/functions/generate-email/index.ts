@@ -689,7 +689,7 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
       kb_categories: undefined,
     });
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
     // Build Strategic Advisor instructions
     const strategicAdvisor = buildStrategicAdvisor({
