@@ -1,121 +1,132 @@
 
 
-# Test Gap Analysis — Da 7/10 a 10/10
+# Analisi Qualità — Da ~73.000 a 100.000/100.000
 
-## Stato Attuale
+## Punteggio Stimato Attuale: ~73.000
 
-| Area | Copertura | Voto |
+| Area | Peso | Attuale | Max | Gap |
+|---|---|---|---|---|
+| Type Safety | 15.000 | 8.000 | 15.000 | -7.000 |
+| Test Coverage | 20.000 | 11.000 | 20.000 | -9.000 |
+| Code Architecture | 15.000 | 10.000 | 15.000 | -5.000 |
+| Security | 15.000 | 13.500 | 15.000 | -1.500 |
+| Code Hygiene | 10.000 | 8.500 | 10.000 | -1.500 |
+| Edge Function Quality | 10.000 | 5.500 | 10.000 | -4.500 |
+| E2E / Integration | 10.000 | 4.500 | 10.000 | -5.500 |
+| Documentation | 5.000 | 3.500 | 5.000 | -1.500 |
+| **TOTALE** | **100.000** | **~73.000** | **100.000** | **~27.000** |
+
+---
+
+## I 10 Gap da Colmare
+
+### GAP 1 — Type Safety: 396× `as any` + 454× `: any` (−7.000 pt)
+**146 file** con cast `as any`, **454 parametri** tipizzati `: any`.
+- Peggiori: hooks Supabase (ogni query usa `as any` per aggirare i tipi generati)
+- Fix: creare type helpers per le tabelle non in types.ts (agents, ai_memory, ecc.)
+- Obiettivo: < 50 `as any` totali, 0 `: any` nei file non-test
+
+### GAP 2 — Test Coverage: 1/343 componenti, 0/118 hooks (−9.000 pt)
+| Layer | File | Con Test | % |
+|---|---|---|---|
+| Componenti | 343 | 1 | 0.3% |
+| Hooks | 118 | 0 | 0% |
+| Pagine | ~40 | 0 | 0% |
+- Servono almeno: 20 component test, 10 hook test, 5 page test
+- Priorità: i 6 mega-componenti (>500 LOC) + hooks critici
+
+### GAP 3 — Mega-file Frontend: 8 file > 600 LOC (−5.000 pt)
+| File | LOC |
+|---|---|
+| FiltersDrawer.tsx | 1.114 |
+| BusinessCardsHub.tsx | 1.084 |
+| AddContactDialog.tsx | 794 |
+| useAcquisitionPipeline.tsx | 748 |
+| EmailComposer.tsx | 729 |
+| MissionStepRenderer.tsx | 700 |
+| EmailComposerContactPicker.tsx | 685 |
+| TestExtensions.tsx | 647 |
+- Obiettivo: nessun file > 400 LOC (split in sub-componenti)
+
+### GAP 4 — Mega-file Edge Functions: 5 funzioni > 700 LOC (−4.500 pt)
+| Funzione | LOC |
+|---|---|
+| ai-assistant | 3.802 |
+| scrape-wca-partners | 1.515 |
+| check-inbox | 1.458 |
+| generate-email | 1.048 |
+| generate-outreach | 703 |
+- `ai-assistant` da solo è quasi 4.000 righe → split in moduli
+- Obiettivo: nessuna funzione > 500 LOC
+
+### GAP 5 — Edge Function test: 19/67 con test (−3.000 pt)
+- 48 funzioni senza alcun test
+- Priorità: le 10 già identificate nello Step 1 del piano test
+- Obiettivo: almeno 50/67 con test base (CORS + 401 + error shape)
+
+### GAP 6 — E2E: 5/12 spec ancora skippate (−2.500 pt)
+- Login fixture creato ma non ancora usato in tutti gli spec
+- Obiettivo: 0 test skippati, 12/12 spec attivi
+
+### GAP 7 — Security: 1 dangerouslySetInnerHTML senza sanitize (−1.500 pt)
+- `src/components/ui/chart.tsx` usa dangerouslySetInnerHTML senza DOMPurify
+- 3 occorrenze di `JSON.parse(JSON.stringify())` ancora presenti
+- Obiettivo: 0 render HTML non sanitizzati, 0 deep clone naive
+
+### GAP 8 — Code Hygiene: 3× JSON.parse(JSON.stringify) (−1.500 pt)
+- Sostituire con `structuredClone()`
+- 1 TODO/FIXME residuo
+- Obiettivo: 0 pattern deprecati
+
+### GAP 9 — Documentation: JSDoc mancante su hooks/utils (−1.500 pt)
+- 118 hooks senza JSDoc
+- Utility functions senza documentazione
+- Obiettivo: JSDoc su tutti gli hooks pubblici e utility esportate
+
+### GAP 10 — Missing Error Boundaries per pagine (−1.000 pt)
+- Verificare che ogni pagina abbia error boundary
+- Route protection già presente (withFeatureBoundary)
+
+---
+
+## Piano di Implementazione (in ordine di impatto)
+
+### Fase 1: Type Safety (impatto: +7.000 pt)
+1. Creare `src/types/database-helpers.ts` con tipi per tabelle mancanti
+2. Eliminare `as any` dai hooks principali (useAgents, usePartners, ecc.)
+3. Tipizzare i parametri `: any` nei componenti
+
+### Fase 2: Test Coverage (impatto: +9.000 pt)
+1. 20 component test per i file critici
+2. 10 hook test (useAgents, usePartners, useEmailDrafts, ecc.)
+3. 5 page test (render + routing)
+
+### Fase 3: Refactoring Mega-file (impatto: +9.500 pt)
+1. Split `ai-assistant` in moduli (tools, router, context, response)
+2. Split `FiltersDrawer` in sub-componenti
+3. Split `BusinessCardsHub` in sub-componenti
+4. Refactor rimanenti file > 600 LOC
+
+### Fase 4: Security + Hygiene (impatto: +3.000 pt)
+1. Sanitizzare chart.tsx
+2. Sostituire JSON.parse(JSON.stringify) → structuredClone
+3. Aggiungere JSDoc ai hooks
+
+### Fase 5: E2E Recovery (impatto: +2.500 pt)
+1. Unskippare i 5 spec rimanenti
+2. Validare login fixture in tutti gli spec
+
+---
+
+## Stima Finale
+
+| Fase | Impatto | Effort |
 |---|---|---|
-| Unit test Vitest (src/test/) | 660 test, 54 file — buona | 8/10 |
-| Integration test Deno (edge functions) | 44 test, 8 funzioni su 66 | 4/10 |
-| Component test (.test.tsx) | 0 componenti testati | 0/10 |
-| E2E Playwright | 12 spec, ma 7 hanno il test principale `skip` | 3/10 |
-| Hook/Context test | 0 | 0/10 |
+| Type Safety | +7.000 | Alto (146 file) |
+| Test Coverage | +9.000 | Alto (35+ file nuovi) |
+| Refactoring | +9.500 | Molto alto (8 mega-file) |
+| Security + Hygiene | +3.000 | Basso (5 fix) |
+| E2E | +2.500 | Medio (5 spec) |
+| **TOTALE** | **+~27.000** | — |
 
----
-
-## I 6 Gap che Mancano per il 10/10
-
-### GAP 1 — 58 Edge Functions senza integration test
-Solo 8 funzioni su 66 hanno integration test. Le piu critiche senza copertura:
-
-**Priorita alta (core business):**
-- `voice-brain-bridge` — appena riscritto, zero test
-- `elevenlabs-conversation-token` — appena riscritto, zero test
-- `ai-assistant` — cuore del sistema AI
-- `super-assistant` — assistente enterprise
-- `process-download-job` — download contatti WCA
-- `stripe-webhook` — pagamenti
-- `deep-search-partner` / `deep-search-contact` — enrichment
-- `extension-brain` — bridge estensioni browser
-- `memory-promoter` — promozione memoria AI
-- `kb-embed-backfill` — backfill embedding RAG
-
-**Priorita media:**
-- `import-assistant`, `contacts-assistant`, `cockpit-assistant`
-- `enrich-partner-website`, `analyze-partner`
-- Tutte le funzioni `save-*-cookie`, `get-*-credentials`
-
-### GAP 2 — Zero component test React
-Nessun componente UI ha un test dedicato `.test.tsx`. I monoliti piu critici:
-- `FiltersDrawer` (1300 LOC)
-- `BusinessCardsHub` (1084 LOC)
-- `AddContactDialog` (794 LOC)
-- `ImportWizard` (625 LOC)
-- `AgentVoiceCall` — appena modificato
-- `EmailEditLearningDialog` — appena fixato
-
-### GAP 3 — Zero hook/context test
-Nessun test per:
-- `useAgents`, `usePartners`, `useEmailDrafts`
-- `ActiveOperatorContext`, `ContactDrawerContext`
-- Custom hooks di fetch/mutation
-
-### GAP 4 — E2E quasi tutti `skip`
-7 spec su 12 hanno il test principale skippato. Servono:
-- Login helper riutilizzabile (fixture Playwright)
-- Almeno 5 flussi E2E reali non-skip
-
-### GAP 5 — Nessun test per il sistema di apprendimento
-Il ciclo Memory/KB/RAG appena fixato non ha test:
-- `save_memory` tool → verifica insert in `ai_memory`
-- `save_kb_rule` tool → verifica insert + embedding auto
-- `ragSearchKb` → verifica retrieval semantico
-- `memory-promoter` → verifica promozione L1→L2→L3
-- Feedback buttons → verifica boost/reduce confidence
-
-### GAP 6 — Nessun test per bridge_tokens (nuovo)
-La tabella `bridge_tokens` e il flusso token-per-sessione appena creati non hanno:
-- Test di creazione token + hash validation
-- Test di scadenza (token expired → 401)
-- Test di cleanup token usati
-
----
-
-## Piano di Implementazione (prioritizzato)
-
-### Step 1: Integration test per le 10 edge function critiche
-Creare `index.integration.test.ts` per: `voice-brain-bridge`, `elevenlabs-conversation-token`, `ai-assistant`, `super-assistant`, `stripe-webhook`, `deep-search-partner`, `extension-brain`, `memory-promoter`, `kb-embed-backfill`, `process-download-job`.
-Pattern: CORS preflight + 401 senza auth + error shape.
-
-### Step 2: Test sistema apprendimento (Vitest)
-Nuovo file `src/test/ai-learning-system.test.ts`:
-- Simulazione ciclo memory save/retrieve/promote/decay
-- Validazione embedding auto-trigger dopo save_kb_rule
-- Validazione scale confidence (sempre 0-1)
-- RAG fallback behavior quando embedding manca
-
-### Step 3: Test bridge_tokens (Vitest + Deno)
-- Vitest: logica hash, scadenza, validazione
-- Deno integration: `voice-brain-bridge` con token valido/scaduto/mancante
-
-### Step 4: Component test per i 4 monoliti + 2 appena modificati
-- `AgentVoiceCall.test.tsx` — render, start/stop, token flow
-- `EmailEditLearningDialog.test.tsx` — render, submit, confidence value
-- `FiltersDrawer.test.tsx` — render, filtri base
-- `ImportWizard.test.tsx` — render, step navigation
-
-### Step 5: Hook/Context test
-- `useAgents.test.ts`, `usePartners.test.ts`
-- `ActiveOperatorContext.test.tsx`
-
-### Step 6: E2E login fixture + unskip 5 test
-- Creare `e2e/fixtures/auth.ts` con login riutilizzabile
-- Unskippare: `email-inbound-to-task`, `campaign-queue-lifecycle`, `agent-approval-flow`, `queue-ui-state-consistency`, `followup-mission`
-
----
-
-## Stima
-
-- Step 1: ~10 file, ~50 test Deno
-- Step 2: ~1 file, ~15 test Vitest
-- Step 3: ~2 file, ~10 test
-- Step 4: ~6 file, ~25 test React
-- Step 5: ~3 file, ~15 test
-- Step 6: ~6 file, ~15 test reali
-
-**Totale: ~130 nuovi test**, portando il sistema da ~704 a ~834 test con copertura completa su tutti i layer.
-
-### Raccomandazione
-Iniziare da Step 1 + Step 2 + Step 3 (le aree appena modificate). Sono i piu urgenti perche coprono codice nuovo senza alcun test.
-
+**Punteggio target: 100.000/100.000**
