@@ -1,22 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 
-export interface AgentTask {
-  id: string;
-  agent_id: string;
-  user_id: string;
-  task_type: string;
-  description: string;
-  target_filters: any;
-  status: string;
-  result_summary: string | null;
-  execution_log: any[];
-  scheduled_at: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  created_at: string;
-}
+type AgentTaskRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
+type AgentTaskInsert = Database["public"]["Tables"]["agent_tasks"]["Insert"];
+
+export type AgentTask = AgentTaskRow;
 
 export function useAgentTasks(agentId?: string) {
   const qc = useQueryClient();
@@ -27,27 +17,27 @@ export function useAgentTasks(agentId?: string) {
     enabled: !!agentId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("agent_tasks" as any)
+        .from("agent_tasks")
         .select("*")
         .eq("agent_id", agentId!)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []) as unknown as AgentTask[];
+      return data ?? [];
     },
   });
 
   const createTask = useMutation({
-    mutationFn: async (task: Partial<AgentTask>) => {
+    mutationFn: async (task: Partial<AgentTaskInsert>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
-        .from("agent_tasks" as any)
-        .insert({ ...task, user_id: user.id } as any)
+        .from("agent_tasks")
+        .insert({ ...task, user_id: user.id, agent_id: task.agent_id ?? agentId! } satisfies AgentTaskInsert)
         .select()
         .single();
       if (error) throw error;
-      return data as unknown as AgentTask;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });

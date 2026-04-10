@@ -47,36 +47,36 @@ export function useSystemDirectory() {
 
       // Parallel queries
       const [agentsRes, assignmentsRes, tasksRes, promptsRes] = await Promise.all([
-        supabase.from("agents" as any).select("id, name, role, avatar_emoji, is_active, stats").eq("user_id", user.id),
-        supabase.from("client_assignments" as any).select("agent_id").eq("user_id", user.id),
-        supabase.from("agent_tasks" as any).select("agent_id, status").eq("user_id", user.id).in("status", ["pending", "running"]),
-        supabase.from("operative_prompts" as any).select("id, name, objective, priority, tags, is_active").eq("user_id", user.id).order("priority", { ascending: false }),
+        supabase.from("agents").select("id, name, role, avatar_emoji, is_active, stats").eq("user_id", user.id),
+        supabase.from("client_assignments").select("agent_id").eq("user_id", user.id),
+        supabase.from("agent_tasks").select("agent_id, status").eq("user_id", user.id).in("status", ["pending", "running"]),
+        supabase.from("operative_prompts").select("id, name, objective, priority, tags, is_active").eq("user_id", user.id).order("priority", { ascending: false }),
       ]);
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();
       if (assignmentsRes.data) {
-        for (const a of assignmentsRes.data as any[]) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
+        for (const a of assignmentsRes.data) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
       }
 
       // Count active tasks per agent
       const taskMap = new Map<string, number>();
       if (tasksRes.data) {
-        for (const t of tasksRes.data as any[]) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
+        for (const t of tasksRes.data) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
       }
 
-      const agents: DirectoryAgent[] = ((agentsRes.data as any[]) || []).map((a: any) => ({
+      const agents: DirectoryAgent[] = (agentsRes.data || []).map((a) => ({
         id: a.id,
         name: a.name,
         role: a.role,
         avatar_emoji: a.avatar_emoji,
         is_active: a.is_active,
-        stats: a.stats || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
+        stats: (a.stats as unknown as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
         clientCount: assignMap.get(a.id) || 0,
         activeTaskCount: taskMap.get(a.id) || 0,
       }));
 
-      const prompts: DirectoryPrompt[] = ((promptsRes.data as any[]) || []).map((p: any) => ({
+      const prompts: DirectoryPrompt[] = (promptsRes.data || []).map((p) => ({
         id: p.id,
         name: p.name,
         objective: p.objective || "",

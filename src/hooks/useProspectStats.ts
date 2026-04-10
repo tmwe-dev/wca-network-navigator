@@ -28,7 +28,7 @@ export function useProspectStats() {
     queryFn: async () => {
       // Use count-only query instead of fetching all rows
       const { count: total, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("*", { count: "exact", head: true });
       if (error) throw error;
 
@@ -52,10 +52,10 @@ export function useAtecoGroups() {
     queryKey: ["ateco-groups"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
       if (error) throw error;
-      const rows = (data || []) as any[];
+      const rows = data ?? [];
 
       const map = new Map<string, AtecoGroup>();
       for (const r of rows) {

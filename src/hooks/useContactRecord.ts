@@ -110,12 +110,12 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
 
       if (sourceType === "prospect") {
         const { data: pr, error } = await supabase
-          .from("prospects" as any)
+          .from("prospects")
           .select("*, prospect_contacts(*)")
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as any;
+        const p = pr as Record<string, any>;
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,
@@ -200,7 +200,7 @@ export function useUpdateContactRecord() {
         const { error } = await supabase.from("imported_contacts").update(updates).eq("id", sourceId);
         if (error) throw error;
       } else if (sourceType === "prospect") {
-        const { error } = await (supabase.from("prospects" as any).update(updates) as any).eq("id", sourceId);
+        const { error } = await supabase.from("prospects").update(updates).eq("id", sourceId);
         if (error) throw error;
       } else if (sourceType === "bca") {
         const { error } = await supabase.from("business_cards").update(updates).eq("id", sourceId);
