@@ -46,10 +46,10 @@ export function useTrackActivity() {
         // Create interaction record
         await supabase.from("interactions").insert({
           partner_id: params.partnerId,
-          interaction_type: params.activityType === "send_email" ? "email" : "other",
+          interaction_type: params.activityType === "send_email" ? "email" : "note",
           subject: params.emailSubject || params.title,
           notes: params.description || `Attività: ${params.title}`,
-        } satisfies InteractionInsert);
+        });
       } else if (params.sourceType === "imported_contact") {
         await supabase
           .from("imported_contacts")
