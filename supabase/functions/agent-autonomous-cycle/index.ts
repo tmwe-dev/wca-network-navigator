@@ -170,6 +170,9 @@ serve(async (req) => {
         "agent_work_start_hour",
         "agent_work_end_hour",
         "agent_require_approval",
+        "high_stakes_statuses",
+        "high_stakes_sources",
+        "high_stakes_min_rating",
       ]);
     const cfg: Record<string, string> = {};
     settingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
