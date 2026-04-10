@@ -4,7 +4,7 @@ import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 type Channel = "email" | "linkedin" | "whatsapp" | "sms";
-type Quality = "fast" | "standard" | "premium";
+
 
 /** Contextual KB injection for outreach */
 async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel, userId: string): Promise<{ text: string; sections: string[] }> {

@@ -3000,6 +3000,7 @@ async function executeApplyPlaybook(args: Record<string, unknown>, userId: strin
       .from("kb_entries")
       .select("title, content, category")
       .eq("is_active", true)
+      .eq("user_id", userId)
       .overlaps("tags", (pb as any).kb_tags)
       .order("priority", { ascending: false })
       .limit(6);

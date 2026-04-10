@@ -137,7 +137,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
       if (matches.length === 0) {
         const { data } = await supabase.from("kb_entries")
           .select("id, title, content, category, chapter, tags, priority")
-          .eq("is_active", true).ilike("content", `%${escapeLike(query)}%`)
+          .eq("is_active", true).eq("user_id", userId).ilike("content", `%${escapeLike(query)}%`)
           .order("priority", { ascending: false }).limit(limit);
         return { matches: data || [], method: "fallback_text" };
       }
@@ -287,7 +287,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
     let kbContext: any[] = [];
     if (Array.isArray((pb as any).kb_tags) && (pb as any).kb_tags.length > 0) {
       const { data: kb } = await supabase.from("kb_entries").select("title, content, category")
-        .eq("is_active", true).overlaps("tags", (pb as any).kb_tags)
+        .eq("is_active", true).eq("user_id", userId).overlaps("tags", (pb as any).kb_tags)
         .order("priority", { ascending: false }).limit(6);
       kbContext = kb || [];
     }
