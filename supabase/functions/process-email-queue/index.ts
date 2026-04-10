@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
 
         await supabase.from("email_campaign_queue").update({
           status: "sent",
-          sent_at: new Date().toISOString(),
+          sent_at: smtpSentAt,
         }).eq("id", item.id);
 
         // ── Post-send: unified side effects ──
