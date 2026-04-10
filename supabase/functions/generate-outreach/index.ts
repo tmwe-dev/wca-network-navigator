@@ -417,12 +417,12 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
-    // Language detection
-    const detected = detectLanguage(country_code);
+    // Language hint (AI can override based on context)
+    const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
 
-    // Channel-specific instructions
-    const channelInstructions = getChannelInstructions(ch);
+    // Channel context
+    const channelContext = getChannelContext(ch);
 
     const senderContext = `
 MITTENTE (TU):
