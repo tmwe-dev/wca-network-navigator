@@ -749,28 +749,21 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
     const detected = getLanguageHint(partner.country_code);
     const effectiveLanguage = language || detected.language;
 
-    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
-NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione.
+    const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
+Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
 
 ${strategicAdvisor}
 
-# ISTRUZIONI DI GENERAZIONE EMAIL
-
 ## Formato output:
-- Prima riga: "Subject: ..." (testo puro, non HTML)
-- Dopo l'oggetto: corpo email in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
-- NON usare markdown nel corpo. NON usare \\n, usa tag HTML.
-- NON includere firma — viene aggiunta automaticamente dal sistema.
-- Chiudi con saluto + nome mittente, NIENT'ALTRO.
+- Prima riga: "Subject: ..." (testo puro)
+- Corpo in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
+- La firma viene aggiunta automaticamente — non includerla.
 
-## Regole critiche:
-1. LINGUA: Scrivi INTERAMENTE in ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Oggetto, saluto, corpo, chiusura — TUTTO nella stessa lingua.
-2. PERSONALIZZAZIONE: Usa i dati del destinatario per personalizzare. Se hai dati dal profilo, dal sito, dalla deep search — USALI come leva.
-3. ALIAS: Usa SEMPRE l'alias/nome breve nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Se il nome sembra un ruolo/titolo → usa "Gentile responsabile" o equivalente.
-4. CONCISIONE: L'email deve essere pronta per l'invio, non un template. Massimo 10-15 righe per il corpo.
-5. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA: NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni, statistiche o fatti. Se i dati sono insufficienti, scrivi in modo generico ma VERO. Ogni affermazione DEVE essere supportata dai dati forniti.
-6. NETWORK: Se ci sono network condivisi, usali come punto di connessione.
-7. CTA: Ogni email DEVE avere una call-to-action chiara. Domande aperte > domande chiuse.`;
+## Guardrail:
+- Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})
+- Usa alias/nome breve nel saluto, mai nome completo
+- Zero allucinazioni: usa SOLO dati forniti
+- Includi una call-to-action`;
 
     const userPrompt = `${senderContext}
 
