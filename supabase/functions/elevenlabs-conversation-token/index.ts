@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,22 @@ serve(async (req) => {
     });
   }
 
+  // Validate JWT to get user_id
+  const authHeader = req.headers.get("Authorization") || "";
+  const token = authHeader.replace("Bearer ", "");
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+  const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  let userId: string | null = null;
+  if (token && token !== SUPABASE_ANON_KEY) {
+    try {
+      const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data } = await supabaseAuth.auth.getUser(token);
+      userId = data?.user?.id || null;
+    } catch { /* best effort */ }
+  }
+
   try {
     const { agent_id } = await req.json();
 
@@ -29,6 +46,7 @@ serve(async (req) => {
       });
     }
 
+    // 1. Get ElevenLabs conversation token
     const response = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agent_id}`,
       {
@@ -49,9 +67,36 @@ serve(async (req) => {
 
     const data = await response.json();
 
-    return new Response(JSON.stringify({ token: data.token }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // 2. Generate a per-session bridge token and store hash
+    let bridgeToken: string | null = null;
+    if (userId) {
+      bridgeToken = crypto.randomUUID() + "-" + crypto.randomUUID();
+      const hashBuffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(bridgeToken)
+      );
+      const tokenHash = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      const supabaseService = createClient(SUPABASE_URL, SERVICE_ROLE);
+      await supabaseService.from("bridge_tokens").insert({
+        token_hash: tokenHash,
+        agent_id,
+        created_by: userId,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        token: data.token,
+        bridge_token: bridgeToken,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Conversation token error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
