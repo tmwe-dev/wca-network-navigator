@@ -66,97 +66,8 @@ function getModel(quality: Quality): string {
     : "google/gemini-3-flash-preview";
 }
 
-/** Detect language from country code */
-function detectLanguage(countryCode: string): { language: string; languageLabel: string } {
-  const cc = (countryCode || "").toUpperCase().trim();
-  const map: Record<string, { language: string; languageLabel: string }> = {
-    IT: { language: "italiano", languageLabel: "Italian" },
-    ES: { language: "español", languageLabel: "Spanish" },
-    AR: { language: "español", languageLabel: "Spanish" },
-    MX: { language: "español", languageLabel: "Spanish" },
-    CO: { language: "español", languageLabel: "Spanish" },
-    FR: { language: "français", languageLabel: "French" },
-    BE: { language: "français", languageLabel: "French" },
-    DE: { language: "deutsch", languageLabel: "German" },
-    AT: { language: "deutsch", languageLabel: "German" },
-    CH: { language: "deutsch", languageLabel: "German" },
-    PT: { language: "português", languageLabel: "Portuguese" },
-    BR: { language: "português", languageLabel: "Portuguese" },
-    NL: { language: "nederlands", languageLabel: "Dutch" },
-    RU: { language: "русский", languageLabel: "Russian" },
-    TR: { language: "türkçe", languageLabel: "Turkish" },
-    PL: { language: "polski", languageLabel: "Polish" },
-    RO: { language: "română", languageLabel: "Romanian" },
-    GR: { language: "ελληνικά", languageLabel: "Greek" },
-  };
-  return map[cc] || { language: "english", languageLabel: "English" };
-}
-
-/** Check if a string looks like a person's name (vs a job title) */
-function isLikelyPersonName(value: string): boolean {
-  if (!value || value.trim().length < 2) return false;
-  const lower = value.toLowerCase().trim();
-  const roleKeywords = [
-    "department", "pricing", "business development", "manager", "director",
-    "office", "logistics", "operations", "commercial", "sales", "admin",
-    "accounting", "hr", "finance", "marketing", "coordinator", "supervisor",
-    "assistant", "secretary", "procurement", "purchasing", "supply chain",
-    "warehouse", "import", "export", "freight", "shipping", "forwarding",
-    "rappresentante", "responsabile", "direttore", "ufficio", "reparto",
-    "amministrazione", "commerciale", "operativo", "logistica",
-  ];
-  if (roleKeywords.some((kw) => lower.includes(kw))) return false;
-  if (/[&\/]/.test(value)) return false;
-  return true;
-}
-
-/** Channel-specific instructions */
-function getChannelInstructions(channel: Channel): string {
-  switch (channel) {
-    case "email":
-      return `Genera un'email B2B professionale.
-- Includi un oggetto nella prima riga: "Subject: ..."
-- Dopo l'oggetto, corpo in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
-- Tono formale ma umano, personalizzato sul destinatario
-- Termina con saluto di chiusura e nome mittente`;
-
-    case "linkedin":
-      return `Genera un messaggio LinkedIn InMail/DM professionale.
-- NON includere "Subject:" — LinkedIn non ha oggetto
-- Massimo 300 parole — i messaggi LinkedIn devono essere concisi
-- Tono semi-formale, diretto, personale — come un messaggio tra professionisti
-- Fai riferimento al profilo/azienda del destinatario per personalizzare
-- Testo puro, NO HTML
-- Termina con nome mittente`;
-
-    case "whatsapp":
-      return `Genera un messaggio WhatsApp Business professionale.
-- NON includere "Subject:" — WhatsApp non ha oggetto
-- Massimo 150 parole — i messaggi WhatsApp devono essere brevi e diretti
-- Tono informale ma rispettoso, conversazionale
-- Usa emoji moderatamente (1-2 al massimo) per rendere il messaggio più umano
-- Testo puro, NO HTML
-- Vai subito al punto — no formalità eccessive`;
-
-    case "sms":
-      return `Genera un SMS professionale.
-- NON includere "Subject:" — SMS non ha oggetto
-- Massimo 160 caratteri — CRITICO: rispetta rigorosamente il limite SMS
-- Tono ultra-conciso, diretto, essenziale
-- Includi una call-to-action chiara
-- Testo puro, NO HTML
-- Nessun saluto formale — solo il contenuto essenziale e il nome`;
-  }
-}
-
-/** Strip common legal suffixes from company names (fast, no AI needed) */
-function cleanCompanyName(name: string): string {
-  if (!name) return name;
-  return name
-    .replace(/\b(s\.?r\.?l\.?|s\.?p\.?a\.?|s\.?a\.?s\.?|s\.?n\.?c\.?|llc|ltd\.?|inc\.?|gmbh|d\.?o\.?o\.?|corp\.?|pty\.?|plc\.?|co\.?\s*ltd\.?|pvt\.?\s*ltd\.?|s\.?a\.?|ag|ab|as|aps|bv|nv|oy|kft|sro|spol|eirl|sarl|sas|eurl|sl|sa de cv)\b\.?/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
+// ── Shared utilities (single source of truth) ──
+import { getLanguageHint, isLikelyPersonName, cleanCompanyName } from "../_shared/textUtils.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -506,12 +417,12 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
-    // Language detection
-    const detected = detectLanguage(country_code);
+    // Language hint (AI can override based on context)
+    const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
 
-    // Channel-specific instructions
-    const channelInstructions = getChannelInstructions(ch);
+    // Channel context
+    const channelContext = getChannelContext(ch);
 
     const senderContext = `
 MITTENTE (TU):
@@ -549,34 +460,21 @@ ${intelligence.enrichment_snippet}
       : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
-NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione dalla Knowledge Base.
+    const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
+Hai accesso a una Knowledge Base di tecniche di vendita e negoziazione — usala autonomamente per scegliere strategia, tono e struttura.
 
-# STRATEGIA AUTONOMA
-- LEGGI le tecniche dalla KB e SELEZIONA quelle più appropriate per questo contesto
-- APPLICA almeno 1-2 tecniche nel messaggio (Label, Mirroring, domanda calibrata, urgenza soft...)
-- Se hai dati dal DB sul destinatario → personalizza profondamente
-- Se non hai dati → resta professionale, usa tecniche universali
-- NON inventare MAI informazioni non presenti nei dati forniti
+${channelContext}
 
-CANALE: ${ch.toUpperCase()}
-${channelInstructions}
+CONTESTO:
+- Lingua suggerita: ${effectiveLanguage} (${country_code} → ${detected.languageLabel})
+- ${ch === "email" ? "La firma viene aggiunta automaticamente dal sistema." : ""}
 
-REGOLE CRITICHE:
-1. Scrivi INTERAMENTE in ${effectiveLanguage} (paese destinatario: ${country_code} → ${detected.languageLabel})
-2. Personalizza il messaggio sul destinatario SOLO con dati dalla sezione INTELLIGENCE DESTINATARIO
-3. ${ch === "email" ? "NON includere firma — viene aggiunta automaticamente" : "Includi il nome del mittente alla fine"}
-4. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA:
-   - NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni o fatti
-   - NON attribuire competenze o certificazioni non presenti nei dati
-   - NON inventare statistiche o percentuali
-   - Se i dati sono insufficienti, resta generico ma VERO
-5. Usa i network condivisi come punto di connessione se esistono nei dati
-6. Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
-7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
-8. Ogni messaggio DEVE avere una CTA chiara — domande aperte > domande chiuse
-9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)
-10. LIMITI DI LUNGHEZZA PER CANALE: ${ch === "whatsapp" ? "MAX 100 parole" : ch === "linkedin" ? "MAX 200 parole" : ch === "sms" ? "MAX 160 caratteri" : "MAX 150 parole per primo contatto, 200 per follow-up"}`;
+GUARDRAIL:
+- Scrivi nella lingua del paese destinatario
+- Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti
+- Usa alias/nome breve nel saluto, mai nome completo
+- Includi una call-to-action
+- Adatta lunghezza e stile al canale`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}

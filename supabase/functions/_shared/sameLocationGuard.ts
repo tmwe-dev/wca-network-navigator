@@ -212,14 +212,8 @@ export async function analyzeRelationshipHistory(
   else if (unanswered >= 3) stage = "ghosted";
   else if (emailsSent.length > 0) stage = "warm";
 
-  let toneSuggestion = "";
-  switch (stage) {
-    case "cold": toneSuggestion = "Tono professionale, primo approccio. Presenta chi sei e crea curiosità."; break;
-    case "warm": toneSuggestion = "Tono caloroso, referenzia le comunicazioni precedenti."; break;
-    case "active": toneSuggestion = "Tono colloquiale e diretto. Mantieni il momentum."; break;
-    case "stale": toneSuggestion = "Tono di re-engagement. Offri qualcosa di nuovo."; break;
-    case "ghosted": toneSuggestion = "CAMBIA APPROCCIO RADICALMENTE. Usa 'no strategico' o 'last attempt'."; break;
-  }
+  // No hardcoded tone — let the AI decide based on stage + context
+  const toneSuggestion = stage;
 
   const metrics: RelationshipMetrics = {
     total_interactions: interactions.length,
@@ -261,26 +255,8 @@ export async function analyzeRelationshipHistory(
  * Differentiates between partner (freight forwarder) and end client.
  */
 export function buildInterlocutorTypeBlock(sourceType: string): string {
-  if (sourceType === "partner") {
-    return `
---- TIPOLOGIA INTERLOCUTORE: PARTNER LOGISTICO ---
-Questo è un potenziale PARTNER COMMERCIALE, non un cliente finale.
-È uno spedizioniere/trasportatore come noi — un alleato operativo.
-TONO: Collaborativo, da alleanza commerciale. Trasparente e operativo.
-CONTENUTO: Sinergie operative, network condivisi, complementarità dei servizi.
-PROPOSTA: Integrazione sistemi, accesso tariffe partner, collaborazione strutturata.
-NON usare tono da "venditore a cliente" — usa tono da "collega a collega".
-`;
-  }
-
-  return `
---- TIPOLOGIA INTERLOCUTORE: CLIENTE FINALE ---
-Questo è un'azienda che necessita servizi di spedizione/logistica.
-TONO: Commerciale, orientato ai benefici. Chiaro e accessibile.
-CONTENUTO: Semplicità, risparmio, velocità, accesso diretto ai servizi.
-PROPOSTA: Apertura account, tariffe privilegiate, semplificazione operativa.
-L'obiettivo è portare il contatto ad APRIRE UN ACCOUNT e USARE i nostri sistemi.
-`;
+  // Pass only the type — let the AI decide tone and strategy from KB + context
+  return `\n--- TIPOLOGIA INTERLOCUTORE: ${sourceType === "partner" ? "PARTNER LOGISTICO (spedizioniere/trasportatore)" : "CLIENTE FINALE (azienda che necessita servizi logistici)"} ---\n`;
 }
 
 /**
@@ -292,19 +268,15 @@ export function buildBranchCoordinationBlock(
 ): string {
   if (!branches.length) return "";
   const branchList = branches.map(b => `${b.city} (${b.country_code})`).join(", ");
-  return `
---- COORDINAMENTO SEDI ---
-Questa azienda ha sedi anche a: ${branchList}.
-Stai scrivendo alla sede di ${currentCity || "N/D"}.
-Se opportuno, menziona che la comunicazione è stata estesa anche ad altri referenti in sedi diverse.
-Ogni email deve comunque essere PERSONALE e dedicata al singolo destinatario.
-`;
+  // Data only — AI decides how/whether to mention branches
+  return `\n--- SEDI AZIENDALI ---\nSede attuale: ${currentCity || "N/D"}\nAltre sedi: ${branchList}\n`;
 }
 
 /**
  * Build relationship analysis block for the prompt.
  */
 export function buildRelationshipAnalysisBlock(metrics: RelationshipMetrics): string {
+  // Data only — AI decides strategy based on these metrics + KB techniques
   return `
 --- ANALISI RELAZIONE ---
 - Comunicazioni inviate: ${metrics.total_emails_sent}
@@ -312,16 +284,5 @@ export function buildRelationshipAnalysisBlock(metrics: RelationshipMetrics): st
 - Senza risposta consecutive: ${metrics.unanswered_count}
 - Giorni dall'ultimo contatto: ${metrics.days_since_last_contact}
 - Fase relazione: ${metrics.relationship_stage.toUpperCase()}
-
-ISTRUZIONE TONO: ${metrics.tone_suggestion}
-${metrics.unanswered_count >= 3 ? `
-⚠️ ATTENZIONE: ${metrics.unanswered_count} messaggi senza risposta!
-CAMBIA APPROCCIO. Tecniche:
-1. "No strategico": "Ha rinunciato all'idea di [obiettivo]?"
-2. "Last attempt": "Sarà la mia ultima comunicazione..."
-3. Offri qualcosa di completamente nuovo
-4. Accorcia drasticamente — max 3-4 righe
-` : ""}${metrics.relationship_stage === "active" ? `
-✅ Relazione attiva — referenzia conversazioni recenti, tono diretto.
-` : ""}`;
+`;
 }

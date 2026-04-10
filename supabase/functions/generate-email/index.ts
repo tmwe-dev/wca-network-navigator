@@ -29,50 +29,20 @@ async function fetchKbEntriesStrategic(
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
   
-  // Build category filter based on context — using ACTUAL DB categories
-  const categories: string[] = [];
+  // Always include core categories + let the AI use what's relevant
+  const categories: string[] = ["regole_sistema", "filosofia"];
   
-  // Always include core identity/rules
-  categories.push("regole_sistema", "filosofia");
-  
-  // Add context-specific categories
+  // Add user-specified categories if provided
   if (context.kb_categories?.length) {
     categories.push(...context.kb_categories);
-  } else {
-    // Fallback: derive from email category
-    switch (context.emailCategory) {
-      case "primo_contatto":
-        categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
-        break;
-      case "follow_up":
-        categories.push("followup", "chris_voss", "struttura_email");
-        break;
-      case "richiesta":
-        categories.push("struttura_email", "dati_partner");
-        break;
-      case "proposta_servizi":
-        categories.push("negoziazione", "struttura_email", "chiusura", "dati_partner");
-        break;
-      case "partnership":
-        categories.push("negoziazione", "chris_voss", "dati_partner");
-        break;
-      default:
-        categories.push("struttura_email", "hook");
-    }
   }
   
-  // For follow-ups without response, add re-engagement techniques
-  if (context.isFollowUp) {
-    ["chris_voss", "followup", "obiezioni"].forEach(c => {
-      if (!categories.includes(c)) categories.push(c);
-    });
-  }
-  
-  // For premium, add full arsenal
+  // Add broad categories — let the AI select what's relevant from the results
+  categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
+  if (context.isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
+  if (quality !== "fast") categories.push("negoziazione", "tono", "frasi_modello");
   if (quality === "premium") {
-    ["negoziazione", "chris_voss", "arsenale", "persuasione", "tono", "frasi_modello", "obiezioni", "chiusura", "errori"].forEach(c => {
-      if (!categories.includes(c)) categories.push(c);
-    });
+    categories.push("arsenale", "persuasione", "chiusura", "errori");
   }
   
   const uniqueCategories = [...new Set(categories)];
@@ -97,59 +67,31 @@ async function fetchKbEntriesStrategic(
   return { text, sections_used: sectionsUsed };
 }
 
-/** Build the Strategic Advisor instructions based on context */
+/** Build the Strategic Advisor — context-driven, not prescriptive */
 function buildStrategicAdvisor(context: {
   emailCategory?: string;
   hasHistory?: boolean;
   followUpCount?: number;
   hasEnrichmentData?: boolean;
 }): string {
-  const parts: string[] = [];
-  
-  parts.push(`
-# STRATEGIC ADVISOR — Istruzioni di Intelligenza Autonoma
+  // Provide context + data, let AI decide strategy
+  return `
+# STRATEGIC ADVISOR — Contesto per Decisione Autonoma
 
-Sei un advisor strategico, non un semplice generatore di testo. Hai accesso a una Knowledge Base di tecniche di vendita, negoziazione e comunicazione B2B. DEVI usarla attivamente.
+Hai accesso a una Knowledge Base di tecniche di vendita, negoziazione e comunicazione B2B.
+Seleziona autonomamente le tecniche più appropriate in base al contesto sottostante.
 
-## Come usare la Knowledge Base:
-1. LEGGI le tecniche fornite e SELEZIONA quelle più appropriate per il contesto
-2. APPLICA almeno 2 tecniche per email (es. Label + Domanda Calibrata)
-3. ADATTA la tecnica al destinatario specifico — non usarla in modo meccanico
-4. Se hai dati dal profilo del destinatario, USA quei dati come leva per le tecniche
+## Contesto:
+- Tipo email: ${context.emailCategory || "generico"}
+- Storia interazioni disponibile: ${context.hasHistory ? "SÌ" : "NO"}
+- Tentativo follow-up: ${context.followUpCount ? `#${context.followUpCount}` : "N/A"}
+- Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}
 
-## Regole di autonomia:
-- Se i dati sul destinatario sono ricchi → personalizza profondamente, usa tecniche avanzate
-- Se i dati sono scarsi → resta generico ma professionale, usa tecniche universali (Label, Mirroring)
-- Se c'è storia di interazioni → ANALIZZALA e NON ripetere approcci già usati
-- Se è un follow-up senza risposta → usa tecniche di re-engagement (domanda "no", last attempt)`);
-
-  if (context.hasHistory) {
-    parts.push(`
-## ATTENZIONE — Storia interazioni disponibile:
-Hai accesso alla storia delle interazioni precedenti. DEVI:
-1. Leggere cosa è stato già detto/proposto
-2. NON ripetere lo stesso messaggio
-3. Evolvere l'approccio: ogni comunicazione deve portare VALORE NUOVO`);
-  }
-
-  if (context.followUpCount && context.followUpCount >= 2) {
-    parts.push(`
-## FOLLOW-UP AVANZATO (${context.followUpCount}° tentativo):
-Usa la tecnica del "No strategico": formula una domanda che permetta al destinatario di dire NO senza chiudere la porta.
-Es: "Ha rinunciato all'idea di [obiettivo]?" — questo provoca una risposta correttiva.
-Se è il 3°+ tentativo, considera la tecnica "last attempt".`);
-  }
-
-  if (!context.hasEnrichmentData) {
-    parts.push(`
-## DATI LIMITATI:
-Non hai molte informazioni sul destinatario. In questo caso:
-- NON inventare dettagli, presentazioni, eventi o fatti
-- Usa tecniche universali: Label generico, domanda aperta, reciprocità
-- Focalizza sul VALUE del mittente piuttosto che sulla personalizzazione`);
-  }
-
-  return parts.join("\n");
+## Guardrail:
+- Se c'è storia interazioni → non ripetere approcci già usati
+- Se dati enrichment scarsi → resta generico ma vero
+- Ogni comunicazione deve portare VALORE NUOVO
+`;
 }
 
 /** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
@@ -194,84 +136,8 @@ function getProfileTruncation(quality: Quality): { description: number; rawProfi
   }
 }
 
-/** Detect language from country code */
-function detectLanguage(countryCode: string): { language: string; languageLabel: string } {
-  const cc = (countryCode || "").toUpperCase().trim();
-  const map: Record<string, { language: string; languageLabel: string }> = {
-    IT: { language: "italiano", languageLabel: "Italian" },
-    ES: { language: "español", languageLabel: "Spanish" },
-    AR: { language: "español", languageLabel: "Spanish" },
-    MX: { language: "español", languageLabel: "Spanish" },
-    CO: { language: "español", languageLabel: "Spanish" },
-    CL: { language: "español", languageLabel: "Spanish" },
-    PE: { language: "español", languageLabel: "Spanish" },
-    VE: { language: "español", languageLabel: "Spanish" },
-    EC: { language: "español", languageLabel: "Spanish" },
-    UY: { language: "español", languageLabel: "Spanish" },
-    PY: { language: "español", languageLabel: "Spanish" },
-    BO: { language: "español", languageLabel: "Spanish" },
-    CR: { language: "español", languageLabel: "Spanish" },
-    PA: { language: "español", languageLabel: "Spanish" },
-    GT: { language: "español", languageLabel: "Spanish" },
-    CU: { language: "español", languageLabel: "Spanish" },
-    DO: { language: "español", languageLabel: "Spanish" },
-    HN: { language: "español", languageLabel: "Spanish" },
-    SV: { language: "español", languageLabel: "Spanish" },
-    NI: { language: "español", languageLabel: "Spanish" },
-    FR: { language: "français", languageLabel: "French" },
-    BE: { language: "français", languageLabel: "French" },
-    CI: { language: "français", languageLabel: "French" },
-    SN: { language: "français", languageLabel: "French" },
-    CM: { language: "français", languageLabel: "French" },
-    MA: { language: "français", languageLabel: "French" },
-    TN: { language: "français", languageLabel: "French" },
-    DZ: { language: "français", languageLabel: "French" },
-    DE: { language: "deutsch", languageLabel: "German" },
-    AT: { language: "deutsch", languageLabel: "German" },
-    CH: { language: "deutsch", languageLabel: "German" },
-    PT: { language: "português", languageLabel: "Portuguese" },
-    BR: { language: "português", languageLabel: "Portuguese" },
-    AO: { language: "português", languageLabel: "Portuguese" },
-    MZ: { language: "português", languageLabel: "Portuguese" },
-    NL: { language: "nederlands", languageLabel: "Dutch" },
-    RU: { language: "русский", languageLabel: "Russian" },
-    JP: { language: "english", languageLabel: "English" },
-    CN: { language: "english", languageLabel: "English" },
-    KR: { language: "english", languageLabel: "English" },
-    TR: { language: "türkçe", languageLabel: "Turkish" },
-    PL: { language: "polski", languageLabel: "Polish" },
-    RO: { language: "română", languageLabel: "Romanian" },
-    GR: { language: "ελληνικά", languageLabel: "Greek" },
-  };
-  return map[cc] || { language: "english", languageLabel: "English" };
-}
-
-/** Check if a string looks like a person's name (vs a job title/department) */
-function isLikelyPersonName(value: string): boolean {
-  if (!value || value.trim().length < 2) return false;
-  const lower = value.toLowerCase().trim();
-  const roleKeywords = [
-    "department", "pricing", "business development", "manager", "director",
-    "office", "logistics", "operations", "commercial", "sales", "admin",
-    "accounting", "hr", "human resources", "finance", "marketing",
-    "customer service", "general", "managing", "executive", "officer",
-    "coordinator", "supervisor", "assistant", "secretary", "reception",
-    "procurement", "purchasing", "supply chain", "warehouse", "import",
-    "export", "freight", "shipping", "forwarding", "trade", "compliance",
-    "legal", "it ", "information technology", "support", "helpdesk",
-    "division", "unit", "team", "group", "section", "bureau", "desk",
-    "rappresentante", "responsabile", "direttore", "ufficio", "reparto",
-    "amministrazione", "commerciale", "operativo", "logistica",
-    "contabilità", "segreteria", "acquisti", "vendite",
-  ];
-  // If it contains any role keyword, it's not a person name
-  if (roleKeywords.some((kw) => lower.includes(kw))) return false;
-  // If it contains "&" or "/" it's likely a department combo
-  if (/[&\/]/.test(value)) return false;
-  // If all words are capitalized short words (2-3 letters each), likely acronyms
-  if (/^[A-Z]{2,4}(\s+[A-Z]{2,4})*$/.test(value.trim())) return false;
-  return true;
-}
+// ── Shared utilities (single source of truth) ──
+import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 
 /** Validate URL: only allow http/https, block private IPs */
 function isValidPublicUrl(url: string): boolean {
@@ -879,32 +745,25 @@ ${settings.ai_style_instructions ? `- Istruzioni: ${settings.ai_style_instructio
 ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : ""}
 `;
 
-    // Auto-detect language from recipient's country code
-    const detected = detectLanguage(partner.country_code);
+    // Language hint (AI can override based on context)
+    const detected = getLanguageHint(partner.country_code);
     const effectiveLanguage = language || detected.language;
 
-    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
-NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione.
+    const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
+Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
 
 ${strategicAdvisor}
 
-# ISTRUZIONI DI GENERAZIONE EMAIL
-
 ## Formato output:
-- Prima riga: "Subject: ..." (testo puro, non HTML)
-- Dopo l'oggetto: corpo email in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
-- NON usare markdown nel corpo. NON usare \\n, usa tag HTML.
-- NON includere firma — viene aggiunta automaticamente dal sistema.
-- Chiudi con saluto + nome mittente, NIENT'ALTRO.
+- Prima riga: "Subject: ..." (testo puro)
+- Corpo in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
+- La firma viene aggiunta automaticamente — non includerla.
 
-## Regole critiche:
-1. LINGUA: Scrivi INTERAMENTE in ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Oggetto, saluto, corpo, chiusura — TUTTO nella stessa lingua.
-2. PERSONALIZZAZIONE: Usa i dati del destinatario per personalizzare. Se hai dati dal profilo, dal sito, dalla deep search — USALI come leva.
-3. ALIAS: Usa SEMPRE l'alias/nome breve nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Se il nome sembra un ruolo/titolo → usa "Gentile responsabile" o equivalente.
-4. CONCISIONE: L'email deve essere pronta per l'invio, non un template. Massimo 10-15 righe per il corpo.
-5. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA: NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni, statistiche o fatti. Se i dati sono insufficienti, scrivi in modo generico ma VERO. Ogni affermazione DEVE essere supportata dai dati forniti.
-6. NETWORK: Se ci sono network condivisi, usali come punto di connessione.
-7. CTA: Ogni email DEVE avere una call-to-action chiara. Domande aperte > domande chiuse.`;
+## Guardrail:
+- Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})
+- Usa alias/nome breve nel saluto, mai nome completo
+- Zero allucinazioni: usa SOLO dati forniti
+- Includi una call-to-action`;
 
     const userPrompt = `${senderContext}
 

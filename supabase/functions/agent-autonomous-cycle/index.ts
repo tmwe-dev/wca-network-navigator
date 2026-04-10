@@ -23,10 +23,23 @@ function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 // getCETHour and isOutsideWorkHours are imported from _shared/timeUtils.ts (line 3)
 // No local redeclaration — single source of truth for work-hours logic
 
-function isHighStakes(item: any): boolean {
-  if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
-  if (item.source === "ex_client") return true;
-  if (item.rating && item.rating >= 4) return true;
+// Configurable high-stakes criteria — loaded from app_settings at runtime
+interface HighStakesCriteria {
+  statuses: string[];
+  sources: string[];
+  min_rating: number;
+}
+
+const DEFAULT_HIGH_STAKES: HighStakesCriteria = {
+  statuses: ["in_progress", "negotiation"],
+  sources: ["ex_client"],
+  min_rating: 4,
+};
+
+function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
+  if (criteria.statuses.includes(item.lead_status)) return true;
+  if (criteria.sources.includes(item.source)) return true;
+  if (item.rating && item.rating >= criteria.min_rating) return true;
   return false;
 }
 
@@ -63,7 +76,7 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
   let actionsCreated = 0;
   const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
@@ -117,7 +130,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
         .single();
 
       if (partner) {
-        stakes = isHighStakes(partner);
+        stakes = isHighStakes(partner, hsCriteria);
       }
     }
 
@@ -157,6 +170,9 @@ serve(async (req) => {
         "agent_work_start_hour",
         "agent_work_end_hour",
         "agent_require_approval",
+        "high_stakes_statuses",
+        "high_stakes_sources",
+        "high_stakes_min_rating",
       ]);
     const cfg: Record<string, string> = {};
     settingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
@@ -165,6 +181,13 @@ serve(async (req) => {
     const workStartHour = parseInt(cfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
     const workEndHour = parseInt(cfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
     const forceApproval = cfg["agent_require_approval"] === "true";
+
+    // Build configurable high-stakes criteria
+    const highStakesCriteria: HighStakesCriteria = {
+      statuses: cfg["high_stakes_statuses"] ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.statuses,
+      sources: cfg["high_stakes_sources"] ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.sources,
+      min_rating: parseInt(cfg["high_stakes_min_rating"] || String(DEFAULT_HIGH_STAKES.min_rating), 10),
+    };
 
     // Work-hours check (CET timezone)
     if (isOutsideWorkHours(workStartHour, workEndHour)) {
@@ -190,7 +213,7 @@ serve(async (req) => {
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
-      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval);
+      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval, highStakesCriteria);
       if (screeningCount > 0) {
         results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
         await sleep(DELAY_BETWEEN_AGENTS_MS);
@@ -217,7 +240,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes(partner) || forceApproval;
+              const stakes = isHighStakes(partner, highStakesCriteria) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
@@ -263,7 +286,7 @@ serve(async (req) => {
           let stakes = false;
           if (fup.partner_id) {
             const { data: p } = await supabase.from("partners").select("rating, lead_status").eq("id", fup.partner_id).single();
-            if (p) stakes = isHighStakes(p);
+            if (p) stakes = isHighStakes(p, highStakesCriteria);
           }
 
           const needsApproval = stakes || forceApproval;
