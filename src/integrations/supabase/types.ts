@@ -2105,6 +2105,9 @@ export type Database = {
           chapter: string
           content: string
           created_at: string
+          embedding: string | null
+          embedding_model: string | null
+          embedding_updated_at: string | null
           id: string
           is_active: boolean
           priority: number
@@ -2119,6 +2122,9 @@ export type Database = {
           chapter?: string
           content?: string
           created_at?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_updated_at?: string | null
           id?: string
           is_active?: boolean
           priority?: number
@@ -2133,6 +2139,9 @@ export type Database = {
           chapter?: string
           content?: string
           created_at?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_updated_at?: string | null
           id?: string
           is_active?: boolean
           priority?: number
@@ -3685,6 +3694,26 @@ export type Database = {
         Returns: {
           matched_count: number
           total_processed: number
+        }[]
+      }
+      match_kb_entries: {
+        Args: {
+          filter_categories?: string[]
+          filter_min_priority?: number
+          match_count?: number
+          match_threshold?: number
+          only_active?: boolean
+          query_embedding: string
+        }
+        Returns: {
+          category: string
+          chapter: string
+          content: string
+          id: string
+          priority: number
+          similarity: number
+          tags: string[]
+          title: string
         }[]
       }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
