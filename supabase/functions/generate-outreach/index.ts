@@ -394,10 +394,11 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
 
     // ─── End Recipient Intelligence ───
 
-    // Fetch AI settings
+    // Fetch AI settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", userId)
       .like("key", "ai_%");
 
     const settings: Record<string, string> = {};
@@ -490,7 +491,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
     const model = getModel(quality);
 
     const result = await aiChat({
-      models: [model, "openai/gpt-4o-mini"],
+      models: [model, "openai/gpt-5-mini"],
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
