@@ -226,50 +226,13 @@ serve(async (req) => {
         await sleep(DELAY_BETWEEN_AGENTS_MS);
       }
 
-      // ═══ PHASE 2: Process agents sequentially (existing logic) ═══
+      // ═══ PHASE 2: Per-agent tasks (overdue follow-ups, etc.) ═══
+      // NOTE: Unread message screening is fully handled by Phase 1 (screenIncomingMessages).
+      // Phase 2 only handles agent-specific tasks like overdue follow-ups.
       for (const agent of agents) {
         if (!["outreach", "sales", "account"].includes(agent.role)) continue;
 
         let actionsCreated = 0;
-
-        // Check for unread replies from contacts in holding pattern
-        const { data: unreadMessages } = await supabase.from("channel_messages")
-          .select("id, from_address, subject, body_text, partner_id, email_date")
-          .eq("user_id", userId).eq("direction", "inbound").is("read_at", null)
-          .order("email_date", { ascending: false }).limit(budgetPerAgent);
-
-        for (const msg of (unreadMessages || [])) {
-          if (actionsCreated >= budgetPerAgent) break;
-
-          if (msg.partner_id) {
-            const { data: partner } = await supabase.from("partners")
-              .select("id, company_name, lead_status, rating")
-              .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
-
-            if (partner) {
-              const stakes = isHighStakes(partner, highStakesCriteria) || forceApproval;
-              const taskStatus = stakes ? "proposed" : "pending";
-
-              // Check if task already exists for this message
-              const { data: existingTask } = await supabase.from("agent_tasks")
-                .select("id")
-                .eq("agent_id", agent.id)
-                .eq("user_id", userId)
-                .contains("target_filters", { message_id: msg.id } as any)
-                .maybeSingle();
-
-              if (!existingTask) {
-                await supabase.from("agent_tasks").insert({
-                  agent_id: agent.id, user_id: userId, task_type: "analysis",
-                  description: `Analizza risposta da ${partner.company_name}: "${msg.subject}". ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Auto-approvato: esegui follow-up."}`,
-                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes && !forceApproval } as any,
-                  status: taskStatus,
-                });
-                actionsCreated++;
-              }
-            }
-          }
-        }
 
         // Check for overdue follow-ups
         const { data: overdueFups } = await supabase.from("activities")
