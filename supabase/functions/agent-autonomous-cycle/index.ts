@@ -76,7 +76,7 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
   let actionsCreated = 0;
   const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
@@ -130,7 +130,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
         .single();
 
       if (partner) {
-        stakes = isHighStakes(partner);
+        stakes = isHighStakes(partner, hsCriteria);
       }
     }
 
