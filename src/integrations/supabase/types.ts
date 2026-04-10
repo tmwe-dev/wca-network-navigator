@@ -1368,6 +1368,7 @@ export type Database = {
           error_message: string | null
           html_body: string
           id: string
+          idempotency_key: string
           open_count: number | null
           opened_at: string | null
           partner_id: string
@@ -1387,6 +1388,7 @@ export type Database = {
           error_message?: string | null
           html_body: string
           id?: string
+          idempotency_key?: string
           open_count?: number | null
           opened_at?: string | null
           partner_id: string
@@ -1406,6 +1408,7 @@ export type Database = {
           error_message?: string | null
           html_body?: string
           id?: string
+          idempotency_key?: string
           open_count?: number | null
           opened_at?: string | null
           partner_id?: string
