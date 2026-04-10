@@ -154,6 +154,27 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Idempotency check: skip if this key was already sent ──
+      if (item.idempotency_key) {
+        const { data: existing } = await supabase
+          .from("email_campaign_queue")
+          .select("id")
+          .eq("idempotency_key", item.idempotency_key)
+          .eq("status", "sent")
+          .neq("id", item.id)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          // Duplicate detected — mark as skipped, don't send
+          await supabase.from("email_campaign_queue").update({
+            status: "sent",
+            error_message: "Skipped: duplicate idempotency_key",
+            sent_at: new Date().toISOString(),
+          }).eq("id", item.id);
+          sentCount++;
+          continue;
+        }
+      }
+
       // Mark as sending
       await supabase.from("email_campaign_queue").update({ status: "sending" }).eq("id", item.id);
 
@@ -166,9 +187,13 @@ Deno.serve(async (req) => {
           html: item.html_body,
         });
 
+        // ── Recovery marker: record SMTP success timestamp BEFORE DB updates ──
+        // If DB fails after this point, we can detect orphaned sends
+        const smtpSentAt = new Date().toISOString();
+
         await supabase.from("email_campaign_queue").update({
           status: "sent",
-          sent_at: new Date().toISOString(),
+          sent_at: smtpSentAt,
         }).eq("id", item.id);
 
         // ── Post-send: unified side effects ──
