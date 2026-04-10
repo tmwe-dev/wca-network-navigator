@@ -217,9 +217,12 @@ interface MissionWidgetRendererProps {
   onChange: (d: MissionStepData) => void;
   countryStats: { code: string; name: string; count: number; withEmail: number }[];
   onLaunch: () => void;
+  onPlanApprove?: () => void;
+  onPlanCancel?: () => void;
+  planReviewProps?: { plan: any; isApproving: boolean };
 }
 
-export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch }: MissionWidgetRendererProps) {
+export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
   if (widgets.length === 0) return null;
 
   return (
@@ -298,6 +301,22 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 onLaunch={onLaunch}
               />
             );
+
+          case "plan_review":
+            if (planReviewProps && onPlanApprove && onPlanCancel) {
+              const MissionPlanReview = require("./MissionPlanReview").default;
+              return (
+                <MissionPlanReview
+                  key={i}
+                  plan={planReviewProps.plan}
+                  visible={true}
+                  isApproving={planReviewProps.isApproving}
+                  onApprove={onPlanApprove}
+                  onCancel={onPlanCancel}
+                />
+              );
+            }
+            return null;
 
           default:
             return null;
