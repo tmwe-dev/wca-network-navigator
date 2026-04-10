@@ -49,7 +49,7 @@ describe("Bridge Tokens — Token Structure", () => {
     const token = generateBridgeToken();
     // Format: uuid-uuid (73 chars: 36 + 1 + 36)
     expect(token.length).toBe(73);
-    expect(token.split("-").length).toBe(9); // 5 from first UUID + dash + 5 from second = 9 segments after splitting
+    expect(token.split("-").length).toBe(10); // 5 from each UUID = 10 segments
   });
 
   it("generates unique tokens each time", () => {
