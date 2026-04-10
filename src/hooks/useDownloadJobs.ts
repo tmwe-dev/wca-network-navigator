@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
 
@@ -42,7 +43,7 @@ interface RtState {
 }
 
 function getRtState(): RtState {
-  const w = window as Record<string, unknown>;
+  const w = window as unknown as Record<string, unknown>;
   if (!w[RT_KEY]) {
     w[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
   }
@@ -162,7 +163,7 @@ export function useCreateDownloadJob() {
           country_code: params.country_code,
           country_name: params.country_name,
           network_name: params.network_name,
-          wca_ids: filteredIds as unknown as Database["public"]["Tables"]["download_jobs"]["Insert"]["wca_ids"],
+          wca_ids: filteredIds as unknown as Json,
           total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",
@@ -188,7 +189,7 @@ export function useCreateDownloadJob() {
       await supabase.from("download_job_events").insert({
         job_id: data.id,
         event_type: "job_created",
-        payload: { total: filteredIds.length } as Database["public"]["Tables"]["download_job_events"]["Insert"]["payload"],
+        payload: { total: filteredIds.length } as Json,
       });
 
       return data.id;
