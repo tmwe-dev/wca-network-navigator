@@ -215,14 +215,14 @@ export default function Auth() {
                   <Label htmlFor="login-email" className="text-xs">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
+                    <Input id="login-email" name="email" autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="login-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-pw" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10" required />
+                    <Input id="login-pw" name="password" autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10" required />
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -241,20 +241,20 @@ export default function Auth() {
               <form onSubmit={handleSignup} className="space-y-3 mt-3">
                 <div>
                   <Label htmlFor="signup-name" className="text-xs">Nome</Label>
-                  <Input id="signup-name" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Il tuo nome" required />
+                  <Input id="signup-name" name="name" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Il tuo nome" required />
                 </div>
                 <div>
                   <Label htmlFor="signup-email" className="text-xs">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
+                    <Input id="signup-email" name="email" autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="signup-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-pw" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10" minLength={6} required />
+                    <Input id="signup-pw" name="new-password" autoComplete="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10" minLength={6} required />
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isBusy}>
