@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface ConversationMessage {
   role: "user" | "assistant";
@@ -101,7 +102,7 @@ export function useAIConversation(pageContext: string) {
             user_id: user.id,
             page_context: pageContext,
             title: title || "Nuova conversazione",
-            messages: JSON.parse(JSON.stringify(updated)),
+            messages: structuredClone(updated) as unknown as Json[],
           }])
           .select("id")
           .single();

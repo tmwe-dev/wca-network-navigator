@@ -16,10 +16,10 @@ interface Props {
 }
 
 export function AgentKnowledgeBase({ agent }: Props) {
-  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as KBEntry[]) || []);
+  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as unknown as KBEntry[]) || []);
   const { updateAgent } = useAgents();
 
-  useEffect(() => setEntries((agent.knowledge_base as KBEntry[]) || []), [agent.id]);
+  useEffect(() => setEntries((agent.knowledge_base as unknown as KBEntry[]) || []), [agent.id]);
 
   const addEntry = () => setEntries([...entries, { title: "", content: "" }]);
 

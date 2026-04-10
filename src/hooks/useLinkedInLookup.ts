@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
 import {
@@ -162,14 +163,14 @@ export function useLinkedInLookup() {
           if (ic) {
             const existing = (ic.enrichment_data as Record<string, any>) || {};
             await (supabase.from("imported_contacts").update({
-              enrichment_data: JSON.parse(JSON.stringify({
+              enrichment_data: structuredClone({
                 ...existing,
                 linkedin_search_log: log,
                 linkedin_resolved_at: foundUrl ? new Date().toISOString() : null,
                 linkedin_resolved_method: resolvedMethod,
                 linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
                 ...(foundUrl ? { linkedin_url: foundUrl } : {}),
-              })),
+              }) as unknown as Json,
             }) as any).eq("id", contact.sourceId);
           }
         } catch (e) {
@@ -265,7 +266,7 @@ export function useLinkedInLookup() {
         ...(foundUrl ? { linkedin_profile_url: foundUrl, linkedin_url: foundUrl } : {}),
       };
 
-      await (supabase.from("imported_contacts").update({ enrichment_data: JSON.parse(JSON.stringify(updated)) }) as any).eq("id", c.id);
+      await (supabase.from("imported_contacts").update({ enrichment_data: structuredClone(updated) }) as any).eq("id", c.id);
 
       if (foundUrl) found++; else notFound++;
       setProgress(p => ({ ...p, found, notFound, currentMethod: undefined }));
