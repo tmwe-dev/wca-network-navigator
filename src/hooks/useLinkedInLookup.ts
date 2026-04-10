@@ -169,7 +169,7 @@ export function useLinkedInLookup() {
                 linkedin_resolved_method: resolvedMethod,
                 linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
                 ...(foundUrl ? { linkedin_url: foundUrl } : {}),
-              }),
+              }) as unknown as Json,
             }) as any).eq("id", contact.sourceId);
           }
         } catch (e) {
