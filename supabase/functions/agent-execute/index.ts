@@ -342,9 +342,16 @@ Rispondi SEMPRE in italiano. Usa markdown per formattare le risposte. Sei un age
         completed_at: new Date().toISOString(),
       }).eq("id", task_id);
 
+      // Update agent stats: only increment the correct counter based on outcome
       const stats = (agent.stats as any) || {};
+      const updatedStats = { ...stats };
+      if (taskStatus === "completed") {
+        updatedStats.tasks_completed = (stats.tasks_completed || 0) + 1;
+      } else {
+        updatedStats.tasks_failed = (stats.tasks_failed || 0) + 1;
+      }
       await supabase.from("agents").update({
-        stats: { ...stats, tasks_completed: (stats.tasks_completed || 0) + 1 } as any,
+        stats: updatedStats as any,
         updated_at: new Date().toISOString(),
       }).eq("id", agent_id);
 

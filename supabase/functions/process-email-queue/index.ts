@@ -240,13 +240,14 @@ Deno.serve(async (req) => {
         }).eq("id", item.id);
         failedCount++;
       }
-
-      // Update draft counters (atomic increment via raw SQL-like approach)
-      const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
-      const cumulativeSent = (currentDraft?.sent_count || 0) + 1;
-      await supabase.from("email_drafts").update({
-        sent_count: cumulativeSent,
-      }).eq("id", draft_id);
+      // Update draft sent_count only on success (Bug fix: was incrementing on failure too)
+      if (sentCount > 0) {
+        const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
+        const cumulativeSent = (currentDraft?.sent_count || 0) + 1;
+        await supabase.from("email_drafts").update({
+          sent_count: cumulativeSent,
+        }).eq("id", draft_id);
+      }
 
       // Delay between sends
       if (delayMs > 0) {

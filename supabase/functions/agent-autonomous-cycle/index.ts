@@ -11,11 +11,31 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const BUDGET_PER_AGENT = 10;
-const DELAY_BETWEEN_AGENTS_MS = 3000;
-const CYCLE_LOOKBACK_MINUTES = 12; // slightly more than 10min interval
+// Defaults — overridden by app_settings at runtime
+const DEFAULT_BUDGET_PER_AGENT = 10;
+const DEFAULT_CYCLE_LOOKBACK_MINUTES = 12;
+const DEFAULT_WORK_START_HOUR = 6;
+const DEFAULT_WORK_END_HOUR = 24; // midnight
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+function getCETHour(): number {
+  // CET = UTC+1, CEST = UTC+2. Use Intl to get the real Europe/Rome hour.
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Rome",
+    hour: "numeric",
+    hour12: false,
+  });
+  return parseInt(formatter.format(now), 10);
+}
+
+function isOutsideWorkHours(startHour: number, endHour: number): boolean {
+  const hour = getCETHour();
+  // endHour=24 means midnight, so hour < startHour means too early
+  if (endHour <= startHour) return false; // misconfigured → never pause
+  return hour < startHour || hour >= endHour;
+}
 
 function isHighStakes(item: any): boolean {
   if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
@@ -24,10 +44,7 @@ function isHighStakes(item: any): boolean {
   return false;
 }
 
-function isNightTime(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 0 && hour < 6;
-}
+const DELAY_BETWEEN_AGENTS_MS = 3000;
 
 async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
   // Check client_assignments first
@@ -60,9 +77,9 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[]): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean): Promise<number> {
   let actionsCreated = 0;
-  const lookback = new Date(Date.now() - CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
+  const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
   // Get unread inbound messages from last cycle window
   const { data: messages } = await supabase
@@ -96,7 +113,7 @@ async function screenIncomingMessages(userId: string, agents: any[]): Promise<nu
 
   for (const msg of messages) {
     if (alreadyProcessedIds.has(msg.id)) continue;
-    if (actionsCreated >= BUDGET_PER_AGENT) break;
+    if (actionsCreated >= budgetPerAgent) break;
 
     let assignedAgent = fallbackAgent;
     let stakes = false;
@@ -131,9 +148,9 @@ async function screenIncomingMessages(userId: string, agents: any[]): Promise<nu
         message_id: msg.id,
         partner_id: msg.partner_id,
         channel: msg.channel,
-        auto_approved: !stakes,
+        auto_approved: !stakes && !forceApproval,
       } as any,
-      status: stakes ? "proposed" : "pending",
+      status: (stakes || forceApproval) ? "proposed" : "pending",
     });
     actionsCreated++;
   }
@@ -145,9 +162,27 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Night pause check
-    if (isNightTime()) {
-      return new Response(JSON.stringify({ message: "Night pause active (00:00-06:00)", skipped: true }), {
+    // ── Load configurable settings from app_settings ──
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .in("key", [
+        "agent_max_actions_per_cycle",
+        "agent_work_start_hour",
+        "agent_work_end_hour",
+        "agent_require_approval",
+      ]);
+    const cfg: Record<string, string> = {};
+    settingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+
+    const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
+    const workStartHour = parseInt(cfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
+    const workEndHour = parseInt(cfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
+    const forceApproval = cfg["agent_require_approval"] === "true";
+
+    // Work-hours check (CET timezone)
+    if (isOutsideWorkHours(workStartHour, workEndHour)) {
+      return new Response(JSON.stringify({ message: `Outside work hours (CET ${workStartHour}:00-${workEndHour}:00)`, skipped: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -169,7 +204,7 @@ serve(async (req) => {
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
-      const screeningCount = await screenIncomingMessages(userId, agents);
+      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval);
       if (screeningCount > 0) {
         results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
         await sleep(DELAY_BETWEEN_AGENTS_MS);
@@ -185,10 +220,10 @@ serve(async (req) => {
         const { data: unreadMessages } = await supabase.from("channel_messages")
           .select("id, from_address, subject, body_text, partner_id, email_date")
           .eq("user_id", userId).eq("direction", "inbound").is("read_at", null)
-          .order("email_date", { ascending: false }).limit(BUDGET_PER_AGENT);
+          .order("email_date", { ascending: false }).limit(budgetPerAgent);
 
         for (const msg of (unreadMessages || [])) {
-          if (actionsCreated >= BUDGET_PER_AGENT) break;
+          if (actionsCreated >= budgetPerAgent) break;
 
           if (msg.partner_id) {
             const { data: partner } = await supabase.from("partners")
@@ -196,7 +231,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes({ ...partner, source: "wca" });
+              const stakes = isHighStakes({ ...partner, source: "wca" }) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
@@ -211,7 +246,7 @@ serve(async (req) => {
                 await supabase.from("agent_tasks").insert({
                   agent_id: agent.id, user_id: userId, task_type: "analysis",
                   description: `Analizza risposta da ${partner.company_name}: "${msg.subject}". ${stakes ? "⚠️ HIGH-STAKES: richiede approvazione." : "Auto-approvato: esegui follow-up."}`,
-                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes } as any,
+                  target_filters: { message_id: msg.id, partner_id: partner.id, auto_approved: !stakes && !forceApproval } as any,
                   status: taskStatus,
                 });
                 actionsCreated++;
@@ -225,10 +260,10 @@ serve(async (req) => {
           .select("id, title, partner_id, source_meta, due_date")
           .eq("user_id", userId).eq("status", "pending").eq("activity_type", "follow_up")
           .lt("due_date", new Date().toISOString().split("T")[0])
-          .limit(BUDGET_PER_AGENT - actionsCreated);
+          .limit(budgetPerAgent - actionsCreated);
 
         for (const fup of (overdueFups || [])) {
-          if (actionsCreated >= BUDGET_PER_AGENT) break;
+          if (actionsCreated >= budgetPerAgent) break;
 
           // Check if task already exists
           const { data: existingTask } = await supabase.from("agent_tasks")
@@ -245,11 +280,12 @@ serve(async (req) => {
             if (p) stakes = isHighStakes(p);
           }
 
+          const needsApproval = stakes || forceApproval;
           await supabase.from("agent_tasks").insert({
             agent_id: agent.id, user_id: userId, task_type: "follow_up",
-            description: `Follow-up scaduto: "${fup.title}". ${stakes ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
-            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !stakes } as any,
-            status: stakes ? "proposed" : "pending",
+            description: `Follow-up scaduto: "${fup.title}". ${needsApproval ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
+            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as any,
+            status: needsApproval ? "proposed" : "pending",
           });
           actionsCreated++;
         }
