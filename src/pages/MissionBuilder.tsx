@@ -439,6 +439,9 @@ export default function MissionBuilder() {
                         onChange={setStepData}
                         countryStats={countryStats}
                         onLaunch={launchMission}
+                        onPlanApprove={handlePlanApprove}
+                        onPlanCancel={handlePlanCancel}
+                        planReviewProps={pendingPlan ? { plan: pendingPlan, isApproving } : undefined}
                       />
                     )}
                   </>
