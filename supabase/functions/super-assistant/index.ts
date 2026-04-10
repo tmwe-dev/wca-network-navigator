@@ -73,6 +73,7 @@ serve(async (req) => {
     const { data: aiSettings } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", userId)
       .like("key", "ai_%");
 
     if (aiSettings?.length) {
