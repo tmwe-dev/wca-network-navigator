@@ -161,26 +161,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Settings will be loaded per-user inside the loop below
-    // Only load work-hours globally (applies to the cron job itself)
-    const { data: globalWorkHours } = await supabase
-      .from("app_settings")
-      .select("key, value")
-      .in("key", ["agent_work_start_hour", "agent_work_end_hour"])
-      .limit(2);
-    const globalCfg: Record<string, string> = {};
-    globalWorkHours?.forEach((row: any) => { if (row.value) globalCfg[row.key] = row.value; });
-
-    const workStartHour = parseInt(globalCfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
-    const workEndHour = parseInt(globalCfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
-
-    // Work-hours check (CET timezone)
-    if (isOutsideWorkHours(workStartHour, workEndHour)) {
-      return new Response(JSON.stringify({ message: `Outside work hours (CET ${workStartHour}:00-${workEndHour}:00)`, skipped: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Get all users with active agents
     const { data: allAgents } = await supabase.from("agents").select("id, user_id, name, role, territory_codes, is_active").eq("is_active", true);
     if (!allAgents || allAgents.length === 0) {
@@ -197,6 +177,13 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const [userId, agents] of Object.entries(userAgents)) {
+      // ── Per-user work-hours check ──
+      const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, userId);
+      if (isOutsideWorkHours(workStartHour, workEndHour)) {
+        results.push({ phase: "skipped", user_id: userId, reason: `Outside work hours (${workStartHour}-${workEndHour})` });
+        continue;
+      }
+
       // ── Load per-user settings ──
       const { data: userSettingsRows } = await supabase
         .from("app_settings")

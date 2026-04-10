@@ -216,11 +216,10 @@ Deno.serve(async (req) => {
 
         sentCount++;
 
-        // Update draft sent_count ONLY on success (inside try block)
-        const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
+        // Increment draft sent_count (sequential processing — no race condition risk)
         await supabase.from("email_drafts").update({
-          sent_count: (currentDraft?.sent_count || 0) + 1,
-        }).eq("id", draft_id);
+          sent_count: sentCount,
+        } as any).eq("id", draft_id);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         await supabase.from("email_campaign_queue").update({

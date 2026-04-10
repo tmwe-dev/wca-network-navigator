@@ -762,38 +762,54 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
 
     const model = getModel(quality);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    // Fallback model cascade with timeout
+    const fallbackModels = [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+    let response: Response | null = null;
+    for (const m of fallbackModels) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45_000);
+      try {
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: m,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+          signal: controller.signal,
+        });
+        if (response.ok) { clearTimeout(timeoutId); break; }
+        // Handle non-retryable errors
+        const status = response.status;
+        clearTimeout(timeoutId);
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const errText = await response.text();
+        console.warn(`[generate-email] Model ${m} failed (${status}): ${errText.substring(0, 200)}`);
+        response = null; // try next model
+      } catch (e: any) {
+        clearTimeout(timeoutId);
+        if (e.name === "AbortError") { console.warn(`[generate-email] Timeout on model ${m}`); response = null; continue; }
+        throw e;
+      }
+    }
 
-    if (!response.ok) {
-      const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const text = await response.text();
-      console.error("AI error:", status, text);
-      throw new Error("AI gateway error");
+    if (!response || !response.ok) {
+      throw new Error("All AI models failed");
     }
 
     const result = await response.json();

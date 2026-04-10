@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
         .from("agents")
         .select("signature_html, signature_image_url, avatar_emoji, name, role, voice_call_url")
         .eq("id", agent_id)
+        .eq("user_id", claimsData.claims.sub as string)
         .single();
 
       if (agentRow?.signature_html) {
