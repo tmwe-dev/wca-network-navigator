@@ -170,12 +170,16 @@ serve(async (req) => {
       // 9. Director-only: system_prompt di tutti gli agenti + prompt operativi completi
       if (agent.role === "account" || agent.role === "director") {
         if (allAgents?.length) {
-          contextBlock += "\n--- PROMPT AGENTI (Director View) ---\n";
-          for (const a of allAgents) {
-            if (a.id === agent_id) continue;
-            const { data: agentDetail } = await supabase.from("agents").select("system_prompt").eq("id", a.id).single();
-            if (agentDetail?.system_prompt) {
-              contextBlock += `\n### ${a.name} (${a.role})\n${agentDetail.system_prompt.substring(0, 500)}\n...\n`;
+          const otherAgentIds = allAgents.filter((a: any) => a.id !== agent_id).map((a: any) => a.id);
+          if (otherAgentIds.length > 0) {
+            const { data: agentDetails } = await supabase.from("agents").select("id, name, role, system_prompt").in("id", otherAgentIds);
+            if (agentDetails?.length) {
+              contextBlock += "\n--- PROMPT AGENTI (Director View) ---\n";
+              for (const ad of agentDetails) {
+                if (ad.system_prompt) {
+                  contextBlock += `\n### ${ad.name} (${ad.role})\n${ad.system_prompt.substring(0, 500)}\n...\n`;
+                }
+              }
             }
           }
         }

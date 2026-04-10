@@ -3731,6 +3731,10 @@ export type Database = {
         Args: { memory_ids: string[] }
         Returns: undefined
       }
+      increment_partner_interaction: {
+        Args: { p_partner_id: string }
+        Returns: undefined
+      }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
       match_contacts_to_wca: {

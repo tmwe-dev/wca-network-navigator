@@ -62,7 +62,7 @@ serve(async (req) => {
 
     // ── Centralized gateway call (retry, timeout, fallback) ──
     const result = await aiChat({
-      models: [model, "openai/gpt-4o-mini"],
+      models: [model, "openai/gpt-5-mini"],
       messages: [{ role: "user", content: prompt }],
       max_tokens: 256,
       timeoutMs: 20000,
