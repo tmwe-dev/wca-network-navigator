@@ -11,7 +11,7 @@ export interface AgendaDayData {
 }
 
 // Mock data for agenda demo
-const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
+const MOCK_AGENDA_ACTIVITIES = [
   {
     id: "ag-1", title: "Email primo contatto — Mazzetti Trasporti", description: "Presentazione servizi consolidato aereo MXP-DXB",
     activity_type: "send_email", status: "completed", priority: "high", created_at: new Date().toISOString().replace(/T.*/, "T09:15:00Z"),
@@ -21,7 +21,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     campaign_batch_id: null, executed_by_agent_id: null, reviewed: true, scheduled_at: null, selected_contact_id: null, sent_at: null, source_meta: null,
     partners: { company_name: "Mazzetti Trasporti Srl", company_alias: null, country_code: "IT", country_name: "Italy", city: "Milano", enriched_at: null, website: null, logo_url: null, email: "m.rossi@mazzetti.it" },
     team_members: null, selected_contact: { id: "c1", name: "Marco Rossi", email: "m.rossi@mazzetti.it", direct_phone: null, mobile: "+39 335 1234567", title: "Operations Manager", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-2", title: "Follow-up WhatsApp — Global Freight", description: "Secondo contatto dopo mancata risposta email",
     activity_type: "follow_up", status: "pending", priority: "medium", created_at: new Date().toISOString().replace(/T.*/, "T10:00:00Z"),
@@ -31,7 +31,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: { note: "Nessuna risposta dopo 5 giorni" },
     partners: { company_name: "Global Freight LLC", company_alias: null, country_code: "AE", country_name: "UAE", city: "Dubai", enriched_at: null, website: null, logo_url: null, email: "ops@globalfreight.ae" },
     team_members: null, selected_contact: { id: "c2", name: "Ahmed Al-Rashid", email: "ops@globalfreight.ae", direct_phone: null, mobile: null, title: "Operations", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-3", title: "Chiamata Nordic Shipping — verifica interesse", description: "Chiamata programmata per verificare interesse dopo proposta aereo",
     activity_type: "phone_call", status: "in_progress", priority: "high", created_at: new Date().toISOString().replace(/T.*/, "T10:30:00Z"),
@@ -41,7 +41,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: { note: "Dopo 2 email senza risposta — escalation telefonica" },
     partners: { company_name: "Nordic Shipping AB", company_alias: null, country_code: "SE", country_name: "Sweden", city: "Göteborg", enriched_at: null, website: null, logo_url: null, email: "info@nordicship.se" },
     team_members: null, selected_contact: null,
-  } as any,
+  },
   {
     id: "ag-4", title: "Email tariffe LCL — Pacifica Logistica", description: "Invio tariffe mare Santos-Genova Q2",
     activity_type: "send_email", status: "completed", priority: "low", created_at: new Date().toISOString().replace(/T.*/, "T08:30:00Z"),
@@ -52,7 +52,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: null,
     partners: { company_name: "Pacifica Logistica SA", company_alias: null, country_code: "BR", country_name: "Brazil", city: "São Paulo", enriched_at: null, website: null, logo_url: null, email: "carlos@pacifica.com.br" },
     team_members: null, selected_contact: { id: "c3", name: "Carlos Silva", email: "carlos@pacifica.com.br", direct_phone: null, mobile: null, title: "Import Manager", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-5", title: "LinkedIn connection — CargoPrime", description: "Richiesta connessione LinkedIn a Sales Manager",
     activity_type: "follow_up", status: "completed", priority: "low", created_at: new Date().toISOString().replace(/T.*/, "T11:00:00Z"),
@@ -62,7 +62,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: null,
     partners: { company_name: "CargoPrime Ltd", company_alias: null, country_code: "GB", country_name: "UK", city: "London", enriched_at: null, website: null, logo_url: null, email: "sales@cargoprime.co.uk" },
     team_members: null, selected_contact: { id: "c5", name: "James Wilson", email: "sales@cargoprime.co.uk", direct_phone: null, mobile: null, title: "Sales Manager", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-6", title: "Nota urgente: Silk Route richiede tariffe espresso", description: "Il cliente ha richiesto urgentemente tariffe espresso BOM-FCO",
     activity_type: "follow_up", status: "pending", priority: "urgent", created_at: new Date().toISOString().replace(/T.*/, "T07:30:00Z"),
@@ -72,7 +72,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: { note: "Urgente: il cliente ha chiamato direttamente chiedendo tariffe espresso BOM-FCO per 500kg elettronica fragile" },
     partners: { company_name: "Silk Route Logistics", company_alias: null, country_code: "IN", country_name: "India", city: "Mumbai", enriched_at: null, website: null, logo_url: null, email: "priya@silkroute.in" },
     team_members: null, selected_contact: { id: "c6", name: "Priya Sharma", email: "priya@silkroute.in", direct_phone: null, mobile: null, title: "CEO", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-7", title: "Email reminder TransAlp Spedizioni", description: "Reminder automatico dopo 5 giorni senza risposta",
     activity_type: "send_email", status: "pending", priority: "medium", created_at: new Date().toISOString().replace(/T.*/, "T12:00:00Z"),
@@ -83,7 +83,7 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: null,
     partners: { company_name: "TransAlp Spedizioni", company_alias: null, country_code: "IT", country_name: "Italy", city: "Verona", enriched_at: null, website: null, logo_url: null, email: "g.bianchi@transalp.it" },
     team_members: null, selected_contact: { id: "c7", name: "Giovanni Bianchi", email: "g.bianchi@transalp.it", direct_phone: null, mobile: null, title: "Direttore Commerciale", contact_alias: null },
-  } as any,
+  },
   {
     id: "ag-8", title: "Meeting online Yangtze Express — partnership", description: "Video call per discutere partnership esclusiva PVG-MXP",
     activity_type: "phone_call", status: "pending", priority: "high", created_at: new Date().toISOString().replace(/T.*/, "T14:00:00Z"),
@@ -93,21 +93,21 @@ const MOCK_AGENDA_ACTIVITIES: AllActivity[] = [
     source_meta: { note: "Confermato via email da Mr. Wang" },
     partners: { company_name: "Yangtze Express Co", company_alias: null, country_code: "CN", country_name: "China", city: "Shanghai", enriched_at: null, website: null, logo_url: null, email: "wang.li@yangtze-exp.cn" },
     team_members: null, selected_contact: { id: "c8", name: "Wang Li", email: "wang.li@yangtze-exp.cn", direct_phone: null, mobile: null, title: "Partnership Director", contact_alias: null },
-  } as any,
-];
+  },
+] satisfies Omit<AllActivity, "source_meta">[] as unknown as AllActivity[];
 
-const MOCK_REMINDERS: Reminder[] = [
+const MOCK_REMINDERS = [
   {
     id: "rem-1", title: "Scadenza proposta Mazzetti", partner_id: "mock-p1", due_date: new Date().toISOString().split("T")[0],
     status: "pending", created_at: new Date().toISOString(), user_id: "u1", description: "La proposta scade tra 2 giorni",
     partners: { company_name: "Mazzetti Trasporti Srl", country_code: "IT" },
-  } as any,
+  },
   {
     id: "rem-2", title: "Follow-up Silk Route — tariffe espresso", partner_id: "mock-p8", due_date: new Date().toISOString().split("T")[0],
     status: "pending", created_at: new Date().toISOString(), user_id: "u1", description: "Verificare se hanno ricevuto quotazione",
     partners: { company_name: "Silk Route Logistics", country_code: "IN" },
-  } as any,
-];
+  },
+] as Reminder[];
 
 function isMockEnabled(): boolean {
   try {
