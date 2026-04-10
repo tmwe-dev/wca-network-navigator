@@ -3105,11 +3105,13 @@ async function consumeCredits(userId: string, usage: { prompt_tokens?: number; c
 // LOAD USER PROFILE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadUserProfile(): Promise<string> {
-  const { data } = await supabase
+async function loadUserProfile(userId?: string): Promise<string> {
+  let query = supabase
     .from("app_settings")
     .select("key, value")
     .like("key", "ai_%");
+  if (userId) query = query.eq("user_id", userId);
+  const { data } = await query;
   if (!data?.length) return "";
 
   const settings: Record<string, string> = {};
@@ -3479,7 +3481,7 @@ Iniziato: ${(ws as any).started_at}`;
     // Load all context in parallel
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
-      loadUserProfile(),
+      loadUserProfile(userId),
       loadKBContext(lastUserMsg, userId),
       loadOperativePrompts(userId),
       loadMissionHistory(userId),
