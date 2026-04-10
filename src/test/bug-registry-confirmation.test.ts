@@ -91,7 +91,7 @@ describe("BF-002: tasks_completed must not increment on failure", () => {
     const stats = { tasks_completed: 5, tasks_failed: 1 };
     
     // Scenario: task fails
-    const taskStatus = "failed";
+    const taskStatus: string = "failed";
     const updatedStats = { ...stats };
     if (taskStatus === "completed") {
       updatedStats.tasks_completed = (stats.tasks_completed || 0) + 1;
