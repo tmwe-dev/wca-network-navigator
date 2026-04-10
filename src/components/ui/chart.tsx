@@ -75,8 +75,13 @@ ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    // Sanitize: only allow valid CSS custom property values (hex, hsl, rgb, named colors)
+    if (color && /^[a-zA-Z0-9#(),.\s%\/]+$/.test(color)) {
+      return `  --color-${key}: ${color};`;
+    }
+    return null;
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `,
