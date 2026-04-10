@@ -162,9 +162,27 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Night pause check
-    if (isNightTime()) {
-      return new Response(JSON.stringify({ message: "Night pause active (00:00-06:00)", skipped: true }), {
+    // ── Load configurable settings from app_settings ──
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .in("key", [
+        "agent_max_actions_per_cycle",
+        "agent_work_start_hour",
+        "agent_work_end_hour",
+        "agent_require_approval",
+      ]);
+    const cfg: Record<string, string> = {};
+    settingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+
+    const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
+    const workStartHour = parseInt(cfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
+    const workEndHour = parseInt(cfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
+    const forceApproval = cfg["agent_require_approval"] === "true";
+
+    // Work-hours check (CET timezone)
+    if (isOutsideWorkHours(workStartHour, workEndHour)) {
+      return new Response(JSON.stringify({ message: `Outside work hours (CET ${workStartHour}:00-${workEndHour}:00)`, skipped: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
