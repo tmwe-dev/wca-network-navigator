@@ -140,26 +140,11 @@ const App = () => (
                   <Route path="/telemetry" element={withFeatureBoundary(<Telemetry />, "Telemetry")} />
                   <Route path="/staff-direzionale" element={withFeatureBoundary(<StaffDirezionale />, "Staff Direzionale")} />
 
-                  {/* ── Redirects from old routes to new environments ── */}
+                  {/* Legacy redirects — kept for bookmark compatibility */}
                   <Route path="/operations" element={<Navigate to="/network" replace />} />
-                  <Route path="/partner-hub" element={<Navigate to="/network" replace />} />
                   <Route path="/contacts" element={<Navigate to="/crm" replace />} />
-                  <Route path="/prospects" element={<Navigate to="/crm" replace />} />
-                  <Route path="/import" element={<Navigate to="/crm" replace />} />
                   <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/workspace" element={<Navigate to="/outreach" replace />} />
-                  
-                  <Route path="/sorting" element={<Navigate to="/outreach" replace />} />
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
-                  <Route path="/hub" element={<Navigate to="/agenda" replace />} />
-                  <Route path="/acquisizione" element={<Navigate to="/network" replace />} />
-                  <Route path="/dashboard-legacy" element={<Navigate to="/" replace />} />
-                  <Route path="/agents" element={<Navigate to="/" replace />} />
-                  <Route path="/global" element={<Navigate to="/network" replace />} />
-                  <Route path="/system-map" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-a" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-b" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-c" element={<Navigate to="/" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react"; // restored
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
