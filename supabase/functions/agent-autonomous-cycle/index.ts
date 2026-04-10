@@ -77,9 +77,9 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[]): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean): Promise<number> {
   let actionsCreated = 0;
-  const lookback = new Date(Date.now() - CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
+  const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
   // Get unread inbound messages from last cycle window
   const { data: messages } = await supabase
@@ -113,7 +113,7 @@ async function screenIncomingMessages(userId: string, agents: any[]): Promise<nu
 
   for (const msg of messages) {
     if (alreadyProcessedIds.has(msg.id)) continue;
-    if (actionsCreated >= BUDGET_PER_AGENT) break;
+    if (actionsCreated >= budgetPerAgent) break;
 
     let assignedAgent = fallbackAgent;
     let stakes = false;
