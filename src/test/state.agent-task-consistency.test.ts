@@ -25,7 +25,7 @@ describe("Agent Task Stats Consistency (logic)", () => {
 
   it("should only increment tasks_failed on failed task", () => {
     const stats = { tasks_completed: 5, tasks_failed: 2, emails_sent: 10, calls_made: 0 };
-    const taskStatus = "failed";
+    const taskStatus: string = "failed";
 
     const updated = { ...stats };
     if (taskStatus === "completed") {
