@@ -134,7 +134,7 @@ export default function Onboarding() {
         { key: "ai_target_regions", value: JSON.stringify(selectedRegions) },
       ];
       for (const s of settings) {
-        await supabase.from("app_settings").upsert({ key: s.key, value: s.value }, { onConflict: "key" });
+        await supabase.from("app_settings").upsert({ key: s.key, value: s.value, user_id: userId }, { onConflict: "user_id,key" });
       }
 
       // Create selected agents
