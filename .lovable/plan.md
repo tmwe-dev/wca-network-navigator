@@ -1,123 +1,92 @@
 
 
-# Analisi Audit Esterno + Stato Attuale Post-Fix — Sintesi e Piano
+# Piano: Refactor GlobalFiltersContext da 33 setter a useReducer
 
-## Documenti Memorizzati
+## Problema attuale
 
-**Documento 1**: Audit tecnico DOCX (Claude Opus 4.6, 10 Aprile 2026)
-- Punteggio: **37.600 / 100.000** (37.6%)
-- 10 assi di valutazione, 34 problemi catalogati + 1.597 lint
-- 4 vulnerabilità sicurezza critiche (SEC-01..04)
-- 4 problemi architetturali critici (ARC-01..04)
-- 11 problemi alti, 15 medi
+`GlobalFiltersContext.tsx` (203 LOC) definisce 33 setter individuali con `useCallback`, ognuno identico nel pattern (`setFilters(p => ({ ...p, key: value }))`). Questo causa:
+- **Boilerplate**: 33 righe di `useCallback` + 33 righe nell'interfaccia + 33 righe nel Provider value
+- **Nessun batch update**: cambiare 3 filtri insieme causa 3 re-render separati
+- **Interfaccia fragile**: ogni nuovo filtro richiede modifiche in 4 punti (tipo, interfaccia, setter, provider value)
 
-**Documento 2**: Analisi conversazionale (tua sintesi) 
-- Punteggio: **54.000 / 100.000** (54%)
-- Diagnosi filosofica: "più ricco che coerente"
-- 3 filosofie simultanee: enterprise, Lovable/prompt-driven, browser-assisted
-- Knowledge sprawl identificata come criticità principale
+## Soluzione
 
-## Confronto tra i Due Audit
+Sostituire i 33 setter con un `useReducer` che espone:
+1. **`dispatch`** -- per azioni tipizzate (`SET_FIELD`, `RESET`, `BATCH`)
+2. **`setFilter(key, value)`** -- helper generico che wrappa dispatch
+3. **`batchUpdate(partial)`** -- per aggiornare N filtri in un singolo render
 
-| Asse | Audit DOCX (Opus) | Tua Analisi | Differenza |
-|---|---|---|---|
-| **Punteggio globale** | 37.600 | 54.000 | +16.400 |
-| **Type Safety** | 1.800 (strict OFF) | Ora strict ON | DOCX è stale qui |
-| **Test** | 800 (5 file) | ~720 test | DOCX è stale qui |
-| **AI/Prompt** | 7.500 | 38.000 (incoerenza) | Diversa metrica |
-| **Sicurezza** | 3.200 | Non valutata | DOCX copre estensioni Chrome |
-| **Build** | 7.800 | CI rotta (npm ci) | Entrambi trovano problemi |
+## Impatto sui consumer (18 file)
 
-## Cosa è Stato Fixato nelle 4 Cacce al Tesoro (Oggi)
+L'API pubblica cambia da:
+```typescript
+// Prima
+const { setSearch, setSortBy, setCrmQuality } = useGlobalFilters();
+setSearch("test");
+setSortBy("date");
+```
 
-1. **Multi-tenancy**: `.eq("user_id")` aggiunto a tutte le 12+ edge function per `app_settings` e `kb_entries`
-2. **sameLocationGuard**: `return true` bug eliminato
-3. **Modelli AI**: allowlist aggiornata (gpt-5 family), fallback obsoleti rimossi
-4. **Race condition**: `increment_partner_interaction` e `increment_agent_stat` ora atomici via RPC
-5. **Syntax crash**: righe duplicate in `generate-email` e `agent-autonomous-cycle` rimosse
-6. **AI resilience**: AbortController 45s + fallback model cascade in `generate-email`
-7. **KB centralizzata**: `_shared/kbSlice.ts` elimina duplicazione in 3 file
-8. **N+1 query**: Director View in `agent-execute` ora usa `.in("id", agentIds)`
-9. **Work hours per-utente**: `loadWorkHourSettings(supabase, userId)` in tutti i cron
+A:
+```typescript
+// Dopo
+const { setFilter, batchUpdate } = useGlobalFilters();
+setFilter("search", "test");
+// oppure batch:
+batchUpdate({ search: "test", sortBy: "date" });
+```
 
-## Cosa Rimane Aperto (Convergenza dei Due Audit)
+I 33 setter individuali vengono **mantenuti come alias retrocompatibili** generati automaticamente, quindi i 18 file consumer non devono cambiare immediatamente. Possono essere migrati gradualmente.
 
-### Blocco 0 — CI/Build (IMMEDIATO)
-- `npm ci` fallisce per lockfile fuori sync
-- `vitest/globals` non risolve nel typecheck
-- **Senza CI verde, niente è verificabile**
+## File da modificare
 
-### Blocco 1 — Sicurezza Estensioni Chrome (dal DOCX)
-- SEC-02: `new Function()` in `pipeline.js` e `task-runner.js` (RCE)
-- SEC-03: `innerHTML` non sanitizzato in estensioni (XSS) — nel React app è OK, problema solo nelle estensioni
-- SEC-04: Password LinkedIn in chiaro
-- EXT-01: `host_permissions: <all_urls>`
-- **Queste sono FUORI dal perimetro Lovable** (file JS estensioni non in `src/`)
+### 1. `src/contexts/GlobalFiltersContext.tsx` (riscrittura completa)
 
-### Blocco 2 — Architettura (convergenza entrambi)
-- God components (FiltersDrawer 1.114 LOC, BusinessCardsHub 1.084 LOC)
-- useCockpitLogic con 11 useState
-- Dead code V8 (~2.000 LOC)
-- 23 route legacy redirect
-- 13 Edge Functions AI sovrapposte
-- app_settings come "registro universale"
+```text
+Prima (203 LOC)                    Dopo (~120 LOC)
+─────────────────                  ──────────────
+33 useCallback setter              1 useReducer
+33 righe interfaccia setter        3 metodi: setFilter, batchUpdate, resetFilters
+33 righe Provider value            alias retrocompatibili generati con loop
+```
 
-### Blocco 3 — Qualità Codice
-- ~1.500 `any` espliciti (parzialmente ridotti)
-- 59 catch vuoti
-- 55 violazioni exhaustive-deps
-- Nessun optimistic update
-- JSON fields DB senza validazione runtime
+Struttura del reducer:
+```typescript
+type FilterAction =
+  | { type: "SET"; key: keyof GlobalFilterState; value: any }
+  | { type: "BATCH"; updates: Partial<GlobalFilterState> }
+  | { type: "RESET" };
 
-### Blocco 4 — Knowledge Architecture
-- KB monolitica in `app_settings` coesiste con `kb_entries` atomica
-- `operative_prompts` vs `agentPrompts.ts` vs prompt hardcoded
-- Nessuna versioning dei prompt
-- Source of truth multipla
+function filterReducer(state: GlobalFilterState, action: FilterAction) {
+  switch (action.type) {
+    case "SET": return { ...state, [action.key]: action.value };
+    case "BATCH": return { ...state, ...action.updates };
+    case "RESET": return cloneDefaults();
+  }
+}
+```
 
-## Piano Proposto — Prioritizzazione Post-Audit
+Alias retrocompatibili (generati, non scritti a mano):
+```typescript
+const setters = Object.fromEntries(
+  Object.keys(defaults).map(key => [
+    `set${key[0].toUpperCase()}${key.slice(1)}`,
+    (val: any) => dispatch({ type: "SET", key, value: val })
+  ])
+);
+```
 
-### Fase 1: CI Verde (1 giorno)
-- Riallineare `package-lock.json`
-- Fix `vitest/globals` nel typecheck
-- Pipeline: `npm ci → typecheck → test → build`
+### 2. Nessun altro file cambia
 
-### Fase 2: Pulizia Immediata (2-3 giorni)
-- Eliminare dead code V8
-- Rimuovere le 23 route legacy
-- Eliminare le 9 edge functions WCA legacy
-- Ridurre `any` nei file più critici
+Grazie agli alias retrocompatibili, tutti i 18 file consumer (`ContactStream`, `CRMFiltersSection`, `NetworkFilterSlot`, ecc.) continuano a funzionare senza modifiche.
 
-### Fase 3: Architettura AI (1 settimana)
-- Consolidare 13 AI edge functions in 4-5 con routing interno
-- Unificare KB: migrare `ai_sales_knowledge_base` monolitica → `kb_entries`
-- Stabilire gerarchia prompt: `operative_prompts` > `kb_entries` > defaults
-- Eliminare prompt hardcoded residui
+## Vantaggi
 
-### Fase 4: God Components (1 settimana)
-- Spezzare FiltersDrawer, BusinessCardsHub, useCockpitLogic
-- Estrarre query DB da componenti → hook dominio
-- Introdurre optimistic updates su mutazioni critiche
+- **-80 LOC** nel context (da 203 a ~120)
+- **Batch updates**: `batchUpdate({ search: "", quality: "all", sortBy: "name" })` = 1 render invece di 3
+- **Scalabilita**: aggiungere un nuovo filtro richiede solo 1 riga in `GlobalFilterState` e 1 in `defaults`
+- **Zero breaking changes**: alias garantiscono retrocompatibilita
 
-### Fase 5: Validazione e Resilienza (ongoing)
-- Zod per JSON fields DB
-- Catch vuoti → logging strutturato
-- Fix exhaustive-deps
+## Rischio
 
-### Punteggio Atteso Post-Piano
-- Dopo Fase 1-2: **~50.000** (debito ridotto, CI affidabile)
-- Dopo Fase 3-4: **~65.000** (architettura coerente)
-- Dopo Fase 5: **~72.000** (qualità industriale)
-
-## Nota sulla Divergenza di Punteggio
-
-L'audit DOCX dà 37.600 perché:
-1. Valuta le estensioni Chrome (17.593 LOC con vulnerabilità gravi) — noi non le tocchiamo qui
-2. Era pre-fix multi-tenancy (il bug più grave è stato risolto oggi)
-3. Conta strict OFF — ora è strict ON
-4. Conta 5 test — ora ce ne sono 720+
-
-La tua stima di 54.000 è più accurata per lo stato attuale del codice `src/` + edge functions, ma non include le estensioni Chrome.
-
-**Punteggio realistico attuale (solo perimetro Lovable)**: ~52.000-55.000
+Basso. Il reducer e un pattern React standard. Gli alias mantengono la firma identica. Il build e i test esistenti coprono la verifica.
 
