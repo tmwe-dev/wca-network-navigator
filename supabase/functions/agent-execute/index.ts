@@ -60,14 +60,14 @@ serve(async (req) => {
     let contextBlock = "";
     try {
       // 1. Profilo utente
-      const { data: settings } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
+      const { data: settings } = await supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%");
       if (settings?.length) {
         contextBlock += "\n\n--- PROFILO UTENTE ---\n";
         for (const s of settings) { const label = s.key.replace("ai_", "").replace(/_/g, " ").toUpperCase(); if (s.value) contextBlock += `${label}: ${s.value}\n`; }
       }
 
       // 1b. Timing & scheduling config
-      const { data: timingSettings } = await supabase.from("app_settings").select("key, value").like("key", "agent_%").or("key.like.email_%,key.like.whatsapp_%,key.like.linkedin_%,key.like.scraping_%,key.like.deep_search_%");
+      const { data: timingSettings } = await supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "agent_%").or("key.like.email_%,key.like.whatsapp_%,key.like.linkedin_%,key.like.scraping_%,key.like.deep_search_%");
       if (timingSettings?.length) {
         contextBlock += "\n--- TIMING & SCHEDULING ---\n";
         for (const s of timingSettings) { if (s.value) contextBlock += `${s.key}: ${s.value}\n`; }
