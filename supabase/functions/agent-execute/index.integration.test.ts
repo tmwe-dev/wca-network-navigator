@@ -38,3 +38,30 @@ Deno.test("[D13] Error shape consistent", async () => {
   assertExists(body.error);
   assertEquals(typeof body.error, "string");
 });
+
+Deno.test("[D14] Returns 401 with invalid Bearer token", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: ANON_KEY,
+      Authorization: "Bearer fake-token",
+    },
+    body: JSON.stringify({ agent_id: "test" }),
+  });
+  const body = await res.json();
+  assertEquals(res.status, 401);
+  assertExists(body.error);
+});
+
+Deno.test("[D15] Missing agent_id without auth returns 401 first", async () => {
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  // Auth check comes before field validation
+  assertEquals(res.status, 401);
+  assertExists(body.error);
+});
