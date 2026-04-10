@@ -168,8 +168,8 @@ export function useAgendaDayActivities(day: Date | null) {
 
       // Check which partners have responded
       const partnerIds = (acts || [])
-        .filter((a: any) => a.partner_id && ["send_email", "follow_up"].includes(a.activity_type))
-        .map((a: any) => a.partner_id);
+        .filter(a => a.partner_id && ["send_email", "follow_up"].includes(a.activity_type))
+        .map(a => a.partner_id!);
 
       const uniquePartnerIds = [...new Set(partnerIds)];
       const respondedPartnerIds = new Set<string>();
@@ -183,7 +183,7 @@ export function useAgendaDayActivities(day: Date | null) {
           .gte("created_at", dayStart);
 
         if (inbound) {
-          inbound.forEach((m: any) => {
+          inbound.forEach(m => {
             if (m.partner_id) respondedPartnerIds.add(m.partner_id);
           });
         }

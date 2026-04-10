@@ -42,10 +42,11 @@ interface RtState {
 }
 
 function getRtState(): RtState {
-  if (!(window as any)[RT_KEY]) {
-    (window as any)[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
+  const w = window as Record<string, unknown>;
+  if (!w[RT_KEY]) {
+    w[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
   }
-  return (window as any)[RT_KEY];
+  return w[RT_KEY] as RtState;
 }
 
 export function useDownloadJobs() {
@@ -161,7 +162,7 @@ export function useCreateDownloadJob() {
           country_code: params.country_code,
           country_name: params.country_name,
           network_name: params.network_name,
-          wca_ids: filteredIds as any,
+          wca_ids: filteredIds as unknown as Database["public"]["Tables"]["download_jobs"]["Insert"]["wca_ids"],
           total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",
@@ -187,7 +188,7 @@ export function useCreateDownloadJob() {
       await supabase.from("download_job_events").insert({
         job_id: data.id,
         event_type: "job_created",
-        payload: { total: filteredIds.length } as any,
+        payload: { total: filteredIds.length } as Database["public"]["Tables"]["download_job_events"]["Insert"]["payload"],
       });
 
       return data.id;
