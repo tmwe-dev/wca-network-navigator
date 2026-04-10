@@ -385,6 +385,7 @@ export function HoldingPatternCommandCenter() {
                       <p className="text-xs text-muted-foreground text-center py-8">Nessuna analisi disponibile</p>
                     )}
                   </div>
+                )}
               </TabsContent>
             </Tabs>
           </>
