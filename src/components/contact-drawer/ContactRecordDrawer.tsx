@@ -11,14 +11,12 @@ import { Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, type ComponentType } from "react";
+import { createElement, useEffect } from "react";
 
 export function ContactRecordDrawer() {
   const { isOpen, target, list, currentIndex, close, goNext, goPrev } = useContactDrawer();
   const { data: record, isLoading } = useContactRecord(target?.sourceType ?? null, target?.sourceId ?? null);
   const updateMutation = useUpdateContactRecord();
-  const ContactRecordActionsComponent = ContactRecordActions as ComponentType<{ record: NonNullable<typeof record> }>;
-
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -95,7 +93,7 @@ export function ContactRecordDrawer() {
                     />
 
                     {/* Communication actions */}
-                    <ContactRecordActionsComponent record={record} />
+                    {createElement(ContactRecordActions, { record })}
 
                     {/* Agent assignment */}
                     <ContactRecordAgent sourceId={record.sourceId} sourceType={record.sourceType} />
