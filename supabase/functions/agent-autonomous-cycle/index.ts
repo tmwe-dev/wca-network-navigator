@@ -161,33 +161,21 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // ── Load configurable settings from app_settings ──
-    const { data: settingsRows } = await supabase
+    // Settings will be loaded per-user inside the loop below
+    // Only load work-hours globally (applies to the cron job itself)
+    const { data: globalWorkHours } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", [
-        "agent_max_actions_per_cycle",
-        "agent_work_start_hour",
-        "agent_work_end_hour",
-        "agent_require_approval",
-        "high_stakes_statuses",
-        "high_stakes_sources",
-        "high_stakes_min_rating",
-      ]);
-    const cfg: Record<string, string> = {};
-    settingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+      .in("key", ["agent_work_start_hour", "agent_work_end_hour"])
+      .limit(2);
+    const globalCfg: Record<string, string> = {};
+    globalWorkHours?.forEach((row: any) => { if (row.value) globalCfg[row.key] = row.value; });
 
-    const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
-    const workStartHour = parseInt(cfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
-    const workEndHour = parseInt(cfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
-    const forceApproval = cfg["agent_require_approval"] === "true";
+    const workStartHour = parseInt(globalCfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
+    const workEndHour = parseInt(globalCfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
 
-    // Build configurable high-stakes criteria
-    const highStakesCriteria: HighStakesCriteria = {
-      statuses: cfg["high_stakes_statuses"] ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.statuses,
-      sources: cfg["high_stakes_sources"] ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.sources,
-      min_rating: parseInt(cfg["high_stakes_min_rating"] || String(DEFAULT_HIGH_STAKES.min_rating), 10),
-    };
+    const workStartHour = parseInt(globalCfg["agent_work_start_hour"] || String(DEFAULT_WORK_START_HOUR), 10);
+    const workEndHour = parseInt(globalCfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
 
     // Work-hours check (CET timezone)
     if (isOutsideWorkHours(workStartHour, workEndHour)) {
@@ -212,6 +200,28 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const [userId, agents] of Object.entries(userAgents)) {
+      // ── Load per-user settings ──
+      const { data: userSettingsRows } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("user_id", userId)
+        .in("key", [
+          "agent_max_actions_per_cycle",
+          "agent_require_approval",
+          "high_stakes_statuses",
+          "high_stakes_sources",
+          "high_stakes_min_rating",
+        ]);
+      const cfg: Record<string, string> = {};
+      userSettingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+
+      const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
+      const forceApproval = cfg["agent_require_approval"] === "true";
+      const highStakesCriteria: HighStakesCriteria = {
+        statuses: cfg["high_stakes_statuses"] ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.statuses,
+        sources: cfg["high_stakes_sources"] ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.sources,
+        min_rating: parseInt(cfg["high_stakes_min_rating"] || String(DEFAULT_HIGH_STAKES.min_rating), 10),
+      };
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
       const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval, highStakesCriteria);
       if (screeningCount > 0) {

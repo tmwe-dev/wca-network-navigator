@@ -187,7 +187,7 @@ serve(async (req) => {
     let content = "{}";
     try {
       const r = await aiChat({
-        models: ["google/gemini-2.5-flash-lite", "openai/gpt-4o-mini"],
+        models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
         messages: [
           {
             role: "system",
