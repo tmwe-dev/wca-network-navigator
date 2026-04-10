@@ -1,98 +1,67 @@
 
+Obiettivo: darti un’alternativa che non dipenda da GitHub e che riduca al minimo la gestione manuale del bridge.
 
-# Audit Completo: Sistema di Apprendimento AI
+Cosa ho verificato nel codice:
+- Il blocco vero è in `supabase/functions/voice-brain-bridge/index.ts`: oggi il bridge risponde `401` se manca o non combacia `x-bridge-secret`, e `500` se manca `VOICE_BRIDGE_USER_ID`.
+- Però `VOICE_BRIDGE_USER_ID` in realtà è già risolvibile senza secret: una migrazione ha creato un service user fisso (`a0000000-0000-4000-a000-000000000b07`) e anche l’helper `public.get_service_user_id()`.
+- Quindi il secret `VOICE_BRIDGE_USER_ID` si può eliminare del tutto.
+- Il solo punto che non si può togliere “a zero” senza rischi è l’autenticazione del webhook: il bridge è pubblico e ElevenLabs non entra con il login dell’utente, quindi senza una protezione chiunque potrebbe colpirlo.
 
-## Diagnosi
+Soluzione consigliata:
+- Togliere completamente `VOICE_BRIDGE_USER_ID`.
+- Sostituire il secret statico del bridge con un token breve per singola chiamata, generato dal backend quando l’utente avvia la call.
+- Tenere compatibilità col vecchio schema solo come fallback.
 
-Ho analizzato in profondita tutti i 5 canali di apprendimento del sistema. Il design architetturale e **eccellente** — memoria gerarchica a 3 livelli, decay esponenziale, promozione automatica, rolling summary, auto-save dai tool, feedback loop dalle email. Ma ci sono **3 problemi critici bloccanti** che impediscono al sistema di funzionare realmente.
+Piano di implementazione:
+1. Rendere il bridge indipendente da `VOICE_BRIDGE_USER_ID`
+   - usare il service user già seedato come fallback fisso;
+   - così non devi più recuperare nessun UUID manualmente.
 
----
+2. Introdurre un token “per-sessione”
+   - estendere `elevenlabs-conversation-token` oppure aggiungere un endpoint di init;
+   - quando parte la chiamata, il backend genera un token breve legato a `agent_id` e `external_call_id`.
 
-## I 5 Canali di Apprendimento (Stato Attuale)
+3. Salvare il token in backend in modo sicuro
+   - nuova tabella per token bridge con hash, scadenza, agent, call id e creatore;
+   - mai salvare il token in chiaro.
 
-| Canale | Meccanismo | Stato |
-|---|---|---|
-| **1. Memory esplicita** | `save_memory` tool — l'AI salva quando l'utente corregge/preferisce | OK (funziona) |
-| **2. Auto-save dai tool** | Dopo `send_email`, `create_download_job`, ecc. → L1 auto con dedup 24h | OK (funziona) |
-| **3. Rolling summary** | Ogni 8+ messaggi → compressione background → L1 `rolling_summary` | OK (funziona) |
-| **4. KB learning** | `save_kb_rule` tool — pattern ricorrenti → regola KB persistente | ROTTO — nessun embedding |
-| **5. Operative prompts** | `save_operative_prompt` — scenario complesso → prompt strutturato | OK (ma 0 record) |
-| **6. Email edit learning** | Dialog post-edit → salva stile in `ai_memory` | OK (funziona) |
-| **7. Feedback buttons** | Thumbs up/down → boost/reduce confidence memorie recenti | OK (funziona) |
+4. Aggiornare il flusso frontend
+   - `AgentVoiceCall.tsx` richiederà sia il conversation token sia il bridge token;
+   - il token verrà passato alla sessione voce in modo che ElevenLabs lo inoltri al webhook.
 
----
+5. Aggiornare `voice-brain-bridge`
+   - accettare il token breve come autenticazione primaria;
+   - validare scadenza, match con agente/chiamata e uso consentito;
+   - continuare a loggare su `voice_call_sessions`, `request_logs`, `ai_request_log` e `ai_memory`.
 
-## PROBLEMA CRITICO 1 — RAG Completamente Inoperativo
+6. Fallback pratico se ElevenLabs non supporta header/body dinamici
+   - manteniamo un solo secret statico per il bridge;
+   - ma eliminiamo comunque `VOICE_BRIDGE_USER_ID`;
+   - quindi resterebbe un solo valore da configurare, non due.
 
-La colonna `embedding` **NON ESISTE** su `kb_entries`. L'estensione `pgvector` **NON e installata**. La funzione RPC `match_kb_entries` **NON ESISTE**.
+Alternativa “zero secret” vera:
+- Disattivare del tutto il bridge e usare l’agente voce solo con prompt/KB dentro ElevenLabs.
+- Pro: niente secret, niente service user, setup più semplice.
+- Contro: perdi la parte intelligente del sistema, cioè contesto partner, workflow, memoria, log operativi e telemetria strutturata.
 
-La migrazione `20260408054333_enable_pgvector_rag.sql` e nel repository ma non e mai stata applicata al database.
+Scelta che ti consiglio:
+- Se vuoi mantenere il Brain vero del sistema: token breve per chiamata.
+- Se vuoi la soluzione più veloce e minimale: modalità voce senza bridge.
 
-**Impatto**: Il retrieval semantico (`ragSearchKb`) fallisce silenziosamente ad ogni chiamata. Il sistema ricade SEMPRE sul fallback statico (top 10 per priority >= 5), il che significa che:
-- Le KB entries voice_rules appena create (priority 5-6) competono con le regole_sistema (priority 10) e spesso non vengono iniettate
-- La ricerca KB per argomento e puramente testuale (ilike), non semantica
-- Il `kb-embed-backfill` fallisce perche la colonna non esiste
+Dettagli tecnici:
+- Il bridge oggi non può essere convertito banalmente a JWT utente, perché è chiamato da un sistema esterno.
+- `VOICE_BRIDGE_USER_ID` è superfluo grazie alla migrazione già presente.
+- Il modello più pulito è:
+```text
+Utente loggato -> avvio chiamata -> backend emette token breve
+-> ElevenLabs chiama voice-brain-bridge con token breve
+-> bridge valida token -> esegue logica + log
+```
 
-**Fix**: Applicare la migrazione pgvector.
+Verifica finale prevista:
+- chiamata valida: `200`, sessione creata/aggiornata;
+- token scaduto o errato: `401`;
+- chiusura chiamata: outcome salvato e telemetria presente;
+- test end-to-end da UI con chiamata reale.
 
----
-
-## PROBLEMA CRITICO 2 — Memory Quasi Vuota
-
-Il database contiene **1 solo record** in `ai_memory` (un rolling_summary). Nessuna memoria esplicita, nessun auto-save, nessun feedback. Questo suggerisce che:
-- L'utente non ha ancora usato l'assistente in produzione in modo significativo, OPPURE
-- Le memorie sono state pruned dal `memory-promoter` (soglia confidence < 0.02)
-
-**Impatto**: L'AI parte senza contesto ad ogni sessione.
-
----
-
-## PROBLEMA CRITICO 3 — Operative Prompts Vuoti (0 record)
-
-La tabella esiste e il tool `save_operative_prompt` funziona, ma il LEARNING_PROTOCOL dice "proponi all'utente" — l'AI non salva autonomamente, aspetta che l'utente confermi. Senza un trigger proattivo, restano vuoti.
-
----
-
-## Gap nel Ciclo di Apprendimento
-
-### Gap A: Nessun trigger automatico per `save_kb_rule`
-Il LEARNING_PROTOCOL dice "quando rilevi pattern su 2+ partner", ma l'AI non ha un meccanismo di conteggio delle occorrenze. Dipende interamente dalla capacita del modello di ricordare i pattern nella stessa sessione.
-
-### Gap B: Le nuove KB entries non vengono embeddate automaticamente
-`save_kb_rule` restituisce `needs_embedding: true` ma **nessun processo** reagisce a quel flag. Il `kb-embed-backfill` e manuale (richiede una chiamata HTTP esplicita). Non c'e un trigger o cron.
-
-### Gap C: La confidence del feedback non si propaga alla KB
-`FeedbackButtons` modifica la `confidence` delle memorie L1/L2 recenti, ma NON tocca le `kb_entries`. Le regole KB non migliorano/peggiorano in base al feedback utente.
-
-### Gap D: Email edit learning salva come `style_preference` con `confidence: 60`
-Il campo confidence in `ai_memory` e normalizzato 0-1 nel resto del sistema, ma `EmailEditLearningDialog` usa `60` (probabilmente inteso come 60%). Questo crea incoerenza.
-
----
-
-## Piano di Fix (4 Step)
-
-### Step 1: Applicare la migrazione pgvector
-Eseguire il SQL che:
-- Abilita `pgvector` extension
-- Aggiunge colonna `embedding vector(1536)` a `kb_entries`
-- Crea la funzione RPC `match_kb_entries`
-- Crea l'indice IVFFlat per performance
-
-### Step 2: Triggerare il backfill degli embedding
-Dopo la migrazione, invocare `kb-embed-backfill` per generare gli embedding per tutte le 46+ KB entries esistenti (incluse le 6 voice_rules appena create).
-
-### Step 3: Fixare la confidence in EmailEditLearningDialog
-Cambiare `confidence: 60` → `confidence: 0.6` in `src/components/email/EmailEditLearningDialog.tsx`.
-
-### Step 4: Creare un auto-embed trigger per nuove KB entries
-Aggiungere logica nel `save_kb_rule` handler per chiamare automaticamente l'embedding dopo l'insert, eliminando il gap tra creazione e indicizzazione.
-
----
-
-## File Coinvolti
-
-- Migrazione SQL — applicare pgvector + colonna embedding + RPC match_kb_entries
-- `supabase/functions/_shared/toolHandlersEnterprise.ts` — auto-embed dopo save_kb_rule
-- `src/components/email/EmailEditLearningDialog.tsx` — fix confidence 60 → 0.6
-- `supabase/functions/kb-embed-backfill/index.ts` — invocare per backfill iniziale
-
+In sintesi: sì, c’è un’alternativa. Possiamo togliere del tutto lo `USER_ID` e, per evitare anche il secret statico, cambiare architettura del bridge verso token temporanei per chiamata. È la strada più pulita e non richiede GitHub.
