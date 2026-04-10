@@ -19,10 +19,12 @@ export interface HoldingStrategy {
 export function useHoldingStrategy() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [strategy, setStrategy] = useState<HoldingStrategy | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const analyze = async (message: ChannelMessage, companyName: string) => {
     setIsAnalyzing(true);
     setStrategy(null);
+    setError(null);
     try {
       // Find the first active agent to use for analysis
       const { data: agents } = await supabase
@@ -33,7 +35,7 @@ export function useHoldingStrategy() {
         .single();
 
       if (!agents?.id) {
-        console.error("No active agent found for strategy analysis");
+        setError("Nessun agente AI attivo. Configura almeno un agente nella sezione Agenti.");
         return null;
       }
 
@@ -50,25 +52,30 @@ export function useHoldingStrategy() {
 
       // Parse AI response into structured strategy
       const content = (result as any)?.response || (result as any)?.message || "";
-      setStrategy({
+      const parsed: HoldingStrategy = {
         draftReply: content,
         sentiment: "unknown",
         intent: "da analizzare",
         suggestedAction: "Rispondi",
         nextStepDate: null,
         confidence: 70,
-      });
-
-      return strategy;
+      };
+      setStrategy(parsed);
+      return parsed;
     } catch (err: any) {
+      const msg = err?.message || "Errore durante l'analisi AI";
       console.error("Strategy analysis failed:", err);
+      setError(msg);
       return null;
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const reset = () => setStrategy(null);
+  const reset = () => {
+    setStrategy(null);
+    setError(null);
+  };
 
-  return { analyze, isAnalyzing, strategy, setStrategy, reset };
+  return { analyze, isAnalyzing, strategy, setStrategy, error, reset };
 }

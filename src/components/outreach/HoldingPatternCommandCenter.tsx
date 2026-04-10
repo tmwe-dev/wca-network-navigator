@@ -51,7 +51,7 @@ export function HoldingPatternCommandCenter() {
 
   const { data: groups = [], isLoading } = useHoldingMessages(channel);
   const { data: unreadCounts } = useHoldingUnreadCounts();
-  const { analyze, isAnalyzing, strategy, setStrategy, reset: resetStrategy } = useHoldingStrategy();
+  const { analyze, isAnalyzing, strategy, setStrategy, error: strategyError, reset: resetStrategy } = useHoldingStrategy();
   const markAsRead = useMarkAsRead();
   const { mockEnabled } = useOutreachMock();
 
