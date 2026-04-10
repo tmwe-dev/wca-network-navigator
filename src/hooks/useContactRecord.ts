@@ -115,7 +115,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as Record<string, unknown>;
+        const p = pr as Record<string, any>;
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,

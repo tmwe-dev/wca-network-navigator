@@ -15,7 +15,7 @@ export function useOperators() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("operators")
-        .select("id, user_id, name, email, avatar_url, imap_host, imap_user, smtp_host, smtp_user, smtp_port, whatsapp_phone, linkedin_profile_url, is_admin, is_active, invited_by, invited_at, created_at, updated_at")
+        .select("*")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
