@@ -222,6 +222,25 @@ Deno.serve(async (req) => {
 
     const hasMore = (remaining || 0) > 0;
 
+    // ── Auto-finalize: if no more pending items, mark draft as completed ──
+    if (!hasMore) {
+      const { data: finalStats } = await supabase
+        .from("email_campaign_queue")
+        .select("status")
+        .eq("draft_id", draft_id);
+
+      const finalSent = finalStats?.filter(s => s.status === "sent").length || 0;
+      const finalFailed = finalStats?.filter(s => s.status === "failed").length || 0;
+
+      await supabase.from("email_drafts").update({
+        queue_status: "completed",
+        queue_completed_at: new Date().toISOString(),
+        status: finalFailed > 0 && finalSent === 0 ? "error" : "sent",
+        sent_count: finalSent,
+        sent_at: new Date().toISOString(),
+      }).eq("id", draft_id);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       completed: !hasMore,
