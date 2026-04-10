@@ -53,16 +53,20 @@ export function useWhatsAppDomLearning() {
     schema.learnedAt = Date.now();
     const value = JSON.stringify(schema);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data: existing } = await supabase
       .from("app_settings")
       .select("id")
       .eq("key", CACHE_KEY)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (existing) {
-      await supabase.from("app_settings").update({ value }).eq("key", CACHE_KEY);
+      await supabase.from("app_settings").update({ value }).eq("key", CACHE_KEY).eq("user_id", user.id);
     } else {
-      await supabase.from("app_settings").insert({ key: CACHE_KEY, value });
+      await supabase.from("app_settings").insert({ key: CACHE_KEY, value, user_id: user.id });
     }
 
     schemaRef.current = schema;

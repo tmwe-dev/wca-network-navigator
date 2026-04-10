@@ -74,9 +74,11 @@ export default function OperativeGuideSettings() {
   const save = async () => {
     setSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "operative_strategy", value: JSON.stringify(strategy), updated_at: new Date().toISOString() }, { onConflict: "key" });
+        .upsert({ key: "operative_strategy", value: JSON.stringify(strategy), updated_at: new Date().toISOString(), user_id: user.id }, { onConflict: "user_id,key" });
       if (error) throw error;
       toast.success("Guida Operativa salvata");
     } catch (e: any) {
