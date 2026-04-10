@@ -81,7 +81,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const loadPreset = (preset: WorkspacePreset) => {
     setGoal(preset.goal || "");
     setBaseProposal(preset.base_proposal || "");
-    setReferenceLinks(preset.reference_links || []);
+    setReferenceLinks((preset.reference_links as string[] | null) || []);
     setContext((preset as any).context || "");
     setActivePresetId(preset.id);
   };

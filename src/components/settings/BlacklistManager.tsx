@@ -274,7 +274,7 @@ export default function BlacklistManager() {
                     <Badge variant="outline" className="text-[10px]">
                       {log.sync_type === "manual_import" ? "Import" : "Scrape"}
                     </Badge>
-                    <span>{new Date(log.created_at).toLocaleString("it-IT")}</span>
+                    <span>{new Date(log.created_at!).toLocaleString("it-IT")}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{log.entries_count} record</span>

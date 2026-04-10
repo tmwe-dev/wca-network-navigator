@@ -312,7 +312,7 @@ export default function ContentManager() {
 
   const allLinks = useMemo(() => {
     const set = new Set<string>();
-    presets.forEach(p => (p.reference_links || []).forEach(l => set.add(l)));
+    presets.forEach(p => ((p.reference_links as string[] | null) || []).forEach((l: string) => set.add(l)));
     return Array.from(set);
   }, [presets]);
 
@@ -348,10 +348,10 @@ export default function ContentManager() {
     if (!newLinkUrl.trim()) return;
     const target = presets[0];
     if (!target) { toast.error("Crea prima un preset nel Workspace"); return; }
-    const links = [...(target.reference_links || []), newLinkUrl.trim()];
+    const links = [...((target.reference_links as string[] | null) || []), newLinkUrl.trim()];
     save.mutate({
-      id: target.id, name: target.name, goal: target.goal, base_proposal: target.base_proposal,
-      document_ids: target.document_ids, reference_links: links,
+      id: target.id, name: target.name, goal: target.goal ?? "", base_proposal: target.base_proposal ?? "",
+      document_ids: (target.document_ids as string[] | null) ?? [], reference_links: links,
     }, { onSuccess: () => { setNewLinkUrl(""); toast.success("Link aggiunto"); } });
   };
 
