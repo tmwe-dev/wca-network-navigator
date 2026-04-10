@@ -159,10 +159,24 @@ export default function Auth() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (error) {
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        toast.error("Errore con Google Sign-In");
+        setLoading(false);
+        return;
+      }
+      if (result.redirected) {
+        // Browser will redirect to Google — nothing else to do
+        return;
+      }
+      // Tokens were returned and session set — onAuthStateChange will handle navigation
+      // But reset loading after a safety timeout in case navigation doesn't fire
+      setTimeout(() => setLoading(false), 5000);
+    } catch (err) {
+      log.error("Google login error", { message: err instanceof Error ? err.message : String(err) });
       toast.error("Errore con Google Sign-In");
       setLoading(false);
     }
