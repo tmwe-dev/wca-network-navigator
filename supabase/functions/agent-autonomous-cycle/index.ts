@@ -37,6 +37,15 @@ function isOutsideWorkHours(startHour: number, endHour: number): boolean {
   return hour < startHour || hour >= endHour;
 }
 
+function isHighStakes(item: any): boolean {
+  if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
+  if (item.source === "ex_client") return true;
+  if (item.rating && item.rating >= 4) return true;
+  return false;
+}
+
+const DELAY_BETWEEN_AGENTS_MS = 3000;
+
 async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
   // Check client_assignments first
   const { data: assignment } = await supabase
