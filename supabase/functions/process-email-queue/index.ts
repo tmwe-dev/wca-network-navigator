@@ -171,84 +171,32 @@ Deno.serve(async (req) => {
           sent_at: new Date().toISOString(),
         }).eq("id", item.id);
 
-        // ── Post-send: Activity + Holding Pattern + History ──
+        // ── Post-send: unified side effects ──
         if (item.partner_id) {
-          // 1. Create activity record
-          await supabase.from("activities").insert({
-            user_id: userId,
-            source_type: "partner",
-            source_id: item.partner_id,
+          await logEmailSideEffects({
+            supabase,
             partner_id: item.partner_id,
-            activity_type: "email",
-            title: `Email inviata: ${item.subject || "Senza oggetto"}`,
-            description: `Email inviata a ${item.recipient_email}`,
-            email_subject: item.subject,
-            email_body: item.html_body,
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            sent_at: new Date().toISOString(),
-            priority: "medium",
+            user_id: userId,
+            subject: item.subject,
+            to: item.recipient_email,
+            html: item.html_body,
             source_meta: {
-              company_name: item.recipient_name || item.company_name || "",
+              company_name: item.recipient_name || (item as any).company_name || "",
               email: item.recipient_email,
-              country: item.country_name || "",
+              country: (item as any).country_name || "",
             },
           });
-
-          // 2. Put partner in holding pattern (contacted)
-          await supabase.from("partners")
-            .update({ 
-              lead_status: "contacted",
-              last_interaction_at: new Date().toISOString(),
-              interaction_count: undefined, // will be incremented below
-            })
-            .eq("id", item.partner_id)
-            .eq("lead_status", "new"); // only escalate from 'new'
-
-          // Increment interaction count for partner
-          const { data: partnerData } = await supabase.from("partners")
-            .select("interaction_count")
-            .eq("id", item.partner_id)
-            .single();
-          if (partnerData) {
-            await supabase.from("partners").update({
-              interaction_count: ((partnerData as any).interaction_count || 0) + 1,
-              last_interaction_at: new Date().toISOString(),
-            }).eq("id", item.partner_id);
-          }
-
-          // 3. Log interaction in history
-          await supabase.from("interactions").insert({
-            partner_id: item.partner_id,
-            user_id: userId,
-            interaction_type: "email",
-            subject: `Email: ${item.subject}`,
-            notes: item.html_body,
-            interaction_date: new Date().toISOString(),
-          });
-
-          // 4. Also update matched BCA lead_status (trigger handles this via sync)
-          // The database trigger sync_partner_lead_status_to_bca already handles this
         }
 
         sentCount++;
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        await supabase.from("email_campaign_queue").update({
-          status: "failed",
-          error_message: errorMsg,
-          retry_count: (item.retry_count || 0) + 1,
-        }).eq("id", item.id);
-        failedCount++;
-      }
-      // Update draft sent_count only on success (Bug fix: was incrementing on failure too)
-      if (sentCount > 0) {
-        const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
-        const cumulativeSent = (currentDraft?.sent_count || 0) + 1;
-        await supabase.from("email_drafts").update({
-          sent_count: cumulativeSent,
-        }).eq("id", draft_id);
-      }
+
+        // Update draft sent_count ONLY on success (inside try block)
+        {
+          const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
+          await supabase.from("email_drafts").update({
+            sent_count: (currentDraft?.sent_count || 0) + 1,
+          }).eq("id", draft_id);
+        }
 
       // Delay between sends
       if (delayMs > 0) {
