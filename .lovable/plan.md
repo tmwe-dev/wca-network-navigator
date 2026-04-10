@@ -1,112 +1,78 @@
 
 
-# Audit AI: Troppo Hardcode, Poca Libertà per l'AI
+# Audit AI — Secondo Passaggio: Hardcode Residuo
 
-## Problema Identificato
+## Stato Attuale dopo il Primo Intervento
 
-Il sistema attualmente "prende il volante" invece di lasciare che l'AI guidi. Ci sono **centinaia di righe di istruzioni imperative hardcoded** nei prompt e nella logica delle edge function che costringono l'AI a comportarsi in modo rigido. L'approccio corretto è: **dare contesto + guardrail + variabili**, e lasciare l'AI decidere *come* eseguire.
+Il primo intervento ha fatto buoni progressi: `sameLocationGuard.ts` ora passa solo dati, `agent-execute` ha rimosso le 7 regole commerciali. Ma rimangono aree significative.
 
----
+## BUG CRITICO
 
-## Aree Critiche Trovate
+**`getChannelContext(ch)` in `generate-outreach/index.ts` riga 425** — questa funzione viene chiamata ma non è mai definita né importata. Il precedente refactoring ha rimosso `getChannelInstructions()` ma il codice usa `getChannelContext()` che non esiste. **Crasherà a runtime.**
 
-### 1. **`sameLocationGuard.ts` — Tono e Strategia Hardcoded**
-- `toneSuggestion` è un `switch/case` con 5 frasi fisse per ogni `relationship_stage` (cold/warm/active/stale/ghosted)
-- `buildInterlocutorTypeBlock()` ha due blocchi di testo statici che dettano ESATTAMENTE cosa dire per partner vs cliente
-- `buildRelationshipAnalysisBlock()` contiene istruzioni imperative specifiche ("Usa 'no strategico'", "Last attempt")
-- `buildBranchCoordinationBlock()` dice esattamente come menzionare le sedi
+## Hardcode Residuo — Cosa Rimane
 
-**Cosa fare:** Passare solo i DATI (metriche, numeri, stage label) e lasciare che l'AI decida il tono e la strategia in base al contesto + KB.
+### 1. `generate-outreach/index.ts` — Prompt ancora prescrittivo
+- **Riga 449-452**: Istruzioni imperative nel saluto — `REGOLA: Rivolgiti a X, MAI all'azienda` — queste sono guardrail legittimi, ma il formato è troppo imperativo. Basterebbe passare il dato `recipientName` e un guardrail minimo.
+- **Riga 463-477**: Il system prompt ha 6 guardrail hardcoded. Alcuni sono legittimi (zero allucinazioni), ma `Includi una call-to-action` e `Adatta lunghezza e stile al canale` sono istruzioni che l'AI dovrebbe decidere dalla KB.
+- **Riga 491**: `OBIETTIVO COMMERCIALE FINALE: Convertire il lead...` con leve specifiche hardcoded (apertura account, tariffe privilegiate, semplificazione operativa) — queste leve commerciali dovrebbero essere in `app_settings` o KB.
 
-### 2. **`generate-outreach/index.ts` — Prompt Iper-Prescrittivo**
-- `getChannelInstructions()` (linee 114-150): 4 blocchi hardcoded che dettano formato, lunghezza, emoji, stile per ogni canale
-- Limiti di parole hardcoded nel prompt (WhatsApp < 100, LinkedIn < 200, SMS < 160, Email < 150)
-- `detectLanguage()` duplicata in 2 file con mappa statica di ~15 paesi
-- `isLikelyPersonName()` duplicata in 2 file con lista hardcoded di ~30 keyword di ruoli
-- `cleanCompanyName()` con regex hardcoded per suffissi legali
-- 10 "REGOLE CRITICHE" imperative nel system prompt
+### 2. `generate-email/index.ts` — Ancora prescrittivo
+- **Righe 583-586**: `metInPersonContext` con `ISTRUZIONI: Usa un tono più caldo...` — imperativo. Bastava: `DATO: Incontro avvenuto a [evento]. L'AI decide come usare questa info.`
+- **Righe 686-692**: `contactContext` con `REGOLA ASSOLUTA: Rivolgiti SEMPRE alla persona...` — troppo rigido. Il dato basta, l'AI sa come salutare.
+- **Righe 788-795**: Stesse leve commerciali hardcoded di outreach (`apertura account, tariffe privilegiate...`)
+- **Riga 766**: `Includi una call-to-action` — stesso problema di outreach.
 
-**Cosa fare:** Spostare limiti canale e regole in `app_settings` o in KB entries. Dare i dati grezzi e lasciare l'AI decidere. La lingua dovrebbe essere rilevata dall'AI stessa, non da una mappa di 15 paesi.
+### 3. `agent-execute/index.ts` — Guardrail residui hardcoded
+- **Righe 205-209**: 4 guardrail operativi hardcoded (`7 giorni`, `storia interazioni`, `partner vs cliente`, `funnel`). La regola dei 7 giorni è un parametro che dovrebbe essere in `app_settings`. Gli altri 3 sono linee guida che dovrebbero essere nella KB.
+- **Riga 211**: `Rispondi SEMPRE in italiano` — hardcoded. Dovrebbe essere `Rispondi nella lingua configurata dall'utente: ${settings.ai_language || "italiano"}`.
+- **Riga 70**: `timingKeys` — lista di 13 chiavi hardcoded. Non è un problema grave (sono nomi di settings), ma meglio fare un `LIKE` query.
+- **Riga 75**: `IMPORTANTE: Rispetta SEMPRE questi timing nelle operazioni.` — imperativo inutile, l'AI vede i dati.
 
-### 3. **`generate-email/index.ts` — Strategic Advisor Rigido**
-- `buildStrategicAdvisor()` (linee 101-153): dice esattamente quali tecniche usare e quando
-- `fetchKbEntriesStrategic()`: switch/case hardcoded che mappa `emailCategory` → categorie KB specifiche
-- 7 "Regole critiche" nel system prompt che micro-gestiscono l'output
-- Alias, firma, formato HTML — tutto dettato con istruzioni imperative
+### 4. `_shared/textUtils.ts` — Mappa lingue hardcoded
+- **55 righe** di mappa paese→lingua. Come detto nel piano precedente, l'AI potrebbe ricevere solo il `country_code` e decidere la lingua, MA questa mappa è un "hint" ragionevole — è efficiente e non limita l'AI (il commento dice "AI can override"). **Opinione: TENERLA**, è un hint utile, non una gabbia.
 
-**Cosa fare:** Eliminare lo switch/case delle categorie — dare TUTTE le categorie pertinenti e lasciare l'AI selezionare. Ridurre le regole a guardrail essenziali.
+### 5. `_shared/textUtils.ts` — `isLikelyPersonName()` 
+- Lista di ~40 keyword di ruoli hardcoded. Questa è una funzione di utilità deterministica, non un prompt AI. **Opinione: TENERLA**, è logica di parsing, non "gabbia AI".
 
-### 4. **`agent-execute/index.ts` — 7 Regole Commerciali Hardcoded**
-- Linee 204-214: "REGOLE COMMERCIALI FONDAMENTALI" (7 punti imperativi)
-- Queste regole dovrebbero essere in `kb_entries` o `operative_prompts`, non nel codice
-- L'agente riceve un prompt di ~200 righe di istruzioni fisse
+### 6. `generate-aliases/index.ts` — Prompt con regole
+- **Righe 48-61**: Regole precise per generazione alias. **Opinione: TENERLA**, gli alias sono un task deterministico con output specifico. L'AI ha bisogno di regole precise qui.
 
-**Cosa fare:** Caricare le regole commerciali dalla KB/operative_prompts invece che dal codice.
+## La Mia Opinione
 
-### 5. **`agent-autonomous-cycle/index.ts` — Logica Decisionale Hardcoded**
-- `isHighStakes()` (linea 26-31): condizioni hardcoded (lead_status, rating >= 4)
-- Status "proposed" vs "pending" deciso da if/else nel codice, non dall'AI
-- Budget e timing sono hardcoded come fallback
+Il sistema è al **70% liberato**. Le aree più critiche rimaste sono:
 
-**Cosa fare:** I criteri high-stakes dovrebbero essere configurabili in app_settings.
+1. **Le leve commerciali hardcoded** (`apertura account, tariffe privilegiate`) in outreach e email — queste DEVONO essere in `app_settings` o KB perché variano per azienda
+2. **Il tono imperativo residuo** nei prompt (`REGOLA ASSOLUTA`, `MAI`, `SEMPRE`) — può essere ridotto a dati + hint
+3. **I guardrail di `agent-execute`** — il `7 giorni` dovrebbe essere una variabile, la lingua dovrebbe venire dai settings
+4. **Il bug `getChannelContext`** — va fixato immediatamente
 
-### 6. **Duplicazioni di Codice**
-- `detectLanguage()` identica in `generate-email` e `generate-outreach`
-- `isLikelyPersonName()` identica in entrambi
-- `cleanCompanyName()` identica in entrambi
-- `getKBSlice()`/`getKBSliceLegacy()` quasi identici
-
----
+Cose che NON toccherei:
+- `textUtils.ts` (mappa lingue + isPersonName) — sono utility deterministiche, non gabbie AI
+- `generate-aliases` — task deterministico, servono regole precise
+- Guardrail "zero allucinazioni" — questo è un guardrail di sicurezza essenziale
 
 ## Piano di Implementazione
 
-### Step 1: Centralizzare utility duplicate
-- Spostare `detectLanguage`, `isLikelyPersonName`, `cleanCompanyName` in `_shared/textUtils.ts`
-- Eliminare le copie locali
+### Step 1: Fixare il bug `getChannelContext`
+Definire la funzione in `generate-outreach` — versione minimale che passa solo il nome del canale come contesto, senza istruzioni imperative.
 
-### Step 2: Esternalizzare regole commerciali e toni
-- Creare una nuova tabella `ai_guardrails` (o usare `app_settings`) con chiavi tipo:
-  - `channel_guidelines_email`, `channel_guidelines_whatsapp`, ecc.
-  - `tone_rules_partner`, `tone_rules_client`
-  - `high_stakes_criteria`
-  - `word_limits_per_channel`
-- Caricarle a runtime invece di hardcodarle
+### Step 2: Esternalizzare le leve commerciali
+Spostare `apertura account, tariffe privilegiate, semplificazione operativa` in `app_settings` con chiave `ai_commercial_levers`. Usare nel prompt: `Leve commerciali configurate: ${settings.ai_commercial_levers || "non configurate"}`.
 
-### Step 3: Snellire i prompt — da imperativo a contestuale
-- **`sameLocationGuard.ts`**: `buildInterlocutorTypeBlock()` → passa solo `{ type: "partner" | "client", data }`, senza dettare il tono. `buildRelationshipAnalysisBlock()` → passa solo le metriche, senza le istruzioni imperative di tono
-- **`generate-outreach`**: Rimuovere `getChannelInstructions()` hardcoded. Dare solo: `canale: whatsapp, linee guida: {da_settings}`
-- **`generate-email`**: Semplificare `buildStrategicAdvisor()` — dare contesto + KB, non istruzioni step-by-step
-- **`agent-execute`**: Spostare le 7 regole commerciali in `operative_prompts` o KB
+### Step 3: Snellire i prompt residui
+- `generate-outreach`: Rimuovere `REGOLA:` imperativa nel saluto → passare solo il dato nome
+- `generate-email`: Ridurre `metInPersonContext` a dato puro, rimuovere `ISTRUZIONI:`
+- `generate-email`: Rimuovere `REGOLA ASSOLUTA` nel contactContext
+- Entrambi: Rimuovere `Includi una call-to-action` (l'AI lo sa dalla KB)
 
-### Step 4: Lasciare l'AI decidere la lingua
-- Eliminare la mappa `detectLanguage()` hardcoded
-- Passare solo `country_code` e `preferred_language` (se configurata) e lasciare che l'AI scelga
+### Step 4: Variabilizzare i guardrail di `agent-execute`
+- `7 giorni` → leggere da `app_settings` chiave `comm_cooldown_days` (default 7)
+- `Rispondi in italiano` → `Rispondi in ${lingua configurata}`
+- Rimuovere `IMPORTANTE: Rispetta SEMPRE questi timing` — ridondante
 
-### Step 5: Rendere `isHighStakes` configurabile
-- I criteri per high-stakes (rating, lead_status) dovrebbero essere in app_settings
-- L'AI/sistema legge i criteri a runtime
+### Stima
+- 4 file da modificare
+- ~50 righe di prompt da snellire/variabilizzare
+- 1 bug critico da fixare
 
----
-
-## Principio Guida
-
-```text
-PRIMA (ingabbiato):
-  "Scrivi in tono collaborativo. Usa Label + Mirroring. Max 100 parole."
-
-DOPO (libero con guardrail):
-  "Canale: WhatsApp. Relazione: cold. KB disponibile. Dati partner: {...}. 
-   Guardrail: zero allucinazioni, no firma, rispetta la lingua del paese."
-```
-
-L'AI riceve DATI + CONTESTO + GUARDRAIL minimi, e decide autonomamente strategia, tono, lunghezza e tecniche.
-
----
-
-## Stima
-- ~8 file da modificare
-- ~400 righe di prompt hardcoded da sostituire con caricamento da DB
-- 1 migrazione DB per `ai_guardrails` o estensione `app_settings`
-- 1 nuovo file `_shared/textUtils.ts`
-
-Vuoi che proceda?
