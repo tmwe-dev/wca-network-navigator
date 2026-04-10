@@ -91,12 +91,10 @@ describe("Dedup reliability", () => {
   });
 
   it("raw_sha256 provides secondary dedup check", () => {
-    const hash1 = "abc123def456";
-    const hash2 = "abc123def456"; // same content
-    const hash3 = "xyz789ghi012"; // different content
-
-    expect(hash1 === hash2).toBe(true);  // duplicate
-    expect(hash1 === hash3).toBe(false); // not duplicate
+    const hashes = ["abc123def456", "abc123def456", "xyz789ghi012"];
+    
+    expect(hashes[0] === hashes[1]).toBe(true);  // duplicate
+    expect(hashes[0] === hashes[2]).toBe(false); // not duplicate
   });
 });
 
@@ -116,10 +114,9 @@ describe("Resume/recovery", () => {
   });
 
   it("UIDVALIDITY change triggers full re-sync", () => {
-    const storedValidity = 12345;
-    const serverValidity = 67890; // changed!
-
-    const needsFullResync = storedValidity !== serverValidity;
+    const validities = [12345, 67890]; // stored vs server
+    
+    const needsFullResync = validities[0] !== validities[1];
     expect(needsFullResync).toBe(true);
   });
 
