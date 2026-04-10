@@ -1,78 +1,136 @@
 
 
-# Audit AI — Secondo Passaggio: Hardcode Residuo
+# Audit Completo: Caccia al Tesoro — Bug, Errori di Architettura, Logica Sbagliata
 
-## Stato Attuale dopo il Primo Intervento
+## 🔴 BUG CRITICI (Rottura funzionale)
 
-Il primo intervento ha fatto buoni progressi: `sameLocationGuard.ts` ora passa solo dati, `agent-execute` ha rimosso le 7 regole commerciali. Ma rimangono aree significative.
+### 1. **app_settings: NESSUNA Edge Function filtra per user_id** 
+**Gravità: CRITICA** — Vanifica completamente la migrazione fatta 2 sessioni fa.
 
-## BUG CRITICO
+Il frontend (`useAppSettings.ts`) filtra correttamente per `user_id`. Ma **TUTTE e 12 le Edge Function** che leggono `app_settings` usano il **service_role_key** (che bypassa RLS) e **NON filtrano mai per user_id**:
 
-**`getChannelContext(ch)` in `generate-outreach/index.ts` riga 425** — questa funzione viene chiamata ma non è mai definita né importata. Il precedente refactoring ha rimosso `getChannelInstructions()` ma il codice usa `getChannelContext()` che non esiste. **Crasherà a runtime.**
+- `generate-outreach`: `.like("key", "ai_%")` — legge le settings di TUTTI gli utenti
+- `generate-email`: `.like("key", "ai_%")` — idem
+- `agent-execute`: `.like("key", "ai_%")` — idem  
+- `send-email`: `.in("key", ["smtp_host", ...])` — prende la PRIMA riga, potrebbe essere di un altro utente
+- `process-email-queue`: stessa cosa per SMTP
+- `agent-autonomous-cycle`: `.in("key", [...])` — senza user_id
+- `daily-briefing`: `.eq("key", "operative_strategy")` — senza user_id
+- `improve-email`: `.like("key", "ai_%")` — senza user_id
+- `timeUtils.ts`: `.in("key", [...])` — senza user_id
+- `scrape-wca-blacklist`: legge E scrive senza user_id
+- `ai-assistant`: `.like("key", "ai_%")` — senza user_id
+- `super-assistant`: `.like("key", "ai_%")` — senza user_id
 
-## Hardcode Residuo — Cosa Rimane
+**Risultato**: Un utente invia email con le credenziali SMTP di un altro, vede la KB di un altro, usa l'alias/firma di un altro.
 
-### 1. `generate-outreach/index.ts` — Prompt ancora prescrittivo
-- **Riga 449-452**: Istruzioni imperative nel saluto — `REGOLA: Rivolgiti a X, MAI all'azienda` — queste sono guardrail legittimi, ma il formato è troppo imperativo. Basterebbe passare il dato `recipientName` e un guardrail minimo.
-- **Riga 463-477**: Il system prompt ha 6 guardrail hardcoded. Alcuni sono legittimi (zero allucinazioni), ma `Includi una call-to-action` e `Adatta lunghezza e stile al canale` sono istruzioni che l'AI dovrebbe decidere dalla KB.
-- **Riga 491**: `OBIETTIVO COMMERCIALE FINALE: Convertire il lead...` con leve specifiche hardcoded (apertura account, tariffe privilegiate, semplificazione operativa) — queste leve commerciali dovrebbero essere in `app_settings` o KB.
+**Fix**: Aggiungere `.eq("user_id", userId)` in OGNI query su `app_settings` in tutte le edge function.
 
-### 2. `generate-email/index.ts` — Ancora prescrittivo
-- **Righe 583-586**: `metInPersonContext` con `ISTRUZIONI: Usa un tono più caldo...` — imperativo. Bastava: `DATO: Incontro avvenuto a [evento]. L'AI decide come usare questa info.`
-- **Righe 686-692**: `contactContext` con `REGOLA ASSOLUTA: Rivolgiti SEMPRE alla persona...` — troppo rigido. Il dato basta, l'AI sa come salutare.
-- **Righe 788-795**: Stesse leve commerciali hardcoded di outreach (`apertura account, tariffe privilegiate...`)
-- **Riga 766**: `Includi una call-to-action` — stesso problema di outreach.
+---
 
-### 3. `agent-execute/index.ts` — Guardrail residui hardcoded
-- **Righe 205-209**: 4 guardrail operativi hardcoded (`7 giorni`, `storia interazioni`, `partner vs cliente`, `funnel`). La regola dei 7 giorni è un parametro che dovrebbe essere in `app_settings`. Gli altri 3 sono linee guida che dovrebbero essere nella KB.
-- **Riga 211**: `Rispondi SEMPRE in italiano` — hardcoded. Dovrebbe essere `Rispondi nella lingua configurata dall'utente: ${settings.ai_language || "italiano"}`.
-- **Riga 70**: `timingKeys` — lista di 13 chiavi hardcoded. Non è un problema grave (sono nomi di settings), ma meglio fare un `LIKE` query.
-- **Riga 75**: `IMPORTANTE: Rispetta SEMPRE questi timing nelle operazioni.` — imperativo inutile, l'AI vede i dati.
+### 2. **kb_entries: generate-outreach e generate-email NON filtrano per user_id**
+**Gravità: CRITICA**
 
-### 4. `_shared/textUtils.ts` — Mappa lingue hardcoded
-- **55 righe** di mappa paese→lingua. Come detto nel piano precedente, l'AI potrebbe ricevere solo il `country_code` e decidere la lingua, MA questa mappa è un "hint" ragionevole — è efficiente e non limita l'AI (il commento dice "AI can override"). **Opinione: TENERLA**, è un hint utile, non una gabbia.
+`fetchKbEntriesForOutreach()` e `fetchKbEntriesStrategic()` leggono tutte le kb_entries attive senza filtrare per user_id. L'utente A ottiene le tecniche di vendita dell'utente B nel suo prompt.
 
-### 5. `_shared/textUtils.ts` — `isLikelyPersonName()` 
-- Lista di ~40 keyword di ruoli hardcoded. Questa è una funzione di utilità deterministica, non un prompt AI. **Opinione: TENERLA**, è logica di parsing, non "gabbia AI".
+Solo `agent-execute` (riga 90) filtra `.eq("user_id", userId)`.
 
-### 6. `generate-aliases/index.ts` — Prompt con regole
-- **Righe 48-61**: Regole precise per generazione alias. **Opinione: TENERLA**, gli alias sono un task deterministico con output specifico. L'AI ha bisogno di regole precise qui.
+**Fix**: Aggiungere `.eq("user_id", userId)` alle query KB in outreach, email, improve-email, super-assistant, voice-brain-bridge, e ai-assistant (dove manca).
 
-## La Mia Opinione
+---
 
-Il sistema è al **70% liberato**. Le aree più critiche rimaste sono:
+### 3. **sameLocationGuard: `return true` blocca TUTTI gli invii**
+**Gravità: CRITICA**
 
-1. **Le leve commerciali hardcoded** (`apertura account, tariffe privilegiate`) in outreach e email — queste DEVONO essere in `app_settings` o KB perché variano per azienda
-2. **Il tono imperativo residuo** nei prompt (`REGOLA ASSOLUTA`, `MAI`, `SEMPRE`) — può essere ridotto a dati + hint
-3. **I guardrail di `agent-execute`** — il `7 giorni` dovrebbe essere una variabile, la lingua dovrebbe venire dai settings
-4. **Il bug `getChannelContext`** — va fixato immediatamente
+In `sameLocationGuard.ts` riga 66:
+```js
+const sentToOther = recentActs.find(a => {
+  return true; // any recent send to this partner counts
+});
+```
+La funzione `find()` con `return true` matcha SEMPRE il primo elemento. Questo significa che se c'è stata UNA QUALSIASI attività completata verso quel partner negli ultimi 7 giorni, **TUTTI i nuovi invii sono bloccati**, anche se era un follow-up alla stessa persona.
 
-Cose che NON toccherei:
-- `textUtils.ts` (mappa lingue + isPersonName) — sono utility deterministiche, non gabbie AI
-- `generate-aliases` — task deterministico, servono regole precise
-- Guardrail "zero allucinazioni" — questo è un guardrail di sicurezza essenziale
+La logica intendeva verificare se il contatto fosse diverso, ma il check è stato sostituito con `return true` — probabilmente un refactoring andato male.
 
-## Piano di Implementazione
+**Fix**: Implementare un check reale basato su `selected_contact_id` o `to_address` per distinguere follow-up (stesso contatto = ok) da invio a nuovo contatto (bloccare).
 
-### Step 1: Fixare il bug `getChannelContext`
-Definire la funzione in `generate-outreach` — versione minimale che passa solo il nome del canale come contesto, senza istruzioni imperative.
+---
 
-### Step 2: Esternalizzare le leve commerciali
-Spostare `apertura account, tariffe privilegiate, semplificazione operativa` in `app_settings` con chiave `ai_commercial_levers`. Usare nel prompt: `Leve commerciali configurate: ${settings.ai_commercial_levers || "non configurate"}`.
+### 4. **generate-outreach fallback model inesistente**
+**Gravità: MEDIA**
 
-### Step 3: Snellire i prompt residui
-- `generate-outreach`: Rimuovere `REGOLA:` imperativa nel saluto → passare solo il dato nome
-- `generate-email`: Ridurre `metInPersonContext` a dato puro, rimuovere `ISTRUZIONI:`
-- `generate-email`: Rimuovere `REGOLA ASSOLUTA` nel contactContext
-- Entrambi: Rimuovere `Includi una call-to-action` (l'AI lo sa dalla KB)
+Riga 493: `models: [model, "openai/gpt-4o-mini"]` — `gpt-4o-mini` NON è nella lista dei modelli supportati. Il fallback non funzionerà mai. Dovrebbe essere `openai/gpt-5-mini` o `openai/gpt-5-nano`.
 
-### Step 4: Variabilizzare i guardrail di `agent-execute`
-- `7 giorni` → leggere da `app_settings` chiave `comm_cooldown_days` (default 7)
-- `Rispondi in italiano` → `Rispondi in ${lingua configurata}`
-- Rimuovere `IMPORTANTE: Rispetta SEMPRE questi timing` — ridondante
+---
+
+### 5. **scrape-wca-blacklist: upsert senza user_id rompe il vincolo**
+**Gravità: MEDIA**
+
+Riga 127: `.upsert({ key: "blacklist_last_updated", value: ... }, { onConflict: "key" })` — Il vincolo unique ora è su `(user_id, key)`, non su `key` da solo. Questo upsert fallirà o creerà duplicati perché manca `user_id`.
+
+---
+
+## 🟡 ERRORI DI ARCHITETTURA
+
+### 6. **agent-autonomous-cycle: settings globali, non per-utente**
+Il ciclo autonomo carica settings da `app_settings` SENZA user_id (riga 165-176), poi le applica a TUTTI gli utenti nel loop. Se utente A ha `agent_require_approval = true` e utente B no, il comportamento dipende da quale riga il DB restituisce per prima.
+
+**Fix**: Dentro il loop `for (const [userId, agents] of Object.entries(userAgents))`, caricare le settings per quel `userId` specifico.
+
+### 7. **send-email e process-email-queue: leggono SMTP senza user_id**
+Se due utenti hanno configurato SMTP diversi, il sistema usa il primo trovato nel DB. Un utente potrebbe inviare email tramite il server SMTP di un altro.
+
+### 8. **agent-execute: carica agent CON user_id, ma settings SENZA**
+Riga 51: `.eq("user_id", userId)` per l'agent — corretto. Ma riga 63: settings senza user_id — le settings caricate nel prompt dell'agente potrebbero essere di un altro utente.
+
+---
+
+## 🟠 LOGICA SBAGLIATA
+
+### 9. **sameLocationGuard: recentContact restituisce dati vuoti**
+Righe 72-76: `name: ""`, `email: ""` — il recentContact viene sempre restituito con dati vuoti, rendendo inutile l'informazione per l'utente nel messaggio di errore.
+
+### 10. **generate-email: effectivePartnerId incoerente in standalone mode**
+Riga 529: `const effectivePartnerId = isPartnerSource ? activity?.partner_id : partner?.id;`
+In standalone mode con `partner_id`, `activity` è `undefined`, quindi `activity?.partner_id` è `undefined` anche se `isPartnerSource` è `true` (riga 490 lo imposta a true). Il guard e le relazioni vengono saltati anche quando i dati ci sono.
+
+### 11. **generate-email: "ISTRUZIONI DAL TIPO EMAIL SELEZIONATO" ripete il goal**
+Righe 785-786: 
+```
+ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
+${goal || "Nessuna istruzione specifica..."}
+```
+Questo è lo stesso `goal` già usato 3 righe sopra. L'AI riceve lo stesso testo due volte, sprecando token e confondendo il contesto.
+
+### 12. **agent-autonomous-cycle: Phase 2 duplica Phase 1**
+Phase 1 (`screenIncomingMessages`) già processa tutti i messaggi inbound non letti. Phase 2 (riga 229-265) rifà la stessa query su `channel_messages` con un filtro aggiuntivo su `lead_status`. Risultato: messaggi duplicati se un partner ha lead_status "contacted" o "in_progress".
+
+Il check anti-duplicazione (riga 247-252) usa `.contains("target_filters", { message_id: msg.id })` che dovrebbe funzionare, ma aggiunge complessità e query inutili.
+
+---
+
+## Piano di Fix
+
+### Step 1: Risolvere l'isolamento user_id nelle Edge Function (CRITICO)
+- Passare `userId` a tutte le query su `app_settings` e `kb_entries` in **12 file**
+- Per le edge function che ricevono auth header: estrarre userId e usarlo
+- Per le edge function cron (es. `agent-autonomous-cycle`): caricare settings per-utente dentro il loop
+
+### Step 2: Fixare sameLocationGuard `return true`
+- Implementare il check reale: se `selected_contact_id` corrisponde al contatto attuale → `allowed: true`, altrimenti bloccare
+
+### Step 3: Fixare il modello fallback in generate-outreach
+- `gpt-4o-mini` → `openai/gpt-5-mini`
+
+### Step 4: Fixare logica incoerente in generate-email standalone
+- `effectivePartnerId` dovrebbe usare `partner_id` (dal body) quando `isPartnerSource && !activity`
+
+### Step 5: Rimuovere la duplicazione ISTRUZIONI/GOAL in generate-email
+
+### Step 6: Fixare upsert in scrape-wca-blacklist
 
 ### Stima
-- 4 file da modificare
-- ~50 righe di prompt da snellire/variabilizzare
-- 1 bug critico da fixare
+- **12+ file da modificare**
+- Fix critici (Step 1-2): ~100 righe di codice
+- Fix architetturali (Step 3-6): ~30 righe
 
