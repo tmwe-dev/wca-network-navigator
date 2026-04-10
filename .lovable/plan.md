@@ -1,120 +1,113 @@
 
-
-# Audit Completo — Caccia al Tesoro #2
+# Audit Completo — Caccia al Tesoro #4
 
 ## 🔴 BUG CRITICI
 
-### 1. **generate-email riga 788-789: Riga duplicata causa errore di sintassi**
-Righe 788-789:
-```
-Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
-Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
-```
-La stessa riga di chiusura del template literal è presente DUE VOLTE. Questo produce un errore di sintassi JavaScript — la seconda riga è codice fuori dal template literal. **Il file potrebbe non funzionare affatto.**
+### 1. **email-cron-sync riga 29: `loadWorkHourSettings(supabase)` senza userId**
+La funzione cron chiama `loadWorkHourSettings(supabase)` SENZA passare un userId. In `timeUtils.ts` riga 37: `if (userId) query = query.eq("user_id", userId)` — senza userId, prende la PRIMA riga trovata tra TUTTI gli utenti. Se l'utente A ha orari 6-24 e l'utente B ha 9-18, il cron potrebbe usare gli orari di A per decidere se fare sync per TUTTI.
+**Fix**: Il cron itera già gli utenti (riga 52). Spostare il check work-hours DENTRO il loop per-utente.
+
+### 2. **agent-autonomous-cycle righe 166-176: work-hours globali senza user_id**
+Stessa identica problematica. Carica orari di lavoro GLOBALMENTE (senza user_id) e poi li applica PRIMA del loop per-utente (riga 199). Risultato: se il primo utente trovato ha orari 6-24, il sistema opera per tutti; se ha 9-18, blocca tutti alle 18 anche chi ha configurato 6-24.
+**Fix**: Spostare il work-hours check dentro il loop per-utente, usando il loro userId.
+
+### 3. **generate-email: raw fetch() senza timeout/retry/fallback (riga 765)**
+`generate-email` chiama `fetch("https://ai.gateway.lovable.dev/...")` direttamente. NESSUN:
+- Timeout (AbortController)
+- Retry con backoff
+- Fallback model cascade
+In contrasto, `generate-outreach` usa `aiChat()` con tutto questo. Se il modello primario è sovraccarico, `generate-email` FALLISCE. L'utente riceve un errore 500 senza recupero.
+**Fix**: Migrare a `aiChat()` dal gateway condiviso.
+
+### 4. **agent-execute: raw fetch() senza timeout (righe 232-236, 290-294)**
+Il loop di fallback models usa `fetch()` nudo. Se una chiamata si blocca, l'edge function resta in stallo fino al timeout del runtime (300s su Supabase). Nessun AbortController.
+**Fix**: Aggiungere AbortController con timeout 45s per ogni chiamata.
 
 ---
 
-### 2. **agent-autonomous-cycle righe 177-178: Variabili dichiarate due volte**
+## 🟡 RACE CONDITIONS
+
+### 5. **agent-execute righe 338-348: stats update non atomico**
 ```js
-const workStartHour = parseInt(globalCfg["agent_work_start_hour"]...);  // riga 174
-const workEndHour = parseInt(globalCfg["agent_work_end_hour"]...);      // riga 175
-const workStartHour = parseInt(globalCfg["agent_work_start_hour"]...);  // riga 177 — DUPLICATO
-const workEndHour = parseInt(globalCfg["agent_work_end_hour"]...);      // riga 178 — DUPLICATO
+const stats = (agent.stats as any) || {};
+const updatedStats = { ...stats };
+updatedStats.tasks_completed = (stats.tasks_completed || 0) + 1;
+await supabase.from("agents").update({ stats: updatedStats }).eq("id", agent_id);
 ```
-Doppia dichiarazione `const` = errore runtime. **Il ciclo autonomo potrebbe crashare all'avvio.**
+Se due task dello stesso agente terminano in parallelo, entrambi leggono `stats.tasks_completed = 5`, entrambi scrivono `6` invece di `7`. Pattern identico al bug #6 del precedente audit (interaction_count).
+**Fix**: RPC atomica `increment_agent_stat`.
 
----
-
-### 3. **aiGateway.ts ALLOWED_MODELS: modelli obsoleti bloccano le chiamate**
-L'allowlist contiene `openai/gpt-4o-mini` e `openai/gpt-4o` che NON sono nella lista dei modelli supportati dalla piattaforma. Ma NON contiene `openai/gpt-5-mini` che è usato come fallback in `generate-outreach` (riga 495) e `agent-execute` (riga 218).
-
-**Risultato**: `generate-outreach` chiama `aiChat({ models: [model, "openai/gpt-5-mini"] })` → `aiGateway` lancia `AiGatewayError("invalid_model")` perché `gpt-5-mini` non è nell'allowlist. **Il fallback non funziona MAI.**
-
-Inoltre, `ai-assistant`, `ai-deep-search-helper` e `voice-brain-bridge` usano ancora `openai/gpt-4o-mini` come fallback.
-
----
-
-### 4. **timeUtils.ts loadWorkHourSettings: query senza user_id**
-Riga 33-36: la funzione `loadWorkHourSettings()` legge `app_settings` SENZA filtrare per `user_id`. Usata da `email-cron-sync`, prende la prima riga trovata che potrebbe essere di qualsiasi utente. **Problema di isolamento dati.**
-
----
-
-### 5. **agent-autonomous-cycle: query work-hours senza user_id (righe 166-172)**
-La query globale per work-hours non filtra per `user_id` — se due utenti hanno orari diversi, il sistema usa il primo trovato. Inoltre, gli orari di lavoro dovrebbero essere per-utente (un utente in Asia, uno in Europa), non globali per il cron job.
-
----
-
-## 🟡 ERRORI DI ARCHITETTURA
-
-### 6. **logEmailSideEffects: race condition sul contatore interazioni**
-Righe 71-84: il codice fa un SELECT del `interaction_count`, poi un UPDATE con `count + 1`. Questo NON è atomico — se due email vengono inviate in parallelo per lo stesso partner, entrambe leggono lo stesso valore e incrementano a N+1 invece di N+2. Dovrebbe usare una `rpc` atomica o `interaction_count + 1` via SQL raw.
-
----
-
-### 7. **generate-email riga 594: cachedEnrichmentContext usa `activity?.partner_id` in modo incoerente**
+### 6. **process-email-queue righe 220-223: sent_count non atomico**
 ```js
-if (isPartnerSource && activity?.partner_id) {
+const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count")...
+await supabase.from("email_drafts").update({ sent_count: (currentDraft?.sent_count || 0) + 1 })...
 ```
-In standalone mode `activity` è `undefined`, quindi `activity?.partner_id` è sempre `undefined`. Ma `effectivePartnerId` (riga 531) è stato fixato per usare `partner?.id` quando `activity` non c'è. Qui però il blocco di enrichment NON usa `effectivePartnerId` — usa `activity!.partner_id` (riga 598). Risultato: in standalone mode, nessun enrichment data viene caricato anche se il partner esiste.
+Non è un vero rischio perché il queue è processato sequenzialmente per draft. Ma se due invocazioni concorrenti elaborano lo stesso draft, il conteggio si perde.
 
 ---
 
-### 8. **Phase 2 di autonomous-cycle duplica Phase 1 (righe 232-275)**
-Phase 1 (`screenIncomingMessages`) processa TUTTI i messaggi inbound non letti con `is("read_at", null)`. Phase 2 (riga 239-242) fa la stessa query senza `gte("created_at", lookback)` — prende TUTTI i messaggi non letti, inclusi quelli già processati da Phase 1. Il check anti-duplicazione (riga 257-262) dovrebbe catturare i duplicati, ma genera query N inutili e spreca risorse.
+## 🟠 SICUREZZA
+
+### 7. **send-email riga 104-109: query agente senza filtro user_id**
+```js
+const { data: agentRow } = await supabase
+  .from("agents")
+  .select("signature_html, ...")
+  .eq("id", agent_id)
+  .single();
+```
+Un utente autenticato che passa un `agent_id` di un ALTRO utente caricherà la firma di quell'agente. Manca `.eq("user_id", userId)`.
+
+### 8. **agent-autonomous-cycle: findAgentForPartner riga 62-66 query partner senza user scope**
+```js
+const { data: partner } = await supabase
+  .from("partners")
+  .select("country_code")
+  .eq("id", partnerId)
+  .single();
+```
+I partner sono condivisi per design, ma la query successiva su `client_assignments` (riga 50-55) filtra correttamente per `user_id`. OK per architettura attuale, ma va documentato.
 
 ---
 
-### 9. **generate-outreach: partner query senza user_id (riga 139-141)**
-La query su `partners` usa solo `ilike("company_name", ...)` SENZA filtrare per utente. I partner sono condivisi per design, MA la query `partner_contacts`, `partner_networks`, `partner_services` ugualmente non filtra per user_id. Se i dati sono condivisi è ok, ma va verificato che questa sia la scelta intenzionale.
+## 🟢 MIGLIORAMENTI ARCHITETTURALI
 
----
+### 9. **generate-email duplica la logica di firma con generate-outreach**
+Entrambi costruiscono `signatureBlock` con la stessa logica (righe 668-680 in generate-email, righe 513-525 in generate-outreach). Dovrebbe essere in `_shared/`.
 
-### 10. **getKBSlice e getKBSliceLegacy: codice duplicato in 3 file**
-La stessa funzione `getKBSlice`/`getKBSliceLegacy` esiste in:
-- `generate-outreach/index.ts` (righe 42-62)
-- `generate-email/index.ts` (righe 100-125)
-- `improve-email/index.ts` (righe 28+)
-
-Dovrebbe essere in `_shared/`.
-
----
-
-## 🟠 LOGICA/PERFORMANCE
-
-### 11. **agent-execute: N+1 query per Director View (righe 171-181)**
-Per ogni agente nel team, viene eseguita una query separata per caricare il `system_prompt`. Se ci sono 10 agenti, sono 10 query separate. Dovrebbe fare una singola query `.in("id", agentIds)`.
-
-### 12. **generate-email: `deduct_credits` usa formula diversa**
-In `generate-email` (riga 834): `(inputTokens + outputTokens * 2) / 1000` — usa i campi `prompt_tokens`/`completion_tokens` dal response.
-In `generate-outreach` (riga 510): stessa formula ma usa `result.usage.promptTokens`/`result.usage.completionTokens` dal wrapper `aiGateway`.
-`generate-email` NON usa `aiGateway` — chiama `fetch` direttamente. Nessun retry, nessun fallback model, nessun timeout. **Meno resiliente di `generate-outreach`.**
+### 10. **agent-execute: KB globale caricata SENZA limit (riga 89-93)**
+```js
+const { data: kbEntries } = await supabase.from("kb_entries").select(...)
+  .eq("is_active", true).order("priority", { ascending: false });
+```
+Nessun `.limit()` — se un utente ha 200 KB entries, tutte vengono caricate nel context. Questo può superare il token limit del modello e rallentare drasticamente l'esecuzione.
+**Fix**: Aggiungere `.limit(50)` e/o troncare il contenuto.
 
 ---
 
 ## Piano di Fix
 
-### Step 1 — Bug critici immediati
-1. Rimuovere la riga duplicata in `generate-email` (788-789)
-2. Rimuovere le variabili duplicate in `agent-autonomous-cycle` (177-178)
-3. Aggiornare `ALLOWED_MODELS` in `aiGateway.ts`: rimuovere `openai/gpt-4o-mini` e `openai/gpt-4o`, aggiungere `openai/gpt-5-mini`, `openai/gpt-5`, `openai/gpt-5-nano`
-4. Aggiornare i fallback obsoleti in `ai-assistant`, `ai-deep-search-helper`, `voice-brain-bridge` da `gpt-4o-mini` → `gpt-5-mini`
+### Step 1 — Work-hours per-utente (Bug #1, #2)
+- email-cron-sync: spostare check inside per-user loop
+- agent-autonomous-cycle: spostare check inside per-user loop
 
-### Step 2 — Isolamento dati
-5. Aggiungere `user_id` a `loadWorkHourSettings()` in `timeUtils.ts`
-6. Fix query work-hours in `agent-autonomous-cycle` per caricarle per-utente
+### Step 2 — Resilienza AI (Bug #3, #4)
+- generate-email: migrare a `aiChat()` dal gateway
+- agent-execute: aggiungere AbortController con timeout
 
-### Step 3 — Bug logici
-7. Fixare `cachedEnrichmentContext` in `generate-email` per usare `effectivePartnerId`
-8. Rendere atomico l'incremento `interaction_count` in `logEmailSideEffects`
-9. Eliminare la duplicazione Phase 1/Phase 2 in `autonomous-cycle`
+### Step 3 — Race conditions (Bug #5, #6)
+- agent-execute: creare RPC `increment_agent_stat`
+- process-email-queue: usare RPC per sent_count
 
-### Step 4 — Pulizia e performance
-10. Centralizzare `getKBSliceLegacy` in `_shared/`
-11. Fixare N+1 query in Director View di `agent-execute`
+### Step 4 — Sicurezza (Bug #7)
+- send-email: aggiungere `.eq("user_id", userId)` alla query agente
+
+### Step 5 — Performance (Bug #10)
+- agent-execute: aggiungere limit alla query KB entries
 
 ### Stima
-- ~12 file da modificare
-- 2 bug sintattici bloccanti (crash runtime)
-- 1 bug di allowlist che disabilita tutti i fallback model
-- 4 fix logici/architetturali
-
+- 5 file da modificare
+- 1 migrazione DB (RPC increment_agent_stat)
+- 2 bug di isolamento work-hours
+- 1 bug di resilienza AI critico
+- 1 bug di sicurezza cross-tenant
