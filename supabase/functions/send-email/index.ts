@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
+import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,13 +180,17 @@ Deno.serve(async (req) => {
 
     await client.close();
 
-    // Log interaction in DB if partner_id provided
+    // Log side effects consistently (same as queue path)
     if (partner_id) {
-      await supabase.from("interactions").insert({
+      const userId = claimsData.claims.sub as string;
+      await logEmailSideEffects({
+        supabase,
         partner_id,
-        interaction_type: "email",
-        subject: `Email a ${to}: ${subject}`,
-        notes: html,
+        user_id: userId,
+        subject,
+        to,
+        html,
+        agent_id,
       });
     }
 
