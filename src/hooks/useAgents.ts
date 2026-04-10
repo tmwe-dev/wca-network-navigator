@@ -1,27 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export interface Agent {
-  id: string;
-  user_id: string;
-  name: string;
-  role: string;
-  avatar_emoji: string;
-  system_prompt: string;
-  knowledge_base: any[];
-  elevenlabs_agent_id: string | null;
-  elevenlabs_voice_id: string | null;
-  assigned_tools: string[];
-  schedule_config: any;
-  is_active: boolean;
+/** Row type derived from the generated Supabase schema */
+export type Agent = Database["public"]["Tables"]["agents"]["Row"] & {
+  /** Typed overlay for the JSON stats column */
   stats: { tasks_completed: number; emails_sent: number; calls_made: number };
-  signature_html: string | null;
-  signature_image_url: string | null;
-  voice_call_url: string | null;
-  territory_codes: string[];
-  created_at: string;
-  updated_at: string;
-}
+  assigned_tools: string[];
+  knowledge_base: Record<string, unknown>[];
+};
+
+type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
+type AgentUpdate = Database["public"]["Tables"]["agents"]["Update"];
 
 const QUERY_KEY = ["agents"] as const;
 
@@ -34,35 +24,35 @@ export function useAgents() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
-        .from("agents" as any)
+        .from("agents")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as Agent[];
+      return (data ?? []) as Agent[];
     },
   });
 
   const createAgent = useMutation({
-    mutationFn: async (agent: Partial<Agent>) => {
+    mutationFn: async (agent: Partial<AgentInsert>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
-        .from("agents" as any)
-        .insert({ ...agent, user_id: user.id } as any)
+        .from("agents")
+        .insert({ ...agent, user_id: user.id, name: agent.name ?? "New Agent" } satisfies AgentInsert)
         .select()
         .single();
       if (error) throw error;
-      return data as unknown as Agent;
+      return data as Agent;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 
   const updateAgent = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Agent> & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: AgentUpdate & { id: string }) => {
       const { error } = await supabase
-        .from("agents" as any)
-        .update({ ...updates, updated_at: new Date().toISOString() } as any)
+        .from("agents")
+        .update({ ...updates, updated_at: new Date().toISOString() } satisfies AgentUpdate)
         .eq("id", id);
       if (error) throw error;
     },
@@ -71,7 +61,7 @@ export function useAgents() {
 
   const deleteAgent = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("agents" as any).delete().eq("id", id);
+      const { error } = await supabase.from("agents").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
