@@ -94,7 +94,7 @@ const MOCK_AGENDA_ACTIVITIES = [
     partners: { company_name: "Yangtze Express Co", company_alias: null, country_code: "CN", country_name: "China", city: "Shanghai", enriched_at: null, website: null, logo_url: null, email: "wang.li@yangtze-exp.cn" },
     team_members: null, selected_contact: { id: "c8", name: "Wang Li", email: "wang.li@yangtze-exp.cn", direct_phone: null, mobile: null, title: "Partnership Director", contact_alias: null },
   },
-] satisfies Omit<AllActivity, "source_meta">[] as unknown as AllActivity[];
+] as unknown as AllActivity[];
 
 const MOCK_REMINDERS = [
   {
@@ -107,7 +107,7 @@ const MOCK_REMINDERS = [
     status: "pending", created_at: new Date().toISOString(), user_id: "u1", description: "Verificare se hanno ricevuto quotazione",
     partners: { company_name: "Silk Route Logistics", country_code: "IN" },
   },
-] as Reminder[];
+] as unknown as Reminder[];
 
 function isMockEnabled(): boolean {
   try {
