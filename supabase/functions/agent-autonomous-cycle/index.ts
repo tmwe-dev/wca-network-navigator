@@ -217,7 +217,7 @@ serve(async (req) => {
               .eq("id", msg.partner_id).in("lead_status", ["contacted", "in_progress"]).single();
 
             if (partner) {
-              const stakes = isHighStakes({ ...partner, source: "wca" }) || forceApproval;
+              const stakes = isHighStakes(partner) || forceApproval;
               const taskStatus = stakes ? "proposed" : "pending";
 
               // Check if task already exists for this message
