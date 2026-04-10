@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type BCInsert = Database["public"]["Tables"]["business_cards"]["Insert"];
+type BCUpdate = Database["public"]["Tables"]["business_cards"]["Update"];
 
 const BC_KEY = ["business-cards"] as const;
 const BC_MATCHES_KEY = ["business-card-matches"] as const;
@@ -92,7 +96,7 @@ export function useCreateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (card: Partial<BusinessCard> & { user_id: string }) => {
-      const { error } = await supabase.from("business_cards").insert(card as any);
+      const { error } = await supabase.from("business_cards").insert(card as BCInsert);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -106,7 +110,7 @@ export function useUpdateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<BusinessCard>) => {
-      const { error } = await supabase.from("business_cards").update(updates as any).eq("id", id);
+      const { error } = await supabase.from("business_cards").update(updates as BCUpdate).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
