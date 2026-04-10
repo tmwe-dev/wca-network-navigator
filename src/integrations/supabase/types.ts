@@ -3723,6 +3723,10 @@ export type Database = {
           member_count: number
         }[]
       }
+      increment_agent_stat: {
+        Args: { p_agent_id: string; p_stat_key: string }
+        Returns: undefined
+      }
       increment_contact_interaction: {
         Args: { p_contact_id: string }
         Returns: undefined
