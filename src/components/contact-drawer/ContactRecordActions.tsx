@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Mail, MessageCircle, Linkedin, Phone, Send, Loader2 } from "lucide-react";
 import type { UnifiedRecord } from "@/hooks/useContactRecord";
@@ -11,7 +11,7 @@ interface Props {
   record: UnifiedRecord;
 }
 
-export function ContactRecordActions({ record }: Props) {
+export function ContactRecordActions({ record }: Props): ReactElement {
   const [liDmOpen, setLiDmOpen] = useState(false);
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
 
