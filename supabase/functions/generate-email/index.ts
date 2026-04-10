@@ -96,33 +96,7 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 `;
 }
 
-/** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
-function getKBSliceLegacy(fullKB: string, quality: Quality): string {
-  if (!fullKB) return "";
-  const sectionMap: Record<Quality, number[]> = {
-    fast: [1, 5],
-    standard: [1, 2, 3, 4, 5, 6, 7, 8],
-    premium: [],
-  };
-  if (quality === "premium") return fullKB;
-  const allowedSections = sectionMap[quality];
-  const sectionRegex = /<!-- SECTION:(\d+) -->/g;
-  const markers: { index: number; section: number }[] = [];
-  let match;
-  while ((match = sectionRegex.exec(fullKB)) !== null) {
-    markers.push({ index: match.index, section: parseInt(match[1]) });
-  }
-  if (markers.length === 0) return fullKB;
-  const parts: string[] = [];
-  for (let i = 0; i < markers.length; i++) {
-    if (allowedSections.includes(markers[i].section)) {
-      const start = markers[i].index;
-      const end = i + 1 < markers.length ? markers[i + 1].index : fullKB.length;
-      parts.push(fullKB.substring(start, end).trim());
-    }
-  }
-  return parts.join("\n\n---\n\n");
-}
+import { getKBSlice, type Quality } from "../_shared/kbSlice.ts";
 
 function getModel(quality: Quality): string {
   return quality === "fast" 

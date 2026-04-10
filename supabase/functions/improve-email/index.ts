@@ -25,27 +25,7 @@ async function fetchKbEntriesForImprove(supabase: any, userId: string): Promise<
   };
 }
 
-/** Legacy fallback: Extract sections from KB using <!-- SECTION:N --> markers */
-function getKBSliceLegacy(fullKB: string): string {
-  if (!fullKB) return "";
-  const allowedSections = [1, 2, 3, 4, 5, 6, 7, 8];
-  const sectionRegex = /<!-- SECTION:(\d+) -->/g;
-  const markers: { index: number; section: number }[] = [];
-  let match;
-  while ((match = sectionRegex.exec(fullKB)) !== null) {
-    markers.push({ index: match.index, section: parseInt(match[1]) });
-  }
-  if (markers.length === 0) return fullKB.substring(0, 3000);
-  const parts: string[] = [];
-  for (let i = 0; i < markers.length; i++) {
-    if (allowedSections.includes(markers[i].section)) {
-      const start = markers[i].index;
-      const end = i + 1 < markers.length ? markers[i + 1].index : fullKB.length;
-      parts.push(fullKB.substring(start, end).trim());
-    }
-  }
-  return parts.join("\n\n---\n\n").substring(0, 4000);
-}
+import { getKBSlice } from "../_shared/kbSlice.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
