@@ -34,22 +34,22 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        } as any)
+        })
         .select()
         .single();
       if (error) throw error;
 
       const doc: WorkspaceDoc = {
-        id: (data as any).id,
-        file_name: (data as any).file_name,
-        file_url: (data as any).file_url,
-        file_size: (data as any).file_size,
+        id: data.id,
+        file_name: data.file_name,
+        file_url: data.file_url,
+        file_size: data.file_size,
       };
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
       return doc;
-    } catch (err: any) {
-      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       return null;
     } finally {
       setUploading(false);

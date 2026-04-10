@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
+
+type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
+type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
 
 export interface SortingJob {
   id: string;
@@ -79,7 +83,7 @@ export function useReviewJob() {
     mutationFn: async ({ id, reviewed }: { id: string; reviewed: boolean }) => {
       const { error } = await supabase
         .from("activities")
-        .update({ reviewed } as any)
+        .update({ reviewed } satisfies ActivityUpdate)
         .eq("id", id);
       if (error) throw error;
     },
@@ -93,7 +97,7 @@ export function useBulkReview() {
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
         .from("activities")
-        .update({ reviewed: true } as any)
+        .update({ reviewed: true } satisfies ActivityUpdate)
         .in("id", ids);
       if (error) throw error;
     },
@@ -110,7 +114,7 @@ export function useCancelJobs() {
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
         .from("activities")
-        .update({ status: "cancelled" } as any)
+        .update({ status: "cancelled" } satisfies ActivityUpdate)
         .in("id", ids);
       if (error) throw error;
     },
@@ -149,7 +153,7 @@ export function useSendJob() {
           status: "completed",
           sent_at: now,
           completed_at: now,
-        } as any)
+        } satisfies ActivityUpdate)
         .eq("id", job.id);
       if (error) throw error;
 
@@ -160,17 +164,17 @@ export function useSendJob() {
           .update({
             lead_status: "contacted",
             last_interaction_at: now,
-          } as any)
+          })
           .eq("id", job.partner_id)
           .eq("lead_status", "new");
 
         // Create interaction record
         await supabase.from("interactions").insert({
           partner_id: job.partner_id,
-          interaction_type: "email" as any,
+          interaction_type: "email",
           subject: job.email_subject || "Email inviata",
           notes: `Inviata a ${email}`,
-        } as any);
+        } satisfies InteractionInsert);
       }
     },
     onSuccess: () => {
@@ -190,7 +194,7 @@ export function useUpdateJobEmail() {
     mutationFn: async ({ id, email_subject, email_body }: { id: string; email_subject: string; email_body: string }) => {
       const { error } = await supabase
         .from("activities")
-        .update({ email_subject, email_body } as any)
+        .update({ email_subject, email_body } satisfies ActivityUpdate)
         .eq("id", id);
       if (error) throw error;
     },

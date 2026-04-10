@@ -2,6 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import type { TrackActivityParams } from "@/types/tracking";
+import type { Database } from "@/integrations/supabase/types";
+
+type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
+type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
 
 const log = createLogger("useTrackActivity");
 
@@ -17,39 +21,39 @@ export function useTrackActivity() {
 
       // 1. Insert completed activity
       const { error: actErr } = await supabase.from("activities").insert({
-        activity_type: params.activityType as any,
+        activity_type: params.activityType,
         title: params.title,
         source_id: params.sourceId,
         source_type: params.sourceType,
         partner_id: params.partnerId || null,
         user_id: user.id,
-        status: "completed" as any,
+        status: "completed",
         completed_at: now,
         sent_at: params.activityType === "send_email" ? now : null,
         email_subject: params.emailSubject || null,
         description: params.description || null,
-      } as any);
+      } satisfies ActivityInsert);
       if (actErr) log.error("track activity insert failed", { message: actErr.message, code: actErr.code });
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {
         await supabase
           .from("partners")
-          .update({ lead_status: "contacted", last_interaction_at: now } as any)
+          .update({ lead_status: "contacted", last_interaction_at: now })
           .eq("id", params.partnerId)
           .eq("lead_status", "new");
 
         // Create interaction record
         await supabase.from("interactions").insert({
           partner_id: params.partnerId,
-          interaction_type: params.activityType === "send_email" ? "email" : "other" as any,
+          interaction_type: params.activityType === "send_email" ? "email" : "other",
           subject: params.emailSubject || params.title,
           notes: params.description || `Attività: ${params.title}`,
-        } as any);
+        } satisfies InteractionInsert);
       } else if (params.sourceType === "imported_contact") {
         await supabase
           .from("imported_contacts")
-          .update({ lead_status: "contacted", last_interaction_at: now } as any)
+          .update({ lead_status: "contacted", last_interaction_at: now })
           .eq("id", params.sourceId)
           .eq("lead_status", "new");
 
@@ -63,7 +67,7 @@ export function useTrackActivity() {
       } else if (params.sourceType === "business_card") {
         await supabase
           .from("business_cards")
-          .update({ lead_status: "contacted" } as any)
+          .update({ lead_status: "contacted" })
           .eq("id", params.sourceId)
           .eq("lead_status", "new");
       }
