@@ -18,6 +18,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "@/lib/api/apiError";
 import { createLogger } from "@/lib/log";
+import { checkBudget, trackCost } from "@/lib/api/costTracker";
+import { validateResponse, type ResponseSchema } from "@/lib/api/responseValidator";
 
 const log = createLogger("invokeEdge");
 
@@ -27,13 +29,18 @@ export interface InvokeEdgeOptions {
   context: string;
   /** Header HTTP opzionali */
   headers?: Record<string, string>;
+  /** Optional runtime schema validation for the response */
+  responseSchema?: ResponseSchema;
 }
 
 export async function invokeEdge<T = unknown>(
   functionName: string,
   options: InvokeEdgeOptions,
 ): Promise<T> {
-  const { body, context, headers } = options;
+  const { body, context, headers, responseSchema } = options;
+
+  // Guardrail: block if session budget exceeded
+  checkBudget();
 
   let result: Awaited<ReturnType<typeof supabase.functions.invoke>>;
   try {
@@ -95,5 +102,23 @@ export async function invokeEdge<T = unknown>(
     });
   }
 
-  return result.data as T;
+  const data = result.data as T;
+
+  // Guardrail: track cost if _debug.credits_consumed is present
+  const debugInfo = (data as Record<string, unknown> | null)?._debug as
+    | { credits_consumed?: number }
+    | undefined;
+  if (debugInfo?.credits_consumed) {
+    const crossed = trackCost(functionName, debugInfo.credits_consumed);
+    if (crossed) {
+      log.warn("soft budget limit crossed", { functionName, context });
+    }
+  }
+
+  // Guardrail: validate response shape if schema provided
+  if (responseSchema) {
+    validateResponse<T>(data, responseSchema);
+  }
+
+  return data;
 }
