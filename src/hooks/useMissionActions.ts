@@ -1,24 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
-export interface MissionAction {
-  id: string;
-  mission_id: string;
-  user_id: string;
-  action_type: string;
-  action_label: string;
-  status: string;
-  idempotency_key: string | null;
-  danger_level: string;
-  position: number;
-  started_at: string | null;
-  completed_at: string | null;
-  error_message: string | null;
-  recovery_log: any[];
-  metadata: Record<string, any>;
-  created_at: string;
-}
+type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
+type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
+type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Update"];
+
+export type MissionAction = MissionActionRow;
 
 export interface MissionPlan {
   interpretation: string;
@@ -29,7 +18,7 @@ export interface MissionPlan {
   idempotencyKey: string;
 }
 
-function generateIdempotencyKey(data: Record<string, any>): string {
+function generateIdempotencyKey(data: Record<string, unknown>): string {
   const str = JSON.stringify(data);
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -55,7 +44,7 @@ export function useMissionActions(missionId?: string) {
         .eq("mission_id", missionId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as MissionAction[];
+      return data ?? [];
     },
     enabled: !!missionId,
   });
@@ -74,13 +63,13 @@ export function useMissionActions(missionId?: string) {
         .select("id")
         .eq("idempotency_key", input.plan.idempotencyKey)
         .eq("user_id", user.id)
-        .limit(1) as any;
+        .limit(1);
 
       if (existing && existing.length > 0) {
         throw new Error("Questa missione è già stata pianificata");
       }
 
-      const rows = input.plan.actions.map((a, i) => ({
+      const rows: MissionActionInsert[] = input.plan.actions.map((a, i) => ({
         mission_id: input.missionId,
         user_id: user.id,
         action_type: a.type,
@@ -89,45 +78,45 @@ export function useMissionActions(missionId?: string) {
         idempotency_key: `${input.plan.idempotencyKey}-${i}`,
         danger_level: input.plan.dangerLevel,
         position: i,
-        metadata: { details: a.details || "" } as any,
-        recovery_log: [] as any,
+        metadata: { details: a.details || "" },
+        recovery_log: [],
       }));
 
       const { data, error } = await supabase
         .from("mission_actions")
-        .insert(rows as any)
+        .insert(rows)
         .select();
       if (error) throw error;
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const approveAll = useMutation({
     mutationFn: async (actionMissionId: string) => {
       const { error } = await supabase
         .from("mission_actions")
-        .update({ status: "approved" } as any)
+        .update({ status: "approved" } satisfies MissionActionUpdate)
         .eq("mission_id", actionMissionId)
-        .eq("status", "planned") as any;
+        .eq("status", "planned");
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Piano approvato"); },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const cancelAll = useMutation({
     mutationFn: async (actionMissionId: string) => {
       const { error } = await supabase
         .from("mission_actions")
-        .update({ status: "cancelled" } as any)
+        .update({ status: "cancelled" } satisfies MissionActionUpdate)
         .eq("mission_id", actionMissionId)
-        .in("status", ["planned", "approved"]) as any;
+        .in("status", ["planned", "approved"]);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.info("Piano annullato"); },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return {
@@ -152,9 +141,9 @@ export function useActiveMissions() {
         .eq("user_id", user.id)
         .in("status", ["planned", "approved", "executing"])
         .order("created_at", { ascending: false })
-        .limit(50) as any;
+        .limit(50);
       if (error) throw error;
-      return (data ?? []) as unknown as MissionAction[];
+      return data ?? [];
     },
     refetchInterval: 10000,
   });
