@@ -67,12 +67,10 @@ serve(async (req) => {
       }
 
       // 1b. Timing & scheduling config
-      const timingKeys = ["email_send_delay","email_batch_size","whatsapp_send_delay","linkedin_send_delay","scraping_base_delay","deep_search_delay","agent_cycle_interval","agent_max_actions_per_cycle","agent_cooldown_after_error","agent_work_start_hour","agent_work_end_hour","agent_work_days","agent_require_approval"];
-      const { data: timingSettings } = await supabase.from("app_settings").select("key, value").in("key", timingKeys);
+      const { data: timingSettings } = await supabase.from("app_settings").select("key, value").like("key", "agent_%").or("key.like.email_%,key.like.whatsapp_%,key.like.linkedin_%,key.like.scraping_%,key.like.deep_search_%");
       if (timingSettings?.length) {
         contextBlock += "\n--- TIMING & SCHEDULING ---\n";
         for (const s of timingSettings) { if (s.value) contextBlock += `${s.key}: ${s.value}\n`; }
-        contextBlock += "IMPORTANTE: Rispetta SEMPRE questi timing nelle operazioni. Non superare il max azioni per ciclo. Opera solo negli orari di lavoro configurati.\n";
         const approvalSetting = timingSettings.find(s => s.key === "agent_require_approval");
         if (approvalSetting?.value === "true") {
           contextBlock += "APPROVAZIONE OBBLIGATORIA: Ogni azione (email, WhatsApp, LinkedIn) DEVE essere messa in coda con status 'pending' per approvazione umana. Non eseguire direttamente.\n";
@@ -202,13 +200,7 @@ serve(async (req) => {
 - Puoi vedere le attività di TUTTI i colleghi per coordinamento.
 - Le regole commerciali e di governance sono nella Knowledge Base e nei Prompt Operativi — seguile.
 
-GUARDRAIL OPERATIVI:
-- Una comunicazione per sede ogni 7 giorni
-- Analizza sempre la storia interazioni prima di agire
-- Differenzia l'approccio in base alla tipologia interlocutore (partner vs cliente)
-- Ogni azione deve far avanzare il lead nel funnel
-
-Rispondi SEMPRE in italiano. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.`;
+Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.`;
     const kb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
     if (kb?.length) {
       systemPrompt += "\n\n--- KNOWLEDGE BASE ---\n";
