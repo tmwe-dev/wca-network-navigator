@@ -280,11 +280,12 @@ serve(async (req) => {
             if (p) stakes = isHighStakes(p);
           }
 
+          const needsApproval = stakes || forceApproval;
           await supabase.from("agent_tasks").insert({
             agent_id: agent.id, user_id: userId, task_type: "follow_up",
-            description: `Follow-up scaduto: "${fup.title}". ${stakes ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
-            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !stakes } as any,
-            status: stakes ? "proposed" : "pending",
+            description: `Follow-up scaduto: "${fup.title}". ${needsApproval ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
+            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as any,
+            status: needsApproval ? "proposed" : "pending",
           });
           actionsCreated++;
         }
