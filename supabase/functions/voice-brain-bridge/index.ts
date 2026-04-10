@@ -109,7 +109,16 @@ async function validateBridgeToken(
   }
 }
 
-async function loadVoiceContext(supabase: ReturnType<typeof createClient>): Promise<string> {
+async function loadVoiceContext(supabase: ReturnType<typeof createClient>, userId?: string): Promise<string> {
+  let kbQuery = supabase
+    .from("kb_entries")
+    .select("title, content, priority")
+    .eq("category", "voice_rules")
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(20);
+  if (userId) kbQuery = kbQuery.eq("user_id", userId);
+
   const [{ data: playbook }, { data: kb }] = await Promise.all([
     supabase
       .from("commercial_playbooks")
@@ -117,13 +126,7 @@ async function loadVoiceContext(supabase: ReturnType<typeof createClient>): Prom
       .eq("code", "voice_wca_partner_call")
       .eq("is_template", true)
       .maybeSingle(),
-    supabase
-      .from("kb_entries")
-      .select("title, content, priority")
-      .eq("category", "voice_rules")
-      .eq("is_active", true)
-      .order("priority", { ascending: false })
-      .limit(20),
+    kbQuery,
   ]);
 
   const parts: string[] = [];
