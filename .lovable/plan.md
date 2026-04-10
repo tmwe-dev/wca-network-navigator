@@ -1,132 +1,112 @@
 
 
-# Analisi Qualità — Da ~73.000 a 100.000/100.000
+# Audit AI: Troppo Hardcode, Poca Libertà per l'AI
 
-## Punteggio Stimato Attuale: ~73.000
+## Problema Identificato
 
-| Area | Peso | Attuale | Max | Gap |
-|---|---|---|---|---|
-| Type Safety | 15.000 | 8.000 | 15.000 | -7.000 |
-| Test Coverage | 20.000 | 11.000 | 20.000 | -9.000 |
-| Code Architecture | 15.000 | 10.000 | 15.000 | -5.000 |
-| Security | 15.000 | 13.500 | 15.000 | -1.500 |
-| Code Hygiene | 10.000 | 8.500 | 10.000 | -1.500 |
-| Edge Function Quality | 10.000 | 5.500 | 10.000 | -4.500 |
-| E2E / Integration | 10.000 | 4.500 | 10.000 | -5.500 |
-| Documentation | 5.000 | 3.500 | 5.000 | -1.500 |
-| **TOTALE** | **100.000** | **~73.000** | **100.000** | **~27.000** |
+Il sistema attualmente "prende il volante" invece di lasciare che l'AI guidi. Ci sono **centinaia di righe di istruzioni imperative hardcoded** nei prompt e nella logica delle edge function che costringono l'AI a comportarsi in modo rigido. L'approccio corretto è: **dare contesto + guardrail + variabili**, e lasciare l'AI decidere *come* eseguire.
 
 ---
 
-## I 10 Gap da Colmare
+## Aree Critiche Trovate
 
-### GAP 1 — Type Safety: 396× `as any` + 454× `: any` (−7.000 pt)
-**146 file** con cast `as any`, **454 parametri** tipizzati `: any`.
-- Peggiori: hooks Supabase (ogni query usa `as any` per aggirare i tipi generati)
-- Fix: creare type helpers per le tabelle non in types.ts (agents, ai_memory, ecc.)
-- Obiettivo: < 50 `as any` totali, 0 `: any` nei file non-test
+### 1. **`sameLocationGuard.ts` — Tono e Strategia Hardcoded**
+- `toneSuggestion` è un `switch/case` con 5 frasi fisse per ogni `relationship_stage` (cold/warm/active/stale/ghosted)
+- `buildInterlocutorTypeBlock()` ha due blocchi di testo statici che dettano ESATTAMENTE cosa dire per partner vs cliente
+- `buildRelationshipAnalysisBlock()` contiene istruzioni imperative specifiche ("Usa 'no strategico'", "Last attempt")
+- `buildBranchCoordinationBlock()` dice esattamente come menzionare le sedi
 
-### GAP 2 — Test Coverage: 1/343 componenti, 0/118 hooks (−9.000 pt)
-| Layer | File | Con Test | % |
-|---|---|---|---|
-| Componenti | 343 | 1 | 0.3% |
-| Hooks | 118 | 0 | 0% |
-| Pagine | ~40 | 0 | 0% |
-- Servono almeno: 20 component test, 10 hook test, 5 page test
-- Priorità: i 6 mega-componenti (>500 LOC) + hooks critici
+**Cosa fare:** Passare solo i DATI (metriche, numeri, stage label) e lasciare che l'AI decida il tono e la strategia in base al contesto + KB.
 
-### GAP 3 — Mega-file Frontend: 8 file > 600 LOC (−5.000 pt)
-| File | LOC |
-|---|---|
-| FiltersDrawer.tsx | 1.114 |
-| BusinessCardsHub.tsx | 1.084 |
-| AddContactDialog.tsx | 794 |
-| useAcquisitionPipeline.tsx | 748 |
-| EmailComposer.tsx | 729 |
-| MissionStepRenderer.tsx | 700 |
-| EmailComposerContactPicker.tsx | 685 |
-| TestExtensions.tsx | 647 |
-- Obiettivo: nessun file > 400 LOC (split in sub-componenti)
+### 2. **`generate-outreach/index.ts` — Prompt Iper-Prescrittivo**
+- `getChannelInstructions()` (linee 114-150): 4 blocchi hardcoded che dettano formato, lunghezza, emoji, stile per ogni canale
+- Limiti di parole hardcoded nel prompt (WhatsApp < 100, LinkedIn < 200, SMS < 160, Email < 150)
+- `detectLanguage()` duplicata in 2 file con mappa statica di ~15 paesi
+- `isLikelyPersonName()` duplicata in 2 file con lista hardcoded di ~30 keyword di ruoli
+- `cleanCompanyName()` con regex hardcoded per suffissi legali
+- 10 "REGOLE CRITICHE" imperative nel system prompt
 
-### GAP 4 — Mega-file Edge Functions: 5 funzioni > 700 LOC (−4.500 pt)
-| Funzione | LOC |
-|---|---|
-| ai-assistant | 3.802 |
-| scrape-wca-partners | 1.515 |
-| check-inbox | 1.458 |
-| generate-email | 1.048 |
-| generate-outreach | 703 |
-- `ai-assistant` da solo è quasi 4.000 righe → split in moduli
-- Obiettivo: nessuna funzione > 500 LOC
+**Cosa fare:** Spostare limiti canale e regole in `app_settings` o in KB entries. Dare i dati grezzi e lasciare l'AI decidere. La lingua dovrebbe essere rilevata dall'AI stessa, non da una mappa di 15 paesi.
 
-### GAP 5 — Edge Function test: 19/67 con test (−3.000 pt)
-- 48 funzioni senza alcun test
-- Priorità: le 10 già identificate nello Step 1 del piano test
-- Obiettivo: almeno 50/67 con test base (CORS + 401 + error shape)
+### 3. **`generate-email/index.ts` — Strategic Advisor Rigido**
+- `buildStrategicAdvisor()` (linee 101-153): dice esattamente quali tecniche usare e quando
+- `fetchKbEntriesStrategic()`: switch/case hardcoded che mappa `emailCategory` → categorie KB specifiche
+- 7 "Regole critiche" nel system prompt che micro-gestiscono l'output
+- Alias, firma, formato HTML — tutto dettato con istruzioni imperative
 
-### GAP 6 — E2E: 5/12 spec ancora skippate (−2.500 pt)
-- Login fixture creato ma non ancora usato in tutti gli spec
-- Obiettivo: 0 test skippati, 12/12 spec attivi
+**Cosa fare:** Eliminare lo switch/case delle categorie — dare TUTTE le categorie pertinenti e lasciare l'AI selezionare. Ridurre le regole a guardrail essenziali.
 
-### GAP 7 — Security: 1 dangerouslySetInnerHTML senza sanitize (−1.500 pt)
-- `src/components/ui/chart.tsx` usa dangerouslySetInnerHTML senza DOMPurify
-- 3 occorrenze di `JSON.parse(JSON.stringify())` ancora presenti
-- Obiettivo: 0 render HTML non sanitizzati, 0 deep clone naive
+### 4. **`agent-execute/index.ts` — 7 Regole Commerciali Hardcoded**
+- Linee 204-214: "REGOLE COMMERCIALI FONDAMENTALI" (7 punti imperativi)
+- Queste regole dovrebbero essere in `kb_entries` o `operative_prompts`, non nel codice
+- L'agente riceve un prompt di ~200 righe di istruzioni fisse
 
-### GAP 8 — Code Hygiene: 3× JSON.parse(JSON.stringify) (−1.500 pt)
-- Sostituire con `structuredClone()`
-- 1 TODO/FIXME residuo
-- Obiettivo: 0 pattern deprecati
+**Cosa fare:** Caricare le regole commerciali dalla KB/operative_prompts invece che dal codice.
 
-### GAP 9 — Documentation: JSDoc mancante su hooks/utils (−1.500 pt)
-- 118 hooks senza JSDoc
-- Utility functions senza documentazione
-- Obiettivo: JSDoc su tutti gli hooks pubblici e utility esportate
+### 5. **`agent-autonomous-cycle/index.ts` — Logica Decisionale Hardcoded**
+- `isHighStakes()` (linea 26-31): condizioni hardcoded (lead_status, rating >= 4)
+- Status "proposed" vs "pending" deciso da if/else nel codice, non dall'AI
+- Budget e timing sono hardcoded come fallback
 
-### GAP 10 — Missing Error Boundaries per pagine (−1.000 pt)
-- Verificare che ogni pagina abbia error boundary
-- Route protection già presente (withFeatureBoundary)
+**Cosa fare:** I criteri high-stakes dovrebbero essere configurabili in app_settings.
+
+### 6. **Duplicazioni di Codice**
+- `detectLanguage()` identica in `generate-email` e `generate-outreach`
+- `isLikelyPersonName()` identica in entrambi
+- `cleanCompanyName()` identica in entrambi
+- `getKBSlice()`/`getKBSliceLegacy()` quasi identici
 
 ---
 
-## Piano di Implementazione (in ordine di impatto)
+## Piano di Implementazione
 
-### Fase 1: Type Safety (impatto: +7.000 pt)
-1. Creare `src/types/database-helpers.ts` con tipi per tabelle mancanti
-2. Eliminare `as any` dai hooks principali (useAgents, usePartners, ecc.)
-3. Tipizzare i parametri `: any` nei componenti
+### Step 1: Centralizzare utility duplicate
+- Spostare `detectLanguage`, `isLikelyPersonName`, `cleanCompanyName` in `_shared/textUtils.ts`
+- Eliminare le copie locali
 
-### Fase 2: Test Coverage (impatto: +9.000 pt)
-1. 20 component test per i file critici
-2. 10 hook test (useAgents, usePartners, useEmailDrafts, ecc.)
-3. 5 page test (render + routing)
+### Step 2: Esternalizzare regole commerciali e toni
+- Creare una nuova tabella `ai_guardrails` (o usare `app_settings`) con chiavi tipo:
+  - `channel_guidelines_email`, `channel_guidelines_whatsapp`, ecc.
+  - `tone_rules_partner`, `tone_rules_client`
+  - `high_stakes_criteria`
+  - `word_limits_per_channel`
+- Caricarle a runtime invece di hardcodarle
 
-### Fase 3: Refactoring Mega-file (impatto: +9.500 pt)
-1. Split `ai-assistant` in moduli (tools, router, context, response)
-2. Split `FiltersDrawer` in sub-componenti
-3. Split `BusinessCardsHub` in sub-componenti
-4. Refactor rimanenti file > 600 LOC
+### Step 3: Snellire i prompt — da imperativo a contestuale
+- **`sameLocationGuard.ts`**: `buildInterlocutorTypeBlock()` → passa solo `{ type: "partner" | "client", data }`, senza dettare il tono. `buildRelationshipAnalysisBlock()` → passa solo le metriche, senza le istruzioni imperative di tono
+- **`generate-outreach`**: Rimuovere `getChannelInstructions()` hardcoded. Dare solo: `canale: whatsapp, linee guida: {da_settings}`
+- **`generate-email`**: Semplificare `buildStrategicAdvisor()` — dare contesto + KB, non istruzioni step-by-step
+- **`agent-execute`**: Spostare le 7 regole commerciali in `operative_prompts` o KB
 
-### Fase 4: Security + Hygiene (impatto: +3.000 pt)
-1. Sanitizzare chart.tsx
-2. Sostituire JSON.parse(JSON.stringify) → structuredClone
-3. Aggiungere JSDoc ai hooks
+### Step 4: Lasciare l'AI decidere la lingua
+- Eliminare la mappa `detectLanguage()` hardcoded
+- Passare solo `country_code` e `preferred_language` (se configurata) e lasciare che l'AI scelga
 
-### Fase 5: E2E Recovery (impatto: +2.500 pt)
-1. Unskippare i 5 spec rimanenti
-2. Validare login fixture in tutti gli spec
+### Step 5: Rendere `isHighStakes` configurabile
+- I criteri per high-stakes (rating, lead_status) dovrebbero essere in app_settings
+- L'AI/sistema legge i criteri a runtime
 
 ---
 
-## Stima Finale
+## Principio Guida
 
-| Fase | Impatto | Effort |
-|---|---|---|
-| Type Safety | +7.000 | Alto (146 file) |
-| Test Coverage | +9.000 | Alto (35+ file nuovi) |
-| Refactoring | +9.500 | Molto alto (8 mega-file) |
-| Security + Hygiene | +3.000 | Basso (5 fix) |
-| E2E | +2.500 | Medio (5 spec) |
-| **TOTALE** | **+~27.000** | — |
+```text
+PRIMA (ingabbiato):
+  "Scrivi in tono collaborativo. Usa Label + Mirroring. Max 100 parole."
 
-**Punteggio target: 100.000/100.000**
+DOPO (libero con guardrail):
+  "Canale: WhatsApp. Relazione: cold. KB disponibile. Dati partner: {...}. 
+   Guardrail: zero allucinazioni, no firma, rispetta la lingua del paese."
+```
+
+L'AI riceve DATI + CONTESTO + GUARDRAIL minimi, e decide autonomamente strategia, tono, lunghezza e tecniche.
+
+---
+
+## Stima
+- ~8 file da modificare
+- ~400 righe di prompt hardcoded da sostituire con caricamento da DB
+- 1 migrazione DB per `ai_guardrails` o estensione `app_settings`
+- 1 nuovo file `_shared/textUtils.ts`
+
+Vuoi che proceda?
