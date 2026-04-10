@@ -1,15 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export interface ClientAssignment {
-  id: string;
-  source_id: string;
-  source_type: string;
-  agent_id: string;
-  manager_id: string | null;
-  assigned_at: string;
-  user_id: string;
-}
+type ClientAssignmentRow = Database["public"]["Tables"]["client_assignments"]["Row"];
+type ClientAssignmentInsert = Database["public"]["Tables"]["client_assignments"]["Insert"];
+
+export type ClientAssignment = ClientAssignmentRow;
 
 const QUERY_KEY = ["client-assignments"] as const;
 
@@ -21,11 +17,11 @@ export function useClientAssignments() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data, error } = await supabase
-        .from("client_assignments" as any)
+        .from("client_assignments")
         .select("*")
         .eq("user_id", user.id);
       if (error) throw error;
-      return (data ?? []) as unknown as ClientAssignment[];
+      return data ?? [];
     },
   });
 }
@@ -57,7 +53,7 @@ export function useAssignClient() {
 
       // Check if already assigned
       const { data: existing } = await supabase
-        .from("client_assignments" as any)
+        .from("client_assignments")
         .select("id")
         .eq("source_id", params.sourceId)
         .eq("user_id", user.id)
@@ -66,14 +62,14 @@ export function useAssignClient() {
       if (existing) return existing; // already assigned
 
       const { data, error } = await supabase
-        .from("client_assignments" as any)
+        .from("client_assignments")
         .insert({
           source_id: params.sourceId,
           source_type: params.sourceType,
           agent_id: params.agentId,
           manager_id: params.managerId || null,
           user_id: user.id,
-        } as any)
+        } satisfies ClientAssignmentInsert)
         .select()
         .single();
       if (error) throw error;
@@ -92,12 +88,12 @@ export function useAgentClients(agentId: string | undefined) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data, error } = await supabase
-        .from("client_assignments" as any)
+        .from("client_assignments")
         .select("*")
         .eq("agent_id", agentId!)
         .eq("user_id", user.id);
       if (error) throw error;
-      return (data ?? []) as unknown as ClientAssignment[];
+      return data ?? [];
     },
   });
 }

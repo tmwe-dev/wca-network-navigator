@@ -1,25 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useEmailCampaignQueue");
 
-export interface QueueItem {
-  id: string;
-  draft_id: string;
-  partner_id: string;
-  recipient_email: string;
-  recipient_name: string | null;
-  subject: string;
-  status: string;
-  error_message: string | null;
-  sent_at: string | null;
-  position: number;
-  created_at: string;
-}
+type QueueRow = Database["public"]["Tables"]["email_campaign_queue"]["Row"];
+type QueueInsert = Database["public"]["Tables"]["email_campaign_queue"]["Insert"];
+
+export type QueueItem = QueueRow;
 
 export interface QueueStats {
   total: number;
@@ -38,12 +30,12 @@ export function useEmailCampaignQueue(draftId: string | null) {
     queryFn: async () => {
       if (!draftId) return [];
       const { data, error } = await supabase
-        .from("email_campaign_queue" as any)
+        .from("email_campaign_queue")
         .select("*")
         .eq("draft_id", draftId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data || []) as unknown as QueueItem[];
+      return data ?? [];
     },
     enabled: !!draftId,
     refetchInterval: false,
@@ -87,7 +79,7 @@ export function useEnqueueCampaign() {
       delaySeconds: number;
     }) => {
       // Insert queue items
-      const rows = params.recipients.map((r, i) => ({
+      const rows: QueueInsert[] = params.recipients.map((r, i) => ({
         draft_id: params.draftId,
         partner_id: r.partner_id,
         recipient_email: r.email,
@@ -101,18 +93,18 @@ export function useEnqueueCampaign() {
       // Insert in batches of 100
       for (let i = 0; i < rows.length; i += 100) {
         const batch = rows.slice(i, i + 100);
-        const { error } = await supabase.from("email_campaign_queue" as any).insert(batch as any);
+        const { error } = await supabase.from("email_campaign_queue").insert(batch);
         if (error) throw error;
       }
 
       // Update draft
-      await supabase.from("email_drafts" as any).update({
+      await supabase.from("email_drafts").update({
         queue_status: "idle",
         queue_delay_seconds: params.delaySeconds,
         total_count: params.recipients.length,
         sent_count: 0,
         status: "queued",
-      } as any).eq("id", params.draftId);
+      }).eq("id", params.draftId);
 
       return { queued: rows.length };
     },
@@ -149,11 +141,11 @@ export function useProcessQueue() {
 
         // Check if paused
         const { data: draft } = await supabase
-          .from("email_drafts" as any)
+          .from("email_drafts")
           .select("queue_status")
           .eq("id", draftId)
           .single();
-        if ((draft as any)?.queue_status === "paused" || (draft as any)?.queue_status === "cancelled") {
+        if (draft?.queue_status === "paused" || draft?.queue_status === "cancelled") {
           break;
         }
 
