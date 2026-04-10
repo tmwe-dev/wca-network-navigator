@@ -7,7 +7,7 @@ type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 type Quality = "fast" | "standard" | "premium";
 
 /** Contextual KB injection for outreach */
-async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel): Promise<{ text: string; sections: string[] }> {
+async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel, userId: string): Promise<{ text: string; sections: string[] }> {
   const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
   
   // Select categories based on channel — using ACTUAL DB categories
@@ -21,6 +21,7 @@ async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channe
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
+    .eq("user_id", userId)
     .eq("is_active", true)
     .in("category", categories)
     .order("priority", { ascending: false })
@@ -394,10 +395,11 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
 
     // ─── End Recipient Intelligence ───
 
-    // Fetch AI settings
+    // Fetch AI settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", userId)
       .like("key", "ai_%");
 
     const settings: Record<string, string> = {};
@@ -413,7 +415,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
     // Sales KB — contextual injection from kb_entries
-    const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch);
+    const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch, userId);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
@@ -490,7 +492,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
     const model = getModel(quality);
 
     const result = await aiChat({
-      models: [model, "openai/gpt-4o-mini"],
+      models: [model, "openai/gpt-5-mini"],
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

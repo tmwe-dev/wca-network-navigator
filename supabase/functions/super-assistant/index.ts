@@ -73,6 +73,7 @@ serve(async (req) => {
     const { data: aiSettings } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", userId)
       .like("key", "ai_%");
 
     if (aiSettings?.length) {
@@ -112,6 +113,7 @@ serve(async (req) => {
         supabase
           .from("kb_entries")
           .select("title, content, category, tags")
+          .eq("user_id", userId)
           .eq("is_active", true)
           .gte("priority", 7)
           .order("priority", { ascending: false })

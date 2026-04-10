@@ -3105,11 +3105,13 @@ async function consumeCredits(userId: string, usage: { prompt_tokens?: number; c
 // LOAD USER PROFILE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadUserProfile(): Promise<string> {
-  const { data } = await supabase
+async function loadUserProfile(userId?: string): Promise<string> {
+  let query = supabase
     .from("app_settings")
     .select("key, value")
     .like("key", "ai_%");
+  if (userId) query = query.eq("user_id", userId);
+  const { data } = await query;
   if (!data?.length) return "";
 
   const settings: Record<string, string> = {};
@@ -3168,7 +3170,7 @@ async function loadMissionHistory(userId: string): Promise<string> {
 // LOAD KB ENTRIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadKBContext(query?: string): Promise<string> {
+async function loadKBContext(query?: string, userId?: string): Promise<string> {
   // ── Wave3 RAG: se c'è una query, prova retrieval semantico via embeddings ──
   if (query && query.trim().length >= 8) {
     try {
@@ -3195,6 +3197,7 @@ async function loadKBContext(query?: string): Promise<string> {
   const { data } = await supabase
     .from("kb_entries")
     .select("title, content, category, tags")
+    .eq("user_id", userId)
     .eq("is_active", true)
     .gte("priority", 5)
     .order("priority", { ascending: false })
@@ -3478,8 +3481,8 @@ Iniziato: ${(ws as any).started_at}`;
     // Load all context in parallel
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
       loadMemoryContext(userId),
-      loadUserProfile(),
-      loadKBContext(lastUserMsg),
+      loadUserProfile(userId),
+      loadKBContext(lastUserMsg, userId),
       loadOperativePrompts(userId),
       loadMissionHistory(userId),
     ]);

@@ -59,19 +59,38 @@ export async function checkSameLocationContacts(
 
   // Check activities — was a different contact at this partner emailed recently?
   const recentActs = actRes.data || [];
-  if (recentActs.length > 0) {
-    // If a different contact was emailed, block
+  if (recentActs.length > 0 && currentContactEmail) {
+    // Look up the contact_id for the current email to compare
+    const { data: currentContactRow } = await supabase
+      .from("partner_contacts")
+      .select("id")
+      .eq("partner_id", partnerId)
+      .ilike("email", currentContactEmail)
+      .limit(1)
+      .maybeSingle();
+    const currentContactId = currentContactRow?.id || null;
+
+    // Find if a DIFFERENT contact was emailed (same contact = follow-up = ok)
     const sentToOther = recentActs.find(a => {
-      // If we know the contact email, check to_address mismatch
-      return true; // any recent send to this partner counts
+      if (!a.selected_contact_id) return false; // no contact tracked, skip
+      if (currentContactId && a.selected_contact_id === currentContactId) return false; // same person
+      return true; // different person at same partner
     });
+
     if (sentToOther) {
+      // Fetch the name/email of the recently contacted person
+      const { data: recentContactRow } = await supabase
+        .from("partner_contacts")
+        .select("name, email")
+        .eq("id", sentToOther.selected_contact_id)
+        .maybeSingle();
+
       return {
         allowed: false,
-        reason: `Comunicazione già inviata a questo partner il ${sentToOther.sent_at?.slice(0, 10)}. Regola: una sola comunicazione per sede ogni 7 giorni.`,
+        reason: `Comunicazione già inviata a ${recentContactRow?.name || "un altro contatto"} di questo partner il ${sentToOther.sent_at?.slice(0, 10)}. Regola: una sola comunicazione per sede ogni 7 giorni.`,
         recentContact: {
-          name: "",
-          email: "",
+          name: recentContactRow?.name || "",
+          email: recentContactRow?.email || "",
           sent_at: sentToOther.sent_at || "",
         },
       };

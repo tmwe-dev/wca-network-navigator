@@ -121,10 +121,24 @@ Deno.serve(async (req) => {
       matched_count: matchCount,
     });
 
-    // 8. Update last updated date
-    await supabase
+    // 8. Update last updated date (global setting — no specific user)
+    // Use a system-level user_id placeholder for cron-based operations
+    // Find the first user who has wca_session_cookie configured
+    const { data: cookieOwner } = await supabase
       .from("app_settings")
-      .upsert({ key: "blacklist_last_updated", value: new Date().toISOString() }, { onConflict: "key" });
+      .select("user_id")
+      .eq("key", "wca_session_cookie")
+      .limit(1)
+      .maybeSingle();
+    const blacklistUserId = cookieOwner?.user_id || settings?.[0]?.user_id;
+    if (blacklistUserId) {
+      await supabase
+        .from("app_settings")
+        .upsert(
+          { key: "blacklist_last_updated", value: new Date().toISOString(), user_id: blacklistUserId },
+          { onConflict: "user_id,key" }
+        );
+    }
 
     return new Response(
       JSON.stringify({ success: true, entries_count: entries.length, matched_count: matchCount }),

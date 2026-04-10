@@ -4,10 +4,11 @@ import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 /** Fetch KB entries optimized for email improvement — focus on style and techniques */
-async function fetchKbEntriesForImprove(supabase: any): Promise<{ text: string; sections: string[] }> {
+async function fetchKbEntriesForImprove(supabase: any, userId: string): Promise<{ text: string; sections: string[] }> {
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
+    .eq("user_id", userId)
     .eq("is_active", true)
     .in("category", ["regole_sistema", "struttura_email", "chris_voss", "negoziazione", "hook", "persuasione", "tono", "errori"])
     .gte("priority", 6)
@@ -77,10 +78,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Fetch user settings (profile, KB, sales techniques)
+    // Fetch user settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", userId)
       .like("key", "ai_%");
 
     const settings: Record<string, string> = {};
@@ -90,7 +92,7 @@ serve(async (req) => {
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
 
     // Use granular kb_entries first, fallback to legacy monolithic
-    const kbResult = await fetchKbEntriesForImprove(supabase);
+    const kbResult = await fetchKbEntriesForImprove(supabase, userId);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSliceLegacy(fullSalesKB);
 
@@ -142,7 +144,7 @@ Corpo:
 ${html_body}`;
 
     const result = await aiChat({
-      models: ["google/gemini-3-flash-preview", "openai/gpt-4o-mini"],
+      models: ["google/gemini-3-flash-preview", "openai/gpt-5-mini"],
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
