@@ -182,6 +182,13 @@ serve(async (req) => {
     const workEndHour = parseInt(cfg["agent_work_end_hour"] || String(DEFAULT_WORK_END_HOUR), 10);
     const forceApproval = cfg["agent_require_approval"] === "true";
 
+    // Build configurable high-stakes criteria
+    const highStakesCriteria: HighStakesCriteria = {
+      statuses: cfg["high_stakes_statuses"] ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.statuses,
+      sources: cfg["high_stakes_sources"] ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.sources,
+      min_rating: parseInt(cfg["high_stakes_min_rating"] || String(DEFAULT_HIGH_STAKES.min_rating), 10),
+    };
+
     // Work-hours check (CET timezone)
     if (isOutsideWorkHours(workStartHour, workEndHour)) {
       return new Response(JSON.stringify({ message: `Outside work hours (CET ${workStartHour}:00-${workEndHour}:00)`, skipped: true }), {
