@@ -11,22 +11,30 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const BUDGET_PER_AGENT = 10;
-const DELAY_BETWEEN_AGENTS_MS = 3000;
-const CYCLE_LOOKBACK_MINUTES = 12; // slightly more than 10min interval
+// Defaults — overridden by app_settings at runtime
+const DEFAULT_BUDGET_PER_AGENT = 10;
+const DEFAULT_CYCLE_LOOKBACK_MINUTES = 12;
+const DEFAULT_WORK_START_HOUR = 6;
+const DEFAULT_WORK_END_HOUR = 24; // midnight
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
-function isHighStakes(item: any): boolean {
-  if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
-  if (item.source === "ex_client") return true;
-  if (item.rating && item.rating >= 4) return true;
-  return false;
+function getCETHour(): number {
+  // CET = UTC+1, CEST = UTC+2. Use Intl to get the real Europe/Rome hour.
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Rome",
+    hour: "numeric",
+    hour12: false,
+  });
+  return parseInt(formatter.format(now), 10);
 }
 
-function isNightTime(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 0 && hour < 6;
+function isOutsideWorkHours(startHour: number, endHour: number): boolean {
+  const hour = getCETHour();
+  // endHour=24 means midnight, so hour < startHour means too early
+  if (endHour <= startHour) return false; // misconfigured → never pause
+  return hour < startHour || hour >= endHour;
 }
 
 async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
