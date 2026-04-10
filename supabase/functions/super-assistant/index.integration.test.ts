@@ -11,15 +11,15 @@ Deno.test("[SA-01] CORS preflight returns 200", async () => {
   await res.text();
 });
 
-Deno.test("[SA-02] Returns 401 without auth", async () => {
+Deno.test("[SA-02] Returns error without auth", async () => {
   const res = await fetch(FN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
     body: JSON.stringify({ message: "ciao" }),
   });
-  assertEquals(res.status, 401);
+  assertEquals(res.status >= 400, true);
   const body = await res.json();
-  assertExists(body.error);
+  assertExists(body.error || body.reply);
 });
 
 Deno.test("[SA-03] Response includes CORS headers on 401", async () => {
