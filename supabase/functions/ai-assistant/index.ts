@@ -2765,11 +2765,33 @@ async function executeSaveKbRule(args: Record<string, unknown>, userId: string) 
     console.error("save_kb_rule error:", error);
     return { error: error.message };
   }
+
+  // Auto-embed: generate embedding immediately after insert
+  let embeddingStatus = "pending";
+  try {
+    const { embedOne, DEFAULT_EMBEDDING_MODEL } = await import("../_shared/embeddings.ts");
+    const textToEmbed = `${chapter ? `[${chapter}] ` : ""}${title}\n${content}`.slice(0, 8000);
+    const vector = await embedOne(textToEmbed, { timeoutMs: 15000 });
+    const { error: embedErr } = await supabase
+      .from("kb_entries")
+      .update({
+        embedding: vector,
+        embedding_model: DEFAULT_EMBEDDING_MODEL,
+        embedding_updated_at: new Date().toISOString(),
+      })
+      .eq("id", data?.id);
+    embeddingStatus = embedErr ? "failed" : "done";
+    if (embedErr) console.error("auto-embed kb error:", embedErr.message);
+  } catch (e) {
+    console.error("auto-embed kb exception:", e);
+    embeddingStatus = "failed";
+  }
+
   return {
     success: true,
     rule_id: data?.id,
-    message: `Regola "${title}" salvata in KB (categoria=${category}, priority=${priority})`,
-    needs_embedding: true,
+    message: `Regola "${title}" salvata in KB (categoria=${category}, priority=${priority}). Embedding: ${embeddingStatus}`,
+    embedding_status: embeddingStatus,
   };
 }
 
