@@ -233,12 +233,12 @@ export function useHoldingTimeline(item: HoldingItem | null) {
         );
       } else if (item.source === "prospect") {
         const { data: pInts } = await supabase
-          .from("prospect_interactions" as any)
+          .from("prospect_interactions")
           .select("id, created_at, interaction_type, title, description, outcome")
           .eq("prospect_id", item.id)
           .order("created_at", { ascending: false })
           .limit(50);
-        ((pInts as any[]) || []).forEach((i) =>
+        (pInts || []).forEach((i) =>
           entries.push({
             id: i.id,
             date: i.created_at,
