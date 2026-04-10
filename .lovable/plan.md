@@ -1,47 +1,24 @@
 
 
-## Piano di fix: Circuito — selezione messaggi e feedback utente
+## Fix: Autocompilazione credenziali nel login
 
 ### Problema
-Quando l'utente seleziona un messaggio nel Circuito, il pannello destro non si aggiorna perché:
-1. `useHoldingStrategy.analyze()` fallisce silenziosamente se non trova un agente attivo
-2. Non c'è feedback di errore — il pannello resta su "Seleziona un messaggio"
-3. Possibili messaggi duplicati da import IMAP
+Gli input del form di login in `Auth.tsx` non hanno gli attributi `name` e `autoComplete`, quindi il browser non offre di salvare o compilare automaticamente le credenziali. Combinato con il fatto che la preview perde il localStorage ad ogni riavvio del sandbox, l'utente deve ridigitare email e password ogni volta.
 
-### Modifiche previste
+### Cosa faremo
 
-**1. Fix feedback errore in `useHoldingStrategy.ts`**
-- Aggiungere uno stato `error` al hook
-- Quando non si trova un agente attivo, settare un messaggio di errore visibile invece di fallire silenziosamente
-- Quando l'edge function fallisce, mostrare l'errore
-
-**2. Fix pannello destro in `HoldingPatternCommandCenter.tsx`**
-- Aggiungere un ramo per lo stato `error`: mostrare un messaggio chiaro ("Nessun agente AI configurato" o "Errore nell'analisi")
-- Mostrare comunque l'header del messaggio selezionato e il corpo originale, anche se l'AI non risponde — così l'utente vede che la selezione ha funzionato
-- Separare il concetto "messaggio selezionato" dal concetto "strategia disponibile"
-
-**3. Deduplicazione messaggi nel pannello sinistro**
-- In `useHoldingMessages.ts`, aggiungere un filtro di deduplicazione basato su `message_id_external` o combinazione `subject + from_address + email_date` per evitare di mostrare lo stesso messaggio due volte
-
-### Dettagli tecnici
-
-```text
-useHoldingStrategy.ts
-├── Aggiungere: error state (string | null)
-├── Se nessun agente → setError("Nessun agente AI attivo")
-└── Se edge function fallisce → setError(err.message)
-
-HoldingPatternCommandCenter.tsx
-├── Leggere error da useHoldingStrategy
-├── Mostrare corpo messaggio originale nel tab Risposta anche senza AI
-└── Mostrare errore con icona AlertTriangle se presente
-
-useHoldingMessages.ts
-└── Deduplicare per message_id_external prima del grouping
-```
+**File: `src/pages/Auth.tsx`**
+- Aggiungere `name="email"` e `autoComplete="email"` all'input email nel tab login
+- Aggiungere `name="password"` e `autoComplete="current-password"` all'input password nel tab login
+- Aggiungere `name="email"` e `autoComplete="email"` all'input email nel tab registrazione
+- Aggiungere `name="new-password"` e `autoComplete="new-password"` all'input password nel tab registrazione
+- Aggiungere `name="name"` e `autoComplete="name"` all'input nome nel tab registrazione
 
 ### Risultato
-- Il click sul messaggio mostra sempre il contenuto nel pannello destro
-- Se l'AI non è disponibile, l'utente vede un messaggio chiaro invece del silenzio
-- Niente più messaggi duplicati
+- Il browser proporrà di salvare le credenziali dopo il primo login riuscito
+- Ai login successivi, email e password verranno precompilati automaticamente
+- Funziona sia in preview sia sul sito pubblicato
+
+### Nota importante
+La sessione nella **preview** si perde comunque ad ogni riavvio del sandbox (limite infrastrutturale). Sul **sito pubblicato** la sessione persiste normalmente tra le visite.
 
