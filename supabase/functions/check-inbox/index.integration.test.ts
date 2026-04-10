@@ -38,5 +38,4 @@ Deno.test("[B05] Duplicate message_id check - error shape", async () => {
   const body = await res.json();
   // Should be 401 or error object
   assertExists(body.error || body.message);
-  await res.body?.cancel();
 });
