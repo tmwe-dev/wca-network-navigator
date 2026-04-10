@@ -1,92 +1,69 @@
 
 
-# Piano: Refactor GlobalFiltersContext da 33 setter a useReducer
+# AI Guardrails: CostTracker + ResponseValidator + invokeEdge Integration
 
-## Problema attuale
+## What Already Exists
+- **RateLimiter** (`src/lib/api/rateLimiter.ts`): Fully functional token-bucket + circuit breaker. 689 tests passing. No changes needed.
+- **Credits system**: DB-side `deduct_credits()` RPC + `useCredits` hook for balance display. Server handles actual billing.
+- **invokeEdge**: Central wrapper for all 56 call-sites to edge functions.
 
-`GlobalFiltersContext.tsx` (203 LOC) definisce 33 setter individuali con `useCallback`, ognuno identico nel pattern (`setFilters(p => ({ ...p, key: value }))`). Questo causa:
-- **Boilerplate**: 33 righe di `useCallback` + 33 righe nell'interfaccia + 33 righe nel Provider value
-- **Nessun batch update**: cambiare 3 filtri insieme causa 3 re-render separati
-- **Interfaccia fragile**: ogni nuovo filtro richiede modifiche in 4 punti (tipo, interfaccia, setter, provider value)
+## What's Missing
+1. **CostTracker** — Client-side session budget tracking. Prevents runaway AI calls before they hit the server. Tracks cumulative cost per session, warns at thresholds, blocks at hard limit.
+2. **ResponseValidator** — Validates AI response shapes before consumers process them. Catches malformed responses early with structured errors instead of runtime crashes.
+3. **Integration** — Wire both into `invokeEdge` so all 56 call-sites get protection automatically.
 
-## Soluzione
+## Plan
 
-Sostituire i 33 setter con un `useReducer` che espone:
-1. **`dispatch`** -- per azioni tipizzate (`SET_FIELD`, `RESET`, `BATCH`)
-2. **`setFilter(key, value)`** -- helper generico che wrappa dispatch
-3. **`batchUpdate(partial)`** -- per aggiornare N filtri in un singolo render
+### File 1: `src/lib/api/costTracker.ts` (~80 LOC)
 
-## Impatto sui consumer (18 file)
+Session-scoped AI cost tracker:
+- In-memory counter tracking `totalCredits`, `callCount`, `callsByFunction` per session
+- Configurable `softLimit` (warning toast) and `hardLimit` (blocks call, throws `BudgetExceededError`)
+- `trackCost(functionName, credits)` — called after successful AI responses
+- `checkBudget()` — called before AI calls, throws if hard limit exceeded
+- `getSessionStats()` — returns current session usage for UI/debugging
+- `resetSession()` — manual reset
+- Defaults: softLimit=500, hardLimit=1000 (configurable via `configureCostTracker`)
 
-L'API pubblica cambia da:
-```typescript
-// Prima
-const { setSearch, setSortBy, setCrmQuality } = useGlobalFilters();
-setSearch("test");
-setSortBy("date");
-```
+### File 2: `src/lib/api/responseValidator.ts` (~90 LOC)
 
-A:
-```typescript
-// Dopo
-const { setFilter, batchUpdate } = useGlobalFilters();
-setFilter("search", "test");
-// oppure batch:
-batchUpdate({ search: "test", sortBy: "date" });
-```
+Lightweight response shape validator:
+- `validateResponse<T>(data, schema): T` where schema defines required/optional fields and types
+- Schema format: `{ required: { field: "string" | "number" | "object" | "array" | "boolean" }, optional: { field: type } }`
+- Throws `ResponseValidationError` (extends `ApiError` with code `SCHEMA_MISMATCH`) on failure, listing which fields failed
+- Pre-built schemas exported for common AI responses: `outreachSchema`, `emailSchema`, `assistantSchema`
+- Keeps it simple — no Zod dependency in client bundle, just runtime type checks
 
-I 33 setter individuali vengono **mantenuti come alias retrocompatibili** generati automaticamente, quindi i 18 file consumer non devono cambiare immediatamente. Possono essere migrati gradualmente.
+### File 3: Update `src/lib/api/invokeEdge.ts` (~15 LOC added)
 
-## File da modificare
+Add guardrails to the central wrapper:
+- Before call: `checkBudget()` — blocks if session hard limit reached
+- After success: extract `_debug.credits_consumed` from response (if present) and call `trackCost()`
+- After success: if a validator schema is registered for the function name, run `validateResponse()`
+- New optional field in `InvokeEdgeOptions`: `responseSchema` for per-call validation
+- All existing 56 call-sites get budget protection automatically, zero changes needed
 
-### 1. `src/contexts/GlobalFiltersContext.tsx` (riscrittura completa)
+### File 4: `src/test/costTracker.test.ts` (~50 LOC)
 
-```text
-Prima (203 LOC)                    Dopo (~120 LOC)
-─────────────────                  ──────────────
-33 useCallback setter              1 useReducer
-33 righe interfaccia setter        3 metodi: setFilter, batchUpdate, resetFilters
-33 righe Provider value            alias retrocompatibili generati con loop
-```
+Tests: tracks credits, warns at soft limit, throws at hard limit, resets correctly.
 
-Struttura del reducer:
-```typescript
-type FilterAction =
-  | { type: "SET"; key: keyof GlobalFilterState; value: any }
-  | { type: "BATCH"; updates: Partial<GlobalFilterState> }
-  | { type: "RESET" };
+### File 5: `src/test/responseValidator.test.ts` (~60 LOC)
 
-function filterReducer(state: GlobalFilterState, action: FilterAction) {
-  switch (action.type) {
-    case "SET": return { ...state, [action.key]: action.value };
-    case "BATCH": return { ...state, ...action.updates };
-    case "RESET": return cloneDefaults();
-  }
-}
-```
+Tests: passes valid shapes, rejects missing required fields, handles optional fields, returns typed data.
 
-Alias retrocompatibili (generati, non scritti a mano):
-```typescript
-const setters = Object.fromEntries(
-  Object.keys(defaults).map(key => [
-    `set${key[0].toUpperCase()}${key.slice(1)}`,
-    (val: any) => dispatch({ type: "SET", key, value: val })
-  ])
-);
-```
+### File 6: Update `src/hooks/useCredits.ts` (~5 LOC added)
 
-### 2. Nessun altro file cambia
+Expose `sessionStats` from `getSessionStats()` alongside the DB balance, so the UI can show both server balance and session consumption.
 
-Grazie agli alias retrocompatibili, tutti i 18 file consumer (`ContactStream`, `CRMFiltersSection`, `NetworkFilterSlot`, ecc.) continuano a funzionare senza modifiche.
+## Technical Notes
 
-## Vantaggi
+- **Zero breaking changes**: invokeEdge signature is backward-compatible (new fields are optional)
+- **No new dependencies**: pure TypeScript runtime checks
+- **Session-scoped**: CostTracker resets on page reload (intentional — server is source of truth for billing)
+- **AI functions auto-tracked**: Any edge function returning `_debug.credits_consumed` gets tracked automatically
 
-- **-80 LOC** nel context (da 203 a ~120)
-- **Batch updates**: `batchUpdate({ search: "", quality: "all", sortBy: "name" })` = 1 render invece di 3
-- **Scalabilita**: aggiungere un nuovo filtro richiede solo 1 riga in `GlobalFilterState` e 1 in `defaults`
-- **Zero breaking changes**: alias garantiscono retrocompatibilita
-
-## Rischio
-
-Basso. Il reducer e un pattern React standard. Gli alias mantengono la firma identica. Il build e i test esistenti coprono la verifica.
+## Expected Impact
+- 2 new files (~170 LOC), 2 test files (~110 LOC), 2 minor updates
+- All 56 AI call-sites protected automatically via invokeEdge
+- Prevents runaway AI costs client-side before server even sees the request
 
