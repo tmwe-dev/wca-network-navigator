@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { MissionStepData } from "@/components/missions/MissionStepRenderer";
 import { extractWidgets, MissionWidgetRenderer, type WidgetConfig } from "@/components/missions/MissionChatWidgets";
+import MissionPlanReview from "@/components/missions/MissionPlanReview";
+import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("MissionBuilder");
@@ -31,6 +33,12 @@ export default function MissionBuilder() {
   const navigate = useNavigate();
   const [stepData, setStepData] = useState<MissionStepData>({ channel: "email", schedule: "immediate" });
   const [missionTitle, setMissionTitle] = useState("");
+
+  // Plan → Approve → Execute state
+  const [pendingPlan, setPendingPlan] = useState<MissionPlan | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [currentMissionId, setCurrentMissionId] = useState<string | undefined>();
+  const { createActions, approveAll, generateIdempotencyKey } = useMissionActions(currentMissionId);
 
   // Stats from DB
   const [countryStats, setCountryStats] = useState<{ code: string; name: string; count: number; withEmail: number }[]>([]);
