@@ -21,6 +21,7 @@ Deno.test("[MP-02] Returns valid response without auth", async () => {
   assertEquals(res.status >= 200, true);
   assertEquals(res.status < 500, true);
   await res.text();
+});
 
 Deno.test("[MP-03] Response includes CORS headers", async () => {
   const res = await fetch(FN_URL, {
