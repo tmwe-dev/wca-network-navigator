@@ -49,7 +49,7 @@ export default function EmailEditLearningDialog({
         level: 1,
         source: "email_edit_learning",
         importance: analysis.significance === "high" ? 8 : 5,
-        confidence: 60,
+        confidence: 0.6,
         tags: ["style_preference", "email"],
         context_page: "email-composer",
       });
