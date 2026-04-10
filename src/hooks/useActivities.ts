@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
+type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 
 export interface Activity {
   id: string;
@@ -60,7 +64,7 @@ export function useCreateActivities() {
       }));
       const { data, error } = await supabase
         .from("activities")
-        .insert(cleaned as any)
+        .insert(cleaned as ActivityInsert[])
         .select();
       if (error) throw error;
       return data;
@@ -78,7 +82,7 @@ export function useUpdateActivity() {
     mutationFn: async ({ id, ...updates }: { id: string; status?: "pending" | "in_progress" | "completed" | "cancelled"; completed_at?: string | null; selected_contact_id?: string | null }) => {
       const { error } = await supabase
         .from("activities")
-        .update(updates as any)
+        .update(updates as ActivityUpdate)
         .eq("id", id);
       if (error) throw error;
     },
@@ -189,7 +193,7 @@ export function useContactsForPartners(partnerIds: string[]) {
       
       // Batch .in() calls in chunks of 100 to avoid URL length limits
       const CHUNK = 100;
-      const allData: any[] = [];
+      const allData: PartnerContactRecord[] = [];
       for (let i = 0; i < partnerIds.length; i += CHUNK) {
         const chunk = partnerIds.slice(i, i + CHUNK);
         const { data, error } = await supabase

@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type DraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
+type DraftUpdate = Database["public"]["Tables"]["email_drafts"]["Update"];
 
 export interface EmailDraft {
   id: string;
@@ -38,13 +42,13 @@ export function useSaveEmailDraft() {
       if (draft.id) {
         const { error } = await supabase
           .from("email_drafts")
-          .update(draft as any)
+          .update(draft as DraftUpdate)
           .eq("id", draft.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("email_drafts")
-          .insert(draft as any)
+          .insert(draft as DraftInsert)
           .select()
           .single();
         if (error) throw error;

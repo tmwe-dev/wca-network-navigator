@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type CJInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
+type CJUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
 
 export interface CampaignJob {
   id: string;
@@ -64,7 +68,7 @@ export function useCreateCampaignJobs() {
     mutationFn: async (jobs: Omit<CampaignJob, "id" | "created_at" | "completed_at" | "status" | "assigned_to" | "notes">[]) => {
       const { data, error } = await supabase
         .from("campaign_jobs")
-        .insert(jobs as any)
+        .insert(jobs as CJInsert[])
         .select();
       if (error) throw error;
 
@@ -83,7 +87,7 @@ export function useUpdateCampaignJob() {
     mutationFn: async ({ id, ...updates }: Partial<CampaignJob> & { id: string }) => {
       const { error } = await supabase
         .from("campaign_jobs")
-        .update(updates as any)
+        .update(updates as CJUpdate)
         .eq("id", id);
       if (error) throw error;
     },

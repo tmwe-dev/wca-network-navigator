@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
+
+type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
 
 export interface KbEntry {
   id: string;
@@ -48,7 +51,7 @@ export function useUpsertKbEntry() {
         const { error } = await supabase.from("kb_entries").update(payload).eq("id", entry.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("kb_entries").insert(payload as any);
+        const { error } = await supabase.from("kb_entries").insert(payload as KbInsert);
         if (error) throw error;
       }
     },
@@ -91,7 +94,7 @@ export function useSeedKbFromLegacy() {
       // Insert in batches of 10 to avoid payload limits
       for (let i = 0; i < entries.length; i += 10) {
         const batch = entries.slice(i, i + 10);
-        const { error } = await supabase.from("kb_entries").insert(batch as any);
+        const { error } = await supabase.from("kb_entries").insert(batch as KbInsert[]);
         if (error) throw error;
       }
       return entries.length;
