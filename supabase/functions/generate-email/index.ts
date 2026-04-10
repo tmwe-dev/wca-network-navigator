@@ -745,8 +745,8 @@ ${settings.ai_style_instructions ? `- Istruzioni: ${settings.ai_style_instructio
 ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : ""}
 `;
 
-    // Auto-detect language from recipient's country code
-    const detected = detectLanguage(partner.country_code);
+    // Language hint (AI can override based on context)
+    const detected = getLanguageHint(partner.country_code);
     const effectiveLanguage = language || detected.language;
 
     const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
