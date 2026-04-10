@@ -46,10 +46,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Read SMTP settings from app_settings
+    // Read SMTP settings from app_settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
+      .eq("user_id", claimsData.claims.sub as string)
       .in("key", [
         "smtp_host", "smtp_port", "smtp_user", "smtp_password",
         "default_sender_email", "default_sender_name",
