@@ -19,6 +19,12 @@ export type EmailAttachment = {
   is_inline: boolean;
 };
 
+type MarkAsReadInput = {
+  id: string;
+  channel?: string | null;
+  user_id?: string | null;
+};
+
 export function useMessageAttachments(messageId: string | null) {
   return useQuery({
     queryKey: ["email-attachments", messageId],
@@ -57,26 +63,61 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (messageId: string) => {
-      const { error } = await supabase
+    mutationFn: async (input: string | MarkAsReadInput) => {
+      const messageId = typeof input === "string" ? input : input.id;
+      const messageChannel = typeof input === "string" ? null : (input.channel ?? null);
+      const messageUserId = typeof input === "string" ? null : (input.user_id ?? null);
+
+      const { data: updatedMessage, error } = await supabase
         .from("channel_messages")
         .update({ read_at: new Date().toISOString() })
-        .eq("id", messageId);
+        .eq("id", messageId)
+        .select("id, channel, user_id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!updatedMessage) {
+        log.warn("mark-as-read skipped: message not writable", {
+          messageId,
+          channel: messageChannel,
+          userId: messageUserId,
+        });
+        return;
+      }
+
+      const resolvedChannel = messageChannel ?? updatedMessage.channel ?? null;
+      const resolvedUserId = messageUserId ?? updatedMessage.user_id ?? null;
+
+      if (resolvedChannel !== "email") return;
 
       // Fire-and-forget: sync \Seen flag to IMAP server
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      if (projectId) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (supabaseUrl) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) return;
-          fetch(`https://${projectId}.supabase.co/functions/v1/mark-imap-seen`, {
+          if (resolvedUserId && resolvedUserId !== session.user.id) return;
+
+          void fetch(`${supabaseUrl}/functions/v1/mark-imap-seen`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({ message_id: messageId }),
-          }).catch((err) => log.warn("mark-imap-seen sync failed", { message: err instanceof Error ? err.message : String(err) }));
+          })
+            .then(async (response) => {
+              if (response.ok) return;
+              const body = await response.text().catch(() => "");
+              log.warn("mark-imap-seen sync failed", {
+                messageId,
+                status: response.status,
+                body: body || undefined,
+              });
+            })
+            .catch((err) => log.warn("mark-imap-seen sync failed", {
+              messageId,
+              message: err instanceof Error ? err.message : String(err),
+            }));
         });
       }
     },
