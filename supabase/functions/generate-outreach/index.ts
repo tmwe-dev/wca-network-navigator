@@ -421,8 +421,10 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
 
-    // Channel context
-    const channelContext = getChannelContext(ch);
+    // Channel context — minimal, let AI decide style
+    const channelContext = `Canale: ${ch.toUpperCase()}`;
+    // Load commercial levers from settings (externalized)
+    const commercialLevers = settings.ai_commercial_levers || "";
 
     const senderContext = `
 MITTENTE (TU):
@@ -446,10 +448,8 @@ STILE:
 DESTINATARIO:
 - Azienda: ${cleanedCompany || company_name || "N/A"}
 - Paese: ${country_code || "N/A"}
-${recipientName ? `- Nome: ${recipientName} (IMPORTANTE: usa SOLO il nome di battesimo nel saluto)` : `- ATTENZIONE: nessun nome persona disponibile. Usa saluto generico ("Gentile responsabile" o equivalente).`}
+${recipientName ? `- Nome persona: ${recipientName}` : `- Nome persona: non disponibile`}
 ${contact_email ? `- Email: ${contact_email}` : ""}
-
-REGOLA: ${recipientName ? `Rivolgiti a ${recipientName}, MAI all'azienda nel saluto.` : `Usa saluto generico. MAI usare nomi di azienda nel saluto.`}
 `;
 
     // Recipient intelligence block for prompt
@@ -472,9 +472,7 @@ CONTESTO:
 GUARDRAIL:
 - Scrivi nella lingua del paese destinatario
 - Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti
-- Usa alias/nome breve nel saluto, mai nome completo
-- Includi una call-to-action
-- Adatta lunghezza e stile al canale`;
+- Usa alias/nome breve nel saluto, mai nome completo`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
@@ -486,10 +484,7 @@ ${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
-
-OBIETTIVO COMMERCIALE FINALE:
-Convertire il lead in cliente attivo. Leve: apertura account, tariffe privilegiate, semplificazione operativa.
-
+${commercialLevers ? `\nLEVE COMMERCIALI CONFIGURATE:\n${commercialLevers}\n` : ""}
 Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
     const model = getModel(quality);

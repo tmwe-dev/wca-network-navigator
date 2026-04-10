@@ -580,10 +580,10 @@ serve(async (req) => {
           if (bc.location) parts.push(`Luogo: ${bc.location}`);
           return parts.join(", ");
         }).join("\n");
-        metInPersonContext = `\nINCONTRO DI PERSONA — IMPORTANTE:
-Hai incontrato questa azienda di persona. Questo cambia il tono della comunicazione.
+        metInPersonContext = `\nINCONTRO DI PERSONA:
+Incontri registrati con questa azienda:
 ${encounters}
-ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di persona ("È stato un piacere incontrarvi a [evento]..."). NON trattare come un contatto freddo.\n`;
+`;
       }
     }
 
@@ -683,13 +683,11 @@ ${linkedinContext}`;
 
     const contactContext = contact ? `
 CONTATTO DESTINATARIO:
-${recipientName ? `- Nome da usare nel saluto: ${recipientName} (IMPORTANTE: usa SOLO questo nome, mai il nome completo con cognome)` : `- ATTENZIONE: il nome del contatto non è disponibile o è un titolo/ruolo aziendale. Usa "Gentile responsabile" o equivalente nella lingua dell'email.`}
+${recipientName ? `- Nome persona: ${recipientName}` : `- Nome persona: non disponibile`}
 - Ruolo: ${contact.title || "N/A"}
 - Email: ${contact.email || contactEmail}
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
-
-REGOLA ASSOLUTA: ${recipientName ? `Rivolgiti SEMPRE alla persona (${recipientName}), MAI all'azienda nel saluto.` : `Non hai un nome di persona valido. Usa un saluto generico come "Gentile responsabile" o equivalente. MAI usare nomi di ruoli/dipartimenti come se fossero persone.`} L'email è personale, diretta al contatto. Non scrivere mai "Cara azienda", "Gentile società", "Dear Company" o simili.
-` : `ATTENZIONE: Nessun contatto selezionato. Rivolgiti comunque in modo generico ma MAI usando "Cara/Dear" + nome azienda. Usa "Gentile responsabile" o equivalente nella lingua richiesta.`;
+` : `NOTA: Nessun contatto selezionato.`;
 
     // --- SIGNATURE BLOCK ---
     let signatureBlock = settings.ai_email_signature_block || "";
@@ -762,8 +760,7 @@ ${strategicAdvisor}
 ## Guardrail:
 - Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})
 - Usa alias/nome breve nel saluto, mai nome completo
-- Zero allucinazioni: usa SOLO dati forniti
-- Includi una call-to-action`;
+- Zero allucinazioni: usa SOLO dati forniti`;
 
     const userPrompt = `${senderContext}
 
@@ -784,11 +781,6 @@ ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
 PROPOSTA DI BASE:
 ${base_proposal || "Proposta generica di collaborazione nel settore freight forwarding"}
-
-OBIETTIVO COMMERCIALE FINALE:
-L'obiettivo ultimo di ogni comunicazione è CONVERTIRE il lead in cliente attivo.
-Le leve principali sono: invitare ad usare i nostri sistemi, proporre apertura account,
-evidenziare tariffe privilegiate, mostrare come semplifichiamo tempi e operatività.
 
 ISTRUZIONI DAL TIPO EMAIL SELEZIONATO:
 ${goal || "Nessuna istruzione specifica — genera un'email professionale basata sul goal e la proposta."}
