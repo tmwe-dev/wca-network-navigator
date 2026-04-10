@@ -148,9 +148,9 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
         message_id: msg.id,
         partner_id: msg.partner_id,
         channel: msg.channel,
-        auto_approved: !stakes,
+        auto_approved: !stakes && !forceApproval,
       } as any,
-      status: stakes ? "proposed" : "pending",
+      status: (stakes || forceApproval) ? "proposed" : "pending",
     });
     actionsCreated++;
   }
@@ -204,7 +204,7 @@ serve(async (req) => {
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
-      const screeningCount = await screenIncomingMessages(userId, agents);
+      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval);
       if (screeningCount > 0) {
         results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
         await sleep(DELAY_BETWEEN_AGENTS_MS);
