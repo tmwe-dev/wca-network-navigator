@@ -302,7 +302,7 @@ serve(async (req) => {
 
   // Build prompt
   const [voiceCtx, partnerSnippet] = await Promise.all([
-    loadVoiceContext(supabase),
+    loadVoiceContext(supabase, resolvedUserId),
     loadPartnerSnippet(supabase, turn.caller_context?.partner_id),
   ]);
   const systemPrompt = buildSystemPrompt(voiceCtx, partnerSnippet);
