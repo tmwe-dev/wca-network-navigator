@@ -3168,7 +3168,7 @@ async function loadMissionHistory(userId: string): Promise<string> {
 // LOAD KB ENTRIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function loadKBContext(query?: string): Promise<string> {
+async function loadKBContext(query?: string, userId?: string): Promise<string> {
   // ── Wave3 RAG: se c'è una query, prova retrieval semantico via embeddings ──
   if (query && query.trim().length >= 8) {
     try {
