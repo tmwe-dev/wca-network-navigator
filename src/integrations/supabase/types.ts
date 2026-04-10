@@ -661,6 +661,47 @@ export type Database = {
         }
         Relationships: []
       }
+      bridge_tokens: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          external_call_id: string | null
+          id: string
+          token_hash: string
+          used: boolean
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          external_call_id?: string | null
+          id?: string
+          token_hash: string
+          used?: boolean
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          external_call_id?: string | null
+          id?: string
+          token_hash?: string
+          used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bridge_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_cards: {
         Row: {
           company_name: string | null
