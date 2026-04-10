@@ -11,7 +11,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
-import { createElement, useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 export function ContactRecordDrawer() {
   const { isOpen, target, list, currentIndex, close, goNext, goPrev } = useContactDrawer();
@@ -41,12 +41,12 @@ export function ContactRecordDrawer() {
   };
 
   const ed = record?.enrichmentData as Record<string, unknown> | null | undefined;
-  const hasEnrichment = ed && (
+  const hasEnrichment = Boolean(ed && (
     ed.contact_profile ||
     ed.company_profile ||
     ed.linkedin_url ||
     ed.linkedin_profile_url
-  );
+  ));
 
   return (
     <AnimatePresence>
@@ -93,7 +93,7 @@ export function ContactRecordDrawer() {
                     />
 
                     {/* Communication actions */}
-                    {createElement(ContactRecordActions, { record })}
+                    {(<ContactRecordActions record={record} />) as ReactNode}
 
                     {/* Agent assignment */}
                     <ContactRecordAgent sourceId={record.sourceId} sourceType={record.sourceType} />
