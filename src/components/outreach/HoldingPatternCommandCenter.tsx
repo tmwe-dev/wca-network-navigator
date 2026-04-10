@@ -374,8 +374,17 @@ export function HoldingPatternCommandCenter() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground text-center py-8">Nessuna analisi disponibile</p>
-                )}
+                  <div className="space-y-3">
+                    {strategyError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="text-xs text-destructive">{strategyError}</p>
+                      </div>
+                    )}
+                    {!strategyError && (
+                      <p className="text-xs text-muted-foreground text-center py-8">Nessuna analisi disponibile</p>
+                    )}
+                  </div>
               </TabsContent>
             </Tabs>
           </>
