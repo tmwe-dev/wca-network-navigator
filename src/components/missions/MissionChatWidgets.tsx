@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MissionPlanReviewComponent from "./MissionPlanReview";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -304,9 +305,8 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
 
           case "plan_review":
             if (planReviewProps && onPlanApprove && onPlanCancel) {
-              const MissionPlanReview = require("./MissionPlanReview").default;
               return (
-                <MissionPlanReview
+                <MissionPlanReviewComponent
                   key={i}
                   plan={planReviewProps.plan}
                   visible={true}
