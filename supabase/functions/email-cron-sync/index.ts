@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const corsHeaders = {
 /**
  * Email Cron Sync — runs every 5 minutes via pg_cron.
  * Finds all users with IMAP sync state and calls check-inbox for each.
- * This ensures emails are downloaded even when no browser tab is open.
+ * Uses shared work-hours logic (CET timezone, reads from app_settings).
  */
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -24,13 +25,10 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    // Night pause check: skip between 00:00-06:00 UTC+1 (CET rough approximation)
-    // The main app handles local night pause, but server-side we use a broad window
-    const now = new Date();
-    const hour = now.getUTCHours();
-    // Skip 23:00-05:00 UTC (roughly midnight-6am CET)
-    if (hour >= 23 || hour < 5) {
-      return new Response(JSON.stringify({ message: "Night pause active, skipping" }), {
+    // Night pause check: use shared CET-based work-hours logic + app_settings
+    const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase);
+    if (isOutsideWorkHours(workStartHour, workEndHour)) {
+      return new Response(JSON.stringify({ message: `Night pause active (CET outside ${workStartHour}:00-${workEndHour}:00)` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
