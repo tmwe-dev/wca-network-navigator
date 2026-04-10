@@ -72,7 +72,7 @@ export function useMarkAsRead() {
         .from("channel_messages")
         .update({ read_at: new Date().toISOString() })
         .eq("id", messageId)
-        .select("id")
+        .select("id, channel, user_id")
         .maybeSingle();
 
       if (error) throw error;
@@ -85,14 +85,17 @@ export function useMarkAsRead() {
         return;
       }
 
-      if (messageChannel !== "email") return;
+      const resolvedChannel = messageChannel ?? updatedMessage.channel ?? null;
+      const resolvedUserId = messageUserId ?? updatedMessage.user_id ?? null;
+
+      if (resolvedChannel !== "email") return;
 
       // Fire-and-forget: sync \Seen flag to IMAP server
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (supabaseUrl) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) return;
-          if (messageUserId && messageUserId !== session.user.id) return;
+          if (resolvedUserId && resolvedUserId !== session.user.id) return;
 
           void fetch(`${supabaseUrl}/functions/v1/mark-imap-seen`, {
             method: "POST",
