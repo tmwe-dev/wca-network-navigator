@@ -318,8 +318,20 @@ export function HoldingPatternCommandCenter() {
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-xs text-muted-foreground">Seleziona un messaggio per generare la risposta AI</p>
+                  <div className="space-y-3">
+                    {strategyError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="text-xs text-destructive">{strategyError}</p>
+                      </div>
+                    )}
+                    {/* Always show original message body */}
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Messaggio originale</p>
+                      <div className="text-xs text-foreground/80 whitespace-pre-wrap bg-muted/10 rounded-lg p-3 border border-border/20 max-h-[300px] overflow-auto">
+                        {selectedMessage?.body_text || "Nessun contenuto disponibile"}
+                      </div>
+                    </div>
                   </div>
                 )}
               </TabsContent>
