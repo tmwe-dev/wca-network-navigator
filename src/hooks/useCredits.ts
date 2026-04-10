@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { getSessionStats, type SessionStats } from "@/lib/api/costTracker";
 
 /**
  * Refactored credits hook using React Query for caching and deduplication.
@@ -45,5 +46,6 @@ export function useCredits() {
     totalConsumed: data?.totalConsumed ?? 0,
     loading: isLoading,
     refetch: () => queryClient.invalidateQueries({ queryKey: ["user-credits"] }),
+    sessionStats: getSessionStats() as SessionStats,
   };
 }
