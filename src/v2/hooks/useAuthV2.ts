@@ -48,17 +48,17 @@ export type UseAuthV2Return = AuthState & AuthActions;
 async function loadProfile(userId: string): Promise<UserProfile | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, email")
-    .eq("id", userId)
+    .select("id, display_name, user_id")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return null;
 
   return {
     userId,
-    email: (data as Record<string, unknown>).email as string ?? "",
-    displayName: (data as Record<string, unknown>).display_name as string | null,
-    avatarUrl: (data as Record<string, unknown>).avatar_url as string | null,
+    email: "",
+    displayName: data.display_name,
+    avatarUrl: null,
   };
 }
 
