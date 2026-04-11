@@ -84,7 +84,6 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
       }));
 
       await createActivities(activityInserts);
-      if (error) throw error;
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();

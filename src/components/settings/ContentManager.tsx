@@ -333,7 +333,6 @@ export default function ContentManager() {
         await createWorkspaceDoc({
           file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
         });
-        if (dbErr) throw dbErr;
       }
       toast.success(`${files.length} documento/i caricato/i`);
       qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });

@@ -71,7 +71,6 @@ export function ContactActionMenu({ contact, children }: Props) {
       ...extra,
     } as any);
 
-    if (error) {
       toast.error("Errore creazione attività");
       return;
     }

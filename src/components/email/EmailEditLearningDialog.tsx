@@ -55,7 +55,6 @@ export default function EmailEditLearningDialog({
         context_page: "email-composer",
       });
 
-      if (error) throw error;
       toast.success("Preferenza di stile salvata nella memoria AI");
       log.info("Style preference saved", { memory: analysis.suggested_memory });
     } catch (err) {

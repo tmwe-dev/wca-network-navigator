@@ -179,7 +179,6 @@ export function PartnerListPanel({
       }
       if (items.length > 0) {
         await insertCockpitQueueItems(items);
-        if (error) { toast.error("Errore: " + error.message); return; }
         // Store for auto-preselection in Cockpit
         const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
         addCockpitPreselection(items.map(i => i.source_id));
@@ -208,7 +207,6 @@ export function PartnerListPanel({
         };
       });
       await createActivities(inserts);
-      if (error) { toast.error("Errore: " + error.message); return; }
       toast.success(`${inserts.length} partner inviati a Workspace`);
     }
     setSelectedIds(new Set());

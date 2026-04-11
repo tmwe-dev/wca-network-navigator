@@ -73,7 +73,6 @@ export function UnifiedActionBar({
         subject: noteText.trim().slice(0, 80),
         notes: noteText.trim(),
       });
-      if (error) throw error;
       toast.success("Nota salvata");
       setNoteText("");
       setNoteDialogOpen(false);

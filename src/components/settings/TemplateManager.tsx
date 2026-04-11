@@ -54,7 +54,6 @@ export default function TemplateManager() {
         .from("email_templates")
         .select("*")
         .order("created_at", { ascending: false });
-      if (error) throw error;
       return data || [];
     },
   });
@@ -100,7 +99,6 @@ export default function TemplateManager() {
           file_type: file.type || "application/octet-stream",
           category: uploadCategory,
         } as any);
-        if (dbError) throw dbError;
       }
       toast.success(`${files.length} file caricati`);
       qc.invalidateQueries({ queryKey: ["email-templates"] });

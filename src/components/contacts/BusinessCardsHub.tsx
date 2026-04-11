@@ -112,7 +112,6 @@ export default function BusinessCardsHub() {
     if (!ids.length) return;
     if (!confirm(`Eliminare ${ids.length} biglietti da visita?`)) return;
     await deleteBusinessCards(ids);
-    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
     toast({ title: `✅ ${ids.length} biglietti eliminati` });
     setSelectedIds(new Set());
     refetch();
