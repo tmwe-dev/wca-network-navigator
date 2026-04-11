@@ -258,9 +258,7 @@ export default function EnrichmentSettings() {
 
       const fetchPartnerBatch = async (ids: string[]) => {
         const { getPartnersByIds } = await import("@/data/partners");
-        const all = await getPartnersByIds(ids, "id, company_name, email, website");
-        {
-        return all;
+        return await getPartnersByIds(ids, "id, company_name, email, website");
       };
       const fetchContactBatch = async (ids: string[]) => {
         const { getContactsByIds } = await import("@/data/contacts");
