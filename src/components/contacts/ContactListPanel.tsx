@@ -12,6 +12,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "@/hooks/useInView";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { supabase } from "@/integrations/supabase/client";
+import { rpcMatchContactsToWca } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -398,12 +399,15 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
           } : undefined}
           onWcaMatch={async () => {
-            const { data, error } = await supabase.rpc("match_contacts_to_wca");
-            if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
-            toast({ title: `✅ WCA Match completato — ${data?.length || 0} associazioni trovate` });
-            selection.clear();
-            qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-            qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+            try {
+              const data = await rpcMatchContactsToWca();
+              toast({ title: `✅ WCA Match completato — ${(data as any)?.matched_count || 0} associazioni trovate` });
+              selection.clear();
+              qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+              qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+            } catch (e: any) {
+              toast({ title: "Errore", description: e.message, variant: "destructive" });
+            }
           }}
         />
       )}

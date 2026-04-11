@@ -224,6 +224,24 @@ export async function getDistinctCountries() {
   return [...unique];
 }
 
+export async function getCountryCodesBatched(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  let from = 0;
+  const batchSize = 1000;
+  while (true) {
+    const { data } = await supabase
+      .from("partners")
+      .select("country_code")
+      .not("country_code", "is", null)
+      .range(from, from + batchSize - 1);
+    if (!data || data.length === 0) break;
+    data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+  return counts;
+}
+
 /** Search partners by name (for command palette, autocomplete) */
 export async function searchPartners(term: string, limit = 10) {
   const s = sanitizeSearchTerm(term);
@@ -385,6 +403,38 @@ export async function getPartnersByLeadStatus(statuses: string[], select = "id")
     .in("lead_status", statuses);
   if (error) throw error;
   return data ?? [];
+}
+
+export async function findPartnerByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
+  let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
+  if (filters.country) q = q.eq("country_code", filters.country);
+  if (filters.type) q = q.eq("partner_type", filters.type as any);
+  if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
+  const { data, error } = await q.limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getPartnerWebsite(id: string) {
+  const { data, error } = await supabase.from("partners").select("id, website").eq("id", id).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
+  const { error } = await (supabase as any).from(table).update({ lead_status: status }).eq("id", id);
+  if (error) throw error;
 }
 
 // ─── Cache Invalidation ────────────────────────────────

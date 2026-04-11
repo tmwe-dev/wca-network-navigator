@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { supabase } from "@/integrations/supabase/client";
+import { updateLeadStatus } from "@/data/partners";
+import { updateProspectLeadStatus } from "@/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -71,11 +73,13 @@ export function HoldingPatternTab() {
 
   const handleChangeStatus = async (item: HoldingItem, newStatus: LeadStatus) => {
     try {
-      const table =
-        item.source === "partner" ? "partners" :
-        item.source === "prospect" ? ("prospects" as any) :
-        "imported_contacts";
-      await supabase.from(table).update({ lead_status: newStatus } as any).eq("id", item.id);
+      if (item.source === "partner") {
+        await updateLeadStatus("partners", item.id, newStatus);
+      } else if (item.source === "prospect") {
+        await updateProspectLeadStatus(item.id, newStatus);
+      } else {
+        await updateLeadStatus("imported_contacts", item.id, newStatus);
+      }
       queryClient.invalidateQueries({ queryKey: ["holding-pattern-list"] });
       toast.success("Stato aggiornato");
     } catch (e) {

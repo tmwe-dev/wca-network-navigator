@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
+import { countTableRows, countViewRows, rpcCall } from "@/data/rpc";
 import { countPartnersWithoutCountry, countActivePartners } from "@/data/partners";
 import {
   CheckCircle2, XCircle, Loader2, Play, RotateCcw,
@@ -157,9 +158,8 @@ export default function Diagnostics() {
       upsert({ id, name: table, category: "Database Tables", status: "running" });
       try {
         const ms = await timed(async () => {
-          const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
-          if (error) throw error;
-          upsert({ id, name: table, category: "Database Tables", status: "pass", message: `${count ?? 0} righe` });
+          const count = await countTableRows(table);
+          upsert({ id, name: table, category: "Database Tables", status: "pass", message: `${count} righe` });
         });
         setResults(prev => prev.map(r => r.id === id ? { ...r, durationMs: ms } : r));
       } catch (e: any) {
@@ -181,8 +181,7 @@ export default function Diagnostics() {
           continue;
         }
         const ms = await timed(async () => {
-          const { error } = await supabase.rpc(fn as any);
-          if (error) throw error;
+          await rpcCall(fn);
         });
         upsert({ id, name: fn, category: "RPC Functions", status: "pass", durationMs: ms });
       } catch (e: any) {
@@ -285,7 +284,7 @@ export default function Diagnostics() {
     upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "running" });
     try {
       const totalPartners = await countActivePartners();
-      const { count: noContacts } = await supabase.from("partners_no_contacts").select("*", { count: "exact", head: true }).eq("resolved", false);
+      const noContacts = await countViewRows("partners_no_contacts", { column: "resolved", value: false });
       const pct = totalPartners ? Math.round(((totalPartners - (noContacts ?? 0)) / totalPartners) * 100) : 0;
       upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: pct > 50 ? "pass" : "warn", message: `${pct}% con contatti (${noContacts ?? 0} senza)` });
     } catch (e: unknown) {

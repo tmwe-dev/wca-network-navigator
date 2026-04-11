@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { getContactsByIds } from "@/data/contacts";
+import { getContactsByIds, fetchGroupContactIds } from "@/data/contacts";
 import { insertCampaignJobs } from "@/data/campaignJobs";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import { useSelection } from "@/hooks/useSelection";
 import type { AICommand } from "@/components/contacts/ContactAIBar";
 import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
-import { supabase } from "@/integrations/supabase/client";
 import { findContacts } from "@/data/contacts";
 
 interface Deps {
@@ -207,21 +206,5 @@ async function createCampaignJobsAction(contactIds: string[], selection: ReturnT
   selection.clear(); setSelectedGroups(new Set());
   navigate("/campaign-jobs");
 }
-
-export async function fetchGroupContactIds(groupType: string, groupKey: string, holdingPattern?: "out" | "in" | "all"): Promise<string[]> {
-  // Use supabase directly for complex OR filter
-  let q = supabase.from("imported_contacts").select("id").or("company_name.not.is.null,name.not.is.null,email.not.is.null");
-  if (holdingPattern === "out") q = q.eq("interaction_count", 0);
-  else if (holdingPattern === "in") q = q.gt("interaction_count", 0);
-  switch (groupType) {
-    case "country": groupKey === "??" || groupKey === "Sconosciuto" ? q = q.is("country", null) : q = q.eq("country", groupKey); break;
-    case "origin": groupKey === "Sconosciuta" ? q = q.is("origin", null) : q = q.eq("origin", groupKey); break;
-    case "status": q = q.eq("lead_status", groupKey); break;
-    case "date":
-      if (groupKey === "nd") q = q.is("created_at", null);
-      else { const [y, m] = groupKey.split("-").map(Number); q = q.gte("created_at", `${groupKey}-01T00:00:00Z`).lt("created_at", new Date(y, m, 1).toISOString()); }
-      break;
-  }
-  const { data } = await q.limit(1000);
-  return (data ?? []).map((r: any) => r.id);
-}
+// Re-export from DAL
+export { fetchGroupContactIds } from "@/data/contacts";

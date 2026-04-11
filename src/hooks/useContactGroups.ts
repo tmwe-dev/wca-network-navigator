@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { rpcGetContactGroupCounts } from "@/data/rpc";
 
 export interface ContactGroupCount {
   group_type: string;
@@ -19,8 +20,8 @@ export function useContactGroupCounts() {
   return useQuery({
     queryKey: GROUP_COUNTS_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_contact_group_counts");
-      if (error) throw error;
+      const data = await rpcGetContactGroupCounts();
+      return data as ContactGroupCount[];
       return (data ?? []) as ContactGroupCount[];
     },
     staleTime: 30_000,

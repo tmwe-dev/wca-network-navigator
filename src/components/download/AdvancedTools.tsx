@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findPartnersForEnrichment, getPartnerWebsite } from "@/data/partners";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
@@ -71,12 +72,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
   const { data: partners, isLoading } = useQuery({
     queryKey: ["enrichment-partners", filterCountry, filterType, onlyNotEnriched],
     queryFn: async () => {
-      let query = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
-      if (filterCountry) query = query.eq("country_code", filterCountry);
-      if (filterType) query = query.eq("partner_type", filterType as any);
-      if (onlyNotEnriched) query = query.is("enriched_at", null);
-      const { data, error } = await query.limit(500);
-      if (error) throw error;
+      const data = await findPartnersForEnrichment({ country: filterCountry, type: filterType, onlyNotEnriched }, 500);
       return data as EnrichPartner[];
     },
   });
@@ -88,7 +84,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
     for (let i = 0; i < ids.length; i++) {
       setCurrent(i + 1);
       try {
-        const { data: partner } = await supabase.from("partners").select("id, website").eq("id", ids[i]).single();
+        const partner = await getPartnerWebsite(ids[i]);
         if (partner?.website) {
           let enrichBody: Record<string, any> = { partnerId: partner.id };
 

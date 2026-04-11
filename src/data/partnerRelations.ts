@@ -11,6 +11,17 @@ export async function findPartnerContacts(partnerId: string, select = "id, name,
   return (data ?? []) as any[];
 }
 
+export async function findPartnerContactByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("partner_contacts")
+    .select("partner_id, name, contact_alias, email, partners(company_name, company_alias, country_code, city)")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function insertPartnerContact(contact: Record<string, unknown>) {
   const { data, error } = await supabase.from("partner_contacts").insert(contact as any).select().single();
   if (error) throw error;

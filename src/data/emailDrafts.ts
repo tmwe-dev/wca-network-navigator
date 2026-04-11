@@ -13,3 +13,9 @@ export async function insertEmailDraft(draft: Record<string, unknown>) {
   const { error } = await supabase.from("email_drafts" as any).insert(draft as any);
   if (error) throw error;
 }
+
+export async function insertEmailDraftReturning(draft: Record<string, unknown>) {
+  const { data, error } = await supabase.from("email_drafts" as any).insert(draft as any).select().single();
+  if (error) throw error;
+  return data;
+}

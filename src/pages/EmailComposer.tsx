@@ -30,8 +30,10 @@ import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import EmailEditLearningDialog, { type EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 
 import { cn } from "@/lib/utils";
-import { insertEmailDraft } from "@/data/emailDrafts";
-import { supabase } from "@/integrations/supabase/client";
+import { insertEmailDraft, insertEmailDraftReturning } from "@/data/emailDrafts";
+import { findPartnerByEmail } from "@/data/partners";
+import { findPartnerContactByEmail } from "@/data/partnerRelations";
+import { findBusinessCardByEmail } from "@/data/businessCards";
 
 const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{country}}"];
 
@@ -126,24 +128,14 @@ export default function EmailComposer() {
 
   const lookupEmailInDB = async (email: string) => {
     // Check partners
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("id, company_name, company_alias, country_code, city, email")
-      .ilike("email", email)
-      .limit(1)
-      .maybeSingle();
+    const partner = await findPartnerByEmail(email);
     if (partner) return { found: true, companyName: partner.company_alias || partner.company_name, contactName: "", countryCode: partner.country_code || "", city: partner.city || "", partnerId: partner.id };
 
     // Check partner_contacts
-    const { data: pc } = await supabase
-      .from("partner_contacts")
-      .select("partner_id, name, contact_alias, email, partners(company_name, company_alias, country_code, city)")
-      .ilike("email", email)
-      .limit(1)
-      .maybeSingle();
+    const pc = await findPartnerContactByEmail(email);
     if (pc) {
       const p = pc.partners as any;
-      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: pc.contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
+      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: (pc as any).contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
     }
 
     // Check imported_contacts
@@ -152,12 +144,7 @@ export default function EmailComposer() {
     if (ic) return { found: true, companyName: ic.company_alias || ic.company_name || "", contactName: ic.contact_alias || ic.name || "", countryCode: ic.country || "", city: "", partnerId: "" };
 
     // Check business_cards
-    const { data: bc } = await supabase
-      .from("business_cards")
-      .select("company_name, contact_name, location, matched_partner_id")
-      .ilike("email", email)
-      .limit(1)
-      .maybeSingle();
+    const bc = await findBusinessCardByEmail(email);
     if (bc) return { found: true, companyName: bc.company_name || "", contactName: bc.contact_name || "", countryCode: "", city: bc.location || "", partnerId: bc.matched_partner_id || "" };
 
     return { found: false, companyName: "", contactName: "", countryCode: "", city: "", partnerId: "" };
@@ -364,16 +351,13 @@ export default function EmailComposer() {
   const executeEnqueue = async () => {
     setSending(true);
     try {
-      const { data: savedDraft, error: draftError } = await supabase
-        .from("email_drafts" as any)
-        .insert({
-          subject, html_body: htmlBody, category: "altro",
-          recipient_type: "partner",
-          recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
-          attachment_ids: selectedAttachments, link_urls: emailLinks,
-          status: "queued", total_count: recipientsWithEmail.length,
-        } as any).select().single();
-      if (draftError) throw draftError;
+      const savedDraft = await insertEmailDraftReturning({
+        subject, html_body: htmlBody, category: "altro",
+        recipient_type: "partner",
+        recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
+        attachment_ids: selectedAttachments, link_urls: emailLinks,
+        status: "queued", total_count: recipientsWithEmail.length,
+      });
       const draftId = (savedDraft as any).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryProspects } from "@/data/prospects";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
@@ -62,30 +63,25 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters],
     queryFn: async () => {
-      let query = supabase.from("prospects" as any).select("*").order("company_name");
-
-      if (quickSearch && quickSearch.length >= 2) {
-        query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
-      } else if (atecoCodes.length > 0) {
-        query = query.in("codice_ateco", atecoCodes);
-      }
-
-      if (regionFilter) query = query.eq("region", regionFilter);
-      if (provinceFilter) query = query.eq("province", provinceFilter);
-
-      // Apply server-side filters for fatturato, dipendenti, anno_fondazione
-      if (advFilters?.fatturato_min) query = query.gte("fatturato", parseInt(advFilters.fatturato_min) * 1000);
-      if (advFilters?.fatturato_max) query = query.lte("fatturato", parseInt(advFilters.fatturato_max) * 1000);
-      if (advFilters?.dipendenti_min) query = query.gte("dipendenti", parseInt(advFilters.dipendenti_min));
-      if (advFilters?.dipendenti_max) query = query.lte("dipendenti", parseInt(advFilters.dipendenti_max));
-      if (advFilters?.anno_fondazione_min) query = query.gte("data_costituzione", `${advFilters.anno_fondazione_min}-01-01`);
-      if (advFilters?.anno_fondazione_max) query = query.lte("data_costituzione", `${advFilters.anno_fondazione_max}-12-31`);
-      if (advFilters?.has_phone || advFilters?.has_phone_and_email) query = query.not("phone", "is", null);
-      if (advFilters?.has_email || advFilters?.has_phone_and_email) query = query.not("email", "is", null);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as unknown as Prospect[];
+      const data = await queryProspects((query: any) => {
+        if (quickSearch && quickSearch.length >= 2) {
+          query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
+        } else if (atecoCodes.length > 0) {
+          query = query.in("codice_ateco", atecoCodes);
+        }
+        if (regionFilter) query = query.eq("region", regionFilter);
+        if (provinceFilter) query = query.eq("province", provinceFilter);
+        if (advFilters?.fatturato_min) query = query.gte("fatturato", parseInt(advFilters.fatturato_min) * 1000);
+        if (advFilters?.fatturato_max) query = query.lte("fatturato", parseInt(advFilters.fatturato_max) * 1000);
+        if (advFilters?.dipendenti_min) query = query.gte("dipendenti", parseInt(advFilters.dipendenti_min));
+        if (advFilters?.dipendenti_max) query = query.lte("dipendenti", parseInt(advFilters.dipendenti_max));
+        if (advFilters?.anno_fondazione_min) query = query.gte("data_costituzione", `${advFilters.anno_fondazione_min}-01-01`);
+        if (advFilters?.anno_fondazione_max) query = query.lte("data_costituzione", `${advFilters.anno_fondazione_max}-12-31`);
+        if (advFilters?.has_phone || advFilters?.has_phone_and_email) query = query.not("phone", "is", null);
+        if (advFilters?.has_email || advFilters?.has_phone_and_email) query = query.not("email", "is", null);
+        return query;
+      });
+      return data as unknown as Prospect[];
     },
     enabled: atecoCodes.length > 0 || (!!quickSearch && quickSearch.length >= 2),
   });
