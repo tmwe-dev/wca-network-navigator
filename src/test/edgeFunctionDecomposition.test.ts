@@ -106,3 +106,44 @@ describe("Edge Function Consolidation — Macro-functions", () => {
     }
   });
 });
+
+describe("Client Migration — call sites use macro-endpoints", () => {
+  const srcDir = path.resolve("src");
+
+  function searchFiles(dir: string, pattern: RegExp): string[] {
+    const results: string[] = [];
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== "test") {
+        results.push(...searchFiles(fullPath, pattern));
+      } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
+        const content = fs.readFileSync(fullPath, "utf-8");
+        if (pattern.test(content)) results.push(fullPath);
+      }
+    }
+    return results;
+  }
+
+  it("nessun call site usa più i proxy legacy per gli assistant", () => {
+    const legacyAssistants = /"(cockpit-assistant|contacts-assistant|import-assistant|extension-brain|super-assistant)"/;
+    const hits = searchFiles(srcDir, legacyAssistants);
+    expect(hits).toEqual([]);
+  });
+
+  it("nessun call site usa più i proxy legacy per generate/utility", () => {
+    const legacyGenerators = /"(generate-email|generate-outreach|deep-search-partner)"/;
+    const hits = searchFiles(srcDir, legacyGenerators);
+    expect(hits).toEqual([]);
+  });
+
+  it("dead hooks sono stati rimossi", () => {
+    const deadHooks = [
+      "useDirectoryDownload.ts", "useEntityPaginated.ts", "usePartnerHubActions.ts",
+      "useTeamMembers.ts", "useThemeToggle.ts", "useWorkedToday.ts",
+    ];
+    for (const hook of deadHooks) {
+      expect(fs.existsSync(path.join(srcDir, "hooks", hook))).toBe(false);
+    }
+  });
+});
