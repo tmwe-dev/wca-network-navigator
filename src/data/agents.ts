@@ -1,0 +1,84 @@
+/**
+ * DAL — agents
+ * Centralizes all agents queries and cache invalidation.
+ */
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import type { QueryClient } from "@tanstack/react-query";
+
+export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
+export type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
+export type AgentUpdate = Database["public"]["Tables"]["agents"]["Update"];
+
+export interface Agent extends AgentRow {
+  stats: { tasks_completed: number; emails_sent: number; calls_made: number };
+  assigned_tools: string[];
+  knowledge_base: Record<string, unknown>[];
+}
+
+const QUERY_KEY = ["agents"] as const;
+
+// ── Reads ──
+
+export async function findAgents(userId: string): Promise<Agent[]> {
+  const { data, error } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Agent[];
+}
+
+export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<AgentRow[]> {
+  const { data, error } = await supabase
+    .from("agents")
+    .select(fields)
+    .eq("is_active", true);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getAgentById(id: string): Promise<Agent | null> {
+  const { data, error } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as Agent | null;
+}
+
+// ── Writes ──
+
+export async function createAgent(agent: AgentInsert): Promise<Agent> {
+  const { data, error } = await supabase
+    .from("agents")
+    .insert(agent)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Agent;
+}
+
+export async function updateAgent(id: string, updates: AgentUpdate): Promise<void> {
+  const { error } = await supabase
+    .from("agents")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteAgent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("agents")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ── Cache ──
+
+export function invalidateAgents(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: QUERY_KEY });
+}
