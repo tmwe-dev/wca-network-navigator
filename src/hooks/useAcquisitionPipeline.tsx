@@ -214,8 +214,11 @@ export function useAcquisitionPipeline() {
             const enrichResult = await invokeEdge<Record<string, unknown>>("enrich-partner-website", { body: enrichBody, context: "pipeline.enrich" });
             if (enrichResult?.enrichment) {
               const ed = enrichResult.enrichment as Record<string, unknown>;
-              state.setCanvasData(prev => prev ? { ...prev, key_markets: (ed.key_markets as string[]) || [], key_routes: (ed.key_routes as string[]) || [] } : prev);
-            }
+              state.setCanvasData(prev => prev ? {
+                ...prev,
+                key_markets: (ed.key_markets as string[]) || prev.key_markets,
+                key_routes: (ed.key_routes as Array<{ from: string; to: string }>) || prev.key_routes,
+              } : prev);
           } catch { /* non-blocking */ }
         })());
       }
