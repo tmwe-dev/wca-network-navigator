@@ -71,7 +71,7 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
     .eq("user_id", userId);
 
   if (!data || data.length === 0) return ["user"];
-  return data.map((row) => (row as Record<string, unknown>).role as AppRole);
+  return data.map((row) => row.role as AppRole);
 }
 
 // ── Helper: check whitelist ──────────────────────────────────────────
