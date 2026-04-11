@@ -86,7 +86,7 @@ export function AppLayout() {
         case "start_download_job":
           if (detail.job_id) {
             toast({ title: "🤖 Job creato dall'agente", description: `Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.` });
-            navigate("/network");
+            navigate("/v1/network");
           }
           break;
       }
@@ -160,13 +160,13 @@ export function AppLayout() {
                     <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                       <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
 
-                      {currentPath.startsWith("/network") && (
-                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/crm")}>
+                      {currentPath.startsWith("/v1/network") && (
+                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/crm")}>
                           <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
                         </Button>
                       )}
-                      {currentPath.startsWith("/crm") && (
-                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/network")}>
+                      {currentPath.startsWith("/v1/crm") && (
+                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/network")}>
                           <Globe className="w-3.5 h-3.5" /> Network <ArrowRight className="w-3 h-3" />
                         </Button>
                       )}

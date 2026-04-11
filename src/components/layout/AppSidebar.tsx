@@ -13,48 +13,48 @@ import { usePendingTaskCount } from "@/hooks/usePendingTaskCount";
 import { useState } from "react";
 
 function getNavSections(pathname: string) {
-  const inNetwork = pathname.startsWith("/network");
-  const inCRM = pathname.startsWith("/crm");
+  const inNetwork = pathname.startsWith("/v1/network");
+  const inCRM = pathname.startsWith("/v1/crm");
 
   return [
     {
       label: "Aree",
       items: [
-        { title: "Dashboard", url: "/", icon: Home },
-        ...(!inCRM ? [{ title: "Network", url: "/network", icon: Globe }] : []),
-        ...(!inNetwork ? [{ title: "CRM", url: "/crm", icon: Users }] : []),
+        { title: "Dashboard", url: "/v1", icon: Home },
+        ...(!inCRM ? [{ title: "Network", url: "/v1/network", icon: Globe }] : []),
+        ...(!inNetwork ? [{ title: "CRM", url: "/v1/crm", icon: Users }] : []),
       ],
     },
     {
       label: "Strumenti",
       items: [
-        { title: "Nuova Missione", url: "/mission-builder", icon: Target },
-        { title: "Outreach", url: "/outreach", icon: Rocket },
-        { title: "Inreach", url: "/inreach", icon: Inbox },
-        { title: "Email Composer", url: "/email-composer", icon: Mail },
-        { title: "Agenda", url: "/agenda", icon: Calendar },
+        { title: "Nuova Missione", url: "/v1/mission-builder", icon: Target },
+        { title: "Outreach", url: "/v1/outreach", icon: Rocket },
+        { title: "Inreach", url: "/v1/inreach", icon: Inbox },
+        { title: "Email Composer", url: "/v1/email-composer", icon: Mail },
+        { title: "Agenda", url: "/v1/agenda", icon: Calendar },
       ],
     },
     {
       label: "AI",
       items: [
-        { title: "Agenti", url: "/agents", icon: Bot },
-        { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
-        { title: "Staff Direzionale", url: "/staff-direzionale", icon: Crown },
+        { title: "Agenti", url: "/v1/agents", icon: Bot },
+        { title: "Chat Agenti", url: "/v1/agent-chat", icon: MessageCircle },
+        { title: "Staff Direzionale", url: "/v1/staff-direzionale", icon: Crown },
       ],
     },
     {
       label: "Legacy",
       items: [
-        { title: "Global", url: "/global", icon: Earth },
-        { title: "Campagne", url: "/campaigns", icon: Send },
+        { title: "Global", url: "/v1/global", icon: Earth },
+        { title: "Campagne", url: "/v1/campaigns", icon: Send },
       ],
     },
     {
       label: "Sistema",
       items: [
-        { title: "Telemetria", url: "/telemetry", icon: Activity },
-        { title: "Impostazioni", url: "/settings", icon: Settings },
+        { title: "Telemetria", url: "/v1/telemetry", icon: Activity },
+        { title: "Impostazioni", url: "/v1/settings", icon: Settings },
       ],
     },
   ];
