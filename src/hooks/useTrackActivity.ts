@@ -1,5 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { insertActivity } from "@/data/activities";
+import { updatePartner } from "@/data/partners";
+import { createInteraction } from "@/data/interactions";
+import { updateContact } from "@/data/contacts";
+import { insertContactInteraction } from "@/data/contactInteractions";
+import { updateBusinessCard } from "@/data/businessCards";
 import { createLogger } from "@/lib/log";
 import type { TrackActivityParams } from "@/types/tracking";
 import type { Database } from "@/integrations/supabase/types";
@@ -20,20 +26,21 @@ export function useTrackActivity() {
       const now = new Date().toISOString();
 
       // 1. Insert completed activity
-      const { error: actErr } = await supabase.from("activities").insert({
-        activity_type: params.activityType,
-        title: params.title,
-        source_id: params.sourceId,
-        source_type: params.sourceType,
-        partner_id: params.partnerId || null,
-        user_id: user.id,
-        status: "completed",
-        completed_at: now,
-        sent_at: params.activityType === "send_email" ? now : null,
-        email_subject: params.emailSubject || null,
-        description: params.description || null,
-      } satisfies ActivityInsert);
-      if (actErr) log.error("track activity insert failed", { message: actErr.message, code: actErr.code });
+      try {
+        await insertActivity({
+          activity_type: params.activityType,
+          title: params.title,
+          source_id: params.sourceId,
+          source_type: params.sourceType,
+          partner_id: params.partnerId || null,
+          user_id: user.id,
+          status: "completed",
+          completed_at: now,
+          sent_at: params.activityType === "send_email" ? now : null,
+          email_subject: params.emailSubject || null,
+          description: params.description || null,
+        });
+      } catch (actErr: any) { log.error("track activity insert failed", { message: actErr?.message }); }
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {
