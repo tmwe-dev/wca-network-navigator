@@ -2,8 +2,8 @@
  * Tests: Result monad
  */
 import { describe, it, expect } from "vitest";
-import { ok, err, isOk, isErr, map, flatMap, unwrapOr, unwrap, fromPromise } from "../core/domain/result";
-import { domainError } from "../core/domain/errors";
+import { ok, err, isOk, isErr, map, flatMap, unwrapOr, unwrap, fromPromise } from "../../core/domain/result";
+import { domainError } from "../../core/domain/errors";
 
 describe("Result monad", () => {
   it("ok() creates Ok result", () => {
@@ -23,7 +23,7 @@ describe("Result monad", () => {
   });
 
   it("map transforms Ok value", () => {
-    const r = map(ok(10), (v) => v * 2);
+    const r = map(ok(10), (v: number) => v * 2);
     expect(isOk(r) && r.value).toBe(20);
   });
 
@@ -34,7 +34,7 @@ describe("Result monad", () => {
   });
 
   it("flatMap chains Ok results", () => {
-    const r = flatMap(ok(5), (v) => ok(v + 1));
+    const r = flatMap(ok(5), (v: number) => ok(v + 1));
     expect(isOk(r) && r.value).toBe(6);
   });
 
@@ -63,13 +63,13 @@ describe("Result monad", () => {
   });
 
   it("fromPromise wraps resolved promise", async () => {
-    const r = await fromPromise(Promise.resolve(42), (e) => domainError("VALIDATION_FAILED", String(e)));
+    const r = await fromPromise(Promise.resolve(42), (caught: unknown) => domainError("VALIDATION_FAILED", String(caught)));
     expect(isOk(r) && r.value).toBe(42);
   });
 
   it("fromPromise wraps rejected promise", async () => {
-    const r = await fromPromise(Promise.reject(new Error("boom")), (e) =>
-      domainError("VALIDATION_FAILED", e instanceof Error ? e.message : "unknown"),
+    const r = await fromPromise(Promise.reject(new Error("boom")), (caught: unknown) =>
+      domainError("VALIDATION_FAILED", caught instanceof Error ? caught.message : "unknown"),
     );
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.message).toBe("boom");

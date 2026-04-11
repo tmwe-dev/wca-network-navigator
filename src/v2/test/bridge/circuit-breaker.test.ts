@@ -6,8 +6,8 @@ import {
   withCircuitBreaker,
   getCircuitState,
   resetAllCircuits,
-} from "../bridge/circuit-breaker";
-import { isOk, isErr } from "../core/domain/result";
+} from "../../bridge/circuit-breaker";
+import { isOk, isErr } from "../../core/domain/result";
 
 beforeEach(() => {
   resetAllCircuits();

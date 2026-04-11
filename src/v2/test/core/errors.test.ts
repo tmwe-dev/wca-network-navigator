@@ -2,7 +2,7 @@
  * Tests: Error factory
  */
 import { describe, it, expect } from "vitest";
-import { domainError, ioError, infraError, isAppError, fromUnknown } from "../core/domain/errors";
+import { domainError, ioError, infraError, isAppError, fromUnknown } from "../../core/domain/errors";
 
 describe("Error factory", () => {
   it("domainError creates correct category", () => {

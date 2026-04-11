@@ -2,7 +2,7 @@
  * Tests: Domain Events
  */
 import { describe, it, expect } from "vitest";
-import { createEvent } from "../core/domain/events";
+import { createEvent } from "../../core/domain/events";
 
 describe("Domain Events", () => {
   it("creates event with all required fields", () => {

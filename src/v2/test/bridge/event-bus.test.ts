@@ -10,8 +10,8 @@ import {
   clearDeadLetterQueue,
   getSubscriptionCount,
   resetBus,
-} from "../bridge/event-bus";
-import { createEvent } from "../core/domain/events";
+} from "../../bridge/event-bus";
+import { createEvent } from "../../core/domain/events";
 
 beforeEach(() => {
   resetBus();

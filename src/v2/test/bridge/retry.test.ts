@@ -2,8 +2,8 @@
  * Tests: Retry with backoff
  */
 import { describe, it, expect } from "vitest";
-import { withRetry } from "../bridge/retry";
-import { isOk, isErr } from "../core/domain/result";
+import { withRetry } from "../../bridge/retry";
+import { isOk, isErr } from "../../core/domain/result";
 
 describe("Retry", () => {
   it("returns Ok on first success", async () => {
