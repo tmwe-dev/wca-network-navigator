@@ -2,7 +2,7 @@
  * GlobePage — 3D interactive globe with partner data
  */
 import * as React from "react";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,6 +11,8 @@ const StandaloneGlobe = lazy(() =>
 );
 
 export function GlobePage(): React.ReactElement {
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
   const { data: countryStats } = useQuery({
     queryKey: ["v2-country-stats"],
     queryFn: async () => {
@@ -19,14 +21,6 @@ export function GlobePage(): React.ReactElement {
       return data ?? [];
     },
   });
-
-  const partners = (countryStats ?? []).map((s) => ({
-    id: s.country_code,
-    name: s.country_code,
-    country: s.country_code,
-    lat: 0,
-    lng: 0,
-  }));
 
   return (
     <div className="h-full flex flex-col">
@@ -42,7 +36,7 @@ export function GlobePage(): React.ReactElement {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         }>
-          <StandaloneGlobe />
+          <StandaloneGlobe selectedCountry={selectedCountry} onCountrySelect={setSelectedCountry} />
         </Suspense>
       </div>
     </div>
