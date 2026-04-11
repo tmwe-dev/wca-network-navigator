@@ -4,6 +4,7 @@
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByCountries } from "@/data/partners";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";

@@ -28,7 +28,7 @@ function usePartnerCount() {
   return useQuery({
     queryKey: ["proto-partner-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("partners").select("*", { count: "exact", head: true });
+      const count = await countActivePartners();
       return count ?? 0;
     },
     staleTime: 60_000,

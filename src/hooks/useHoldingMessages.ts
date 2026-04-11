@@ -5,6 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findPartners } from "@/data/partners";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 export type HoldingChannel = "email" | "whatsapp" | "linkedin";

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findPartners } from "@/data/partners";
 import type { Database } from "@/integrations/supabase/types";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];

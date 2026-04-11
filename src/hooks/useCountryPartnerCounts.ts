@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getPartnerStats } from "@/data/partners";
 import { WCA_COUNTRIES, WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 
 export interface CountryPartnerCount {
