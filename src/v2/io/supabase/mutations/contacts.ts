@@ -18,6 +18,8 @@ export interface CreateContactInput {
   readonly city?: string | null;
   readonly country?: string | null;
   readonly origin?: string | null;
+  readonly lead_status?: string | null;
+  readonly note?: string | null;
 }
 
 export async function createContact(
