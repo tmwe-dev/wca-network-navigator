@@ -71,10 +71,6 @@ export function ContactActionMenu({ contact, children }: Props) {
       ...extra,
     } as any);
 
-      toast.error("Errore creazione attività");
-      return;
-    }
-
     if (status === "completed" || extra.due_date) {
       await deleteCockpitQueueItem(contact.queueId);
     }
