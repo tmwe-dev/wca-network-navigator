@@ -316,6 +316,23 @@ export async function updateContactStatus(id: string, status: string, extra?: Re
   if (error) throw error;
 }
 
+export async function fetchGroupContactIds(groupType: string, groupKey: string, holdingPattern?: "out" | "in" | "all"): Promise<string[]> {
+  let q = supabase.from("imported_contacts").select("id").or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+  if (holdingPattern === "out") q = q.eq("interaction_count", 0);
+  else if (holdingPattern === "in") q = q.gt("interaction_count", 0);
+  switch (groupType) {
+    case "country": groupKey === "??" || groupKey === "Sconosciuto" ? q = q.is("country", null) : q = q.eq("country", groupKey); break;
+    case "origin": groupKey === "Sconosciuta" ? q = q.is("origin", null) : q = q.eq("origin", groupKey); break;
+    case "status": q = q.eq("lead_status", groupKey); break;
+    case "date":
+      if (groupKey === "nd") q = q.is("created_at", null);
+      else { const [y, m] = groupKey.split("-").map(Number); q = q.gte("created_at", `${groupKey}-01T00:00:00Z`).lt("created_at", new Date(y, m, 1).toISOString()); }
+      break;
+  }
+  const { data } = await q.limit(1000);
+  return (data ?? []).map((r: any) => r.id);
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateContactCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: contactKeys.all });
