@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, Check, X, Trash2, Shield, Zap, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { deleteMemory } from "@/data/aiMemory";
 
 interface MemoryRow {
   id: string;
@@ -81,7 +82,7 @@ export default function MemoryDashboard() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ai_memory").delete().eq("id", id);
+      await deleteMemory(id); const error = null;
       if (error) throw error;
     },
     onSuccess: () => {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
 
 export interface WorkspaceDoc {
   id: string;
@@ -28,16 +29,11 @@ export function useWorkspaceDocuments() {
         .from("workspace-docs")
         .createSignedUrl(path, 60 * 60 * 24 * 365);
 
-      const { data, error } = await supabase
-        .from("workspace_documents")
-        .insert({
+      const data = await createWorkspaceDoc({
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        })
-        .select()
-        .single();
-      if (error) throw error;
+        }) as any;
 
       const doc: WorkspaceDoc = {
         id: data.id,
@@ -58,7 +54,7 @@ export function useWorkspaceDocuments() {
 
   const remove = async (docId: string) => {
     setDocuments((prev) => prev.filter((d) => d.id !== docId));
-    await supabase.from("workspace_documents").delete().eq("id", docId);
+    await deleteWorkspaceDoc(docId);
   };
 
   return { documents, uploading, upload, remove, setDocuments };

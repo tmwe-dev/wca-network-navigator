@@ -3,8 +3,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export async function createMemory(entry: { user_id: string; content: string; memory_type: string; source: string; importance?: number; tags?: string[]; context_page?: string }) {
-  const { error } = await supabase.from("ai_memory").insert(entry);
+export async function createMemory(entry: Record<string, unknown>) {
+  const { error } = await supabase.from("ai_memory").insert(entry as any);
   if (error) throw error;
 }
 

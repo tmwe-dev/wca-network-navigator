@@ -9,11 +9,11 @@ import {
   X, Loader2, Square, Save, AlertCircle, Inbox,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
+import { createInteraction } from "@/data/interactions";
 
 const log = createLogger("UnifiedActionBar");
 
@@ -67,13 +67,12 @@ export function UnifiedActionBar({
     if (!noteText.trim() || !focusedPartner) return;
     setSavingNote(true);
     try {
-      const { error } = await supabase.from("interactions").insert({
+      await createInteraction({
         partner_id: focusedPartner.id,
         interaction_type: "note",
         subject: noteText.trim().slice(0, 80),
         notes: noteText.trim(),
       });
-      if (error) throw error;
       toast.success("Nota salvata");
       setNoteText("");
       setNoteDialogOpen(false);

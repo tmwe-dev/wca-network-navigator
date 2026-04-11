@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
 import { createLogger } from "@/lib/log";
+import { checkProfileConnection } from "@/data/profiles";
 
 const log = createLogger("ConnectionBanner");
 
@@ -19,7 +20,7 @@ export function ConnectionBanner() {
     // Lightweight heartbeat every 30s
     const heartbeat = async () => {
       try {
-        const { error } = await supabase.from("profiles").select("id").limit(1);
+        const { error } = await checkProfileConnection();
         if (error) {
           // RLS error means connection works, auth might be expired
           if (error.code === "PGRST301" || error.message?.includes("JWT")) {

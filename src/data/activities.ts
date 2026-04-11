@@ -165,6 +165,22 @@ export async function deleteActivities(ids: string[]) {
   if (error) throw error;
 }
 
+export async function insertActivity(activity: Record<string, unknown>) {
+  const { error } = await supabase.from("activities").insert(activity as any);
+  if (error) throw error;
+}
+
+export async function countActivitiesWithNullPartner() {
+  const { count, error } = await supabase.from("activities").select("*", { count: "exact", head: true }).is("partner_id", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function approveActivity(id: string) {
+  const { error } = await supabase.from("activities").update({ status: "approved" as any, reviewed: true }).eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });

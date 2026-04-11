@@ -77,6 +77,23 @@ export async function deleteAgent(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function countActiveAgents() {
+  const { count, error } = await supabase.from("agents").select("id", { count: "planned", head: true }).eq("is_active", true);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function findAgentsByUser(userId: string, select = "id, name, role, avatar_emoji, is_active, stats") {
+  const { data, error } = await supabase.from("agents").select(select).eq("user_id", userId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function findAgentByUserAndName(userId: string, name: string) {
+  const { data } = await supabase.from("agents").select("id").eq("user_id", userId).eq("name", name).maybeSingle();
+  return data;
+}
+
 // ── Cache ──
 
 export function invalidateAgents(qc: QueryClient) {

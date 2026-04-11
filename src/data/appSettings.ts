@@ -20,3 +20,24 @@ export async function getAppSetting(key: string, userId: string) {
   if (error) throw error;
   return data?.value ?? null;
 }
+
+export async function getAppSettingByKey(key: string) {
+  const { data, error } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
+  if (error) throw error;
+  return data?.value ?? null;
+}
+
+export async function findAppSettingId(key: string, userId: string) {
+  const { data } = await supabase.from("app_settings").select("id").eq("key", key).eq("user_id", userId).maybeSingle();
+  return data;
+}
+
+export async function updateAppSettingByKey(key: string, userId: string, value: string) {
+  const { error } = await supabase.from("app_settings").update({ value }).eq("key", key).eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function insertAppSetting(setting: { key: string; value: string; user_id: string }) {
+  const { error } = await supabase.from("app_settings").insert(setting);
+  if (error) throw error;
+}

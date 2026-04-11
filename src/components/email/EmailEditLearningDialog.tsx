@@ -8,6 +8,7 @@ import { Brain, TrendingDown, TrendingUp, Sparkles, Send, X } from "lucide-react
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { createMemory } from "@/data/aiMemory";
 
 const log = createLogger("EmailEditLearning");
 
@@ -42,7 +43,7 @@ export default function EmailEditLearningDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("ai_memory").insert({
+      await createMemory({
         user_id: user.id,
         content: analysis.suggested_memory,
         memory_type: "style_preference",
@@ -54,7 +55,6 @@ export default function EmailEditLearningDialog({
         context_page: "email-composer",
       });
 
-      if (error) throw error;
       toast.success("Preferenza di stile salvata nella memoria AI");
       log.info("Style preference saved", { memory: analysis.suggested_memory });
     } catch (err) {

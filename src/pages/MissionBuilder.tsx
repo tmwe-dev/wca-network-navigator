@@ -15,6 +15,8 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("MissionBuilder");
 import ReactMarkdown from "react-markdown";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { insertOutreachMission } from "@/data/outreachMissions";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 const LAURA_VOICE_ID = "FGY2WhTYpPnrIDTdsKH5";
@@ -296,7 +298,7 @@ export default function MissionBuilder() {
       // Recovery marker: log start
       const recoveryLog = [{ phase: "mission_insert", at: new Date().toISOString() }];
 
-      const { data: mission, error } = await supabase.from("outreach_missions" as any).insert({
+      const mission = await insertOutreachMission({
         user_id: session.user.id,
         title,
         status: "active",
@@ -315,7 +317,7 @@ export default function MissionBuilder() {
           attachments: stepData.attachments || {},
           toneConfig: stepData.toneConfig || {},
         },
-      }).select().single();
+      });
 
       if (error) throw error;
       const missionId = (mission as any).id;
@@ -350,7 +352,7 @@ export default function MissionBuilder() {
             partner_id: p.id,
             status: "queued",
           }));
-          await supabase.from("cockpit_queue").insert(queueItems);
+          await insertCockpitQueueItems(queueItems);
         }
       }
 

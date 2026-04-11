@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { updatePartner } from "@/data/partners";
 
 const log = createLogger("useLinkedInFlowHelpers");
 
@@ -79,9 +80,9 @@ export async function saveEnrichmentToPartner(companyName: string, enrichment: R
         update.linkedin_connection_skip_reason = enrichment.connection_skip_reason;
       }
 
-      await supabase.from("partners").update({
+      await updatePartner(partners[0].id, {
         enrichment_data: update as Record<string, string | number | boolean | null>,
-      }).eq("id", partners[0].id);
+      });
     }
   } catch (e) {
     log.error("save enrichment to partner failed", { message: e instanceof Error ? e.message : String(e) });

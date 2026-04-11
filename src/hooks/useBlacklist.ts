@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByIds } from "@/data/partners";
 import type { Database } from "@/integrations/supabase/types";
+import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
 type BlacklistEntryInsert = Database["public"]["Tables"]["blacklist_entries"]["Insert"];
@@ -99,19 +100,17 @@ export function useImportBlacklist() {
   return useMutation({
     mutationFn: async (entries: Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]) => {
       // Delete existing manual entries then insert new ones
-      await supabase.from("blacklist_entries").delete().eq("source", "manual");
+      await deleteBlacklistBySource("manual");
 
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50) as BlacklistEntryInsert[];
-        const { error } = await supabase.from("blacklist_entries").insert(batch);
+        await insertBlacklistBatch(batch as any[]); const error = null;
         if (error) throw error;
       }
 
       // Match with partners
-      const { data: allEntries } = await supabase
-        .from("blacklist_entries")
-        .select("id, company_name, country");
+      const allEntries = await findAllBlacklistEntries() as any[];
       const { data: partners } = await supabase
         .from("partners")
         .select("id, company_name, country_name");
@@ -131,21 +130,18 @@ export function useImportBlacklist() {
           });
 
           if (match) {
-            await supabase
-              .from("blacklist_entries")
-              .update({ matched_partner_id: match.id })
-              .eq("id", entry.id);
+            await updateBlacklistEntry(entry.id, { matched_partner_id: match.id });
             matchCount++;
           }
         }
       }
 
       // Log sync
-      await supabase.from("blacklist_sync_log").insert({
+      await insertBlacklistSyncLog({
         sync_type: "manual_import",
         entries_count: entries.length,
         matched_count: matchCount,
-      } satisfies BlacklistSyncLogInsert);
+      });
 
       return { imported: entries.length, matched: matchCount };
     },

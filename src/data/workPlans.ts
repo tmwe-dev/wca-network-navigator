@@ -26,3 +26,9 @@ export async function deleteWorkPlan(id: string) {
   const { error } = await supabase.from("ai_work_plans").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function findActiveWorkPlans(userId: string, select = "id, title, status, steps, current_step, tags", limit = 5) {
+  const { data, error } = await supabase.from("ai_work_plans").select(select).eq("user_id", userId).in("status", ["running", "paused"]).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}

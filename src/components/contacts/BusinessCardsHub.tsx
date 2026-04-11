@@ -25,6 +25,8 @@ import { CompactRow, CardGridItem, ExpandedCardItem } from "./bca/BCACardRendere
 import { BusinessCardDetailPanel } from "./bca/BCADetailPanel";
 import { useUploadAndParse, DropZone } from "./bca/BCAUpload";
 import { googleLogoSearchUrl } from "./bca/bcaUtils";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { deleteBusinessCards } from "@/data/businessCards";
 
 type ViewMode = "compact" | "card" | "expanded";
 
@@ -93,7 +95,7 @@ export default function BusinessCardsHub() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const inserts = selected.map(c => ({ source_id: c.id, source_type: "business_card", user_id: user.id, partner_id: c.matched_partner_id || null }));
-      await supabase.from("cockpit_queue").insert(inserts as any);
+      await insertCockpitQueueItems(inserts);
       toast({ title: `✅ ${selected.length} aggiunti al Cockpit` });
       setSelectedIds(new Set());
     } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
@@ -109,8 +111,7 @@ export default function BusinessCardsHub() {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
     if (!confirm(`Eliminare ${ids.length} biglietti da visita?`)) return;
-    const { error } = await supabase.from("business_cards").delete().in("id", ids);
-    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    await deleteBusinessCards(ids);
     toast({ title: `✅ ${ids.length} biglietti eliminati` });
     setSelectedIds(new Set());
     refetch();

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { findWorkspaceDocs, createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
 
 const log = createLogger("ContentManager");
 
@@ -307,7 +308,7 @@ export default function ContentManager() {
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
     queryKey: ["workspace-documents-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("workspace_documents").select("*").order("created_at", { ascending: false });
+      const data = await findWorkspaceDocs(); const error = null;
       if (error) throw error;
       return data || [];
     },
@@ -329,10 +330,9 @@ export default function ContentManager() {
         const { error: upErr } = await supabase.storage.from("workspace-docs").upload(path, file);
         if (upErr) throw upErr;
         const { data: urlData } = await supabase.storage.from("workspace-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-        const { error: dbErr } = await supabase.from("workspace_documents").insert({
+        await createWorkspaceDoc({
           file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
         });
-        if (dbErr) throw dbErr;
       }
       toast.success(`${files.length} documento/i caricato/i`);
       qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
@@ -341,7 +341,7 @@ export default function ContentManager() {
   };
 
   const handleDeleteDoc = async (id: string) => {
-    await supabase.from("workspace_documents").delete().eq("id", id);
+    await deleteWorkspaceDoc(id);
     qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
     toast.success("Documento eliminato");
   };

@@ -1,12 +1,12 @@
 import SectionWrapper from "./SectionWrapper";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findActiveAgents } from "@/data/agents";
 
 const AgentTeamSection = () => {
   const { data: agents } = useQuery({
     queryKey: ["guida-agents"],
     queryFn: async () => {
-      const { data } = await supabase.from("agents").select("name, role, avatar_emoji, is_active, stats, territory_codes").eq("is_active", true);
+      const data = await findActiveAgents("name, role, avatar_emoji, is_active, stats, territory_codes");
       return data || [];
     },
     staleTime: 60000,

@@ -1,0 +1,15 @@
+/**
+ * DAL — email_drafts
+ */
+import { supabase } from "@/integrations/supabase/client";
+
+export async function countEmailDrafts() {
+  const { count, error } = await supabase.from("email_drafts").select("*", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function insertEmailDraft(draft: Record<string, unknown>) {
+  const { error } = await supabase.from("email_drafts" as any).insert(draft as any);
+  if (error) throw error;
+}

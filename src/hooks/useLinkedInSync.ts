@@ -12,6 +12,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
+import { insertChannelMessage } from "@/data/channelMessages";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
@@ -65,7 +66,7 @@ export function useLinkedInSync() {
       for (const thread of result.threads) {
         if (!thread.lastMessage || !thread.name) continue;
         const extId = buildExternalId(thread.name, new Date().toISOString(), thread.lastMessage);
-        const { error } = await supabase.from("channel_messages").insert({
+        const error = await insertChannelMessage({
           user_id: user.id,
           channel: "linkedin",
           direction: "inbound",
@@ -73,7 +74,7 @@ export function useLinkedInSync() {
           body_text: thread.lastMessage,
           message_id_external: extId,
           thread_id: thread.threadUrl || null,
-        });
+        }).then(() => null).catch(e => e);
         if (!error) newMsgs++;
         else if (error.code === "23505") dupes++;
         else log.warn("insert error", { message: error.message });

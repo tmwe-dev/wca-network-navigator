@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createLogger } from "@/lib/log";
 
@@ -31,6 +30,8 @@ import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import EmailEditLearningDialog, { type EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 
 import { cn } from "@/lib/utils";
+import { insertEmailDraft } from "@/data/emailDrafts";
+import { supabase } from "@/integrations/supabase/client";
 
 const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{country}}"];
 
@@ -331,7 +332,7 @@ export default function EmailComposer() {
     }
     try {
       // Save as email_templates entry (reuse existing table)
-      const { error } = await supabase.from("email_drafts" as any).insert({
+      await insertEmailDraft({
         subject,
         html_body: htmlBody,
         category: finalCategory,
@@ -339,7 +340,6 @@ export default function EmailComposer() {
         status: "template",
         total_count: 0,
       } as any);
-      if (error) throw error;
       setSaveTemplateOpen(false);
       setTemplateName("");
       setTemplateCategory("primo_contatto");

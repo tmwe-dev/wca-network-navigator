@@ -8,6 +8,8 @@ import { isApiError } from "@/lib/api/apiError";
 import { createLogger } from "@/lib/log";
 import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
+import { upsertDirectoryCache } from "@/data/directoryCache";
+import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
 
 const log = createLogger("scanDirectory");
 
@@ -89,17 +91,14 @@ export async function scanDirectory(
             country_code: code,
             wca_id: m.wca_id,
           }));
-          await supabase.from("directory_cache").upsert(
-            {
+          await upsertDirectoryCache({
               country_code: code,
               network_name: net,
               members: membersJson as any,
               total_results: scanResult.members.length,
               scanned_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-            },
-            { onConflict: "country_code,network_name" }
-          );
+            });
 
           scanResult.members.forEach((m: any) => {
             if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
@@ -169,15 +168,16 @@ export async function enrichQueueWithNetworks(
  * Load full partner preview data for a given WCA ID.
  */
 export async function loadPartnerPreview(wcaId: number) {
-  const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+  const { findPartnerByWcaId } = await import("@/data/partners");
+  const partner = await findPartnerByWcaId(wcaId);
   if (!partner) return null;
 
-  const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
-    supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
-    supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-    supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
-  ]);
+  const [contacts, nets, svcs, socialLinks] = await Promise.all([
+    findPartnerContacts(partner.id, "name, title, email, direct_phone, mobile"),
+    findPartnerNetworks(partner.id),
+    findPartnerServices(partner.id),
+    findPartnerSocialLinks(partner.id),
+  ]) as [any[], any[], any[], any[]];
 
   const ed = partner.enrichment_data as any;
 

@@ -11,6 +11,8 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("useAcquisitionResume");
 import type { PipelineStatus, LiveStats } from "./useAcquisitionPipeline";
+import { upsertDirectoryCache } from "@/data/directoryCache";
+import { updateDownloadJob } from "@/data/downloadJobs";
 
 interface ResumeSetters {
   setActiveJobId: (id: string | null) => void;
@@ -104,17 +106,14 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                   country_code: job.country_code,
                   wca_id: m.wca_id,
                 }));
-                await supabase.from("directory_cache").upsert(
-                  {
+                await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
                     members: membersJson as any,
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
-                  },
-                  { onConflict: "country_code,network_name" }
-                );
+                  });
                 for (const m of scanResult.members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
@@ -147,7 +146,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
             pauseRef.current = true;
 
             if (job.status === "running") {
-              await supabase.from("download_jobs").update({ status: "paused" }).eq("id", job.id);
+              await updateDownloadJob(job.id, { status: "paused" });
             }
 
             toast({

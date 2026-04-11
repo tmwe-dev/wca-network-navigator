@@ -25,6 +25,7 @@ import {
   TARGET_COLUMNS,
   TARGET_SCHEMA,
 } from "@/lib/import";
+import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } from "@/data/importLogs";
 
 // ── Utility helpers ──
 
@@ -145,9 +146,9 @@ export function useImportWizard() {
   // ── Delete import ──
   const handleDeleteImport = useCallback(async (logId: string) => {
     try {
-      await supabase.from("import_errors").delete().eq("import_log_id", logId);
-      await supabase.from("imported_contacts").delete().eq("import_log_id", logId);
-      await supabase.from("import_logs").delete().eq("id", logId);
+      await deleteImportErrors(logId);
+      await deleteImportedContactsByLogId(logId);
+      await deleteImportLog(logId);
       if (activeLogId === logId) setActiveLogId(null);
       queryClient.invalidateQueries({ queryKey: ["import-logs"] });
       queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });

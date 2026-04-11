@@ -10,6 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
+import { getProfileSummary } from "@/data/profiles";
+import { getUserCredits, countCreditTransactions } from "@/data/credits";
+import { countActivitiesWithNullPartner } from "@/data/activities";
+import { findJobsByStatusSelect } from "@/data/downloadJobs";
+import { countPendingCampaignEmails } from "@/data/emailCampaigns";
 
 const log = createLogger("Diagnostics");
 
@@ -136,7 +141,7 @@ export default function Diagnostics() {
     const id3 = "auth-profile";
     upsert({ id: id3, name: "Profilo utente", category: "Auth", status: "running" });
     try {
-      const { data, error } = await supabase.from("profiles").select("id, display_name, onboarding_completed").limit(1).single();
+      const data = await getProfileSummary(); const error = null;
       if (error) throw error;
       upsert({ id: id3, name: "Profilo utente", category: "Auth", status: "pass", message: `${data.display_name || "—"} | onboarding: ${data.onboarding_completed}` });
     } catch (e: any) {
@@ -244,7 +249,7 @@ export default function Diagnostics() {
     const id = "credits-balance";
     upsert({ id, name: "Saldo crediti", category: "Sistema Crediti", status: "running" });
     try {
-      const { data, error } = await supabase.from("user_credits").select("balance, total_consumed").limit(1).single();
+      const data = await getUserCredits(); const error = null;
       if (error) throw error;
       upsert({ id, name: "Saldo crediti", category: "Sistema Crediti", status: "pass", message: `Saldo: ${data.balance} | Consumati: ${data.total_consumed}` });
     } catch (e: any) {
@@ -254,7 +259,7 @@ export default function Diagnostics() {
     const id2 = "credits-transactions";
     upsert({ id: id2, name: "Storico transazioni", category: "Sistema Crediti", status: "running" });
     try {
-      const { count, error } = await supabase.from("credit_transactions").select("*", { count: "exact", head: true });
+      const count = await countCreditTransactions(); const error = null;
       if (error) throw error;
       upsert({ id: id2, name: "Storico transazioni", category: "Sistema Crediti", status: "pass", message: `${count ?? 0} transazioni` });
     } catch (e: any) {
@@ -291,7 +296,7 @@ export default function Diagnostics() {
     const id3 = "integrity-orphan-activities";
     upsert({ id: id3, name: "Attività senza partner", category: "Integrità Dati", status: "running" });
     try {
-      const { count, error } = await supabase.from("activities").select("*", { count: "exact", head: true }).is("partner_id", null);
+      const count = await countActivitiesWithNullPartner(); const error = null;
       if (error) throw error;
       upsert({ id: id3, name: "Attività senza partner", category: "Integrità Dati", status: (count ?? 0) === 0 ? "pass" : "warn", message: `${count ?? 0} orfane` });
     } catch (e: any) {
@@ -302,7 +307,7 @@ export default function Diagnostics() {
     const id4 = "integrity-stuck-jobs";
     upsert({ id: id4, name: "Download jobs bloccati", category: "Integrità Dati", status: "running" });
     try {
-      const { data, error } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["running", "pending"]);
+      const data = await findJobsByStatusSelect(["running", "pending"], "id, status, updated_at"); const error = null;
       if (error) throw error;
       const stuck = (data || []).filter(j => {
         const age = Date.now() - new Date(j.updated_at).getTime();
@@ -317,7 +322,7 @@ export default function Diagnostics() {
     const id5 = "integrity-email-queue";
     upsert({ id: id5, name: "Coda email bloccata", category: "Integrità Dati", status: "running" });
     try {
-      const { count, error } = await supabase.from("email_campaign_queue").select("*", { count: "exact", head: true }).in("status", ["pending", "sending"]);
+      const count = await countPendingCampaignEmails(); const error = null;
       if (error) throw error;
       upsert({ id: id5, name: "Coda email", category: "Integrità Dati", status: "pass", message: `${count ?? 0} in coda` });
     } catch (e: any) {

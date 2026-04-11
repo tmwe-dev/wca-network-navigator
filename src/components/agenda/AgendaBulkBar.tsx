@@ -6,6 +6,7 @@ import { Mail, MessageCircle, Linkedin, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { createActivities } from "@/data/activities";
 
 const EMAIL_GOALS = [
   { value: "first_contact", label: "Primo contatto" },
@@ -82,8 +83,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         priority: "medium",
       }));
 
-      const { error } = await supabase.from("activities").insert(activityInserts);
-      if (error) throw error;
+      await createActivities(activityInserts as any);
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();

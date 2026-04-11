@@ -11,6 +11,7 @@ import type { AICommand } from "@/components/contacts/ContactAIBar";
 import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 import { supabase } from "@/integrations/supabase/client";
+import { findContacts } from "@/data/contacts";
 
 interface Deps {
   selection: ReturnType<typeof useSelection>;
@@ -208,6 +209,7 @@ async function createCampaignJobsAction(contactIds: string[], selection: ReturnT
 }
 
 export async function fetchGroupContactIds(groupType: string, groupKey: string, holdingPattern?: "out" | "in" | "all"): Promise<string[]> {
+  // Use supabase directly for complex OR filter
   let q = supabase.from("imported_contacts").select("id").or("company_name.not.is.null,name.not.is.null,email.not.is.null");
   if (holdingPattern === "out") q = q.eq("interaction_count", 0);
   else if (holdingPattern === "in") q = q.gt("interaction_count", 0);

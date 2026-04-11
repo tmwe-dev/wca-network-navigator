@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { updateDownloadJob as dalUpdateJob } from "@/data/downloadJobs";
 
 /**
  * Centralized helper for updating download job progress in the database.
@@ -33,6 +33,6 @@ export async function updateJobProgress(
   if (updates.errorMessage !== undefined) payload.error_message = updates.errorMessage;
 
   if (Object.keys(payload).length > 0) {
-    await supabase.from("download_jobs").update(payload).eq("id", jobId);
+    await dalUpdateJob(jobId, payload);
   }
 }

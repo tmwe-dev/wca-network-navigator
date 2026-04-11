@@ -26,6 +26,8 @@ import { usePartnerListStats } from "@/hooks/usePartnerListStats";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { createActivities } from "@/data/activities";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
@@ -176,8 +178,7 @@ export function PartnerListPanel({
         }
       }
       if (items.length > 0) {
-        const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
-        if (error) { toast.error("Errore: " + error.message); return; }
+        await insertCockpitQueueItems(items);
         // Store for auto-preselection in Cockpit
         const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
         addCockpitPreselection(items.map(i => i.source_id));
@@ -205,8 +206,7 @@ export function PartnerListPanel({
           user_id: userId,
         };
       });
-      const { error } = await supabase.from("activities").insert(inserts as any);
-      if (error) { toast.error("Errore: " + error.message); return; }
+      await createActivities(inserts as any);
       toast.success(`${inserts.length} partner inviati a Workspace`);
     }
     setSelectedIds(new Set());

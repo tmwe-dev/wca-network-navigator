@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
 import type { ContactOrigin } from "@/pages/Cockpit";
 import { createLogger } from "@/lib/log";
+import { getContactsByIds } from "@/data/contacts";
 
 const log = createLogger("useCockpitContacts");
 
@@ -136,7 +137,7 @@ export function useCockpitContacts() {
           ? getPartnerContactsByIds(pcIds, "id, name, title, email, direct_phone, mobile, partner_id, contact_alias")
           : Promise.resolve([]),
         bcIds.length > 0
-          ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
+          ? (await import("@/data/businessCards")).findBusinessCards().then(cards => cards.filter((c: any) => bcIds.includes(c.id)))
           : Promise.resolve([]),
         prcIds.length > 0
           ? getProspectContactsByIds(prcIds)

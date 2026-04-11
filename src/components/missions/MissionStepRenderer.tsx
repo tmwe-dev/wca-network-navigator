@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { findActiveEmailPrompts } from "@/data/emailPrompts";
+import { findEmailTemplatesShort } from "@/data/emailTemplates";
 
 // ── Data types ──
 
@@ -283,8 +285,8 @@ function CommunicationStep({ data, onChange }: { data: MissionStepData; onChange
   const [emailTypes, setEmailTypes] = useState<{ id: string; title: string; scope: string }[]>([]);
 
   useEffect(() => {
-    supabase.from("email_prompts").select("id, title, scope").eq("is_active", true).order("priority", { ascending: false }).limit(20)
-      .then(({ data }) => { if (data) setEmailTypes(data); });
+    findActiveEmailPrompts()
+      .then((data) => { if (data) setEmailTypes(data as any); });
   }, []);
 
   const modes = [
@@ -383,8 +385,8 @@ function AttachmentStep({ data, onChange }: { data: MissionStepData; onChange: (
 
   useEffect(() => {
     // Load templates
-    supabase.from("email_templates").select("id, name, file_url").order("created_at", { ascending: false }).limit(20)
-      .then(({ data }) => { if (data) setTemplates(data); });
+    findEmailTemplatesShort()
+      .then((data) => { if (data) setTemplates(data as any); });
     // Load images
     supabase.storage.from("email-images").list("", { limit: 50, sortBy: { column: "created_at", order: "desc" } })
       .then(({ data }) => {
