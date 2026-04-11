@@ -3,9 +3,8 @@
  */
 import * as React from "react";
 import { useState, useMemo } from "react";
-import { useProspectsV2 } from "@/v2/hooks/useProspectsV2";
+import { useProspectPipelineV2 } from "@/v2/hooks/useProspectPipelineV2";
 import { Target, Search, Mail, Phone } from "lucide-react";
-import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +27,7 @@ export function ProspectPage(): React.ReactElement {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const { data: contacts, isLoading } = useProspectsV2(
+  const { data: contacts, isLoading } = useProspectPipelineV2(
     statusFilter !== "all" ? statusFilter : undefined,
     search || undefined,
   );
@@ -48,7 +47,7 @@ export function ProspectPage(): React.ReactElement {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2", "prospects"] });
+      qc.invalidateQueries({ queryKey: ["v2", "prospect-pipeline"] });
       toast.success("Stato aggiornato");
     },
   });
@@ -100,7 +99,7 @@ export function ProspectPage(): React.ReactElement {
                   </Button>
                 ) : null}
                 {(c.phone ?? c.mobile) ? (
-                  <Button variant="ghost" size="sm" onClick={() => { if (c.phone ?? c.mobile) window.open(`tel:${c.phone ?? c.mobile}`); }}>
+                  <Button variant="ghost" size="sm" onClick={() => { const num = c.phone ?? c.mobile; if (num) window.open(`tel:${num}`); }}>
                     <Phone className="h-3.5 w-3.5" />
                   </Button>
                 ) : null}
