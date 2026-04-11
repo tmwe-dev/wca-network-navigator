@@ -3536,6 +3536,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_wca_credentials: {
         Row: {
           created_at: string
@@ -3744,6 +3765,13 @@ export type Database = {
           member_count: number
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_agent_stat: {
         Args: { p_agent_id: string; p_stat_key: string }
         Returns: undefined
@@ -3802,6 +3830,7 @@ export type Database = {
         | "other"
         | "whatsapp_message"
         | "linkedin_message"
+      app_role: "admin" | "moderator" | "user"
       campaign_job_status: "pending" | "in_progress" | "completed" | "skipped"
       campaign_job_type: "email" | "call"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
@@ -3976,6 +4005,7 @@ export const Constants = {
         "whatsapp_message",
         "linkedin_message",
       ],
+      app_role: ["admin", "moderator", "user"],
       campaign_job_status: ["pending", "in_progress", "completed", "skipped"],
       campaign_job_type: ["email", "call"],
       certification_type: ["IATA", "BASC", "ISO", "C-TPAT", "AEO"],
