@@ -21,7 +21,7 @@ export function usePartnersV2(filters: PartnerFilters = {}) {
       const partnerResult = await fetchPartners({
         countryCode: filters.countryCode,
         networkName: filters.networkName,
-        searchQuery: filters.searchQuery,
+        search: filters.searchQuery,
         limit: 500,
       });
 
