@@ -17,30 +17,12 @@ export function useCountryPartnerCounts() {
   return useQuery({
     queryKey: ["country-partner-counts"],
     queryFn: async () => {
-      // Aggregate counts from partners table
-      const PAGE_SIZE = 2000;
+      const stats = await getPartnerStats();
       const countMap: Record<string, number> = {};
       const nameMap: Record<string, string> = {};
-      let offset = 0;
-
-      while (true) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select("country_code, country_name")
-          .eq("is_active", true)
-          .range(offset, offset + PAGE_SIZE - 1);
-
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-
-        for (const row of data) {
-          const cc = row.country_code;
-          countMap[cc] = (countMap[cc] || 0) + 1;
-          if (!nameMap[cc]) nameMap[cc] = row.country_name;
-        }
-
-        if (data.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
+      for (const [code, info] of Object.entries(stats.countryCounts)) {
+        countMap[code] = info.count;
+        nameMap[code] = info.name;
       }
 
       // Build full list: all WCA countries + any DB-only codes
