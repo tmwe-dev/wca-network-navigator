@@ -110,6 +110,12 @@ File:
 
 `Closed → Open (dopo 3 fallimenti) → Half-Open (dopo 60s cooldown) → Closed (se test ok)`
 
+### ⛔ Antipattern AI Code Generators
+
+File: [`Antipattern_Lovable_e_AI_Code_Generators.md`](./Antipattern_Lovable_e_AI_Code_Generators.md)
+
+6 errori strutturali da NON ripetere nella v2.0: speed over architecture, zero opinioni architetturali, TypeScript finto, error handling cosmetico, nessuna manutenibilità, priorità 20/80 invertita. Ogni antipattern ha la regola correttiva con riferimento ai volumi.
+
 ---
 
 ## Regola d'oro
