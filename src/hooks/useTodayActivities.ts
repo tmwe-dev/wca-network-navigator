@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { asSourceMeta } from "@/lib/types/sourceMeta";
 
 export interface TodayActivity {
   id: string;
@@ -25,14 +26,14 @@ export function useTodayActivities() {
         .from("activities")
         .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
         .gte("created_at", today.toISOString())
-        .in("status", ["pending", "in_progress", "completed"] as any)
+        .in("status", ["pending", "in_progress", "completed"] as Array<"pending" | "in_progress" | "completed">)
         .order("completed_at", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (error) throw error;
 
       return (data || []).map((a): TodayActivity => {
-        const meta = (a.source_meta || {}) as any;
+        const meta = asSourceMeta(a.source_meta);
         return {
           id: a.id,
           activityType: a.activity_type,
