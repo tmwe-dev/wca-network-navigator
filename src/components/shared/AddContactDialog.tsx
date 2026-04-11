@@ -143,12 +143,12 @@ export default function AddContactDialog({
 
       // If cockpit destination OR user wants it queued
       if (destination === "cockpit" && sourceId && sourceType) {
-        await supabase.from("cockpit_queue").insert({
+        await insertCockpitQueueItems([{
           user_id: user.id,
           source_id: sourceId,
           source_type: sourceType,
           partner_id: partnerId || null,
-        });
+        }]);
         queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
@@ -203,11 +203,11 @@ export default function AddContactDialog({
           .single();
         if (error) throw error;
 
-        await supabase.from("cockpit_queue").insert({
+        await insertCockpitQueueItems([{
           user_id: user.id,
           source_id: contact!.id,
           source_type: "contact",
-        });
+        }]);
         queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
         queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
       }

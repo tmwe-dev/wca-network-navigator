@@ -58,20 +58,16 @@ export async function getSessionStatus(channel: ChannelKind): Promise<ChannelSes
 async function writeSession(session: ChannelSession): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  // @ts-ignore - migrated to DAL
-  const { error } = await (await import("@/integrations/supabase/client")).supabase.from("app_settings").upsert(
-    {
-      key: keyFor(session.channel),
-      value: JSON.stringify({
-        status: session.status,
-        last_seen_at: session.last_seen_at,
-        last_error: session.last_error,
-        metadata: session.metadata,
-      }),
-      user_id: user.id,
-    },
-    { onConflict: "user_id,key" }
-  );
+  const { upsertAppSetting } = await import("@/data/appSettings");
+  let error: any = null;
+  try {
+    await upsertAppSetting(user.id, keyFor(session.channel), JSON.stringify({
+      status: session.status,
+      last_seen_at: session.last_seen_at,
+      last_error: session.last_error,
+      metadata: session.metadata,
+    }));
+  } catch (e) { error = e; }
   if (error) {
     log.error("session.write_failed", {
       channel: session.channel,

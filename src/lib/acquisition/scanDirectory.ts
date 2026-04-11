@@ -91,17 +91,14 @@ export async function scanDirectory(
             country_code: code,
             wca_id: m.wca_id,
           }));
-          await supabase.from("directory_cache").upsert(
-            {
+          await upsertDirectoryCache({
               country_code: code,
               network_name: net,
               members: membersJson as any,
               total_results: scanResult.members.length,
               scanned_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-            },
-            { onConflict: "country_code,network_name" }
-          );
+            });
 
           scanResult.members.forEach((m: any) => {
             if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
