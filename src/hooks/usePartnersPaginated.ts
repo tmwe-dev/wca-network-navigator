@@ -55,7 +55,7 @@ export function usePartnersPaginated(filters?: PaginatedFilters) {
 
       // ── Partner type filter ──
       if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
-        query = query.in("partner_type", filters.partnerTypes as any);
+        query = query.in("partner_type", filters.partnerTypes as string[]);
       }
 
       // ── Favorites ──
