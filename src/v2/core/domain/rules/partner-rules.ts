@@ -1,15 +1,11 @@
 /**
- * Partner Domain Rules — STEP 6
- * Regole business: validazione, score completezza.
+ * Partner Domain Rules — completeness score, validation
  */
-
 import { type Result, ok, err } from "../result";
 import { domainError, type AppError } from "../errors";
-import type { Partner } from "../entities";
+import type { PartnerV2 } from "../partner-entity";
 
-// ── Completeness score ───────────────────────────────────────────────
-
-export function partnerCompletenessScore(partner: Partner): number {
+export function partnerCompletenessScore(partner: PartnerV2): number {
   let score = 0;
   const weights = [
     { field: partner.companyName, points: 15 },
@@ -33,9 +29,7 @@ export function partnerCompletenessScore(partner: Partner): number {
   return score;
 }
 
-// ── Validation ───────────────────────────────────────────────────────
-
-export function validatePartnerForOutreach(partner: Partner): Result<Partner, AppError> {
+export function validatePartnerForOutreach(partner: PartnerV2): Result<PartnerV2, AppError> {
   if (!partner.email && !partner.phone) {
     return err(domainError(
       "BUSINESS_RULE_VIOLATED",
@@ -44,20 +38,10 @@ export function validatePartnerForOutreach(partner: Partner): Result<Partner, Ap
     ));
   }
 
-  if (partner.isBlacklisted) {
-    return err(domainError(
-      "BUSINESS_RULE_VIOLATED",
-      "Cannot perform outreach to blacklisted partner",
-      { partnerId: String(partner.id) },
-    ));
-  }
-
   return ok(partner);
 }
 
-// ── Enrichment eligibility ───────────────────────────────────────────
-
-export function isEligibleForEnrichment(partner: Partner): boolean {
+export function isEligibleForEnrichment(partner: PartnerV2): boolean {
   if (!partner.wcaId) return false;
   if (partner.enrichmentData) return false;
   return partnerCompletenessScore(partner) < 70;
