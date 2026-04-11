@@ -433,10 +433,6 @@ export default function Campaigns() {
     }));
 
     await insertCockpitQueueItems(rows);
-      toast.error("Errore nell'invio al cockpit");
-      console.error(error);
-      return;
-    }
 
     toast.success(`${campaignPartners.length} aziende inviate al Cockpit — Goal: ${goalLabel}`);
     setCampaignPartners([]);

@@ -90,11 +90,9 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
         ...extra,
       } as any);
 
-      if (!error) {
-        successCount++;
-        if (status === "completed" || extra.due_date) {
-          await deleteCockpitQueueItem(contact.queueId);
-        }
+      successCount++;
+      if (status === "completed" || extra.due_date) {
+        await deleteCockpitQueueItem(contact.queueId);
       }
     }
 
