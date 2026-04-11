@@ -1,106 +1,25 @@
+/**
+ * React Query hooks for Partners — thin wrappers around src/data/partners.ts
+ */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  findPartners,
+  findPartnersByCountry,
+  getPartner,
+  toggleFavorite,
+  getPartnerStats,
+  invalidatePartnerCache,
+} from "@/data/partners";
+import type { Partner, PartnerFilters, PartnerWithRelations } from "@/data/partners";
 
-export interface Partner {
-  id: string;
-  wca_id: number | null;
-  company_name: string;
-  country_code: string;
-  country_name: string;
-  city: string;
-  office_type: string | null;
-  address: string | null;
-  phone: string | null;
-  fax: string | null;
-  mobile: string | null;
-  emergency_phone: string | null;
-  email: string | null;
-  website: string | null;
-  member_since: string | null;
-  membership_expires: string | null;
-  profile_description: string | null;
-  has_branches: boolean | null;
-  branch_cities: any;
-  partner_type: string | null;
-  is_active: boolean | null;
-  is_favorite: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-export interface PartnerFilters {
-  search?: string;
-  countries?: string[];
-  cities?: string[];
-  partnerTypes?: string[];
-  services?: string[];
-  certifications?: string[];
-  networks?: string[];
-  minRating?: number;
-  minYearsMember?: number;
-  hasBranches?: boolean;
-  expiresWithinMonths?: number | "active";
-  favorites?: boolean;
-  metPersonally?: boolean;
-}
-
-/** Fetch all rows by iterating with .range() in blocks of 1000 */
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => any): Promise<T[]> {
-  const PAGE = 1000;
-  const all: T[] = [];
-  let offset = 0;
-  while (true) {
-    const { data, error } = await buildQuery(offset, offset + PAGE - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < PAGE) break;
-    offset += PAGE;
-  }
-  return all;
-}
+// Re-export types for backward compat
+export type { Partner, PartnerFilters, PartnerWithRelations };
 
 export function usePartners(filters?: PartnerFilters) {
   return useQuery({
-    queryKey: ["partners", filters],
-    queryFn: async () => {
-      return fetchAllRows((from, to) => {
-        let query = supabase
-          .from("partners")
-          .select(`
-            *,
-            partner_services (service_category),
-            partner_certifications (certification),
-            partner_networks (id, network_name, expires),
-            partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias)
-          `)
-          .eq("is_active", true);
-
-        if (filters?.search) {
-          const s = sanitizeSearchTerm(filters.search);
-          if (s) query = query.ilike("company_name", `%${s}%`);
-        }
-
-        if (filters?.countries && filters.countries.length > 0) {
-          query = query.in("country_code", filters.countries);
-        }
-
-        if (filters?.cities && filters.cities.length > 0) {
-          query = query.in("city", filters.cities);
-        }
-
-        if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
-          query = query.in("partner_type", filters.partnerTypes as any);
-        }
-
-        if (filters?.favorites) {
-          query = query.eq("is_favorite", true);
-        }
-
-        return query.order("company_name").range(from, to);
-      });
-    },
+    queryKey: queryKeys.partners.filtered(filters as Record<string, unknown>),
+    queryFn: () => findPartners(filters),
     staleTime: 30_000,
   });
 }
@@ -108,23 +27,7 @@ export function usePartners(filters?: PartnerFilters) {
 export function usePartnersByCountry(countryCode: string | null) {
   return useQuery({
     queryKey: ["partners-by-country", countryCode],
-    queryFn: async () => {
-      if (!countryCode) return [];
-
-      return fetchAllRows((from, to) =>
-        supabase
-          .from("partners")
-          .select(`
-            *,
-            partner_services (service_category),
-            partner_certifications (certification)
-          `)
-          .eq("is_active", true)
-          .eq("country_code", countryCode)
-          .order("company_name")
-          .range(from, to)
-      );
-    },
+    queryFn: () => findPartnersByCountry(countryCode!),
     enabled: !!countryCode,
     staleTime: 30_000,
   });
@@ -132,88 +35,28 @@ export function usePartnersByCountry(countryCode: string | null) {
 
 export function usePartner(id: string) {
   return useQuery({
-    queryKey: ["partner", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("partners")
-        .select(`
-          *,
-          partner_contacts (*),
-          partner_services (service_category),
-          partner_certifications (certification),
-          partner_networks (*),
-          interactions (*),
-          reminders (*)
-        `)
-        .eq("id", id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    queryKey: queryKeys.partner(id),
+    queryFn: () => getPartner(id),
     enabled: !!id,
     staleTime: 30_000,
   });
 }
 
 export function useToggleFavorite() {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) => {
-      const { error } = await supabase
-        .from("partners")
-        .update({ is_favorite: isFavorite })
-        .eq("id", id);
-
-      if (error) throw error;
+      await toggleFavorite(id, isFavorite);
       return { id };
     },
-    onSuccess: ({ id }) => {
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["partner", id] });
-    },
+    onSuccess: ({ id }) => invalidatePartnerCache(qc, id),
   });
 }
 
 export function usePartnerStats() {
   return useQuery({
-    queryKey: ["partner-stats"],
-    queryFn: async () => {
-      const partners = await fetchAllRows<any>((from, to) =>
-        supabase
-          .from("partners")
-          .select("id, country_code, country_name, partner_type, member_since")
-          .eq("is_active", true)
-          .range(from, to)
-      );
-
-      const totalPartners = partners.length;
-
-      const countryCounts: Record<string, { name: string; count: number }> = {};
-      partners.forEach((p) => {
-        if (!countryCounts[p.country_code]) {
-          countryCounts[p.country_code] = { name: p.country_name, count: 0 };
-        }
-        countryCounts[p.country_code].count++;
-      });
-
-      const typeCounts: Record<string, number> = {};
-      partners.forEach((p) => {
-        if (p.partner_type) {
-          typeCounts[p.partner_type] = (typeCounts[p.partner_type] || 0) + 1;
-        }
-      });
-
-      const uniqueCountries = Object.keys(countryCounts).length;
-
-      return {
-        totalPartners,
-        uniqueCountries,
-        countryCounts,
-        typeCounts,
-      };
-    },
+    queryKey: queryKeys.partnerStats,
+    queryFn: getPartnerStats,
     staleTime: 60_000,
   });
 }
