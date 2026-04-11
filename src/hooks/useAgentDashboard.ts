@@ -38,7 +38,7 @@ export function useAgentDashboard() {
         .eq("user_id", user.id)
         .eq("is_active", true)
         .order("created_at");
-      return (agents ?? []) as any[];
+      return (agents ?? []) as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
     },
   });
 
