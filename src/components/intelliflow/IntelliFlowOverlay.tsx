@@ -4,6 +4,7 @@ import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, Message
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
+import { countActivePartners } from "@/data/partners";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
@@ -24,7 +25,7 @@ function useSystemStats() {
     queryKey: ["intelliflow-stats"],
     queryFn: async () => {
       const [partners, contacts, drafts, cards] = await Promise.all([
-        supabase.from("partners").select("*", { count: "exact", head: true }),
+        countActivePartners().then(c => ({ count: c })),
         supabase.from("partner_contacts").select("*", { count: "exact", head: true }),
         supabase.from("email_drafts").select("*", { count: "exact", head: true }),
         supabase.from("business_cards").select("*", { count: "exact", head: true }),

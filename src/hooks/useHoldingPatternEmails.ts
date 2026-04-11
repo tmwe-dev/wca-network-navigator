@@ -5,6 +5,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByIdsFiltered } from "@/data/partners";
+import { getContactsByIds } from "@/data/contacts";
 
 const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
 
@@ -23,21 +25,13 @@ export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
       const result = new Set<string>();
 
       if (partnerIds.length > 0) {
-        const { data: partners } = await supabase
-          .from("partners")
-          .select("id")
-          .in("id", partnerIds)
-          .in("lead_status", ACTIVE_STATUSES);
-        (partners || []).forEach(p => result.add(`p:${p.id}`));
+        const partners = await getPartnersByIdsFiltered(partnerIds, "id", { lead_status: ACTIVE_STATUSES });
+        (partners || []).forEach((p: any) => result.add(`p:${p.id}`));
       }
 
       if (contactIds.length > 0) {
-        const { data: contacts } = await supabase
-          .from("imported_contacts")
-          .select("id")
-          .in("id", contactIds)
-          .in("lead_status", ACTIVE_STATUSES);
-        (contacts || []).forEach(c => result.add(`c:${c.id}`));
+        const contacts = await getContactsByIds(contactIds, "id, lead_status");
+        contacts.filter((c: any) => ACTIVE_STATUSES.includes(c.lead_status)).forEach((c: any) => result.add(`c:${c.id}`));
       }
 
       return [...result];

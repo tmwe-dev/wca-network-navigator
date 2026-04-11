@@ -12,6 +12,7 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing } from "@/hooks/useDailyBriefing";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { countActivePartners } from "@/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
@@ -28,7 +29,7 @@ function usePartnerCount() {
   return useQuery({
     queryKey: ["proto-partner-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("partners").select("*", { count: "exact", head: true });
+      const count = await countActivePartners();
       return count ?? 0;
     },
     staleTime: 60_000,

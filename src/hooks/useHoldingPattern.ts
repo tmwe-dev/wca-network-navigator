@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByLeadStatus } from "@/data/partners";
 
 export type HoldingSource = "partner" | "prospect" | "contact";
 
@@ -42,11 +43,7 @@ export function useHoldingPatternList() {
       const items: HoldingItem[] = [];
 
       // Partners
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")
-        .in("lead_status", ACTIVE_STATUSES)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false });
+      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as any[];
 
       (partners || []).forEach((p) =>
         items.push({

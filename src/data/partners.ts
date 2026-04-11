@@ -377,6 +377,16 @@ export async function deletePartnersWithRelations(ids: string[]) {
   }
 }
 
+/** Get partners by lead status */
+export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("partners")
+    .select(select)
+    .in("lead_status", statuses);
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidatePartnerCache(qc: QueryClient, partnerId?: string) {
   qc.invalidateQueries({ queryKey: queryKeys.partners.all });

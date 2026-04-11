@@ -4,6 +4,7 @@
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByCountries } from "@/data/partners";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
@@ -84,16 +85,12 @@ export function useAcquisitionPipelineActions(
     try {
       if (!jobId) {
         const countryCode = items[0]?.country_code || state.selectedCountries[0] || "";
-        const { data: countryPartner } = await supabase
-          .from("partners")
-          .select("country_name")
-          .eq("country_code", countryCode)
-          .limit(1)
-          .maybeSingle();
+        const countryPartners = await getPartnersByCountries([countryCode], "country_name");
+        const countryName = countryPartners[0]?.country_name || countryCode;
 
         jobId = await createDownloadJob({
           country_code: countryCode,
-          country_name: countryPartner?.country_name || countryCode,
+          country_name: countryName,
           network_name: state.selectedNetworks.length > 0 ? state.selectedNetworks.join(", ") : "All Networks",
           wca_ids: items.map((i) => i.wca_id),
           total_count: items.length,

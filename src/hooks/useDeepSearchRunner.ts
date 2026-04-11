@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByIds } from "@/data/partners";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
@@ -53,16 +54,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     // ── Pre-check: for partners, detect missing profiles ──
     let noProfileIds: string[] = [];
     if (mode === "partner") {
-      const batchSize = 100;
-      const allPartnerData: any[] = [];
-      for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
-        const { data } = await supabase
-          .from("partners")
-          .select("id, raw_profile_html, enrichment_data")
-          .in("id", batch);
-        if (data) allPartnerData.push(...data);
-      }
+        const allPartnerData = await getPartnersByIds(ids, "id, raw_profile_html, enrichment_data");
 
       noProfileIds = allPartnerData
         .filter((p: any) => !p.raw_profile_html)
@@ -97,11 +89,8 @@ export function useDeepSearchRunner(): DeepSearchState {
         const allContacts = await getContactsByIds(toProcess, "id, deep_search_at");
         alreadyDone = allContacts.filter((c: any) => c.deep_search_at);
       } else {
-        const { data } = await supabase
-          .from("partners")
-          .select("id, enrichment_data")
-          .in("id", toProcess);
-        alreadyDone = (data || []).filter((p: any) => p.enrichment_data?.deep_search_at);
+        const partnerData = await getPartnersByIds(toProcess, "id, enrichment_data");
+        alreadyDone = partnerData.filter((p: any) => p.enrichment_data?.deep_search_at);
       }
 
       const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
@@ -144,12 +133,8 @@ export function useDeepSearchRunner(): DeepSearchState {
             }
           }
           if (!cached) {
-            const { data } = await supabase
-              .from("partners")
-              .select("id, company_name, country_code, logo_url")
-              .eq("id", id)
-              .maybeSingle();
-            cached = data;
+            const partnerResults = await getPartnersByIds([id], "id, company_name, country_code, logo_url");
+            cached = partnerResults[0] || null;
           }
         } else {
           const { getContactsByIds: fetchContacts } = await import("@/data/contacts");
