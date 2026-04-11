@@ -92,6 +92,17 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="diagnostics" element={<DiagnosticsPage />} />
           <Route path="import" element={<ImportPage />} />
+          <Route path="acquisition" element={<AcquisizionePartnerPage />} />
+          <Route path="agent-chat" element={<AgentChatHubPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="email-download" element={<EmailDownloadPage />} />
+          <Route path="ra-explorer" element={<RAExplorerPage />} />
+          <Route path="ra-scraping" element={<RAScrapingEnginePage />} />
+          <Route path="ra-company" element={<RACompanyDetailPage />} />
+          <Route path="campaign-jobs" element={<CampaignJobsPage />} />
+          <Route path="admin-users" element={<AdminUsersPage />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
+          <Route path="guida" element={<GuidaPage />} />
         </Route>
       </Routes>
     </Suspense>
