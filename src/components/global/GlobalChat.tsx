@@ -15,7 +15,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
-const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/super-assistant`;
+const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/unified-assistant`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 const QUICK_PROMPTS = [
@@ -118,7 +118,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify(mode === "conversational"
-            ? { messages: allMsgs, pageContext: "global-chat" }
+            ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat" }
             : { messages: allMsgs }),
         });
 
