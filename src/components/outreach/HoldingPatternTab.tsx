@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { supabase } from "@/integrations/supabase/client";
+import { updateLeadStatus } from "@/data/partners";
+import { updateProspectLeadStatus } from "@/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
