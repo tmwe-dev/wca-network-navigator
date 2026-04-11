@@ -79,3 +79,30 @@ export async function findPartnerSocialLinks(partnerId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
+  let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
+  if (platform) q = q.eq("platform", platform);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function insertPartnerSocialLink(link: { partner_id: string; contact_id: string | null; platform: string; url: string }) {
+  const { error } = await supabase.from("partner_social_links").insert(link);
+  return { error };
+}
+
+// ── partner_contacts by IDs ──
+export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias") {
+  const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ── prospect_contacts by IDs ──
+export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url") {
+  const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids);
+  if (error) throw error;
+  return data ?? [];
+}
