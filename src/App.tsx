@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
+import { V2Routes } from "@/v2/routes";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -147,6 +148,8 @@ const App = () => (
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                 </Route>
               </Route>
+              {/* v2 routes */}
+              <Route path="/v2/*" element={<V2Routes />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
