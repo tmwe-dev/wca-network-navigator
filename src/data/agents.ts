@@ -10,11 +10,11 @@ export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
 export type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
 export type AgentUpdate = Database["public"]["Tables"]["agents"]["Update"];
 
-export interface Agent extends AgentRow {
+export type Agent = Omit<AgentRow, "stats" | "assigned_tools" | "knowledge_base"> & {
   stats: { tasks_completed: number; emails_sent: number; calls_made: number };
   assigned_tools: string[];
   knowledge_base: Record<string, unknown>[];
-}
+};
 
 const QUERY_KEY = ["agents"] as const;
 
@@ -30,7 +30,7 @@ export async function findAgents(userId: string): Promise<Agent[]> {
   return (data ?? []) as Agent[];
 }
 
-export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<AgentRow[]> {
+export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<any[]> {
   const { data, error } = await supabase
     .from("agents")
     .select(fields)
