@@ -4,22 +4,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
-import { type CampaignJob, type CampaignJobType } from "../../../core/domain/entities";
+import { type CampaignJob } from "../../../core/domain/entities";
 import { mapCampaignJobRow } from "../../../core/mappers/campaign-mapper";
+import type { Database } from "@/integrations/supabase/types";
 
-export interface CreateCampaignJobInput {
-  readonly batch_id: string;
-  readonly partner_id: string;
-  readonly company_name: string;
-  readonly country_code: string;
-  readonly country_name: string;
-  readonly job_type?: CampaignJobType;
-  readonly email?: string | null;
-  readonly phone?: string | null;
-}
+type CampaignJobInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
+type CampaignJobUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
 
 export async function createCampaignJob(
-  input: CreateCampaignJobInput,
+  input: CampaignJobInsert,
 ): Promise<Result<CampaignJob, AppError>> {
   try {
     const { data, error } = await supabase
@@ -40,18 +33,11 @@ export async function createCampaignJob(
   }
 }
 
-export async function updateCampaignJobStatus(
+export async function updateCampaignJob(
   jobId: string,
-  status: string,
-  notes?: string,
+  updates: CampaignJobUpdate,
 ): Promise<Result<void, AppError>> {
   try {
-    const updates: Record<string, unknown> = { status };
-    if (status === "completed" || status === "failed") {
-      updates.completed_at = new Date().toISOString();
-    }
-    if (notes) updates.notes = notes;
-
     const { error } = await supabase
       .from("campaign_jobs")
       .update(updates)
@@ -60,11 +46,11 @@ export async function updateCampaignJobStatus(
     if (error) {
       return err(ioError("DATABASE_ERROR", error.message, {
         table: "campaign_jobs", jobId, operation: "update",
-      }, "updateCampaignJobStatus"));
+      }, "updateCampaignJob"));
     }
 
     return ok(undefined);
   } catch (caught: unknown) {
-    return err(fromUnknown(caught, "DATABASE_ERROR", "updateCampaignJobStatus"));
+    return err(fromUnknown(caught, "DATABASE_ERROR", "updateCampaignJob"));
   }
 }

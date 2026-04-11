@@ -4,13 +4,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
-import { type Activity } from "../../../core/domain/entities";
+import { type Activity, type ActivityType, type ActivityStatus } from "../../../core/domain/entities";
 import { mapActivityRow } from "../../../core/mappers/activity-mapper";
 
 export interface ActivityFilters {
   readonly partnerId?: string;
-  readonly status?: string;
-  readonly activityType?: string;
+  readonly status?: ActivityStatus;
+  readonly activityType?: ActivityType;
   readonly limit?: number;
   readonly offset?: number;
 }

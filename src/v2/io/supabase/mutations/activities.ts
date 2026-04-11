@@ -4,21 +4,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
-import { type Activity, type ActivityType } from "../../../core/domain/entities";
+import { type Activity } from "../../../core/domain/entities";
 import { mapActivityRow } from "../../../core/mappers/activity-mapper";
+import type { Database } from "@/integrations/supabase/types";
 
-export interface CreateActivityInput {
-  readonly title: string;
-  readonly activity_type: ActivityType;
-  readonly source_id: string;
-  readonly partner_id?: string | null;
-  readonly description?: string | null;
-  readonly due_date?: string | null;
-  readonly priority?: string;
-}
+type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
+type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 
 export async function createActivity(
-  input: CreateActivityInput,
+  input: ActivityInsert,
 ): Promise<Result<Activity, AppError>> {
   try {
     const { data, error } = await supabase
@@ -41,7 +35,7 @@ export async function createActivity(
 
 export async function updateActivity(
   activityId: string,
-  updates: Partial<CreateActivityInput & { status: string; completed_at: string | null }>,
+  updates: ActivityUpdate,
 ): Promise<Result<Activity, AppError>> {
   try {
     const { data, error } = await supabase
