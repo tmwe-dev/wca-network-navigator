@@ -302,23 +302,25 @@ export function useCockpitContacts() {
         const ic = icMap[sid];
         if (!ic) continue;
         // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
-        const icEd = (ic.enrichment_data || {}) as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const icEd = (ic.enrichment_data as any) || {};
         let icLinkedin = icEd.linkedin_profile_url
           || icEd.linkedin_url
           || icEd.social_links?.linkedin
           || "";
         // contact_profiles is an OBJECT keyed by ID, not an array
         if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
-          const profiles = Object.values(icEd.contact_profiles as Record<string, Record<string, unknown>>);
-          const found = profiles.find((cp) => cp.linkedin_url);
-          if (found) icLinkedin = found.linkedin_url as string;
+          const profiles = Object.values(icEd.contact_profiles) as any[];
+          const found = profiles.find((cp: any) => cp.linkedin_url);
+          if (found) icLinkedin = found.linkedin_url;
         }
         // Also check partner_social_links if we have a partner_id
         const icPartnerId = item.partner_id;
         if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
           icLinkedin = socialLinksMap[icPartnerId];
         }
-        const icEnrich = (ic.enrichment_data || {}) as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const icEnrich = (ic.enrichment_data as any) || {};
         const icMeta: Partial<CockpitContact> = {};
         if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
         if (icEnrich.company_profile?.specialties?.length) icMeta.specialties = icEnrich.company_profile.specialties.slice(0, 4);
@@ -352,7 +354,8 @@ export function useCockpitContacts() {
 
     // Add scheduled return activities
     for (const act of scheduledActivities) {
-      const meta = (act.source_meta || {}) as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meta = (act.source_meta || {}) as any;
       const existsAlready = result.some(r => r.sourceId === act.source_id);
       if (existsAlready) continue;
       result.push({
