@@ -182,7 +182,7 @@ export function useCockpitContacts() {
       const uniquePartnerIds = [...new Set(partnerIds)];
       let partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
-        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status").in("id", uniquePartnerIds);
+        const pData = await getPartnersByIds(uniquePartnerIds, "id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status");
         for (const p of pData || []) partnersMap[p.id] = p as unknown as PartnerRow;
       }
 

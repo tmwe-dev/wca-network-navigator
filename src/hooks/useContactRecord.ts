@@ -195,11 +195,9 @@ export function useUpdateContactRecord() {
       updates: Record<string, any>;
     }) => {
       if (sourceType === "partner") {
-        const { error } = await supabase.from("partners").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updatePartner(sourceId, updates);
       } else if (sourceType === "contact") {
-        const { error } = await supabase.from("imported_contacts").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
         const { error } = await supabase.from("prospects").update(updates).eq("id", sourceId);
         if (error) throw error;
