@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { updatePartner } from "@/data/partners";
 import { updateContact } from "@/data/contacts";
+import { updateProspect } from "@/data/prospects";
+import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 
 export interface UnifiedRecord {
@@ -55,23 +57,17 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           email: (primary?.email as string) || p.email,
           phone: (primary?.direct_phone as string) || p.phone,
           mobile: (primary?.mobile as string) || p.mobile,
-          country: p.country_name,
-          city: p.city,
-          address: p.address,
+          country: p.country_name, city: p.city, address: p.address,
           position: (primary?.title as string) || null,
-          website: p.website,
-          leadStatus: p.lead_status,
+          website: p.website, leadStatus: p.lead_status,
           note: p.profile_description,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: p.enriched_at,
-          createdAt: p.created_at || "",
-          lastInteractionAt: p.last_interaction_at,
-          interactionCount: p.interaction_count,
+          deepSearchAt: p.enriched_at, createdAt: p.created_at || "",
+          lastInteractionAt: p.last_interaction_at, interactionCount: p.interaction_count,
           linkedinUrl: (liLink?.url as string) || null,
           companyAlias: p.company_alias,
           contactAlias: (primary?.contact_alias as string) || null,
-          partnerId: p.id,
-          raw: p,
+          partnerId: p.id, raw: p,
         };
       }
 
@@ -82,32 +78,20 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !c) return null;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ed = (c.enrichment_data as any) || {};
         return {
           sourceType: "contact", sourceId,
-          companyName: c.company_name || "",
-          contactName: c.name || "",
-          email: c.email,
-          phone: c.phone,
-          mobile: c.mobile,
-          country: c.country,
-          city: c.city,
-          address: c.address,
-          position: c.position,
-          website: ed.company_website || null,
-          leadStatus: c.lead_status,
-          note: c.note,
+          companyName: c.company_name || "", contactName: c.name || "",
+          email: c.email, phone: c.phone, mobile: c.mobile,
+          country: c.country, city: c.city, address: c.address,
+          position: c.position, website: ed.company_website || null,
+          leadStatus: c.lead_status, note: c.note,
           enrichmentData: (c.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: c.deep_search_at,
-          createdAt: c.created_at,
-          lastInteractionAt: c.last_interaction_at,
-          interactionCount: c.interaction_count,
+          deepSearchAt: c.deep_search_at, createdAt: c.created_at,
+          lastInteractionAt: c.last_interaction_at, interactionCount: c.interaction_count,
           linkedinUrl: ed.linkedin_profile_url || ed.linkedin_url || null,
-          companyAlias: c.company_alias,
-          contactAlias: c.contact_alias,
-          partnerId: null,
-          raw: c,
+          companyAlias: c.company_alias, contactAlias: c.contact_alias,
+          partnerId: null, raw: c,
         };
       }
 
@@ -124,26 +108,16 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           sourceType: "prospect", sourceId,
           companyName: p.ragione_sociale || p.company_name || "",
           contactName: pc?.name || "",
-          email: p.email || pc?.email || null,
-          phone: pc?.phone || null,
-          mobile: null,
-          country: "Italia",
-          city: p.sede_legale || null,
-          address: null,
-          position: pc?.role || null,
-          website: p.website || null,
-          leadStatus: p.lead_status || "new",
-          note: null,
+          email: p.email || pc?.email || null, phone: pc?.phone || null, mobile: null,
+          country: "Italia", city: p.sede_legale || null, address: null,
+          position: pc?.role || null, website: p.website || null,
+          leadStatus: p.lead_status || "new", note: null,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: null,
-          createdAt: p.created_at,
+          deepSearchAt: null, createdAt: p.created_at,
           lastInteractionAt: p.last_interaction_at,
           interactionCount: p.interaction_count || 0,
           linkedinUrl: pc?.linkedin_url || null,
-          companyAlias: null,
-          contactAlias: null,
-          partnerId: null,
-          raw: p,
+          companyAlias: null, contactAlias: null, partnerId: null, raw: p,
         };
       }
 
@@ -156,28 +130,16 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
         if (error || !bc) return null;
         return {
           sourceType: "bca", sourceId,
-          companyName: bc.company_name || "",
-          contactName: bc.contact_name || "",
-          email: bc.email,
-          phone: bc.phone,
-          mobile: bc.mobile,
-          country: bc.location,
-          city: null,
-          address: null,
-          position: bc.position,
-          website: null,
-          leadStatus: bc.match_status || "pending",
-          note: bc.notes,
+          companyName: bc.company_name || "", contactName: bc.contact_name || "",
+          email: bc.email, phone: bc.phone, mobile: bc.mobile,
+          country: bc.location, city: null, address: null,
+          position: bc.position, website: null,
+          leadStatus: bc.match_status || "pending", note: bc.notes,
           enrichmentData: (bc.raw_data as Record<string, unknown>) ?? null,
-          deepSearchAt: null,
-          createdAt: bc.created_at,
-          lastInteractionAt: null,
-          interactionCount: 0,
-          linkedinUrl: null,
-          companyAlias: null,
-          contactAlias: null,
-          partnerId: bc.matched_partner_id,
-          raw: bc,
+          deepSearchAt: null, createdAt: bc.created_at,
+          lastInteractionAt: null, interactionCount: 0,
+          linkedinUrl: null, companyAlias: null, contactAlias: null,
+          partnerId: bc.matched_partner_id, raw: bc,
         };
       }
 
@@ -201,11 +163,9 @@ export function useUpdateContactRecord() {
       } else if (sourceType === "contact") {
         await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
-        const { error } = await supabase.from("prospects").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateProspect(sourceId, updates);
       } else if (sourceType === "bca") {
-        const { error } = await supabase.from("business_cards").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateBusinessCard(sourceId, updates);
       }
     },
     onSuccess: (_, vars) => {

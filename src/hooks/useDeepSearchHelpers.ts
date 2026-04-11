@@ -2,8 +2,8 @@
  * Deep Search — Pure helper functions extracted from useDeepSearchLocal.
  * Zero React dependencies. ~200 LOC reduction from main hook.
  */
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { findPartnerServices, findPartnerNetworks } from "@/data/partnerRelations";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useDeepSearchHelpers");
@@ -76,10 +76,8 @@ export async function calculateRating(
   memberSince: string | null,
   branchCities: unknown,
 ): Promise<number> {
-  const { data: servicesData } = await supabase.from("partner_services").select("service_category").eq("partner_id", partnerId);
-  const { data: networksData } = await supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId);
-  const services = servicesData ?? [];
-  const networks = networksData ?? [];
+  const services = await findPartnerServices(partnerId);
+  const networks = await findPartnerNetworks(partnerId);
 
   const websiteScore = websiteQualityScore || (website ? 2 : 1);
   const svcSet = new Set(services.map((s) => (s as Record<string, string>).service_category));

@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { getContactsByIds } from "@/data/contacts";
+import { insertCampaignJobs } from "@/data/campaignJobs";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
@@ -10,6 +10,7 @@ import { useSelection } from "@/hooks/useSelection";
 import type { AICommand } from "@/components/contacts/ContactAIBar";
 import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Deps {
   selection: ReturnType<typeof useSelection>;
@@ -70,9 +71,6 @@ export function useContactActions(deps: Deps) {
 
   const handleToggleGroupSelect = useCallback(async (group: ContactGroupCount) => {
     const key = `${currentGroupBy}:${group.group_key}`;
-    if (deps.selection.selectedIds.size > 0) {
-      // Check if group key was already selected
-    }
     const ids = await fetchGroupContactIds(currentGroupBy, group.group_key, holdingPattern);
     setSelectedGroups((prev) => {
       const next = new Set(prev);
@@ -109,7 +107,7 @@ export function useContactActions(deps: Deps) {
         city: ct.city || null, email: ct.email || null, phone: ct.phone || null,
         job_type: "email" as const, batch_id: batchId,
       }));
-      await supabase.from("campaign_jobs").insert(jobs);
+      await insertCampaignJobs(jobs);
       toast({ title: "Campagna creata", description: `${jobs.length} contatti aggiunti al batch` });
       selection.clear(); setSelectedGroups(new Set());
       navigate("/campaigns");
@@ -131,7 +129,7 @@ export function useContactActions(deps: Deps) {
           } break;
         case "export_csv": await exportContactsCsv(c.contact_ids || []); break;
         case "send_to_workspace": await sendToWorkspace(c.contact_ids || [], navigate); break;
-        case "create_jobs": await createCampaignJobs(c.contact_ids || [], selection, setSelectedGroups, navigate); break;
+        case "create_jobs": await createCampaignJobsAction(c.contact_ids || [], selection, setSelectedGroups, navigate); break;
         case "multi": if (c.commands) { for (const sub of c.commands) await exec(sub); } break;
       }
     };
@@ -167,7 +165,6 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
   if (!contacts?.length) { toast({ title: "Nessun contatto con email", variant: "destructive" }); return; }
 
   if (contacts.length === 1) {
-    // Single contact → prefill email composer directly
     const ct = contacts[0] as any;
     navigate("/email-composer", {
       state: {
@@ -182,7 +179,6 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
     return;
   }
 
-  // Multiple contacts → pass as array of recipients
   const recipients = contacts.map((ct: any) => ({
     email: ct.email,
     name: ct.name || undefined,
@@ -194,7 +190,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
   });
 }
 
-async function createCampaignJobs(contactIds: string[], selection: ReturnType<typeof useSelection>, setSelectedGroups: React.Dispatch<React.SetStateAction<Set<string>>>, navigate: ReturnType<typeof useNavigate>) {
+async function createCampaignJobsAction(contactIds: string[], selection: ReturnType<typeof useSelection>, setSelectedGroups: React.Dispatch<React.SetStateAction<Set<string>>>, navigate: ReturnType<typeof useNavigate>) {
   if (!contactIds.length) return;
   const contacts = await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, phone, country, city");
   if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
@@ -205,7 +201,7 @@ async function createCampaignJobs(contactIds: string[], selection: ReturnType<ty
     city: ct.city || null, email: ct.email || null, phone: ct.phone || null,
     job_type: "email" as const, batch_id: batchId,
   }));
-  await supabase.from("campaign_jobs").insert(jobs);
+  await insertCampaignJobs(jobs);
   toast({ title: "Job creati", description: `${jobs.length} job aggiunti` });
   selection.clear(); setSelectedGroups(new Set());
   navigate("/campaign-jobs");
