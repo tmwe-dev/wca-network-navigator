@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import SectionWrapper from "./SectionWrapper";
 import { supabase } from "@/integrations/supabase/client";
+import { countActivePartners, getDistinctCountries } from "@/data/partners";
 import { useQuery } from "@tanstack/react-query";
 import { Globe, Users, Mail, Briefcase, Bot, Cpu } from "lucide-react";
 
@@ -37,18 +38,18 @@ const PerformanceSection = () => {
   const { data: stats } = useQuery({
     queryKey: ["guida-stats"],
     queryFn: async () => {
-      const [partners, emails, countries, agents, tasks] = await Promise.all([
-        supabase.from("partners").select("id", { count: "planned", head: true }).eq("is_active", true),
+      const [partnersCount, countryCodes, emails, agents, tasks] = await Promise.all([
+        countActivePartners(),
+        getDistinctCountries(),
         supabase.from("channel_messages").select("id", { count: "planned", head: true }).eq("channel", "email"),
-        supabase.from("partners").select("country_code").eq("is_active", true),
         supabase.from("agents").select("id", { count: "planned", head: true }).eq("is_active", true),
         supabase.from("agent_tasks").select("id", { count: "planned", head: true }).eq("status", "completed"),
       ]);
       
-      const uniqueCountries = new Set((countries.data || []).map((r: any) => r.country_code)).size;
+      const uniqueCountries = countryCodes.length;
       
       return {
-        partners: partners.count || 0,
+        partners: partnersCount,
         emails: emails.count || 0,
         countries: uniqueCountries,
         agents: agents.count || 0,

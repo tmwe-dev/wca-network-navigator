@@ -5,6 +5,8 @@
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updatePartner, findPartnerByName, getPartner } from "@/data/partners";
+import { updateContactEnrichment } from "@/data/contacts";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
 import {
@@ -126,8 +128,8 @@ export function useDeepSearchLocal() {
           const domain = new URL(websiteUrl).hostname;
           const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
           if (logoUrl) {
-            const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
-            if (!error) logoFound = true;
+            await updatePartner(partnerId, { logo_url: logoUrl });
+            logoFound = true;
           }
         } catch { /* best-effort */ }
         if (scraped.markdown && scraped.markdown.length > 100) {
@@ -139,7 +141,7 @@ export function useDeepSearchLocal() {
       const ce = contacts.find((c) => c.email && !/(gmail|yahoo|hotmail|outlook)/i.test(c.email));
       if (ce?.email) {
         const domain = ce.email.split("@")[1];
-        if (domain) await supabase.from("partners").update({ website: `https://${domain}` }).eq("id", partnerId);
+        if (domain) await updatePartner(partnerId, { website: `https://${domain}` });
       }
     }
     return { logoFound, websiteQualityScore };
@@ -147,10 +149,8 @@ export function useDeepSearchLocal() {
 
   const searchPartner = useCallback(async (partnerId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    const { data: partner, error: pErr } = await supabase.from("partners")
-      .select("id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone, branch_cities, has_branches")
-      .eq("id", partnerId).single();
-    if (pErr || !partner) return { ...failResult, error: "Partner not found" };
+    const partner = await getPartner(partnerId) as any;
+    if (!partner) return { ...failResult, error: "Partner not found" };
 
     const { data: contactsData } = await supabase.from("partner_contacts").select("id, name, title, email, mobile, direct_phone").eq("partner_id", partnerId);
     const contacts = contactsData ?? [];
@@ -169,10 +169,10 @@ export function useDeepSearchLocal() {
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    await supabase.from("partners").update({ enrichment_data: updated as unknown as Record<string, string> }).eq("id", partnerId);
+    await updatePartner(partnerId, { enrichment_data: updated as unknown as Record<string, string> });
 
     const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);
-    await supabase.from("partners").update({ rating }).eq("id", partnerId);
+    await updatePartner(partnerId, { rating });
 
     return { success: true, socialLinksFound: contactLinks + companyLinks, logoFound, contactProfilesFound: Object.keys(contactProfiles).length, companyProfileFound: companyLinks > 0, rating, rateLimited: false, companyName: partner.company_name };
   }, [fs, googleSearch, scrapeUrl, searchLinkedInForContacts, searchCompanyLinkedIn, scrapeWebsite]);
@@ -189,7 +189,7 @@ export function useDeepSearchLocal() {
     const location = `${contact.city || ""} ${contact.country || ""}`.trim();
     let partnerId: string | null = null;
     if (contact.company_name) {
-      const { data: partner } = await supabase.from("partners").select("id").ilike("company_name", `%${contact.company_name}%`).maybeSingle();
+      const partner = await findPartnerByName(contact.company_name);
       partnerId = partner?.id || null;
     }
     let socialLinksFound = 0;
@@ -279,7 +279,7 @@ export function useDeepSearchLocal() {
       ...(companyProfileFound ? { company_linkedin_found: true } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    await supabase.from("imported_contacts").update({ enrichment_data: updated as unknown as Record<string, string>, deep_search_at: new Date().toISOString() }).eq("id", contactId);
+    await updateContactEnrichment(contactId, { ...updated, deep_search_at: new Date().toISOString() });
 
     return { success: true, socialLinksFound, logoFound, contactProfilesFound: Object.keys(contactProfiles).length, companyProfileFound, rating: websiteQualityScore || 0, rateLimited: false, companyName };
   }, [fs, googleSearch, scrapeUrl]);
