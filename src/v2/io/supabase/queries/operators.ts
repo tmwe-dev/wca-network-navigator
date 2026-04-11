@@ -23,7 +23,7 @@ export async function fetchOperators(): Promise<Result<Operator[], AppError>> {
       const r = parsed.data;
       ops.push({
         id: operatorId(r.id),
-        userId: userId(r.user_id),
+        userId: r.user_id ? userId(r.user_id) : userId(""),
         name: r.name,
         email: r.email,
         isAdmin: r.is_admin,

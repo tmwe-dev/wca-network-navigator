@@ -4,9 +4,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
+import type { Database } from "@/integrations/supabase/types";
+
+type WorkspaceDocInsert = Database["public"]["Tables"]["workspace_documents"]["Insert"];
 
 export async function createWorkspaceDoc(
-  doc: Record<string, unknown>,
+  doc: WorkspaceDocInsert,
 ): Promise<Result<void, AppError>> {
   try {
     const { error } = await supabase.from("workspace_documents").insert(doc);

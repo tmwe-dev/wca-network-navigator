@@ -23,10 +23,10 @@ export async function fetchWorkspaceDocs(): Promise<Result<WorkspaceDoc[], AppEr
       const r = parsed.data;
       docs.push({
         id: workspaceDocId(r.id),
-        userId: userId(r.user_id),
-        title: r.title,
-        content: r.content,
-        category: r.category,
+        userId: r.user_id ? userId(r.user_id) : userId(""),
+        title: r.file_name,
+        content: r.extracted_text,
+        category: null,
         createdAt: r.created_at,
       });
     }
