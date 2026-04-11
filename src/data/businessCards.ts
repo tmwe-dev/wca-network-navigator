@@ -25,6 +25,17 @@ export async function findBusinessCards(filters?: { event_name?: string; match_s
   return data ?? [];
 }
 
+export async function findBusinessCardByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("business_cards")
+    .select("company_name, contact_name, location, matched_partner_id")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function findMatchedPartnerIds() {
   const { data, error } = await supabase
     .from("business_cards")

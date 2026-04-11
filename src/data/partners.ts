@@ -387,6 +387,17 @@ export async function getPartnersByLeadStatus(statuses: string[], select = "id")
   return data ?? [];
 }
 
+export async function findPartnerByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
   let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
