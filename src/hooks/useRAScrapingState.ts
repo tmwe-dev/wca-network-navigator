@@ -133,7 +133,7 @@ export function useRAScrapingState() {
         batch_size: batchSize,
       });
       setActiveJobId(job.id);
-      await scrapeSelected({ items: selectedItems });
+      await scrapeSelected({ items: selectedItems as unknown as { name: string; url: string }[] });
       pollStatus(job.id);
     } catch (error) {
       addLog(`Errore durante lo scraping: ${error}`);
