@@ -34,8 +34,11 @@ describe("Empty catch blocks audit", () => {
     if (violations.length > 0) {
       console.warn("Files with empty catches:", violations);
     }
-    // Allow max 5 as transitional threshold (target: 0)
+    // Only log.ts infra files are exempt (would cause recursion)
     const total = violations.reduce((sum, v) => sum + v.count, 0);
-    expect(total).toBeLessThanOrEqual(5);
+    const exemptFiles = ["lib/log.ts", "lib/log/remoteSink.ts"];
+    const nonExempt = violations.filter(v => !exemptFiles.some(e => v.file.endsWith(e)));
+    const nonExemptTotal = nonExempt.reduce((sum, v) => sum + v.count, 0);
+    expect(nonExemptTotal).toBe(0);
   });
 });
