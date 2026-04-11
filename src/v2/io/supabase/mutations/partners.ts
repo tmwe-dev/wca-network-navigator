@@ -1,11 +1,10 @@
 /**
  * IO Mutations: Partners — Result-based CRUD
- * Uses Database types for insert/update compatibility.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
-import { type Partner } from "../../../core/domain/entities";
+import type { PartnerV2 } from "../../../core/domain/partner-entity";
 import { mapPartnerRow } from "../../../core/mappers/partner-mapper";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -14,7 +13,7 @@ type PartnerUpdate = Database["public"]["Tables"]["partners"]["Update"];
 
 export async function createPartner(
   input: PartnerInsert,
-): Promise<Result<Partner, AppError>> {
+): Promise<Result<PartnerV2, AppError>> {
   try {
     const { data, error } = await supabase
       .from("partners")
@@ -37,7 +36,7 @@ export async function createPartner(
 export async function updatePartner(
   partnerId: string,
   updates: PartnerUpdate,
-): Promise<Result<Partner, AppError>> {
+): Promise<Result<PartnerV2, AppError>> {
   try {
     const { data, error } = await supabase
       .from("partners")

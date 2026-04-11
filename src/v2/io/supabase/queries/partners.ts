@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
-import { type Partner } from "../../../core/domain/entities";
+import type { PartnerV2 } from "../../../core/domain/partner-entity";
 import { mapPartnerRow, mapPartnerRows } from "../../../core/mappers/partner-mapper";
 
 export interface PartnerFilters {
@@ -17,15 +17,12 @@ export interface PartnerFilters {
 
 export async function fetchPartners(
   filters?: PartnerFilters,
-): Promise<Result<Partner[], AppError>> {
+): Promise<Result<PartnerV2[], AppError>> {
   try {
     let query = supabase.from("partners").select("*");
 
     if (filters?.countryCode) {
       query = query.eq("country_code", filters.countryCode);
-    }
-    if (filters?.networkName) {
-      query = query.eq("network_name", filters.networkName);
     }
     if (filters?.search) {
       query = query.ilike("company_name", `%${filters.search}%`);
@@ -52,7 +49,7 @@ export async function fetchPartners(
 
 export async function fetchPartnerById(
   partnerId: string,
-): Promise<Result<Partner, AppError>> {
+): Promise<Result<PartnerV2, AppError>> {
   try {
     const { data, error } = await supabase
       .from("partners")
@@ -80,6 +77,6 @@ export async function fetchPartnerById(
 
 export async function fetchPartnersByCountry(
   countryCode: string,
-): Promise<Result<Partner[], AppError>> {
+): Promise<Result<PartnerV2[], AppError>> {
   return fetchPartners({ countryCode });
 }

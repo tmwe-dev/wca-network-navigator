@@ -1,12 +1,13 @@
 /**
- * Partner Mapper — DB row → Domain entity
+ * Partner Mapper — DB row → Domain entity (matches actual schema)
  */
 import { type Result, ok, err } from "../domain/result";
 import { ioError, type AppError } from "../domain/errors";
 import { PartnerRowSchema } from "../../io/supabase/schemas/partner-schema";
-import { type Partner, partnerId, userId } from "../domain/entities";
+import { partnerId, userId } from "../domain/entities";
+import type { PartnerV2 } from "../domain/partner-entity";
 
-export function mapPartnerRow(row: unknown): Result<Partner, AppError> {
+export function mapPartnerRow(row: unknown): Result<PartnerV2, AppError> {
   const parsed = PartnerRowSchema.safeParse(row);
   if (!parsed.success) {
     return err(ioError("SCHEMA_MISMATCH", `Partner row validation failed: ${parsed.error.message}`, {
@@ -24,20 +25,30 @@ export function mapPartnerRow(row: unknown): Result<Partner, AppError> {
     city: r.city,
     address: r.address,
     phone: r.phone,
+    mobile: r.mobile,
     email: r.email,
     website: r.website,
-    networkName: r.network_name,
     memberSince: r.member_since,
-    isBlacklisted: r.is_blacklisted,
-    enrichmentData: r.enrichment_data,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    officeType: r.office_type,
+    partnerType: r.partner_type,
+    isActive: r.is_active ?? true,
+    isFavorite: r.is_favorite ?? false,
+    leadStatus: r.lead_status,
+    logoUrl: r.logo_url,
+    rating: r.rating,
+    enrichmentData: r.enrichment_data as Readonly<Record<string, unknown>> | null,
+    companyAlias: r.company_alias,
+    interactionCount: r.interaction_count,
+    lastInteractionAt: r.last_interaction_at,
+    profileDescription: r.profile_description,
+    createdAt: r.created_at ?? new Date().toISOString(),
+    updatedAt: r.updated_at ?? new Date().toISOString(),
     userId: r.user_id ? userId(r.user_id) : null,
   });
 }
 
-export function mapPartnerRows(rows: unknown[]): Result<Partner[], AppError> {
-  const partners: Partner[] = [];
+export function mapPartnerRows(rows: unknown[]): Result<PartnerV2[], AppError> {
+  const partners: PartnerV2[] = [];
   for (const row of rows) {
     const mapped = mapPartnerRow(row);
     if (mapped._tag === "Err") return mapped;
