@@ -2,12 +2,13 @@
  * ProspectPage — Pipeline view with status columns and contact actions
  */
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Target, Search, Mail, Phone } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useProspectsV2 } from "@/v2/hooks/useProspectsV2";
+import { Target, Search, Mail, Phone } from "lucide-react";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -27,28 +28,16 @@ export function ProspectPage(): React.ReactElement {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const { data: contacts, isLoading } = useQuery({
-    queryKey: ["v2-prospects", statusFilter, search],
-    queryFn: async () => {
-      let q = supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, phone, mobile, lead_status, country, origin, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (statusFilter !== "all") q = q.eq("lead_status", statusFilter);
-      if (search) q = q.or(`name.ilike.%${search}%,company_name.ilike.%${search}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: contacts, isLoading } = useProspectsV2(
+    statusFilter !== "all" ? statusFilter : undefined,
+    search || undefined,
+  );
 
-  // Count per status
   const statusCounts = useMemo(() => {
     if (!contacts) return {};
     const counts: Record<string, number> = {};
     for (const c of contacts) {
-      counts[c.lead_status] = (counts[c.lead_status] ?? 0) + 1;
+      counts[c.leadStatus] = (counts[c.leadStatus] ?? 0) + 1;
     }
     return counts;
   }, [contacts]);
@@ -59,7 +48,7 @@ export function ProspectPage(): React.ReactElement {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2-prospects"] });
+      qc.invalidateQueries({ queryKey: ["v2", "prospects"] });
       toast.success("Stato aggiornato");
     },
   });
@@ -71,7 +60,6 @@ export function ProspectPage(): React.ReactElement {
         <p className="text-sm text-muted-foreground">Pipeline acquisizione contatti.</p>
       </div>
 
-      {/* Status pills with counts */}
       <div className="flex flex-wrap gap-2">
         <button onClick={() => setStatusFilter("all")} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
           Tutti ({contacts?.length ?? 0})
@@ -97,13 +85,12 @@ export function ProspectPage(): React.ReactElement {
         <div className="space-y-2">
           {contacts?.map((c) => (
             <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
-              <div className={`h-8 w-1 rounded-full ${STATUS_COLORS[c.lead_status] ?? "bg-muted"}`} />
+              <div className={`h-8 w-1 rounded-full ${STATUS_COLORS[c.leadStatus] ?? "bg-muted"}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{c.name ?? c.company_name ?? "—"}</p>
+                <p className="text-sm font-medium text-foreground truncate">{c.name ?? c.companyName ?? "—"}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {c.company_name && c.name ? <span className="truncate">{c.company_name}</span> : null}
+                  {c.companyName && c.name ? <span className="truncate">{c.companyName}</span> : null}
                   {c.country ? <span>{c.country}</span> : null}
-                  {c.origin ? <span>• {c.origin}</span> : null}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -119,7 +106,7 @@ export function ProspectPage(): React.ReactElement {
                 ) : null}
                 <select
                   className="rounded border bg-background px-1.5 py-0.5 text-xs text-foreground"
-                  value={c.lead_status}
+                  value={c.leadStatus}
                   onChange={(e) => updateStatusMut.mutate({ id: c.id, status: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                 >
