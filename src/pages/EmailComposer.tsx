@@ -351,16 +351,13 @@ export default function EmailComposer() {
   const executeEnqueue = async () => {
     setSending(true);
     try {
-      const { data: savedDraft, error: draftError } = await supabase
-        .from("email_drafts" as any)
-        .insert({
-          subject, html_body: htmlBody, category: "altro",
-          recipient_type: "partner",
-          recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
-          attachment_ids: selectedAttachments, link_urls: emailLinks,
-          status: "queued", total_count: recipientsWithEmail.length,
-        } as any).select().single();
-      if (draftError) throw draftError;
+      const savedDraft = await insertEmailDraftReturning({
+        subject, html_body: htmlBody, category: "altro",
+        recipient_type: "partner",
+        recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
+        attachment_ids: selectedAttachments, link_urls: emailLinks,
+        status: "queued", total_count: recipientsWithEmail.length,
+      });
       const draftId = (savedDraft as any).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
