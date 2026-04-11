@@ -18,7 +18,7 @@ export const PartnerRowSchema = z.object({
   network_name: z.string(),
   member_since: z.string().nullable(),
   is_blacklisted: z.boolean(),
-  enrichment_data: z.record(z.unknown()).nullable(),
+  enrichment_data: z.record(z.string(), z.unknown()).nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   user_id: z.string().uuid().nullable(),

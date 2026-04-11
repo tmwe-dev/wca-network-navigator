@@ -26,7 +26,7 @@ export const ActivityRowSchema = z.object({
   scheduled_at: z.string().nullable(),
   source_type: z.string(),
   source_id: z.string().uuid(),
-  source_meta: z.record(z.unknown()).nullable(),
+  source_meta: z.record(z.string(), z.unknown()).nullable(),
   email_subject: z.string().nullable(),
   email_body: z.string().nullable(),
   reviewed: z.boolean(),
