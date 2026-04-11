@@ -2,49 +2,45 @@
  * Campaign Bridge Handler — STEP 5
  */
 
-import { EventBus } from "../event-bus";
-import { createEvent, type DomainEvent } from "@/v2/core/domain/events";
+import { subscribe, publish } from "../event-bus";
+import { createEvent } from "@/v2/core/domain/events";
 import { isOk } from "@/v2/core/domain/result";
-import { validateDateRange } from "@/v2/core/domain/validators";
 import * as campaignMutations from "@/v2/io/supabase/mutations/campaigns";
-import type { CampaignId } from "@/v2/core/domain/entities";
-import { logV2 } from "@/v2/lib/logger";
+import { createLogger } from "@/v2/lib/logger";
 
-interface CampaignCreatePayload {
-  readonly name: string;
-  readonly channel: string;
-  readonly targetFilters: Record<string, unknown>;
-  readonly userId: string;
-}
+const logger = createLogger("campaign-bridge");
 
-export function registerCampaignBridge(bus: EventBus): void {
-  bus.subscribe("campaign.create.requested", async (event: DomainEvent) => {
-    const payload = event.payload as CampaignCreatePayload;
+export function registerCampaignBridge(): void {
+  subscribe("campaign.create.requested", async (event) => {
+    const payload = event.payload as {
+      batchId: string; partnerId: string; companyName: string;
+      countryCode: string; countryName: string; userId: string;
+    };
 
-    const mutationResult = await campaignMutations.createCampaign({
-      title: payload.name,
-      channel: payload.channel,
-      target_filters: payload.targetFilters,
-      user_id: payload.userId,
+    const mutationResult = await campaignMutations.createCampaignJob({
+      batch_id: payload.batchId,
+      partner_id: payload.partnerId,
+      company_name: payload.companyName,
+      country_code: payload.countryCode,
+      country_name: payload.countryName,
     });
 
     if (isOk(mutationResult)) {
-      bus.publish(createEvent("campaign.created", mutationResult.value));
-      logV2("info", "campaign-bridge", "Campaign created via bridge", { name: payload.name });
+      publish(createEvent("campaign.created", { campaignJobId: mutationResult.value.campaignJobId }, "campaign-bridge"));
+      logger.info("Campaign job created", { batchId: payload.batchId });
     } else {
-      bus.publish(createEvent("campaign.create.failed", { reason: "io_error", error: mutationResult.error }));
+      publish(createEvent("campaign.create.failed", { reason: "io_error" }, "campaign-bridge"));
     }
   });
 
-  bus.subscribe("campaign.update.requested", async (event: DomainEvent) => {
-    const { campaignId, changes } = event.payload as { campaignId: CampaignId; changes: Record<string, unknown> };
-
-    const mutationResult = await campaignMutations.updateCampaign(campaignId, changes);
+  subscribe("campaign.update.requested", async (event) => {
+    const { campaignJobId, changes } = event.payload as { campaignJobId: string; changes: Record<string, unknown> };
+    const mutationResult = await campaignMutations.updateCampaignJob(campaignJobId, changes);
 
     if (isOk(mutationResult)) {
-      bus.publish(createEvent("campaign.updated", mutationResult.value));
+      publish(createEvent("campaign.updated", { campaignJobId }, "campaign-bridge"));
     } else {
-      bus.publish(createEvent("campaign.update.failed", { campaignId, error: mutationResult.error }));
+      publish(createEvent("campaign.update.failed", { campaignJobId }, "campaign-bridge"));
     }
   });
 }

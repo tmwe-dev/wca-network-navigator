@@ -2,30 +2,25 @@
  * Contact Bridge Handler — STEP 5
  */
 
-import { EventBus } from "../event-bus";
-import { createEvent, type DomainEvent } from "@/v2/core/domain/events";
+import { subscribe, publish } from "../event-bus";
+import { createEvent } from "@/v2/core/domain/events";
 import { isOk } from "@/v2/core/domain/result";
 import { validateEmail } from "@/v2/core/domain/validators";
 import * as contactMutations from "@/v2/io/supabase/mutations/contacts";
-import type { ContactId } from "@/v2/core/domain/entities";
-import { logV2 } from "@/v2/lib/logger";
+import { createLogger } from "@/v2/lib/logger";
 
-interface ContactCreatePayload {
-  readonly name: string;
-  readonly email?: string;
-  readonly companyName?: string;
-  readonly importLogId: string;
-  readonly userId: string;
-}
+const logger = createLogger("contact-bridge");
 
-export function registerContactBridge(bus: EventBus): void {
-  bus.subscribe("contact.create.requested", async (event: DomainEvent) => {
-    const payload = event.payload as ContactCreatePayload;
+export function registerContactBridge(): void {
+  subscribe("contact.create.requested", async (event) => {
+    const payload = event.payload as {
+      name: string; email?: string; companyName?: string; importLogId: string;
+    };
 
     if (payload.email) {
       const emailCheck = validateEmail(payload.email);
       if (!isOk(emailCheck)) {
-        bus.publish(createEvent("contact.create.failed", { reason: "invalid_email", ...payload }));
+        publish(createEvent("contact.create.failed", { reason: "invalid_email" }, "contact-bridge"));
         return;
       }
     }
@@ -35,26 +30,24 @@ export function registerContactBridge(bus: EventBus): void {
       email: payload.email ?? null,
       company_name: payload.companyName ?? null,
       import_log_id: payload.importLogId,
-      user_id: payload.userId,
     });
 
     if (isOk(mutationResult)) {
-      bus.publish(createEvent("contact.created", mutationResult.value));
-      logV2("info", "contact-bridge", "Contact created via bridge", { name: payload.name });
+      publish(createEvent("contact.created", { contactId: mutationResult.value.contactId }, "contact-bridge"));
+      logger.info("Contact created", { name: payload.name });
     } else {
-      bus.publish(createEvent("contact.create.failed", { reason: "io_error", error: mutationResult.error }));
+      publish(createEvent("contact.create.failed", { reason: "io_error" }, "contact-bridge"));
     }
   });
 
-  bus.subscribe("contact.update.requested", async (event: DomainEvent) => {
-    const { contactId, changes } = event.payload as { contactId: ContactId; changes: Record<string, unknown> };
-
+  subscribe("contact.update.requested", async (event) => {
+    const { contactId, changes } = event.payload as { contactId: string; changes: Record<string, unknown> };
     const mutationResult = await contactMutations.updateContact(contactId, changes);
 
     if (isOk(mutationResult)) {
-      bus.publish(createEvent("contact.updated", mutationResult.value));
+      publish(createEvent("contact.updated", { contactId }, "contact-bridge"));
     } else {
-      bus.publish(createEvent("contact.update.failed", { contactId, error: mutationResult.error }));
+      publish(createEvent("contact.update.failed", { contactId }, "contact-bridge"));
     }
   });
 }
