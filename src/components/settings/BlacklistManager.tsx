@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
-import ExcelJS from "exceljs";
+// ExcelJS loaded lazily to reduce bundle size
+const getExcelJS = () => import("exceljs").then(m => m.default);
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("BlacklistManager");
@@ -19,6 +20,7 @@ const log = createLogger("BlacklistManager");
 /* ── Parse XLS/CSV file ── */
 async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
   const buffer = await file.arrayBuffer();
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
 
   if (file.name.endsWith(".csv")) {

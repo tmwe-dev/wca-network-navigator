@@ -48,7 +48,8 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
     setLoading(true);
 
     try {
-      const data = await invokeEdge<any>("import-assistant", { body: {
+      const data = await invokeEdge<any>("unified-assistant", { body: {
+          scope: "import",
           messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           context: {
             activeLogId,

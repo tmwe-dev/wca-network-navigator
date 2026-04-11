@@ -1678,6 +1678,7 @@ export type Database = {
           status: string
           subject: string | null
           total_count: number
+          user_id: string | null
         }
         Insert: {
           attachment_ids?: Json | null
@@ -1697,6 +1698,7 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
+          user_id?: string | null
         }
         Update: {
           attachment_ids?: Json | null
@@ -1716,6 +1718,7 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1853,6 +1856,7 @@ export type Database = {
           id: string
           name: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           category?: string | null
@@ -1864,6 +1868,7 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           category?: string | null
@@ -1875,6 +1880,7 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -2373,6 +2379,7 @@ export type Database = {
           notes: string | null
           sample_tested_at: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -2385,6 +2392,7 @@ export type Database = {
           notes?: string | null
           sample_tested_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -2397,6 +2405,7 @@ export type Database = {
           notes?: string | null
           sample_tested_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -3121,6 +3130,7 @@ export type Database = {
           phone: string | null
           prospect_id: string
           role: string | null
+          user_id: string | null
         }
         Insert: {
           codice_fiscale?: string | null
@@ -3132,6 +3142,7 @@ export type Database = {
           phone?: string | null
           prospect_id: string
           role?: string | null
+          user_id?: string | null
         }
         Update: {
           codice_fiscale?: string | null
@@ -3143,6 +3154,7 @@ export type Database = {
           phone?: string | null
           prospect_id?: string
           role?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3164,6 +3176,7 @@ export type Database = {
           outcome: string | null
           prospect_id: string
           title: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -3174,6 +3187,7 @@ export type Database = {
           outcome?: string | null
           prospect_id: string
           title: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3184,6 +3198,7 @@ export type Database = {
           outcome?: string | null
           prospect_id?: string
           title?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3203,6 +3218,7 @@ export type Database = {
           platform: string
           prospect_id: string
           url: string
+          user_id: string | null
         }
         Insert: {
           contact_id?: string | null
@@ -3211,6 +3227,7 @@ export type Database = {
           platform: string
           prospect_id: string
           url: string
+          user_id?: string | null
         }
         Update: {
           contact_id?: string | null
@@ -3219,6 +3236,7 @@ export type Database = {
           platform?: string
           prospect_id?: string
           url?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3269,6 +3287,7 @@ export type Database = {
           region: string | null
           source: string
           updated_at: string
+          user_id: string | null
           utile: number | null
           website: string | null
         }
@@ -3303,6 +3322,7 @@ export type Database = {
           region?: string | null
           source?: string
           updated_at?: string
+          user_id?: string | null
           utile?: number | null
           website?: string | null
         }
@@ -3337,6 +3357,7 @@ export type Database = {
           region?: string | null
           source?: string
           updated_at?: string
+          user_id?: string | null
           utile?: number | null
           website?: string | null
         }

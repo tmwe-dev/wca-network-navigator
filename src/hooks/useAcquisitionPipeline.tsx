@@ -434,7 +434,7 @@ export function useAcquisitionPipeline() {
         parallelTasks.push(
           (async () => {
             try {
-              const deepResult = await invokeEdge<any>("deep-search-partner", { body: { partnerId }, context: "useAcquisitionPipeline.deep_search_partner" });
+              const deepResult = await invokeEdge<any>("ai-utility", { body: { action: "deep_search", partnerId }, context: "useAcquisitionPipeline.deep_search_partner" });
               if (deepResult) {
                 const [{ data: updatedPartner }, { data: socialLinks }] = await Promise.all([
                   supabase.from("partners").select("logo_url").eq("id", partnerId!).maybeSingle(),

@@ -136,9 +136,9 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
     const history = prevMessages.map(m => ({ role: m.role, content: m.content }));
 
     try {
-      // Route to cockpit-assistant if on cockpit page and in operational mode
+      // Route to unified-assistant with cockpit scope if on cockpit page and in operational mode
       if (isCockpit && mode === "operational" && cockpitContacts) {
-        const data = await invokeEdge<any>("cockpit-assistant", { body: { command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
+        const data = await invokeEdge<any>("unified-assistant", { body: { scope: "cockpit", command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
         if (data?.error) throw new Error(data.error);
         
         const actions = data?.actions || [];
@@ -151,12 +151,12 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
         const assistantMsg: ConversationMessage = { role: "assistant", content: message, timestamp: ts() };
         await addMessages([assistantMsg]);
       } else {
-        // Standard AI assistant
-        const fnName = mode === "conversational" ? "super-assistant" : "ai-assistant";
+        // Standard AI assistant — route through unified-assistant
+        const scope = mode === "conversational" ? "strategic" : "partner_hub";
         const body = mode === "conversational"
-          ? { messages: history, pageContext: currentPage, systemStats: stats }
-          : { messages: history, context: { currentPage } };
-        const data = await invokeEdge<any>(fnName, { body, context: `IntelliFlowOverlay.${fnName}` });
+          ? { scope, messages: history, pageContext: currentPage, systemStats: stats }
+          : { scope, messages: history, context: { currentPage } };
+        const data = await invokeEdge<any>("unified-assistant", { body, context: `IntelliFlowOverlay.unified_${scope}` });
         const raw = data?.content || data?.message || "";
         dispatchAiAgentEffects(parseAiAgentResponse(raw));
         const assistantMsg: ConversationMessage = { role: "assistant", content: raw, timestamp: ts() };

@@ -36,8 +36,8 @@ export function useEmailGenerator() {
     try {
       let data: (GeneratedEmail & GenerateEmailErrorBody) | null = null;
       try {
-        data = await invokeEdge<GeneratedEmail & GenerateEmailErrorBody>("generate-email", {
-          body: params,
+        data = await invokeEdge<GeneratedEmail & GenerateEmailErrorBody>("generate-content", {
+          body: { action: "email", ...params },
           context: "useEmailGenerator.generate",
         });
       } catch (err) {

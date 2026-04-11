@@ -128,7 +128,7 @@ export default function BusinessCardsHub() {
           const partnerIds = new Set<string>();
           for (const id of selectedIds) { const card = cards.find(c => c.id === id); if (card?.matched_partner_id) partnerIds.add(card.matched_partner_id); }
           if (partnerIds.size === 0) { toast({ title: "Nessun biglietto associato a un partner" }); return; }
-          invokeEdge("deep-search-partner", { body: { partnerIds: Array.from(partnerIds) }, context: "BusinessCardsHub.deep_search_partner" })
+          invokeEdge("ai-utility", { body: { action: "deep_search", partnerIds: Array.from(partnerIds) }, context: "BusinessCardsHub.deep_search_partner" })
             .then(() => toast({ title: `✅ Deep Search avviata su ${partnerIds.size} partner` }))
             .catch(() => toast({ title: "Errore Deep Search", variant: "destructive" }));
         }}

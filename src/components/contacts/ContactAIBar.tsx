@@ -64,7 +64,8 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const data = await invokeEdge<any>("contacts-assistant", { body: {
+      const data = await invokeEdge<any>("unified-assistant", { body: {
+          scope: "contacts",
           messages: newMessages,
           context: {
             filters,
