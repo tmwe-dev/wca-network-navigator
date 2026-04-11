@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
+import { countPartnersWithoutCountry, countActivePartners } from "@/data/partners";
 import {
   CheckCircle2, XCircle, Loader2, Play, RotateCcw,
   Database, Shield, Globe, Zap, HardDrive, Link2,
