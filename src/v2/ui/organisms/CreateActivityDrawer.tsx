@@ -38,16 +38,16 @@ export function CreateActivityDrawer({ open, onClose, onCreated }: Props): React
   const createMut = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Titolo obbligatorio");
-      const { error } = await supabase.from("activities").insert({
+      const { error } = await supabase.from("activities").insert([{
         title: title.trim(),
-        activity_type: type as "email",
+        activity_type: type as "follow_up",
         priority,
         due_date: dueDate || null,
         description: description || null,
         source_id: crypto.randomUUID(),
         source_type: "manual",
         user_id: session?.user?.id,
-      });
+      }]);
       if (error) throw error;
     },
     onSuccess: () => {
