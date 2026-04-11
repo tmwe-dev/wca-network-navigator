@@ -82,14 +82,14 @@ export async function findPartnerSocialLinks(partnerId: string) {
 
 export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
   let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
-  if (platform) q = q.eq("platform", platform);
+  if (platform) q = q.eq("platform", platform as any);
   const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function insertPartnerSocialLink(link: { partner_id: string; contact_id: string | null; platform: string; url: string }) {
-  const { error } = await supabase.from("partner_social_links").insert(link);
+  const { error } = await supabase.from("partner_social_links").insert(link as any);
   return { error };
 }
 
