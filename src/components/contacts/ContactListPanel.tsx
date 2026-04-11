@@ -402,9 +402,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             try {
               const data = await rpcMatchContactsToWca();
               toast({ title: `✅ WCA Match completato — ${(data as any)?.matched_count || 0} associazioni trovate` });
-            selection.clear();
-            qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-            qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+              selection.clear();
+              qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+              qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+            } catch (e: any) {
+              toast({ title: "Errore", description: e.message, variant: "destructive" });
+            }
           }}
         />
       )}
