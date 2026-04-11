@@ -101,9 +101,15 @@ export function useImportV2() {
           return record;
         });
 
+        const typedBatch = batch as Array<{
+          import_log_id: string;
+          user_id: string;
+          row_number: number;
+          [key: string]: unknown;
+        }>;
         const { error: insertErr } = await supabase
           .from("imported_contacts")
-          .insert(batch as Array<Record<string, unknown>>);
+          .insert(typedBatch);
         if (insertErr) { errors += batch.length; } else { imported += batch.length; }
       }
 
