@@ -1,50 +1,69 @@
-# 📚 Il Metodo — Fonte di Verità del Progetto
+# 📚 Il Metodo — Bibbia Metodologica v2.0
 
-**Questa cartella contiene la bibbia metodologica di `wca-network-navigator`.**
-Ogni decisione tecnica, ogni refactor, ogni nuova feature **deve** essere coerente con i due volumi qui raccolti. In caso di conflitto tra un'abitudine consolidata del codice e una regola di questi libri, vincono i libri.
+**Questa cartella contiene la guida definitiva per la ricostruzione v2.0 di `wca-network-navigator`.**
 
-I volumi valgono sia per **Claude** (sessioni Cowork / Claude Code) sia per **Lovable**. Entrambi gli agenti leggono questa cartella prima di agire sul codice.
+Ogni decisione tecnica, ogni modulo, ogni flusso della v2.0 **deve** essere coerente con i quattro volumi qui raccolti. In caso di conflitto tra un'abitudine consolidata del codice e una regola di questi libri, **vincono i libri**.
 
 ---
 
-## I tre volumi
+## v1.0 vs v2.0
 
-### 📘 Documento 2 — Come Costruire da Zero un Software Perfetto con AI
-*Guida enterprise per costruire un prodotto vendibile, stabile e scalabile senza cadere nel caos tipico dei builder AI.*
+| | v1.0 (attuale) | v2.0 (target) |
+|---|---|---|
+| **Stato** | 🔒 FREEZE — nessuna modifica | 🏗️ Da costruire da zero |
+| **Architettura** | Organica, debito tecnico accumulato | Atomic Design: `/core`, `/io`, `/bridge` |
+| **Qualità** | 4.150/10.000 (audit aprile 2026) | Standard Enterprise (5 criteri oggettivi) |
+| **AI** | Prompt ad hoc, logica sparsa | Sistema multi-agente con consenso e Perfection Matrix |
+| **Testing** | 44 test (guardrails minimi) | Validazione preventiva + contract + regression |
+| **Osservabilità** | Parziale | Logging strutturato, metriche, audit trail completo |
 
-**REGOLA SUPREMA**: Qualsiasi cosa venga costruita a livello di codice deve seguire assolutamente, tassativamente, inderogabilmente le regole di questo documento.
+**Il codice v1.0 resta dov'è. La v2.0 sarà ricostruita seguendo i 4 volumi.**
 
-File:
-- [`Documento_2_Software_Perfetto_da_Zero_con_AI.md`](./Documento_2_Software_Perfetto_da_Zero_con_AI.md) — testo integrale leggibile e ricercabile
-- `Documento_2_Software_Perfetto_da_Zero_con_AI.docx` — originale consegnato dal proprietario
+---
 
-**Struttura**: 11 sezioni — dalla definizione di software perfetto alla formula conclusiva, passando per 6 regole fondanti, 10 fasi di costruzione, 5 regole di prompting enterprise e la checklist di costruzione perfetta.
+## I quattro volumi
 
-### 📕 Volume I — Il Protocollo del Recupero
+### 📕 Volume I — Il Protocollo del Recupero (2ª edizione)
 *Manuale operativo per il ripristino di sistemi software complessi.*
 
-Si applica **oggi**, finché il sistema non è uscito dal protocollo. Governa tutte le attività di audit, pulizia, debugging, refactor e consolidamento sul codice esistente.
+File:
+- [`Volume_I_Il_Protocollo_del_Recupero.md`](./Volume_I_Il_Protocollo_del_Recupero.md)
+- `Volume_I_Il_Protocollo_del_Recupero-2.docx` (originale)
+
+**Struttura**: 13 capitoli — dalla Fase 0 (Fotografia) alla Fase 10 (Hardening), più le 7 leggi del recupero e i 6 criteri di uscita dal protocollo.
+
+### 📘 Volume II — Il Metodo Enterprise (2ª edizione)
+*Come costruire da zero un software perfetto con intelligenza artificiale.*
 
 File:
-- [`Volume_I_Il_Protocollo_del_Recupero.md`](./Volume_I_Il_Protocollo_del_Recupero.md) — testo integrale leggibile e ricercabile
-- `Volume_I_Il_Protocollo_del_Recupero.docx` — originale consegnato dal proprietario
+- [`Volume_II_Il_Metodo_Enterprise.md`](./Volume_II_Il_Metodo_Enterprise.md)
+- `Volume_II_Il_Metodo_Enterprise-2.docx` (originale)
 
-**Struttura**: 13 capitoli, dalla Fase 0 (Fotografia dello Stato Iniziale) alla Fase 10 (Hardening Finale), passando per 10 fasi operative e 7 leggi non negoziabili.
+**Struttura**: 17 capitoli — dalla Fase Zero (Validazione) al Go-to-Market, i 5 criteri dello standard enterprise, gli errori da evitare.
 
-### 📗 Volume II — Il Metodo Enterprise
-*Manuale operativo per la progettazione e lo sviluppo di prodotti scalabili e vendibili.*
-
-Si applica **dopo** che il protocollo del Vol. I ha riportato il sistema a uno stato stabile. Governa tutte le decisioni su nuove feature, nuovi moduli, nuovi prodotti, go-to-market.
+### 📗 Volume III — Software Perfetto (1ª edizione)
+*Manuale avanzato per il sistema multi-agente e la generazione di codice perfetto.*
 
 File:
-- [`Volume_II_Il_Metodo_Enterprise.md`](./Volume_II_Il_Metodo_Enterprise.md) — testo integrale leggibile e ricercabile
-- `Volume_II_Il_Metodo_Enterprise.docx` — originale consegnato dal proprietario
+- [`Volume_III_Software_Perfetto.md`](./Volume_III_Software_Perfetto.md)
+- `Volume_3_-_software_perfect.docx` (originale)
 
-**Struttura**: 17 capitoli, dalla Fase Zero (Validazione Prima della Costruzione) al Go-to-Market, includendo una sezione dedicata all'uso corretto dell'AI e i cinque criteri oggettivi dello standard enterprise.
+**Struttura**: 5 sezioni — Classificazione TACO, best practices, Perfection Matrix, Glossario SSOT, pattern Atomic Design (`/core`, `/io`, `/bridge`), flusso di disaccoppiamento.
+
+### 📙 Volume IV — Manuale Avanzato Multi-Agente (2ª edizione)
+*Sistema multi-agente e generazione di codice perfetto — edizione integrata e completa.*
+
+File:
+- [`Volume_IV_Manuale_Avanzato_Multi_Agente.md`](./Volume_IV_Manuale_Avanzato_Multi_Agente.md)
+- `volume_4_-_Manuale_Avanzato_Multi_Agente.docx` (originale)
+
+**Struttura**: 12 capitoli — Resilienza (Circuit Breaker), Convergenza del consenso (L1/L2/L3), Versionamento (glossario, schema, ruoli), Osservabilità, Testing preventivo, Sicurezza e governance, Event Bus e Dead Letter Queue.
 
 ---
 
-## Le 7 Leggi del Recupero (citazione letterale dal Vol. I)
+## Concetti chiave per la v2.0
+
+### Le 7 Leggi del Recupero (Vol. I)
 
 > 1. Durante il recupero non si aggiungono funzionalità.
 > 2. Non si esegue mai un refactor globale.
@@ -54,7 +73,7 @@ File:
 > 6. L'AI esegue, non decide. L'architettura è responsabilità umana.
 > 7. Nessun intervento è completo finché non è documentato.
 
-## I 5 Criteri dello Standard Enterprise (citazione letterale dal Vol. II)
+### I 5 Criteri dello Standard Enterprise (Vol. II)
 
 > 1. **Prevedibilità** — stesso input, stesso stato → stesso comportamento, sempre.
 > 2. **Stabilità** — tollera carichi, errori di rete, input malformati senza degradarsi.
@@ -62,52 +81,37 @@ File:
 > 4. **Estendibilità** — nuove feature senza modificare parti non correlate.
 > 5. **Monitoraggio** — ogni stato del sistema osservabile dall'esterno.
 
-## Le 3 illusioni da estirpare (Vol. I, §1.2)
+### Pattern Atomic Design (Vol. III)
 
-1. **Il rewrite** — riscrivere tutto da zero non risolve, rigenera gli stessi bug più una nuova generazione.
-2. **La magia dell'AI** — un buon prompt non basta: l'AI non ha visione d'insieme.
-3. **La velocità** — la velocità apparente iniziale si paga con gli interessi in fase di recupero.
+```
+/core   → logica pura, senza I/O
+/io     → accesso a database, API esterne
+/bridge → orchestrazione tra core e io tramite event bus
+```
 
-## Cosa l'AI deve fare / non deve fare (Vol. II, cap. VII)
+### Perfection Matrix (Vol. III)
 
-**Deve**: boilerplate, componenti da specifiche chiare, refactor locali (una funzione/un file), test per codice esistente, documentazione da codice.
+| Fase | Output richiesto | Criterio di accettazione |
+|------|-----------------|-------------------------|
+| Definizione | JSON Schema dei dati | Nessun campo opzionale senza default |
+| Architettura | Grafo delle dipendenze | Nessun ciclo; percorso lineare |
+| Logica | Pseudocodice in Markdown | Nessun ciclo infinito; preferire map/filter |
+| Output Lovable | Prompt di implementazione | Deve includere: "Se vedi un'ambiguità, fermati e chiedi" |
 
-**Non deve**: inventare l'architettura, gestire logiche critiche di dominio, modificare più moduli simultaneamente.
+### Convergenza del Consenso (Vol. IV)
 
-**Regola del singolo obiettivo**: ogni interazione con l'AI ha un solo obiettivo verificabile. Ogni prompt include: file coinvolti, contratto input/output, vincoli da non violare, criterio di successo.
+| Livello | Criterio | Azione |
+|---------|----------|--------|
+| **L1** | Consenso unanime (5/5) | Procede |
+| **L2** | Maggioranza qualificata (4/5, obiezioni solo minor) | Procede con annotation |
+| **L3** | Dopo 5 iterazioni senza L1/L2 | Escalation umana |
 
----
+### Circuit Breaker (Vol. IV)
 
-## Stato attuale del progetto rispetto al metodo
-
-Secondo l'[AUDIT_2026-04-08.md](../../AUDIT_2026-04-08.md), il progetto si trova **nella Fase 1 del Protocollo del Recupero** (Vol. I, cap. III). Voto attuale: **4.150/10.000** (audit iniziale). Il piano di ristrutturazione in 5 ondate descritto nell'audit è la **concretizzazione** delle fasi 1-10 del Vol. I applicate a questo specifico codebase.
-
-### Test implementati (Sessione 2026-04-09)
-
-| File test | Tipo | Test | Cosa verifica |
-|---|---|---|---|
-| `src/test/apiError.test.ts` | Vitest | 16 | ApiError: costruzione, toJSON, isApiError, from(), fromResponse() per tutti gli status |
-| `src/test/invokeEdge.test.ts` | Vitest | 14 | invokeEdge: successo, propagazione body/headers, mapping status→code, body extraction |
-| `src/test/platformTools-integrity.test.ts` | Vitest | 7 | Integrità PLATFORM_TOOLS: ≥30 tool, nomi unici, handler↔definizione, struttura parametri |
-| `supabase/functions/_shared/platformTools_test.ts` | Deno | 5 | Stesse verifiche lato Deno (snake_case, unicità, completezza) |
-| `supabase/functions/check-inbox/index_test.ts` | Deno | 2 | CORS preflight 200, POST senza auth → 401 |
-
-**Totale: 44 test passanti** (37 Vitest + 7 Deno)
-
-| Fase Vol. I | Corrispondenza nel piano audit |
-|---|---|
-| Fase 0 — Fotografia | ✅ AUDIT_2026-04-08.md (eseguito) |
-| Fase 1 — Contenimento del degrado | ✅ Parziale — test guardrails implementati |
-| Fase 2 — Radiografia | ✅ sezioni 1-6 dell'audit |
-| Fase 3 — Asse di verità | ⏳ Ondata 1 (consolidamento bridge WCA) |
-| Fase 4 — Classificazione 3 colori | ⏳ Ondata 2 (split file giganti) |
-| Fase 5 — Guardrails | ✅ Parziale — test suite API + integrità tool |
-| Fase 6 — Debugging sistematico | ⏳ continuo |
-| Fase 7 — Recupero verticale | ⏳ Ondata 2+ (un flusso alla volta) |
-| Fase 8 — Strangler pattern | ⏳ Ondata 4 (edge fn + tabelle) |
-| Fase 9 — Standardizzazione | ⏳ Ondata 3 fine (ARCHITECTURE.md) |
-| Fase 10 — Hardening | ⏳ Ondata 5 (performance + sicurezza) |
+`Closed → Open (dopo 3 fallimenti) → Half-Open (dopo 60s cooldown) → Closed (se test ok)`
 
 ---
 
-**Regola d'oro**: prima di qualunque intervento sul repo, leggere o ri-leggere il capitolo pertinente. Se il capitolo e il codice esistente sono in conflitto, **vince il capitolo**.
+## Regola d'oro
+
+> Prima di qualunque intervento sul repo, leggere o ri-leggere il capitolo pertinente. Se il capitolo e il codice esistente sono in conflitto, **vince il capitolo**.
