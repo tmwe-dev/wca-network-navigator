@@ -238,6 +238,85 @@ export async function searchPartners(term: string, limit = 10) {
   return data ?? [];
 }
 
+/** Find partner by WCA ID */
+export async function findPartnerByWcaId(wcaId: number) {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("*")
+    .eq("wca_id", wcaId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Find partner by company name (fuzzy) */
+export async function findPartnerByName(name: string) {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, country_code, enrichment_data")
+    .ilike("company_name", `%${name}%`)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Count partners with null country_code */
+export async function countPartnersWithoutCountry() {
+  const { count, error } = await supabase
+    .from("partners")
+    .select("*", { count: "exact", head: true })
+    .is("country_code", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Get partners by IDs (batched) */
+export async function getPartnersByIds(ids: string[], select = "id, company_name, email, website") {
+  const results: Record<string, unknown>[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const { data, error } = await supabase
+      .from("partners")
+      .select(select)
+      .in("id", batch);
+    if (error) throw error;
+    if (data) results.push(...data);
+  }
+  return results;
+}
+
+/** Get WCA IDs for partners in given countries */
+export async function getWcaIdsByCountries(countryCodes: string[]) {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, wca_id")
+    .in("country_code", countryCodes)
+    .not("wca_id", "is", null);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Delete partners by IDs (batched) */
+export async function deletePartnersByIds(ids: string[]) {
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const { error } = await supabase.from("partners").delete().in("id", batch);
+    if (error) throw error;
+  }
+}
+
+/** Insert a new partner and return it */
+export async function createPartner(partner: Record<string, unknown>) {
+  const { data, error } = await supabase
+    .from("partners")
+    .insert(partner)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidatePartnerCache(qc: QueryClient, partnerId?: string) {
   qc.invalidateQueries({ queryKey: queryKeys.partners.all });
