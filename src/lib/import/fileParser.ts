@@ -3,7 +3,8 @@
  * Supports CSV, TXT, XLSX, XLS with auto-detection
  */
 import Papa from "papaparse";
-import ExcelJS from "exceljs";
+// ExcelJS loaded lazily to reduce bundle size (~940KB)
+const getExcelJS = () => import("exceljs").then(m => m.default);
 import type { ParsedFile, ParsingOptions } from "./types";
 import { createLogger } from "@/lib/log";
 
