@@ -30,7 +30,7 @@ function useDirectoryTotal() {
   return useQuery({
     queryKey: ["cache-data-by-country"],
     queryFn: async () => {
-      const { data } = await supabase.rpc("get_directory_counts");
+      const data = await rpcGetDirectoryCounts();
       const result: Record<string, { count: number; verified: boolean }> = {};
       (data || []).forEach((r: any) => {
         result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };

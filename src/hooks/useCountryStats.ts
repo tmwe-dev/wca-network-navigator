@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { rpcGetCountryStats } from "@/data/rpc";
 
 export interface CountryStats {
   country_code: string;
@@ -24,8 +24,8 @@ export function useCountryStats() {
   return useQuery({
     queryKey: ["country-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_country_stats");
-      if (error) throw error;
+      const data = await rpcGetCountryStats();
+      const error = null;
 
       const byCountry: Record<string, CountryStats> = {};
       let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;

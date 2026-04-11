@@ -398,7 +398,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
           } : undefined}
           onWcaMatch={async () => {
-            const { data, error } = await supabase.rpc("match_contacts_to_wca");
+            const data = await rpcMatchContactsToWca();
             if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
             toast({ title: `✅ WCA Match completato — ${data?.length || 0} associazioni trovate` });
             selection.clear();

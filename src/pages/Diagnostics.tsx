@@ -157,8 +157,7 @@ export default function Diagnostics() {
       upsert({ id, name: table, category: "Database Tables", status: "running" });
       try {
         const ms = await timed(async () => {
-          const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
-          if (error) throw error;
+          const { count, error } = await (async () => { const c = await countTableRows(table); return { count: c, error: null }; })();
           upsert({ id, name: table, category: "Database Tables", status: "pass", message: `${count ?? 0} righe` });
         });
         setResults(prev => prev.map(r => r.id === id ? { ...r, durationMs: ms } : r));
@@ -181,7 +180,7 @@ export default function Diagnostics() {
           continue;
         }
         const ms = await timed(async () => {
-          const { error } = await supabase.rpc(fn as any);
+          const { error } = await (async () => { await rpcCall(fn); return { error: null }; })();
           if (error) throw error;
         });
         upsert({ id, name: fn, category: "RPC Functions", status: "pass", durationMs: ms });
@@ -285,7 +284,7 @@ export default function Diagnostics() {
     upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "running" });
     try {
       const totalPartners = await countActivePartners();
-      const { count: noContacts } = await supabase.from("partners_no_contacts").select("*", { count: "exact", head: true }).eq("resolved", false);
+      const noContacts = await countViewRows("partners_no_contacts", { column: "resolved", value: false });
       const pct = totalPartners ? Math.round(((totalPartners - (noContacts ?? 0)) / totalPartners) * 100) : 0;
       upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: pct > 50 ? "pass" : "warn", message: `${pct}% con contatti (${noContacts ?? 0} senza)` });
     } catch (e: unknown) {

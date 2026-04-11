@@ -15,12 +15,7 @@ const log = createLogger("Auth");
 
 async function checkWhitelist(email: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc("is_email_authorized" as any, { p_email: email });
-    if (error) {
-      log.error("whitelist check failed", { message: error.message, code: error.code });
-      return false;
-    }
-    return data === true;
+    return await rpcIsEmailAuthorized(email);
   } catch (err) {
     log.warn("whitelist check threw", { message: err instanceof Error ? err.message : String(err) });
     return false;
@@ -29,10 +24,9 @@ async function checkWhitelist(email: string): Promise<boolean> {
 
 async function recordLogin(email: string) {
   try {
-    await supabase.rpc("record_user_login" as any, { p_email: email });
+    await rpcRecordUserLogin(email);
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-    // intentionally ignored: best-effort cleanup
   }
 }
 
