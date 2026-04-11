@@ -27,7 +27,7 @@ export function useDailyBriefingV2() {
         agentCode: r.agent_code,
         content: r.content,
         briefingType: r.briefing_type,
-        createdAt: r.created_at,
+        createdAt: r.created_at ?? new Date().toISOString(),
       }));
     },
   });
