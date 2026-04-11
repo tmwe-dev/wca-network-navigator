@@ -224,6 +224,24 @@ export async function getDistinctCountries() {
   return [...unique];
 }
 
+export async function getCountryCodesBatched(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  let from = 0;
+  const batchSize = 1000;
+  while (true) {
+    const { data } = await supabase
+      .from("partners")
+      .select("country_code")
+      .not("country_code", "is", null)
+      .range(from, from + batchSize - 1);
+    if (!data || data.length === 0) break;
+    data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+  return counts;
+}
+
 /** Search partners by name (for command palette, autocomplete) */
 export async function searchPartners(term: string, limit = 10) {
   const s = sanitizeSearchTerm(term);

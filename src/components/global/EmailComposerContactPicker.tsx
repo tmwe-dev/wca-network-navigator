@@ -8,8 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { rpcGetCountryStats, rpcGetContactFilterOptions } from "@/data/rpc";
+import { getCountryCodesBatched } from "@/data/partners";
 import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
 import { getCountryFlag } from "@/lib/countries";
@@ -71,20 +71,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         // fallback below
       }
       // Fallback: fetch all country_codes in batches to bypass 1000 limit
-      const counts: Record<string, number> = {};
-      let from = 0;
-      const batchSize = 1000;
-      while (true) {
-        const { data } = await supabase
-          .from("partners")
-          .select("country_code")
-          .not("country_code", "is", null)
-          .range(from, from + batchSize - 1);
-        if (!data || data.length === 0) break;
-        data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
-        if (data.length < batchSize) break;
-        from += batchSize;
-      }
+      const counts = await getCountryCodesBatched();
       return Object.entries(counts).map(([code, count]) => ({
         code, count,
         flag: getCountryFlag(code),
