@@ -15,6 +15,7 @@ import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { rpcGetDirectoryCounts } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";
