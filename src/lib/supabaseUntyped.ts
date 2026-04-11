@@ -4,14 +4,12 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UntypedClient = ReturnType<typeof supabase.from<any>>;
-
 /**
  * Access a Supabase table that isn't in the generated types yet.
- * Returns a fully-typed PostgREST query builder (with `any` row type).
+ * Returns a PostgREST query builder with loose typing.
  */
-export function untypedFrom(table: string): UntypedClient {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function untypedFrom(table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (supabase as any).from(table);
 }
