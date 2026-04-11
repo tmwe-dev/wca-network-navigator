@@ -23,7 +23,7 @@ export function OperationsPage(): React.ReactElement {
   });
 
   const pending = downloadQueue?.filter((q) => q.status === "pending").length ?? 0;
-  const processing = downloadQueue?.filter((q) => q.status === "processing").length ?? 0;
+  const processing = downloadQueue?.filter((q) => q.status === "in_progress").length ?? 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -57,7 +57,7 @@ export function OperationsPage(): React.ReactElement {
                   <td className="px-4 py-2 text-foreground">{q.total_processed}/{q.total_found}</td>
                   <td className="px-4 py-2">
                     <StatusBadge
-                      status={q.status === "completed" ? "success" : q.status === "processing" ? "info" : "warning"}
+                      status={q.status === "completed" ? "success" : q.status === "in_progress" ? "info" : "warning"}
                       label={q.status}
                     />
                   </td>
