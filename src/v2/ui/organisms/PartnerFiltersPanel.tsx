@@ -1,6 +1,5 @@
 /**
  * PartnerFiltersPanel — Sidebar filters for NetworkPage
- * Country multi-select, network filter, quality filter
  */
 import * as React from "react";
 import { useState, useCallback } from "react";
@@ -11,7 +10,6 @@ import { X, Filter } from "lucide-react";
 
 export interface PartnerFilterValues {
   readonly countryCode?: string;
-  readonly networkName?: string;
   readonly hasEmail?: boolean;
   readonly hasPhone?: boolean;
   readonly searchQuery?: string;
@@ -21,14 +19,12 @@ interface PartnerFiltersPanelProps {
   readonly filters: PartnerFilterValues;
   readonly onFiltersChange: (filters: PartnerFilterValues) => void;
   readonly availableCountries?: readonly string[];
-  readonly availableNetworks?: readonly string[];
 }
 
 export function PartnerFiltersPanel({
   filters,
   onFiltersChange,
   availableCountries = [],
-  availableNetworks = [],
 }: PartnerFiltersPanelProps): React.ReactElement {
   const [countryInput, setCountryInput] = useState("");
 
@@ -66,7 +62,6 @@ export function PartnerFiltersPanel({
         ) : null}
       </div>
 
-      {/* Country filter */}
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground font-medium">Paese</label>
         <Input
@@ -103,24 +98,6 @@ export function PartnerFiltersPanel({
         ) : null}
       </div>
 
-      {/* Network filter */}
-      {availableNetworks.length > 0 ? (
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground font-medium">Network</label>
-          <select
-            className="w-full h-8 text-sm rounded border bg-background px-2"
-            value={filters.networkName ?? ""}
-            onChange={(e) => updateFilter("networkName", e.target.value || undefined)}
-          >
-            <option value="">Tutti</option>
-            {availableNetworks.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </div>
-      ) : null}
-
-      {/* Quality filters */}
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground font-medium">Qualità dati</label>
         <div className="flex flex-col gap-1">
