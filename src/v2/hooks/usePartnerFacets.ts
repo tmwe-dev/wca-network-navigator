@@ -1,11 +1,11 @@
 /**
- * usePartnerFacets — Available countries, networks for filter dropdowns
+ * usePartnerFacets — Available countries for filter dropdowns
  */
 import { useQuery } from "@tanstack/react-query";
 import { fetchPartnerFacets, type PartnerFacets } from "@/v2/io/supabase/queries/partner-facets";
 import { isOk } from "@/v2/core/domain/result";
 
-const EMPTY: PartnerFacets = { countries: [], networks: [], totalCount: 0 };
+const EMPTY: PartnerFacets = { countries: [], totalCount: 0 };
 
 export function usePartnerFacets() {
   return useQuery({
@@ -15,6 +15,6 @@ export function usePartnerFacets() {
       if (isOk(result)) return result.value;
       return EMPTY;
     },
-    staleTime: 5 * 60_000, // 5 min cache
+    staleTime: 5 * 60_000,
   });
 }

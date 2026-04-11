@@ -12,12 +12,10 @@ import { PartnerDetailDrawer } from "../organisms/PartnerDetailDrawer";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
 import { partnerCompletenessScore } from "@/v2/core/domain/rules/partner-rules";
-import type { Partner } from "@/v2/core/domain/entities";
+import type { PartnerV2 } from "@/v2/core/domain/partner-entity";
 import { Filter } from "lucide-react";
 
-// ── Column definitions ───────────────────────────────────────────────
-
-const partnerColumns: readonly ColumnDef<Partner>[] = [
+const partnerColumns: readonly ColumnDef<PartnerV2>[] = [
   {
     id: "companyName",
     header: "Azienda",
@@ -35,14 +33,14 @@ const partnerColumns: readonly ColumnDef<Partner>[] = [
     accessorFn: (row) => row.city,
   },
   {
-    id: "network",
-    header: "Network",
-    accessorFn: (row) => row.networkName,
-  },
-  {
     id: "email",
     header: "Email",
     accessorFn: (row) => row.email,
+  },
+  {
+    id: "leadStatus",
+    header: "Stato",
+    accessorFn: (row) => row.leadStatus,
   },
   {
     id: "score",
@@ -57,8 +55,6 @@ const partnerColumns: readonly ColumnDef<Partner>[] = [
   },
 ];
 
-// ── Component ────────────────────────────────────────────────────────
-
 export function NetworkPage(): React.ReactElement {
   const [filterValues, setFilterValues] = useState<PartnerFilterValues>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -66,18 +62,15 @@ export function NetworkPage(): React.ReactElement {
 
   const { data: facets } = usePartnerFacets();
 
-  // Build query filters from panel values
   const queryFilters = useMemo<PartnerFilters>(() => ({
     countryCode: filterValues.countryCode,
-    networkName: filterValues.networkName,
     searchQuery: filterValues.searchQuery,
   }), [filterValues]);
 
   const { data: partners = [], isLoading } = usePartnersV2(queryFilters);
 
-  // Client-side quality filters (hasEmail / hasPhone)
   const filteredPartners = useMemo(() => {
-    let result = partners;
+    let result = [...partners];
     if (filterValues.hasEmail) {
       result = result.filter((p) => Boolean(p.email));
     }
@@ -91,25 +84,22 @@ export function NetworkPage(): React.ReactElement {
     setFilterValues((prev) => ({ ...prev, searchQuery: searchQuery || undefined }));
   }, []);
 
-  const handleRowClick = useCallback((partner: Partner) => {
+  const handleRowClick = useCallback((partner: PartnerV2) => {
     setSelectedPartnerId(String(partner.id));
   }, []);
 
   return (
     <div className="flex h-full">
-      {/* Filters sidebar */}
       {showFilters ? (
         <div className="w-64 flex-shrink-0 border-r overflow-y-auto p-2">
           <PartnerFiltersPanel
             filters={filterValues}
             onFiltersChange={setFilterValues}
             availableCountries={facets?.countries ?? []}
-            availableNetworks={facets?.networks ?? []}
           />
         </div>
       ) : null}
 
-      {/* Main content */}
       <div className="flex-1 p-6 space-y-4 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
@@ -147,7 +137,6 @@ export function NetworkPage(): React.ReactElement {
         )}
       </div>
 
-      {/* Detail drawer */}
       <PartnerDetailDrawer
         partnerId={selectedPartnerId}
         onClose={() => setSelectedPartnerId(null)}

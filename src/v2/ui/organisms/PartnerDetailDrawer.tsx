@@ -8,7 +8,7 @@ import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
 import {
   X, Globe, Mail, Phone, MapPin, Building2, Calendar,
-  ExternalLink, AlertTriangle,
+  ExternalLink, Star,
 } from "lucide-react";
 
 interface PartnerDetailDrawerProps {
@@ -26,7 +26,6 @@ export function PartnerDetailDrawer({
 
   return (
     <div className="fixed inset-y-0 right-0 w-full max-w-md border-l bg-card shadow-lg z-50 flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold text-foreground truncate">
           {isLoading ? "Caricamento..." : partner?.companyName ?? "Partner"}
@@ -36,7 +35,6 @@ export function PartnerDetailDrawer({
         </Button>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -44,7 +42,6 @@ export function PartnerDetailDrawer({
           </div>
         ) : partner ? (
           <>
-            {/* Score */}
             <div className="flex items-center gap-3">
               <ScoreRing score={partnerCompletenessScore(partner)} />
               <div>
@@ -53,17 +50,27 @@ export function PartnerDetailDrawer({
                   {partnerCompletenessScore(partner)}% dei dati compilati
                 </p>
               </div>
-              {partner.isBlacklisted ? (
-                <StatusBadge status="error" label="Blacklist" />
+              {partner.isFavorite ? (
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
               ) : null}
             </div>
 
-            {/* Info grid */}
+            <div className="flex gap-2 flex-wrap">
+              <StatusBadge
+                status={partner.isActive ? "success" : "error"}
+                label={partner.isActive ? "Attivo" : "Inattivo"}
+              />
+              <StatusBadge
+                status={partner.leadStatus === "converted" ? "success" : partner.leadStatus === "new" ? "info" : "warning"}
+                label={partner.leadStatus}
+              />
+            </div>
+
             <div className="space-y-3">
-              <InfoRow icon={<Building2 className="h-4 w-4" />} label="Network" value={partner.networkName} />
               <InfoRow icon={<MapPin className="h-4 w-4" />} label="Paese" value={`${partner.countryName} (${partner.countryCode})`} />
-              {partner.city ? <InfoRow icon={<MapPin className="h-4 w-4" />} label="Città" value={partner.city} /> : null}
+              <InfoRow icon={<MapPin className="h-4 w-4" />} label="Città" value={partner.city} />
               {partner.address ? <InfoRow icon={<MapPin className="h-4 w-4" />} label="Indirizzo" value={partner.address} /> : null}
+              {partner.officeType ? <InfoRow icon={<Building2 className="h-4 w-4" />} label="Tipo ufficio" value={partner.officeType} /> : null}
               {partner.email ? (
                 <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={partner.email} href={`mailto:${partner.email}`} />
               ) : (
@@ -71,9 +78,10 @@ export function PartnerDetailDrawer({
               )}
               {partner.phone ? (
                 <InfoRow icon={<Phone className="h-4 w-4" />} label="Telefono" value={partner.phone} href={`tel:${partner.phone}`} />
-              ) : (
-                <InfoRow icon={<Phone className="h-4 w-4" />} label="Telefono" value="Non disponibile" missing />
-              )}
+              ) : null}
+              {partner.mobile ? (
+                <InfoRow icon={<Phone className="h-4 w-4" />} label="Mobile" value={partner.mobile} href={`tel:${partner.mobile}`} />
+              ) : null}
               {partner.website ? (
                 <InfoRow icon={<Globe className="h-4 w-4" />} label="Sito web" value={partner.website} href={partner.website} external />
               ) : null}
@@ -83,13 +91,16 @@ export function PartnerDetailDrawer({
               {partner.wcaId ? (
                 <InfoRow icon={<Building2 className="h-4 w-4" />} label="WCA ID" value={String(partner.wcaId)} />
               ) : null}
+              {partner.rating ? (
+                <InfoRow icon={<Star className="h-4 w-4" />} label="Rating" value={String(partner.rating)} />
+              ) : null}
+              <InfoRow icon={<Mail className="h-4 w-4" />} label="Interazioni" value={String(partner.interactionCount)} />
             </div>
 
-            {/* Blacklist warning */}
-            {partner.isBlacklisted ? (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                Partner in blacklist — operazioni di outreach bloccate.
+            {partner.profileDescription ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Descrizione</p>
+                <p className="text-sm text-foreground">{partner.profileDescription}</p>
               </div>
             ) : null}
           </>
@@ -101,15 +112,9 @@ export function PartnerDetailDrawer({
   );
 }
 
-// ── Sub-components ───────────────────────────────────────────────────
-
 function ScoreRing({ score }: { readonly score: number }): React.ReactElement {
   const color = score >= 70 ? "text-green-500" : score >= 40 ? "text-yellow-500" : "text-red-500";
-  return (
-    <div className={`text-2xl font-bold ${color}`}>
-      {score}%
-    </div>
-  );
+  return <div className={`text-2xl font-bold ${color}`}>{score}%</div>;
 }
 
 interface InfoRowProps {
@@ -138,9 +143,7 @@ function InfoRow({ icon, label, value, href, external, missing }: InfoRowProps):
             {external ? <ExternalLink className="h-3 w-3" /> : null}
           </a>
         ) : (
-          <p className={`text-sm ${missing ? "text-muted-foreground italic" : "text-foreground"}`}>
-            {value}
-          </p>
+          <p className={`text-sm ${missing ? "text-muted-foreground italic" : "text-foreground"}`}>{value}</p>
         )}
       </div>
     </div>
