@@ -63,14 +63,14 @@ export async function getDownloadJob(id: string): Promise<DownloadJob | null> {
   return data as DownloadJob | null;
 }
 
-export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10) {
+export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10): Promise<any[]> {
   const { data, error } = await supabase
     .from("download_jobs")
     .select(select)
     .in("status", statuses)
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as any[];
 }
 
 export async function findJobByCountryAndNetwork(countryCode: string, networkName: string, statuses: string[]) {
@@ -163,23 +163,23 @@ export async function deleteJobsByStatus(statuses: string[]): Promise<number> {
 
 // ── Job Items ──
 
-export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing") {
+export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<any[]> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
     .eq("job_id", jobId);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as any[];
 }
 
-export async function getJobItemById(itemId: string, select = "attempt_count") {
+export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<any> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
     .eq("id", itemId)
     .single();
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {
