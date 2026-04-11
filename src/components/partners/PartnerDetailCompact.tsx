@@ -59,7 +59,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
     try {
-      const data = await invokeEdge<any>("deep-search-partner", { body: { partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
+      const data = await invokeEdge<any>("ai-utility", { body: { action: "deep_search", partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
       if (data?.success) {
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
