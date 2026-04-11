@@ -18,13 +18,13 @@ import {
   Star,
   Phone,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { searchPartners } from "@/data/partners";
 
 interface Partner {
   id: string;
   company_name: string;
   city: string;
-  country_name: string;
+  country_name?: string;
 }
 
 interface CommandPaletteProps {
@@ -39,16 +39,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   useEffect(() => {
     if (open && search.length >= 2) {
-      const fetchPartners = async () => {
-        const { data } = await supabase
-          .from("partners")
-          .select("id, company_name, city, country_name")
-          .ilike("company_name", `%${search}%`)
-          .limit(5);
-        
-        if (data) setPartners(data);
-      };
-      fetchPartners();
+      searchPartners(search, 5).then((data) => {
+        setPartners(data.map(d => ({ ...d, city: (d as any).city ?? "" })) as Partner[]);
+      });
     } else {
       setPartners([]);
     }

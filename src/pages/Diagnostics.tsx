@@ -267,24 +267,23 @@ export default function Diagnostics() {
     const id1 = "integrity-partner-country";
     upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: "running" });
     try {
-      const { count, error } = await supabase.from("partners").select("*", { count: "exact", head: true }).is("country_code", null);
-      if (error) throw error;
-      const s = (count ?? 0) === 0 ? "pass" : "warn";
-      upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: s as TestStatus, message: `${count ?? 0} trovati` });
-    } catch (e: any) {
-      upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: "fail", message: e.message });
+      const count = await countPartnersWithoutCountry();
+      const s = count === 0 ? "pass" : "warn";
+      upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: s as TestStatus, message: `${count} trovati` });
+    } catch (e: unknown) {
+      upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: "fail", message: (e as Error).message });
     }
 
     // Partners with contacts
     const id2 = "integrity-contacts-coverage";
     upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "running" });
     try {
-      const { count: totalPartners } = await supabase.from("partners").select("*", { count: "exact", head: true });
+      const totalPartners = await countActivePartners();
       const { count: noContacts } = await supabase.from("partners_no_contacts").select("*", { count: "exact", head: true }).eq("resolved", false);
       const pct = totalPartners ? Math.round(((totalPartners - (noContacts ?? 0)) / totalPartners) * 100) : 0;
       upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: pct > 50 ? "pass" : "warn", message: `${pct}% con contatti (${noContacts ?? 0} senza)` });
-    } catch (e: any) {
-      upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "fail", message: e.message });
+    } catch (e: unknown) {
+      upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "fail", message: (e as Error).message });
     }
 
     // Orphan activities
