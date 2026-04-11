@@ -473,13 +473,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         enrichment_data: Object.keys(enrichmentData).length > 0 ? enrichmentData : null,
       }]);
 
-      {
-        setSavedId("saved");
-        toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
-      }
-        setSavedId(inserted.id);
-        toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
-      }
+      toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
     } catch (e: any) {
       toast.error("Errore: " + (e.message || "sconosciuto"));
     } finally {
