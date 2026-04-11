@@ -373,7 +373,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           onDelete={async () => {
             const ids = Array.from(selection.selectedIds);
             if (!confirm(`Eliminare ${ids.length} contatti?`)) return;
-            const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
+            const { deleteContacts } = await import("@/data/contacts");
+            await deleteContacts(ids).catch((error: any) => { toast({ title: "Errore", description: error.message, variant: "destructive" }); throw error; });
             if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
             toast({ title: `✅ ${ids.length} contatti eliminati` });
             selection.clear();

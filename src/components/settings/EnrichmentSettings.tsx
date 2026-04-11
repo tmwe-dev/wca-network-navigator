@@ -257,19 +257,14 @@ export default function EnrichmentSettings() {
       const contactIds = [...new Set(queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id))];
 
       const fetchPartnerBatch = async (ids: string[]) => {
-        const all: any[] = [];
-        for (let i = 0; i < ids.length; i += 100) {
-          const { data } = await supabase.from("partners").select("id, company_name, email, website").in("id", ids.slice(i, i + 100));
-          if (data) all.push(...data);
-        }
+        const { getPartnersByIds } = await import("@/data/partners");
+        const all = await getPartnersByIds(ids, "id, company_name, email, website");
+        {
         return all;
       };
       const fetchContactBatch = async (ids: string[]) => {
-        const all: any[] = [];
-        for (let i = 0; i < ids.length; i += 100) {
-          const { data } = await supabase.from("imported_contacts").select("id, name, company_name, email").in("id", ids.slice(i, i + 100));
-          if (data) all.push(...data);
-        }
+        const { getContactsByIds } = await import("@/data/contacts");
+        const all = await getContactsByIds(ids, "id, name, company_name, email");
         return all;
       };
 

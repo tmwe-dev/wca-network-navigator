@@ -170,11 +170,8 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       }
 
       // Refetch the contact from DB to update the panel
-      const { data: updated } = await supabase
-        .from("imported_contacts")
-        .select("*")
-        .eq("id", c.id)
-        .single();
+      const { getContactById } = await import("@/data/contacts");
+      const updated = await getContactById(c.id).catch(() => null);
 
       if (updated) {
         setC(updated as Contact);

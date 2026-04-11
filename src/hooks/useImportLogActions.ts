@@ -74,9 +74,9 @@ export function useCreateImport() {
         raw_data: row,
       }));
 
-      for (let i = 0; i < contacts.length; i += 100) {
-        const { error: insertError } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100));
-        if (insertError) throw insertError;
+      const { insertContacts } = await import("@/data/contacts");
+      {
+        await insertContacts(contacts);
       }
 
       return importLog as ImportLog;
@@ -106,8 +106,8 @@ export function useToggleContactSelection() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, selected }: { id: string; selected: boolean }) => {
-      const { error } = await supabase.from("imported_contacts").update({ is_selected: selected }).eq("id", id);
-      if (error) throw error;
+      const { toggleContactSelection } = await import("@/data/contacts");
+      await toggleContactSelection(id, selected);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["imported-contacts"] }),
   });
@@ -146,7 +146,7 @@ export function useTransferToPartners() {
           });
         }
 
-        await supabase.from("imported_contacts").update({ is_transferred: true }).eq("id", c.id);
+        await (await import("@/data/contacts")).markContactTransferred(c.id);
         successCount++;
       }
       return successCount;
@@ -196,7 +196,7 @@ export function useCreateActivitiesFromImport() {
           campaign_batch_id: campaignBatchId || null,
         });
 
-        await supabase.from("imported_contacts").update({ is_transferred: true }).eq("id", c.id);
+        await (await import("@/data/contacts")).markContactTransferred(c.id);
         count++;
       }
       return count;
@@ -276,9 +276,9 @@ export function useCreateImportFromParsedRows() {
         };
       });
 
-      for (let i = 0; i < contacts.length; i += 100) {
-        const { error: insertError } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100));
-        if (insertError) throw insertError;
+      {
+        const { insertContacts } = await import("@/data/contacts");
+        await insertContacts(contacts);
       }
 
       const totalBatches = Math.ceil(contacts.length / 100);
