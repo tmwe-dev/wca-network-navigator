@@ -20,6 +20,7 @@ import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
 const Auth = lazyRetry(() => import("./pages/Auth"));
+const LauncherHome = lazyRetry(() => import("./pages/LauncherHome"));
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
@@ -101,54 +102,51 @@ const App = () => (
           <RuntimeDiagnosticPanel />
           <Suspense fallback={<PageFallback />}>
             <Routes>
+              {/* Launcher — no auth */}
+              <Route path="/" element={<LauncherHome />} />
+
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
+              {/* V1 — Protected routes under /v1 */}
+              <Route path="/v1" element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  {/* ── 5 consolidated environments ── */}
-                  <Route path="/" element={withFeatureBoundary(<SuperHome3D />, "Home")} />
-                  <Route path="/network" element={withFeatureBoundary(<NetworkPage />, "Network")} />
-                  <Route path="/crm" element={withFeatureBoundary(<CRM />, "CRM")} />
-                  <Route path="/outreach" element={withFeatureBoundary(<Outreach />, "Outreach")} />
-                  <Route path="/inreach" element={withFeatureBoundary(<Inreach />, "Inreach")} />
-                  <Route path="/agenda" element={withFeatureBoundary(<Agenda />, "Agenda")} />
-                  <Route path="/agent-chat" element={withFeatureBoundary(<AgentChatHub />, "Agent Chat")} />
-                  <Route path="/settings" element={withFeatureBoundary(<Settings />, "Settings")} />
-                  <Route path="/settings/operators" element={withFeatureBoundary(<OperatorsSettings />, "Operators")} />
-                  <Route path="/settings/users" element={withFeatureBoundary(<AdminUsers />, "Admin Users")} />
-                  <Route path="/email-composer" element={withFeatureBoundary(<EmailComposer />, "Email Composer")} />
-
-                  {/* ── Report Aziende ── */}
-                  <Route path="/ra" element={withFeatureBoundary(<RADashboard />, "RA Dashboard")} />
-                  <Route path="/ra/explorer" element={withFeatureBoundary(<RAExplorer />, "RA Explorer")} />
-                  <Route path="/ra/scraping" element={withFeatureBoundary(<RAScrapingEngine />, "RA Scraping")} />
-                  <Route path="/ra/company/:id" element={withFeatureBoundary(<RACompanyDetail />, "RA Company")} />
-
-                  {/* ── Utility pages ── */}
-                  <Route path="/campaigns" element={withFeatureBoundary(<Campaigns />, "Campagne")} />
-                  <Route path="/campaign-jobs" element={withFeatureBoundary(<CampaignJobs />, "Campaign Jobs")} />
-                  <Route path="/test-download" element={withFeatureBoundary(<TestDownload />, "Test Download")} />
-                  <Route path="/test-linkedin" element={withFeatureBoundary(<TestLinkedInSearch />, "Test LinkedIn")} />
-                  <Route path="/test-extensions" element={withFeatureBoundary(<TestExtensions />, "Test Extensions")} />
-                  <Route path="/diagnostics" element={withFeatureBoundary(<Diagnostics />, "Diagnostics")} />
-                  <Route path="/guida" element={withFeatureBoundary(<Guida />, "Guida")} />
-                  <Route path="/ai-lab" element={withFeatureBoundary(<AILab />, "AI Lab")} />
-                  <Route path="/mission-builder" element={withFeatureBoundary(<MissionBuilder />, "Mission Builder")} />
-                  <Route path="/telemetry" element={withFeatureBoundary(<Telemetry />, "Telemetry")} />
-                  <Route path="/staff-direzionale" element={withFeatureBoundary(<StaffDirezionale />, "Staff Direzionale")} />
-
-                  {/* Legacy redirects — kept for bookmark compatibility */}
-                  <Route path="/operations" element={<Navigate to="/network" replace />} />
-                  <Route path="/contacts" element={<Navigate to="/crm" replace />} />
-                  <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
+                  <Route index element={withFeatureBoundary(<SuperHome3D />, "Home")} />
+                  <Route path="network" element={withFeatureBoundary(<NetworkPage />, "Network")} />
+                  <Route path="crm" element={withFeatureBoundary(<CRM />, "CRM")} />
+                  <Route path="outreach" element={withFeatureBoundary(<Outreach />, "Outreach")} />
+                  <Route path="inreach" element={withFeatureBoundary(<Inreach />, "Inreach")} />
+                  <Route path="agenda" element={withFeatureBoundary(<Agenda />, "Agenda")} />
+                  <Route path="agent-chat" element={withFeatureBoundary(<AgentChatHub />, "Agent Chat")} />
+                  <Route path="settings" element={withFeatureBoundary(<Settings />, "Settings")} />
+                  <Route path="settings/operators" element={withFeatureBoundary(<OperatorsSettings />, "Operators")} />
+                  <Route path="settings/users" element={withFeatureBoundary(<AdminUsers />, "Admin Users")} />
+                  <Route path="email-composer" element={withFeatureBoundary(<EmailComposer />, "Email Composer")} />
+                  <Route path="ra" element={withFeatureBoundary(<RADashboard />, "RA Dashboard")} />
+                  <Route path="ra/explorer" element={withFeatureBoundary(<RAExplorer />, "RA Explorer")} />
+                  <Route path="ra/scraping" element={withFeatureBoundary(<RAScrapingEngine />, "RA Scraping")} />
+                  <Route path="ra/company/:id" element={withFeatureBoundary(<RACompanyDetail />, "RA Company")} />
+                  <Route path="campaigns" element={withFeatureBoundary(<Campaigns />, "Campagne")} />
+                  <Route path="campaign-jobs" element={withFeatureBoundary(<CampaignJobs />, "Campaign Jobs")} />
+                  <Route path="test-download" element={withFeatureBoundary(<TestDownload />, "Test Download")} />
+                  <Route path="test-linkedin" element={withFeatureBoundary(<TestLinkedInSearch />, "Test LinkedIn")} />
+                  <Route path="test-extensions" element={withFeatureBoundary(<TestExtensions />, "Test Extensions")} />
+                  <Route path="diagnostics" element={withFeatureBoundary(<Diagnostics />, "Diagnostics")} />
+                  <Route path="guida" element={withFeatureBoundary(<Guida />, "Guida")} />
+                  <Route path="ai-lab" element={withFeatureBoundary(<AILab />, "AI Lab")} />
+                  <Route path="mission-builder" element={withFeatureBoundary(<MissionBuilder />, "Mission Builder")} />
+                  <Route path="telemetry" element={withFeatureBoundary(<Telemetry />, "Telemetry")} />
+                  <Route path="staff-direzionale" element={withFeatureBoundary(<StaffDirezionale />, "Staff Direzionale")} />
+                  <Route path="operations" element={<Navigate to="network" replace />} />
+                  <Route path="contacts" element={<Navigate to="crm" replace />} />
+                  <Route path="cockpit" element={<Navigate to="outreach" replace />} />
+                  <Route path="reminders" element={<Navigate to="agenda" replace />} />
                 </Route>
               </Route>
-              {/* v2 routes */}
+
+              {/* V2 routes */}
               <Route path="/v2/*" element={<V2Routes />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
