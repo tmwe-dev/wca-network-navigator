@@ -126,7 +126,7 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
     }
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
-    if (filters?.partnerTypes?.length) query = query.in("partner_type", filters.partnerTypes as string[]);
+    if (filters?.partnerTypes?.length) query = query.in("partner_type", filters.partnerTypes as any);
     if (filters?.favorites) query = query.eq("is_favorite", true);
 
     return query.order("company_name").range(from, to);

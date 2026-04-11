@@ -59,7 +59,7 @@ const DEFAULT_PAGE_SIZE = 200;
 // ─── Query Helpers ──────────────────────────────────────
 
 function applyContactFilters(
-  q: ReturnType<typeof supabase.from<"imported_contacts">>,
+  q: any,
   filters: ContactFilters
 ) {
   // Quality filter — base
