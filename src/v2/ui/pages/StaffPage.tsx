@@ -20,7 +20,7 @@ const STAFF_AGENTS = [
 ] as const;
 
 export function StaffPage(): React.ReactElement {
-  const [selectedAgent, setSelectedAgent] = useState(STAFF_AGENTS[0].code);
+  const [selectedAgent, setSelectedAgent] = useState<string>(STAFF_AGENTS[0].code);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
