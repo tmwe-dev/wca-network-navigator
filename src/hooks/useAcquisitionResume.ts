@@ -57,10 +57,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }));
 
           // Enrich names from partners table
-          const { data: partners } = await supabase
-            .from("partners")
-            .select("wca_id, company_name, city")
-            .in("wca_id", wcaIds);
+          const partners = await getPartnersByCountries([job.country_code], "wca_id, company_name, city");
           if (partners) {
             for (const p of partners) {
               const qi = queueItems.find((q) => q.wca_id === p.wca_id);
