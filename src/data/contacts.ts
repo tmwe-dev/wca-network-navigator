@@ -232,6 +232,90 @@ export async function updateContact(id: string, updates: Record<string, unknown>
   if (error) throw error;
 }
 
+// ─── Additional Queries ────────────────────────────────
+
+export async function getContactById(id: string) {
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
+  const results: any[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const { data, error } = await supabase
+      .from("imported_contacts")
+      .select(select)
+      .in("id", batch);
+    if (error) throw error;
+    if (data) results.push(...data);
+  }
+  return results;
+}
+
+export async function insertContacts(contacts: Record<string, unknown>[]) {
+  for (let i = 0; i < contacts.length; i += 100) {
+    const { error } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100) as any);
+    if (error) throw error;
+  }
+}
+
+export async function toggleContactSelection(id: string, selected: boolean) {
+  const { error } = await supabase
+    .from("imported_contacts")
+    .update({ is_selected: selected })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function markContactTransferred(id: string) {
+  const { error } = await supabase
+    .from("imported_contacts")
+    .update({ is_transferred: true })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function findContactByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .select("company_name, company_alias, name, contact_alias, country")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateContactEnrichment(id: string, enrichmentPatch: Record<string, unknown>) {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("enrichment_data")
+    .eq("id", id)
+    .single();
+  const existing = ((data?.enrichment_data as Record<string, unknown>) ?? {});
+  const merged = structuredClone({ ...existing, ...enrichmentPatch });
+  const { error } = await supabase
+    .from("imported_contacts")
+    .update({ enrichment_data: merged as any })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateContactStatus(id: string, status: string, extra?: Record<string, unknown>) {
+  const updates: Record<string, unknown> = { lead_status: status, ...extra };
+  const { error } = await supabase
+    .from("imported_contacts")
+    .update(updates)
+    .eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateContactCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: contactKeys.all });

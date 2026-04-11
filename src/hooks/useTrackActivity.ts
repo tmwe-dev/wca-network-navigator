@@ -51,6 +51,8 @@ export function useTrackActivity() {
           notes: params.description || `Attività: ${params.title}`,
         });
       } else if (params.sourceType === "imported_contact") {
+        const { updateContact } = await import("@/data/contacts");
+        // Only update if currently "new" — we can't do conditional update via DAL, so use supabase directly
         await supabase
           .from("imported_contacts")
           .update({ lead_status: "contacted", last_interaction_at: now })

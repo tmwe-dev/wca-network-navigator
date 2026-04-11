@@ -146,12 +146,8 @@ export default function EmailComposer() {
     }
 
     // Check imported_contacts
-    const { data: ic } = await supabase
-      .from("imported_contacts")
-      .select("company_name, company_alias, name, contact_alias, country")
-      .ilike("email", email)
-      .limit(1)
-      .maybeSingle();
+    const { findContactByEmail } = await import("@/data/contacts");
+    const ic = await findContactByEmail(email);
     if (ic) return { found: true, companyName: ic.company_alias || ic.company_name || "", contactName: ic.contact_alias || ic.name || "", countryCode: ic.country || "", city: "", partnerId: "" };
 
     // Check business_cards
