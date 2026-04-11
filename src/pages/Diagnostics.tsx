@@ -158,8 +158,8 @@ export default function Diagnostics() {
       upsert({ id, name: table, category: "Database Tables", status: "running" });
       try {
         const ms = await timed(async () => {
-          const { count, error } = await (async () => { const c = await countTableRows(table); return { count: c, error: null }; })();
-          upsert({ id, name: table, category: "Database Tables", status: "pass", message: `${count ?? 0} righe` });
+          const count = await countTableRows(table);
+          upsert({ id, name: table, category: "Database Tables", status: "pass", message: `${count} righe` });
         });
         setResults(prev => prev.map(r => r.id === id ? { ...r, durationMs: ms } : r));
       } catch (e: any) {
@@ -181,8 +181,7 @@ export default function Diagnostics() {
           continue;
         }
         const ms = await timed(async () => {
-          const { error } = await (async () => { await rpcCall(fn); return { error: null }; })();
-          if (error) throw error;
+          await rpcCall(fn);
         });
         upsert({ id, name: fn, category: "RPC Functions", status: "pass", durationMs: ms });
       } catch (e: any) {
