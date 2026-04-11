@@ -5,10 +5,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // ── partner_contacts ──
-export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias") {
+export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<any[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as any[];
 }
 
 export async function insertPartnerContact(contact: Record<string, unknown>) {
@@ -78,4 +78,31 @@ export async function findPartnerSocialLinks(partnerId: string) {
   const { data, error } = await supabase.from("partner_social_links").select("*").eq("partner_id", partnerId);
   if (error) throw error;
   return data ?? [];
+}
+
+export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
+  let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
+  if (platform) q = q.eq("platform", platform as any);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function insertPartnerSocialLink(link: { partner_id: string; contact_id: string | null; platform: string; url: string }) {
+  const { error } = await supabase.from("partner_social_links").insert(link as any);
+  return { error };
+}
+
+// ── partner_contacts by IDs ──
+export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<any[]> {
+  const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids);
+  if (error) throw error;
+  return (data ?? []) as any[];
+}
+
+// ── prospect_contacts by IDs ──
+export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<any[]> {
+  const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids);
+  if (error) throw error;
+  return (data ?? []) as any[];
 }

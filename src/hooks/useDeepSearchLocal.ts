@@ -1,12 +1,11 @@
 /**
  * useDeepSearchLocal — Client-side Deep Search using Partner Connect extension + AI Gateway
  * Decomposed: pure helpers in useDeepSearchHelpers.ts
- * ~300 LOC (was 548)
  */
 import { useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { updatePartner, findPartnerByName, getPartner } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
+import { findPartnerContacts, findPartnerSocialLinks, insertPartnerSocialLink } from "@/data/partnerRelations";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
 import {
@@ -83,7 +82,7 @@ export function useDeepSearchLocal() {
           if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
             const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
             if (m) {
-              const { error } = await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: contact.id, platform: "linkedin", url: m[1].replace(/\/$/, "") });
+              const { error } = await insertPartnerSocialLink({ partner_id: partnerId, contact_id: contact.id, platform: "linkedin", url: m[1].replace(/\/$/, "") });
               if (!error) socialLinksFound++;
               const sr = extractSeniority(results[0]?.title);
               if (sr) contactProfiles[contact.id] = { name: contact.name, title: contact.title || "", ...sr };
@@ -96,7 +95,7 @@ export function useDeepSearchLocal() {
       if (waNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
         const cleaned = toWhatsAppNumber(waNumber);
         if (cleaned.length >= 8) {
-          const { error } = await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: contact.id, platform: "whatsapp", url: `https://wa.me/${cleaned}` });
+          const { error } = await insertPartnerSocialLink({ partner_id: partnerId, contact_id: contact.id, platform: "whatsapp", url: `https://wa.me/${cleaned}` });
           if (!error) socialLinksFound++;
         }
       }
@@ -110,7 +109,7 @@ export function useDeepSearchLocal() {
     const res = await googleSearch(q, 3);
     const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
     if (match) {
-      const { error } = await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, "") });
+      const { error } = await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, "") });
       if (!error) { await delay(500); return 1; }
     }
     await delay(500);
@@ -152,9 +151,9 @@ export function useDeepSearchLocal() {
     const partner = await getPartner(partnerId) as any;
     if (!partner) return { ...failResult, error: "Partner not found" };
 
-    const { data: contactsData } = await supabase.from("partner_contacts").select("id, name, title, email, mobile, direct_phone").eq("partner_id", partnerId);
+    const contactsData = await findPartnerContacts(partnerId, "id, name, title, email, mobile, direct_phone");
     const contacts = contactsData ?? [];
-    const { data: existingLinksData } = await supabase.from("partner_social_links").select("contact_id, platform").eq("partner_id", partnerId);
+    const existingLinksData = await findPartnerSocialLinks(partnerId);
     const existingSet = new Set((existingLinksData ?? []).map((l) => `${l.contact_id || "company"}_${l.platform}`));
     const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
 
@@ -223,7 +222,7 @@ export function useDeepSearchLocal() {
             const sr = extractSeniority(results[0]?.title);
             if (sr) contactProfiles[contactId] = { name: contact.name, title: contact.position || "", ...sr };
             if (partnerId) {
-              await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
+              await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
             }
           }
         }
@@ -236,7 +235,7 @@ export function useDeepSearchLocal() {
       const cleaned = toWhatsAppNumber(waNumber);
       if (cleaned.length >= 8) {
         socialLinksFound++;
-        if (partnerId) await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: null, platform: "whatsapp", url: `https://wa.me/${cleaned}` });
+        if (partnerId) await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "whatsapp", url: `https://wa.me/${cleaned}` });
       }
     }
 
@@ -247,7 +246,7 @@ export function useDeepSearchLocal() {
       const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
       if (match) {
         companyProfileFound = true; socialLinksFound++;
-        if (partnerId) await supabase.from("partner_social_links").insert({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, "") });
+        if (partnerId) await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, "") });
       }
       await delay(500);
     }

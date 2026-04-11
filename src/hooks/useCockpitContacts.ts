@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByIds } from "@/data/partners";
+import { getPartnerContactsByIds, findSocialLinksByPartnerIds, getProspectContactsByIds } from "@/data/partnerRelations";
+import { findCockpitQueue, deleteCockpitQueueBySource, insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
@@ -119,16 +121,8 @@ export function useCockpitContacts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Fetch queue items
-      const { data: queue, error } = await supabase
-        .from("cockpit_queue")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "queued")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      if (!queue || queue.length === 0) return [];
+      const queue = await findCockpitQueue(user.id);
+      if (queue.length === 0) return [];
 
       // Group source_ids by source_type
       const pcIds = queue.filter(q => q.source_type === "partner_contact").map(q => q.source_id);
@@ -136,16 +130,16 @@ export function useCockpitContacts() {
       const prcIds = queue.filter(q => q.source_type === "prospect_contact").map(q => q.source_id);
       const icIds = queue.filter(q => q.source_type === "contact").map(q => q.source_id);
 
-      // Fetch source data in parallel
+      // Fetch source data in parallel using DAL
       const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
-          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id, contact_alias").in("id", pcIds).then(r => r.data || [])
+          ? getPartnerContactsByIds(pcIds, "id, name, title, email, direct_phone, mobile, partner_id, contact_alias")
           : Promise.resolve([]),
         bcIds.length > 0
           ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
           : Promise.resolve([]),
         prcIds.length > 0
-          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id, linkedin_url").in("id", prcIds).then(r => r.data || [])
+          ? getProspectContactsByIds(prcIds)
           : Promise.resolve([]),
         icIds.length > 0
           ? import("@/data/contacts").then(({ getContactsByIds }) => getContactsByIds(icIds, "id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias"))
@@ -158,15 +152,11 @@ export function useCockpitContacts() {
         ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
       ].filter(Boolean);
       const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
-      let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
-      let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
+      let socialLinksMap: Record<string, string> = {};
+      let contactSocialMap: Record<string, string> = {};
       if (uniqueSocialPartnerIds.length > 0) {
-        const { data: slData } = await supabase
-          .from("partner_social_links")
-          .select("partner_id, contact_id, platform, url")
-          .in("partner_id", uniqueSocialPartnerIds)
-          .eq("platform", "linkedin");
-        for (const sl of slData || []) {
+        const slData = await findSocialLinksByPartnerIds(uniqueSocialPartnerIds, "linkedin");
+        for (const sl of slData) {
           if (sl.contact_id) {
             contactSocialMap[sl.contact_id] = sl.url;
           } else {
@@ -227,23 +217,16 @@ export function useCockpitContacts() {
         const partner = (pc.partner_id ? partnersMap[pc.partner_id] : undefined) || (item.partner_id ? partnersMap[item.partner_id] : undefined);
         const pMeta = extractPartnerMeta(partner);
         result.push({
-          id: `pc-${pc.id}`,
-          queueId: item.id,
-          name: pc.name || "—",
-          company: partner?.company_name || "—",
-          role: pc.title || "",
-          country: partner?.country_code || "",
+          id: `pc-${pc.id}`, queueId: item.id,
+          name: pc.name || "—", company: partner?.company_name || "—",
+          role: pc.title || "", country: partner?.country_code || "",
           language: inferLanguage(partner?.country_code ?? null),
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
-          email: pc.email || "",
-          phone: pc.mobile || pc.direct_phone || "",
-          origin: "wca" as ContactOrigin,
-          originDetail: partner?.company_name || "Partner",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: pc.partner_id || item.partner_id,
+          email: pc.email || "", phone: pc.mobile || pc.direct_phone || "",
+          origin: "wca" as ContactOrigin, originDetail: partner?.company_name || "Partner",
+          sourceType: st, sourceId: sid, partnerId: pc.partner_id || item.partner_id,
           linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
           contactAlias: pc.contact_alias || undefined,
           companyAlias: partner?.company_alias || undefined,
@@ -256,93 +239,60 @@ export function useCockpitContacts() {
         const bc = bcMap[sid];
         if (!bc) continue;
         result.push({
-          id: `bc-${bc.id}`,
-          queueId: item.id,
-          name: bc.contact_name || "—",
-          company: bc.company_name || "—",
-          role: bc.position || "",
-          country: "",
-          language: "english",
+          id: `bc-${bc.id}`, queueId: item.id,
+          name: bc.contact_name || "—", company: bc.company_name || "—",
+          role: bc.position || "", country: "", language: "english",
           lastContact: formatRelativeDate(bc.met_at || bc.created_at),
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
-          email: bc.email || "",
-          phone: bc.mobile || bc.phone || "",
+          email: bc.email || "", phone: bc.mobile || bc.phone || "",
           origin: "bca" as ContactOrigin,
           originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
-          linkedinUrl: "",
-          isBusinessCard: true,
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
+          linkedinUrl: "", isBusinessCard: true,
         });
       } else if (st === "prospect_contact") {
         const prc = prcMap[sid];
         if (!prc) continue;
         result.push({
-          id: `prc-${prc.id}`,
-          queueId: item.id,
-          name: prc.name || "—",
-          company: "—",
-          role: prc.role || "",
-          country: "",
-          language: "italiano",
+          id: `prc-${prc.id}`, queueId: item.id,
+          name: prc.name || "—", company: "—",
+          role: prc.role || "", country: "", language: "italiano",
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(prc.email, prc.phone, null),
           channels: inferChannels(prc.email, prc.phone, null),
-          email: prc.email || "",
-          phone: prc.phone || "",
-          origin: "report_aziende" as ContactOrigin,
-          originDetail: "Prospect",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
+          email: prc.email || "", phone: prc.phone || "",
+          origin: "report_aziende" as ContactOrigin, originDetail: "Prospect",
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
           linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
         const ic = icMap[sid];
         if (!ic) continue;
-        // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const icEd = (ic.enrichment_data as any) || {};
-        let icLinkedin = icEd.linkedin_profile_url
-          || icEd.linkedin_url
-          || icEd.social_links?.linkedin
-          || "";
-        // contact_profiles is an OBJECT keyed by ID, not an array
+        let icLinkedin = icEd.linkedin_profile_url || icEd.linkedin_url || icEd.social_links?.linkedin || "";
         if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
           const profiles = Object.values(icEd.contact_profiles) as any[];
           const found = profiles.find((cp: any) => cp.linkedin_url);
           if (found) icLinkedin = found.linkedin_url;
         }
-        // Also check partner_social_links if we have a partner_id
         const icPartnerId = item.partner_id;
-        if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
-          icLinkedin = socialLinksMap[icPartnerId];
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) icLinkedin = socialLinksMap[icPartnerId];
         const icEnrich = (ic.enrichment_data as any) || {};
         const icMeta: Partial<CockpitContact> = {};
         if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
         if (icEnrich.company_profile?.specialties?.length) icMeta.specialties = icEnrich.company_profile.specialties.slice(0, 4);
         result.push({
-          id: `ic-${ic.id}`,
-          queueId: item.id,
-          name: ic.name || "—",
-          company: ic.company_name || "—",
-          role: ic.position || "",
-          country: ic.country || "",
+          id: `ic-${ic.id}`, queueId: item.id,
+          name: ic.name || "—", company: ic.company_name || "—",
+          role: ic.position || "", country: ic.country || "",
           language: inferLanguage(ic.country),
           lastContact: formatRelativeDate(ic.created_at),
           priority: computePriority(ic.email, ic.phone, ic.mobile),
           channels: inferChannels(ic.email, ic.phone, ic.mobile),
-          email: ic.email || "",
-          phone: ic.mobile || ic.phone || "",
-          origin: "manual" as ContactOrigin,
-          originDetail: ic.origin || "Manuale",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
+          email: ic.email || "", phone: ic.mobile || ic.phone || "",
+          origin: "manual" as ContactOrigin, originDetail: ic.origin || "Manuale",
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
           contactAlias: ic.contact_alias || undefined,
           companyAlias: ic.company_alias || undefined,
@@ -355,29 +305,21 @@ export function useCockpitContacts() {
 
     // Add scheduled return activities
     for (const act of scheduledActivities) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const meta = (act.source_meta || {}) as any;
       const existsAlready = result.some(r => r.sourceId === act.source_id);
       if (existsAlready) continue;
       result.push({
-        id: `act-${act.id}`,
-        queueId: act.id,
-        name: meta.name || act.title || "—",
-        company: meta.company || "—",
-        role: "",
-        country: meta.country || "",
+        id: `act-${act.id}`, queueId: act.id,
+        name: meta.name || act.title || "—", company: meta.company || "—",
+        role: "", country: meta.country || "",
         language: inferLanguage(meta.country),
         lastContact: formatRelativeDate(act.created_at),
         priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
         channels: inferChannels(meta.email, null, null),
-        email: meta.email || "",
-        phone: meta.phone || meta.mobile || "",
-        origin: "wca" as ContactOrigin,
-        originDetail: `📅 Riprogrammato`,
-        sourceType: act.source_type,
-        sourceId: act.source_id,
-        partnerId: act.partner_id,
-        linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
+        email: meta.email || "", phone: meta.phone || meta.mobile || "",
+        origin: "wca" as ContactOrigin, originDetail: `📅 Riprogrammato`,
+        sourceType: act.source_type, sourceId: act.source_id,
+        partnerId: act.partner_id, linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
         isScheduledReturn: true,
       });
     }
@@ -395,15 +337,10 @@ export function useCockpitContacts() {
   return { contacts, contactsMap, isLoading: q.isLoading };
 }
 
-/**
- * Remove contacts from cockpit_queue
- */
 export function useDeleteCockpitContacts() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (prefixedIds: string[]) => {
-      // We need to find the queue IDs for these contacts
-      // But we can also just delete by source criteria
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -415,14 +352,8 @@ export function useDeleteCockpitContacts() {
         else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
       }
 
-      // Delete from cockpit_queue by source matches
       for (const entry of sourceEntries) {
-        await supabase
-          .from("cockpit_queue")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("source_type", entry.type)
-          .eq("source_id", entry.id);
+        await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
       }
     },
     onSuccess: () => {
@@ -431,9 +362,6 @@ export function useDeleteCockpitContacts() {
   });
 }
 
-/**
- * Send partner contacts to cockpit_queue
- */
 export function useSendToCockpit() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -449,17 +377,11 @@ export function useSendToCockpit() {
         status: "queued",
       }));
 
-      const { error } = await supabase.from("cockpit_queue").upsert(inserts as any, {
-        onConflict: "user_id,source_type,source_id",
-        ignoreDuplicates: true,
-      });
-      if (error) throw error;
+      await insertCockpitQueueItems(inserts);
 
-      // Store source IDs for auto-preselection in Cockpit
       const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
       addCockpitPreselection(items.map(i => i.sourceId));
 
-      // Auto-assign agents silently for each contact
       for (const item of items) {
         try {
           await autoAssignAgent({
@@ -475,7 +397,7 @@ export function useSendToCockpit() {
 
       return inserts.length;
     },
-    onSuccess: (count) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
       queryClient.invalidateQueries({ queryKey: ["client-assignments"] });
     },

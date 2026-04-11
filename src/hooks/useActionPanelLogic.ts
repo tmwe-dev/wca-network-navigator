@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
-import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByCountries, deletePartnersWithRelations } from "@/data/partners";
+import { findDirectoryCache, upsertDirectoryCache } from "@/data/directoryCache";
+import { findJobsByStatusSelect, updateDownloadJob, updateJobItemsByJobIdAndStatus } from "@/data/downloadJobs";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
@@ -46,12 +47,12 @@ export function useActionPanelLogic({
     queryKey: ["directory-cache", countryCodes, networkKeys],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      let q = supabase.from("directory_cache").select("*").in("country_code", countryCodes);
-      if (networks.length > 0) q = q.in("network_name", networks);
-      else q = q.eq("network_name", "");
-      const { data, error } = await q;
-      if (error) { toast({ title: "Errore directory cache", description: error.message, variant: "destructive" }); return []; }
-      return data || [];
+      try {
+        return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
+      } catch (e: any) {
+        toast({ title: "Errore directory cache", description: e.message, variant: "destructive" });
+        return [];
+      }
     },
     staleTime: 30_000,
     enabled: countryCodes.length > 0,
@@ -132,10 +133,10 @@ export function useActionPanelLogic({
   // ── Scan ──
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
-    await supabase.from("directory_cache").upsert({
+    await upsertDirectoryCache({
       country_code: countryCode, network_name: netKey, members: membersJson as any,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    }, { onConflict: "country_code,network_name" });
+    });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
   }, [queryClient]);
 
@@ -225,13 +226,13 @@ export function useActionPanelLogic({
       }
     } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
 
-    const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
-    if (activeJobs && activeJobs.length > 0) {
+    const activeJobs = await findJobsByStatusSelect(["pending", "running"], "id, status, updated_at", 1);
+    if (activeJobs.length > 0) {
       const job = activeJobs[0];
       const ageMs = Date.now() - new Date(job.updated_at).getTime();
       if (job.status === "running" && ageMs > 120_000) {
-        await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — job orfano" }).eq("id", job.id);
-        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", job.id).eq("status", "processing");
+        await updateDownloadJob(job.id, { status: "stopped", error_message: "Resettato — job orfano" });
+        await updateJobItemsByJobIdAndStatus(job.id, "processing", { status: "pending" });
       } else {
         toast({ title: "Job già in corso", description: "Attendi il completamento.", variant: "destructive" }); return;
       }
@@ -298,7 +299,6 @@ export function useActionPanelLogic({
   }, [loadingCache, loadingDb, hasCache, countryCodes.length]);
 
   return {
-    // State
     downloadMode, setDownloadMode,
     skipCachedDirs, setSkipCachedDirs,
     isScanning, scanComplete,
@@ -306,12 +306,10 @@ export function useActionPanelLogic({
     scanError, skippedCountries,
     dirThenDownload, setDirThenDownload,
     autoDownloadPending, setAutoDownloadPending,
-    // Derived
     hasCache, totalCount, downloadedCount, missingIds,
     noProfileInDirectoryCount, idsToDownload, estimateLabel,
     isLoading: loadingCache || loadingDb,
     createJob,
-    // Actions
     handleStartScan, abortScan, executeDownload,
   };
 }

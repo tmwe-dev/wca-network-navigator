@@ -1,6 +1,6 @@
 /**
- * DAL — download_jobs
- * Centralizes all download_jobs queries and cache invalidation.
+ * DAL — download_jobs, download_job_items, download_job_events
+ * Centralizes all download-related queries and cache invalidation.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -31,7 +31,7 @@ export interface DownloadJob {
   failed_ids: number[];
 }
 
-// ── Reads ──
+// ── Job Reads ──
 
 export async function findDownloadJobs(limit = 50): Promise<DownloadJob[]> {
   const { data, error } = await supabase
@@ -63,13 +63,44 @@ export async function getDownloadJob(id: string): Promise<DownloadJob | null> {
   return data as DownloadJob | null;
 }
 
-// ── Writes ──
+export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("download_jobs")
+    .select(select)
+    .in("status", statuses)
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as any[];
+}
+
+export async function findJobByCountryAndNetwork(countryCode: string, networkName: string, statuses: string[]) {
+  const { data, error } = await supabase
+    .from("download_jobs")
+    .select("id, status, updated_at")
+    .eq("country_code", countryCode)
+    .eq("network_name", networkName)
+    .in("status", statuses)
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
+export async function findRunningJobs() {
+  const { data, error } = await supabase
+    .from("download_jobs")
+    .select("id, country_name, current_index, updated_at")
+    .eq("status", "running");
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ── Job Writes ──
 
 export async function updateDownloadJob(
   id: string,
   updates: Partial<Pick<DownloadJob, "status" | "error_message" | "current_index" | "delay_seconds" |
     "last_processed_wca_id" | "last_processed_company" | "last_contact_result" |
-    "contacts_found_count" | "contacts_missing_count">> & { processed_ids?: number[] }
+    "contacts_found_count" | "contacts_missing_count">> & { processed_ids?: number[]; completed_at?: string; failed_ids?: unknown }
 ) {
   const payload: Record<string, unknown> = { ...updates };
   if (updates.processed_ids) {
@@ -80,6 +111,17 @@ export async function updateDownloadJob(
     .update(payload)
     .eq("id", id);
   if (error) throw error;
+}
+
+/** Claim a job (set running) with status guard, returns true if claimed */
+export async function claimDownloadJob(jobId: string) {
+  const { data } = await supabase
+    .from("download_jobs")
+    .update({ status: "running", error_message: null })
+    .eq("id", jobId)
+    .in("status", ["pending", "paused", "running"])
+    .select("id");
+  return !!(data?.length);
 }
 
 export async function createDownloadJob(params: {
@@ -117,6 +159,74 @@ export async function deleteJobsByStatus(statuses: string[]): Promise<number> {
     .in("status", statuses);
   if (error) throw error;
   return jobs.length;
+}
+
+// ── Job Items ──
+
+export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("download_job_items")
+    .select(select)
+    .eq("job_id", jobId);
+  if (error) throw error;
+  return (data ?? []) as any[];
+}
+
+export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<any> {
+  const { data, error } = await supabase
+    .from("download_job_items")
+    .select(select)
+    .eq("id", itemId)
+    .single();
+  if (error) throw error;
+  return data as any;
+}
+
+export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {
+  const { error } = await supabase
+    .from("download_job_items")
+    .update(updates)
+    .eq("id", itemId);
+  if (error) throw error;
+}
+
+export async function updateJobItemsByJobIdAndStatus(jobId: string, fromStatus: string | string[], updates: Record<string, unknown>) {
+  let q = supabase.from("download_job_items").update(updates).eq("job_id", jobId);
+  if (Array.isArray(fromStatus)) q = q.in("status", fromStatus);
+  else q = q.eq("status", fromStatus);
+  const { error } = await q;
+  if (error) throw error;
+}
+
+export async function insertJobItems(items: Array<{ job_id: string; wca_id: number; position: number; status: string }>) {
+  for (let i = 0; i < items.length; i += 500) {
+    const { error } = await supabase.from("download_job_items").insert(items.slice(i, i + 500));
+    if (error) throw error;
+  }
+}
+
+// ── Job Events ──
+
+export async function insertJobEvent(event: { job_id: string; item_id?: string; event_type: string; payload?: Record<string, unknown> }) {
+  const { error } = await supabase.from("download_job_events").insert({
+    job_id: event.job_id,
+    item_id: event.item_id || undefined,
+    event_type: event.event_type,
+    payload: (event.payload || {}) as Json,
+  });
+  if (error) throw error;
+}
+
+// ── Dead partners ──
+
+export async function findDeadPartnerIds(wcaIds: number[]) {
+  const { data, error } = await supabase
+    .from("partners_no_contacts")
+    .select("wca_id")
+    .in("wca_id", wcaIds)
+    .eq("resolved", false);
+  if (error) throw error;
+  return (data ?? []).map(r => r.wca_id);
 }
 
 // ── Cache ──
