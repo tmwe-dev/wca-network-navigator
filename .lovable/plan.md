@@ -7,74 +7,36 @@
 ---
 
 ## STEP 1 — Fondazioni TypeScript e Infrastruttura Core ✅
-
-**Completato l'11 aprile 2026. 42 test green.**
-
-### File creati in `src/v2/`:
-
-- `core/domain/entities.ts` — 11 branded ID + 10 interfacce dominio. Zero `any`.
-- `core/domain/errors.ts` — Error factory 3 categorie (Domain/IO/Infra) + recovery strategies.
-- `core/domain/events.ts` — 20+ tipi evento + factory `createEvent()`.
-- `core/domain/result.ts` — Result monad con ok/err/map/flatMap/unwrapOr/fromPromise.
-- `core/glossary.ts` — SSOT nomi dominio + nomi vietati.
-- `bridge/event-bus.ts` — Event bus tipizzato con DLQ (max 3 retry).
-- `bridge/circuit-breaker.ts` — 3 stati: closed/open/half-open.
-- `bridge/retry.ts` — Backoff esponenziale.
-- `bridge/health.ts` — Health check registry.
-- `bridge/internal-logger.ts` — Logger bridge interno.
-- `lib/logger.ts` — Wrapper v2 del logger v1.
-- `lib/feature-flags.ts` — 10 feature flags moduli v2.
-- `test/` — 6 suite, 42 test tutti green.
-- Dipendenza `zod` installata.
-
----
-
 ## STEP 2 — IO Layer: Zod Schemas + Mappers + Query/Mutations ✅
-
-**Completato l'11 aprile 2026. 63 test green (21 nuovi).**
-
-### File creati:
-
-#### Zod Schemas (`src/v2/io/supabase/schemas/`)
-- `partner-schema.ts`, `contact-schema.ts`, `agent-schema.ts`, `activity-schema.ts`, `campaign-schema.ts`
-
-#### Mappers (`src/v2/core/mappers/`)
-- `partner-mapper.ts`, `contact-mapper.ts`, `agent-mapper.ts`, `activity-mapper.ts`, `campaign-mapper.ts`
-
-#### Queries (`src/v2/io/supabase/queries/`)
-- `partners.ts`, `contacts.ts`, `agents.ts`, `activities.ts`, `campaigns.ts`, `app-settings.ts`
-
-#### Mutations (`src/v2/io/supabase/mutations/`)
-- `partners.ts`, `contacts.ts`, `agents.ts`, `activities.ts`, `campaigns.ts`
-
-#### Edge/External (`src/v2/io/`)
-- `edge/client.ts` — invokeEdgeV2 con Result + circuit breaker + Zod validation
-- `edge/schemas.ts` — Zod schemas per risposte edge function
-- `external/wca-api.ts` — WCA API client v2 con Result + circuit breaker
-
-#### Validators (`src/v2/core/domain/`)
-- `validators.ts` — validateEmail, validateCountryCode, validateCompanyName, validateDateRange, validatePartnerInput
-
-#### Test nuovi
-- `test/io/schemas.test.ts` (7 test) — Zod parse/reject + mapper integration
-- `test/core/validators.test.ts` (14 test) — validazioni dominio pure
-
----
-
 ## STEP 3 — Auth Completo + Profili + Ruoli ✅
+## STEP 4 — Design System v2 + Layout ✅
+## STEP 5 — Bridge Layer + Handlers ✅
 
-**Completato l'11 aprile 2026.**
+**63 test green. Build green. Zero errori TypeScript in src/v2/.**
 
-### Migrazione DB:
+### STEP 3 — Migrazione DB:
 - Tipo enum `app_role` (admin, moderator, user)
-- Tabella `user_roles` con RLS
-- Funzione `has_role()` SECURITY DEFINER
-- Trigger `on_auth_user_created_assign_role` → ruolo default 'user'
+- Tabella `user_roles` con RLS + `has_role()` SECURITY DEFINER
+- Trigger auto-assign ruolo 'user' su signup
 - Leaked password protection abilitata
 
-### File creati:
-- `hooks/useAuthV2.ts` — Auth hook completo (login, Google OAuth, profilo, ruoli, whitelist)
-- `hooks/useRequireAuth.ts` — Guard redirect se non autenticato
-- `hooks/useRequireRole.ts` — Guard ruolo con redirect
+### STEP 3 — Hooks auth:
+- `hooks/useAuthV2.ts` — Login, Google OAuth, profilo, ruoli, whitelist
+- `hooks/useRequireAuth.ts` — Guard redirect
+- `hooks/useRequireRole.ts` — Guard ruolo
 
-### Prossimo: STEP 4 — Design System v2 + Layout
+### STEP 4 — Design System:
+- Atoms: Button, Input, Badge, StatusBadge, DataCell, EmptyState, ErrorMessage
+- Molecules: FormField, SearchBar, StatCard, ConfirmDialog, ActionToolbar
+- Organisms: DataTable (generico tipizzato), FormSection
+- Templates: AuthenticatedLayout, PublicLayout
+- Pages: LoginPage, DashboardPage, ResetPasswordPage
+- Routes: `src/v2/routes.tsx` lazy-loaded, montato in App.tsx su `/v2/*`
+
+### STEP 5 — Bridge Handlers:
+- `handlers/partner-bridge.ts` — create/delete con validazione domain
+- `handlers/contact-bridge.ts` — create/update con validazione email
+- `handlers/agent-bridge.ts` — create/update
+- `handlers/campaign-bridge.ts` — create/update campaign jobs
+
+### Prossimo: STEP 6 — Modulo Network/Partners
