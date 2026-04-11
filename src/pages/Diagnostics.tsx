@@ -43,16 +43,16 @@ const DB_TABLES = [
 const EDGE_FUNCTIONS = [
   "ai-assistant", "analyze-import-structure", "analyze-partner",
   "buy-credits", "check-subscription", "consume-credits",
-  "contacts-assistant", "create-checkout", "customer-portal",
+  "create-checkout", "customer-portal",
   "deduplicate-partners", "deep-search-contact", "deep-search-partner",
   "enrich-partner-website", "generate-aliases", "generate-email",
   "get-linkedin-credentials", "get-ra-credentials", "get-wca-credentials",
-  "import-assistant", "parse-profile-ai", "process-ai-import",
+  "parse-profile-ai", "process-ai-import",
   "process-download-job", "process-email-queue",
   "save-linkedin-cookie", "save-ra-cookie", "save-ra-prospects",
   "save-wca-contacts", "save-wca-cookie",
   "scrape-wca-blacklist", "scrape-wca-directory", "scrape-wca-partners",
-  "send-email", "stripe-webhook", "wca-auto-login",
+  "send-email", "stripe-webhook", "unified-assistant", "wca-auto-login",
 ];
 
 // ── RPC functions ─────────────────────────────────────────────────
