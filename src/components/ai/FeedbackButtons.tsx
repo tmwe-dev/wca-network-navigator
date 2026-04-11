@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
+import { createMemory } from "@/data/aiMemory";
 
 const log = createLogger("FeedbackButtons");
 
@@ -25,7 +26,7 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase.from("ai_memory").insert({
+      await createMemory({
         user_id: user.id,
         content: type === "up"
           ? `L'utente ha gradito la risposta #${messageIndex} dell'assistente.`

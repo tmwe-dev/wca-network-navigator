@@ -10,9 +10,9 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { useTheme, t } from "./theme";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { updateDownloadJob, updateJobItemsByJobIdAndStatus } from "@/data/downloadJobs";
 
 const log = createLogger("ActiveJobBar");
 // useExtensionBridge rimosso — download via wca-app bridge (Claude Engine V8)
@@ -53,8 +53,8 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
 
   const handleResetJob = async () => {
     try {
-      await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato manualmente" }).eq("id", mainJob.id);
-      await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", mainJob.id).eq("status", "processing");
+      await updateDownloadJob(mainJob.id, { status: "stopped", error_message: "Resettato manualmente" });
+      await updateJobItemsByJobIdAndStatus(mainJob.id, "processing", { status: "pending" });
       toast.success("Job resettato");
     } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel reset"); }
   };

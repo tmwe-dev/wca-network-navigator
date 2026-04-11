@@ -16,6 +16,7 @@ import { useUpdateBusinessCard, type BusinessCardWithPartner } from "@/hooks/use
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "@/hooks/use-toast";
 import { STATUS_COLORS, STATUS_LABELS, countryFlag, googleLogoSearchUrl } from "./bcaUtils";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
@@ -82,7 +83,7 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from("cockpit_queue").insert({ source_id: card.id, source_type: "business_card", user_id: user.id, partner_id: card.matched_partner_id || null } as any);
+      await insertCockpitQueueItems([{ source_id: card.id, source_type: "business_card", user_id: user.id, partner_id: card.matched_partner_id || null }]);
       toast({ title: "✅ Aggiunto al Cockpit" });
     } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
   }, [card]);

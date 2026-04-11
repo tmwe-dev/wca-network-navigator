@@ -35,6 +35,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
+import { insertActivity } from "@/data/activities";
 
 interface PartnerDetailCompactProps {
   partner: any;
@@ -106,7 +107,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         // Create activity for holding pattern
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.from("activities").insert({
+          await insertActivity({
             activity_type: "whatsapp_message" as any,
             title: `WhatsApp a ${contact.name} (${partner.company_name})`,
             source_type: "partner",

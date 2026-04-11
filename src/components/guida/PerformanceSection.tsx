@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import SectionWrapper from "./SectionWrapper";
-import { supabase } from "@/integrations/supabase/client";
 import { countActivePartners, getDistinctCountries } from "@/data/partners";
 import { useQuery } from "@tanstack/react-query";
 import { Globe, Users, Mail, Briefcase, Bot, Cpu } from "lucide-react";
+import { countChannelMessages } from "@/data/channelMessages";
+import { countActiveAgents } from "@/data/agents";
+import { countCompletedAgentTasks } from "@/data/agentTasks";
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -41,9 +43,9 @@ const PerformanceSection = () => {
       const [partnersCount, countryCodes, emails, agents, tasks] = await Promise.all([
         countActivePartners(),
         getDistinctCountries(),
-        supabase.from("channel_messages").select("id", { count: "planned", head: true }).eq("channel", "email"),
-        supabase.from("agents").select("id", { count: "planned", head: true }).eq("is_active", true),
-        supabase.from("agent_tasks").select("id", { count: "planned", head: true }).eq("status", "completed"),
+        countChannelMessages("email").then(c => ({ count: c })),
+        countActiveAgents().then(c => ({ count: c })),
+        countCompletedAgentTasks().then(c => ({ count: c })),
       ]);
       
       const uniqueCountries = countryCodes.length;

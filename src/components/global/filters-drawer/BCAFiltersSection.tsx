@@ -4,6 +4,7 @@ import { Search, Filter, Users } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { createLogger } from "@/lib/log";
+import { findBusinessCards } from "@/data/businessCards";
 
 const log = createLogger("BCAFiltersSection");
 
@@ -18,7 +19,7 @@ export function BCAFiltersSection() {
     const fetchMeta = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        const { data } = await supabase.from("business_cards").select("event_name, match_status");
+        const data = await findBusinessCards();
         if (!data) return;
         const evCounts: Record<string, number> = {};
         const stCounts: Record<string, number> = {};

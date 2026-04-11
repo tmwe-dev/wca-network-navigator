@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { unwrapGoogleResultUrl } from "@/lib/linkedinSearch";
+import { insertContacts } from "@/data/contacts";
 
 const COUNTRY_OPTIONS = [
   "AF","AL","DZ","AD","AO","AR","AM","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BT","BO",
@@ -450,7 +451,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
       if (logoUrl) enrichmentData.logo_url = logoUrl;
       if (website) enrichmentData.website = website;
 
-      const { data: inserted, error } = await supabase.from("imported_contacts").insert({
+      const inserted = await insertContacts([{
         user_id: user.id,
         import_log_id: importLogId,
         company_name: companyName.trim(),

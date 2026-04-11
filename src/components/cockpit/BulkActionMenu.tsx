@@ -25,6 +25,8 @@ import { useAgents } from "@/hooks/useAgents";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
+import { insertActivity } from "@/data/activities";
+import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
 
 const log = createLogger("BulkActionMenu");
 
@@ -76,7 +78,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
     let successCount = 0;
 
     for (const contact of selectedContacts) {
-      const { error } = await supabase.from("activities").insert({
+      await insertActivity({
         user_id: user.id,
         activity_type: activityType,
         status,
@@ -91,7 +93,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       if (!error) {
         successCount++;
         if (status === "completed" || extra.due_date) {
-          await supabase.from("cockpit_queue").delete().eq("id", contact.queueId);
+          await deleteCockpitQueueItem(contact.queueId);
         }
       }
     }

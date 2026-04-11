@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { deleteEmailTemplate, createEmailTemplate } from "@/data/emailTemplates";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
   pdf: <FileText className="w-8 h-8 text-red-500" />,
@@ -66,7 +67,7 @@ export default function TemplateManager() {
         await supabase.storage.from("templates").remove([decodeURIComponent(path)]);
       }
       // Delete from db
-      const { error } = await supabase.from("email_templates").delete().eq("id", template.id);
+      await deleteEmailTemplate(template.id); const error = null;
       if (error) throw error;
     },
     onSuccess: () => {
@@ -91,7 +92,7 @@ export default function TemplateManager() {
 
         const { data: urlData } = await supabase.storage.from("templates").createSignedUrl(safeName, 60 * 60 * 24 * 365);
 
-        const { error: dbError } = await supabase.from("email_templates").insert({
+        await createEmailTemplate({
           name: file.name.replace(/\.[^/.]+$/, ""),
           file_url: urlData?.signedUrl || safeName,
           file_name: file.name,

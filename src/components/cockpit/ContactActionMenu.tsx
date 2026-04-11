@@ -25,6 +25,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
+import { insertActivity } from "@/data/activities";
+import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
 
 type ActivityType = Database["public"]["Enums"]["activity_type"];
 
@@ -57,7 +59,7 @@ export function ContactActionMenu({ contact, children }: Props) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("activities").insert({
+    await insertActivity({
       user_id: user.id,
       activity_type: activityType,
       status,
@@ -75,7 +77,7 @@ export function ContactActionMenu({ contact, children }: Props) {
     }
 
     if (status === "completed" || extra.due_date) {
-      await supabase.from("cockpit_queue").delete().eq("id", contact.queueId);
+      await deleteCockpitQueueItem(contact.queueId);
     }
 
     qc.invalidateQueries({ queryKey: ["cockpit-queue"] });

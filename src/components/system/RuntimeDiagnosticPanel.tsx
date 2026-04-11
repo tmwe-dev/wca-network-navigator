@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { createLogger } from "@/lib/log";
+import { findJobsByStatusSelect } from "@/data/downloadJobs";
 
 const log = createLogger("RuntimeDiagnosticPanel");
 
@@ -71,7 +72,7 @@ export function RuntimeDiagnosticPanel() {
 
     // Active jobs
     try {
-      const { data } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(10);
+      const data = await findJobsByStatusSelect(["pending", "running"], "id", 10);
       state.activeJobs = data?.length || 0;
     } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 

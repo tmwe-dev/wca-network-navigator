@@ -23,6 +23,8 @@ import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
+import { findProspects } from "@/data/prospects";
+import { createActivities } from "@/data/activities";
 
 interface ProspectListPanelProps {
   atecoCodes: string[];
@@ -141,7 +143,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
       const CHUNK = 50;
       for (let i = 0; i < activities.length; i += CHUNK) {
-        await supabase.from("activities").insert(activities.slice(i, i + CHUNK) as any);
+        await createActivities(activities.slice(i, i + CHUNK));
       }
       toast.success(`${activities.length} attività create nel Workspace`);
       setSelectedIds(new Set());

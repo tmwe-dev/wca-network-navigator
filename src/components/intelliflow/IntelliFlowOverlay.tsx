@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, MessageSquare, PanelRightOpen, PanelRightClose, Search, Users, FileText, BarChart3, Volume2 } from "lucide-react";
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
-import { supabase } from "@/integrations/supabase/client";
 import { countActivePartners } from "@/data/partners";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import AIMarkdown from "./AIMarkdown";
@@ -19,6 +18,9 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { countPartnerContacts } from "@/data/partnerRelations";
+import { countEmailDrafts } from "@/data/emailDrafts";
+import { countBusinessCards } from "@/data/businessCards";
 
 function useSystemStats() {
   return useQuery({
@@ -26,9 +28,9 @@ function useSystemStats() {
     queryFn: async () => {
       const [partners, contacts, drafts, cards] = await Promise.all([
         countActivePartners().then(c => ({ count: c })),
-        supabase.from("partner_contacts").select("*", { count: "exact", head: true }),
-        supabase.from("email_drafts").select("*", { count: "exact", head: true }),
-        supabase.from("business_cards").select("*", { count: "exact", head: true }),
+        countPartnerContacts().then(c => ({ count: c })),
+        countEmailDrafts().then(c => ({ count: c })),
+        countBusinessCards().then(c => ({ count: c })),
       ]);
       return {
         partners: partners.count ?? 0,

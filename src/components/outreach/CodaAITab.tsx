@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { approveActivity } from "@/data/activities";
 
 interface AgentAction {
   id: string;
@@ -102,7 +103,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const ids = pendingActions.map(a => a.id);
       for (const id of ids) {
-        await supabase.from("activities").update({ status: "approved" as any, reviewed: true }).eq("id", id);
+        await approveActivity(id);
       }
     },
     onSuccess: () => {

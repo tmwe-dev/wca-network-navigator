@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { insertActivity } from "@/data/activities";
 
 interface PartnerContact {
   id: string;
@@ -56,7 +57,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
   ) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("activities").insert({
+    await insertActivity({
       user_id: user.id,
       activity_type: activityType,
       status,
