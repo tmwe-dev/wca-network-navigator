@@ -179,9 +179,10 @@ export function useDeepSearchLocal() {
 
   const searchContact = useCallback(async (contactId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    const { data: contact, error: cErr } = await supabase.from("imported_contacts")
-      .select("id, name, company_name, email, phone, mobile, country, city, position, enrichment_data")
-      .eq("id", contactId).single();
+    const { getContactsByIds } = await import("@/data/contacts");
+    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data");
+    const contact = contacts[0] || null;
+    const cErr = !contact ? "not found" : null;
     if (cErr || !contact) return { ...failResult, error: "Contact not found" };
 
     const companyName = contact.company_name || "Unknown";

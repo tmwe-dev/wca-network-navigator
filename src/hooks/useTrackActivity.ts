@@ -37,10 +37,8 @@ export function useTrackActivity() {
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {
-        await supabase
-          .from("partners")
-          .update({ lead_status: "contacted", last_interaction_at: now })
-          .eq("id", params.partnerId)
+        const { updatePartner } = await import("@/data/partners");
+        await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now });
           .eq("lead_status", "new");
 
         // Create interaction record

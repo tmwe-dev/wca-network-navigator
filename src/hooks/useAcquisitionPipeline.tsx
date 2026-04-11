@@ -91,15 +91,14 @@ export function useAcquisitionPipeline() {
       // Ensure partner exists
       let partnerId: string | null = null;
       let partnerData: Record<string, unknown> | null = null;
-      const { data: existingPartner } = await supabase.from("partners").select("*").eq("wca_id", item.wca_id).maybeSingle();
+      const { findPartnerByWcaId, createPartner } = await import("@/data/partners");
+      const existingPartner = await findPartnerByWcaId(item.wca_id);
 
       if (existingPartner) {
         partnerId = existingPartner.id;
         partnerData = existingPartner;
       } else {
-        const { data: newPartner } = await supabase.from("partners")
-          .insert({ wca_id: item.wca_id, company_name: item.company_name || `WCA ${item.wca_id}`, country_code: item.country_code, country_name: item.country_code, city: item.city || "" })
-          .select("*").single();
+        const newPartner = await createPartner({ wca_id: item.wca_id, company_name: item.company_name || `WCA ${item.wca_id}`, country_code: item.country_code, country_name: item.country_code, city: item.city || "" });
         if (newPartner) { partnerId = newPartner.id; partnerData = newPartner; }
       }
 
@@ -157,7 +156,7 @@ export function useAcquisitionPipeline() {
             canvas.contactSource = "extension";
             if (extResult.companyName && !extResult.companyName.startsWith("WCA ")) {
               canvas.company_name = extResult.companyName;
-              if (partnerId) await supabase.from("partners").update({ company_name: extResult.companyName }).eq("id", partnerId);
+              if (partnerId) { const { updatePartner: up } = await import("@/data/partners"); await up(partnerId, { company_name: extResult.companyName }); }
             }
             state.setCanvasData({ ...canvas });
           }

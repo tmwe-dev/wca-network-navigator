@@ -162,9 +162,8 @@ export function useSendJob() {
 
       // Update partner lead_status and last_interaction_at
       if (job.partner_id) {
-        await supabase
-          .from("partners")
-          .update({
+        const { updatePartner } = await import("@/data/partners");
+        await updatePartner(job.partner_id, {
             lead_status: "contacted",
             last_interaction_at: now,
           })

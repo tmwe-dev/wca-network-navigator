@@ -177,20 +177,25 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
     const payload: Record<string, any> = { ...fields };
 
     if (Object.keys(enrichmentPatch).length > 0) {
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("enrichment_data")
-        .eq("id", savedId)
-        .maybeSingle();
-
-      const existing = (data?.enrichment_data as Record<string, any>) || {};
-      payload.enrichment_data = structuredClone({ ...existing, ...enrichmentPatch });
+      const { updateContactEnrichment } = await import("@/data/contacts");
+      await updateContactEnrichment(savedId, enrichmentPatch);
+      // Also update plain fields if any
+      const plainFields = { ...fields };
+      if (Object.keys(plainFields).length > 0) {
+        const { updateContact } = await import("@/data/contacts");
+        await updateContact(savedId, plainFields);
+      }
+      return;
     }
 
-    if (Object.keys(payload).length === 0) return;
+    if (Object.keys(fields).length === 0) return;
 
-    const { error } = await (supabase.from("imported_contacts").update(payload) as any).eq("id", savedId);
-    if (error) log.warn("persist update failed", { message: error.message, code: error.code });
+    const { updateContact } = await import("@/data/contacts");
+    try {
+      await updateContact(savedId, fields);
+    } catch (e: any) {
+      log.warn("persist update failed", { message: e.message });
+    }
   }, [savedId]);
 
   const applyPlacesResult = (result: any) => {

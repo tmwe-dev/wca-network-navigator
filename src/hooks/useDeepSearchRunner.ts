@@ -93,12 +93,9 @@ export function useDeepSearchRunner(): DeepSearchState {
     if (!force) {
       let alreadyDone: any[] | null = null;
       if (mode === "contact") {
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("id")
-          .in("id", toProcess)
-          .not("deep_search_at", "is", null);
-        alreadyDone = data;
+        const { getContactsByIds } = await import("@/data/contacts");
+        const allContacts = await getContactsByIds(toProcess, "id, deep_search_at");
+        alreadyDone = allContacts.filter((c: any) => c.deep_search_at);
       } else {
         const { data } = await supabase
           .from("partners")
@@ -155,11 +152,9 @@ export function useDeepSearchRunner(): DeepSearchState {
             cached = data;
           }
         } else {
-          const { data } = await supabase
-            .from("imported_contacts")
-            .select("id, company_name, name, country")
-            .eq("id", id)
-            .maybeSingle();
+          const { getContactsByIds: fetchContacts } = await import("@/data/contacts");
+          const results = await fetchContacts([id], "id, company_name, name, country");
+          const data = results[0] || null;
           cached = data ? { company_name: data.name || data.company_name, country_code: data.country } : null;
         }
 
