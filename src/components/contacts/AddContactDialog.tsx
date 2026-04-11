@@ -451,7 +451,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
       if (logoUrl) enrichmentData.logo_url = logoUrl;
       if (website) enrichmentData.website = website;
 
-      const inserted = await insertContacts([{
+      await insertContacts([{
         user_id: user.id,
         import_log_id: importLogId,
         company_name: companyName.trim(),
@@ -471,11 +471,12 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
         lead_status: "new",
         row_number: 0,
         enrichment_data: Object.keys(enrichmentData).length > 0 ? enrichmentData : null,
-      }).select("id").single();
+      }]);
 
-      if (error) {
-        toast.error("Errore salvataggio: " + error.message);
-      } else if (inserted) {
+      {
+        setSavedId("saved");
+        toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
+      }
         setSavedId(inserted.id);
         toast.success("Contatto salvato! Ora i tool scrivono direttamente sul record.");
       }
