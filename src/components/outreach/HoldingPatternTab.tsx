@@ -71,11 +71,13 @@ export function HoldingPatternTab() {
 
   const handleChangeStatus = async (item: HoldingItem, newStatus: LeadStatus) => {
     try {
-      const table =
-        item.source === "partner" ? "partners" :
-        item.source === "prospect" ? ("prospects" as any) :
-        "imported_contacts";
-      await supabase.from(table).update({ lead_status: newStatus } as any).eq("id", item.id);
+      if (item.source === "partner") {
+        await updateLeadStatus("partners", item.id, newStatus);
+      } else if (item.source === "prospect") {
+        await updateProspectLeadStatus(item.id, newStatus);
+      } else {
+        await updateLeadStatus("imported_contacts", item.id, newStatus);
+      }
       queryClient.invalidateQueries({ queryKey: ["holding-pattern-list"] });
       toast.success("Stato aggiornato");
     } catch (e) {
