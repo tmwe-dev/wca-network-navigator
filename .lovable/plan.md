@@ -27,4 +27,36 @@
 - `test/` — 6 suite, 42 test tutti green.
 - Dipendenza `zod` installata.
 
-### Prossimo: STEP 2 — IO Layer (Zod Schemas + Mappers + Query/Mutations)
+---
+
+## STEP 2 — IO Layer: Zod Schemas + Mappers + Query/Mutations ✅
+
+**Completato l'11 aprile 2026. 63 test green (21 nuovi).**
+
+### File creati:
+
+#### Zod Schemas (`src/v2/io/supabase/schemas/`)
+- `partner-schema.ts`, `contact-schema.ts`, `agent-schema.ts`, `activity-schema.ts`, `campaign-schema.ts`
+
+#### Mappers (`src/v2/core/mappers/`)
+- `partner-mapper.ts`, `contact-mapper.ts`, `agent-mapper.ts`, `activity-mapper.ts`, `campaign-mapper.ts`
+
+#### Queries (`src/v2/io/supabase/queries/`)
+- `partners.ts`, `contacts.ts`, `agents.ts`, `activities.ts`, `campaigns.ts`, `app-settings.ts`
+
+#### Mutations (`src/v2/io/supabase/mutations/`)
+- `partners.ts`, `contacts.ts`, `agents.ts`, `activities.ts`, `campaigns.ts`
+
+#### Edge/External (`src/v2/io/`)
+- `edge/client.ts` — invokeEdgeV2 con Result + circuit breaker + Zod validation
+- `edge/schemas.ts` — Zod schemas per risposte edge function
+- `external/wca-api.ts` — WCA API client v2 con Result + circuit breaker
+
+#### Validators (`src/v2/core/domain/`)
+- `validators.ts` — validateEmail, validateCountryCode, validateCompanyName, validateDateRange, validatePartnerInput
+
+#### Test nuovi
+- `test/io/schemas.test.ts` (7 test) — Zod parse/reject + mapper integration
+- `test/core/validators.test.ts` (14 test) — validazioni dominio pure
+
+### Prossimo: STEP 3 — Auth Completo + Profili + Ruoli (migrazione DB `user_roles`)

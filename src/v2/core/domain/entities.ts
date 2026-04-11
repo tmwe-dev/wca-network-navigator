@@ -41,13 +41,13 @@ export function messageId(raw: string): MessageId { return raw as MessageId; }
 // ── Activity enums ───────────────────────────────────────────────────
 
 export type ActivityType =
-  | "call" | "email" | "meeting" | "note" | "task"
-  | "follow_up" | "linkedin" | "whatsapp" | "ai_generated";
+  | "send_email" | "phone_call" | "add_to_campaign" | "meeting"
+  | "follow_up" | "other" | "whatsapp_message" | "linkedin_message";
 
 export type ActivityStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
-export type CampaignJobType = "email" | "call" | "linkedin";
-export type CampaignJobStatus = "pending" | "in_progress" | "completed" | "failed" | "skipped";
+export type CampaignJobType = "email" | "call";
+export type CampaignJobStatus = "pending" | "in_progress" | "completed" | "skipped";
 
 // ── Partner ──────────────────────────────────────────────────────────
 
