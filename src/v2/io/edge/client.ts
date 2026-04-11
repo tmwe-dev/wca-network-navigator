@@ -11,7 +11,7 @@ import type { z } from "zod";
  * Invokes a Supabase edge function with Result wrapping,
  * Zod response validation, and circuit breaker protection.
  */
-export async function invokeEdgeV2<TReq, TRes>(
+export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
   functionName: string,
   payload: TReq,
   responseSchema: z.ZodType<TRes>,
@@ -43,7 +43,7 @@ export async function invokeEdgeV2<TReq, TRes>(
  * Invokes an edge function without response schema validation.
  * Use when the response shape is unknown or unimportant.
  */
-export async function invokeEdgeRaw<TReq>(
+export async function invokeEdgeRaw<TReq extends Record<string, unknown>>(
   functionName: string,
   payload: TReq,
 ): Promise<Result<unknown, AppError>> {
