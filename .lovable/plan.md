@@ -59,4 +59,22 @@
 - `test/io/schemas.test.ts` (7 test) — Zod parse/reject + mapper integration
 - `test/core/validators.test.ts` (14 test) — validazioni dominio pure
 
-### Prossimo: STEP 3 — Auth Completo + Profili + Ruoli (migrazione DB `user_roles`)
+---
+
+## STEP 3 — Auth Completo + Profili + Ruoli ✅
+
+**Completato l'11 aprile 2026.**
+
+### Migrazione DB:
+- Tipo enum `app_role` (admin, moderator, user)
+- Tabella `user_roles` con RLS
+- Funzione `has_role()` SECURITY DEFINER
+- Trigger `on_auth_user_created_assign_role` → ruolo default 'user'
+- Leaked password protection abilitata
+
+### File creati:
+- `hooks/useAuthV2.ts` — Auth hook completo (login, Google OAuth, profilo, ruoli, whitelist)
+- `hooks/useRequireAuth.ts` — Guard redirect se non autenticato
+- `hooks/useRequireRole.ts` — Guard ruolo con redirect
+
+### Prossimo: STEP 4 — Design System v2 + Layout
