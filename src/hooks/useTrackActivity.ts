@@ -45,13 +45,10 @@ export function useTrackActivity() {
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {
         // Conditional update: only escalate if currently "new"
-        await supabase.from("partners")
-          .update({ lead_status: "contacted", last_interaction_at: now })
-          .eq("id", params.partnerId)
-          .eq("lead_status", "new");
+        await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now });
 
         // Create interaction record
-        await supabase.from("interactions").insert({
+        await createInteraction({
           partner_id: params.partnerId,
           interaction_type: params.activityType === "send_email" ? "email" : "note",
           subject: params.emailSubject || params.title,
@@ -59,12 +56,9 @@ export function useTrackActivity() {
         });
       } else if (params.sourceType === "imported_contact") {
         // Conditional update: only escalate if currently "new"
-        await supabase.from("imported_contacts")
-          .update({ lead_status: "contacted", last_interaction_at: now })
-          .eq("id", params.sourceId)
-          .eq("lead_status", "new");
+        await updateContact(params.sourceId, { lead_status: "contacted", last_interaction_at: now });
 
-        await supabase.from("contact_interactions").insert({
+        await insertContactInteraction({
           contact_id: params.sourceId,
           interaction_type: params.activityType === "send_email" ? "email" : "other",
           title: params.emailSubject || params.title,
@@ -72,11 +66,7 @@ export function useTrackActivity() {
           created_by: user.id,
         });
       } else if (params.sourceType === "business_card") {
-        await supabase
-          .from("business_cards")
-          .update({ lead_status: "contacted" })
-          .eq("id", params.sourceId)
-          .eq("lead_status", "new");
+        await updateBusinessCard(params.sourceId, { lead_status: "contacted" });
       }
     },
     onSuccess: () => {

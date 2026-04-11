@@ -8,6 +8,8 @@ import { isApiError } from "@/lib/api/apiError";
 import { createLogger } from "@/lib/log";
 import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
+import { upsertDirectoryCache } from "@/data/directoryCache";
+import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
 
 const log = createLogger("scanDirectory");
 
@@ -169,14 +171,15 @@ export async function enrichQueueWithNetworks(
  * Load full partner preview data for a given WCA ID.
  */
 export async function loadPartnerPreview(wcaId: number) {
-  const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+  const { findPartnerByWcaId } = await import("@/data/partners");
+  const partner = await findPartnerByWcaId(wcaId);
   if (!partner) return null;
 
   const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
-    supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
-    supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-    supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
+    findPartnerContacts(partner.id, "name, title, email, direct_phone, mobile"),
+    findPartnerNetworks(partner.id),
+    findPartnerServices(partner.id),
+    findPartnerSocialLinks(partner.id),
   ]);
 
   const ed = partner.enrichment_data as any;

@@ -9,6 +9,10 @@ import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
 import { createLogger } from "@/lib/log";
 import type { ImportLog, ImportedContact } from "./useImportLogQueries";
+import { insertPartnerContact } from "@/data/partnerRelations";
+import { insertActivity } from "@/data/activities";
+import { createPartner } from "@/data/partners";
+import { updateImportLog } from "@/data/importLogs";
 
 const log = createLogger("useImportLogActions");
 
@@ -139,7 +143,7 @@ export function useTransferToPartners() {
         if (pError) { log.error("transfer failed", { message: pError.message }); continue; }
 
         if (c.name) {
-          await supabase.from("partner_contacts").insert({
+          await insertPartnerContact({
             partner_id: partner.id, name: c.name, email: c.email,
             direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias,
             title: (c as any).position || null, is_primary: true,
@@ -188,7 +192,7 @@ export function useCreateActivitiesFromImport() {
           contactId = contact?.id || null;
         }
 
-        await supabase.from("activities").insert({
+        await insertActivity({
           partner_id: partner.id, source_type: "partner", source_id: partner.id,
           activity_type: activityType,
           title: `${activityType === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
@@ -282,7 +286,7 @@ export function useCreateImportFromParsedRows() {
       }
 
       const totalBatches = Math.ceil(contacts.length / 100);
-      await supabase.from("import_logs").update({ status: "completed", imported_rows: contacts.length, processing_batch: totalBatches, total_batches: totalBatches }).eq("id", importLog.id);
+      await updateImportLog(importLog.id, { status: "completed", imported_rows: contacts.length, processing_batch: totalBatches, total_batches: totalBatches });
 
       return importLog as ImportLog;
     },

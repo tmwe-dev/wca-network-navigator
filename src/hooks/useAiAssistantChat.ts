@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
+import { findActiveWorkPlans } from "@/data/workPlans";
 
 const log = createLogger("useAiAssistantChat");
 
@@ -76,10 +77,7 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) return;
-      const { data } = await supabase.from("ai_work_plans")
-        .select("id, title, status, steps, current_step, tags")
-        .eq("user_id", session.user.id).in("status", ["running", "paused"])
-        .order("created_at", { ascending: false }).limit(5);
+      const data = await findActiveWorkPlans(session.user.id);
       setActivePlans(data || []);
     })();
   }, [open, messages.length]);

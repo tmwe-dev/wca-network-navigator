@@ -8,6 +8,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { insertPageEvent } from "@/data/telemetry";
 
 const log = createLogger("telemetry");
 
@@ -72,7 +73,7 @@ async function insert(
       duration_ms: opts.durationMs ?? null,
     };
     // intentionally not awaited in caller — fire and forget
-    await supabase.from("page_events" as any).insert(payload as any);
+    await insertPageEvent(payload);
   } catch (e) {
     if (typeof console !== "undefined") {
       console.debug("[telemetry] insert failed", e);

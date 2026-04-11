@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findAgentsByUser } from "@/data/agents";
+import { findClientAssignmentsByUser } from "@/data/clientAssignments";
+import { findAgentTasksByUser } from "@/data/agentTasks";
+import { findOperativePrompts } from "@/data/operativePrompts";
 
 export interface DirectoryAgent {
   id: string;
@@ -46,12 +50,16 @@ export function useSystemDirectory() {
       if (!user) throw new Error("Not authenticated");
 
       // Parallel queries
-      const [agentsRes, assignmentsRes, tasksRes, promptsRes] = await Promise.all([
-        supabase.from("agents").select("id, name, role, avatar_emoji, is_active, stats").eq("user_id", user.id),
-        supabase.from("client_assignments").select("agent_id").eq("user_id", user.id),
-        supabase.from("agent_tasks").select("agent_id, status").eq("user_id", user.id).in("status", ["pending", "running"]),
-        supabase.from("operative_prompts").select("id, name, objective, priority, tags, is_active").eq("user_id", user.id).order("priority", { ascending: false }),
+      const [agentsData, assignmentsData, tasksData, promptsData] = await Promise.all([
+        findAgentsByUser(user.id, "id, name, role, avatar_emoji, is_active, stats"),
+        findClientAssignmentsByUser(user.id),
+        findAgentTasksByUser(user.id, ["pending", "running"]),
+        findOperativePrompts(user.id),
       ]);
+      const agentsRes = { data: agentsData };
+      const assignmentsRes = { data: assignmentsData };
+      const tasksRes = { data: tasksData };
+      const promptsRes = { data: promptsData };
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();

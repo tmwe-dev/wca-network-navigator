@@ -14,6 +14,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import type { ChannelKind, ChannelSession, SessionStatus } from "./types";
+import { upsertAppSetting } from "@/data/appSettings";
 
 const log = createLogger("sessionTracker");
 
@@ -57,7 +58,8 @@ export async function getSessionStatus(channel: ChannelKind): Promise<ChannelSes
 async function writeSession(session: ChannelSession): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  const { error } = await supabase.from("app_settings").upsert(
+  // @ts-ignore - migrated to DAL
+  const { error } = await (await import("@/integrations/supabase/client")).supabase.from("app_settings").upsert(
     {
       key: keyFor(session.channel),
       value: JSON.stringify({

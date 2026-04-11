@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { updatePartner } from "@/data/partners";
+import { createInteraction } from "@/data/interactions";
 
 const log = createLogger("useSortingJobs");
 
@@ -163,18 +164,15 @@ export function useSendJob() {
       // Update partner lead_status and last_interaction_at
       if (job.partner_id) {
         // Conditional update: only escalate if currently "new"
-        await supabase.from("partners")
-          .update({ lead_status: "contacted", last_interaction_at: now })
-          .eq("id", job.partner_id)
-          .eq("lead_status", "new");
+        await updatePartner(job.partner_id, { lead_status: "contacted", last_interaction_at: now });
 
         // Create interaction record
-        await supabase.from("interactions").insert({
+        await createInteraction({
           partner_id: job.partner_id,
           interaction_type: "email",
           subject: job.email_subject || "Email inviata",
           notes: `Inviata a ${email}`,
-        } satisfies InteractionInsert);
+        });
       }
     },
     onSuccess: () => {

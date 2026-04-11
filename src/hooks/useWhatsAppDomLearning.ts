@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
 import { createLogger } from "@/lib/log";
+import { upsertAppSetting, getAppSettingByKey, findAppSettingId, updateAppSettingByKey, insertAppSetting } from "@/data/appSettings";
 
 const log = createLogger("useWhatsAppDomLearning");
 
@@ -32,11 +33,8 @@ export function useWhatsAppDomLearning() {
   // Load cached schema from app_settings
   const loadCached = useCallback(async (): Promise<WaDomSchema | null> => {
     try {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", CACHE_KEY)
-        .maybeSingle();
+      const value = await getAppSettingByKey(CACHE_KEY);
+      const data = value ? { value } : null;
 
       if (data?.value) {
         const parsed = JSON.parse(data.value) as WaDomSchema;
@@ -56,18 +54,7 @@ export function useWhatsAppDomLearning() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: existing } = await supabase
-      .from("app_settings")
-      .select("id")
-      .eq("key", CACHE_KEY)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase.from("app_settings").update({ value }).eq("key", CACHE_KEY).eq("user_id", user.id);
-    } else {
-      await supabase.from("app_settings").insert({ key: CACHE_KEY, value, user_id: user.id });
-    }
+    await upsertAppSetting(user.id, CACHE_KEY, value);
 
     schemaRef.current = schema;
     lastLearnRef.current = schema.learnedAt;

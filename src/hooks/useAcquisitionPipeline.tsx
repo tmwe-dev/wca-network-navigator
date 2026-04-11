@@ -19,6 +19,7 @@ import { updateDownloadJob } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
 
 import type { LiveStats } from "./useAcquisitionPipelineState";
+import { findPartnerNetworks, findPartnerServices, findPartnerContacts } from "@/data/partnerRelations";
 
 const log = createLogger("useAcquisitionPipeline");
 
@@ -117,12 +118,12 @@ export function useAcquisitionPipeline() {
       };
 
       if (partnerId) {
-        const [{ data: nets }, { data: svcs }] = await Promise.all([
-          supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId),
-          supabase.from("partner_services").select("service_category").eq("partner_id", partnerId),
+        const [nets, svcs] = await Promise.all([
+          findPartnerNetworks(partnerId),
+          findPartnerServices(partnerId),
         ]);
-        canvas.networks = (nets || []).map(n => n.network_name);
-        canvas.services = (svcs || []).map(s => s.service_category);
+        canvas.networks = (nets).map(n => n.network_name);
+        canvas.services = (svcs).map(s => s.service_category);
         if (canvas.networks.length > 0) {
           state.setQueue(prev => prev.map(q => q.wca_id === item.wca_id ? { ...q, networks: canvas.networks } : q));
         }
@@ -167,9 +168,8 @@ export function useAcquisitionPipeline() {
         // Fallback: DB contacts
         if (canvas.contactSource !== "extension" && partnerId) {
           try {
-            const { data: dbContacts } = await supabase.from("partner_contacts")
-              .select("name, title, email, direct_phone, mobile").eq("partner_id", partnerId);
-            if (dbContacts?.length && dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
+            const dbContacts = await findPartnerContacts(partnerId, "name, title, email, direct_phone, mobile");
+            if (dbContacts.length && dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
               canvas.contacts = dbContacts.map(c => ({
                 name: c.name, title: c.title || undefined, email: c.email || undefined,
                 direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined,

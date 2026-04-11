@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
+import { insertChannelMessage } from "@/data/channelMessages";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 
@@ -82,7 +83,7 @@ export function useLinkedInBackfill() {
           let saved = 0;
           for (const msg of threadResult.messages) {
             const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
-            const { error } = await supabase.from("channel_messages").insert({
+            const error = await insertChannelMessage({
               user_id: user.id,
               channel: "linkedin",
               direction: msg.direction === "outbound" ? "outbound" : "inbound",
@@ -90,7 +91,7 @@ export function useLinkedInBackfill() {
               to_address: msg.direction === "outbound" ? thread.name : undefined,
               body_text: msg.text,
               message_id_external: extId,
-            });
+            }).then(() => null).catch(e => e);
             if (!error) saved++;
           }
           setProgress(p => ({ ...p, recoveredMessages: saved }));
