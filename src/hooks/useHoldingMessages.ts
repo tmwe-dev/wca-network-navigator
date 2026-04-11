@@ -27,10 +27,9 @@ export function useHoldingMessages(channel: HoldingChannel) {
     queryKey: ["holding-messages", channel],
     queryFn: async () => {
       // Step 1: Get partner IDs in holding pattern
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name, email, lead_status")
-        .in("lead_status", HOLDING_STATUSES);
+      const partners = await findPartners() as any[];
+      const holdingPartners = partners.filter((p: any) => HOLDING_STATUSES.includes(p.lead_status))
+        .map((p: any) => ({ id: p.id, company_name: p.company_name, email: p.email, lead_status: p.lead_status }));
 
       if (!partners?.length) return [] as HoldingMessageGroup[];
 
