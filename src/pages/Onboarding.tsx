@@ -148,7 +148,7 @@ export default function Onboarding() {
       for (const template of AGENT_TEMPLATES) {
         if (!selectedAgents.includes(template.name)) continue;
         const existing = await findAgentByUserAndName(userId, template.name);
-        if (existing) continue;
+        if (existing?.id) continue;
 
         await createAgent({
           user_id: userId,

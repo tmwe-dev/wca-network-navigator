@@ -76,7 +76,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         user_id: user.id,
         partner_id: j.partner_id,
         source_id: j.partner_id,
-        source_type: "partner",
+        source_type: "partner" as const,
         activity_type: channel === "email" ? "send_email" as const : "follow_up" as const,
         title: `[Bulk] ${finalGoal} via ${channel}`,
         status: "pending" as const,

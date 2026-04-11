@@ -319,7 +319,6 @@ export default function MissionBuilder() {
         },
       });
 
-      if (error) throw error;
       const missionId = (mission as any).id;
       setCurrentMissionId(missionId);
 
