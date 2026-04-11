@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
+import { getAppSetting } from "@/data/appSettings";
 
 export interface OperativeJob {
   id: string;
@@ -27,14 +29,7 @@ export function useOperativeJobs() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("ai_work_plans")
-        .select("*")
-        .contains("tags", [TAG])
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as OperativeJob[];
+      return findWorkPlans(user.id, [TAG]) as Promise<unknown> as Promise<OperativeJob[]>;
     },
   });
 
@@ -42,23 +37,12 @@ export function useOperativeJobs() {
     mutationFn: async (input: { title: string; description: string; channels: string[]; deadline?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Non autenticato");
-
       const steps = { channels: input.channels, deadline: input.deadline || null, target: "" };
-      const { data, error } = await supabase
-        .from("ai_work_plans")
-        .insert({
-          title: input.title,
-          description: input.description,
-          steps: JSON.parse(JSON.stringify(steps)),
-          metadata: JSON.parse("{}"),
-          tags: [TAG],
-          status: "running",
-          user_id: user.id,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as unknown as OperativeJob;
+      return createWorkPlan({
+        title: input.title, description: input.description,
+        steps: JSON.parse(JSON.stringify(steps)), metadata: JSON.parse("{}"),
+        tags: [TAG], status: "running", user_id: user.id,
+      }) as Promise<unknown> as Promise<OperativeJob>;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
     onError: (e: any) => toast.error(e.message || "Errore creazione job"),
@@ -68,31 +52,23 @@ export function useOperativeJobs() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const upd: any = { status };
       if (status === "completed") upd.completed_at = new Date().toISOString();
-      const { error } = await supabase.from("ai_work_plans").update(upd).eq("id", id);
-      if (error) throw error;
+      await updateWorkPlan(id, upd);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
     onError: (e: any) => toast.error(e.message),
   });
 
-  const deleteJob = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ai_work_plans").delete().eq("id", id);
-      if (error) throw error;
-    },
+  const deleteJobMut = useMutation({
+    mutationFn: (id: string) => deleteWorkPlan(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job eliminato"); },
     onError: (e: any) => toast.error(e.message),
   });
 
   const generatePrompt = useMutation({
     mutationFn: async (job: OperativeJob) => {
-      // Load operative strategy for context
-      const { data: stratRow } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "operative_strategy")
-        .maybeSingle();
-      const strategy = stratRow?.value ? JSON.parse(stratRow.value) : {};
+      const { data: { user } } = await supabase.auth.getUser();
+      const stratValue = user ? await getAppSetting("operative_strategy", user.id) : null;
+      const strategy = stratValue ? JSON.parse(stratValue) : {};
 
       const systemMsg = `Sei un manager AI operativo. Genera un prompt strutturato per gli agenti sales basandoti sulle istruzioni del job e sulla strategia aziendale.
 
@@ -110,28 +86,14 @@ Canali: ${(job.steps?.channels || []).join(", ") || "tutti"}
 Scadenza: ${job.steps?.deadline || "non specificata"}`;
 
       const res = await invokeEdge<any>("agent-execute", {
-        body: {
-          messages: [
-            { role: "system", content: systemMsg },
-            { role: "user", content: userMsg },
-          ],
-        },
+        body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
         context: "useOperativeJobs.generatePrompt",
       });
 
       const prompt = res?.response || res?.content || "Prompt non generato";
-      
-      const { error } = await supabase
-        .from("ai_work_plans")
-        .update({
-          metadata: {
-            ...(job.metadata || {}),
-            generated_prompt: prompt,
-            prompt_generated_at: new Date().toISOString(),
-          } as any,
-        })
-        .eq("id", job.id);
-      if (error) throw error;
+      await updateWorkPlan(job.id, {
+        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+      });
       return prompt;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt AI generato"); },
@@ -140,17 +102,13 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
 
   const savePrompt = useMutation({
     mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: any }) => {
-      const { error } = await supabase
-        .from("ai_work_plans")
-        .update({
-          metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
-        })
-        .eq("id", id);
-      if (error) throw error;
+      await updateWorkPlan(id, {
+        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+      });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },
     onError: (e: any) => toast.error(e.message),
   });
 
-  return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob, generatePrompt, savePrompt };
+  return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob: deleteJobMut, generatePrompt, savePrompt };
 }
