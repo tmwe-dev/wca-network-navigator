@@ -34,6 +34,17 @@ const DeepSearchPage = lazy(() => import("./ui/pages/DeepSearchPage").then((m) =
 const SortingPage = lazy(() => import("./ui/pages/SortingPage").then((m) => ({ default: m.SortingPage })));
 const TelemetryPage = lazy(() => import("./ui/pages/TelemetryPage").then((m) => ({ default: m.TelemetryPage })));
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
+const AcquisizionePartnerPage = lazy(() => import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartnerPage })));
+const AgentChatHubPage = lazy(() => import("./ui/pages/AgentChatHubPage").then((m) => ({ default: m.AgentChatHubPage })));
+const ContactsPage = lazy(() => import("./ui/pages/ContactsPage").then((m) => ({ default: m.ContactsPage })));
+const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })));
+const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorerPage })));
+const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEnginePage })));
+const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
+const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
+const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
+const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.OnboardingPage })));
+const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ default: m.GuidaPage })));
 
 // ── Loading fallback ─────────────────────────────────────────────────
 function LoadingFallback(): React.ReactElement {
@@ -81,6 +92,17 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="diagnostics" element={<DiagnosticsPage />} />
           <Route path="import" element={<ImportPage />} />
+          <Route path="acquisition" element={<AcquisizionePartnerPage />} />
+          <Route path="agent-chat" element={<AgentChatHubPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="email-download" element={<EmailDownloadPage />} />
+          <Route path="ra-explorer" element={<RAExplorerPage />} />
+          <Route path="ra-scraping" element={<RAScrapingEnginePage />} />
+          <Route path="ra-company" element={<RACompanyDetailPage />} />
+          <Route path="campaign-jobs" element={<CampaignJobsPage />} />
+          <Route path="admin-users" element={<AdminUsersPage />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
+          <Route path="guida" element={<GuidaPage />} />
         </Route>
       </Routes>
     </Suspense>
