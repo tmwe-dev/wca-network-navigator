@@ -27,8 +27,8 @@ export function registerContactBridge(): void {
 
     const mutationResult = await contactMutations.createContact({
       name: payload.name,
-      email: payload.email ?? null,
-      company_name: payload.companyName ?? null,
+      email: payload.email ?? undefined,
+      company_name: payload.companyName ?? undefined,
       import_log_id: payload.importLogId,
     });
 
