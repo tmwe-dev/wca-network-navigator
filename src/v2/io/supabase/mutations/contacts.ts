@@ -9,15 +9,17 @@ import { mapContactRow } from "../../../core/mappers/contact-mapper";
 
 export interface CreateContactInput {
   readonly import_log_id: string;
-  readonly name?: string | null;
-  readonly company_name?: string | null;
-  readonly email?: string | null;
-  readonly phone?: string | null;
-  readonly mobile?: string | null;
-  readonly position?: string | null;
-  readonly city?: string | null;
-  readonly country?: string | null;
-  readonly origin?: string | null;
+  readonly name?: string;
+  readonly company_name?: string;
+  readonly email?: string;
+  readonly phone?: string;
+  readonly mobile?: string;
+  readonly position?: string;
+  readonly city?: string;
+  readonly country?: string;
+  readonly origin?: string;
+  readonly lead_status?: string;
+  readonly note?: string;
 }
 
 export async function createContact(
@@ -26,7 +28,7 @@ export async function createContact(
   try {
     const { data, error } = await supabase
       .from("imported_contacts")
-      .insert(input)
+      .insert([input])
       .select()
       .single();
 
@@ -47,9 +49,13 @@ export async function updateContact(
   updates: Partial<CreateContactInput>,
 ): Promise<Result<Contact, AppError>> {
   try {
+    const cleanUpdates: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      if (v !== undefined) cleanUpdates[k] = v;
+    }
     const { data, error } = await supabase
       .from("imported_contacts")
-      .update(updates)
+      .update(cleanUpdates as Record<string, string>)
       .eq("id", contactId)
       .select()
       .single();
