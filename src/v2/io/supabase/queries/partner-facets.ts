@@ -33,14 +33,14 @@ export async function fetchPartnerFacets(): Promise<Result<PartnerFacets, AppErr
       (citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => c != null && c !== "")
     )].sort();
 
-    const uniqueTypes = [...new Set(
-      (typesRes.data ?? []).map((r) => r.partner_type).filter((t): t is string => t != null && t !== "")
-    )].sort();
+    const rawTypes = (typesRes.data ?? []).map((r) => r.partner_type);
+    const uniqueTypes: string[] = [...new Set(rawTypes.filter((t): t is NonNullable<typeof t> => t != null))];
+    uniqueTypes.sort();
 
     return ok({
       countries: uniqueCountries,
       cities: uniqueCities,
-      partnerTypes: uniqueTypes,
+      partnerTypes: uniqueTypes as readonly string[],
       totalCount: countRes.count ?? 0,
     });
   } catch (caught: unknown) {
