@@ -10,14 +10,16 @@ import {
   X, Mail, Phone, Calendar, Clock, User, FileText, CheckCircle,
 } from "lucide-react";
 
-interface ActivityDetailDrawerProps {
+export interface ActivityDetailDrawerProps {
   readonly activity: Activity | null;
   readonly onClose: () => void;
+  readonly onMarkComplete?: (id: string) => void;
 }
 
 export function ActivityDetailDrawer({
   activity,
   onClose,
+  onMarkComplete,
 }: ActivityDetailDrawerProps): React.ReactElement | null {
   if (!activity) return null;
 
@@ -82,6 +84,14 @@ export function ActivityDetailDrawer({
                 Inviata: {new Date(activity.sentAt).toLocaleString("it-IT")}
               </p>
             ) : null}
+          </div>
+        ) : null}
+
+        {onMarkComplete && activity.status !== "completed" ? (
+          <div className="border-t pt-4">
+            <Button onClick={() => onMarkComplete(String(activity.id))} className="w-full gap-2">
+              <CheckCircle className="h-4 w-4" /> Segna come completata
+            </Button>
           </div>
         ) : null}
       </div>
