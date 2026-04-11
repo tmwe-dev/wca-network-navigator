@@ -35,7 +35,7 @@ function SocialButton({ url, label, icon }: { url: string; label: string; icon: 
 }
 
 export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactEnrichmentCardProps) {
-  const e = enrichmentData as any;
+  const e = enrichmentData as Record<string, unknown> | null;
   if (!e && !deepSearchAt) return null;
 
   const companyProfile = e?.company_profile;

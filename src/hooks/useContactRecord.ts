@@ -80,7 +80,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !c) return null;
-        const ed = (c.enrichment_data as any) || {};
+        const ed = (c.enrichment_data || {}) as Record<string, unknown>;
         return {
           sourceType: "contact", sourceId,
           companyName: c.company_name || "",

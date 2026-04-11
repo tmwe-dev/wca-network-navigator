@@ -42,8 +42,8 @@ export function useTodayActivities() {
           sourceType: a.source_type,
           description: a.description,
           completedAt: a.completed_at,
-          contactName: meta.name || a.title?.split("—")[0]?.trim() || "—",
-          company: meta.company || a.title?.split("—")[1]?.trim() || "",
+          contactName: (meta.contact_name as string) || a.title?.split("—")[0]?.trim() || "—",
+          company: (meta.company_name as string) || a.title?.split("—")[1]?.trim() || "",
           status: a.status,
         };
       });
