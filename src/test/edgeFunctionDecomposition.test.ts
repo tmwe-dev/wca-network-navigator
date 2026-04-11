@@ -110,6 +110,9 @@ describe("Edge Function Consolidation — Macro-functions", () => {
 describe("Client Migration — call sites use macro-endpoints", () => {
   const srcDir = path.resolve("src");
 
+  // Exclude test pages (AILab, Diagnostics) and data config files from migration check
+  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts"];
+
   function searchFiles(dir: string, pattern: RegExp): string[] {
     const results: string[] = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -117,7 +120,7 @@ describe("Client Migration — call sites use macro-endpoints", () => {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== "test") {
         results.push(...searchFiles(fullPath, pattern));
-      } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
+      } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) && !EXCLUDE.includes(entry.name)) {
         const content = fs.readFileSync(fullPath, "utf-8");
         if (pattern.test(content)) results.push(fullPath);
       }
