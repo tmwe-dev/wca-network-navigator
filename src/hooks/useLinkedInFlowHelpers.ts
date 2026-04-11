@@ -80,7 +80,7 @@ export async function saveEnrichmentToPartner(companyName: string, enrichment: R
       }
 
       await supabase.from("partners").update({
-        enrichment_data: update,
+        enrichment_data: update as Record<string, string | number | boolean | null>,
       }).eq("id", partners[0].id);
     }
   } catch (e) {
