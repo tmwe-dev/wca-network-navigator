@@ -5,7 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findPartners } from "@/data/partners";
+import { getPartnersByLeadStatus } from "@/data/partners";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 export type HoldingChannel = "email" | "whatsapp" | "linkedin";
@@ -27,14 +27,12 @@ export function useHoldingMessages(channel: HoldingChannel) {
     queryKey: ["holding-messages", channel],
     queryFn: async () => {
       // Step 1: Get partner IDs in holding pattern
-      const partners = await findPartners() as any[];
-      const holdingPartners = partners.filter((p: any) => HOLDING_STATUSES.includes(p.lead_status))
-        .map((p: any) => ({ id: p.id, company_name: p.company_name, email: p.email, lead_status: p.lead_status }));
+      const holdingPartners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id, company_name, email, lead_status");
 
-      if (!partners?.length) return [] as HoldingMessageGroup[];
+      if (!holdingPartners?.length) return [] as HoldingMessageGroup[];
 
-      const partnerMap = new Map(partners.map(p => [p.id, p]));
-      const partnerIds = partners.map(p => p.id);
+      const partnerMap = new Map(holdingPartners.map((p: any) => [p.id, p]));
+      const partnerIds = holdingPartners.map((p: any) => p.id);
 
       // Step 2: Get messages for these partners on the specified channel
       const { data: messages, error } = await supabase
@@ -103,10 +101,7 @@ export function useHoldingUnreadCounts() {
   return useQuery({
     queryKey: ["holding-unread-counts"],
     queryFn: async () => {
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id")
-        .in("lead_status", HOLDING_STATUSES);
+      const partners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id");
 
       if (!partners?.length) return { email: 0, whatsapp: 0, linkedin: 0 };
 
