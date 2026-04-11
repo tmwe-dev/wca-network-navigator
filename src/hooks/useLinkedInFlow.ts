@@ -52,10 +52,10 @@ export function useLinkedInFlow() {
     if (!activeJobId) return;
     const channel = supabase
       .channel(`li-flow-${activeJobId}`)
-      .on("postgres_changes", {
+      .on("postgres_changes" as "system", {
         event: "UPDATE", schema: "public", table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
-      }, (payload: Record<string, Record<string, unknown>>) => {
+      } as Record<string, string>, (payload: Record<string, Record<string, unknown>>) => {
         const row = payload.new;
         setProgress({
           total: row.total_count as number, processed: row.processed_count as number,

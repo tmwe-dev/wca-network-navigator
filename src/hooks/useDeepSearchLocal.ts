@@ -169,7 +169,7 @@ export function useDeepSearchLocal() {
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    await supabase.from("partners").update({ enrichment_data: updated as Record<string, string> }).eq("id", partnerId);
+    await supabase.from("partners").update({ enrichment_data: updated as unknown as Record<string, string> }).eq("id", partnerId);
 
     const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);
     await supabase.from("partners").update({ rating }).eq("id", partnerId);
@@ -278,7 +278,7 @@ export function useDeepSearchLocal() {
       ...(companyProfileFound ? { company_linkedin_found: true } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    await supabase.from("imported_contacts").update({ enrichment_data: updated as Record<string, string>, deep_search_at: new Date().toISOString() }).eq("id", contactId);
+    await supabase.from("imported_contacts").update({ enrichment_data: updated as unknown as Record<string, string>, deep_search_at: new Date().toISOString() }).eq("id", contactId);
 
     return { success: true, socialLinksFound, logoFound, contactProfilesFound: Object.keys(contactProfiles).length, companyProfileFound, rating: websiteQualityScore || 0, rateLimited: false, companyName };
   }, [fs, googleSearch, scrapeUrl]);
