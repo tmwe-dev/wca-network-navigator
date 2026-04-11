@@ -3,7 +3,7 @@
  * Pure business logic for activity/outreach evaluation.
  */
 
-import type { Activity, ActivityStatus } from "../../entities";
+import type { Activity, ActivityStatus } from "../entities";
 
 /** Whether activity is actionable */
 export function isActionable(activity: Activity): boolean {

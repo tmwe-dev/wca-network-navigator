@@ -24,7 +24,7 @@ const activityColumns: readonly ColumnDef<Activity>[] = [
     accessorFn: (row) => row.activityType,
     cell: (row) => (
       <StatusBadge
-        status="default"
+        status="neutral"
         label={row.activityType.replace(/_/g, " ")}
       />
     ),
@@ -36,11 +36,11 @@ const activityColumns: readonly ColumnDef<Activity>[] = [
     accessorFn: (row) => row.status,
     cell: (row) => {
       const overdue = isOverdue(row);
-      const statusMap: Record<string, "success" | "warning" | "error" | "default"> = {
+      const statusMap: Record<string, "success" | "warning" | "error" | "neutral"> = {
         completed: "success",
         in_progress: "warning",
-        pending: overdue ? "error" : "default",
-        cancelled: "default",
+        pending: overdue ? "error" : "neutral",
+        cancelled: "neutral",
       };
       return (
         <StatusBadge

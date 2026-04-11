@@ -3,7 +3,7 @@
  * Pure business logic for agent evaluation.
  */
 
-import type { Agent } from "../../entities";
+import type { Agent } from "../entities";
 
 /** Checks if an agent can accept new tasks */
 export function canAcceptTasks(agent: Agent): boolean {

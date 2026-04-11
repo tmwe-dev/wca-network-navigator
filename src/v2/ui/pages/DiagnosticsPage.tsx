@@ -79,7 +79,7 @@ export function DiagnosticsPage(): React.ReactElement {
                       ? "error"
                       : check.status === "checking"
                         ? "warning"
-                        : "default"
+                        : "neutral"
                 }
                 label={
                   check.status === "idle"

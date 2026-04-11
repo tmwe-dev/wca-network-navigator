@@ -3,7 +3,7 @@
  * Pure business logic for campaign evaluation.
  */
 
-import type { CampaignJob, CampaignJobStatus } from "../../entities";
+import type { CampaignJob, CampaignJobStatus } from "../entities";
 
 /** Counts jobs by status */
 export function jobStatusCounts(

@@ -43,7 +43,7 @@ const agentColumns: readonly ColumnDef<Agent>[] = [
     accessorFn: (row) => (row.isActive ? "Attivo" : "Inattivo"),
     cell: (row) => (
       <StatusBadge
-        status={row.isActive ? "success" : "default"}
+        status={row.isActive ? "success" : "neutral"}
         label={row.isActive ? "Attivo" : "Inattivo"}
       />
     ),
