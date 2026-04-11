@@ -348,8 +348,9 @@ export function useLinkedInFlow() {
           setCurrentStep("Generazione bozza AI...");
 
           try {
-            const outreach = await invokeEdge<{ subject?: string; body?: string; language?: string; error?: string } | null>("generate-outreach", {
+            const outreach = await invokeEdge<{ subject?: string; body?: string; language?: string; error?: string } | null>("generate-content", {
               body: {
+                action: "outreach",
                 channel: "linkedin",
                 contact_name: item.contact_name || "",
                 company_name: item.company_name || "",

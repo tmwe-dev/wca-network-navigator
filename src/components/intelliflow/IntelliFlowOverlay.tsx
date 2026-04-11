@@ -138,7 +138,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
     try {
       // Route to cockpit-assistant if on cockpit page and in operational mode
       if (isCockpit && mode === "operational" && cockpitContacts) {
-        const data = await invokeEdge<any>("cockpit-assistant", { body: { command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
+        const data = await invokeEdge<any>("unified-assistant", { body: { scope: "cockpit", command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
         if (data?.error) throw new Error(data.error);
         
         const actions = data?.actions || [];

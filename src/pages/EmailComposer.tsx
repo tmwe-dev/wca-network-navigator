@@ -272,7 +272,8 @@ export default function EmailComposer() {
       const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
 
-      const data = await invokeEdge<any>("generate-email", { body: {
+      const data = await invokeEdge<any>("generate-content", { body: {
+          action: "email",
           goal: effectiveGoal,
           base_proposal: baseProposal,
           language: "italiano",

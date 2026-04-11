@@ -76,8 +76,8 @@ export function useOutreachGenerator() {
     try {
       let data: (OutreachResult & { error?: string }) | null = null;
       try {
-        data = await invokeEdge<OutreachResult & { error?: string }>("generate-outreach", {
-          body: params,
+        data = await invokeEdge<OutreachResult & { error?: string }>("generate-content", {
+          body: { action: "outreach", ...params },
           context: "useOutreachGenerator",
         });
       } catch (err) {

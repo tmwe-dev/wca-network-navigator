@@ -144,6 +144,7 @@ async function parseExcel(
   optionsOverride?: Partial<ParsingOptions>
 ): Promise<{ parsed: ParsedFile; options: ParsingOptions }> {
   const buffer = await file.arrayBuffer();
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
