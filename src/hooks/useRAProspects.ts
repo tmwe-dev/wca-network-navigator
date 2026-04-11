@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import type { RAContact, RAInteraction } from "@/types/ra";
 import type { RAProspect, RAProspectFilters, RALeadStatus } from "@/types/ra";
 
 const RA_PROSPECTS_KEY = ["ra-prospects"] as const;
@@ -78,7 +79,7 @@ export function useRAProspectContacts(prospectId: string | undefined) {
         .eq("prospect_id", prospectId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Record<string, unknown>[];
+      return (data ?? []) as RAContact[];
     },
     enabled: !!prospectId,
   });
@@ -94,7 +95,7 @@ export function useRAProspectInteractions(prospectId: string | undefined) {
         .eq("prospect_id", prospectId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Record<string, unknown>[];
+      return (data ?? []) as RAInteraction[];
     },
     enabled: !!prospectId,
   });
