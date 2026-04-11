@@ -1,46 +1,76 @@
 /**
- * SettingsPage — Full settings with real forms
+ * SettingsPage — Full settings with VerticalTabNav (14 tabs)
  */
 import * as React from "react";
 import { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Settings, Shield, Database, Bot, Mail, Globe, Users } from "lucide-react";
+import { Settings, Shield, Database, Bot, Mail, Globe, Volume2, Download, FileText, Image, Crown, Users, Clock, Briefcase } from "lucide-react";
+import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { GeneralSettingsTab } from "../organisms/settings/GeneralSettingsTab";
 import { SecuritySettingsTab } from "../organisms/settings/SecuritySettingsTab";
 import { DataSettingsTab } from "../organisms/settings/DataSettingsTab";
 import { AISettingsTab } from "../organisms/settings/AISettingsTab";
 import { EmailSettingsTab } from "../organisms/settings/EmailSettingsTab";
 import { ConnectionsSettingsTab } from "../organisms/settings/ConnectionsSettingsTab";
+import { VoiceAISettingsTab } from "../organisms/settings/VoiceAISettingsTab";
+import { ImportSettingsTab } from "../organisms/settings/ImportSettingsTab";
+import { RASettingsTab } from "../organisms/settings/RASettingsTab";
+import { EnrichmentSettingsTab } from "../organisms/settings/EnrichmentSettingsTab";
+import { MemoryAISettingsTab } from "../organisms/settings/MemoryAISettingsTab";
+import { SubscriptionSettingsTab } from "../organisms/settings/SubscriptionSettingsTab";
+import { OperatorsSettingsTab } from "../organisms/settings/OperatorsSettingsTab";
+import { TimingSettingsTab } from "../organisms/settings/TimingSettingsTab";
 
-type SettingsTab = "general" | "security" | "data" | "ai" | "email" | "connections";
+type SettingsTabValue =
+  | "general" | "security" | "email" | "connections"
+  | "data" | "ai" | "voice" | "import" | "ra"
+  | "enrichment" | "memory" | "subscription" | "operators" | "timing";
+
+const TABS: VerticalTab[] = [
+  { value: "general", label: "Generale", icon: Settings },
+  { value: "security", label: "Sicurezza", icon: Shield },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "connections", label: "Connessioni", icon: Globe },
+  { value: "data", label: "Dati", icon: Database },
+  { value: "ai", label: "AI", icon: Bot },
+  { value: "voice", label: "Voce AI", icon: Volume2 },
+  { value: "import", label: "Importa", icon: Download },
+  { value: "ra", label: "Report Aziende", icon: FileText },
+  { value: "enrichment", label: "Arricchimento", icon: Image },
+  { value: "memory", label: "Memoria AI", icon: Database },
+  { value: "subscription", label: "Abbonamento", icon: Crown },
+  { value: "operators", label: "Operatori", icon: Users },
+  { value: "timing", label: "Timing", icon: Clock },
+];
+
+const TAB_COMPONENTS: Record<SettingsTabValue, React.FC> = {
+  general: GeneralSettingsTab,
+  security: SecuritySettingsTab,
+  email: EmailSettingsTab,
+  connections: ConnectionsSettingsTab,
+  data: DataSettingsTab,
+  ai: AISettingsTab,
+  voice: VoiceAISettingsTab,
+  import: ImportSettingsTab,
+  ra: RASettingsTab,
+  enrichment: EnrichmentSettingsTab,
+  memory: MemoryAISettingsTab,
+  subscription: SubscriptionSettingsTab,
+  operators: OperatorsSettingsTab,
+  timing: TimingSettingsTab,
+};
 
 export function SettingsPage(): React.ReactElement {
-  const [tab, setTab] = useState<SettingsTab>("general");
+  const [tab, setTab] = useState<SettingsTabValue>("general");
+  const ActiveTab = TAB_COMPONENTS[tab];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
-        <p className="text-sm text-muted-foreground">Configurazione piattaforma e integrazioni.</p>
+    <div className="flex h-full min-h-0 overflow-hidden">
+      <VerticalTabNav tabs={TABS} value={tab} onChange={(v) => setTab(v as SettingsTabValue)} />
+      <div className="flex-1 min-w-0 overflow-auto p-4">
+        <div className="max-w-4xl">
+          <ActiveTab />
+        </div>
       </div>
-
-      <Tabs value={tab} onValueChange={(v) => setTab(v as SettingsTab)}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" />Generale</TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Sicurezza</TabsTrigger>
-          <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" />Email</TabsTrigger>
-          <TabsTrigger value="connections" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Connessioni</TabsTrigger>
-          <TabsTrigger value="data" className="gap-1.5"><Database className="h-3.5 w-3.5" />Dati</TabsTrigger>
-          <TabsTrigger value="ai" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general" className="mt-4"><GeneralSettingsTab /></TabsContent>
-        <TabsContent value="security" className="mt-4"><SecuritySettingsTab /></TabsContent>
-        <TabsContent value="email" className="mt-4"><EmailSettingsTab /></TabsContent>
-        <TabsContent value="connections" className="mt-4"><ConnectionsSettingsTab /></TabsContent>
-        <TabsContent value="data" className="mt-4"><DataSettingsTab /></TabsContent>
-        <TabsContent value="ai" className="mt-4"><AISettingsTab /></TabsContent>
-      </Tabs>
     </div>
   );
 }
