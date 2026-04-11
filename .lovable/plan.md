@@ -1,69 +1,81 @@
 
 
-# AI Guardrails: CostTracker + ResponseValidator + invokeEdge Integration
+# Fix 172 Empty Catch Blocks with Structured Logging
 
-## What Already Exists
-- **RateLimiter** (`src/lib/api/rateLimiter.ts`): Fully functional token-bucket + circuit breaker. 689 tests passing. No changes needed.
-- **Credits system**: DB-side `deduct_credits()` RPC + `useCredits` hook for balance display. Server handles actual billing.
-- **invokeEdge**: Central wrapper for all 56 call-sites to edge functions.
+## Scope
 
-## What's Missing
-1. **CostTracker** — Client-side session budget tracking. Prevents runaway AI calls before they hit the server. Tracks cumulative cost per session, warns at thresholds, blocks at hard limit.
-2. **ResponseValidator** — Validates AI response shapes before consumers process them. Catches malformed responses early with structured errors instead of runtime crashes.
-3. **Integration** — Wire both into `invokeEdge` so all 56 call-sites get protection automatically.
+172 `catch {` blocks across ~80 files in `src/`. The project already has a structured logger (`src/lib/log.ts`) with `createLogger(module)` that produces JSON records.
 
-## Plan
+## Strategy
 
-### File 1: `src/lib/api/costTracker.ts` (~80 LOC)
+Each empty catch falls into one of 3 categories, each gets a different fix:
 
-Session-scoped AI cost tracker:
-- In-memory counter tracking `totalCredits`, `callCount`, `callsByFunction` per session
-- Configurable `softLimit` (warning toast) and `hardLimit` (blocks call, throws `BudgetExceededError`)
-- `trackCost(functionName, credits)` — called after successful AI responses
-- `checkBudget()` — called before AI calls, throws if hard limit exceeded
-- `getSessionStats()` — returns current session usage for UI/debugging
-- `resetSession()` — manual reset
-- Defaults: softLimit=500, hardLimit=1000 (configurable via `configureCostTracker`)
+### Category A: Silent swallow (no fallback, no comment) — ~90 occurrences
+**Fix**: Add `(e)` parameter + `log.error("context", { error: e })` or `log.warn()` for non-critical paths.
 
-### File 2: `src/lib/api/responseValidator.ts` (~90 LOC)
+```typescript
+// Before
+} catch {
 
-Lightweight response shape validator:
-- `validateResponse<T>(data, schema): T` where schema defines required/optional fields and types
-- Schema format: `{ required: { field: "string" | "number" | "object" | "array" | "boolean" }, optional: { field: type } }`
-- Throws `ResponseValidationError` (extends `ApiError` with code `SCHEMA_MISMATCH`) on failure, listing which fields failed
-- Pre-built schemas exported for common AI responses: `outreachSchema`, `emailSchema`, `assistantSchema`
-- Keeps it simple — no Zod dependency in client bundle, just runtime type checks
+// After
+} catch (e) {
+  log.error("failed to load X", { error: e });
+}
+```
 
-### File 3: Update `src/lib/api/invokeEdge.ts` (~15 LOC added)
+### Category B: Fallback return (e.g. `catch { return []; }`) — ~35 occurrences
+**Fix**: Add `(e)` + `log.warn()` before the return. The fallback stays.
 
-Add guardrails to the central wrapper:
-- Before call: `checkBudget()` — blocks if session hard limit reached
-- After success: extract `_debug.credits_consumed` from response (if present) and call `trackCost()`
-- After success: if a validator schema is registered for the function name, run `validateResponse()`
-- New optional field in `InvokeEdgeOptions`: `responseSchema` for per-call validation
-- All existing 56 call-sites get budget protection automatically, zero changes needed
+```typescript
+// Before
+} catch { return []; }
 
-### File 4: `src/test/costTracker.test.ts` (~50 LOC)
+// After
+} catch (e) { log.warn("parse failed, using fallback", { error: e }); return []; }
+```
 
-Tests: tracks credits, warns at soft limit, throws at hard limit, resets correctly.
+### Category C: Already has comment like `/* intentionally ignored */` or `/* best-effort */` — ~30 occurrences
+**Fix**: Add `(e)` parameter + `log.debug()` (lowest level, silent in prod). Keep the comment.
 
-### File 5: `src/test/responseValidator.test.ts` (~60 LOC)
+```typescript
+// Before
+} catch { /* intentionally ignored: best-effort cleanup */ }
 
-Tests: passes valid shapes, rejects missing required fields, handles optional fields, returns typed data.
+// After
+} catch (e) { log.debug("best-effort cleanup failed", { error: e }); /* intentionally ignored */ }
+```
 
-### File 6: Update `src/hooks/useCredits.ts` (~5 LOC added)
+### Category D: In test files — ~15 occurrences
+**Fix**: Leave as-is or add minimal `console.debug`. Tests intentionally trigger errors.
 
-Expose `sessionStats` from `getSessionStats()` alongside the DB balance, so the UI can show both server balance and session consumption.
+## Special cases
 
-## Technical Notes
+- **`src/lib/log.ts` itself** (5 catches): These MUST stay empty or use `console.error` — using the logger inside the logger would cause infinite recursion.
+- **`src/lib/api/apiError.ts`**: Same — infrastructure code, use `console.error`.
+- **JSON parse one-liners** (e.g. `try { return JSON.parse(x) } catch { return default }`): Add `log.debug` only, these are expected failures.
 
-- **Zero breaking changes**: invokeEdge signature is backward-compatible (new fields are optional)
-- **No new dependencies**: pure TypeScript runtime checks
-- **Session-scoped**: CostTracker resets on page reload (intentional — server is source of truth for billing)
-- **AI functions auto-tracked**: Any edge function returning `_debug.credits_consumed` gets tracked automatically
+## File changes
 
-## Expected Impact
-- 2 new files (~170 LOC), 2 test files (~110 LOC), 2 minor updates
-- All 56 AI call-sites protected automatically via invokeEdge
-- Prevents runaway AI costs client-side before server even sees the request
+~65 source files will be modified. Each file will:
+1. Add `import { createLogger } from "@/lib/log"` if not already present
+2. Add `const log = createLogger("moduleName")` if not already present  
+3. Replace each `catch {` with `catch (e) { log.error/warn/debug(...) }`
+
+## Test file updates
+
+The `src/test/emptyCatches.test.ts` threshold can be lowered from 5 to 0 after this work.
+
+## Risk
+
+Low. Adding logging to catch blocks cannot break functionality. The error parameter `(e)` is captured but only passed to the logger. All existing behavior (fallback returns, toasts, state resets) is preserved.
+
+## Execution
+
+Will be done in batches by directory to keep changes reviewable:
+1. `src/lib/` (infrastructure — ~15 files)
+2. `src/hooks/` (~25 files)
+3. `src/components/` (~35 files)
+4. `src/pages/` (~8 files)
+5. `src/test/` (skip or minimal)
+6. Update emptyCatches test threshold to 0
 
