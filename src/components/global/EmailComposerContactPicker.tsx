@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { rpcGetCountryStats, rpcGetContactFilterOptions } from "@/data/rpc";
 import { getCountryCodesBatched } from "@/data/partners";
 import { useMission } from "@/contexts/MissionContext";
