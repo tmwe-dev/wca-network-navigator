@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
+import { V2Routes } from "@/v2/routes";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
