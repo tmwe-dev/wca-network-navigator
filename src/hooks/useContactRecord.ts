@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { updatePartner } from "@/data/partners";
+import { updateContact } from "@/data/contacts";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 
 export interface UnifiedRecord {

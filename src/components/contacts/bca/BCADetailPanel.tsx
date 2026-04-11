@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { searchPartnersByNameAlias } from "@/data/partners";
 import { useUpdateBusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "@/hooks/use-toast";

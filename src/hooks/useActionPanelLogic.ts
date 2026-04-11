@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByCountries, deletePartnersWithRelations } from "@/data/partners";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";

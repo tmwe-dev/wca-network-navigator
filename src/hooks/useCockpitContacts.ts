@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByIds } from "@/data/partners";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
