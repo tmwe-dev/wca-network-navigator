@@ -3,8 +3,8 @@
  */
 import { z } from "zod";
 
-const CampaignJobTypeSchema = z.enum(["email", "call", "linkedin"]);
-const CampaignJobStatusSchema = z.enum(["pending", "in_progress", "completed", "failed", "skipped"]);
+const CampaignJobTypeSchema = z.enum(["email", "call"]);
+const CampaignJobStatusSchema = z.enum(["pending", "in_progress", "completed", "skipped"]);
 
 export const CampaignJobRowSchema = z.object({
   id: z.string().uuid(),

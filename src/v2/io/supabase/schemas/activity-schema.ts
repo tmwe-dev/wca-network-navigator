@@ -4,8 +4,8 @@
 import { z } from "zod";
 
 const ActivityTypeSchema = z.enum([
-  "call", "email", "meeting", "note", "task",
-  "follow_up", "linkedin", "whatsapp", "ai_generated",
+  "send_email", "phone_call", "add_to_campaign", "meeting",
+  "follow_up", "other", "whatsapp_message", "linkedin_message",
 ]);
 
 const ActivityStatusSchema = z.enum([
