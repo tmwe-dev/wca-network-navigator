@@ -30,11 +30,11 @@ export async function fetchPartnerFacets(): Promise<Result<PartnerFacets, AppErr
     )].sort();
 
     const uniqueCities = [...new Set(
-      (citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => Boolean(c))
+      (citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => c != null && c !== "")
     )].sort();
 
     const uniqueTypes = [...new Set(
-      (typesRes.data ?? []).map((r) => r.partner_type).filter((t): t is string => Boolean(t))
+      (typesRes.data ?? []).map((r) => r.partner_type).filter((t): t is string => t != null && t !== "")
     )].sort();
 
     return ok({

@@ -64,7 +64,7 @@ export async function fetchPartnersPaginated(
 
     // ── Partner type ──
     if (filters?.partnerType) {
-      query = query.eq("partner_type", filters.partnerType);
+      query = query.eq("partner_type", filters.partnerType as "3pl" | "carrier" | "courier" | "customs_broker" | "freight_forwarder" | "nvocc");
     }
 
     // ── Favorites ──
