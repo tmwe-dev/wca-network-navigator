@@ -12,6 +12,9 @@ import {
   CheckCircle2, XCircle, RotateCcw, Settings2, Play, Pause,
 } from "lucide-react";
 import { type ImportError } from "@/hooks/useImportLogs";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ImportErrorMonitor");
 
 interface ImportErrorMonitorProps {
   errors: ImportError[];
@@ -86,7 +89,8 @@ export function ImportErrorMonitor({
 
         // Small delay between batches
         if (hasMore) await new Promise((r) => setTimeout(r, 1000));
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         hasMore = false;
       }
     }

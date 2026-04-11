@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import type { AllActivity } from "./useActivities";
 import type { Reminder } from "./useReminders";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAgendaDayActivities");
 
 export interface AgendaDayData {
   activities: AllActivity[];
@@ -112,7 +115,8 @@ const MOCK_REMINDERS = [
 function isMockEnabled(): boolean {
   try {
     return localStorage.getItem("demo-data-enabled") === "true" || localStorage.getItem("outreach-mock-enabled") === "true";
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return false;
   }
 }

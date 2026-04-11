@@ -39,7 +39,8 @@ function parseCommand(content: string): { message: string; command: AICommand | 
   try {
     const command = JSON.parse(jsonStr) as AICommand;
     return { message, command };
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return { message: content.trim(), command: null };
   }
 }

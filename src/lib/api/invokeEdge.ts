@@ -74,7 +74,8 @@ export async function invokeEdge<T = unknown>(
       try {
         const cloned = (ctxResponse as Response).clone();
         body = (await cloned.json()) as Record<string, unknown>;
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         // body non-JSON o stream già consumato — best-effort
       }
     }

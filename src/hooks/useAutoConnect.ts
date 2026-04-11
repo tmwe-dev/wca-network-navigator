@@ -3,6 +3,9 @@ import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAutoConnect");
 
 /**
  * Auto-verifies LinkedIn and WhatsApp connections on mount
@@ -28,7 +31,7 @@ export function useAutoConnect() {
         try {
           const r = await li.verifySession();
           liOk = r.success === true && r.authenticated === true;
-        } catch { /* intentionally ignored: best-effort cleanup */ }
+        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }
       // No fallback to DB credentials — they don't mean you're logged in locally
 
@@ -38,7 +41,7 @@ export function useAutoConnect() {
         try {
           const r = await wa.verifySession();
           waOk = r.success === true;
-        } catch { /* intentionally ignored: best-effort cleanup */ }
+        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }
       if (!waOk) {
         try {
@@ -48,14 +51,14 @@ export function useAutoConnect() {
             .eq("key", "whatsapp_sender")
             .maybeSingle();
           if (data?.value) waOk = true;
-        } catch { /* intentionally ignored: best-effort cleanup */ }
+        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }
 
       // Persist real state
       try {
         await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
         await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-      } catch { /* intentionally ignored: best-effort cleanup */ }
+      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
     };
 
     const timer = setTimeout(run, 2000);

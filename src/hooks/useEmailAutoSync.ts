@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCheckInbox } from "@/hooks/useChannelMessages";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useEmailAutoSync");
 
 const STORAGE_KEY = "email_auto_sync_enabled";
 const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
@@ -18,7 +21,7 @@ export function useEmailAutoSync(options: Options = {}) {
       const stored = localStorage.getItem(STORAGE_KEY);
       // If never set, default to true
       return stored === null ? true : stored === "true";
-    } catch { return true; }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return true; }
   });
   const checkInbox = useCheckInbox();
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -26,7 +29,7 @@ export function useEmailAutoSync(options: Options = {}) {
   const toggle = useCallback(() => {
     setEnabled(prev => {
       const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
+      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
       return next;
     });
   }, []);

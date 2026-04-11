@@ -34,7 +34,8 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
               try {
                 const parsed = new URL(item.url);
                 profileUrl = `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`.replace(/\/$/, "");
-              } catch {
+              } catch (e) {
+                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
                 profileUrl = item.url.split("?")[0].replace(/\/$/, "");
               }
               break;

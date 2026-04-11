@@ -13,6 +13,9 @@ import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("EmailComposerContactPicker");
 
 type PickerTab = "partners" | "contacts" | "bca";
 type CountrySort = "name" | "count";
@@ -62,7 +65,8 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
               name: WCA_COUNTRIES_MAP[r.country_code]?.name || r.country_code,
             }));
         }
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         // fallback below
       }
       // Fallback: fetch all country_codes in batches to bypass 1000 limit

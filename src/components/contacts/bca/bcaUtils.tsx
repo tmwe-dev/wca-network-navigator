@@ -4,6 +4,9 @@ import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptBusinessCard } from "@/lib/contactActionAdapter";
 import { resolveCountryCode } from "@/lib/countries";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("bcaUtils");
 
 /* ═══ Status colors & labels ═══ */
 export const STATUS_COLORS: Record<string, string> = {
@@ -28,7 +31,7 @@ export function countryFlag(code: string | null | undefined): string {
   if (!code) return "";
   try {
     return String.fromCodePoint(...[...code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65));
-  } catch { return ""; }
+  } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return ""; }
 }
 
 /* ═══ Resolve country from card data ═══ */

@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useThemeToggle");
 
 /**
  * useThemeToggle — minimal dark/light toggle with localStorage persistence.
@@ -17,7 +20,8 @@ function getInitialTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") return stored;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     /* ignore */
   }
   // Default keeps current behaviour: dark.
@@ -40,7 +44,8 @@ export function useThemeToggle() {
     applyTheme(theme);
     try {
       localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       /* ignore */
     }
   }, [theme]);

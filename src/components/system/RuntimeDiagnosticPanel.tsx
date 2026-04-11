@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("RuntimeDiagnosticPanel");
 
 interface DiagState {
   supabaseStatus: "connected" | "auth_missing" | "error";
@@ -40,7 +43,8 @@ export function RuntimeDiagnosticPanel() {
       } else {
         state.supabaseStatus = "auth_missing";
       }
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       state.supabaseStatus = "error";
     }
 
@@ -60,7 +64,8 @@ export function RuntimeDiagnosticPanel() {
         window.postMessage({ direction: "from-webapp", action: "ping", requestId: id }, window.location.origin || "*");
       });
       state.extensionStatus = extOk ? "connected" : "timeout";
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       state.extensionStatus = "no_extension";
     }
 
@@ -68,7 +73,7 @@ export function RuntimeDiagnosticPanel() {
     try {
       const { data } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(10);
       state.activeJobs = data?.length || 0;
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 
     // Cache size
     state.queryCacheSize = queryClient.getQueryCache().getAll().length;
@@ -77,13 +82,13 @@ export function RuntimeDiagnosticPanel() {
     try {
       const raw = localStorage.getItem("last_wca_error");
       if (raw) state.lastWcaError = JSON.parse(raw);
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 
     // Last failed call
     try {
       const raw = localStorage.getItem("last_failed_network_call");
       if (raw) state.lastFailedCall = JSON.parse(raw);
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 
     setDiag(state);
   }, [queryClient]);

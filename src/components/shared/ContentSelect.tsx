@@ -16,6 +16,9 @@ import {
 } from "@/data/defaultContentPresets";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ContentSelect");
 
 const ICON_MAP: Record<string, any> = {
   Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
@@ -45,7 +48,7 @@ export default function ContentSelect({ type, onSelect, selectedText, placeholde
   const items = useMemo<ContentItem[]>(() => {
     try {
       return settings?.[settingsKey] ? JSON.parse(settings[settingsKey]) : defaults;
-    } catch { return defaults; }
+    } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return defaults; }
   }, [settings?.[settingsKey]]);
 
   const grouped = useMemo(() => {

@@ -46,13 +46,13 @@ export class GlobalErrorBoundary extends Component<Props, State> {
         const session = JSON.parse(localStorage.getItem(storageKey) || "{}");
         lines.push(`UserID: ${session?.user?.id || "unknown"}`);
       }
-    } catch { lines.push("UserID: unknown"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); lines.push("UserID: unknown"); }
 
     // Last WCA error
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 
     lines.push("");
     lines.push(`Error: ${error?.message || "Unknown"}`);

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getTierByProductId, type SubscriptionTier } from "@/config/subscriptionTiers";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useSubscription");
 
 type CheckSubscriptionResult = { subscribed?: boolean; product_id?: string | null; subscription_end?: string | null };
 type CheckoutResult = { url?: string };
@@ -37,7 +40,8 @@ export function useSubscription() {
         subscriptionEnd: data?.subscription_end ?? null,
         productId: data?.product_id ?? null,
       });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setState(prev => ({ ...prev, loading: false }));
     }
   }, []);

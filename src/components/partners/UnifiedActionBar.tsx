@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("UnifiedActionBar");
 
 interface UnifiedActionBarProps {
   selectedIds: Set<string>;
@@ -75,7 +78,8 @@ export function UnifiedActionBar({
       setNoteText("");
       setNoteDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["partner", focusedPartner.id] });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore salvataggio nota");
     } finally {
       setSavingNote(false);

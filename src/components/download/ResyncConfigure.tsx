@@ -82,7 +82,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       if (data.success && data.cookies) {
         setWcaCookie(data.cookies);
       }
-    } catch { setHasCookie(false); }
+    } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setHasCookie(false); }
   }
 
   async function loadStats() {

@@ -13,6 +13,9 @@ import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { CRM_GROUPBY } from "./constants";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("CRMFiltersSection");
 
 export function CRMFiltersSection() {
   const g = useGlobalFilters();
@@ -62,7 +65,7 @@ export function CRMFiltersSection() {
             .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
             .sort((a, b) => (b.count || 0) - (a.count || 0))
         );
-      } catch { /* best-effort */ }
+      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
     };
     fetchData();
   }, []);
@@ -130,7 +133,7 @@ export function CRMFiltersSection() {
           .or(`name.ilike.%${searchValue}%,company_name.ilike.%${searchValue}%,company_alias.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
           .limit(30);
         setSearchResults(data || []);
-      } catch { setSearchResults([]); }
+      } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }
       finally { setSearching(false); }
     };
     const timer = setTimeout(doSearch, 300);

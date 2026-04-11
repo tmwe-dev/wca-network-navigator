@@ -7,13 +7,16 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { RALeadStatus, RAContact, RAInteraction } from "@/types/ra";
 import { LEAD_STATUS_LABELS } from "./RACompanyHeader";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("RACompanySidebar");
 
 const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "contacted", "qualified", "negotiation", "converted", "lost"];
 
 function formatDate(dateString: string) {
   try {
     return new Date(dateString).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch { return "—"; }
+  } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return "—"; }
 }
 
 interface RACompanySidebarProps {

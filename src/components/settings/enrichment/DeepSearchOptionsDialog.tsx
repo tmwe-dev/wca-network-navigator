@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Globe, Linkedin, Phone, Brain, Loader2 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("DeepSearchOptionsDialog");
 
 interface DeepSearchOption {
   key: "scrapeWebsite" | "scrapeLinkedin" | "verifyWhatsapp" | "aiAnalysis";
@@ -48,7 +51,7 @@ export function DeepSearchOptionsDialog({
         const parsed = JSON.parse(settings.deep_search_config);
         const ctx = parsed.contacts || parsed.cockpit || DEFAULT_CONFIG;
         setOptions({ ...DEFAULT_CONFIG, ...ctx });
-      } catch { /* use defaults */ }
+      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* use defaults */ }
     }
   }, [settings?.deep_search_config]);
 

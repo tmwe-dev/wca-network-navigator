@@ -12,6 +12,9 @@ import { ChannelsTab } from "./ChannelsTab";
 import { ExtensionsTab } from "./ExtensionsTab";
 import { WcaTab } from "./WcaTab";
 import { LinkedInTab } from "./LinkedInTab";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ConnectionsSettings");
 
 interface ConnectionsSettingsProps {
   settings: Record<string, string> | undefined;
@@ -49,7 +52,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     try {
       const ok = await ensureSession();
       toast.success(ok ? "Sessione attiva!" : "Sessione non attiva");
-    } catch { toast.error("Errore durante la verifica"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante la verifica"); }
     finally { setVerifying(false); }
   };
 
@@ -89,7 +92,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
     toast.success(results.join(" · "));
     setConnectingAll(false);
   };

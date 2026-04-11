@@ -88,7 +88,8 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
     setPlayingIdx(idx);
     try {
       await playTTS(content, defaultVoiceId);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast({ title: "Errore TTS", description: "Impossibile riprodurre l'audio", variant: "destructive" });
     } finally {
       setPlayingIdx(null);
@@ -151,7 +152,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
                   const parsed = JSON.parse(jsonStr);
                   const content = parsed.choices?.[0]?.delta?.content;
                   if (content) assistantContent += content;
-                } catch { textBuffer = line + "\n" + textBuffer; break; }
+                } catch (e) { log.debug("stream parse chunk failed", { error: e instanceof Error ? e.message : String(e) }); textBuffer = line + "\n" + textBuffer; break; }
               }
             }
             if (textBuffer.trim()) {
@@ -166,7 +167,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
                   const parsed = JSON.parse(jsonStr);
                   const content = parsed.choices?.[0]?.delta?.content;
                   if (content) assistantContent += content;
-                } catch { /* ignore */ }
+                } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* ignore */ }
               }
             }
           } else {

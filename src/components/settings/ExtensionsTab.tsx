@@ -3,6 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
 import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ExtensionsTab");
 
 export function ExtensionsTab() {
   return (
@@ -66,7 +69,8 @@ export function ExtensionsTab() {
               try {
                 await downloadWhatsAppExtensionZip();
                 toast.success("Estensione WhatsApp scaricata!");
-              } catch {
+              } catch (e) {
+                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
                 toast.error("File non disponibile");
               }
             }}>

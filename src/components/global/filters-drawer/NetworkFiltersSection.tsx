@@ -10,6 +10,9 @@ import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { NETWORK_QUALITY } from "./constants";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("NetworkFiltersSection");
 
 export function NetworkFiltersSection() {
   const g = useGlobalFilters();
@@ -69,7 +72,7 @@ export function NetworkFiltersSection() {
           .eq("is_active", true)
           .limit(30);
         setSearchResults(data || []);
-      } catch { setSearchResults([]); }
+      } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }
       finally { setSearching(false); }
     };
     const timer = setTimeout(doSearch, 300);

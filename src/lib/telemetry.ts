@@ -7,6 +7,9 @@
  * Backend: see migration 20260408095954_wave6_hardening_telemetry_staff.sql
  */
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("telemetry");
 
 const SESSION_KEY = "wca_telemetry_session";
 
@@ -18,7 +21,8 @@ function getSessionId(): string {
       sessionStorage.setItem(SESSION_KEY, sid);
     }
     return sid;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return `s_${Date.now()}`;
   }
 }
@@ -37,7 +41,8 @@ async function getUserId(): Promise<string | null> {
   try {
     const { data } = await supabase.auth.getUser();
     userIdCache = data?.user?.id ?? null;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     userIdCache = null;
   }
   return userIdCache;

@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useCreateActivities } from "@/hooks/useActivities";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("usePartnerHubActions");
 
 interface UsePartnerHubActionsOptions {
   selectedIds: Set<string>;
@@ -86,7 +89,8 @@ export function usePartnerHubActions({
       toast.success(`${withEmail.length} attività create — apertura Workspace...`);
       setSelectedIds(new Set());
       navigate("/workspace");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore nella creazione delle attività");
     } finally {
       setSendingToWorkspace(false);
@@ -125,7 +129,7 @@ export function usePartnerHubActions({
         }]);
         toast.success("Attività creata — apertura Workspace...");
         navigate("/workspace");
-      } catch { toast.error("Errore"); }
+      } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore"); }
       finally { setSendingToWorkspace(false); }
     }
   }, [selectedIds, selectedId, filteredPartners, createActivities, navigate, handleSendToWorkspace]);

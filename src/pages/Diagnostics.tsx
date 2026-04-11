@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("Diagnostics");
 
 // ── Types ──────────────────────────────────────────────────────────
 type TestStatus = "idle" | "running" | "pass" | "fail" | "warn";
@@ -387,7 +390,8 @@ export default function Diagnostics() {
         window.postMessage({ direction: "from-webapp", action: "ping", requestId: reqId }, window.location.origin);
       });
       upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: ok ? "pass" : "warn", message: ok ? "Connessa" : "Non installata (non necessaria)" });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "warn", message: "Non rilevata" });
     }
   };

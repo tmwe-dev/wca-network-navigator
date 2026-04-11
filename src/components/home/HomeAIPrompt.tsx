@@ -9,6 +9,9 @@ import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("HomeAIPrompt");
 
 interface Props {
   className?: string;
@@ -148,7 +151,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch { /* best-effort */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
   };
 
   return (

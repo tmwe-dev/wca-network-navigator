@@ -8,6 +8,9 @@ import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentChat");
 
 interface Message {
   role: "user" | "assistant";
@@ -67,7 +70,7 @@ export function AgentChat({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   };
 
   return (

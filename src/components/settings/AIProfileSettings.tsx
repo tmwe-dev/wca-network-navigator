@@ -16,6 +16,9 @@ import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/data/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AIProfileSettings");
 
 const AI_KEYS = [
   "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_alias",
@@ -115,7 +118,8 @@ export default function AIProfileSettings() {
         await updateSetting.mutateAsync({ key, value: fields[key].trim() });
       }
       toast.success("Profilo AI salvato con successo!");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore durante il salvataggio");
     } finally {
       setSaving(false);

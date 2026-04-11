@@ -62,7 +62,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       if (shouldListenRef.current) {
         try {
           recognition.start();
-        } catch {
+        } catch (e) {
+          log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
           // already started
         }
       } else {
@@ -87,7 +88,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     try {
       recognition.start();
       setListening(true);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       // already started
     }
   }, [hasSpeechAPI, createRecognition]);

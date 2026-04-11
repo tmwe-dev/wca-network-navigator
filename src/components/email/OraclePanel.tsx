@@ -16,6 +16,9 @@ import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { ImageGalleryTab } from "./ImageGalleryTab";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("OraclePanel");
 
 export interface OracleConfig {
   emailType: EmailType | null;
@@ -63,7 +66,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
   const customTypes: EmailType[] = useMemo(() => {
     try {
       return JSON.parse(settings?.email_oracle_types || "[]");
-    } catch { return []; }
+    } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings?.email_oracle_types]);
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);

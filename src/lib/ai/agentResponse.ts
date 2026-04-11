@@ -1,4 +1,7 @@
 import type { AiOperation } from "@/components/ai/AiOperationCard";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("agentResponse");
 
 export interface JobCreatedInfo {
   job_id: string;
@@ -48,7 +51,8 @@ function safeJsonParse<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
   try {
     return JSON.parse(value) as T;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return fallback;
   }
 }

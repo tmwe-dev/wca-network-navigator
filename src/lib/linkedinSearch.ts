@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("linkedinSearch");
 export type GoogleSearchResultLike = {
   url?: string | null;
   title?: string | null;
@@ -64,7 +67,8 @@ export const unwrapGoogleResultUrl = (url?: string | null): string | null => {
       );
     }
     return parsed.href;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return url;
   }
 };
@@ -82,7 +86,8 @@ export const isLinkedInProfileUrl = (url?: string | null): boolean => {
       hostname.endsWith(".linkedin.com");
 
     return isLinkedInHost && LINKEDIN_PROFILE_PATH_RE.test(parsed.pathname);
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return false;
   }
 };
@@ -94,7 +99,8 @@ export const normalizeLinkedInProfileUrl = (url?: string | null): string | null 
   try {
     const parsed = new URL(unwrapped!);
     return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`.replace(/\/$/, "");
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return null;
   }
 };

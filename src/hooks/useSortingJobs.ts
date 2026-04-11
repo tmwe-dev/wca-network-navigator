@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useSortingJobs");
 
 type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
@@ -39,7 +42,7 @@ export interface SortingJob {
 }
 
 function isMockEnabled(): boolean {
-  try { return localStorage.getItem("demo-data-enabled") === "true"; } catch { return false; }
+  try { return localStorage.getItem("demo-data-enabled") === "true"; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return false; }
 }
 
 const MOCK_SORTING: SortingJob[] = [

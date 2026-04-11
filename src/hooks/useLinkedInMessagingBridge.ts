@@ -87,7 +87,8 @@ async function checkFireScrape(): Promise<boolean> {
   try {
     const r = await sendToFireScrape("ping", {}, 4000);
     return r?.success === true;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return false;
   }
 }

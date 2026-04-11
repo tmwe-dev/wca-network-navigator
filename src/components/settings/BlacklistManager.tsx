@@ -12,6 +12,9 @@ import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEn
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import ExcelJS from "exceljs";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("BlacklistManager");
 
 /* ── Parse XLS/CSV file ── */
 async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
@@ -83,7 +86,8 @@ export default function BlacklistManager() {
       setAllParsed(entries);
       setPreview(entries.slice(0, 10));
       toast.success(`${entries.length} record trovati nel file`);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore nel parsing del file");
     }
   };

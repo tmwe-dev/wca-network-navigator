@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("emailContentNormalization");
 const BASE64_PATTERN = /^[A-Za-z0-9+/=\s]+$/;
 const HTML_TAG_PATTERN = /<\/?(?:html|body|div|table|tbody|thead|tr|td|th|p|span|img|a|meta|style|section|article|header|footer)\b/i;
 const HTML_ENTITY_PATTERN = /&(?:quot|amp|lt|gt|nbsp|#\d+|#x[0-9a-f]+);/i;
@@ -49,7 +52,8 @@ function safeDecodeBase64(value: string): string | null {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return null;
   }
 }

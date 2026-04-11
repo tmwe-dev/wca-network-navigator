@@ -12,6 +12,9 @@ import {
 import { useTheme, t } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ActiveJobBar");
 // useExtensionBridge rimosso — download via wca-app bridge (Claude Engine V8)
 
 interface ActiveJobBarProps {
@@ -53,7 +56,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
       await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato manualmente" }).eq("id", mainJob.id);
       await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", mainJob.id).eq("status", "processing");
       toast.success("Job resettato");
-    } catch { toast.error("Errore nel reset"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel reset"); }
   };
 
   return (

@@ -13,6 +13,9 @@ import { toast } from "sonner";
 import { Bot, Check, ChevronRight, MessageCircle, Loader2, Sparkles, Send, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("Onboarding");
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -92,7 +95,8 @@ export default function Onboarding() {
         }, context: "Onboarding.ai_assistant" });
       const reply = data?.reply || data?.content || "Non riesco a rispondere ora.";
       setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setChatMessages(prev => [...prev, { role: "assistant", content: "Mi dispiace, errore di connessione. Riprova." }]);
     } finally {
       setChatLoading(false);

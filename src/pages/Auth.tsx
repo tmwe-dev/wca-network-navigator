@@ -30,7 +30,8 @@ async function checkWhitelist(email: string): Promise<boolean> {
 async function recordLogin(email: string) {
   try {
     await supabase.rpc("record_user_login" as any, { p_email: email });
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // intentionally ignored: best-effort cleanup
   }
 }

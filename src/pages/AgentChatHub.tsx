@@ -12,6 +12,9 @@ import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentChatHub");
 
 interface Message {
   role: "user" | "assistant";
@@ -58,7 +61,8 @@ export default function AgentChatHub() {
       const data = await invokeEdge<any>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
       const reply: Message = { role: "assistant", content: data?.response || "Nessuna risposta" };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       chatMapRef.current.set(activeId, [...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione." }]);
     } finally {
       setSending(false);
@@ -84,7 +88,7 @@ export default function AgentChatHub() {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   };
 
   if (isLoading) {

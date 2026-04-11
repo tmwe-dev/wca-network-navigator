@@ -3,6 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Search, Filter, Users } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("BCAFiltersSection");
 
 export function BCAFiltersSection() {
   const g = useGlobalFilters();
@@ -26,7 +29,7 @@ export function BCAFiltersSection() {
         });
         setBcaEvents(Object.entries(evCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
         setBcaStatuses(Object.entries(stCounts).map(([status, count]) => ({ status, count })));
-      } catch { /* best-effort */ }
+      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
     };
     fetchMeta();
   }, []);
