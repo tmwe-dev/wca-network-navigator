@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
+import type { RAContact, RAInteraction } from "@/types/ra";
 import type { RAProspect, RAProspectFilters, RALeadStatus } from "@/types/ra";
 
 const RA_PROSPECTS_KEY = ["ra-prospects"] as const;
 const DEFAULT_PAGE_SIZE = 100;
-const db = supabase as any;
 
 export function useRAProspects(filters: RAProspectFilters = {}) {
   const page = filters.page ?? 0;
@@ -13,8 +13,7 @@ export function useRAProspects(filters: RAProspectFilters = {}) {
   return useQuery({
     queryKey: [...RA_PROSPECTS_KEY, filters],
     queryFn: async () => {
-      let q = db
-        .from("ra_prospects")
+      let q = untypedFrom("ra_prospects")
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false });
 
@@ -59,8 +58,7 @@ export function useRAProspect(id: string | undefined) {
     queryKey: ["ra-prospect", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await db
-        .from("ra_prospects")
+      const { data, error } = await untypedFrom("ra_prospects")
         .select("*")
         .eq("id", id)
         .single();
@@ -76,13 +74,12 @@ export function useRAProspectContacts(prospectId: string | undefined) {
     queryKey: ["ra-prospect-contacts", prospectId],
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await db
-        .from("ra_contacts")
+      const { data, error } = await untypedFrom("ra_contacts")
         .select("*")
         .eq("prospect_id", prospectId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return (data ?? []) as RAContact[];
     },
     enabled: !!prospectId,
   });
@@ -93,13 +90,12 @@ export function useRAProspectInteractions(prospectId: string | undefined) {
     queryKey: ["ra-prospect-interactions", prospectId],
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await db
-        .from("ra_interactions")
+      const { data, error } = await untypedFrom("ra_interactions")
         .select("*")
         .eq("prospect_id", prospectId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return (data ?? []) as RAInteraction[];
     },
     enabled: !!prospectId,
   });
@@ -110,17 +106,15 @@ export function useUpsertRAProspect() {
   return useMutation({
     mutationFn: async (prospect: Partial<RAProspect> & { company_name: string }) => {
       if (prospect.partita_iva) {
-        const { data: existing } = await db
-          .from("ra_prospects")
+        const { data: existing } = await untypedFrom("ra_prospects")
           .select("id")
           .eq("partita_iva", prospect.partita_iva)
           .maybeSingle();
 
         if (existing) {
-          const { data, error } = await db
-            .from("ra_prospects")
+          const { data, error } = await untypedFrom("ra_prospects")
             .update({ ...prospect, updated_at: new Date().toISOString() })
-            .eq("id", existing.id)
+            .eq("id", (existing as Record<string, string>).id)
             .select()
             .single();
           if (error) throw error;
@@ -128,8 +122,7 @@ export function useUpsertRAProspect() {
         }
       }
 
-      const { data, error } = await db
-        .from("ra_prospects")
+      const { data, error } = await untypedFrom("ra_prospects")
         .insert(prospect)
         .select()
         .single();
@@ -146,8 +139,7 @@ export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: RALeadStatus }) => {
-      const { error } = await db
-        .from("ra_prospects")
+      const { error } = await untypedFrom("ra_prospects")
         .update({ lead_status: status, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
@@ -162,8 +154,7 @@ export function useDeleteRAProspects() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await db
-        .from("ra_prospects")
+      const { error } = await untypedFrom("ra_prospects")
         .delete()
         .in("id", ids);
       if (error) throw error;

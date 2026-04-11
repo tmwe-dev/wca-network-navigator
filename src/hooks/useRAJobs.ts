@@ -1,16 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { RAScrapingJob } from "@/types/ra";
 
 const RA_JOBS_KEY = ["ra-jobs"] as const;
-const db = supabase as any;
 
 export function useRAJobs(status?: RAScrapingJob["status"]) {
   return useQuery({
     queryKey: [...RA_JOBS_KEY, status],
     queryFn: async () => {
-      let q = db
-        .from("ra_scraping_jobs")
+      let q = untypedFrom("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
@@ -35,8 +33,7 @@ export function useCreateRAJob() {
         "job_type" | "ateco_codes" | "regions" | "provinces" | "min_fatturato" | "max_fatturato" | "delay_seconds" | "batch_size"
       >
     ) => {
-      const { data, error } = await db
-        .from("ra_scraping_jobs")
+      const { data, error } = await untypedFrom("ra_scraping_jobs")
         .insert({
           ...job,
           status: "pending",
@@ -63,8 +60,7 @@ export function useUpdateRAJob() {
       id,
       ...updates
     }: Partial<RAScrapingJob> & { id: string }) => {
-      const { error } = await db
-        .from("ra_scraping_jobs")
+      const { error } = await untypedFrom("ra_scraping_jobs")
         .update(updates)
         .eq("id", id);
       if (error) throw error;

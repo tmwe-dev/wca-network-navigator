@@ -33,10 +33,11 @@ export function useActiveProcesses() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "download_job_events", filter: "event_type=eq.countdown" },
         (payload) => {
-          const row = payload.new as any;
-          const jobId = row.job_id;
-          const secs = (row.payload as any)?.seconds || 0;
-          const type = (row.payload as any)?.type || "delay";
+          const row = payload.new as Record<string, unknown>;
+          const jobId = row.job_id as string;
+          const rowPayload = row.payload as Record<string, unknown> | null;
+          const secs = (rowPayload?.seconds as number) || 0;
+          const type = (rowPayload?.type as string) || "delay";
           
           setCountdowns((prev) => ({ ...prev, [jobId]: { seconds: secs, type, at: Date.now() } }));
           

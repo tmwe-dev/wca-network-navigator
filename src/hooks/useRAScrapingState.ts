@@ -62,20 +62,20 @@ export function useRAScrapingState() {
       const status = await getScrapingStatus();
       if (!status) { clearInterval(pollInterval); return; }
 
-      const s = status as any;
-      if (s.log?.length) {
-        s.log.forEach((log: string) => addLog(log));
+      const s = status as Record<string, unknown>;
+      if (Array.isArray(s.log)) {
+        (s.log as string[]).forEach((log: string) => addLog(log));
       }
 
       await updateJobMutation.mutateAsync({
         id: jobId,
-        total_items: s.total_items || 0,
-        processed_items: s.processed_items,
-        saved_items: s.saved_items,
-        error_count: s.error_count,
+        total_items: (s.total_items as number) || 0,
+        processed_items: s.processed_items as number,
+        saved_items: s.saved_items as number,
+        error_count: s.error_count as number,
       });
 
-      if (s.results?.length) {
+      if (Array.isArray(s.results) && s.results.length) {
         for (const prospect of s.results) {
           await upsertProspectMutation.mutateAsync(prospect);
         }
@@ -83,8 +83,9 @@ export function useRAScrapingState() {
 
       if (s.status === "completed" || s.status === "error") {
         clearInterval(pollInterval);
+        const finalStatus = s.status === "error" ? "failed" : "completed";
         await updateJobMutation.mutateAsync({
-          id: jobId, status: s.status, completed_at: new Date().toISOString(),
+          id: jobId, status: finalStatus as "completed" | "failed", completed_at: new Date().toISOString(),
         });
         setIsScraping(false);
       }
@@ -104,7 +105,7 @@ export function useRAScrapingState() {
         regions: Array.from(selectedRegions),
         provinces: Array.from(selectedProvinces),
       });
-      setSearchResults(results as any as SearchResult[]);
+      setSearchResults(results as unknown as SearchResult[]);
       setSearchPerformed(true);
       setSelectedResults(new Set());
       addLog(`Trovate ${Array.isArray(results) ? results.length : 0} aziende`);
@@ -122,7 +123,7 @@ export function useRAScrapingState() {
       const selectedItems = searchResults.filter(r => selectedResults.has(r.id));
       addLog(`Scraping di ${selectedItems.length} aziende avviato...`);
       const job = await createJobMutation.mutateAsync({
-        job_type: "scrape_batch" as any,
+        job_type: "scrape_batch",
         ateco_codes: Array.from(selectedAtecoCodes),
         regions: Array.from(selectedRegions),
         provinces: Array.from(selectedProvinces),
@@ -132,7 +133,7 @@ export function useRAScrapingState() {
         batch_size: batchSize,
       });
       setActiveJobId(job.id);
-      await scrapeSelected({ items: selectedItems as any });
+      await scrapeSelected({ items: selectedItems as unknown as { name: string; url: string }[] });
       pollStatus(job.id);
     } catch (error) {
       addLog(`Errore durante lo scraping: ${error}`);
@@ -149,7 +150,7 @@ export function useRAScrapingState() {
       setIsScraping(true);
       addLog("Scraping completo avviato...");
       const job = await createJobMutation.mutateAsync({
-        job_type: "scrape_batch" as any,
+        job_type: "scrape_batch",
         ateco_codes: Array.from(selectedAtecoCodes),
         regions: Array.from(selectedRegions),
         provinces: Array.from(selectedProvinces),
