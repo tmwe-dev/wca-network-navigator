@@ -219,6 +219,7 @@ export function useAcquisitionPipeline() {
                 key_markets: (ed.key_markets as string[]) || prev.key_markets,
                 key_routes: (ed.key_routes as Array<{ from: string; to: string }>) || prev.key_routes,
               } : prev);
+            }
           } catch { /* non-blocking */ }
         })());
       }
