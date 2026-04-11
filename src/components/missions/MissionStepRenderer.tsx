@@ -286,7 +286,7 @@ function CommunicationStep({ data, onChange }: { data: MissionStepData; onChange
 
   useEffect(() => {
     findActiveEmailPrompts()
-      .then(({ data }) => { if (data) setEmailTypes(data); });
+      .then((data) => { if (data) setEmailTypes(data as any); });
   }, []);
 
   const modes = [
@@ -386,7 +386,7 @@ function AttachmentStep({ data, onChange }: { data: MissionStepData; onChange: (
   useEffect(() => {
     // Load templates
     findEmailTemplatesShort()
-      .then(({ data }) => { if (data) setTemplates(data); });
+      .then((data) => { if (data) setTemplates(data as any); });
     // Load images
     supabase.storage.from("email-images").list("", { limit: 50, sortBy: { column: "created_at", order: "desc" } })
       .then(({ data }) => {

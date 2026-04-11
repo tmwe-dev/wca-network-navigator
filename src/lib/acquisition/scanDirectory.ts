@@ -172,12 +172,12 @@ export async function loadPartnerPreview(wcaId: number) {
   const partner = await findPartnerByWcaId(wcaId);
   if (!partner) return null;
 
-  const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
+  const [contacts, nets, svcs, socialLinks] = await Promise.all([
     findPartnerContacts(partner.id, "name, title, email, direct_phone, mobile"),
     findPartnerNetworks(partner.id),
     findPartnerServices(partner.id),
     findPartnerSocialLinks(partner.id),
-  ]);
+  ]) as [any[], any[], any[], any[]];
 
   const ed = partner.enrichment_data as any;
 
