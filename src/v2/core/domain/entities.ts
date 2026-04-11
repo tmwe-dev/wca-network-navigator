@@ -236,3 +236,150 @@ export interface EmailTemplate {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+// ── Additional branded IDs ──────────────────────────────────────────
+
+export type BusinessCardId = Brand<string, "BusinessCardId">;
+export type SortingRuleId = Brand<string, "SortingRuleId">;
+export type OperatorId = Brand<string, "OperatorId">;
+export type WorkspaceDocId = Brand<string, "WorkspaceDocId">;
+export type CreditTransactionId = Brand<string, "CreditTransactionId">;
+export type OutreachQueueId = Brand<string, "OutreachQueueId">;
+export type ProspectId = Brand<string, "ProspectId">;
+
+export function businessCardId(raw: string): BusinessCardId { return raw as BusinessCardId; }
+export function sortingRuleId(raw: string): SortingRuleId { return raw as SortingRuleId; }
+export function operatorId(raw: string): OperatorId { return raw as OperatorId; }
+export function workspaceDocId(raw: string): WorkspaceDocId { return raw as WorkspaceDocId; }
+export function creditTransactionId(raw: string): CreditTransactionId { return raw as CreditTransactionId; }
+export function outreachQueueId(raw: string): OutreachQueueId { return raw as OutreachQueueId; }
+export function prospectId(raw: string): ProspectId { return raw as ProspectId; }
+
+// ── BusinessCard ────────────────────────────────────────────────────
+
+export interface BusinessCard {
+  readonly id: BusinessCardId;
+  readonly userId: UserId;
+  readonly companyName: string | null;
+  readonly contactName: string | null;
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly mobile: string | null;
+  readonly position: string | null;
+  readonly location: string | null;
+  readonly eventName: string | null;
+  readonly metAt: string | null;
+  readonly photoUrl: string | null;
+  readonly notes: string | null;
+  readonly tags: ReadonlyArray<string>;
+  readonly leadStatus: string;
+  readonly matchStatus: string;
+  readonly matchConfidence: number | null;
+  readonly matchedPartnerId: PartnerId | null;
+  readonly matchedContactId: ContactId | null;
+  readonly createdAt: string;
+}
+
+// ── SortingRule ──────────────────────────────────────────────────────
+
+export interface SortingRule {
+  readonly id: SortingRuleId;
+  readonly userId: UserId;
+  readonly name: string;
+  readonly field: string;
+  readonly direction: string;
+  readonly priority: number;
+  readonly isActive: boolean;
+  readonly createdAt: string;
+}
+
+// ── Operator ────────────────────────────────────────────────────────
+
+export interface Operator {
+  readonly id: OperatorId;
+  readonly userId: UserId;
+  readonly name: string;
+  readonly email: string;
+  readonly isAdmin: boolean;
+  readonly isActive: boolean;
+  readonly createdAt: string;
+}
+
+// ── WorkspaceDoc ────────────────────────────────────────────────────
+
+export interface WorkspaceDoc {
+  readonly id: WorkspaceDocId;
+  readonly userId: UserId;
+  readonly title: string;
+  readonly content: string | null;
+  readonly category: string | null;
+  readonly createdAt: string;
+}
+
+// ── CreditTransaction ──────────────────────────────────────────────
+
+export interface CreditTransaction {
+  readonly id: CreditTransactionId;
+  readonly userId: UserId;
+  readonly amount: number;
+  readonly operation: string;
+  readonly description: string | null;
+  readonly createdAt: string;
+}
+
+// ── ChannelMessage ──────────────────────────────────────────────────
+
+export interface ChannelMessage {
+  readonly id: MessageId;
+  readonly userId: UserId;
+  readonly channel: string;
+  readonly direction: string;
+  readonly subject: string | null;
+  readonly fromAddress: string | null;
+  readonly toAddress: string | null;
+  readonly bodyText: string | null;
+  readonly bodyHtml: string | null;
+  readonly partnerId: PartnerId | null;
+  readonly category: string | null;
+  readonly readAt: string | null;
+  readonly emailDate: string | null;
+  readonly createdAt: string;
+}
+
+// ── OutreachQueueItem ───────────────────────────────────────────────
+
+export interface OutreachQueueItem {
+  readonly id: OutreachQueueId;
+  readonly userId: UserId | null;
+  readonly partnerId: string;
+  readonly recipientEmail: string;
+  readonly recipientName: string | null;
+  readonly subject: string;
+  readonly htmlBody: string;
+  readonly status: string;
+  readonly position: number;
+  readonly scheduledAt: string | null;
+  readonly sentAt: string | null;
+  readonly errorMessage: string | null;
+  readonly retryCount: number;
+  readonly createdAt: string;
+}
+
+// ── Prospect ────────────────────────────────────────────────────────
+
+export interface Prospect {
+  readonly id: ProspectId;
+  readonly companyName: string;
+  readonly atecoCode: string | null;
+  readonly region: string | null;
+  readonly province: string | null;
+  readonly city: string | null;
+  readonly address: string | null;
+  readonly phone: string | null;
+  readonly email: string | null;
+  readonly website: string | null;
+  readonly revenue: number | null;
+  readonly employees: number | null;
+  readonly status: string;
+  readonly createdAt: string;
+}
