@@ -387,6 +387,27 @@ export async function getPartnersByLeadStatus(statuses: string[], select = "id")
   return data ?? [];
 }
 
+export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
+  let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
+  if (filters.country) q = q.eq("country_code", filters.country);
+  if (filters.type) q = q.eq("partner_type", filters.type as any);
+  if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
+  const { data, error } = await q.limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getPartnerWebsite(id: string) {
+  const { data, error } = await supabase.from("partners").select("id, website").eq("id", id).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
+  const { error } = await (supabase as any).from(table).update({ lead_status: status }).eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidatePartnerCache(qc: QueryClient, partnerId?: string) {
   qc.invalidateQueries({ queryKey: queryKeys.partners.all });
