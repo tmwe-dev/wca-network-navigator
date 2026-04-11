@@ -12,8 +12,8 @@ describe("activityConstants", () => {
     it("completed → pending (cycles)", () => {
       expect(nextStatus("completed")).toBe("pending");
     });
-    it("unknown status wraps to in_progress", () => {
-      expect(nextStatus("unknown")).toBe("in_progress");
+    it("unknown status wraps to pending (index -1 + 1 = 0)", () => {
+      expect(nextStatus("unknown")).toBe("pending");
     });
   });
 
