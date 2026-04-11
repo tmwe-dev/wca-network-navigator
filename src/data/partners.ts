@@ -353,7 +353,7 @@ export async function searchPartnersByNameAlias(term: string, select: string, li
 }
 
 /** Get partner WCA IDs by countries with optional profile filter */
-export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }) {
+export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<any[]> {
   let q = supabase.from("partners").select(select).in("country_code", countryCodes).not("wca_id", "is", null);
   if (options?.noProfile) q = q.is("raw_profile_html", null);
   const { data, error } = await q.order("company_name");
