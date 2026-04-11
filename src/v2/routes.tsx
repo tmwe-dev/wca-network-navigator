@@ -16,7 +16,6 @@ const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
 const CRMPage = lazy(() => import("./ui/pages/CRMPage").then((m) => ({ default: m.CRMPage })));
-const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 
 // ── Placeholder for future modules ──────────────────────────────────
 
