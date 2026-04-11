@@ -18,7 +18,7 @@ const STAFF_AGENTS = [
 ] as const;
 
 export function useStaffV2() {
-  const [selectedAgent, setSelectedAgent] = useState(STAFF_AGENTS[0].code);
+  const [selectedAgent, setSelectedAgent] = useState<string>(STAFF_AGENTS[0].code);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
 
