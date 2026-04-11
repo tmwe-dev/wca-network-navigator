@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 type CampaignSource = "partners" | "bca";
 
@@ -431,7 +432,7 @@ export default function Campaigns() {
       status: "pending" as const,
     }));
 
-    const { error } = await supabase.from("cockpit_queue").insert(rows as any);
+    await insertCockpitQueueItems(rows);
     if (error) {
       toast.error("Errore nell'invio al cockpit");
       console.error(error);

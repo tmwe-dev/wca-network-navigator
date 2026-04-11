@@ -14,6 +14,9 @@ import { Bot, Check, ChevronRight, MessageCircle, Loader2, Sparkles, Send, Globe
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { createLogger } from "@/lib/log";
+import { upsertAppSetting } from "@/data/appSettings";
+import { findAgentByUserAndName, createAgent } from "@/data/agents";
+import { updateProfileOnboarding } from "@/data/profiles";
 
 const log = createLogger("Onboarding");
 
@@ -138,16 +141,16 @@ export default function Onboarding() {
         { key: "ai_target_regions", value: JSON.stringify(selectedRegions) },
       ];
       for (const s of settings) {
-        await supabase.from("app_settings").upsert({ key: s.key, value: s.value, user_id: userId }, { onConflict: "user_id,key" });
+        await upsertAppSetting(userId, s.key, s.value);
       }
 
       // Create selected agents
       for (const template of AGENT_TEMPLATES) {
         if (!selectedAgents.includes(template.name)) continue;
-        const existing = await supabase.from("agents").select("id").eq("user_id", userId).eq("name", template.name).maybeSingle();
+        const existing = await findAgentByUserAndName(userId, template.name);
         if (existing.data) continue;
 
-        await supabase.from("agents").insert({
+        await createAgent({
           user_id: userId,
           name: template.name,
           role: template.role,
@@ -159,7 +162,7 @@ export default function Onboarding() {
       }
 
       // Mark onboarding complete
-      await supabase.from("profiles").update({ onboarding_completed: true }).eq("user_id", userId);
+      await updateProfileOnboarding(userId);
 
       toast.success("🚀 Piattaforma configurata! Benvenuto.");
       navigate("/", { replace: true });
