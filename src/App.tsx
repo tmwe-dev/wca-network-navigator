@@ -20,6 +20,7 @@ import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
 const Auth = lazyRetry(() => import("./pages/Auth"));
+const LauncherHome = lazyRetry(() => import("./pages/LauncherHome"));
 
 // ── All routes use lazyRetry for automatic chunk recovery ──
 const NetworkPage = lazyRetry(() => import("./pages/Network"));
