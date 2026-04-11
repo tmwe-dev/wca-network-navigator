@@ -370,16 +370,23 @@ export interface OutreachQueueItem {
 export interface Prospect {
   readonly id: ProspectId;
   readonly companyName: string;
-  readonly atecoCode: string | null;
+  readonly codiceAteco: string | null;
+  readonly descrizioneAteco: string | null;
   readonly region: string | null;
   readonly province: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  readonly cap: string | null;
   readonly phone: string | null;
   readonly email: string | null;
+  readonly pec: string | null;
   readonly website: string | null;
-  readonly revenue: number | null;
-  readonly employees: number | null;
-  readonly status: string;
+  readonly fatturato: number | null;
+  readonly dipendenti: number | null;
+  readonly utile: number | null;
+  readonly leadStatus: string;
+  readonly source: string;
+  readonly interactionCount: number;
   readonly createdAt: string;
+  readonly updatedAt: string;
 }
