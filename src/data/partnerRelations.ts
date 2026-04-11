@@ -12,7 +12,7 @@ export async function findPartnerContacts(partnerId: string, select = "id, name,
 }
 
 export async function insertPartnerContact(contact: Record<string, unknown>) {
-  const { data, error } = await supabase.from("partner_contacts").insert(contact).select().single();
+  const { data, error } = await supabase.from("partner_contacts").insert(contact as any).select().single();
   if (error) throw error;
   return data;
 }
@@ -24,7 +24,7 @@ export async function updatePartnerContact(id: string, updates: Record<string, u
 
 export async function insertPartnerContacts(contacts: Record<string, unknown>[]) {
   if (contacts.length === 0) return;
-  const { error } = await supabase.from("partner_contacts").insert(contacts);
+  const { error } = await supabase.from("partner_contacts").insert(contacts as any);
   if (error) throw error;
 }
 
@@ -43,7 +43,7 @@ export async function findPartnerNetworks(partnerId: string) {
 
 export async function insertPartnerNetworks(networks: Record<string, unknown>[]) {
   if (networks.length === 0) return;
-  const { error } = await supabase.from("partner_networks").insert(networks);
+  const { error } = await supabase.from("partner_networks").insert(networks as any);
   if (error) throw error;
 }
 
@@ -56,7 +56,7 @@ export async function findPartnerServices(partnerId: string) {
 
 export async function insertPartnerServices(services: Record<string, unknown>[]) {
   if (services.length === 0) return;
-  const { error } = await supabase.from("partner_services").insert(services);
+  const { error } = await supabase.from("partner_services").insert(services as any);
   if (error) throw error;
 }
 
@@ -69,7 +69,7 @@ export async function findPartnerCertifications(partnerId: string) {
 
 export async function insertPartnerCertifications(certs: Record<string, unknown>[]) {
   if (certs.length === 0) return;
-  const { error } = await supabase.from("partner_certifications").insert(certs);
+  const { error } = await supabase.from("partner_certifications").insert(certs as any);
   if (error) throw error;
 }
 

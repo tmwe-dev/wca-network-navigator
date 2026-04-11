@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createImportLog(log: Record<string, unknown>) {
-  const { data, error } = await supabase.from("import_logs").insert(log).select().single();
+  const { data, error } = await supabase.from("import_logs").insert(log as any).select().single();
   if (error) throw error;
   return data;
 }
