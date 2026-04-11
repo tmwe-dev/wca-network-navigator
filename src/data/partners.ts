@@ -363,13 +363,16 @@ export async function getPartnersByCountries(countryCodes: string[], select: str
 
 /** Delete partners and all related data by IDs */
 export async function deletePartnersWithRelations(ids: string[]) {
-  const relatedTables = ["partner_contacts", "partner_networks", "partner_services", "partner_certifications", "partner_social_links", "interactions", "reminders", "activities"];
   for (let i = 0; i < ids.length; i += 50) {
     const batch = ids.slice(i, i + 50);
-    for (const table of relatedTables) {
-      const col = table === "partners" ? "id" : "partner_id";
-      await supabase.from(table).delete().in(col, batch);
-    }
+    await supabase.from("partner_contacts").delete().in("partner_id", batch);
+    await supabase.from("partner_networks").delete().in("partner_id", batch);
+    await supabase.from("partner_services").delete().in("partner_id", batch);
+    await supabase.from("partner_certifications").delete().in("partner_id", batch);
+    await supabase.from("partner_social_links").delete().in("partner_id", batch);
+    await supabase.from("interactions").delete().in("partner_id", batch);
+    await supabase.from("reminders").delete().in("partner_id", batch);
+    await supabase.from("activities").delete().in("partner_id", batch);
     await supabase.from("partners").delete().in("id", batch);
   }
 }
