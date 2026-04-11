@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
+import { countTableRows, countViewRows, rpcCall } from "@/data/rpc";
 import { countPartnersWithoutCountry, countActivePartners } from "@/data/partners";
 import {
   CheckCircle2, XCircle, Loader2, Play, RotateCcw,
