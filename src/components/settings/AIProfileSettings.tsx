@@ -237,13 +237,14 @@ export default function AIProfileSettings() {
         </CardContent>
       </Card>
 
-      {/* ── Card 2b: Sales Knowledge Base ── */}
-      <Card>
+      {/* ── Card 2b: Sales Knowledge Base (Legacy — migrating to KB Entries) ── */}
+      <Card className="border-amber-500/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
+              <TrendingUp className="w-4 h-4 text-amber-500" />
               <CardTitle className="text-base">Sales Knowledge Base</CardTitle>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">LEGACY</span>
             </div>
             <Button
               variant="outline"
@@ -255,15 +256,16 @@ export default function AIProfileSettings() {
             </Button>
           </div>
           <CardDescription>
-            Guida completa per la generazione di email B2B: tecniche di vendita, gestione obiezioni, struttura email, adattamento tono.
-            L'AI segue queste istruzioni per scrivere comunicazioni convincenti come un venditore esperto.
+            <span className="text-amber-600 font-medium">⚠️ Questo campo sarà sostituito dalle schede KB atomiche.</span>{" "}
+            Le tecniche di vendita inserite qui vengono già ignorate se esistono schede nella Knowledge Base strutturata (Impostazioni → Knowledge Base).
+            Migra i contenuti come schede KB per un controllo più granulare.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
             value={fields.ai_sales_knowledge_base || DEFAULT_SALES_KNOWLEDGE_BASE.trim()}
             onChange={e => set("ai_sales_knowledge_base", e.target.value)}
-            className="min-h-[400px] text-xs font-mono leading-relaxed"
+            className="min-h-[400px] text-xs font-mono leading-relaxed opacity-80"
           />
         </CardContent>
       </Card>
