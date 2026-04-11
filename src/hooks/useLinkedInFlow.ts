@@ -14,6 +14,11 @@ import { createLogger } from "@/lib/log";
 import {
   sleep, getProcessedCount, getCountByStatus, saveEnrichmentToPartner,
 } from "./useLinkedInFlowHelpers";
+import {
+  createLinkedInFlowJob, updateLinkedInFlowJob, getLinkedInFlowJobField,
+  findPendingFlowItems, updateLinkedInFlowItem, insertLinkedInFlowItems,
+} from "@/data/linkedinFlow";
+import { findPartnerByName } from "@/data/partners";
 
 const log = createLogger("useLinkedInFlow");
 
@@ -73,10 +78,10 @@ export function useLinkedInFlow() {
     const processed = await getProcessedCount(jobId);
     const successes = await getCountByStatus(jobId, "completed");
     const errors = await getCountByStatus(jobId, "error");
-    await supabase.from("linkedin_flow_jobs").update({
+    await updateLinkedInFlowJob(jobId, {
       status: "completed", processed_count: processed, success_count: successes,
       error_count: errors, completed_at: new Date().toISOString(),
-    }).eq("id", jobId);
+    });
     runningRef.current = false;
     setPhase("completed");
     setCurrentContact(null);
@@ -85,24 +90,21 @@ export function useLinkedInFlow() {
   };
 
   const processLoop = useCallback(async (jobId: string, delaySec: number) => {
-    const { data: items } = await supabase
-      .from("linkedin_flow_items").select("*")
-      .eq("job_id", jobId).eq("status", "pending")
-      .order("position", { ascending: true });
-    if (!items || items.length === 0) { await finalizeJob(jobId); return; }
+    const items = await findPendingFlowItems(jobId);
+    if (items.length === 0) { await finalizeJob(jobId); return; }
 
-    const { data: jobData } = await supabase.from("linkedin_flow_jobs").select("config").eq("id", jobId).single();
+    const jobData = await getLinkedInFlowJobField(jobId, "config");
     const jobConfig = (jobData?.config as Record<string, unknown>) || {};
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
       if (abortRef.current) {
-        await supabase.from("linkedin_flow_jobs").update({ status: "cancelled" }).eq("id", jobId);
+        await updateLinkedInFlowJob(jobId, { status: "cancelled" });
         runningRef.current = false; setPhase("idle");
         toast.info("LinkedIn Flow interrotto"); return;
       }
       setCurrentContact(item.contact_name || item.contact_id);
-      await supabase.from("linkedin_flow_items").update({ status: "processing", started_at: new Date().toISOString() }).eq("id", item.id);
+      await updateLinkedInFlowItem(item.id, { status: "processing", started_at: new Date().toISOString() });
       const enrichment: Record<string, unknown> = { processed_at: new Date().toISOString() };
       let itemStatus = "completed";
       let errorMsg: string | null = null;
@@ -131,10 +133,9 @@ export function useLinkedInFlow() {
         // STEP 2: Website Deep Search
         if (jobConfig.deep_search_web && pcBridge.isAvailable && item.company_name) {
           setPhase("deep_search"); setCurrentStep("Deep Search sito web...");
-          const { data: partner } = await supabase.from("partners").select("website, enrichment_data")
-            .ilike("company_name", `%${item.company_name}%`).limit(1).single();
-          const website = partner?.website;
-          const existingEnrichment = (partner?.enrichment_data as Record<string, string>) || {};
+          const partner = await findPartnerByName(item.company_name);
+          const website = (partner as any)?.website;
+          const existingEnrichment = ((partner as any)?.enrichment_data as Record<string, string>) || {};
           const cachedAt = existingEnrichment.website_scraped_at;
           const isCacheFresh = cachedAt && (Date.now() - new Date(cachedAt).getTime()) < 30 * 86400000;
 
@@ -197,16 +198,16 @@ export function useLinkedInFlow() {
         log.error("flow error", { contactName: item.contact_name, message: errorMsg });
       }
 
-      await supabase.from("linkedin_flow_items").update({
+      await updateLinkedInFlowItem(item.id, {
         status: itemStatus, scraped_data: enrichment as Record<string, string>,
         enrichment_result: enrichment as Record<string, string>,
         error_message: errorMsg, completed_at: new Date().toISOString(),
-      }).eq("id", item.id);
+      });
 
       const processed = await getProcessedCount(jobId);
       const successes = await getCountByStatus(jobId, "completed");
       const errors = await getCountByStatus(jobId, "error");
-      await supabase.from("linkedin_flow_jobs").update({ processed_count: processed, success_count: successes, error_count: errors, updated_at: new Date().toISOString() }).eq("id", jobId);
+      await updateLinkedInFlowJob(jobId, { processed_count: processed, success_count: successes, error_count: errors, updated_at: new Date().toISOString() });
       setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
 
       if (idx < items.length - 1) {
@@ -231,16 +232,15 @@ export function useLinkedInFlow() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Non autenticato"); return null; }
 
-    const { data: job, error: jobErr } = await supabase.from("linkedin_flow_jobs").insert({
+    const job = await createLinkedInFlowJob({
       user_id: user.id, total_count: contacts.length, delay_seconds: config.delaySec || 15,
       config: { auto_connect: config.autoConnect ?? false, generate_outreach: config.generateOutreach ?? true, deep_search_web: config.deepSearchWeb ?? true, extensions: { linkedin: hasLi, partner_connect: hasPc } },
       status: "running",
-    }).select().single();
-    if (jobErr || !job) { toast.error("Errore creazione job: " + (jobErr?.message || "unknown")); return null; }
+    });
+    if (!job) { toast.error("Errore creazione job"); return null; }
 
     const items = contacts.map((c, i) => ({ job_id: job.id, contact_id: c.id, contact_name: c.name, company_name: c.company, linkedin_url: c.linkedinUrl || null, source_type: c.sourceType || "cockpit", position: i }));
-    const { error: itemsErr } = await supabase.from("linkedin_flow_items").insert(items);
-    if (itemsErr) { toast.error("Errore inserimento contatti: " + itemsErr.message); return null; }
+    await insertLinkedInFlowItems(items);
 
     setActiveJobId(job.id);
     setProgress({ total: contacts.length, processed: 0, success: 0, errors: 0 });
@@ -257,8 +257,8 @@ export function useLinkedInFlow() {
   const resumeFlow = useCallback(async () => {
     if (!activeJobId) return;
     abortRef.current = false; runningRef.current = true; setPhase("scraping");
-    const { data: job } = await supabase.from("linkedin_flow_jobs").select("delay_seconds").eq("id", activeJobId).single();
-    await supabase.from("linkedin_flow_jobs").update({ status: "running" }).eq("id", activeJobId);
+    const job = await getLinkedInFlowJobField(activeJobId, "delay_seconds");
+    await updateLinkedInFlowJob(activeJobId, { status: "running" });
     processLoop(activeJobId, (job?.delay_seconds as number) || 15);
   }, [activeJobId, processLoop]);
 

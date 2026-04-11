@@ -1,7 +1,5 @@
 /**
  * useOutreachQueue — coda automatica di invio outreach.
- * Fix: rimosso trackQueueActivity duplicato, usa useTrackActivity come fonte unica.
- * Fix: catch vuoti sostituiti con logging strutturato (Documento 2 §7).
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +11,7 @@ import { useTrackActivity } from "@/hooks/useTrackActivity";
 import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import type { ActivityType } from "@/types/tracking";
+import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
 
 const log = createLogger("useOutreachQueue");
 
@@ -60,13 +59,13 @@ export function useOutreachQueue() {
   const updateStatus = async (id: string, status: string, error?: string) => {
     const updates: Record<string, unknown> = { status, processed_at: new Date().toISOString() };
     if (error) updates.last_error = error;
-    await supabase.from("outreach_queue").update(updates).eq("id", id);
+    await updateOutreachItem(id, updates);
   };
 
   const incrementAttempts = async (id: string) => {
-    const { data } = await supabase.from("outreach_queue").select("attempts").eq("id", id).single();
+    const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await supabase.from("outreach_queue").update({ attempts: data.attempts + 1 }).eq("id", id);
+      await updateOutreachItem(id, { attempts: (data as any).attempts + 1 });
     }
   };
 
@@ -88,32 +87,17 @@ export function useOutreachQueue() {
     try {
       switch (item.channel) {
         case "whatsapp": {
-          if (!wa.isAvailable) {
-            await updateStatus(item.id, "failed", "Estensione WhatsApp non disponibile");
-            return false;
-          }
-          if (!wa.isAuthenticated) {
-            await updateStatus(item.id, "pending", "WhatsApp Web non autenticato");
-            return false;
-          }
+          if (!wa.isAvailable) { await updateStatus(item.id, "failed", "Estensione WhatsApp non disponibile"); return false; }
+          if (!wa.isAuthenticated) { await updateStatus(item.id, "pending", "WhatsApp Web non autenticato"); return false; }
           const phone = item.recipient_phone?.replace(/[^0-9+]/g, "").replace(/^\+/, "") || "";
           if (!phone) { await updateStatus(item.id, "failed", "Numero telefono mancante"); return false; }
           const res = await wa.sendWhatsApp(phone, item.body);
-          if (res.success) {
-            await updateStatus(item.id, "sent");
-            trackQueueItem(item, "whatsapp");
-            toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` });
-            return true;
-          }
+          if (res.success) { await updateStatus(item.id, "sent"); trackQueueItem(item, "whatsapp"); toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` }); return true; }
           await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", res.error);
           return false;
         }
-
         case "linkedin": {
-          if (!li.isAvailable) {
-            await updateStatus(item.id, "failed", "Estensione LinkedIn non disponibile");
-            return false;
-          }
+          if (!li.isAvailable) { await updateStatus(item.id, "failed", "Estensione LinkedIn non disponibile"); return false; }
           const profileUrl = item.recipient_linkedin_url || "";
           if (!profileUrl) { await updateStatus(item.id, "failed", "URL profilo LinkedIn mancante"); return false; }
           let liRes = await li.sendDirectMessage(profileUrl, item.body);
@@ -121,37 +105,22 @@ export function useOutreachQueue() {
             await new Promise(r => setTimeout(r, 2000));
             liRes = await li.sendDirectMessage(profileUrl, item.body);
           }
-          if (liRes.success) {
-            await updateStatus(item.id, "sent");
-            trackQueueItem(item, "linkedin");
-            toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` });
-            return true;
-          }
+          if (liRes.success) { await updateStatus(item.id, "sent"); trackQueueItem(item, "linkedin"); toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` }); return true; }
           await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", liRes.error);
           return false;
         }
-
         case "email": {
           try {
-            await invokeEdge("send-email", {
-              body: { to: item.recipient_email, subject: item.subject || "(nessun oggetto)", html: item.body },
-              context: "useOutreachQueue.email",
-            });
+            await invokeEdge("send-email", { body: { to: item.recipient_email, subject: item.subject || "(nessun oggetto)", html: item.body }, context: "useOutreachQueue.email" });
           } catch (err) {
             const msg = isApiError(err) ? err.message : (err instanceof Error ? err.message : String(err));
             log.error("queue email send failed", { error: msg, to: item.recipient_email });
             await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
             return false;
           }
-          await updateStatus(item.id, "sent");
-          trackQueueItem(item, "email");
-          toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` });
-          return true;
+          await updateStatus(item.id, "sent"); trackQueueItem(item, "email"); toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` }); return true;
         }
-
-        default:
-          await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`);
-          return false;
+        default: await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`); return false;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -165,23 +134,10 @@ export function useOutreachQueue() {
     if (processingRef.current || pausedRef.current) return;
     processingRef.current = true;
     setProcessing(true);
-
     try {
-      const { data: items } = await supabase
-        .from("outreach_queue")
-        .select("id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, attempts, max_attempts, priority, created_by")
-        .eq("status", "pending")
-        .order("priority", { ascending: false })
-        .order("created_at", { ascending: true })
-        .limit(5);
-
-      if (!items || items.length === 0) {
-        setPendingCount(0);
-        return;
-      }
-
+      const items = await findPendingOutreachItems(5);
+      if (!items || items.length === 0) { setPendingCount(0); return; }
       setPendingCount(items.length);
-
       for (const item of items as QueueItem[]) {
         if (pausedRef.current) break;
         await processItem(item);
@@ -190,16 +146,11 @@ export function useOutreachQueue() {
       }
     } catch (err: unknown) {
       log.error("processQueue failed", { error: err instanceof Error ? err.message : String(err) });
-    } finally {
-      processingRef.current = false;
-      setProcessing(false);
-    }
+    } finally { processingRef.current = false; setProcessing(false); }
   }, [processItem]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!pausedRef.current) processQueue();
-    }, 5000);
+    const interval = setInterval(() => { if (!pausedRef.current) processQueue(); }, 5000);
     processQueue();
     return () => clearInterval(interval);
   }, [processQueue]);
@@ -208,9 +159,7 @@ export function useOutreachQueue() {
     const channel = supabase
       .channel("outreach-queue-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "outreach_queue" }, () => {
-        if (!pausedRef.current) {
-          setTimeout(() => processQueue(), 1000);
-        }
+        if (!pausedRef.current) setTimeout(() => processQueue(), 1000);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
