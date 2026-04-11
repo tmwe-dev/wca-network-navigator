@@ -3,55 +3,26 @@
  */
 import * as React from "react";
 import { useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useCockpitLogicV2 } from "@/v2/hooks/useCockpitLogicV2";
+import { useAgentTasksV2 } from "@/v2/hooks/useAgentTasksV2";
+import { useAgentsV2 } from "@/v2/hooks/useAgentsV2";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
-import { Gauge, Bot, CheckCircle, Clock, Trash2, Play } from "lucide-react";
+import { Gauge, Bot, CheckCircle, Clock, Trash2 } from "lucide-react";
 import { StatCard } from "../molecules/StatCard";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function CockpitPage(): React.ReactElement {
   const qc = useQueryClient();
-
-  const { data: queue } = useQuery({
-    queryKey: ["v2-cockpit-queue"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cockpit_queue")
-        .select("id, source_type, source_id, status, partner_id, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const { data: tasks } = useQuery({
-    queryKey: ["v2-agent-tasks"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agent_tasks")
-        .select("id, task_type, status, description, agent_id, created_at, completed_at, result_summary")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const { data: agents } = useQuery({
-    queryKey: ["v2-agents-for-cockpit"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("agents").select("id, name, avatar_emoji").limit(20);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: queue } = useCockpitLogicV2();
+  const { data: tasks } = useAgentTasksV2();
+  const { data: agents } = useAgentsV2();
 
   const agentMap = useMemo(() => {
     const map = new Map<string, { name: string; emoji: string }>();
-    agents?.forEach((a) => map.set(a.id, { name: a.name, emoji: a.avatar_emoji }));
+    agents?.forEach((a) => map.set(a.id, { name: a.name, emoji: a.avatarEmoji }));
     return map;
   }, [agents]);
 
@@ -66,7 +37,7 @@ export function CockpitPage(): React.ReactElement {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2-cockpit-queue"] });
+      qc.invalidateQueries({ queryKey: ["v2", "cockpit-queue"] });
       toast.success("Rimosso dalla coda");
     },
   });
@@ -85,7 +56,6 @@ export function CockpitPage(): React.ReactElement {
         <StatCard title="Falliti" value={String(failed)} icon={<Trash2 className="h-4 w-4" />} />
       </div>
 
-      {/* Queue */}
       {queue && queue.length > 0 ? (
         <div className="space-y-3">
           <h3 className="font-semibold text-foreground">Coda operativa ({queue.length})</h3>
@@ -102,11 +72,11 @@ export function CockpitPage(): React.ReactElement {
               <tbody>
                 {queue.map((q) => (
                   <tr key={q.id} className="border-t">
-                    <td className="px-4 py-2 text-foreground">{q.source_type}</td>
+                    <td className="px-4 py-2 text-foreground">{q.sourceType}</td>
                     <td className="px-4 py-2">
                       <StatusBadge status={q.status === "pending" ? "warning" : q.status === "completed" ? "success" : "info"} label={q.status} />
                     </td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString("it")}</td>
+                    <td className="px-4 py-2 text-xs text-muted-foreground">{new Date(q.createdAt).toLocaleDateString("it")}</td>
                     <td className="px-4 py-2">
                       <Button variant="ghost" size="sm" onClick={() => removeFromQueueMut.mutate(q.id)}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -120,13 +90,12 @@ export function CockpitPage(): React.ReactElement {
         </div>
       ) : null}
 
-      {/* Recent agent tasks */}
       {tasks && tasks.length > 0 ? (
         <div className="space-y-3">
           <h3 className="font-semibold text-foreground">Task agenti recenti</h3>
           <div className="space-y-2">
             {tasks.slice(0, 20).map((t) => {
-              const agent = agentMap.get(t.agent_id);
+              const agent = agentMap.get(t.agentId);
               return (
                 <div key={t.id} className="p-3 rounded-lg border bg-card">
                   <div className="flex items-center justify-between">
@@ -135,7 +104,7 @@ export function CockpitPage(): React.ReactElement {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {agent?.name ?? "Agente"} • {t.task_type} • {new Date(t.created_at).toLocaleDateString("it")}
+                          {agent?.name ?? "Agente"} • {t.taskType} • {new Date(t.createdAt).toLocaleDateString("it")}
                         </p>
                       </div>
                     </div>
@@ -144,8 +113,8 @@ export function CockpitPage(): React.ReactElement {
                       label={t.status}
                     />
                   </div>
-                  {t.result_summary ? (
-                    <p className="text-xs text-muted-foreground mt-2 border-t pt-2">{t.result_summary}</p>
+                  {t.resultSummary ? (
+                    <p className="text-xs text-muted-foreground mt-2 border-t pt-2">{t.resultSummary}</p>
                   ) : null}
                 </div>
               );

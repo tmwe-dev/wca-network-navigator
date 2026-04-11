@@ -103,7 +103,6 @@ export function OutreachPage(): React.ReactElement {
         </Button>
       </div>
 
-      {/* Filters row */}
       <div className="flex flex-wrap gap-2">
         <div className="flex gap-1">
           {STATUSES.map((s) => (

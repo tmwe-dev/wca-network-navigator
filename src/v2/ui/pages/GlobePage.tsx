@@ -3,8 +3,7 @@
  */
 import * as React from "react";
 import { Suspense, lazy, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useCountryStatsV2 } from "@/v2/hooks/useCountryStatsV2";
 
 const StandaloneGlobe = lazy(() =>
   import("@/standalone-globe").then((m) => ({ default: m.StandaloneGlobe }))
@@ -12,22 +11,16 @@ const StandaloneGlobe = lazy(() =>
 
 export function GlobePage(): React.ReactElement {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const { data: countryStats } = useCountryStatsV2();
 
-  const { data: countryStats } = useQuery({
-    queryKey: ["v2-country-stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_country_stats");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const totalPartners = countryStats?.reduce((s, c) => s + c.count, 0) ?? 0;
 
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b bg-card">
         <h1 className="text-xl font-bold text-foreground">Mappa Globale</h1>
         <p className="text-xs text-muted-foreground">
-          {countryStats?.length ?? 0} paesi • {countryStats?.reduce((s, c) => s + Number(c.total_partners), 0) ?? 0} partner
+          {countryStats?.length ?? 0} paesi • {totalPartners} partner
         </p>
       </div>
       <div className="flex-1 relative bg-background">

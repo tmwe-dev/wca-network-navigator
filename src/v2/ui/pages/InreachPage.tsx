@@ -3,24 +3,9 @@
  */
 import * as React from "react";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Mail, ArrowDownLeft, Search, Eye, X } from "lucide-react";
+import { useInreachV2, useMarkReadV2, type InboundMessage } from "@/v2/hooks/useInreachV2";
+import { Mail, ArrowDownLeft, Search, X } from "lucide-react";
 import { StatusBadge } from "../atoms/StatusBadge";
-import { Button } from "../atoms/Button";
-
-interface InboundMessage {
-  readonly id: string;
-  readonly from_address: string | null;
-  readonly subject: string | null;
-  readonly body_text: string | null;
-  readonly body_html: string | null;
-  readonly channel: string;
-  readonly direction: string;
-  readonly created_at: string;
-  readonly read_at: string | null;
-  readonly category: string | null;
-}
 
 const CATEGORIES = ["", "inquiry", "reply", "notification", "spam"] as const;
 const CAT_LABELS: Record<string, string> = {
@@ -32,45 +17,19 @@ export function InreachPage(): React.ReactElement {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("");
   const [selectedMsg, setSelectedMsg] = useState<InboundMessage | null>(null);
-  const qc = useQueryClient();
 
-  const { data: messages, isLoading } = useQuery({
-    queryKey: ["v2-inreach", search, catFilter],
-    queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select("id, from_address, subject, body_text, body_html, channel, direction, created_at, read_at, category")
-        .eq("direction", "inbound")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (search) q = q.or(`subject.ilike.%${search}%,from_address.ilike.%${search}%`);
-      if (catFilter) q = q.eq("category", catFilter);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as InboundMessage[];
-    },
-  });
+  const { data: messages, isLoading } = useInreachV2(search, catFilter);
+  const markReadMut = useMarkReadV2();
 
-  const markReadMut = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("channel_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["v2-inreach"] }),
-  });
-
-  const unreadCount = useMemo(() => messages?.filter((m) => !m.read_at).length ?? 0, [messages]);
+  const unreadCount = useMemo(() => messages?.filter((m) => !m.readAt).length ?? 0, [messages]);
 
   const handleSelect = (msg: InboundMessage) => {
     setSelectedMsg(msg);
-    if (!msg.read_at) markReadMut.mutate(msg.id);
+    if (!msg.readAt) markReadMut.mutate(msg.id);
   };
 
   return (
     <div className="flex h-full">
-      {/* Message list */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-3">
@@ -112,22 +71,22 @@ export function InreachPage(): React.ReactElement {
             <button
               key={msg.id}
               onClick={() => handleSelect(msg)}
-              className={`w-full text-left p-4 border-b hover:bg-accent/30 transition-colors ${!msg.read_at ? "bg-primary/5" : ""} ${selectedMsg?.id === msg.id ? "bg-accent" : ""}`}
+              className={`w-full text-left p-4 border-b hover:bg-accent/30 transition-colors ${!msg.readAt ? "bg-primary/5" : ""} ${selectedMsg?.id === msg.id ? "bg-accent" : ""}`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  {!msg.read_at && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
-                  <span className={`text-sm truncate ${!msg.read_at ? "font-semibold text-foreground" : "text-foreground"}`}>
-                    {msg.from_address ?? "Sconosciuto"}
+                  {!msg.readAt && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
+                  <span className={`text-sm truncate ${!msg.readAt ? "font-semibold text-foreground" : "text-foreground"}`}>
+                    {msg.fromAddress ?? "Sconosciuto"}
                   </span>
                   {msg.category ? <StatusBadge status="info" label={msg.category} /> : null}
                 </div>
                 <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                  {new Date(msg.created_at).toLocaleDateString("it")}
+                  {new Date(msg.createdAt).toLocaleDateString("it")}
                 </span>
               </div>
               <p className="text-sm text-foreground mt-1 truncate">{msg.subject ?? "(Senza oggetto)"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{msg.body_text?.slice(0, 120)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{msg.bodyText?.slice(0, 120)}</p>
             </button>
           ))}
           {!isLoading && (!messages || messages.length === 0) ? (
@@ -139,13 +98,12 @@ export function InreachPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Detail panel */}
       {selectedMsg ? (
         <div className="w-[55%] max-w-2xl border-l bg-card flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <div className="min-w-0">
               <p className="font-semibold text-foreground truncate">{selectedMsg.subject ?? "(Senza oggetto)"}</p>
-              <p className="text-xs text-muted-foreground">{selectedMsg.from_address}</p>
+              <p className="text-xs text-muted-foreground">{selectedMsg.fromAddress}</p>
             </div>
             <button onClick={() => setSelectedMsg(null)}>
               <X className="h-5 w-5 text-muted-foreground" />
@@ -154,7 +112,7 @@ export function InreachPage(): React.ReactElement {
           <div className="flex items-center gap-2 px-4 py-2 border-b text-xs text-muted-foreground">
             <span>{selectedMsg.channel}</span>
             <span>•</span>
-            <span>{new Date(selectedMsg.created_at).toLocaleString("it")}</span>
+            <span>{new Date(selectedMsg.createdAt).toLocaleString("it")}</span>
             {selectedMsg.category ? (
               <>
                 <span>•</span>
@@ -163,13 +121,13 @@ export function InreachPage(): React.ReactElement {
             ) : null}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {selectedMsg.body_html ? (
+            {selectedMsg.bodyHtml ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: selectedMsg.body_html }}
+                dangerouslySetInnerHTML={{ __html: selectedMsg.bodyHtml }}
               />
             ) : (
-              <p className="text-sm text-foreground whitespace-pre-wrap">{selectedMsg.body_text ?? "Nessun contenuto"}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{selectedMsg.bodyText ?? "Nessun contenuto"}</p>
             )}
           </div>
         </div>

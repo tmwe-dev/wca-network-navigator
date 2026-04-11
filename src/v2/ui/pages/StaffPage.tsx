@@ -3,68 +3,22 @@
  */
 import * as React from "react";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useStaffV2 } from "@/v2/hooks/useStaffV2";
 import { Button } from "../atoms/Button";
-import { Bot, Send, Plus } from "lucide-react";
-
-interface ChatMessage {
-  readonly role: "user" | "assistant";
-  readonly content: string;
-}
-
-const STAFF_AGENTS = [
-  { code: "director", name: "Direttore", emoji: "🎯" },
-  { code: "account_manager", name: "Account Manager", emoji: "🤝" },
-  { code: "strategist", name: "Strategist", emoji: "📊" },
-] as const;
+import { Bot, Send } from "lucide-react";
 
 export function StaffPage(): React.ReactElement {
-  const [selectedAgent, setSelectedAgent] = useState<string>(STAFF_AGENTS[0].code);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const {
+    agents, selectedAgent, agent, messages, sending,
+    plans, switchAgent, sendMessage,
+  } = useStaffV2();
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
 
-  const { data: plans } = useQuery({
-    queryKey: ["v2-work-plans"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_work_plans")
-        .select("id, title, status, current_step, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const handleSend = async () => {
-    if (!input.trim() || sending) return;
-    const userMsg: ChatMessage = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+  const handleSend = () => {
+    if (!input.trim()) return;
+    sendMessage(input);
     setInput("");
-    setSending(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: {
-          messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
-          context: `staff_direzionale_${selectedAgent}`,
-        },
-      });
-      const assistantMsg: ChatMessage = {
-        role: "assistant",
-        content: data?.response ?? data?.message ?? "Risposta non disponibile",
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Errore nella comunicazione con l'AI." }]);
-    } finally {
-      setSending(false);
-    }
   };
-
-  const agent = STAFF_AGENTS.find((a) => a.code === selectedAgent) ?? STAFF_AGENTS[0];
 
   return (
     <div className="flex h-full">
@@ -74,17 +28,17 @@ export function StaffPage(): React.ReactElement {
           <h2 className="font-bold text-foreground">Staff Direzionale</h2>
         </div>
         <nav className="p-2 space-y-1 flex-1">
-          {STAFF_AGENTS.map((a) => (
+          {agents.map((a) => (
             <button
               key={a.code}
-              onClick={() => { setSelectedAgent(a.code); setMessages([]); }}
+              onClick={() => switchAgent(a.code)}
               className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selectedAgent === a.code ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
             >
               {a.emoji} {a.name}
             </button>
           ))}
         </nav>
-        {plans && plans.length > 0 ? (
+        {plans.length > 0 ? (
           <div className="p-3 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-2">Work Plans</p>
             {plans.slice(0, 5).map((p) => (
