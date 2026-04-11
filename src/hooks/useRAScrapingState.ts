@@ -83,8 +83,9 @@ export function useRAScrapingState() {
 
       if (s.status === "completed" || s.status === "error") {
         clearInterval(pollInterval);
+        const finalStatus = s.status === "error" ? "failed" : "completed";
         await updateJobMutation.mutateAsync({
-          id: jobId, status: s.status, completed_at: new Date().toISOString(),
+          id: jobId, status: finalStatus as "completed" | "failed", completed_at: new Date().toISOString(),
         });
         setIsScraping(false);
       }
@@ -132,7 +133,7 @@ export function useRAScrapingState() {
         batch_size: batchSize,
       });
       setActiveJobId(job.id);
-      await scrapeSelected({ items: selectedItems as unknown as Record<string, unknown>[] });
+      await scrapeSelected({ items: selectedItems });
       pollStatus(job.id);
     } catch (error) {
       addLog(`Errore durante lo scraping: ${error}`);
