@@ -17,7 +17,7 @@ export function OperatorsSettingsTab(): React.ReactElement {
     queryFn: async () => {
       const { data } = await supabase
         .from("operators")
-        .select("id, name, email, role, is_active, created_at")
+        .select("id, name, email, is_active, is_admin, created_at")
         .order("name");
       return data ?? [];
     },
@@ -51,7 +51,7 @@ export function OperatorsSettingsTab(): React.ReactElement {
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{op.name}</p>
-                  <p className="text-xs text-muted-foreground">{op.email} · {op.role}</p>
+                  <p className="text-xs text-muted-foreground">{op.email} · {op.is_admin ? "Admin" : "Operatore"}</p>
                 </div>
                 <Switch
                   checked={op.is_active}
