@@ -1,6 +1,6 @@
 /**
- * Routes v2 — STEP 4
- * Routing lazy-loaded separato da v1.
+ * Routes v2 — STEP 9 (Complete routing)
+ * All modules wired with lazy loading.
  */
 
 import * as React from "react";
@@ -16,19 +16,12 @@ const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
 const CRMPage = lazy(() => import("./ui/pages/CRMPage").then((m) => ({ default: m.CRMPage })));
-
-// ── Placeholder for future modules ──────────────────────────────────
-
-function PlaceholderPage({ title }: { readonly title: string }): React.ReactElement {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground mt-1">In costruzione — STEP 6+</p>
-      </div>
-    </div>
-  );
-}
+const OutreachPage = lazy(() => import("./ui/pages/OutreachPage").then((m) => ({ default: m.OutreachPage })));
+const AgentsPage = lazy(() => import("./ui/pages/AgentsPage").then((m) => ({ default: m.AgentsPage })));
+const CampaignsPage = lazy(() => import("./ui/pages/CampaignsPage").then((m) => ({ default: m.CampaignsPage })));
+const SettingsPage = lazy(() => import("./ui/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const DiagnosticsPage = lazy(() => import("./ui/pages/DiagnosticsPage").then((m) => ({ default: m.DiagnosticsPage })));
+const ImportPage = lazy(() => import("./ui/pages/ImportPage").then((m) => ({ default: m.ImportPage })));
 
 // ── Loading fallback ─────────────────────────────────────────────────
 
@@ -55,13 +48,14 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<AuthenticatedLayout />}>
           <Route index element={<DashboardPage />} />
-          <Route path="network" element={<PlaceholderPage title="Network" />} />
-          <Route path="crm" element={<PlaceholderPage title="CRM" />} />
-          <Route path="outreach" element={<PlaceholderPage title="Outreach" />} />
-          <Route path="agents" element={<PlaceholderPage title="Agenti AI" />} />
-          <Route path="campaigns" element={<PlaceholderPage title="Campagne" />} />
-          <Route path="diagnostics" element={<PlaceholderPage title="Diagnostica" />} />
-          <Route path="settings" element={<PlaceholderPage title="Impostazioni" />} />
+          <Route path="network" element={<NetworkPage />} />
+          <Route path="crm" element={<CRMPage />} />
+          <Route path="outreach" element={<OutreachPage />} />
+          <Route path="agents" element={<AgentsPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="diagnostics" element={<DiagnosticsPage />} />
+          <Route path="import" element={<ImportPage />} />
         </Route>
       </Routes>
     </Suspense>
