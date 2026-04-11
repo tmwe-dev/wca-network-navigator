@@ -302,6 +302,7 @@ export function useCockpitContacts() {
         const ic = icMap[sid];
         if (!ic) continue;
         // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const icEd = (ic.enrichment_data as any) || {};
         let icLinkedin = icEd.linkedin_profile_url
           || icEd.linkedin_url
@@ -318,6 +319,7 @@ export function useCockpitContacts() {
         if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
           icLinkedin = socialLinksMap[icPartnerId];
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const icEnrich = (ic.enrichment_data as any) || {};
         const icMeta: Partial<CockpitContact> = {};
         if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
@@ -352,6 +354,7 @@ export function useCockpitContacts() {
 
     // Add scheduled return activities
     for (const act of scheduledActivities) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const meta = (act.source_meta || {}) as any;
       const existsAlready = result.some(r => r.sourceId === act.source_id);
       if (existsAlready) continue;

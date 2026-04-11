@@ -49,8 +49,8 @@ export function useOperativeJobs() {
         .insert({
           title: input.title,
           description: input.description,
-          steps: steps as any,
-          metadata: {} as any,
+          steps: JSON.parse(JSON.stringify(steps)),
+          metadata: JSON.parse("{}"),
           tags: [TAG],
           status: "running",
           user_id: user.id,

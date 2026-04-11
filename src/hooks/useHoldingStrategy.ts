@@ -51,7 +51,7 @@ export function useHoldingStrategy() {
       });
 
       // Parse AI response into structured strategy
-      const content = (result as any)?.response || (result as any)?.message || "";
+      const content = (result as Record<string, unknown>)?.response as string || (result as Record<string, unknown>)?.message as string || "";
       const parsed: HoldingStrategy = {
         draftReply: content,
         sentiment: "unknown",
