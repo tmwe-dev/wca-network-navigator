@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByCountries, deletePartnersWithRelations } from "@/data/partners";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
@@ -60,13 +61,7 @@ export function useActionPanelLogic({
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      const { data, error } = await supabase
-        .from("partners")
-        .select("wca_id, company_name, city, country_code, country_name, updated_at")
-        .in("country_code", countryCodes)
-        .not("wca_id", "is", null)
-        .order("company_name");
-      if (error) { toast({ title: "Errore caricamento partner", description: error.message, variant: "destructive" }); return []; }
+      const data = await getPartnersByCountries(countryCodes, "wca_id, company_name, city, country_code, country_name, updated_at");
       return (data || []).map(p => ({
         wca_id: p.wca_id!, company_name: p.company_name, city: p.city,
         country_code: p.country_code, country_name: p.country_name, updated_at: p.updated_at,
@@ -80,9 +75,7 @@ export function useActionPanelLogic({
     queryKey: ["no-profile-wca-ids", countryCodes],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      const { data } = await supabase
-        .from("partners").select("wca_id")
-        .in("country_code", countryCodes).not("wca_id", "is", null).is("raw_profile_html", null);
+      const data = await getPartnersByCountries(countryCodes, "wca_id", { noProfile: true });
       return (data || []).map(p => p.wca_id!);
     },
     staleTime: 30_000,
@@ -273,24 +266,13 @@ export function useActionPanelLogic({
       const freshWcaIds = new Set(scannedMembers.filter(m => m.wca_id).map(m => m.wca_id!));
       if (freshWcaIds.size === 0) { toast({ title: "⚠️ Nessun partner trovato", variant: "destructive" }); return; }
 
-      const { data: dbPartnersForCleanup } = await supabase.from("partners").select("id, wca_id").in("country_code", countryCodes).not("wca_id", "is", null);
+      const dbPartnersForCleanup = await getPartnersByCountries(countryCodes, "id, wca_id");
       const dbList = dbPartnersForCleanup || [];
       const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id));
 
       if (stalePartners.length > 0) {
         const staleIds = stalePartners.map(p => p.id);
-        for (let i = 0; i < staleIds.length; i += 50) {
-          const batch = staleIds.slice(i, i + 50);
-          await supabase.from("partner_contacts").delete().in("partner_id", batch);
-          await supabase.from("partner_networks").delete().in("partner_id", batch);
-          await supabase.from("partner_services").delete().in("partner_id", batch);
-          await supabase.from("partner_certifications").delete().in("partner_id", batch);
-          await supabase.from("partner_social_links").delete().in("partner_id", batch);
-          await supabase.from("interactions").delete().in("partner_id", batch);
-          await supabase.from("reminders").delete().in("partner_id", batch);
-          await supabase.from("activities").delete().in("partner_id", batch);
-          await supabase.from("partners").delete().in("id", batch);
-        }
+        await deletePartnersWithRelations(staleIds);
       }
 
       await queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });

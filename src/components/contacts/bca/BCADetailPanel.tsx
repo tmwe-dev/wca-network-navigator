@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { searchPartnersByNameAlias } from "@/data/partners";
 import { useUpdateBusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "@/hooks/use-toast";
@@ -28,12 +29,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
     if (!searchTerm.trim()) return;
     setSearching(true); setSearched(true);
     try {
-      const { data, error } = await supabase
-        .from("partners")
-        .select("id, company_name, company_alias, country_code, country_name, city")
-        .or(`company_name.ilike.%${searchTerm.trim()}%,company_alias.ilike.%${searchTerm.trim()}%`)
-        .order("country_name").order("city").order("company_name").limit(20);
-      if (error) throw error;
+      const data = await searchPartnersByNameAlias(searchTerm.trim(), "id, company_name, company_alias, country_code, country_name, city");
       setResults(data ?? []);
     } catch (e: any) { toast({ title: "Errore ricerca", description: e.message, variant: "destructive" }); }
     finally { setSearching(false); }

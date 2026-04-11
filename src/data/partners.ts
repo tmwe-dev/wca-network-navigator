@@ -319,6 +319,64 @@ export async function createPartner(partner: any) {
   return data;
 }
 
+/** Get partners by IDs with custom select and filters */
+export async function getPartnersByIdsFiltered(ids: string[], select: string, filters?: Record<string, unknown>) {
+  const results: any[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    let q = supabase.from("partners").select(select).in("id", batch);
+    if (filters) {
+      for (const [key, val] of Object.entries(filters)) {
+        if (Array.isArray(val)) q = q.in(key, val);
+        else q = q.eq(key, val as string);
+      }
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    if (data) results.push(...data);
+  }
+  return results;
+}
+
+/** Search partners by name/alias with custom select and ordering */
+export async function searchPartnersByNameAlias(term: string, select: string, limit = 20) {
+  const s = sanitizeSearchTerm(term);
+  if (!s) return [];
+  const { data, error } = await supabase
+    .from("partners")
+    .select(select)
+    .or(`company_name.ilike.%${s}%,company_alias.ilike.%${s}%`)
+    .order("country_name").order("city").order("company_name")
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Get partner WCA IDs by countries with optional profile filter */
+export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<any[]> {
+  let q = supabase.from("partners").select(select).in("country_code", countryCodes).not("wca_id", "is", null);
+  if (options?.noProfile) q = q.is("raw_profile_html", null);
+  const { data, error } = await q.order("company_name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Delete partners and all related data by IDs */
+export async function deletePartnersWithRelations(ids: string[]) {
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    await supabase.from("partner_contacts").delete().in("partner_id", batch);
+    await supabase.from("partner_networks").delete().in("partner_id", batch);
+    await supabase.from("partner_services").delete().in("partner_id", batch);
+    await supabase.from("partner_certifications").delete().in("partner_id", batch);
+    await supabase.from("partner_social_links").delete().in("partner_id", batch);
+    await supabase.from("interactions").delete().in("partner_id", batch);
+    await supabase.from("reminders").delete().in("partner_id", batch);
+    await supabase.from("activities").delete().in("partner_id", batch);
+    await supabase.from("partners").delete().in("id", batch);
+  }
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidatePartnerCache(qc: QueryClient, partnerId?: string) {
   qc.invalidateQueries({ queryKey: queryKeys.partners.all });

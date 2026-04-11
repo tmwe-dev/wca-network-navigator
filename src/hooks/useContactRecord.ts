@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { updatePartner } from "@/data/partners";
+import { updateContact } from "@/data/contacts";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 
 export interface UnifiedRecord {
@@ -195,11 +197,9 @@ export function useUpdateContactRecord() {
       updates: Record<string, any>;
     }) => {
       if (sourceType === "partner") {
-        const { error } = await supabase.from("partners").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updatePartner(sourceId, updates);
       } else if (sourceType === "contact") {
-        const { error } = await supabase.from("imported_contacts").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
         const { error } = await supabase.from("prospects").update(updates).eq("id", sourceId);
         if (error) throw error;

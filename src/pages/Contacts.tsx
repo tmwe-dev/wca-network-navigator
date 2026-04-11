@@ -3,7 +3,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
@@ -17,16 +17,12 @@ export default function Contacts() {
 
   const loadContactById = useCallback(async (id: string) => {
     try {
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await getContactById(id);
       if (data) {
         setSelectedContact(data);
         trackEntityOpen("contact", id);
       }
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); }
   }, []);
 
   // Hydrate from URL on first mount / when url changes externally

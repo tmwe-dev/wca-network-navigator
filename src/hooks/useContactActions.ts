@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getContactsByIds } from "@/data/contacts";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
@@ -99,7 +100,7 @@ export function useContactActions(deps: Deps) {
     const ids = Array.from(selection.selectedIds);
     if (!ids.length) return;
     try {
-      const { data: contacts } = await supabase.from("imported_contacts").select("id, company_name, name, email, phone, country, city").in("id", ids.slice(0, 200));
+      const contacts = await getContactsByIds(ids.slice(0, 200), "id, company_name, name, email, phone, country, city");
       if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
       const batchId = `campaign_${Date.now()}`;
       const jobs = contacts.map((ct: any) => ({
@@ -147,9 +148,7 @@ export function useContactActions(deps: Deps) {
 
 async function exportContactsCsv(contactIds: string[]) {
   if (!contactIds.length) return;
-  const { data } = await supabase.from("imported_contacts")
-    .select("company_name, name, email, phone, mobile, country, city, address, zip_code, origin, lead_status, position, note")
-    .in("id", contactIds.slice(0, 500));
+  const data = await getContactsByIds(contactIds.slice(0, 500), "company_name, name, email, phone, mobile, country, city, address, zip_code, origin, lead_status, position, note");
   if (!data?.length) return;
   const headers = ["Azienda", "Nome", "Email", "Telefono", "Cellulare", "Paese", "Città", "Indirizzo", "CAP", "Origine", "Stato", "Ruolo", "Note"];
   const esc = (v: string | null) => { if (!v) return ""; const s = v.replace(/"/g, '""'); return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s; };
@@ -164,7 +163,7 @@ async function exportContactsCsv(contactIds: string[]) {
 
 async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof useNavigate>) {
   if (!contactIds.length) return;
-  const { data: contacts } = await supabase.from("imported_contacts").select("id, company_name, name, email, country, city").in("id", contactIds.slice(0, 200)).not("email", "is", null);
+  const contacts = (await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, country, city")).filter((c: any) => c.email);
   if (!contacts?.length) { toast({ title: "Nessun contatto con email", variant: "destructive" }); return; }
 
   if (contacts.length === 1) {
@@ -197,7 +196,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
 
 async function createCampaignJobs(contactIds: string[], selection: ReturnType<typeof useSelection>, setSelectedGroups: React.Dispatch<React.SetStateAction<Set<string>>>, navigate: ReturnType<typeof useNavigate>) {
   if (!contactIds.length) return;
-  const { data: contacts } = await supabase.from("imported_contacts").select("id, company_name, name, email, phone, country, city").in("id", contactIds.slice(0, 200));
+  const contacts = await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, phone, country, city");
   if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
   const batchId = `contacts_${Date.now()}`;
   const jobs = contacts.map((ct: any) => ({
