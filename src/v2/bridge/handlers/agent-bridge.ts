@@ -24,7 +24,7 @@ export function registerAgentBridge(): void {
     });
 
     if (isOk(mutationResult)) {
-      publish(createEvent("agent.created", { agentId: mutationResult.value.agentId }, "agent-bridge"));
+      publish(createEvent("agent.created", { agentId: String(mutationResult.value.id) }, "agent-bridge"));
       logger.info("Agent created", { name: payload.name });
     } else {
       publish(createEvent("agent.create.failed", { reason: "io_error" }, "agent-bridge"));

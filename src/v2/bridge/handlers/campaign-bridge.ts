@@ -14,7 +14,7 @@ export function registerCampaignBridge(): void {
   subscribe("campaign.create.requested", async (event) => {
     const payload = event.payload as {
       batchId: string; partnerId: string; companyName: string;
-      countryCode: string; countryName: string; userId: string;
+      countryCode: string; countryName: string;
     };
 
     const mutationResult = await campaignMutations.createCampaignJob({
@@ -26,7 +26,7 @@ export function registerCampaignBridge(): void {
     });
 
     if (isOk(mutationResult)) {
-      publish(createEvent("campaign.created", { campaignJobId: mutationResult.value.campaignJobId }, "campaign-bridge"));
+      publish(createEvent("campaign.created", { campaignJobId: String(mutationResult.value.id) }, "campaign-bridge"));
       logger.info("Campaign job created", { batchId: payload.batchId });
     } else {
       publish(createEvent("campaign.create.failed", { reason: "io_error" }, "campaign-bridge"));

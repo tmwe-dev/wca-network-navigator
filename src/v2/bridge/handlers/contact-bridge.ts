@@ -33,7 +33,7 @@ export function registerContactBridge(): void {
     });
 
     if (isOk(mutationResult)) {
-      publish(createEvent("contact.created", { contactId: mutationResult.value.contactId }, "contact-bridge"));
+      publish(createEvent("contact.created", { contactId: String(mutationResult.value.id) }, "contact-bridge"));
       logger.info("Contact created", { name: payload.name });
     } else {
       publish(createEvent("contact.create.failed", { reason: "io_error" }, "contact-bridge"));

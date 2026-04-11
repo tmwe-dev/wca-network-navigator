@@ -3,7 +3,7 @@
  */
 
 import { subscribe, publish } from "../event-bus";
-import { createEvent, type DomainEvent } from "@/v2/core/domain/events";
+import { createEvent } from "@/v2/core/domain/events";
 import { isOk } from "@/v2/core/domain/result";
 import { validateCompanyName, validateCountryCode } from "@/v2/core/domain/validators";
 import * as partnerMutations from "@/v2/io/supabase/mutations/partners";
@@ -14,7 +14,7 @@ const logger = createLogger("partner-bridge");
 export function registerPartnerBridge(): void {
   subscribe("partner.create.requested", async (event) => {
     const payload = event.payload as {
-      companyName: string; countryCode: string; city?: string; userId: string;
+      companyName: string; countryCode: string; countryName: string; city: string; userId: string;
     };
 
     const nameCheck = validateCompanyName(payload.companyName);
@@ -32,11 +32,13 @@ export function registerPartnerBridge(): void {
     const mutationResult = await partnerMutations.createPartner({
       company_name: payload.companyName,
       country_code: payload.countryCode,
+      country_name: payload.countryName,
+      city: payload.city,
       user_id: payload.userId,
     });
 
     if (isOk(mutationResult)) {
-      publish(createEvent("partner.created", { partnerId: mutationResult.value.partnerId }, "partner-bridge"));
+      publish(createEvent("partner.created", { partnerId: String(mutationResult.value.id) }, "partner-bridge"));
       logger.info("Partner created", { companyName: payload.companyName });
     } else {
       publish(createEvent("partner.create.failed", { reason: "io_error" }, "partner-bridge"));
