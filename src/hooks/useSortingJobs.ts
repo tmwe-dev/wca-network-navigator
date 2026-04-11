@@ -162,12 +162,9 @@ export function useSendJob() {
 
       // Update partner lead_status and last_interaction_at
       if (job.partner_id) {
-        await supabase
-          .from("partners")
-          .update({
-            lead_status: "contacted",
-            last_interaction_at: now,
-          })
+        // Conditional update: only escalate if currently "new"
+        await supabase.from("partners")
+          .update({ lead_status: "contacted", last_interaction_at: now })
           .eq("id", job.partner_id)
           .eq("lead_status", "new");
 

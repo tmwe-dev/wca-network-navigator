@@ -121,11 +121,11 @@ export function useImportWizard() {
             if (val && String(val).trim()) updateData[col] = String(val).trim();
           }
           if (Object.keys(updateData).length === 0) return false;
-          const { error } = await supabase
-            .from("imported_contacts")
-            .update(updateData)
-            .eq("id", String(importId).trim());
-          return !error;
+          const { updateContact } = await import("@/data/contacts");
+          try {
+            await updateContact(String(importId).trim(), updateData);
+            return true;
+          } catch { return false; }
         });
         const results = await Promise.all(promises);
         updatedCount += results.filter(Boolean).length;

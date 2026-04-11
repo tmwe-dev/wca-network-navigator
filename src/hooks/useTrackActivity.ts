@@ -37,8 +37,8 @@ export function useTrackActivity() {
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {
-        await supabase
-          .from("partners")
+        // Conditional update: only escalate if currently "new"
+        await supabase.from("partners")
           .update({ lead_status: "contacted", last_interaction_at: now })
           .eq("id", params.partnerId)
           .eq("lead_status", "new");
@@ -51,10 +51,8 @@ export function useTrackActivity() {
           notes: params.description || `Attività: ${params.title}`,
         });
       } else if (params.sourceType === "imported_contact") {
-        const { updateContact } = await import("@/data/contacts");
-        // Only update if currently "new" — we can't do conditional update via DAL, so use supabase directly
-        await supabase
-          .from("imported_contacts")
+        // Conditional update: only escalate if currently "new"
+        await supabase.from("imported_contacts")
           .update({ lead_status: "contacted", last_interaction_at: now })
           .eq("id", params.sourceId)
           .eq("lead_status", "new");

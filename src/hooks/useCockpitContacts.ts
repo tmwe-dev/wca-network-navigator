@@ -147,7 +147,7 @@ export function useCockpitContacts() {
           ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id, linkedin_url").in("id", prcIds).then(r => r.data || [])
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias").in("id", icIds).then(r => r.data || [])
+          ? import("@/data/contacts").then(({ getContactsByIds }) => getContactsByIds(icIds, "id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias"))
           : Promise.resolve([]),
       ]);
 
