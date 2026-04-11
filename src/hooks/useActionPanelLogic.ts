@@ -5,6 +5,9 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useActionPanelLogic");
 
 type DownloadMode = "new" | "no_profile" | "all";
 
@@ -227,7 +230,7 @@ export function useActionPanelLogic({
         if (!data.success || !data.cookies) { toast({ title: "Login WCA fallito", description: data.error || "Riprova.", variant: "destructive" }); return; }
         setWcaCookie(data.cookies);
       }
-    } catch { toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
 
     const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
     if (activeJobs && activeJobs.length > 0) {

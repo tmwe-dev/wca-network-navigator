@@ -309,7 +309,8 @@ export function useLinkedInFlow() {
                   if (analysis.success) {
                     enrichment.website_analysis = analysis;
                   }
-                } catch {
+                } catch (e) {
+                  log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
                   // Brain analysis is optional
                 }
               } else {

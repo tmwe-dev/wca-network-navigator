@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("FeedbackButtons");
 
 interface FeedbackButtonsProps {
   messageIndex: number;
@@ -54,7 +57,8 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
             .eq("id", m.id);
         }
       }
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       // Silent fail for feedback
     }
   };

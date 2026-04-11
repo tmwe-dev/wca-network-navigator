@@ -12,6 +12,9 @@ import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "@/hooks/use-toast";
 import ContentPicker from "@/components/shared/ContentPicker";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GoalBar");
 
 interface GoalBarProps {
   goal: string;
@@ -47,7 +50,7 @@ function formatSize(bytes: number) {
 }
 
 function tryHostname(url: string) {
-  try { return new URL(url).hostname; } catch { return url; }
+  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
 }
 
 export default function GoalBar({

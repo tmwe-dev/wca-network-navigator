@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useWhatsAppExtensionBridge");
 
 type WaExtensionResponse = {
   success: boolean;
@@ -122,7 +125,8 @@ export function useWhatsAppExtensionBridge() {
           window.postMessage({ direction: "from-webapp-wa", action: "verifySession", requestId }, window.location.origin);
         });
         setIsAuthenticated(result.success === true && result.authenticated === true);
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         setIsAuthenticated(false);
       }
     };

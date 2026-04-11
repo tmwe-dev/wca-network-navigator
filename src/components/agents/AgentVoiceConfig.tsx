@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Save, Mic, Volume2 } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentVoiceConfig");
 
 const VOICE_PRESETS = [
   { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura 🇮🇹", lang: "IT" },
@@ -54,7 +57,8 @@ export function AgentVoiceConfig({ agent }: Props) {
       const blob = await res.blob();
       const audio = new Audio(URL.createObjectURL(blob));
       await audio.play();
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore nel test voce");
     }
   };

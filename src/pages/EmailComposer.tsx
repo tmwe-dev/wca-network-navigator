@@ -220,7 +220,7 @@ export default function EmailComposer() {
 
   const isValidUrl = (url: string) => {
     try { return ['http:', 'https:'].includes(new URL(url).protocol); }
-    catch { return false; }
+    catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return false; }
   };
 
   const addLink = () => {
@@ -348,7 +348,7 @@ export default function EmailComposer() {
       setTemplateCategory("primo_contatto");
       setCustomCategory("");
       toast.success(`Template "${templateName}" salvato`);
-    } catch { toast.error("Errore nel salvataggio template"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio template"); }
   };
 
   const handleSaveDraft = async () => {
@@ -361,7 +361,7 @@ export default function EmailComposer() {
         status: "draft", total_count: recipientsWithEmail.length,
       } as any);
       toast.success("Bozza salvata");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
   };
 
   const executeEnqueue = async () => {

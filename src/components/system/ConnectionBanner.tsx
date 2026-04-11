@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ConnectionBanner");
 
 /**
  * Shows a red banner when DB connection is lost.
@@ -28,7 +31,8 @@ export function ConnectionBanner() {
         } else {
           setDbLost(false);
         }
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         setDbLost(true);
       }
     };

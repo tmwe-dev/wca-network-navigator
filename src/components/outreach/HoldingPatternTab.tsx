@@ -22,6 +22,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useNavigate } from "react-router-dom";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("HoldingPatternTab");
 
 /* ── Status groups ── */
 const GROUPS: { key: string; label: string; color: string; count?: number }[] = [
@@ -75,7 +78,8 @@ export function HoldingPatternTab() {
       await supabase.from(table).update({ lead_status: newStatus } as any).eq("id", item.id);
       queryClient.invalidateQueries({ queryKey: ["holding-pattern-list"] });
       toast.success("Stato aggiornato");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore aggiornamento stato");
     }
   };

@@ -8,9 +8,12 @@ import { useCampaignJobs, useUpdateCampaignJob, useDeleteCampaignJobs } from "@/
 import { useContactsForPartners } from "@/hooks/useActivities";
 import { toast } from "sonner";
 import {
+import { createLogger } from "@/lib/log";
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const log = createLogger("CampaignJobs");
 
 export default function CampaignJobs() {
   const [searchParams] = useSearchParams();
@@ -179,7 +182,7 @@ export default function CampaignJobs() {
                   await deleteCampaignJobs.mutateAsync(targetJobs.map(j => j.id));
                   setSelectedContactIds(new Set());
                   toast.success(`${targetJobs.length} job eliminati`);
-                } catch { toast.error("Errore durante l'eliminazione"); }
+                } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
                 setShowDeleteConfirm(false);
               }}
             >

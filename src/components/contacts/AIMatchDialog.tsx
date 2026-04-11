@@ -10,6 +10,9 @@ import { useUpdateBusinessCard } from "@/hooks/useBusinessCards";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AIMatchDialog");
 
 interface MatchCandidate {
   partner_id: string;
@@ -36,7 +39,7 @@ function countryFlag(code: string | null): string {
   if (!code) return "🌍";
   try {
     return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
-  } catch { return "🌍"; }
+  } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return "🌍"; }
 }
 
 function confidenceColor(c: number): string {
@@ -111,7 +114,8 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       try {
         await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as any);
         ok++;
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         fail++;
       }
     }

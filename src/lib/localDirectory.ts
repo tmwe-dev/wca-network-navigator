@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("localDirectory");
 /**
  * Local Directory — Sistema di confronto locale zero-query
  * 🤖 Creato da Claude · Diario di bordo #1
@@ -180,7 +183,7 @@ export function getAllDirectories(): Directory[] {
     if (key?.startsWith(DIR_PREFIX)) {
       try {
         dirs.push(JSON.parse(localStorage.getItem(key)!));
-      } catch { /* intentionally ignored: best-effort cleanup */ }
+      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
     }
   }
   return dirs;

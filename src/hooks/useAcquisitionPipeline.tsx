@@ -106,7 +106,7 @@ export function useAcquisitionPipeline() {
     const keepAliveInterval = setInterval(async () => {
       try {
         await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
-      } catch { /* non-blocking */ }
+      } catch (e) { log.debug("non-blocking operation failed", { error: e instanceof Error ? e.message : String(e) }); /* non-blocking */ }
     }, scrapingSettings.keepAliveMs);
 
     const { data: currentJobData } = await supabase
@@ -294,7 +294,7 @@ export function useAcquisitionPipeline() {
               canvas.contactSource = "extension";
               setCanvasData({ ...canvas });
             }
-          } catch { /* non-blocking */ }
+          } catch (e) { log.debug("non-blocking operation failed", { error: e instanceof Error ? e.message : String(e) }); /* non-blocking */ }
         }
       } else {
         if (!extensionWarningShown.current) {
@@ -415,7 +415,7 @@ export function useAcquisitionPipeline() {
                     enrichBody.markdown = scrapeResult.markdown;
                     enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
                   }
-                } catch { /* fallback to server-side fetch */ }
+                } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to server-side fetch */ }
               }
 
               const enrichResult = await invokeEdge<any>("enrich-partner-website", { body: enrichBody, context: "useAcquisitionPipeline.enrich_partner_website" });
@@ -425,7 +425,7 @@ export function useAcquisitionPipeline() {
                   prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employee_count, founded: ed.founding_year ? String(ed.founding_year) : undefined, fleet: ed.has_own_fleet ? (ed.fleet_details || "Sì") : undefined } : prev
                 );
               }
-            } catch { /* non-blocking */ }
+            } catch (e) { log.debug("non-blocking operation failed", { error: e instanceof Error ? e.message : String(e) }); /* non-blocking */ }
           })()
         );
       }
@@ -450,7 +450,7 @@ export function useAcquisitionPipeline() {
                   } : prev
                 );
               }
-            } catch { /* non-blocking */ }
+            } catch (e) { log.debug("non-blocking operation failed", { error: e instanceof Error ? e.message : String(e) }); /* non-blocking */ }
           })()
         );
       }

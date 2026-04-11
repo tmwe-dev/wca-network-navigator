@@ -20,6 +20,9 @@ import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { WcaBrowser } from "./WcaBrowser";
 import { useTheme, t } from "./theme";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AdvancedTools");
 
 interface EnrichPartner {
   id: string;
@@ -99,13 +102,13 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
                 enrichBody.markdown = scrapeResult.markdown;
                 enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
               }
-            } catch { /* fallback to server-side fetch */ }
+            } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to server-side fetch */ }
           }
 
           await invokeEdge("enrich-partner-website", { body: enrichBody, context: "AdvancedTools.enrich_partner_website" });
           setResults(prev => [...prev, { id: ids[i], success: true }]);
         }
-      } catch { setResults(prev => [...prev, { id: ids[i], success: false }]); }
+      } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); setResults(prev => [...prev, { id: ids[i], success: false }]); }
       if (i < ids.length - 1) await new Promise(r => setTimeout(r, 3000));
     }
     setRunning(false);

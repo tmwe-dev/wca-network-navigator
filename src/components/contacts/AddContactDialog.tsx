@@ -69,7 +69,8 @@ function extractDomain(url: string): string {
   try {
     const u = new URL(url.startsWith("http") ? url : `https://${url}`);
     return u.hostname.replace(/^www\./, "");
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return "";
   }
 }
@@ -160,7 +161,8 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
       if (ping?.success) return true;
       toast.error("Estensione Partner Connect non disponibile");
       return false;
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Estensione Partner Connect non disponibile");
       return false;
     }

@@ -8,6 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("OperativeGuideSettings");
 
 interface OperativeRule {
   id: string;
@@ -65,7 +68,7 @@ export default function OperativeGuideSettings() {
       if (data?.value) {
         try {
           setStrategy({ ...DEFAULT_STRATEGY, ...JSON.parse(data.value) });
-        } catch {}
+        } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
       }
       setLoading(false);
     })();

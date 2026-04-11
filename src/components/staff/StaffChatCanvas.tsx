@@ -8,6 +8,9 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { FileDropZone } from "./FileDropZone";
 import { supabase } from "@/integrations/supabase/client";
 import type { Agent } from "@/hooks/useAgents";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("StaffChatCanvas");
 
 interface Message {
   role: "user" | "assistant";
@@ -72,7 +75,8 @@ export function StaffChatCanvas({ agent }: Props) {
         context: "StaffChatCanvas.agent_execute",
       });
       setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione." }]);
     } finally {
       setLoading(false);
@@ -94,7 +98,7 @@ export function StaffChatCanvas({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch { /* best-effort */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
   };
 
   return (

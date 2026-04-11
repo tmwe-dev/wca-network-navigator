@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 // useWcaSession removed — no session gates
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useDirectoryDownload");
 
 interface UseDirectoryDownloadArgs {
   countryCodes: string[];
@@ -246,7 +249,8 @@ export function useDirectoryDownload({
         }
         setWcaCookie(data.cookies);
       }
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setScanError("Connessione WCA fallita");
       setIsScanning(false);
       return;

@@ -88,7 +88,7 @@ export function useCockpitLogic() {
     if (assignmentInfoMap.has(sourceId)) return;
     const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach")) || agents.find(a => a.is_active);
     if (!salesAgent) return;
-    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch { /* intentionally ignored: best-effort cleanup */ }
+    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   }, [agents, assignmentInfoMap, assignClient]);
 
   // AI Action Executor
@@ -288,7 +288,7 @@ export function useCockpitLogic() {
   const handleBulkDelete = useCallback(() => setShowDeleteConfirm(true), []);
   const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
-    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch { toast.error("Errore durante l'eliminazione"); }
+    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
     setShowDeleteConfirm(false);
   }, [selection, deleteContacts]);
 

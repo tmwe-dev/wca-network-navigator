@@ -23,6 +23,9 @@ import {
   ChevronDown, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ContentManager");
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   primo_contatto: Handshake,
@@ -42,7 +45,7 @@ function formatSize(bytes: number) {
 }
 
 function hostname(url: string) {
-  try { return new URL(url).hostname; } catch { return url; }
+  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
 }
 
 function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }: {
@@ -120,7 +123,7 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
         if (data?.category) {
           finalCategory = data.category;
         }
-      } catch { /* fallback to manual */ }
+      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to manual */ }
       setCategorizing(false);
     }
 
@@ -281,12 +284,12 @@ export default function ContentManager() {
 
   const goals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_goals) return [];
-    try { return JSON.parse(settings.custom_goals); } catch { return []; }
+    try { return JSON.parse(settings.custom_goals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings]);
 
   const proposals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_proposals) return [];
-    try { return JSON.parse(settings.custom_proposals); } catch { return []; }
+    try { return JSON.parse(settings.custom_proposals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings]);
 
   useEffect(() => {

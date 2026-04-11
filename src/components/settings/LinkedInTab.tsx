@@ -8,6 +8,9 @@ import {
   Save, Loader2, CheckCircle2, Download, KeyRound, Eye, EyeOff, Mail, Linkedin,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("LinkedInTab");
 
 interface LinkedInTabProps {
   liHasCreds: boolean;
@@ -74,7 +77,7 @@ export function LinkedInTab({
                 await updateSetting.mutateAsync({ key: "linkedin_email", value: liEmail.trim() });
                 await updateSetting.mutateAsync({ key: "linkedin_password", value: liPass.trim() });
                 toast.success("Credenziali LinkedIn salvate!");
-              } catch { toast.error("Errore nel salvataggio"); }
+              } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
               finally { setSavingLiCreds(false); }
             }}
             disabled={savingLiCreds || !liEmail.trim() || !liPass.trim()}
@@ -141,7 +144,7 @@ export function LinkedInTab({
                   try {
                     await updateSetting.mutateAsync({ key: "linkedin_li_at", value: liAtCookie.trim() });
                     toast.success("Cookie LinkedIn salvato!");
-                  } catch { toast.error("Errore nel salvataggio"); }
+                  } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
                   finally { setSavingLi(false); }
                 }}
                 disabled={savingLi || !liAtCookie.trim()}

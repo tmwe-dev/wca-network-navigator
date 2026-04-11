@@ -6,6 +6,9 @@ import { Users, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("Contacts");
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
@@ -23,7 +26,7 @@ export default function Contacts() {
         setSelectedContact(data);
         trackEntityOpen("contact", id);
       }
-    } catch { /* best-effort */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
   }, []);
 
   // Hydrate from URL on first mount / when url changes externally

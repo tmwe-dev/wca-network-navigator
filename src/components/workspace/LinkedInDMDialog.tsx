@@ -5,6 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("LinkedInDMDialog");
 
 interface LinkedInDMDialogProps {
   open: boolean;
@@ -34,7 +37,8 @@ export default function LinkedInDMDialog({
       } else {
         toast({ title: "Errore invio", description: res.error, variant: "destructive" });
       }
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast({ title: "Errore", variant: "destructive" });
     } finally {
       setSending(false);

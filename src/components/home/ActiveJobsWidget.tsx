@@ -3,6 +3,9 @@ import { Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { DownloadJob } from "@/hooks/useDownloadJobs";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ActiveJobsWidget");
 
 function countryFlag(code: string) {
   if (!code || code.length < 2) return "🏳️";
@@ -32,7 +35,7 @@ export function ActiveJobsWidget({ jobs }: Props) {
     try {
       const stored = localStorage.getItem("dismissed_job_cards");
       return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return new Set(); }
   });
 
   const dismiss = useCallback((id: string) => {

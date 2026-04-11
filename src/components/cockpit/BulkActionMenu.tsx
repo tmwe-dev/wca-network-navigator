@@ -24,6 +24,9 @@ import { useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("BulkActionMenu");
 
 type ActivityType = Database["public"]["Enums"]["activity_type"];
 
@@ -57,7 +60,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       const sourceType = c.sourceType === "partner_contact" ? "partner" : c.sourceType === "prospect_contact" ? "prospect" : "contact";
       try {
         await assignClient.mutateAsync({ sourceId: c.partnerId || c.sourceId, sourceType, agentId: salesAgent.id });
-      } catch { /* skip already assigned */ }
+      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* skip already assigned */ }
     }
   };
 

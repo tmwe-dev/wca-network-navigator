@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { Msg } from "./useAiAssistantChat";
 import { parseStructuredMessage } from "./useAiAssistantChat";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useAiVoice");
 
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
@@ -46,7 +49,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
       audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
       audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
       await audio.play();
-    } catch { setIsSpeaking(false); }
+    } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setIsSpeaking(false); }
   }, [selectedVoice]);
 
   useEffect(() => {

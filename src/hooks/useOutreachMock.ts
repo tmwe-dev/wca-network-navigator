@@ -1,4 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useOutreachMock");
 
 const STORAGE_KEY = "demo-data-enabled";
 
@@ -14,7 +17,8 @@ function getInitialState(): boolean {
       return true;
     }
     return false;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return false;
   }
 }
@@ -25,7 +29,7 @@ export function useOutreachMock() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, String(mockEnabled));
-    } catch { /* noop */ }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); /* noop */ }
   }, [mockEnabled]);
 
   const toggleMock = useCallback(() => setMockEnabled(prev => !prev), []);

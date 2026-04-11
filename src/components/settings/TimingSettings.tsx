@@ -7,6 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "@/hooks/use-toast";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("TimingSettings");
 
 interface TimingField {
   key: string;
@@ -66,7 +69,8 @@ export default function TimingSettings() {
       }
       setValues({});
       toast({ title: "✅ Timing salvati", description: "Tutte le configurazioni sono state aggiornate." });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast({ title: "Errore", description: "Impossibile salvare i timing." });
     }
     setSaving(false);

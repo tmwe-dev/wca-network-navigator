@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Save, Loader2, Globe, Linkedin, Phone, Brain, Mail, LayoutDashboard, Users, CreditCard, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("DeepSearchConfig");
 
 interface ContextConfig {
   scrapeWebsite: boolean;
@@ -46,7 +49,7 @@ export function DeepSearchConfig() {
       try {
         const parsed = JSON.parse(settings.deep_search_config);
         setConfig({ ...DEFAULT_CONFIG, ...parsed });
-      } catch { /* use defaults */ }
+      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* use defaults */ }
     }
   }, [settings?.deep_search_config]);
 
@@ -62,7 +65,7 @@ export function DeepSearchConfig() {
     try {
       await updateSetting.mutateAsync({ key: "deep_search_config", value: JSON.stringify(config) });
       toast.success("Configurazione Deep Search salvata");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
     finally { setSaving(false); }
   };
 

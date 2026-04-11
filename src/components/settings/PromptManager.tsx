@@ -16,6 +16,9 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("PromptManager");
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   primo_contatto: Handshake,
@@ -61,15 +64,15 @@ export function PromptManager() {
 
   // Parse stored items
   const customEmailTypes: EmailType[] = useMemo(() => {
-    try { return JSON.parse(settings?.email_oracle_types || "[]"); } catch { return []; }
+    try { return JSON.parse(settings?.email_oracle_types || "[]"); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings?.email_oracle_types]);
 
   const goals: ContentItem[] = useMemo(() => {
-    try { return JSON.parse(settings?.workspace_goals || "null") || DEFAULT_GOALS; } catch { return DEFAULT_GOALS; }
+    try { return JSON.parse(settings?.workspace_goals || "null") || DEFAULT_GOALS; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return DEFAULT_GOALS; }
   }, [settings?.workspace_goals]);
 
   const proposals: ContentItem[] = useMemo(() => {
-    try { return JSON.parse(settings?.workspace_proposals || "null") || DEFAULT_PROPOSALS; } catch { return DEFAULT_PROPOSALS; }
+    try { return JSON.parse(settings?.workspace_proposals || "null") || DEFAULT_PROPOSALS; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return DEFAULT_PROPOSALS; }
   }, [settings?.workspace_proposals]);
 
   // Unify all into a single list

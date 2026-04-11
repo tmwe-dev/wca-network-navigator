@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, CheckCircle2, FileText, Download, KeyRound, Package } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("RASettings");
 
 interface RASettingsProps {
   settings: Record<string, string> | undefined;
@@ -31,7 +34,7 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
       await updateSetting.mutateAsync({ key: "ra_username", value: raUser.trim() });
       await updateSetting.mutateAsync({ key: "ra_password", value: raPass.trim() });
       toast.success("Credenziali Report Aziende salvate!");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
     finally { setSaving(false); }
   };
 

@@ -173,7 +173,8 @@ export function useLinkedInExtensionBridge() {
         const ok = r.success === true && r.authenticated === true;
         lastAuthCheck.current = { ok, ts: Date.now() };
         return { ok, reason: ok ? "authenticated" : r.reason || "not_authenticated" };
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         lastAuthCheck.current = { ok: false, ts: Date.now() };
         return { ok: false, reason: "verify_error" };
       }

@@ -72,7 +72,7 @@ export function useWcaSync() {
               log.error("sse error", { message: evt.message });
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch { /* intentionally ignored: best-effort cleanup */ }
+          } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["partners"] });

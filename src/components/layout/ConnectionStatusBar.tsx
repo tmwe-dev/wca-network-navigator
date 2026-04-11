@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ConnectionStatusBar");
 
 interface OutreachQueueState {
   pendingCount: number;
@@ -36,12 +39,12 @@ function loadCachedStatus(): ChannelStatus {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch { /* intentionally ignored: best-effort cleanup */ }
+  } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   return { li: false, wa: false, fs: false, ai: true };
 }
 
 function saveCachedStatus(s: ChannelStatus) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* intentionally ignored: best-effort cleanup */ }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 }
 
 export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
@@ -90,7 +93,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
         const r = await li.verifySession();
         liOk = r.success === true && r.authenticated === true;
         if (!liOk) problems.push("LinkedIn: sessione non autenticata");
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         problems.push("LinkedIn: verifica fallita");
       }
     } else {
@@ -103,7 +107,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
         const r = await wa.verifySession();
         waOk = r.success;
         if (!waOk) problems.push("WhatsApp: sessione non attiva");
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         problems.push("WhatsApp: verifica fallita");
       }
     } else {
@@ -118,7 +123,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
             .eq("key", "whatsapp_sender")
             .maybeSingle();
           if (data?.value) waOk = true;
-        } catch { /* intentionally ignored: best-effort cleanup */ }
+        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }
       if (!waOk) problems.push("WhatsApp: né estensione né API configurata");
     }
@@ -134,7 +139,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-    } catch { /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 
     setConnecting(false);
 

@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("cockpitPreselection");
 /**
  * cockpitPreselection — stores source IDs of contacts just sent to cockpit
  * so they can be auto-selected when the user opens the Cockpit page.
@@ -12,7 +15,8 @@ export function addCockpitPreselection(sourceIds: string[]) {
     const existing = getCockpitPreselection();
     const merged = [...new Set([...existing, ...sourceIds])];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // localStorage unavailable — skip silently
   }
 }
@@ -24,7 +28,8 @@ export function consumeCockpitPreselection(): string[] {
     if (!raw) return [];
     localStorage.removeItem(STORAGE_KEY);
     return JSON.parse(raw) as string[];
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return [];
   }
 }
@@ -34,7 +39,8 @@ export function getCockpitPreselection(): string[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return [];
   }
 }

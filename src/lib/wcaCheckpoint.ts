@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("wcaCheckpoint");
 /**
  * WCA Timing Checkpoint — Global Gate
  * 
@@ -107,7 +110,8 @@ export async function waitForGreenLight(
         const t = setTimeout(resolve, 1000);
         signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
       });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       return false; // Aborted
     }
   }

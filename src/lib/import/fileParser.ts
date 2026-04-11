@@ -5,6 +5,9 @@
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import type { ParsedFile, ParsingOptions } from "./types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("fileParser");
 
 const SAMPLE_SIZE = 50;
 
@@ -222,7 +225,8 @@ async function parseJson(
   let json: unknown;
   try {
     json = JSON.parse(text);
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     throw new Error("Il file JSON non è valido.");
   }
 

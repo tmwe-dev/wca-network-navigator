@@ -23,6 +23,9 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("BusinessCardsView");
 
 type ViewMode = "compact" | "card" | "expanded";
 type SortMode = "name_asc" | "name_desc" | "contacts_desc" | "matched_first";
@@ -240,7 +243,7 @@ export function BusinessCardsView() {
       const count = await sendToCockpit.mutateAsync(items);
       toast.success(`${count} biglietti inviati al Cockpit`);
       setSelectedBca(new Set());
-    } catch { toast.error("Errore nell'invio al Cockpit"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nell'invio al Cockpit"); }
   };
 
   const handleBcaDeepSearch = () => {

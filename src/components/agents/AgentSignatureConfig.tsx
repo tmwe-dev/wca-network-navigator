@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentSignatureConfig");
 
 interface Props {
   agent: Agent;
@@ -42,7 +45,8 @@ export function AgentSignatureConfig({ agent }: Props) {
       const { data: urlData } = supabase.storage.from("templates").getPublicUrl(path);
       setSignatureImageUrl(urlData.publicUrl);
       toast.success("Immagine caricata");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore upload immagine");
     } finally {
       setUploading(false);

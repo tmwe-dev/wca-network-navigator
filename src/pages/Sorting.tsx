@@ -9,9 +9,12 @@ import { useDeleteActivities } from "@/hooks/useActivities";
 import type { SortingJob } from "@/hooks/useSortingJobs";
 import { toast } from "sonner";
 import {
+import { createLogger } from "@/lib/log";
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const log = createLogger("Sorting");
 
 export default function Sorting() {
   const { data: jobs = [], isLoading } = useSortingJobs();
@@ -49,7 +52,7 @@ export default function Sorting() {
     for (let i = 0; i < checkedReviewed.length; i++) {
       try {
         await sendJob.mutateAsync(checkedReviewed[i]);
-      } catch { /* already toasted */ }
+      } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); /* already toasted */ }
       setSendProgress({ done: i + 1, total: checkedReviewed.length });
     }
     setSending(false);
@@ -118,7 +121,7 @@ export default function Sorting() {
                   await deleteActivities.mutateAsync(checkedArr);
                   setCheckedIds(new Set());
                   toast.success(`${checkedArr.length} record eliminati`);
-                } catch { toast.error("Errore durante l'eliminazione"); }
+                } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
                 setShowDeleteConfirm(false);
               }}
             >

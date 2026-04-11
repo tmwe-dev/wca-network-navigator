@@ -1,3 +1,6 @@
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("wcaCookieStore");
 /**
  * WCA Session Cookie — modulo centralizzato per gestione cookie di sessione.
  * 
@@ -22,7 +25,8 @@ export function setWcaCookie(cookie: string): void {
   memSavedAt = Date.now();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ cookie, savedAt: memSavedAt }));
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // localStorage non disponibile — in-memory only
   }
 }
@@ -49,7 +53,8 @@ export function getWcaCookie(): string | null {
         return parsed.cookie;
       }
     }
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // corrupted or unavailable
   }
 
@@ -71,7 +76,8 @@ export function clearWcaCookie(): void {
   memSavedAt = 0;
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // ignore
   }
 }

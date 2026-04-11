@@ -12,6 +12,9 @@ import { useAgents } from "@/hooks/useAgents";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ElevenLabsSettings");
 
 interface Voice {
   voice_id: string;
@@ -86,7 +89,8 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
       const data = await invokeEdge<any>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
       setApiStatus(data.status || "error");
       if (data.voices?.length > 0) setVoices(data.voices);
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setApiStatus("error");
     } finally {
       setLoadingVoices(false);

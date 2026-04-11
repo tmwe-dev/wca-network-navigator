@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import TemplateManager from "@/components/settings/TemplateManager";
 import AIProfileSettings from "@/components/settings/AIProfileSettings";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GeneralSettings");
 
 interface GeneralSettingsProps {
   settings: Record<string, string> | undefined;
@@ -58,7 +61,7 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
       await updateSetting.mutateAsync({ key: "default_sender_email", value: emailSender.trim() });
       await updateSetting.mutateAsync({ key: "default_sender_name", value: emailName.trim() });
       toast.success("Impostazioni email SMTP salvate!");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
     finally { setSavingEmail(false); }
   };
 
@@ -143,7 +146,7 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
                   if (!whatsappNumber.trim()) return;
                   setSavingWA(true);
                   try { await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() }); toast.success("Numero WhatsApp salvato"); }
-                  catch { toast.error("Errore nel salvataggio"); }
+                  catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
                   finally { setSavingWA(false); }
                 }}
                 disabled={savingWA || !whatsappNumber.trim()}

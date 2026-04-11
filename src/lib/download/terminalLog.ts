@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("terminalLog");
 
 /**
  * Terminal log with LOCAL BUFFER — flushes to DB every N entries
@@ -55,7 +58,8 @@ async function flushBuffer(): Promise<void> {
       .from("download_jobs")
       .update({ terminal_log: updated as any })
       .eq("id", jobId);
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // Silently fail — terminal log is non-critical
   }
 }
