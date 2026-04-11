@@ -7,8 +7,8 @@ import { JobCanvas } from "@/components/campaigns/JobCanvas";
 import { useCampaignJobs, useUpdateCampaignJob, useDeleteCampaignJobs } from "@/hooks/useCampaignJobs";
 import { useContactsForPartners } from "@/hooks/useActivities";
 import { toast } from "sonner";
-import {
 import { createLogger } from "@/lib/log";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
