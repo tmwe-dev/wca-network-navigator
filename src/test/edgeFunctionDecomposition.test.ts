@@ -59,3 +59,50 @@ describe("Edge Function Decomposition — ai-assistant", () => {
     }
   });
 });
+
+describe("Edge Function Consolidation — Macro-functions", () => {
+  const functionsDir = path.resolve("supabase/functions");
+
+  it("unified-assistant esiste e gestisce tutti gli scope", () => {
+    const content = fs.readFileSync(path.join(functionsDir, "unified-assistant/index.ts"), "utf-8");
+    expect(content).toContain("partner_hub");
+    expect(content).toContain("cockpit");
+    expect(content).toContain("contacts");
+    expect(content).toContain("import");
+    expect(content).toContain("extension");
+    expect(content).toContain("strategic");
+    expect(content).toContain("forwardToFunction");
+  });
+
+  it("generate-content esiste e gestisce tutte le azioni", () => {
+    const content = fs.readFileSync(path.join(functionsDir, "generate-content/index.ts"), "utf-8");
+    expect(content).toContain('"email"');
+    expect(content).toContain('"outreach"');
+    expect(content).toContain('"improve"');
+    expect(content).toContain('"analyze_edit"');
+    expect(content).toContain("forwardToFunction");
+  });
+
+  it("ai-utility esiste e gestisce le utility", () => {
+    const content = fs.readFileSync(path.join(functionsDir, "ai-utility/index.ts"), "utf-8");
+    expect(content).toContain('"briefing"');
+    expect(content).toContain('"categorize"');
+    expect(content).toContain('"deep_search"');
+    expect(content).toContain("forwardToFunction");
+  });
+
+  it("proxyUtils.ts esporta forwardToFunction e proxyToMacro", () => {
+    const content = fs.readFileSync(path.join(functionsDir, "_shared/proxyUtils.ts"), "utf-8");
+    expect(content).toContain("export async function forwardToFunction");
+    expect(content).toContain("export async function proxyToMacro");
+  });
+
+  it("le 3 macro-funzioni sono sotto 100 righe ciascuna (sono router)", () => {
+    const macros = ["unified-assistant/index.ts", "generate-content/index.ts", "ai-utility/index.ts"];
+    for (const macro of macros) {
+      const content = fs.readFileSync(path.join(functionsDir, macro), "utf-8");
+      const lines = content.split("\n").length;
+      expect(lines).toBeLessThan(100);
+    }
+  });
+});
