@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPartnerFacets, type PartnerFacets } from "@/v2/io/supabase/queries/partner-facets";
 import { isOk } from "@/v2/core/domain/result";
 
-const EMPTY: PartnerFacets = { countries: [], totalCount: 0 };
+const EMPTY: PartnerFacets = { countries: [], cities: [], partnerTypes: [], totalCount: 0 };
 
 export function usePartnerFacets() {
   return useQuery({

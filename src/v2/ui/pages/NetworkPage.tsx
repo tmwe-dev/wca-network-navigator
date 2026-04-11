@@ -1,146 +1,196 @@
 /**
- * NetworkPage — Partner list with filters, detail drawer, pagination
+ * NetworkPage — Partner list with infinite scroll, advanced filters, drawer
  */
 import * as React from "react";
-import { useState, useCallback, useMemo } from "react";
-import { usePartnersV2, type PartnerFilters } from "@/v2/hooks/usePartnersV2";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { usePartnersInfinite, useToggleFavoriteV2 } from "@/v2/hooks/usePartnersV2";
 import { usePartnerFacets } from "@/v2/hooks/usePartnerFacets";
-import { DataTable, type ColumnDef } from "../organisms/DataTable";
 import { SearchBar } from "../molecules/SearchBar";
 import { PartnerFiltersPanel, type PartnerFilterValues } from "../organisms/PartnerFiltersPanel";
 import { PartnerDetailDrawer } from "../organisms/PartnerDetailDrawer";
 import { StatusBadge } from "../atoms/StatusBadge";
+import { EmptyState } from "../atoms/EmptyState";
 import { Button } from "../atoms/Button";
 import { partnerCompletenessScore } from "@/v2/core/domain/rules/partner-rules";
 import type { PartnerV2 } from "@/v2/core/domain/partner-entity";
-import { Filter } from "lucide-react";
-
-const partnerColumns: readonly ColumnDef<PartnerV2>[] = [
-  {
-    id: "companyName",
-    header: "Azienda",
-    accessorFn: (row) => row.companyName,
-  },
-  {
-    id: "countryCode",
-    header: "Paese",
-    accessorFn: (row) => row.countryCode,
-    className: "w-[80px]",
-  },
-  {
-    id: "city",
-    header: "Città",
-    accessorFn: (row) => row.city,
-  },
-  {
-    id: "email",
-    header: "Email",
-    accessorFn: (row) => row.email,
-  },
-  {
-    id: "leadStatus",
-    header: "Stato",
-    accessorFn: (row) => row.leadStatus,
-  },
-  {
-    id: "score",
-    header: "Score",
-    accessorFn: (row) => partnerCompletenessScore(row),
-    cell: (row) => {
-      const score = partnerCompletenessScore(row);
-      const status = score >= 70 ? "success" : score >= 40 ? "warning" : "error";
-      return <StatusBadge status={status} label={`${score}%`} />;
-    },
-    className: "w-[80px]",
-  },
-];
+import { Filter, Star, Download, Loader2 } from "lucide-react";
 
 export function NetworkPage(): React.ReactElement {
   const [filterValues, setFilterValues] = useState<PartnerFilterValues>({});
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data: facets } = usePartnerFacets();
+  const toggleFav = useToggleFavoriteV2();
 
-  const queryFilters = useMemo<PartnerFilters>(() => ({
-    countryCode: filterValues.countryCode,
+  const queryFilters = useMemo(() => ({
     searchQuery: filterValues.searchQuery,
+    countryCode: filterValues.countryCode,
+    city: filterValues.city,
+    partnerType: filterValues.partnerType,
+    favorites: filterValues.favorites,
+    quality: filterValues.quality,
+    sort: filterValues.sort,
   }), [filterValues]);
 
-  const { data: partners = [], isLoading } = usePartnersV2(queryFilters);
+  const {
+    data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage,
+  } = usePartnersInfinite(queryFilters);
 
-  const filteredPartners = useMemo(() => {
-    let result = [...partners];
-    if (filterValues.hasEmail) {
-      result = result.filter((p) => Boolean(p.email));
-    }
-    if (filterValues.hasPhone) {
-      result = result.filter((p) => Boolean(p.phone));
-    }
-    return result;
-  }, [partners, filterValues.hasEmail, filterValues.hasPhone]);
+  const allPartners = useMemo(
+    () => data?.pages.flatMap((p) => p.partners) ?? [],
+    [data],
+  );
+  const totalCount = data?.pages[0]?.total ?? 0;
 
-  const handleSearch = useCallback((searchQuery: string) => {
-    setFilterValues((prev) => ({ ...prev, searchQuery: searchQuery || undefined }));
+  // ── Infinite scroll observer ──
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
+      { rootMargin: "200px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleSearch = useCallback((q: string) => {
+    setFilterValues((prev) => ({ ...prev, searchQuery: q || undefined }));
   }, []);
 
-  const handleRowClick = useCallback((partner: PartnerV2) => {
-    setSelectedPartnerId(String(partner.id));
-  }, []);
+  const handleToggleFav = useCallback((partner: PartnerV2) => {
+    toggleFav.mutate({ id: String(partner.id), isFavorite: !partner.isFavorite });
+  }, [toggleFav]);
 
   return (
-    <div className="flex h-full">
-      {showFilters ? (
-        <div className="w-64 flex-shrink-0 border-r overflow-y-auto p-2">
+    <div className="flex h-full min-h-0">
+      {showFilters && (
+        <div className="w-60 flex-shrink-0 border-r overflow-y-auto">
           <PartnerFiltersPanel
             filters={filterValues}
             onFiltersChange={setFilterValues}
             availableCountries={facets?.countries ?? []}
+            availableCities={facets?.cities ?? []}
+            availableTypes={facets?.partnerTypes ?? []}
           />
         </div>
-      ) : null}
+      )}
 
-      <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-        <div className="flex items-center justify-between">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Network</h1>
-            <p className="text-sm text-muted-foreground">
-              {isLoading ? "Caricamento..." : `${filteredPartners.length} partner`}
-              {facets?.totalCount ? ` su ${facets.totalCount.toLocaleString("it-IT")} totali` : ""}
+            <h1 className="text-xl font-bold text-foreground">Network</h1>
+            <p className="text-xs text-muted-foreground">
+              {isLoading ? "Caricamento..." : `${allPartners.length} di ${totalCount.toLocaleString("it-IT")} partner`}
             </p>
           </div>
-          <Button
-            variant={showFilters ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setShowFilters((v) => !v)}
-          >
-            <Filter className="h-4 w-4 mr-1" />
-            Filtri
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              <Filter className="h-4 w-4 mr-1" /> Filtri
+            </Button>
+            <Button variant="outline" size="sm" disabled>
+              <Download className="h-4 w-4 mr-1" /> Export
+            </Button>
+          </div>
         </div>
 
-        <SearchBar onSearch={handleSearch} placeholder="Cerca partner..." />
+        <div className="px-4 pb-2">
+          <SearchBar onSearch={handleSearch} placeholder="Cerca partner..." />
+        </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : (
-          <DataTable
-            columns={partnerColumns}
-            rows={filteredPartners}
-            getRowId={(row) => String(row.id)}
-            emptyTitle="Nessun partner trovato"
-            emptyDescription="Prova a modificare i filtri di ricerca."
-            onRowClick={handleRowClick}
-          />
-        )}
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : allPartners.length === 0 ? (
+            <EmptyState title="Nessun partner trovato" description="Modifica i filtri di ricerca." />
+          ) : (
+            <div className="space-y-1">
+              {allPartners.map((p) => (
+                <PartnerRow
+                  key={String(p.id)}
+                  partner={p}
+                  onClick={() => setSelectedPartnerId(String(p.id))}
+                  onToggleFav={() => handleToggleFav(p)}
+                />
+              ))}
+
+              {/* Infinite scroll sentinel */}
+              <div ref={sentinelRef} className="h-8 flex items-center justify-center">
+                {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <PartnerDetailDrawer
         partnerId={selectedPartnerId}
         onClose={() => setSelectedPartnerId(null)}
+        onToggleFavorite={handleToggleFav}
       />
+    </div>
+  );
+}
+
+/** Single partner row — compact card */
+function PartnerRow({ partner, onClick, onToggleFav }: {
+  readonly partner: PartnerV2;
+  readonly onClick: () => void;
+  readonly onToggleFav: () => void;
+}): React.ReactElement {
+  const score = partnerCompletenessScore(partner);
+  const scoreStatus = score >= 70 ? "success" : score >= 40 ? "warning" : "error";
+
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center gap-3 p-2.5 rounded-md border cursor-pointer hover:bg-accent/50 transition-colors"
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+        className="flex-shrink-0"
+      >
+        <Star className={`h-4 w-4 ${partner.isFavorite ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">{partner.companyName}</span>
+          {partner.companyAlias && (
+            <span className="text-xs text-muted-foreground truncate">({partner.companyAlias})</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{partner.countryCode}</span>
+          <span>·</span>
+          <span className="truncate">{partner.city}</span>
+          {partner.partnerType && (
+            <>
+              <span>·</span>
+              <span>{partner.partnerType}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {partner.email && <StatusBadge status="info" label="✉" className="text-[10px] px-1.5" />}
+        {(partner.phone ?? partner.mobile) && <StatusBadge status="info" label="📞" className="text-[10px] px-1.5" />}
+        <StatusBadge status={scoreStatus} label={`${score}%`} />
+        {partner.rating != null && partner.rating > 0 && (
+          <span className="text-xs text-muted-foreground">{partner.rating}★</span>
+        )}
+      </div>
     </div>
   );
 }

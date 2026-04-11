@@ -1,5 +1,5 @@
 /**
- * IO Queries: Partner Facets — Unique countries for filters
+ * IO Queries: Partner Facets — countries, cities, types for filters
  */
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
@@ -7,14 +7,18 @@ import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors
 
 export interface PartnerFacets {
   readonly countries: readonly string[];
+  readonly cities: readonly string[];
+  readonly partnerTypes: readonly string[];
   readonly totalCount: number;
 }
 
 export async function fetchPartnerFacets(): Promise<Result<PartnerFacets, AppError>> {
   try {
-    const [countriesRes, countRes] = await Promise.all([
-      supabase.from("partners").select("country_code").order("country_code"),
-      supabase.from("partners").select("id", { count: "exact", head: true }),
+    const [countriesRes, citiesRes, typesRes, countRes] = await Promise.all([
+      supabase.from("partners").select("country_code").eq("is_active", true).order("country_code"),
+      supabase.from("partners").select("city").eq("is_active", true).order("city"),
+      supabase.from("partners").select("partner_type").eq("is_active", true),
+      supabase.from("partners").select("id", { count: "exact", head: true }).eq("is_active", true),
     ]);
 
     if (countriesRes.error) {
@@ -25,8 +29,18 @@ export async function fetchPartnerFacets(): Promise<Result<PartnerFacets, AppErr
       (countriesRes.data ?? []).map((r) => r.country_code).filter(Boolean)
     )].sort();
 
+    const uniqueCities = [...new Set(
+      (citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => c != null && c !== "")
+    )].sort();
+
+    const rawTypes = (typesRes.data ?? []).map((r) => r.partner_type);
+    const uniqueTypes: string[] = [...new Set(rawTypes.filter((t): t is NonNullable<typeof t> => t != null))];
+    uniqueTypes.sort();
+
     return ok({
       countries: uniqueCountries,
+      cities: uniqueCities,
+      partnerTypes: uniqueTypes as readonly string[],
       totalCount: countRes.count ?? 0,
     });
   } catch (caught: unknown) {
