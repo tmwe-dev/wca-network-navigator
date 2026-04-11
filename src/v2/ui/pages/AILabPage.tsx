@@ -2,50 +2,12 @@
  * AILabPage — AI playground for prompts and agents
  */
 import * as React from "react";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useAILabV2 } from "@/v2/hooks/useAILabV2";
 import { Button } from "../atoms/Button";
-import { Bot, Play, Code } from "lucide-react";
+import { Play, Code } from "lucide-react";
 
 export function AILabPage(): React.ReactElement {
-  const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState("openai/gpt-5-mini");
-  const [response, setResponse] = useState("");
-  const [running, setRunning] = useState(false);
-
-  const { data: prompts } = useQuery({
-    queryKey: ["v2-operative-prompts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_prompts")
-        .select("id, title, instructions, is_active, scope")
-        .order("priority", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const handleRun = async () => {
-    if (!prompt.trim()) return;
-    setRunning(true);
-    setResponse("");
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: {
-          messages: [{ role: "user", content: prompt }],
-          context: "ai_lab_playground",
-          model,
-        },
-      });
-      setResponse(data?.response ?? data?.message ?? JSON.stringify(data, null, 2));
-    } catch (e) {
-      setResponse(`Errore: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setRunning(false);
-    }
-  };
+  const { prompt, setPrompt, model, setModel, response, running, prompts, run } = useAILabV2();
 
   return (
     <div className="p-6 space-y-6">
@@ -80,7 +42,7 @@ export function AILabPage(): React.ReactElement {
               placeholder="Inserisci il tuo prompt..."
             />
           </div>
-          <Button onClick={handleRun} isLoading={running} className="gap-2">
+          <Button onClick={run} isLoading={running} className="gap-2">
             <Play className="h-4 w-4" />Esegui
           </Button>
         </div>
@@ -95,7 +57,7 @@ export function AILabPage(): React.ReactElement {
       </div>
 
       {/* Prompt library */}
-      {prompts && prompts.length > 0 ? (
+      {prompts.length > 0 ? (
         <div className="space-y-3">
           <h3 className="font-semibold text-foreground flex items-center gap-2"><Code className="h-4 w-4" />Prompt operativi</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
