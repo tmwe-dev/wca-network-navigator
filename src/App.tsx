@@ -148,6 +148,8 @@ const App = () => (
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                 </Route>
               </Route>
+              {/* v2 routes */}
+              <Route path="/v2/*" element={<V2Routes />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
