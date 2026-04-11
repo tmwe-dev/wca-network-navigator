@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { RADashboardStats, RAProspect, RAScrapingJob } from "@/types/ra";
 
 const RA_DASHBOARD_KEY = ["ra-dashboard"] as const;
@@ -8,8 +8,6 @@ export function useRADashboard() {
   return useQuery({
     queryKey: RA_DASHBOARD_KEY,
     queryFn: async (): Promise<RADashboardStats> => {
-      // Run parallel queries
-      const db = supabase as any;
       const [
         { count: totalProspects },
         { count: withEmail },
@@ -19,18 +17,17 @@ export function useRADashboard() {
         { data: activeJobs },
         { data: atecoData },
       ] = await Promise.all([
-        db.from("ra_prospects").select("*", { count: "exact", head: true }),
-        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
-        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("pec", "is", null),
-        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("phone", "is", null),
-        db.from("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
-        db.from("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
-        db.from("ra_prospects").select("codice_ateco, descrizione_ateco"),
+        untypedFrom("ra_prospects").select("*", { count: "exact", head: true }),
+        untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
+        untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("pec", "is", null),
+        untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("phone", "is", null),
+        untypedFrom("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
+        untypedFrom("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
+        untypedFrom("ra_prospects").select("codice_ateco, descrizione_ateco"),
       ]);
 
-      // Calculate top ATECO sectors
       const atecoMap = new Map<string, { description: string; count: number }>();
-      (atecoData ?? []).forEach((p: any) => {
+      ((atecoData ?? []) as Record<string, string>[]).forEach((p) => {
         if (!p.codice_ateco) return;
         const existing = atecoMap.get(p.codice_ateco);
         if (existing) {
