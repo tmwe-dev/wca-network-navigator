@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { updatePartner } from "@/data/partners";
 import { createInteraction } from "@/data/interactions";
+import { supabase } from "@/integrations/supabase/client";
 
 const log = createLogger("useSortingJobs");
 

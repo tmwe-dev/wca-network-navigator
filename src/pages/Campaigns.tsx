@@ -433,7 +433,6 @@ export default function Campaigns() {
     }));
 
     await insertCockpitQueueItems(rows);
-    if (error) {
       toast.error("Errore nell'invio al cockpit");
       console.error(error);
       return;

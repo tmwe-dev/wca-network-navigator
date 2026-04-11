@@ -206,7 +206,7 @@ export function PartnerListPanel({
           user_id: userId,
         };
       });
-      await createActivities(inserts);
+      await createActivities(inserts as any);
       toast.success(`${inserts.length} partner inviati a Workspace`);
     }
     setSelectedIds(new Set());

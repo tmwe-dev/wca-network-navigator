@@ -317,7 +317,7 @@ export default function MissionBuilder() {
           attachments: stepData.attachments || {},
           toneConfig: stepData.toneConfig || {},
         },
-      }).select().single();
+      });
 
       if (error) throw error;
       const missionId = (mission as any).id;

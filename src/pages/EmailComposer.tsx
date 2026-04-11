@@ -31,6 +31,7 @@ import EmailEditLearningDialog, { type EditAnalysis } from "@/components/email/E
 
 import { cn } from "@/lib/utils";
 import { insertEmailDraft } from "@/data/emailDrafts";
+import { supabase } from "@/integrations/supabase/client";
 
 const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{country}}"];
 
@@ -339,7 +340,6 @@ export default function EmailComposer() {
         status: "template",
         total_count: 0,
       } as any);
-      if (error) throw error;
       setSaveTemplateOpen(false);
       setTemplateName("");
       setTemplateCategory("primo_contatto");
