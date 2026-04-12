@@ -111,8 +111,8 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
                   <span>{contactName}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <Mail className="w-3.5 h-3.5 shrink-0 text-sky-400" />
-                  <span className="font-mono text-sky-400">{contactEmail || "nessuna email"}</span>
+                   <Mail className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                   <span className="font-mono text-muted-foreground">{contactEmail || "nessuna email"}</span>
                 </div>
               </div>
 
@@ -124,7 +124,7 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
 
               {/* Email body — white bg, professional typography */}
               <div
-                className="border border-border rounded-b-lg bg-white dark:bg-zinc-950 px-6 py-5 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:mb-3 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:mb-3 [&_li]:mb-1 [&_strong]:font-semibold [&_a]:text-sky-600 [&_a]:underline [&_br]:leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-2 [&_h3]:font-semibold [&_h3]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:border-muted [&_blockquote]:pl-3 [&_blockquote]:italic [&_hr]:my-4 [&_hr]:border-muted"
+                className="border border-border rounded-b-lg bg-card px-6 py-5 text-sm leading-relaxed text-foreground/80 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:mb-3 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:mb-3 [&_li]:mb-1 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_br]:leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-2 [&_h3]:font-semibold [&_h3]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:border-muted [&_blockquote]:pl-3 [&_blockquote]:italic [&_hr]:my-4 [&_hr]:border-muted"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
                 dangerouslySetInnerHTML={{ __html: sanitizedBody }}
               />

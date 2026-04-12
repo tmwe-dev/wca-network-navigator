@@ -265,12 +265,12 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
-          <p className="text-muted-foreground text-sm">Caricamento globo...</p>
-        </div>
-      </div>
+       <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/20">
+         <div className="flex flex-col items-center gap-4">
+           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+           <p className="text-muted-foreground text-sm">Caricamento globo...</p>
+         </div>
+       </div>
     );
   }
 
@@ -300,7 +300,7 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
       {/* Minimal legend - bottom left corner */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 text-[10px] text-muted-foreground bg-black/40 backdrop-blur-sm rounded px-2 py-1">
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-amber-400" />
+          <div className="w-2 h-2 rounded-full bg-primary" />
           <span>Partner</span>
         </div>
         <div className="flex items-center gap-1">

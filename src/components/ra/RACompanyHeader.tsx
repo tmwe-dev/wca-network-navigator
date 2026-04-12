@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import type { RALeadStatus } from "@/types/ra";
 
 const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }> = {
-  new: { label: "Nuovo", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  contacted: { label: "Contattato", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
-  qualified: { label: "Qualificato", color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  negotiation: { label: "Negoziazione", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  new: { label: "Nuovo", color: "bg-muted text-muted-foreground border-border" },
+  contacted: { label: "Contattato", color: "bg-primary/20 text-primary border-primary/30" },
+  qualified: { label: "Qualificato", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  negotiation: { label: "Negoziazione", color: "bg-primary/20 text-primary border-primary/30" },
   converted: { label: "Convertito", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  lost: { label: "Perso", color: "bg-red-500/20 text-red-400 border-red-500/30" },
+  lost: { label: "Perso", color: "bg-destructive/20 text-destructive border-destructive/30" },
 };
 
 interface RACompanyHeaderProps {
@@ -37,7 +37,7 @@ export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
               </Badge>
             )}
             {prospect.codice_ateco && (
-              <Badge className="gap-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+              <Badge className="gap-1 bg-primary/20 text-primary border border-primary/30">
                 {prospect.codice_ateco}
               </Badge>
             )}

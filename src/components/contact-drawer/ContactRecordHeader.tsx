@@ -8,11 +8,11 @@ const SOURCE_LABELS: Partial<Record<RecordSourceType, { label: string; color: st
   partner: { label: "WCA Partner", color: "bg-chart-1/15 text-chart-1 border-chart-1/30" },
   contact: { label: "Contatto", color: "bg-chart-3/15 text-chart-3 border-chart-3/30" },
   prospect: { label: "Prospect RA", color: "bg-chart-4/15 text-chart-4 border-chart-4/30" },
-  bca: { label: "Biglietto", color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
-  business_card: { label: "Biglietto", color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+  bca: { label: "Biglietto", color: "bg-primary/15 text-primary border-primary/30" },
+  business_card: { label: "Biglietto", color: "bg-primary/15 text-primary border-primary/30" },
   campaign: { label: "Campagna", color: "bg-chart-2/15 text-chart-2 border-chart-2/30" },
   task: { label: "Task", color: "bg-chart-5/15 text-chart-5 border-chart-5/30" },
-  voice_session: { label: "Voce", color: "bg-purple-500/15 text-purple-500 border-purple-500/30" },
+  voice_session: { label: "Voce", color: "bg-primary/15 text-primary border-primary/30" },
 };
 
 interface Props {

@@ -34,9 +34,9 @@ function StarDisplay({ rating, size }: { rating: number; size: "sm" | "md" | "lg
 
   for (let i = 1; i <= 5; i++) {
     if (i <= Math.floor(rating)) {
-      stars.push(<Star key={i} className={`${sizeClass} fill-amber-400 text-amber-400`} />);
+      stars.push(<Star key={i} className={`${sizeClass} fill-primary text-primary`} />);
     } else if (i - 0.5 <= rating) {
-      stars.push(<StarHalf key={i} className={`${sizeClass} fill-amber-400 text-amber-400`} />);
+      stars.push(<StarHalf key={i} className={`${sizeClass} fill-primary text-primary`} />);
     } else {
       stars.push(<Star key={i} className={`${sizeClass} text-muted-foreground/30`} />);
     }
@@ -51,7 +51,7 @@ function MiniBar({ value, label }: { value: number; label: string }) {
       <span className="w-28 text-muted-foreground truncate">{label}</span>
       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
         <div
-          className="h-full bg-amber-400 rounded-full transition-all"
+          className="h-full bg-primary rounded-full transition-all"
           style={{ width: `${(value / 5) * 100}%` }}
         />
       </div>

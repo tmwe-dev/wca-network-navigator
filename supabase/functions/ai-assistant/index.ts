@@ -1753,34 +1753,8 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
     }
   }
 
-  // Step 3: If still not found, search WCA directory directly by company name
-  if (!wcaId) {
-    try {
-      const { data: searchResult, error: searchErr } = await supabase.functions.invoke("scrape-wca-directory", {
-        body: { searchBy: "CompanyName", companyName, countryCode: countryCode || undefined },
-      });
-      if (!searchErr && searchResult?.members?.length > 0) {
-        // Find best match from results
-        const exactMatch = searchResult.members.find((m: any) => 
-          m.company_name?.toLowerCase() === companyName.toLowerCase()
-        );
-        const partialMatch = searchResult.members.find((m: any) =>
-          m.company_name?.toLowerCase().includes(companyName.toLowerCase()) || 
-          companyName.toLowerCase().includes(m.company_name?.toLowerCase())
-        );
-        const bestMatch = exactMatch || partialMatch || searchResult.members[0];
-        if (bestMatch?.wca_id) {
-          wcaId = bestMatch.wca_id;
-          // Also update country info if we got it
-          if (!countryCode && bestMatch.country_code) {
-            // countryCode will be resolved later
-          }
-        }
-      }
-    } catch (e) {
-      console.error("WCA directory search failed:", e);
-    }
-  }
+  // Step 3: scrape-wca-directory removed — download now handled by external wca-app service
+  // If wcaId is still null, we simply report not found.
 
   if (!wcaId) return { error: `"${companyName}" non trovata nel database, nella directory cache, né cercando direttamente su WCA. Verifica il nome esatto dell'azienda.` };
 
@@ -2403,21 +2377,8 @@ async function executeEnrichPartnerWebsite(args: Record<string, unknown>, authHe
   return { success: true, partner_id: partnerId, ...data, message: `Enrichment website completato.` };
 }
 
-async function executeScanDirectory(args: Record<string, unknown>, authHeader: string) {
-  const body: Record<string, unknown> = {};
-  if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
-  if (args.search_by) body.searchBy = args.search_by;
-  if (args.company_name) body.companyName = args.company_name;
-  if (args.city) body.city = args.city;
-  if (args.member_id) body.memberId = args.member_id;
-  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/scrape-wca-directory`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: authHeader },
-    body: JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok || data.error) return { error: data.error || "Errore scansione directory" };
-  return { success: true, ...data, message: `Scansione directory completata: ${data.total_results || 0} risultati trovati.` };
+async function executeScanDirectory(_args: Record<string, unknown>, _authHeader: string) {
+  return { error: "Funzione scrape-wca-directory rimossa. Il download directory è ora gestito dal sistema esterno wca-app." };
 }
 
 async function executeGenerateAliases(args: Record<string, unknown>, authHeader: string) {

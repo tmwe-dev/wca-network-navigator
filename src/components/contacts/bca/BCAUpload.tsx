@@ -106,18 +106,18 @@ export function DropZone({ onFiles, uploading, progress }: {
       onClick={() => !uploading && inputRef.current?.click()}
       className={cn(
         "relative flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all",
-        dragOver ? "border-violet-400 bg-violet-500/10" : "border-violet-500/20 bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 hover:border-violet-500/30",
-        uploading && "opacity-60 pointer-events-none",
+         dragOver ? "border-primary bg-primary/10" : "border-primary/20 bg-gradient-to-br from-primary/5 via-card to-primary/5 hover:border-primary/30",
+         uploading && "opacity-60 pointer-events-none",
       )}
     >
       {uploading ? (
         <div className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
           {progress.total > 0 && <p className="text-xs text-muted-foreground">{progress.current}/{progress.total}</p>}
         </div>
       ) : (
         <>
-          <Camera className="w-4 h-4 text-violet-400" />
+          <Camera className="w-4 h-4 text-primary" />
           <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
           <span className="text-xs text-muted-foreground">Trascina foto o file dati</span>
         </>
