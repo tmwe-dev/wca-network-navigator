@@ -4,12 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent browser back/forward on horizontal swipe */
+/* Prevent browser back/forward on horizontal swipe (trackpad two-finger) */
 html, body {
   overscroll-behavior-x: none;
 }
+html {
+  touch-action: pan-y pinch-zoom;
+}
+@supports (-webkit-overflow-scrolling: touch) {
+  html { touch-action: pan-y pinch-zoom; }
+}
 
 @layer base {
+  *, *::before, *::after {
+    overscroll-behavior-x: none;
+  }
+
   :root {
     --background: 210 40% 98%;
     --foreground: 215 25% 15%;
