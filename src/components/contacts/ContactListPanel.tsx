@@ -199,5 +199,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </Suspense>
       )}
     </div>
+    </PageErrorBoundary>
   );
 }
