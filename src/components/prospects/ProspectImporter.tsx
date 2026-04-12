@@ -255,18 +255,15 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Extension status */}
       <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${isAvailable
-        ? (isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200")
-        : (isDark ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-red-50 text-red-600 border border-red-200")
+        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+        : "bg-destructive/10 text-destructive border border-destructive/20"
       }`}>
         <Plug className="w-3.5 h-3.5" />
         {isAvailable ? "Estensione RA connessa" : "Estensione RA non rilevata — installala e ricarica la pagina"}
       </div>
 
       {jobBlocked && (
-        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${isDark
-          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-          : "bg-amber-50 text-amber-600 border border-amber-200"
-        }`}>
+        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20`}>
           <AlertTriangle className="w-3.5 h-3.5" />
           Un job è già in esecuzione. Attendi il completamento.
         </div>
@@ -274,10 +271,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
       {/* ═══ PHASE: SEARCHING ═══ */}
       {phase === "searching" && (
-        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+        <div className={`rounded-xl border p-4 space-y-3 bg-card/40 border-border`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-sky-400" : "border-sky-500"}`} />
+              <div className={`w-5 h-5 rounded-full border-2 border-t-transparent animate-spin border-primary`} />
               <span className={`text-sm font-medium ${th.h2}`}>Ricerca in corso...</span>
             </div>
             <div className="flex items-center gap-2">
@@ -286,10 +283,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
               </span>
               <button
                 onClick={() => { stopScraping(); setPhase("idle"); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
-                  ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
-                  : "bg-rose-500 text-white hover:bg-rose-600"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30`}
               >
                 <Square className="w-3 h-3" />Annulla
               </button>
@@ -302,16 +296,16 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       {/* ═══ PHASE: RESULTS ═══ */}
       {phase === "results" && (
         <>
-          <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+          <div className={`rounded-xl border p-3 space-y-2 bg-card/40 border-border`}>
             <div className="flex items-center justify-between">
-              <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+              <h3 className={`text-sm font-semibold text-foreground`}>
                 Fase 2: Seleziona e Scarica
               </h3>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`text-[10px] ${isDark ? "border-white/15 text-slate-400" : ""}`}>
+                <Badge variant="outline" className={`text-[10px]`}>
                   {searchResults.length} trovate
                 </Badge>
-                <button onClick={handleReset} className={`text-[10px] px-2 py-1 rounded-lg ${isDark ? "bg-white/5 text-slate-400 hover:bg-white/10" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                <button onClick={handleReset} className={`text-[10px] px-2 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80`}>
                   <RotateCcw className="w-3 h-3 inline mr-1" />Nuova ricerca
                 </button>
               </div>
@@ -321,10 +315,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
               <button
                 onClick={handleScrape}
                 disabled={selected.size === 0 || !isAvailable || jobBlocked}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
-                  ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
-                  : "bg-emerald-500 text-white hover:bg-emerald-600"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 border border-emerald-500/30`}
               >
                 <Download className="w-4 h-4" />
                 Scarica {selected.size} profili
@@ -350,10 +341,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
       {/* ═══ PHASE: SCRAPING / DONE ═══ */}
       {(phase === "scraping" || phase === "done") && status && (
-        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+        <div className={`rounded-xl border p-4 space-y-3 bg-card/40 border-border`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+              <h3 className={`text-sm font-semibold text-foreground`}>
                 {status.active ? `Scaricamento profilo ${status.processed + 1} di ${status.total}...` : "Scraping completato"}
               </h3>
               {status.currentCompany && status.active && (
@@ -382,18 +373,12 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
             {status.active ? (
               <button
                 onClick={() => stopScraping()}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
-                  ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
-                  : "bg-rose-500 text-white hover:bg-rose-600"
-                }`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30`}
               >
                 <Square className="w-3.5 h-3.5" />Ferma
               </button>
             ) : (
-              <button onClick={handleReset} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
-                ? "bg-white/5 text-slate-300 hover:bg-white/10"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}>
+              <button onClick={handleReset} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80`}>
                 <RotateCcw className="w-3.5 h-3.5" />Nuova ricerca
               </button>
             )}
@@ -403,14 +388,14 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div className={`rounded-xl border flex-1 min-h-0 flex flex-col ${isDark ? "bg-black/20 border-white/[0.08]" : "bg-slate-50 border-slate-200"}`}>
-          <div className={`px-3 py-2 text-xs font-medium border-b ${isDark ? "text-slate-400 border-white/[0.08]" : "text-slate-500 border-slate-200"}`}>
+        <div className={`rounded-xl border flex-1 min-h-0 flex flex-col bg-card/20 border-border`}>
+          <div className={`px-3 py-2 text-xs font-medium border-b text-muted-foreground border-border`}>
             Log ({logs.length})
           </div>
           <div ref={logRef} className="flex-1 overflow-y-auto p-3 space-y-0.5 font-mono text-[11px]">
             {logs.map((l, i) => (
-              <div key={i} className={isDark ? "text-slate-400" : "text-slate-500"}>
-                <span className={isDark ? "text-slate-600" : "text-slate-300"}>
+              <div key={i} className="text-muted-foreground">
+                <span className="text-muted-foreground/50">
                   {new Date(l.time).toLocaleTimeString()}
                 </span>{" "}
                 {l.msg}

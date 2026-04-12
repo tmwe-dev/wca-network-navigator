@@ -106,7 +106,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                       <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1">
                         <ReactMarkdown components={{
                           a: ({ href, children }) => href?.startsWith("/")
-                            ? <button className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
+                            ? <button className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
                             : <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
                         }}>{parsed.text}</ReactMarkdown>
                       </div>

@@ -88,16 +88,16 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
               </span>
             ) : isPending ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                isDark ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-blue-50 text-blue-700 border border-blue-200"
+                isDark ? "bg-muted text-muted-foreground border border-border" : "bg-muted text-muted-foreground border border-border"
               }`}>
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground" />
                 IN ATTESA
               </span>
             ) : isPaused ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                isDark ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                isDark ? "bg-primary/20 text-primary border border-primary/30" : "bg-primary/10 text-primary border border-primary/20"
               }`}>
-                <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span className="w-2 h-2 rounded-full bg-primary" />
                 IN PAUSA
               </span>
             ) : null}

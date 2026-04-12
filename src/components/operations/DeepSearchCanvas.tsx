@@ -214,7 +214,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
     )}>
       {/* Status icon */}
       {hasError ? (
-        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+        <AlertTriangle className="w-3.5 h-3.5 text-primary flex-shrink-0" />
       ) : (
         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
       )}
