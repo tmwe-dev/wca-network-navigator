@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
+import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_SETTINGS, ROUTE_EMAIL_COMPOSER } from "@/constants/routes";
 import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
@@ -76,11 +77,11 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     setNewLink("");
   };
 
-  const isOutreach = seg === "/outreach";
-  const isNetwork = seg === "/network";
-  const isCRM = seg === "/crm";
-  const isSettings = seg === "/settings";
-  const isEmailComposer = seg === "/email-composer";
+  const isOutreach = seg === `/${ROUTE_OUTREACH}`;
+  const isNetwork = seg === `/${ROUTE_NETWORK}`;
+  const isCRM = seg === `/${ROUTE_CRM}`;
+  const isSettings = seg === `/${ROUTE_SETTINGS}`;
+  const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
 
   // Destinatari visible only in outreach-related contexts
   const showRecipients = isOutreach || isEmailComposer || isNetwork || isCRM;
