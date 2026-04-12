@@ -324,7 +324,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
                 <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">Nessun template</p>
               ) : (
                 <div className="p-1 space-y-0.5">
-                  {templates.map((t: Record<string, string>) => (
+                  {templates.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => { onLoadTemplate(t.name || "", t.file_url || ""); setShowTemplates(false); }}
