@@ -147,8 +147,8 @@ export default function ContentPicker({
                         <div
                           key={globalIdx}
                           className={cn(
-                            "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
-                            isSelected ? "border-primary/50 bg-primary/10" : "border-border/50 bg-card",
+                           "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
+                            isSelected ? "border-primary/50 bg-primary/10" : "border-border bg-card",
                           )}
                           onClick={() => handleSelect(item)}
                         >

@@ -42,7 +42,7 @@ interface PartnerDetailFullProps {
 function Section({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={cn(
-      "bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl p-4 space-y-2",
+      "bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2",
       className
     )}>
       {children}
@@ -53,7 +53,7 @@ function Section({ children, className }: { children: React.ReactNode; className
 function SectionTitle({ icon: Icon, children }: { icon: any; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="w-3.5 h-3.5 text-violet-400" strokeWidth={1.5} />
+      <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
       <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{children}</p>
     </div>
   );
@@ -97,7 +97,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
       )}
 
       {/* ═══ COMPACT HEADER ═══ */}
-      <div className="bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl p-4">
+      <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <div className="shrink-0">
             {getRealLogoUrl(partner.logo_url) ? (
@@ -119,7 +119,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               {enrichment?.deep_search_at && (
                 <Tooltip>
                   <TooltipTrigger>
-                    <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
+                    <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
                   </TooltipTrigger>
                   <TooltipContent>
                     Deep Search — {format(new Date(enrichment.deep_search_at), "d MMM yyyy", { locale: it })}
@@ -129,8 +129,8 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={onToggleFavorite}
-                    className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-amber-400/30")}>
-                    {partner.is_favorite ? <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}
+                    className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}>
+                    {partner.is_favorite ? <Star className="w-4 h-4 fill-primary text-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
@@ -147,7 +147,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               <PartnerTypeIcon className="w-3.5 h-3.5 opacity-60" strokeWidth={1.5} />
               <span>{formatPartnerType(partner.partner_type)}</span>
               {partner.office_type && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 font-medium text-foreground/70">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground/70">
                   {partner.office_type === "head_office" ? "HQ" : "Branch"}
                 </span>
               )}
@@ -163,13 +163,13 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               <span className={cn(
                 "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
                 isExpired ? "border-destructive/30 text-destructive" :
-                isExpiringSoon ? "border-amber-500/30 text-amber-500" :
+                isExpiringSoon ? "border-primary/30 text-primary" :
                 "border-emerald-500/20 text-emerald-400"
               )}>
                 {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "N/A"}
               </span>
               {networks.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/20 text-foreground/70 font-medium">
+                 <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-primary/20 text-foreground/70 font-medium">
                   {networks.length} network
                 </span>
               )}
@@ -219,13 +219,13 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
           <SectionTitle icon={Users}>Contatti Ufficio ({contacts.length})</SectionTitle>
           <div className="space-y-2">
             {contacts.map((c: any) => (
-              <div key={c.id} className="bg-card/60 border border-violet-500/10 rounded-lg p-2.5 space-y-1">
+              <div key={c.id} className="bg-card/60 border border-primary/10 rounded-lg p-2.5 space-y-1">
                 <div className="flex items-center gap-2">
-                  <User className="w-3 h-3 text-violet-400" strokeWidth={1.5} />
-                  <span className="text-xs font-medium text-foreground">{c.name}</span>
-                  {c.is_primary && (
-                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 font-semibold uppercase">Primary</span>
-                  )}
+                   <User className="w-3 h-3 text-primary" strokeWidth={1.5} />
+                   <span className="text-xs font-medium text-foreground">{c.name}</span>
+                   {c.is_primary && (
+                     <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold uppercase">Primary</span>
+                   )}
                 </div>
                 {c.title && <p className="text-[11px] text-foreground/70 ml-5">{c.title}</p>}
                 <div className="flex flex-col gap-0.5 ml-5">
@@ -278,7 +278,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               return (
                 <Tooltip key={n.id}>
                   <TooltipTrigger>
-                    <div className="shrink-0 flex flex-col items-center gap-1 bg-card/60 border border-violet-500/10 rounded-xl px-3 py-2 hover:bg-violet-500/5 transition-colors min-w-[70px]">
+                    <div className="shrink-0 flex flex-col items-center gap-1 bg-card/60 border border-primary/10 rounded-xl px-3 py-2 hover:bg-primary/5 transition-colors min-w-[70px]">
                       {logo ? (
                         <img src={logo} alt={n.network_name} className="h-8 w-auto object-contain" />
                       ) : (
@@ -308,9 +308,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
             {allServices.map((s: any, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
-                <div key={i} className="flex items-center gap-1.5 bg-card/60 border border-violet-500/10 rounded-lg px-2.5 py-1.5">
-                  <Icon className="w-3.5 h-3.5 text-violet-400" strokeWidth={1.5} />
-                  <span className="text-[10px] text-foreground/80">{formatServiceCategory(s.service_category)}</span>
+                 <div key={i} className="flex items-center gap-1.5 bg-card/60 border border-primary/10 rounded-lg px-2.5 py-1.5">
+                   <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
+                   <span className="text-[10px] text-foreground/80">{formatServiceCategory(s.service_category)}</span>
                 </div>
               );
             })}
@@ -332,9 +332,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         ) : (
           <div className="space-y-1.5">
             {interactions.map((interaction: any) => (
-              <div key={interaction.id} className="flex gap-2.5 p-2.5 rounded-lg bg-card/60 border border-violet-500/10 hover:bg-violet-500/5 transition-colors">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                  {interaction.interaction_type?.charAt(0).toUpperCase()}
+               <div key={interaction.id} className="flex gap-2.5 p-2.5 rounded-lg bg-card/60 border border-primary/10 hover:bg-primary/5 transition-colors">
+                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-primary/10 text-primary border border-primary/20">
+                   {interaction.interaction_type?.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -357,7 +357,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
           <SectionTitle icon={Clock}>Promemoria</SectionTitle>
           <div className="space-y-1.5">
             {partner.reminders.map((r: any) => (
-              <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-violet-500/10">
+              <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-primary/10">
                 <div>
                   <p className="font-medium text-xs text-foreground">{r.title}</p>
                   <p className="text-[10px] text-muted-foreground">
@@ -366,7 +366,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                 </div>
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-medium border",
-                  r.status === "completed" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  r.status === "completed" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-primary/10 text-primary border-primary/20"
                 )}>
                   {r.status === "completed" ? "Completato" : "In attesa"}
                 </span>
@@ -380,10 +380,10 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
       {(partner.partner_certifications?.length > 0 || branchCountries.length > 0 || enrichment?.key_markets?.length > 0 || enrichment?.key_routes?.length > 0 || hasBranches || partner.address || partner.member_since) && (
         <Collapsible>
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-violet-500/5 rounded-xl px-3 py-2 transition-colors border border-violet-500/10">
-              <Building2 className="w-3.5 h-3.5 text-violet-400" />
-              <span className="text-xs font-medium text-foreground/80">Dettagli Avanzati</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground ml-auto" />
+             <div className="flex items-center gap-2 cursor-pointer hover:bg-primary/5 rounded-xl px-3 py-2 transition-colors border border-primary/10">
+               <Building2 className="w-3.5 h-3.5 text-primary" />
+               <span className="text-xs font-medium text-foreground/80">Dettagli Avanzati</span>
+               <ChevronDown className="w-3 h-3 text-muted-foreground ml-auto" />
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -396,19 +396,19 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                   <div className="space-y-1.5">
                     {partner.address && (
                       <div className="flex items-start gap-2 text-xs text-foreground/80">
-                        <MapPin className="w-3 h-3 mt-0.5 text-violet-400" strokeWidth={1.5} />
+                        <MapPin className="w-3 h-3 mt-0.5 text-primary" strokeWidth={1.5} />
                         <span>{partner.address}</span>
                       </div>
                     )}
                     {partner.member_since && (
                       <div className="flex items-center gap-2 text-xs text-foreground/80">
-                        <Calendar className="w-3 h-3 text-violet-400" strokeWidth={1.5} />
+                        <Calendar className="w-3 h-3 text-primary" strokeWidth={1.5} />
                         <span>Membro dal {format(new Date(partner.member_since), "MMMM yyyy", { locale: it })}</span>
                       </div>
                     )}
                     {partner.fax && (
                       <div className="flex items-center gap-2 text-xs text-foreground/80">
-                        <FileText className="w-3 h-3 text-violet-400" strokeWidth={1.5} />
+                        <FileText className="w-3 h-3 text-primary" strokeWidth={1.5} />
                         <span>Fax: {partner.fax}</span>
                       </div>
                     )}
@@ -422,9 +422,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                   <SectionTitle icon={ShieldCheck}>Certificazioni</SectionTitle>
                   <div className="flex flex-wrap gap-1.5">
                     {partner.partner_certifications.map((c: any, i: number) => (
-                      <span key={i} className="flex items-center gap-1 bg-card/60 border border-violet-500/10 rounded-lg px-2 py-1 text-xs text-foreground/80">
-                        <ShieldCheck className="w-3 h-3 text-violet-400" strokeWidth={1.5} />
-                        {c.certification}
+                       <span key={i} className="flex items-center gap-1 bg-card/60 border border-primary/10 rounded-lg px-2 py-1 text-xs text-foreground/80">
+                         <ShieldCheck className="w-3 h-3 text-primary" strokeWidth={1.5} />
+                         {c.certification}
                       </span>
                     ))}
                   </div>
@@ -437,7 +437,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                   <SectionTitle icon={Globe}>Paesi Collegati ({branchCountries.length})</SectionTitle>
                   <div className="flex flex-wrap gap-1.5">
                     {branchCountries.map(({ code, name }) => (
-                      <span key={code} className="flex items-center gap-1.5 text-xs bg-card/60 border border-violet-500/10 rounded-lg py-1 px-2 text-foreground/80">
+                      <span key={code} className="flex items-center gap-1.5 text-xs bg-card/60 border border-primary/10 rounded-lg py-1 px-2 text-foreground/80">
                         <span className="text-sm">{getCountryFlag(code)}</span> {name}
                       </span>
                     ))}
@@ -453,7 +453,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                     {enrichment.key_markets.map((market: string, i: number) => {
                       const code = resolveCountryCode(market);
                       return (
-                        <span key={i} className="flex items-center gap-1 text-xs bg-card/60 border border-violet-500/10 rounded-lg py-1 px-2 text-foreground/80">
+                        <span key={i} className="flex items-center gap-1 text-xs bg-card/60 border border-primary/10 rounded-lg py-1 px-2 text-foreground/80">
                           <span className="text-sm">{code ? getCountryFlag(code) : "🌍"}</span> {market}
                         </span>
                       );
@@ -471,9 +471,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                       const fromCode = resolveCountryCode(route.from || route.origin || "");
                       const toCode = resolveCountryCode(route.to || route.destination || "");
                       return (
-                        <div key={i} className="flex items-center justify-center gap-3 bg-card/60 border border-violet-500/10 rounded-lg py-1.5 px-3">
-                          <span className="text-base">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
-                          <ArrowUpRight className="w-3 h-3 text-violet-400 rotate-45 shrink-0" />
+                         <div key={i} className="flex items-center justify-center gap-3 bg-card/60 border border-primary/10 rounded-lg py-1.5 px-3">
+                           <span className="text-base">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
+                           <ArrowUpRight className="w-3 h-3 text-primary rotate-45 shrink-0" />
                           <span className="text-base">{toCode ? getCountryFlag(toCode) : "🌍"}</span>
                         </div>
                       );

@@ -23,12 +23,12 @@ export function IconIndicator({ icon: Icon, count, label, isDark, onClick, activ
           className={cn(
             "relative w-7 h-7 rounded-full flex items-center justify-center transition-all",
             done
-              ? isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-50 text-emerald-600"
+              ? "bg-emerald-500/15 text-emerald-400"
               : verifiedMissing
-                ? isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50/80 text-emerald-500"
+                ? "bg-emerald-500/10 text-emerald-400"
                 : active
-                  ? isDark ? "bg-sky-500/20 text-sky-400 ring-1 ring-sky-400/40" : "bg-sky-100 text-sky-600 ring-1 ring-sky-300"
-                  : isDark ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.1]" : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+                  ? "bg-primary/20 text-primary ring-1 ring-primary/40"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
             done ? "cursor-default" : "cursor-pointer"
           )}
         >
@@ -36,7 +36,7 @@ export function IconIndicator({ icon: Icon, count, label, isDark, onClick, activ
           {count > 0 && (
             <span className={cn(
               "absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-bold leading-none px-0.5",
-              active ? "bg-sky-500 text-white" : verifiedMissing ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+              active ? "bg-primary text-primary-foreground" : verifiedMissing ? "bg-emerald-500 text-primary-foreground" : "bg-destructive text-primary-foreground"
             )}>
               {count > 99 ? "99+" : count}
             </span>
@@ -57,7 +57,7 @@ export function StatusDot({ ok, label, isDark }: { ok: boolean; label: string; i
       <TooltipTrigger asChild>
         <span className={cn(
           "w-2 h-2 rounded-full transition-colors",
-          ok ? "bg-emerald-500" : isDark ? "bg-white/[0.1]" : "bg-slate-200"
+          ok ? "bg-emerald-500" : "bg-muted"
         )} />
       </TooltipTrigger>
       <TooltipContent side="top" className="text-[10px]">
@@ -77,7 +77,7 @@ export function EnrichedStatusIcons({ hasProfile, hasEmail, hasPhone, hasDeep, h
       {hasDeep ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Telescope className="w-3 h-3 text-cyan-500" />
+            <Telescope className="w-3 h-3 text-primary" />
           </TooltipTrigger>
           <TooltipContent side="top" className="text-[10px]">Deep Search ✓</TooltipContent>
         </Tooltip>
@@ -87,7 +87,7 @@ export function EnrichedStatusIcons({ hasProfile, hasEmail, hasPhone, hasDeep, h
       {hasLi ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Linkedin className="w-3 h-3 text-sky-500 fill-sky-500" />
+            <Linkedin className="w-3 h-3 text-primary" />
           </TooltipTrigger>
           <TooltipContent side="top" className="text-[10px]">LinkedIn ✓</TooltipContent>
         </Tooltip>
@@ -116,21 +116,21 @@ export function HorizStep({ step, active, done, isDark, icon: Icon, label, missi
   return (
     <div className={cn(
       "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all flex-1",
-      done ? isDark ? "bg-emerald-500/10" : "bg-emerald-50"
-        : active ? isDark ? "bg-sky-500/15 ring-1 ring-sky-500/30" : "bg-sky-50 ring-1 ring-sky-200"
-        : isDark ? "bg-white/[0.02] opacity-40" : "bg-slate-50/40 opacity-40"
+      done ? "bg-emerald-500/10"
+        : active ? "bg-primary/15 ring-1 ring-primary/30"
+        : "bg-muted/20 opacity-40"
     )}>
       <span className={cn(
         "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
-        done ? "bg-emerald-500/20 text-emerald-400" : active ? isDark ? "bg-sky-500/20 text-sky-400" : "bg-sky-100 text-sky-600" : isDark ? "bg-white/[0.06] text-slate-600" : "bg-slate-200 text-slate-400"
+        done ? "bg-emerald-500/20 text-emerald-400" : active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
       )}>
         {done ? <CheckCircle2 className="w-3 h-3" /> : step}
       </span>
-      <Icon className={cn("w-3 h-3 shrink-0", done ? "text-emerald-400" : active ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-600" : "text-slate-400")} />
-      <span className={cn("text-[10px] font-bold truncate", done ? "text-emerald-500" : active ? isDark ? "text-sky-300" : "text-sky-700" : isDark ? "text-slate-600" : "text-slate-400")}>
+      <Icon className={cn("w-3 h-3 shrink-0", done ? "text-emerald-400" : active ? "text-primary" : "text-muted-foreground")} />
+      <span className={cn("text-[10px] font-bold truncate", done ? "text-emerald-500" : active ? "text-primary" : "text-muted-foreground")}>
         {label}
       </span>
-      <span className={cn("text-[9px] font-mono font-bold ml-auto shrink-0", done ? "text-emerald-400" : isDark ? "text-slate-500" : "text-slate-400")}>
+      <span className={cn("text-[9px] font-mono font-bold ml-auto shrink-0", done ? "text-emerald-400" : "text-muted-foreground")}>
         {done ? "✓" : missing}
       </span>
     </div>
@@ -146,25 +146,25 @@ export function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, d
     <button onClick={onClick} className={cn(
       "w-full text-left rounded-lg border px-2.5 py-1.5 transition-all flex items-center gap-2",
       selected
-        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
-        : isDark ? "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]" : "bg-white/60 border-slate-200 hover:bg-slate-50"
+        ? "bg-primary/10 border-primary/40 ring-1 ring-primary/20"
+        : "bg-card border-border hover:bg-muted/50"
     )}>
       <div className={cn(
         "w-6 h-6 rounded-md shrink-0 flex items-center justify-center",
-        selected ? isDark ? "bg-sky-500/20" : "bg-sky-100" : isDark ? "bg-white/[0.04]" : "bg-slate-100"
+        selected ? "bg-primary/20" : "bg-muted"
       )}>
-        <Icon className={cn("w-3.5 h-3.5", selected ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
+        <Icon className={cn("w-3.5 h-3.5", selected ? "text-primary" : "text-muted-foreground")} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={cn("text-[11px] font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{title}</p>
-        <p className={cn("text-[9px] leading-tight", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
+        <p className={cn("text-[11px] font-bold", "text-foreground")}>{title}</p>
+        <p className="text-[9px] leading-tight text-muted-foreground">{description}</p>
       </div>
       <span className={cn("text-sm font-mono font-extrabold shrink-0", color)}>{count}</span>
       <div className={cn(
         "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0",
-        selected ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
+        selected ? "border-primary bg-primary" : "border-border"
       )}>
-        {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+        {selected && <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
       </div>
     </button>
   );
@@ -182,12 +182,12 @@ export function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearc
   aliasGenerating?: boolean;
 }) {
   const configs: Record<string, { icon: any; label: string; action: () => void; disabled?: boolean; color: string }> = {
-    profiles: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
-    email: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
-    phone: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
-    deep: { icon: Telescope, label: "Avvia Deep Search", action: onDeepSearch, disabled: deepSearchRunning, color: isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-cyan-500 hover:bg-cyan-600" },
-    alias_co: { icon: Building2, label: "Genera Alias Azienda", action: () => onGenerateAlias("company"), disabled: aliasGenerating, color: isDark ? "bg-amber-600 hover:bg-amber-500" : "bg-amber-500 hover:bg-amber-600" },
-    alias_ct: { icon: UserCircle, label: "Genera Alias Contatto", action: () => onGenerateAlias("contact"), disabled: aliasGenerating, color: isDark ? "bg-pink-600 hover:bg-pink-500" : "bg-pink-500 hover:bg-pink-600" },
+    profiles: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: "bg-primary hover:bg-primary/90" },
+    email: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: "bg-primary hover:bg-primary/90" },
+    phone: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: "bg-primary hover:bg-primary/90" },
+    deep: { icon: Telescope, label: "Avvia Deep Search", action: onDeepSearch, disabled: deepSearchRunning, color: "bg-primary hover:bg-primary/90" },
+    alias_co: { icon: Building2, label: "Genera Alias Azienda", action: () => onGenerateAlias("company"), disabled: aliasGenerating, color: "bg-primary hover:bg-primary/90" },
+    alias_ct: { icon: UserCircle, label: "Genera Alias Contatto", action: () => onGenerateAlias("contact"), disabled: aliasGenerating, color: "bg-primary hover:bg-primary/90" },
   };
 
   const cfg = configs[filter];
@@ -197,13 +197,13 @@ export function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearc
   return (
     <div className={cn(
       "flex items-center gap-2 px-2 py-1.5 rounded-xl border animate-in fade-in slide-in-from-top-2 duration-150",
-      isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"
+      "bg-muted/30 border-border"
     )}>
       <button
         onClick={cfg.action}
         disabled={cfg.disabled || count === 0}
         className={cn(
-          "flex-1 flex items-center justify-center gap-1.5 h-7 rounded-lg text-[11px] font-bold text-white transition-all disabled:opacity-40",
+          "flex-1 flex items-center justify-center gap-1.5 h-7 rounded-lg text-[11px] font-bold text-primary-foreground transition-all disabled:opacity-40",
           cfg.color
         )}
       >

@@ -44,8 +44,8 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
   }, [card.id, updateCard]);
 
   return (
-    <div className="space-y-2 bg-amber-500/5 rounded-lg p-3 border border-amber-500/15">
-      <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium flex items-center gap-1"><Search className="w-3 h-3" /> Cerca partner WCA</p>
+    <div className="space-y-2 bg-primary/5 rounded-lg p-3 border border-primary/15">
+      <p className="text-[10px] text-primary uppercase tracking-wider font-medium flex items-center gap-1"><Search className="w-3 h-3" /> Cerca partner WCA</p>
       <div className="flex gap-1.5">
         <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doSearch()} placeholder="Nome azienda..." className="h-7 text-xs flex-1" />
         <Button variant="outline" size="sm" className="h-7 text-[10px] px-2 shrink-0" onClick={doSearch} disabled={searching}>
@@ -97,8 +97,8 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
     <div className="h-full overflow-y-auto p-4 space-y-4">
       <div className="space-y-2">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/15 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-violet-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold text-foreground truncate">{card.company_name || "Senza azienda"}</h2>
@@ -126,9 +126,9 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Send className="w-3 h-3" /> Azioni rapide</p>
         <div className="grid grid-cols-2 gap-1.5">
           {card.email && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start"
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start"
               onClick={() => handleSendEmail({ email: card.email!, name: card.contact_name || undefined, company: card.company_name || undefined, partnerId: card.partner?.id })}>
-              <Mail className="w-3.5 h-3.5 text-violet-400 shrink-0" /><span className="truncate">Email</span>
+              <Mail className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">Email</span>
             </Button>
           )}
           {waPhone && (
@@ -140,16 +140,16 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
             </Button>
           )}
           {(card.phone || card.mobile) && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start" asChild>
-              <a href={`tel:${card.phone || card.mobile}`}><Phone className="w-3.5 h-3.5 text-violet-400 shrink-0" /><span className="truncate">Chiama</span></a>
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" asChild>
+              <a href={`tel:${card.phone || card.mobile}`}><Phone className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">Chiama</span></a>
             </Button>
           )}
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start" onClick={handleCockpit}>
-            <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" /><span className="truncate">→ Cockpit</span>
+          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleCockpit}>
+            <ArrowRight className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">→ Cockpit</span>
           </Button>
           {card.email && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10 justify-start" onClick={handleWorkspace}>
-              <Briefcase className="w-3.5 h-3.5 text-violet-400 shrink-0" /><span className="truncate">Workspace</span>
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleWorkspace}>
+              <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">Workspace</span>
             </Button>
           )}
         </div>
@@ -157,21 +157,21 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
 
       <div className="space-y-1.5 bg-muted/20 rounded-lg p-3 border border-border/30">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Dettagli contatto</p>
-        {card.email && <div className="flex items-center gap-2 text-xs text-foreground"><Mail className="w-3.5 h-3.5 text-violet-400 shrink-0" /> <span className="truncate">{card.email}</span></div>}
-        {card.phone && <div className="flex items-center gap-2 text-xs text-foreground"><Phone className="w-3.5 h-3.5 text-violet-400 shrink-0" /> {card.phone}</div>}
+        {card.email && <div className="flex items-center gap-2 text-xs text-foreground"><Mail className="w-3.5 h-3.5 text-primary shrink-0" /> <span className="truncate">{card.email}</span></div>}
+        {card.phone && <div className="flex items-center gap-2 text-xs text-foreground"><Phone className="w-3.5 h-3.5 text-primary shrink-0" /> {card.phone}</div>}
         {card.mobile && card.mobile !== card.phone && <div className="flex items-center gap-2 text-xs text-foreground"><Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {card.mobile}</div>}
       </div>
 
       {card.event_name && (
-        <div className="space-y-1 bg-violet-500/5 rounded-lg p-3 border border-violet-500/10">
+        <div className="space-y-1 bg-primary/5 rounded-lg p-3 border border-primary/10">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Evento</p>
-          <div className="flex items-center gap-1.5"><Handshake className="w-3.5 h-3.5 text-violet-400" /><span className="text-xs text-foreground">{card.event_name}</span></div>
+          <div className="flex items-center gap-1.5"><Handshake className="w-3.5 h-3.5 text-primary" /><span className="text-xs text-foreground">{card.event_name}</span></div>
           {card.met_at && <p className="text-[10px] text-muted-foreground ml-5">{format(new Date(card.met_at), "dd MMMM yyyy", { locale: it })}</p>}
           {card.location && <p className="text-[10px] text-muted-foreground ml-5">{card.location}</p>}
         </div>
       )}
 
-      <div className="space-y-2 bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 rounded-lg p-3 border border-violet-500/10">
+      <div className="space-y-2 bg-gradient-to-br from-primary/5 via-card to-primary/5 rounded-lg p-3 border border-primary/10">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Stato</p>
         <Badge className={cn("text-[10px]", STATUS_COLORS[card.match_status] || STATUS_COLORS.pending)}>{STATUS_LABELS[card.match_status] || "In attesa"}</Badge>
         {card.match_confidence > 0 && <p className="text-[10px] text-muted-foreground">Confidenza match: {Math.round(card.match_confidence * 100)}%</p>}
@@ -184,9 +184,9 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
       {card.notes && <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">{card.notes}</div>}
 
       {card.company_name && (
-        <Button variant="outline" size="sm" className="w-full text-xs gap-2 border-violet-500/15 hover:bg-violet-500/10"
+        <Button variant="outline" size="sm" className="w-full text-xs gap-2 border-primary/15 hover:bg-primary/10"
           onClick={() => window.open(googleLogoSearchUrl(card.company_name!), "_blank")}>
-          <Globe className="w-3.5 h-3.5 text-violet-400" /> Cerca logo su Google
+          <Globe className="w-3.5 h-3.5 text-primary" /> Cerca logo su Google
         </Button>
       )}
 
