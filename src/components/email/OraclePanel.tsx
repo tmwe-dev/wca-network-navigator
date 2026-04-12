@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, Mic, MicOff } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, Mic, MicOff, Search, SlidersHorizontal, FileText, ImageIcon } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
@@ -121,7 +121,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <span className="text-base">🔮</span>
+        <Sparkles className="w-4 h-4 text-primary" />
         <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
       </div>
 
@@ -232,7 +232,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           <div title={"Tono: " + (currentToneOption?.label || "Professionale")}>
           <Select value={tone} onValueChange={setTone}>
                 <SelectTrigger className="h-7 w-9 p-0 border-0 bg-transparent justify-center [&>svg:last-child]:hidden">
-                  <span className="text-sm">{currentToneOption?.icon || "💼"}</span>
+                  <SlidersHorizontal className="w-4 h-4 text-foreground/70" />
                 </SelectTrigger>
             <SelectContent>
               {TONE_OPTIONS.map(t => (
@@ -250,11 +250,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
               <button
                 onClick={() => setUseKB(!useKB)}
                 className={cn(
-                  "text-sm p-1 rounded transition-colors",
-                  useKB ? "text-foreground" : "text-muted-foreground/40 grayscale"
+                  "p-1.5 rounded-md border transition-all",
+                  useKB ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground/40 hover:border-primary/30 hover:text-foreground"
                 )}
               >
-                📚
+                <BookOpen className="w-4 h-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-[10px]">
@@ -268,11 +268,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
               <button
                 onClick={() => setDeepSearch(!deepSearch)}
                 className={cn(
-                  "text-sm p-1 rounded transition-colors",
-                  deepSearch ? "text-foreground" : "text-muted-foreground/40 grayscale"
+                  "p-1.5 rounded-md border transition-all",
+                  deepSearch ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground/40 hover:border-primary/30 hover:text-foreground"
                 )}
               >
-                🔍
+                <Search className="w-4 h-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-[10px]">
@@ -289,11 +289,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
                 <button
                   onClick={() => { setShowTemplates(!showTemplates); if (!showTemplates) setShowImages(false); }}
                   className={cn(
-                    "text-sm p-1.5 rounded border transition-colors",
-                    showTemplates ? "border-primary/30 bg-primary/10" : "border-border text-muted-foreground hover:border-primary/30"
+                    "p-1.5 rounded-md border transition-all",
+                    showTemplates ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
-                  📄
+                  <FileText className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-[10px]">Template</TooltipContent>
@@ -303,11 +303,12 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
                 <button
                   onClick={() => { setShowImages(!showImages); if (!showImages) setShowTemplates(false); }}
                   className={cn(
-                    "text-sm p-1.5 rounded border transition-colors",
-                    showImages ? "border-primary/30 bg-primary/10" : "border-border text-muted-foreground hover:border-primary/30"
+                    "p-1.5 rounded-md border transition-all",
+                    showImages ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
-                  🖼️
+                  <ImageIcon className="w-4 h-4" />
+                </button>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-[10px]">Immagini</TooltipContent>
@@ -362,7 +363,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           disabled={generating || improving}
         >
           {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          {generating ? "Generazione..." : "🔮 Genera"}
+          {generating ? "Generazione..." : "Genera"}
         </Button>
         <Button
           size="sm"
@@ -372,7 +373,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           disabled={improving || generating || !hasBody}
         >
           {improving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-amber-500" />}
-          {improving ? "Miglioramento..." : "🪄 Migliora"}
+          {improving ? "Miglioramento..." : "Migliora"}
         </Button>
       </div>
 
