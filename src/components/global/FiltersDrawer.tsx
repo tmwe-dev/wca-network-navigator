@@ -59,11 +59,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
   const route = location.pathname;
   const seg = route.replace(/^\/v2/, "");
-  const isOutreach = seg === "/outreach";
-  const isNetwork = seg === "/network";
-  const isCRM = seg === "/crm";
-  const isAgenda = seg === "/agenda";
-  const isEmailComposer = seg === "/email-composer";
+  const isOutreach = seg === `/${ROUTE_OUTREACH}`;
+  const isNetwork = seg === `/${ROUTE_NETWORK}`;
+  const isCRM = seg === `/${ROUTE_CRM}`;
+  const isAgenda = seg === `/${ROUTE_AGENDA}`;
+  const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
 
   const outreachTab = g.filters.outreachTab;
   const isCockpit = isOutreach && outreachTab === "cockpit";
