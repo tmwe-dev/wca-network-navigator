@@ -190,22 +190,22 @@ export function CompanyList({
   return (
     <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
-      <div className="p-4 border-b border-amber-500/20 space-y-3">
+      <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-amber-400">
-            {isBcaSource ? <Handshake className="w-4 h-4 text-purple-400" /> : <Building2 className="w-4 h-4 text-amber-500" />}
+          <h3 className="flex items-center gap-2 text-primary">
+            {isBcaSource ? <Handshake className="w-4 h-4 text-primary" /> : <Building2 className="w-4 h-4 text-primary" />}
             {countryName 
               ? (isBcaSource ? `BCA in ${countryName}` : `Aziende in ${countryName}`)
               : "Seleziona un paese"}
           </h3>
-          <Badge className={cn("space-badge", isBcaSource && "bg-purple-500/20 border-purple-500/40 text-purple-300")}>
+          <Badge variant="outline">
             {filteredPartners.length} risultati
           </Badge>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/60" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Cerca per nome, città, email..."
             value={searchQuery}
@@ -216,7 +216,7 @@ export function CompanyList({
 
         {/* Sort controls */}
         <div className="flex items-center gap-1">
-          <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 mr-1" />
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground mr-1" />
           {(["name", "city", "contacts"] as SortField[]).map(field => (
             <button
               key={field}
@@ -224,8 +224,8 @@ export function CompanyList({
               className={cn(
                 "px-2 py-0.5 rounded text-[11px] transition-colors",
                 sortField === field
-                  ? "bg-amber-500/20 text-amber-300"
-                  : "text-slate-500 hover:bg-muted/30 hover:text-slate-300"
+                  ? "bg-primary/20 text-primary"
+                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
               )}
             >
               {field === "name" ? "Nome" : field === "city" ? "Città" : "Contatti"}
@@ -238,14 +238,14 @@ export function CompanyList({
         {!isBcaSource && (
           <div className="flex gap-2">
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px] bg-black/50 border-amber-500/30 text-slate-200">
-                <Filter className="w-4 h-4 mr-2 text-amber-500" />
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
-              <SelectContent className="bg-black/90 backdrop-blur-xl border-amber-500/30">
-                <SelectItem value="all" className="text-slate-200 focus:bg-amber-500/20">Tutti i tipi</SelectItem>
+              <SelectContent>
+                <SelectItem value="all">Tutti i tipi</SelectItem>
                 {partnerTypes.map(type => (
-                  <SelectItem key={type} value={type} className="text-slate-200 focus:bg-amber-500/20">
+                  <SelectItem key={type} value={type}>
                     {formatPartnerType(type)}
                   </SelectItem>
                 ))}
@@ -262,7 +262,7 @@ export function CompanyList({
               placeholder="Filtra con AI: 'solo IATA certified', 'con servizio pharma'..."
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
-              className="pl-9 bg-black/50 border-emerald-500/40 text-emerald-100 placeholder:text-emerald-400/40 focus-visible:ring-emerald-500/50"
+              className="pl-9 bg-card border-emerald-500/40 text-foreground placeholder:text-emerald-400/40 focus-visible:ring-emerald-500/50"
             />
           </div>
         )}
@@ -274,7 +274,6 @@ export function CompanyList({
               variant="outline" 
               size="sm" 
               onClick={onSelectAll}
-              className="bg-transparent border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
             >
               Seleziona tutti ({filteredPartners.length})
             </Button>
@@ -282,7 +281,7 @@ export function CompanyList({
               variant="outline" 
               size="sm" 
               onClick={onDeselectAll}
-              className="bg-transparent border-amber-500/30 text-slate-400 hover:bg-amber-500/10 hover:text-slate-300"
+              className="text-muted-foreground"
             >
               Deseleziona tutti
             </Button>
@@ -292,11 +291,11 @@ export function CompanyList({
 
       {/* Partner List */}
       <ScrollArea className="flex-1">
-        <div className="divide-y divide-amber-500/10">
+        <div className="divide-y divide-border/50">
           {filteredPartners.length === 0 ? (
             <div className="p-8 text-center">
-              <Building2 className="w-12 h-12 mx-auto mb-3 text-amber-500/30" />
-              <p className="text-slate-400">
+              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-muted-foreground">
                 {partners.length === 0 
                   ? "Clicca su un paese nel globo per vedere le aziende"
                   : "Nessuna azienda corrisponde ai filtri"
@@ -315,29 +314,29 @@ export function CompanyList({
                   {/* Partner row */}
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 hover:bg-amber-500/10 transition-colors",
-                      hasBca && "border-l-2 border-l-purple-500/60"
+                      "flex items-start gap-3 p-3 hover:bg-muted/30 transition-colors",
+                      hasBca && "border-l-2 border-l-primary/60"
                     )}
                   >
                     <Checkbox
                       checked={selectedPartners.has(partner.id)}
                       onCheckedChange={() => onTogglePartner(partner.id)}
-                      className="mt-1 border-amber-500/50 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 cursor-pointer"
+                      className="mt-1 cursor-pointer"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{getCountryFlag(partner.country_code)}</span>
-                        <span className="truncate text-slate-100 cursor-pointer" onClick={() => onTogglePartner(partner.id)}>
+                        <span className="truncate text-foreground cursor-pointer" onClick={() => onTogglePartner(partner.id)}>
                           {partner.company_name}
                         </span>
                         {hasBca && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 border border-purple-500/40 text-purple-300 shrink-0">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary shrink-0">
                                 🤝 Incontrato
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-black/95 border-purple-500/40 text-slate-200 max-w-xs">
+                            <TooltipContent className="max-w-xs">
                               <div className="text-xs space-y-1">
                                 {(bcaInfo?.event_name || partner.bca_event) && (
                                   <p>📍 Evento: <strong>{bcaInfo?.event_name || partner.bca_event}</strong></p>
@@ -359,8 +358,8 @@ export function CompanyList({
                             className={cn(
                               "flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-colors shrink-0",
                               isExpanded
-                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                : "bg-slate-500/10 border-slate-500/30 text-slate-400 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-300"
+                                ? "bg-primary/20 border-primary/40 text-primary"
+                                : "bg-muted border-border text-muted-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary"
                             )}
                           >
                             <Users className="w-3 h-3" />
@@ -369,19 +368,19 @@ export function CompanyList({
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-slate-400">
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-amber-500/60" />
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
                           {partner.city}
                         </span>
                         {partner.partner_type && !isBcaSource && (
-                          <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400/80">
+                          <Badge variant="outline" className="text-xs">
                             {formatPartnerType(partner.partner_type)}
                           </Badge>
                         )}
                       </div>
                       {partner.email && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-slate-500">
+                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                           <Mail className="w-3 h-3" />
                           {partner.email}
                         </div>
@@ -401,33 +400,32 @@ export function CompanyList({
 
                   {/* Expandable contacts list */}
                   {isExpanded && contacts.length > 0 && (
-                    <div className="bg-slate-900/50 border-l-2 border-l-blue-500/30 ml-6 mr-2 mb-1 rounded-b-lg overflow-hidden">
+                    <div className="bg-muted/20 border-l-2 border-l-primary/30 ml-6 mr-2 mb-1 rounded-b-lg overflow-hidden">
                       {contacts.map((contact) => (
                         <label
                           key={contact.id}
                           className={cn(
-                            "flex items-center gap-2.5 px-3 py-2 hover:bg-blue-500/10 cursor-pointer transition-colors text-sm border-b border-slate-700/30 last:border-0",
-                            contact.is_primary && "bg-blue-500/5"
+                            "flex items-center gap-2.5 px-3 py-2 hover:bg-muted/30 cursor-pointer transition-colors text-sm border-b border-border/30 last:border-0",
+                            contact.is_primary && "bg-primary/5"
                           )}
                         >
                           {onToggleContact && selectedContacts && (
                             <Checkbox
                               checked={selectedContacts.has(contact.id)}
                               onCheckedChange={() => onToggleContact(contact.id)}
-                              className="border-blue-500/50 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                             />
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-slate-200 truncate">{contact.name}</span>
+                              <span className="text-foreground truncate">{contact.name}</span>
                               {contact.is_primary && (
-                                <Badge className="text-[9px] px-1 py-0 bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 text-primary border-primary/40">
                                   Primario
                                 </Badge>
                               )}
                             </div>
                             {contact.title && (
-                              <span className="text-[11px] text-slate-500 block truncate">{contact.title}</span>
+                              <span className="text-[11px] text-muted-foreground block truncate">{contact.title}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -436,7 +434,7 @@ export function CompanyList({
                                 <TooltipTrigger asChild>
                                   <Mail className="w-3 h-3 text-emerald-500/60" />
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-black/95 border-amber-500/30 text-slate-200 text-xs">
+                                <TooltipContent className="text-xs">
                                   {contact.email}
                                 </TooltipContent>
                               </Tooltip>
@@ -444,9 +442,9 @@ export function CompanyList({
                             {(contact.direct_phone || contact.mobile) && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Phone className="w-3 h-3 text-blue-500/60" />
+                                  <Phone className="w-3 h-3 text-muted-foreground" />
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-black/95 border-amber-500/30 text-slate-200 text-xs">
+                                <TooltipContent className="text-xs">
                                   {contact.direct_phone || contact.mobile}
                                 </TooltipContent>
                               </Tooltip>
@@ -465,7 +463,7 @@ export function CompanyList({
 
       {/* Footer */}
       {(selectedCount > 0 || selectedContactCount > 0) && (
-        <div className="p-4 border-t border-amber-500/20">
+        <div className="p-4 border-t border-border">
           <Button onClick={onAddToCampaign} className="w-full space-button-primary">
             <Plus className="w-4 h-4 mr-2" />
             Aggiungi alla campagna ({selectedCount} aziende{selectedContactCount > 0 ? `, ${selectedContactCount} contatti` : ""})

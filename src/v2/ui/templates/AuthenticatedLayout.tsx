@@ -420,26 +420,26 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         onMouseEnter={() => handleEdgeEnter("left")}
                         onMouseLeave={() => handleEdgeLeave("left")}
                         className={cn(
-                          "hidden md:flex fixed left-56 top-16 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer",
+                          "hidden md:flex fixed left-56 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
                           filtersOpen && "opacity-0 pointer-events-none"
                         )}
-                        style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
-                        aria-label="Apri filtri"
-                      >
-                        <SlidersHorizontal className="w-3 h-3 text-purple-300" />
+style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
+                         aria-label="Apri filtri"
+                       >
+                         <SlidersHorizontal className="w-3 h-3 text-primary" />
                       </button>
                       <button
                         onClick={() => setMissionOpen(true)}
                         onMouseEnter={() => handleEdgeEnter("right")}
                         onMouseLeave={() => handleEdgeLeave("right")}
                         className={cn(
-                          "hidden md:flex fixed right-0 top-16 z-[60] items-center justify-center w-6 h-12 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer",
+                          "hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-l-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
                           missionOpen && "opacity-0 pointer-events-none"
                         )}
-                        style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
-                        aria-label="Apri Mission"
+                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
+                         aria-label="Apri Mission"
                       >
-                        <Target className="w-3 h-3 text-purple-300" />
+                        <Target className="w-3 h-3 text-primary" />
                       </button>
 
                       {/* Main content area */}
