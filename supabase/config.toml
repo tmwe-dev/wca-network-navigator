@@ -1,8 +1,5 @@
 project_id = "zrbditqddhjkutzjycgi"
 
-[functions.scrape-wca-partners]
-verify_jwt = false
-
 [functions.analyze-partner]
 verify_jwt = false
 
