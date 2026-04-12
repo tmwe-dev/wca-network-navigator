@@ -188,6 +188,13 @@ export function CompanyList({
     }
   }, [sortField]);
 
+  const virtualizer = useVirtualizer({
+    count: filteredPartners.length,
+    getScrollElement: () => listParentRef.current,
+    estimateSize: () => 80,
+    overscan: 10,
+  });
+
   return (
     <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
