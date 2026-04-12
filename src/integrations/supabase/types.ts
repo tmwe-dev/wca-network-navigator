@@ -299,6 +299,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_edit_patterns: {
+        Row: {
+          channel: string | null
+          country_code: string | null
+          created_at: string
+          cta_final: string | null
+          cta_original: string | null
+          email_type: string | null
+          formality_shift: string | null
+          hook_final: string | null
+          hook_original: string | null
+          id: string
+          length_delta_percent: number | null
+          persuasion_pattern: string | null
+          significance: string | null
+          tone_delta: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          country_code?: string | null
+          created_at?: string
+          cta_final?: string | null
+          cta_original?: string | null
+          email_type?: string | null
+          formality_shift?: string | null
+          hook_final?: string | null
+          hook_original?: string | null
+          id?: string
+          length_delta_percent?: number | null
+          persuasion_pattern?: string | null
+          significance?: string | null
+          tone_delta?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          country_code?: string | null
+          created_at?: string
+          cta_final?: string | null
+          cta_original?: string | null
+          email_type?: string | null
+          formality_shift?: string | null
+          hook_final?: string | null
+          hook_original?: string | null
+          id?: string
+          length_delta_percent?: number | null
+          persuasion_pattern?: string | null
+          significance?: string | null
+          tone_delta?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_lab_test_results: {
         Row: {
           created_at: string
