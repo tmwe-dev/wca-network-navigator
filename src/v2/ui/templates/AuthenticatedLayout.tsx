@@ -15,12 +15,13 @@ import {
   FlaskConical, Book, BarChart3, Earth, Search,
   ArrowUpDown, Cpu, Cog, Upload, Send, Menu, X,
   Sparkles, SlidersHorizontal, Plus, DatabaseZap,
-  Sun, Moon, Wifi, WifiOff, Command,
+  Sun, Moon, Wifi, WifiOff, Command, ArrowRight,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // ── Providers (same order as V1 App.tsx + AppLayout.tsx) ──
 import { QueryClientProvider } from "@tanstack/react-query";
