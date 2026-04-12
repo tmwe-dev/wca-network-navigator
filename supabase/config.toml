@@ -1,15 +1,9 @@
 project_id = "zrbditqddhjkutzjycgi"
 
-[functions.scrape-wca-partners]
-verify_jwt = false
-
 [functions.analyze-partner]
 verify_jwt = false
 
 [functions.enrich-partner-website]
-verify_jwt = false
-
-[functions.scrape-wca-directory]
 verify_jwt = false
 
 [functions.process-download-job]
@@ -23,9 +17,6 @@ verify_jwt = false
 
 
 [functions.save-wca-cookie]
-verify_jwt = false
-
-[functions.scrape-wca-blacklist]
 verify_jwt = false
 
 [functions.get-wca-credentials]
