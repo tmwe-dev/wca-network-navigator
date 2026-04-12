@@ -367,7 +367,7 @@ export function useAddContactForm() {
           void persistSavedContact({}, {
             linkedin_url: result.url,
             linkedin_profile_url: result.url,
-            linkedin_resolved_method: result.resolvedMethod,
+            linkedin_resolved_method: result.resolvedMethod || "",
           });
           toast.success("Profilo LinkedIn trovato");
           return;
