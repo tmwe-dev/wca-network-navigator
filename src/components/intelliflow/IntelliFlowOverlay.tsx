@@ -14,6 +14,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
 import { useLocation } from "react-router-dom";
+import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA } from "@/constants/routes";
 import {
   ResizablePanelGroup,
   ResizablePanel,
