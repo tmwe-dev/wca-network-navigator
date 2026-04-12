@@ -538,7 +538,7 @@ export function useEmailComposerState() {
         cta_original: ctaOriginal.slice(0, 500),
         cta_final: ctaFinal.slice(0, 500),
         tone_delta: ai.editAnalysis.tone_shift || undefined,
-        length_delta_percent: ai.editAnalysis.length_change ?? undefined,
+        length_delta_percent: ai.editAnalysis.length_change_pct ?? undefined,
         significance: ai.editAnalysis.significance || undefined,
       }).catch(() => {/* silent */});
     }
