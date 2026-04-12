@@ -2,12 +2,35 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+interface AppSettingRow {
+  key: string;
+  value: string | null;
+}
+
+interface SendEmailBody {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+  partner_id?: string;
+  agent_id?: string;
+  reply_to?: string;
+  operator_id?: string;
+}
+
+interface SmtpSendOptions {
+  from: string;
+  to: string;
+  subject: string;
+  content: string;
+  html: string;
+  replyTo?: string;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,9 +41,7 @@ Deno.serve(async (req) => {
     // ── Auth check ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeError("AUTH_REQUIRED", "Unauthorized");
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -29,21 +50,22 @@ Deno.serve(async (req) => {
     });
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(authHeader.replace("Bearer ", ""));
     if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeError("AUTH_INVALID", "Invalid or expired token");
     }
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id } = await req.json();
+    const body: SendEmailBody = await req.json();
+    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id } = body;
 
     if (!to || !subject || !html) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: to, subject, html" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
+    }
+
+    // Validate email format
+    if (!EMAIL_REGEX.test(to)) {
+      return edgeError("VALIDATION_ERROR", "Invalid recipient email format", to);
     }
 
     // Read SMTP settings from app_settings (scoped to authenticated user)
@@ -58,7 +80,7 @@ Deno.serve(async (req) => {
       ]);
 
     const s: Record<string, string> = {};
-    settingsRows?.forEach((row: any) => { s[row.key] = row.value; });
+    (settingsRows as AppSettingRow[] | null)?.forEach((row) => { if (row.value) s[row.key] = row.value; });
 
     const smtpHost = s["smtp_host"];
     const smtpPort = parseInt(s["smtp_port"] || "465", 10);
@@ -66,10 +88,7 @@ Deno.serve(async (req) => {
     const smtpPass = s["smtp_password"];
 
     if (!smtpHost || !smtpUser || !smtpPass) {
-      return new Response(
-        JSON.stringify({ error: "SMTP non configurato. Vai in Impostazioni → Email per configurarlo." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return edgeError("VALIDATION_ERROR", "SMTP non configurato. Vai in Impostazioni → Email per configurarlo.");
     }
 
     // Build sender
@@ -88,7 +107,7 @@ Deno.serve(async (req) => {
       connection: {
         hostname: smtpHost,
         port: smtpPort,
-        tls: !useTLS, // port 465 = implicit TLS (tls: true), port 587 = STARTTLS (tls: false)
+        tls: !useTLS,
         auth: {
           username: smtpUser,
           password: smtpPass,
@@ -97,10 +116,12 @@ Deno.serve(async (req) => {
     });
 
     // Inject signature and footer images into HTML
-    // Vol. II §6.4: every HTML chunk passes through sanitizer before concat
     let finalHtml = sanitizeHtml(html);
 
-    // If sent by an AI agent, use agent's signature instead of default
+    // Helper: validate URL is https before interpolation
+    const isValidHttpsUrl = (url: string | undefined): url is string =>
+      typeof url === "string" && url.startsWith("https://");
+
     if (agent_id) {
       const { data: agentRow } = await supabase
         .from("agents")
@@ -112,17 +133,14 @@ Deno.serve(async (req) => {
       if (agentRow?.signature_html) {
         finalHtml += sanitizeHtml(agentRow.signature_html);
       } else if (agentRow) {
-        // Auto-generate minimal agent signature (escape user-provided fields)
         const safeName = escapeHtml(agentRow.name || "");
         const safeRole = escapeHtml(agentRow.role || "");
-        const safeImageUrl = sanitizeHtml(`<img src="${agentRow.signature_image_url || ""}" alt="${safeName}" />`);
-        const safeCallUrl = agentRow.voice_call_url
-          ? sanitizeHtml(`<a href="${agentRow.voice_call_url}">Chiamami</a>`)
-          : "";
-        const avatarPart = agentRow.signature_image_url
-          ? safeImageUrl
+        const avatarPart = isValidHttpsUrl(agentRow.signature_image_url)
+          ? sanitizeHtml(`<img src="${agentRow.signature_image_url}" alt="${safeName}" />`)
           : `<span style="font-size:28px;">${escapeHtml(agentRow.avatar_emoji || "")}</span>`;
-        const callPart = safeCallUrl ? `<br/>${safeCallUrl}` : "";
+        const callPart = agentRow.voice_call_url
+          ? `<br/>${sanitizeHtml(`<a href="${agentRow.voice_call_url}">Chiamami</a>`)}`
+          : "";
         finalHtml += `<div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:12px;">
           <table cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;font-size:13px;color:#333;">
             <tr>
@@ -135,19 +153,17 @@ Deno.serve(async (req) => {
           </table>
         </div>`;
       }
-      // Still add footer image if configured
       const footerImg = s["ai_footer_image_url"];
-      if (footerImg) {
+      if (isValidHttpsUrl(footerImg)) {
         finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
       }
     } else {
-      // Default user signature
       const sigImg = s["ai_signature_image_url"];
       const footerImg = s["ai_footer_image_url"];
-      if (sigImg) {
+      if (isValidHttpsUrl(sigImg)) {
         finalHtml += sanitizeHtml(`<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`);
       }
-      if (footerImg) {
+      if (isValidHttpsUrl(footerImg)) {
         finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
       }
     }
@@ -167,7 +183,7 @@ Deno.serve(async (req) => {
       if (commercialReply) resolvedReplyTo = commercialReply;
     }
 
-    const sendOptions: any = {
+    const sendOptions: SmtpSendOptions = {
       from: senderEmail,
       to: to,
       subject: subject,
@@ -179,10 +195,9 @@ Deno.serve(async (req) => {
     }
 
     await client.send(sendOptions);
-
     await client.close();
 
-    // Log side effects consistently (same as queue path)
+    // Log side effects consistently
     if (partner_id) {
       const userId = claimsData.claims.sub as string;
       await logEmailSideEffects({
@@ -200,11 +215,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
-    console.error("send-email error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  } catch (e: unknown) {
+    console.error("send-email error:", e);
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });

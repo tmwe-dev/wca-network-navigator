@@ -1,10 +1,20 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+const SUPPORTED_PROVIDERS = ["openai", "google", "anthropic"] as const;
+type Provider = typeof SUPPORTED_PROVIDERS[number];
+
+const CREDITS_PER_1K: Record<Provider, { input: number; output: number }> = {
+  openai: { input: 1, output: 4 },
+  google: { input: 1, output: 2 },
+  anthropic: { input: 1, output: 5 },
 };
+
+function isValidProvider(p: string): p is Provider {
+  return (SUPPORTED_PROVIDERS as readonly string[]).includes(p);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,17 +29,22 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
+    if (!authHeader) return edgeError("AUTH_REQUIRED", "No authorization header");
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError) throw new Error(`Auth error: ${userError.message}`);
+    if (userError) return edgeError("AUTH_INVALID", `Auth error: ${userError.message}`);
     const user = userData.user;
-    if (!user) throw new Error("User not authenticated");
+    if (!user) return edgeError("AUTH_REQUIRED", "User not authenticated");
 
     const { provider, input_tokens, output_tokens } = await req.json();
+
     if (!provider || (!input_tokens && !output_tokens)) {
-      throw new Error("provider, input_tokens or output_tokens required");
+      return edgeError("VALIDATION_ERROR", "provider, input_tokens or output_tokens required");
+    }
+
+    if (!isValidProvider(provider)) {
+      return edgeError("VALIDATION_ERROR", `Unknown provider: ${provider}. Supported: ${SUPPORTED_PROVIDERS.join(", ")}`);
     }
 
     // Check if user has their own API key for this provider
@@ -42,7 +57,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (apiKey?.api_key) {
-      // BYOK: no credits consumed
       return new Response(JSON.stringify({
         allowed: true,
         byok: true,
@@ -55,20 +69,12 @@ serve(async (req) => {
     }
 
     // Calculate credit cost
-    const CREDITS_PER_1K: Record<string, { input: number; output: number }> = {
-      openai: { input: 1, output: 4 },
-      google: { input: 1, output: 2 },
-      anthropic: { input: 1, output: 5 },
-    };
-
     const rates = CREDITS_PER_1K[provider];
-    if (!rates) throw new Error(`Unknown provider: ${provider}`);
-
     const inputCost = Math.ceil((input_tokens || 0) / 1000 * rates.input);
     const outputCost = Math.ceil((output_tokens || 0) / 1000 * rates.output);
     const totalCredits = inputCost + outputCost;
 
-    // FIX #3: Atomic credit deduction using DB function
+    // Atomic credit deduction using DB function
     const { data: deductResult, error: deductError } = await supabaseAdmin.rpc("deduct_credits", {
       p_user_id: user.id,
       p_amount: totalCredits,
@@ -76,9 +82,9 @@ serve(async (req) => {
       p_description: `${provider}: ${input_tokens || 0} input + ${output_tokens || 0} output tokens`,
     });
 
-    if (deductError) throw deductError;
+    if (deductError) return edgeError("INTERNAL_ERROR", extractErrorMessage(deductError));
 
-    const row = deductResult?.[0];
+    const row = (deductResult as Array<{ success: boolean; new_balance: number }>)?.[0];
     if (!row?.success) {
       return new Response(JSON.stringify({
         allowed: false,
@@ -103,10 +109,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+  } catch (e: unknown) {
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });

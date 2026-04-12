@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { edgeError, extractErrorMessage } from '../_shared/handleEdgeError.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,24 +13,20 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return edgeError('AUTH_REQUIRED', 'Unauthorized')
     }
 
     const token = authHeader.replace('Bearer ', '')
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Strict auth: identify user from JWT — no anonymous fallback
+    // Strict auth: identify user from JWT
     const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: authError } = await authClient.auth.getUser(token)
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return edgeError('AUTH_INVALID', 'Invalid or expired token')
     }
 
     // Fetch per-user credentials only (no global fallback)
@@ -44,7 +37,6 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (userCreds?.wca_username && userCreds?.wca_password) {
-      // Decrypt the password using the server-side helper
       const { data: decrypted } = await supabase.rpc('decrypt_wca_password', { p_encrypted: userCreds.wca_password })
       return new Response(JSON.stringify({
         username: userCreds.wca_username,
@@ -54,18 +46,9 @@ Deno.serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({
-      username: '',
-      password: '',
-      message: 'No WCA credentials configured for this user',
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    console.error('get-wca-credentials error:', error)
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return edgeError('NOT_FOUND', 'No WCA credentials configured for this user')
+  } catch (e: unknown) {
+    console.error('get-wca-credentials error:', e)
+    return edgeError('INTERNAL_ERROR', extractErrorMessage(e))
   }
 })
