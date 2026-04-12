@@ -60,7 +60,7 @@ function useBcaDetails(partnerIds: string[]) {
         .select("matched_partner_id, contact_name, event_name, met_at")
         .in("matched_partner_id", partnerIds);
       const map: Record<string, { contact_name: string | null; event_name: string | null; met_at: string | null }> = {};
-      (data ?? []).forEach((bc: any) => {
+      (data ?? []).forEach((bc) => {
         if (bc.matched_partner_id && !map[bc.matched_partner_id]) {
           map[bc.matched_partner_id] = { contact_name: bc.contact_name, event_name: bc.event_name, met_at: bc.met_at };
         }
