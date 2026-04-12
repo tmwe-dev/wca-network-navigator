@@ -392,7 +392,7 @@ export function useEmailComposerState() {
     if (!email.htmlBody.trim()) { toast.error("Scrivi prima il testo dell'email da migliorare"); return; }
     dispatch({ type: "SET_AI_IMPROVING", payload: true });
     try {
-      const data = await invokeEdge<any>("improve-email", { body: {
+      const data = await invokeEdge<ImproveEmailResponse>("improve-email", { body: {
         subject: email.subject, html_body: email.htmlBody,
         recipient_count: recipientsWithEmail.length,
         recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
@@ -401,8 +401,9 @@ export function useEmailComposerState() {
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       toast.success("Email migliorata con AI 🪄");
-    } catch (err: any) {
-      toast.error("Errore miglioramento: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Sconosciuto";
+      toast.error("Errore miglioramento: " + message);
     } finally { dispatch({ type: "SET_AI_IMPROVING", payload: false }); }
   }, [email.subject, email.htmlBody, recipientsWithEmail, recipients]);
 
@@ -416,7 +417,7 @@ export function useEmailComposerState() {
     const finalCategory = template.templateCategory === "__new__" ? template.customCategory.trim() : template.templateCategory;
     if (!template.templateName.trim() || !finalCategory) { toast.error("Inserisci nome e categoria"); return; }
     try {
-      await insertEmailDraft({ subject: email.subject, html_body: email.htmlBody, category: finalCategory, recipient_type: "template", status: "template", total_count: 0 } as any);
+      await insertEmailDraft({ subject: email.subject, html_body: email.htmlBody, category: finalCategory, recipient_type: "template", status: "template", total_count: 0 });
       dispatch({ type: "RESET_TEMPLATE_FORM" });
       toast.success(`Template "${template.templateName}" salvato`);
     } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio template"); }
@@ -435,7 +436,7 @@ export function useEmailComposerState() {
         recipient_type: "partner", recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "draft", total_count: recipientsWithEmail.length,
-      } as any);
+      });
       toast.success("Bozza salvata");
     } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
   }, [saveDraft, email, recipients, recipientsWithEmail]);
@@ -450,7 +451,7 @@ export function useEmailComposerState() {
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "queued", total_count: recipientsWithEmail.length,
       });
-      const draftId = (savedDraft as any).id;
+      const draftId = (savedDraft as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
         subject: email.subject.replace(/\{\{company_name\}\}/g, r.companyAlias || r.companyName).replace(/\{\{contact_name\}\}/g, r.contactAlias || r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
