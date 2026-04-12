@@ -299,6 +299,104 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_lab_test_results: {
+        Row: {
+          created_at: string
+          debug_info: Json | null
+          duration_ms: number
+          endpoint: string
+          id: string
+          issues: Json | null
+          output_body: string | null
+          output_subject: string | null
+          run_id: string
+          scenario_id: number
+          scenario_name: string
+          score: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          debug_info?: Json | null
+          duration_ms?: number
+          endpoint?: string
+          id?: string
+          issues?: Json | null
+          output_body?: string | null
+          output_subject?: string | null
+          run_id: string
+          scenario_id: number
+          scenario_name?: string
+          score?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          debug_info?: Json | null
+          duration_ms?: number
+          endpoint?: string
+          id?: string
+          issues?: Json | null
+          output_body?: string | null
+          output_subject?: string | null
+          run_id?: string
+          scenario_id?: number
+          scenario_name?: string
+          score?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_lab_test_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_lab_test_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_lab_test_runs: {
+        Row: {
+          completed_at: string | null
+          fail_count: number
+          id: string
+          max_score: number
+          pass_count: number
+          started_at: string
+          summary: Json | null
+          total_score: number
+          user_id: string
+          warn_count: number
+        }
+        Insert: {
+          completed_at?: string | null
+          fail_count?: number
+          id?: string
+          max_score?: number
+          pass_count?: number
+          started_at?: string
+          summary?: Json | null
+          total_score?: number
+          user_id: string
+          warn_count?: number
+        }
+        Update: {
+          completed_at?: string | null
+          fail_count?: number
+          id?: string
+          max_score?: number
+          pass_count?: number
+          started_at?: string
+          summary?: Json | null
+          total_score?: number
+          user_id?: string
+          warn_count?: number
+        }
+        Relationships: []
+      }
       ai_memory: {
         Row: {
           access_count: number
