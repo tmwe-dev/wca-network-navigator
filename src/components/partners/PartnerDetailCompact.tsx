@@ -137,7 +137,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <h2 className={`text-lg font-bold leading-tight ${th.h2}`}>
           {partner.company_name}
           {partner.company_alias && (
-            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 font-normal align-middle">
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-normal align-middle">
               {partner.company_alias}
             </span>
           )}
@@ -154,7 +154,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             <ArrowLeft className="w-3.5 h-3.5" /> Indietro
           </Button>
           <Button size="sm" variant="outline" onClick={onToggleFavorite} className="h-7 text-xs">
-            <Star className={cn("w-3.5 h-3.5", partner.is_favorite && "fill-amber-400 text-amber-400")} />
+            <Star className={cn("w-3.5 h-3.5", partner.is_favorite && "fill-primary text-primary")} />
           </Button>
           <Button size="sm" variant="outline" onClick={handleDeepSearch} disabled={deepSearching} className="h-7 text-xs gap-1">
             {deepSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -173,10 +173,10 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
           {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
-          {years > 0 && (
-            <div className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span className="text-sm font-bold text-amber-500">{years} anni WCA</span>
+           {years > 0 && (
+             <div className="flex items-center gap-1">
+               <Trophy className="w-4 h-4 text-primary fill-primary" />
+               <span className="text-sm font-bold text-primary">{years} anni WCA</span>
             </div>
           )}
           {partner.membership_expires && (
@@ -199,8 +199,8 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
-                {c.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">{c.contact_alias}</span>}
-                {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">Primary</span>}
+                 {c.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">{c.contact_alias}</span>}
+                 {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Primary</span>}
                 <div className="ml-auto">
                   <PartnerContactActionMenu
                     contact={c}
@@ -216,11 +216,11 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                 {c.email && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleSendEmail(c); }}
-                    className="flex items-center gap-1.5 text-xs group w-full text-left hover:bg-sky-500/10 rounded px-1 -mx-1 py-0.5 transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span className="text-sky-400 font-medium group-hover:underline">{c.email}</span>
-                    <Send className="w-3 h-3 text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto shrink-0" />
+                     className="flex items-center gap-1.5 text-xs group w-full text-left hover:bg-primary/10 rounded px-1 -mx-1 py-0.5 transition-colors"
+                   >
+                     <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
+                     <span className="text-primary font-medium group-hover:underline">{c.email}</span>
+                     <Send className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity ml-auto shrink-0" />
                   </button>
                 )}
                 {c.direct_phone && (
@@ -264,11 +264,11 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {/* Company info — compact inline */}
       <div className="space-y-1.5">
         <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Info</p>
-        {partner.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-3.5 h-3.5 text-sky-500" /><span className={th.body}>{partner.phone}</span></div>}
-        {partner.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-3.5 h-3.5 text-sky-500" /><a href={`mailto:${partner.email}`} className={`hover:underline ${th.body}`}>{partner.email}</a></div>}
-        {partner.website && <div className="flex items-center gap-2 text-sm"><Globe className="w-3.5 h-3.5 text-sky-400" /><a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>{partner.website}</a></div>}
-        {partner.address && <div className="flex items-center gap-2 text-sm"><MapPin className="w-3.5 h-3.5 text-rose-400" /><span className={th.body}>{partner.address}</span></div>}
-        {partner.member_since && <div className="flex items-center gap-2 text-sm"><Calendar className="w-3.5 h-3.5 text-sky-500" /><span className={th.body}>Membro dal {format(new Date(partner.member_since), "MMMM yyyy", { locale: it })}</span></div>}
+         {partner.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-3.5 h-3.5 text-primary" /><span className={th.body}>{partner.phone}</span></div>}
+         {partner.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-3.5 h-3.5 text-primary" /><a href={`mailto:${partner.email}`} className={`hover:underline ${th.body}`}>{partner.email}</a></div>}
+         {partner.website && <div className="flex items-center gap-2 text-sm"><Globe className="w-3.5 h-3.5 text-primary" /><a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>{partner.website}</a></div>}
+         {partner.address && <div className="flex items-center gap-2 text-sm"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /><span className={th.body}>{partner.address}</span></div>}
+         {partner.member_since && <div className="flex items-center gap-2 text-sm"><Calendar className="w-3.5 h-3.5 text-primary" /><span className={th.body}>Membro dal {format(new Date(partner.member_since), "MMMM yyyy", { locale: it })}</span></div>}
       </div>
 
       {/* Services — inline icons */}

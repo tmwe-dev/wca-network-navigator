@@ -21,8 +21,8 @@ function StatItem({ icon: Icon, label, value, color, isDark }: { icon: any; labe
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-4 h-4 ${color}`} />
-      <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
-      <span className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-mono font-bold text-foreground">{value}</span>
     </div>
   );
 }
@@ -80,18 +80,18 @@ export default function ProspectCenter() {
       <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
-        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
+        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-primary/[0.03]" : "from-primary/5"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
 
         <div className="relative z-10 h-full flex flex-col">
           {/* TOP BAR */}
           <div className="flex items-center justify-between px-6 py-2 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h1 className={`text-lg font-semibold ${th.h1}`}>Prospect Center</h1>
-              <span className={`text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-sky-500/15 text-sky-400 border border-sky-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
+              <span className={`text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-primary/15 text-primary border border-primary/25" : "bg-primary/10 text-primary border border-primary/20"}`}>
                 Report Aziende
               </span>
             </div>
-            <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
+            <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-card/60 hover:bg-card text-primary" : "bg-card/80 hover:bg-card shadow-sm text-primary"}`}>
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
@@ -100,17 +100,17 @@ export default function ProspectCenter() {
           {stats && stats.total > 0 && (
             <div className="flex-shrink-0 mx-6 mb-3">
               <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                <StatItem icon={Building2} label="Prospect" value={stats.total.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Mail} label="Email" value={stats.withEmail.toLocaleString()} color={isDark ? "text-emerald-400" : "text-emerald-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Mail} label="PEC" value={stats.withPec.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Phone} label="Telefoni" value={stats.withPhone.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Euro} label="Fatturato Medio" value={formatCurrency(stats.avgFatturato)} color={isDark ? "text-amber-400" : "text-amber-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={FileText} label="Settori ATECO" value={stats.atecoSections} color={isDark ? "text-violet-400" : "text-violet-500"} isDark={isDark} />
+                <StatItem icon={Building2} label="Prospect" value={stats.total.toLocaleString()} color="text-primary" isDark={isDark} />
+                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
+                <StatItem icon={Mail} label="Email" value={stats.withEmail.toLocaleString()} color="text-emerald-400" isDark={isDark} />
+                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
+                <StatItem icon={Mail} label="PEC" value={stats.withPec.toLocaleString()} color="text-emerald-400" isDark={isDark} />
+                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
+                <StatItem icon={Phone} label="Telefoni" value={stats.withPhone.toLocaleString()} color="text-primary" isDark={isDark} />
+                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
+                <StatItem icon={Euro} label="Fatturato Medio" value={formatCurrency(stats.avgFatturato)} color="text-primary" isDark={isDark} />
+                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
+                <StatItem icon={FileText} label="Settori ATECO" value={stats.atecoSections} color="text-primary" isDark={isDark} />
               </div>
             </div>
           )}
@@ -121,15 +121,15 @@ export default function ProspectCenter() {
             <div className="w-[35%] min-h-0 flex flex-col">
               {/* Quick search by name / P.IVA */}
               <div className="relative mb-2">
-                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-sky-400/50" : "text-sky-500/50"}`} />
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
                 <Input
                   placeholder="Cerca per nome o P.IVA..."
                   value={quickSearch}
                   onChange={e => setQuickSearch(e.target.value)}
-                  className={`pl-9 pr-8 h-10 rounded-xl text-sm ${isDark ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600" : "bg-white border-slate-200 placeholder:text-slate-400"}`}
+                  className={`pl-9 pr-8 h-10 rounded-xl text-sm ${isDark ? "bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground" : "bg-card border-border placeholder:text-muted-foreground"}`}
                 />
                 {quickSearch && (
-                  <button onClick={() => setQuickSearch("")} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-500 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}>
+                  <button onClick={() => setQuickSearch("")} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground`}>
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -168,7 +168,7 @@ export default function ProspectCenter() {
                   {quickSearch.length >= 2 ? (
                     <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
                       <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
-                        <Search className={`w-4 h-4 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                        <Search className={`w-4 h-4 text-primary`} />
                         <span className={`text-sm font-semibold ${th.h2}`}>
                           Ricerca: "{quickSearch}"
                         </span>
@@ -190,7 +190,7 @@ export default function ProspectCenter() {
                         <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
                         <p className={`text-xs ${th.dim}`}>oppure usa la ricerca per nome / P.IVA</p>
                         {stats && stats.total === 0 && (
-                          <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
+                          <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-primary/10 border-primary/20 text-primary" : "bg-primary/5 border-primary/20 text-primary"}`}>
                             💡 Nessun prospect nel database. Vai su "Importa" per scaricare dati da Report Aziende.
                           </div>
                         )}
