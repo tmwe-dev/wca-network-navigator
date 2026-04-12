@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
@@ -88,6 +89,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const contextSubtitle = isOutreach ? "Email, destinatari e invio" : isNetwork ? "Deep Search e arricchimento" : isCRM ? "Contatti e comunicazione" : isSettings ? "Azioni rapide" : "Configura e vai";
 
   return (
+    <PageErrorBoundary>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className={cn("p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl", !drawerWidth && "w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px]")} style={drawerWidth ? { width: drawerWidth, maxWidth: "80vw" } : undefined}>
         {/* Header */}
@@ -390,6 +392,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         />
       </SheetContent>
     </Sheet>
+    </PageErrorBoundary>
   );
 }
 

@@ -8,6 +8,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
@@ -200,6 +201,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
   }[currentPage] || "Sistema";
 
   return (
+    <PageErrorBoundary>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -493,5 +495,6 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
         </motion.div>
       )}
     </AnimatePresence>
+    </PageErrorBoundary>
   );
 }

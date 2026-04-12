@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Save, Loader2, Mail, Bookmark, Eye } from "lucide-react";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useEmailComposerState } from "@/hooks/useEmailComposerState";
 import { EmailToolbar } from "@/components/email/EmailToolbar";
@@ -18,6 +19,7 @@ export default function EmailComposer() {
   const { email, ui, ai, template, queue } = c.state;
 
   return (
+    <PageErrorBoundary>
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 min-h-0 flex justify-center">
         <div className="flex max-w-[1060px] w-full min-h-0">
@@ -147,5 +149,6 @@ export default function EmailComposer() {
         onSave={c.handleSaveAsTemplate}
       />
     </div>
+    </PageErrorBoundary>
   );
 }

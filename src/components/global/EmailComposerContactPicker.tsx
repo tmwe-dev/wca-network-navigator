@@ -2,6 +2,7 @@
  * EmailComposerContactPicker — Orchestrator (refactored from 678-line monolith)
  */
 import { useEmailContactPicker } from "@/hooks/useEmailContactPicker";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { PickerHeader } from "./email-picker/PickerHeader";
 import { CountryStrip } from "./email-picker/CountryStrip";
 import { ResultsList } from "./email-picker/ResultsList";
@@ -10,6 +11,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const picker = useEmailContactPicker();
 
   return (
+    <PageErrorBoundary>
     <div className="flex flex-col h-full">
       <PickerHeader picker={picker} />
 
@@ -24,5 +26,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         <ResultsList picker={picker} />
       </div>
     </div>
+    </PageErrorBoundary>
   );
 }

@@ -24,6 +24,7 @@ import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFilters
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { InboxFiltersSection } from "@/components/global/filters-drawer/InboxFiltersSection";
 import { BCAFiltersSection } from "@/components/global/filters-drawer/BCAFiltersSection";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 
 interface FiltersDrawerProps {
   open: boolean;
@@ -175,6 +176,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const defaultWidthClass = isEmailComposer ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]" : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
 
   return (
+    <PageErrorBoundary>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className={cn("p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl", !drawerWidth && defaultWidthClass)} style={{ ...(drawerWidth ? { width: drawerWidth, maxWidth: "80vw" } : {}), background: "linear-gradient(to right, hsl(0 0% 0%) 0%, hsl(0 0% 0%) 20%, hsl(var(--background)) 40%)" }}>
         {/* Header */}
@@ -364,5 +366,6 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
         />
       </SheetContent>
     </Sheet>
+    </PageErrorBoundary>
   );
 }

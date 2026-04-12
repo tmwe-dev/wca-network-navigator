@@ -14,6 +14,8 @@ import { ContactCard } from "./ContactCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
+import { ListSkeleton } from "@/components/ui/ListSkeleton";
 
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 
@@ -45,7 +47,10 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     return state.sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />;
   };
 
+  if (isLoading && contacts.length === 0) return <ListSkeleton rows={8} />;
+
   return (
+    <PageErrorBoundary>
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
@@ -194,5 +199,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </Suspense>
       )}
     </div>
+    </PageErrorBoundary>
   );
 }

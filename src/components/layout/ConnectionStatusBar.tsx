@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
@@ -201,6 +202,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
   ];
 
   return (
+    <PageErrorBoundary>
     <TooltipProvider delayDuration={300}>
       <div className="hidden sm:flex items-center gap-1">
         {/* Connection status */}
@@ -321,5 +323,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
         )}
       </div>
     </TooltipProvider>
+    </PageErrorBoundary>
   );
 }
