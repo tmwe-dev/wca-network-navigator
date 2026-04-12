@@ -99,7 +99,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="email-download" element={<EmailDownloadPage />} />
           <Route path="ra-explorer" element={<RAExplorerPage />} />
           <Route path="ra-scraping" element={<RAScrapingEnginePage />} />
-          <Route path="ra-company" element={<RACompanyDetailPage />} />
+          <Route path="ra-company/:id" element={<RACompanyDetailPage />} />
           <Route path="campaign-jobs" element={<CampaignJobsPage />} />
           <Route path="admin-users" element={<AdminUsersPage />} />
           <Route path="onboarding" element={<OnboardingPage />} />
