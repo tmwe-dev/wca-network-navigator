@@ -93,6 +93,7 @@ export function CompanyList({
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
+  const listParentRef = useRef<HTMLDivElement>(null);
 
   // Get BCA details for visible partners
   const partnerIdsWithBca = useMemo(() => {
