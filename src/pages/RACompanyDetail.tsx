@@ -38,7 +38,7 @@ export default function RACompanyDetail() {
             <h2 className="text-lg font-semibold text-white/90">Azienda non trovata</h2>
             <p className="text-sm text-white/60 mt-1">L'azienda che stai cercando non esiste o è stata eliminata</p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/ra/explorer")} className="border-white/10 hover:bg-white/5">
+          <Button variant="outline" onClick={() => navigate("/v2/research/explorer")} className="border-white/10 hover:bg-white/5">
             <ArrowLeft className="w-4 h-4 mr-2" /> Torna a Explorer
           </Button>
         </div>

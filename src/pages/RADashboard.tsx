@@ -316,7 +316,7 @@ export default function RADashboard() {
             size="lg"
             className="gap-2"
             style={{ backgroundColor: CYAN_ACCENT, color: "black" }}
-            onClick={() => navigate("/ra/scraping")}
+            onClick={() => navigate("/v2/research/scraping")}
           >
             <Zap className="w-4 h-4" />
             Nuova Ricerca
@@ -325,7 +325,7 @@ export default function RADashboard() {
             size="lg"
             variant="outline"
             className="gap-2 border-slate-700 hover:bg-slate-800/50"
-            onClick={() => navigate("/ra/explorer")}
+            onClick={() => navigate("/v2/research/explorer")}
           >
             <Activity className="w-4 h-4" />
             Explorer ATECO

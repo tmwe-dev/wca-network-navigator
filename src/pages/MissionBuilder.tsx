@@ -362,7 +362,7 @@ export default function MissionBuilder() {
         content: `✅ **Missione approvata e lanciata!**\n\n${pendingPlan.actions.length} azioni in esecuzione per ${totalContacts} contatti. Puoi monitorare lo stato nel pannello laterale.`,
       }]);
 
-      setTimeout(() => navigate("/outreach"), 2000);
+      setTimeout(() => navigate("/v2/outreach"), 2000);
     } catch (e: any) {
       toast.error("Errore: " + (e.message || "Riprova"));
     } finally {

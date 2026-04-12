@@ -34,10 +34,10 @@ function formatCompact(value: number) {
 }
 
 const NAV_CARDS = [
-  { key: "outreach", title: "Outreach", description: "Cockpit AI, workspace e invio email", route: "/outreach", icon: Radar },
-  { key: "network", title: "Network", description: "Rubrica partner e download directory", route: "/network", icon: Network },
-  { key: "crm", title: "CRM", description: "Prospect, contatti e opportunità", route: "/crm", icon: Users },
-  { key: "agenda", title: "Agenda", description: "Attività, scadenze e follow-up", route: "/agenda", icon: CalendarCheck },
+  { key: "outreach", title: "Outreach", description: "Cockpit AI, workspace e invio email", route: "/v2/outreach", icon: Radar },
+  { key: "network", title: "Network", description: "Rubrica partner e download directory", route: "/v2/network", icon: Network },
+  { key: "crm", title: "CRM", description: "Prospect, contatti e opportunità", route: "/v2/crm", icon: Users },
+  { key: "agenda", title: "Agenda", description: "Attività, scadenze e follow-up", route: "/v2/agenda", icon: CalendarCheck },
 ] as const;
 
 export default function SuperHome3D() {

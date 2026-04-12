@@ -437,7 +437,7 @@ export default function Campaigns() {
     toast.success(`${campaignPartners.length} aziende inviate al Cockpit — Goal: ${goalLabel}`);
     setCampaignPartners([]);
     setShowGoalDialog(false);
-    navigate("/inreach?tab=cockpit");
+    navigate("/v2/inreach?tab=cockpit");
   }, [campaignPartners, selectedGoal, navigate]);
 
   // Find header container for portal

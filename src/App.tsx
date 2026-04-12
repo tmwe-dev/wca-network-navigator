@@ -4,7 +4,8 @@ import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
@@ -66,15 +67,7 @@ const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
 const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// queryClient is now shared from src/lib/queryClient.ts
 
 function PageFallback() {
   return (
