@@ -45,6 +45,7 @@ const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.OnboardingPage })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ default: m.GuidaPage })));
+const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 // ── Loading fallback ─────────────────────────────────────────────────
 function LoadingFallback(): React.ReactElement {
@@ -103,6 +104,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="admin-users" element={<AdminUsersPage />} />
           <Route path="onboarding" element={<OnboardingPage />} />
           <Route path="guida" element={<GuidaPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </Suspense>
