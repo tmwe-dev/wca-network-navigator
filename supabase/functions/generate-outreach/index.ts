@@ -38,7 +38,7 @@ async function fetchKbEntriesForOutreach(supabase: ReturnType<typeof createClien
   return { text, sections };
 }
 
-import { getKBSlice, type Quality } from "../_shared/kbSlice.ts";
+import { type Quality } from "../_shared/kbSlice.ts";
 
 function getModel(quality: Quality): string {
   return quality === "fast"
@@ -413,10 +413,14 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
-    // Sales KB — contextual injection from kb_entries
+    // Sales KB — contextual injection from kb_entries (single source of truth)
     const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch, userId);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text;
+    const kbSource = kbResult.text ? "kb_entries" : (fullSalesKB ? "legacy_monolithic_deprecated" : "none");
+    if (!kbResult.text && fullSalesKB) {
+      console.warn("[generate-outreach] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
+    }
 
     // ─── Readiness Scoring ───
     const readiness = {
@@ -434,7 +438,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
         intelligence.data_found.interactions ? 20 : 0,
         (intelligence.data_found.linkedin || intelligence.data_found.linkedin_live) ? 15 : 0,
       ].reduce((a, b) => a + b, 0),
-      kb: kbResult.text ? Math.min(100, kbResult.sections.length * 15) : (fullSalesKB ? 40 : 0),
+      kb: kbResult.text ? Math.min(100, kbResult.sections.length * 15) : 0,
       scenario: [
         email_type_id ? 40 : 0,
         goal ? 30 : 0,
@@ -589,7 +593,8 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
       sender_company: senderCompanyAlias || "(non configurato)",
       sender_role: settings.ai_contact_role || "(non configurato)",
       kb_loaded: !!settings.ai_knowledge_base,
-      sales_kb_loaded: !!kbResult.text || !!fullSalesKB,
+      sales_kb_loaded: !!kbResult.text,
+      kb_source: kbSource,
       sales_kb_sections: kbResult.sections.join(", ") || (quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8"),
       goal_used: goal || "(default)",
       proposal_used: base_proposal || "(default)",
