@@ -2,11 +2,9 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-
 import {
   Search, CheckCircle, X, CheckSquare, Mail, Phone, RefreshCw, Loader2,
 } from "lucide-react";
@@ -58,16 +56,6 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
       : WCA_COUNTRIES
   );
 
-  let noProfileCount = 0, noEmailCount = 0, noPhoneCount = 0, noDeepCount = 0;
-  countriesWithPartners.forEach(c => {
-    const s = stats[c.code];
-    if (!s || s.total_partners === 0) return;
-    if (s.without_profile > 0) noProfileCount++;
-    if ((s.total_partners - s.with_email) > 0) noEmailCount++;
-    if ((s.total_partners - s.with_phone) > 0) noPhoneCount++;
-    if ((s.total_partners - s.with_deep_search) > 0) noDeepCount++;
-  });
-
   const filtered = countriesWithPartners.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
@@ -104,30 +92,25 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden gap-1.5">
       <div className="flex-shrink-0 space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <Search className="w-4 h-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-64 p-2">
-              <Input
-                placeholder="Cerca paese..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="h-8 text-xs"
-                autoFocus
-              />
-            </PopoverContent>
-          </Popover>
+        {/* Compact search inline */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Cerca paese..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-8 text-xs pl-8 pr-7"
+          />
           {search && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">"{search}"</span>
+            <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="w-3 h-3" />
+            </button>
           )}
         </div>
+
         <div className="flex items-center gap-1.5">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
-            <SelectTrigger className={`h-7 text-[11px] w-[110px] flex-shrink-0 ${isDark ? "bg-white/[0.04] border-white/[0.1] text-slate-200" : "bg-white/70 border-slate-200 text-slate-700"}`}>
+            <SelectTrigger className="h-7 text-[11px] w-[110px] flex-shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -138,11 +121,12 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
           </Select>
           <button
             onClick={handleSelectAll}
-            className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold border transition-all flex-shrink-0 ${
+            className={cn(
+              "flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold border transition-all flex-shrink-0",
               allFilteredSelected
-                ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white"
-            }`}
+                ? "bg-primary/20 border-primary/30 text-primary"
+                : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+            )}
             title="Seleziona tutti i visibili"
           >
             <CheckSquare className="w-3 h-3" />
@@ -160,9 +144,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
                 title={c.name}
               >
                 {getCountryFlag(c.code)}
-                <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${
-                  isDark ? "bg-slate-800 border border-slate-600" : "bg-white border border-slate-300 shadow-sm"
-                }`}>
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-card border border-border shadow-sm">
                   <X className="w-2 h-2" />
                 </span>
               </button>
@@ -209,12 +191,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
           variant="outline"
           onClick={handleSync}
           disabled={syncing}
-          className={cn(
-            "w-full h-8 text-[11px] gap-1.5 font-semibold",
-            isDark
-              ? "border-sky-500/30 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
-              : "border-sky-400 text-sky-700 hover:bg-sky-50"
-          )}
+          className="w-full h-8 text-[11px] gap-1.5 font-semibold"
         >
           {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
           {syncing ? "Sincronizzazione..." : "Sincronizza WCA"}
@@ -240,41 +217,34 @@ function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelecte
   const withProfile = s?.with_profile || 0;
   const noProfile = s?.without_profile || 0;
 
-  let dotColor: string, tooltip: string;
+  let dotColor: string;
   if (pCount === 0) {
-    dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
-    tooltip = "Nessun partner";
+    dotColor = "bg-muted-foreground/30";
   } else if (!hasPartnerStats) {
-    dotColor = isDark ? "bg-sky-400" : "bg-sky-500";
-    tooltip = `${pCount} record disponibili per questo paese`;
+    dotColor = "bg-primary";
   } else if (noProfile === 0 && withEmail === pCount) {
     dotColor = "bg-emerald-500";
-    tooltip = `${pCount} partner — tutti completi`;
   } else {
     const completeness = (withProfile + withEmail) / (pCount * 2);
-    dotColor = completeness >= 0.5 ? "bg-amber-500" : "bg-rose-500";
-    tooltip = `${pCount} partner — ${noProfile} senza profilo, ${pCount - withEmail} senza email`;
+    dotColor = completeness >= 0.5 ? "bg-primary" : "bg-destructive";
   }
-
-  const cardBorder = isSelected
-    ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/50"
-    : isDark ? "border-white/[0.06]" : "border-slate-200/80";
-  const cardBg = isSelected
-    ? isDark ? "bg-sky-950/50" : "bg-sky-50/80"
-    : isDark ? "bg-white/[0.02] hover:bg-white/[0.05]" : "bg-white/50 hover:bg-white/70";
 
   return (
     <button
       onClick={() => onToggle(country.code, country.name)}
-      className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder}`}
-      title={tooltip}
+      className={cn(
+        "group rounded-lg border text-left transition-all duration-150",
+        isSelected
+          ? "bg-primary/10 border-primary/40 ring-1 ring-primary/20"
+          : "bg-card border-border hover:bg-muted/50"
+      )}
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <span className="text-lg leading-none flex-shrink-0">{getCountryFlag(country.code)}</span>
         <div className="min-w-0 flex-1">
-          <p className={`text-[11px] font-semibold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
+          <p className="text-[11px] font-semibold truncate text-foreground">{country.name}</p>
           {pCount > 0 && (
-            <p className={`text-[9px] font-mono mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="text-[9px] font-mono mt-0.5 text-muted-foreground">
               {hasPartnerStats
                 ? <>{pCount} <Mail className="inline w-2.5 h-2.5 -mt-px" />{withEmail} <Phone className="inline w-2.5 h-2.5 -mt-px" />{withPhone}</>
                 : <>{pCount} disponibili</>}
@@ -283,11 +253,9 @@ function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelecte
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-          <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{pCount}</span>
+          <span className="text-[10px] font-bold font-mono text-foreground">{pCount}</span>
         </div>
-        {isSelected && (
-          <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
-        )}
+        {isSelected && <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 text-primary" />}
       </div>
     </button>
   );
