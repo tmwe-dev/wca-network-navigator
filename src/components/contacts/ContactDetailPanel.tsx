@@ -44,7 +44,7 @@ function Section({ children, className }: { children: React.ReactNode; className
   );
 }
 
-function SectionTitle({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; children: React.ReactNode }) {
+function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
