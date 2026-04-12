@@ -527,6 +527,18 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
                       </Suspense>
                     )}
+                    {testExtOpen && (
+                      <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+                        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>🧪 Test Estensioni</DialogTitle>
+                          </DialogHeader>
+                          <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+                            <TestExtensionsContent />
+                          </Suspense>
+                        </DialogContent>
+                      </Dialog>
+                    )}
 
                     {/* Global drawers */}
                     <Suspense fallback={null}>
