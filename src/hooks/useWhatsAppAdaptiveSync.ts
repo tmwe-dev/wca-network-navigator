@@ -183,7 +183,7 @@ export function useWhatsAppAdaptiveSync() {
         to_address: finalDirection === "outbound" ? contact : undefined,
         body_text: text,
         message_id_external: extId,
-        raw_payload: msg as unknown as Record<string, unknown>,
+        raw_payload: JSON.parse(JSON.stringify(msg)) as Record<string, string>,
         created_at: timestamp,
       };
       const { error, status } = await supabase
