@@ -39,6 +39,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const isBusy = loading || resettingPassword;
+  const authRedirectUrl = `${window.location.origin}/auth`;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -137,7 +138,7 @@ export default function Auth() {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: authRedirectUrl,
         data: { full_name: displayName },
       },
     });
@@ -157,7 +158,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: authRedirectUrl,
       });
       if (result.error) {
         toast.error("Errore con Google Sign-In");
