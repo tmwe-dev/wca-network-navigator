@@ -4,6 +4,7 @@ import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
 import { useGlobalChat } from "@/hooks/useGlobalChat";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 
 const QUICK_PROMPTS = [
   "Scarica tutti i partner",

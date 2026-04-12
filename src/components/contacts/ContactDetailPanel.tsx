@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useContactDetail, type ContactDetail } from "@/hooks/useContactDetail";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 
 interface Props {
   contact: ContactDetail;
