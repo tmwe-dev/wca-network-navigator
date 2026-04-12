@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
-import { getKBSlice } from "../_shared/kbSlice.ts";
+// getKBSlice deprecated — kb_entries is the single source of truth
 
 /** Fetch KB entries optimized for email improvement — focus on style and techniques */
 async function fetchKbEntriesForImprove(
@@ -79,7 +79,10 @@ serve(async (req) => {
     // Use granular kb_entries first, fallback to legacy monolithic
     const kbResult = await fetchKbEntriesForImprove(supabase, userId);
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, "standard", 4000);
+    const salesKBSlice = kbResult.text;
+    if (!kbResult.text && fullSalesKB) {
+      console.warn("[improve-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
+    }
 
     const systemPrompt = `Sei un esperto copywriter, stratega di vendita B2B e consulente di comunicazione nel settore della logistica internazionale e del freight forwarding.
 
