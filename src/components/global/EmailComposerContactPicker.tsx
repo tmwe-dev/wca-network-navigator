@@ -2,6 +2,7 @@
  * EmailComposerContactPicker — Orchestrator (refactored from 678-line monolith)
  */
 import { useEmailContactPicker } from "@/hooks/useEmailContactPicker";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { PickerHeader } from "./email-picker/PickerHeader";
 import { CountryStrip } from "./email-picker/CountryStrip";
 import { ResultsList } from "./email-picker/ResultsList";
