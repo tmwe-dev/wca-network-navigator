@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { getKBSlice } from "../_shared/kbSlice.ts";
 
 /** Fetch KB entries optimized for email improvement — focus on style and techniques */
-async function fetchKbEntriesForImprove(supabase: any, userId: string): Promise<{ text: string; sections: string[] }> {
+async function fetchKbEntriesForImprove(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<{ text: string; sections: string[] }> {
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
@@ -18,24 +22,25 @@ async function fetchKbEntriesForImprove(supabase: any, userId: string): Promise<
 
   if (!entries || entries.length === 0) return { text: "", sections: [] };
 
-  const sections = [...new Set(entries.map((e: any) => e.category))];
+  const sections = [...new Set(entries.map((e: { category: string }) => e.category))];
   return {
-    text: entries.map((e: any) => `### ${e.title}\n${e.content}`).join("\n\n---\n\n"),
+    text: entries.map((e: { title: string; content: string }) => `### ${e.title}\n${e.content}`).join("\n\n---\n\n"),
     sections,
   };
 }
-
-import { getKBSlice } from "../_shared/kbSlice.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
 
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -48,7 +53,7 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub;
@@ -66,7 +71,7 @@ serve(async (req) => {
       .like("key", "ai_%");
 
     const settings: Record<string, string> = {};
-    (settingsRows || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
+    (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
 
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
@@ -150,10 +155,10 @@ ${html_body}`;
     improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
     return new Response(JSON.stringify({ subject: improvedSubject, body: improvedBody }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("improve-email error:", e);
-    return mapErrorToResponse(e, corsHeaders);
+    return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));
   }
 });

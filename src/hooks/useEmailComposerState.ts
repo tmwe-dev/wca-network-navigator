@@ -400,6 +400,7 @@ export function useEmailComposerState() {
       }, context: "EmailComposer.improve_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
+      dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
       toast.success("Email migliorata con AI 🪄");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sconosciuto";
@@ -408,9 +409,21 @@ export function useEmailComposerState() {
   }, [email.subject, email.htmlBody, recipientsWithEmail, recipients]);
 
   // ── Templates ──
-  const handleLoadTemplate = useCallback((name: string, _url: string) => {
+  const handleLoadTemplate = useCallback(async (name: string, url: string) => {
     dispatch({ type: "SET_SUBJECT", payload: name });
-    toast.info("Template caricato: " + name);
+    if (url) {
+      try {
+        const res = await fetch(url);
+        const html = await res.text();
+        dispatch({ type: "SET_HTML_BODY", payload: html });
+        toast.success("Template caricato: " + name);
+      } catch (err: unknown) {
+        log.warn("template body fetch failed", { error: err instanceof Error ? err.message : String(err) });
+        toast.error("Impossibile caricare il body del template");
+      }
+    } else {
+      toast.info("Template caricato (solo oggetto): " + name);
+    }
   }, []);
 
   const handleSaveAsTemplate = useCallback(async () => {
