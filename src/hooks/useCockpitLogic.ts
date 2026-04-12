@@ -19,6 +19,28 @@ import type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommand
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/pages/Cockpit";
 
+/** Scrape a LinkedIn profile via extension bridge, with abort support. */
+async function scrapeLinkedInProfile(
+  liBridge: ReturnType<typeof useLinkedInExtensionBridge>,
+  linkedinUrl: string,
+  signal: AbortSignal,
+): Promise<LinkedInProfileData | null> {
+  await new Promise(r => setTimeout(r, 800));
+  if (signal.aborted) return null;
+
+  const profileResult = await liBridge.extractProfile(linkedinUrl);
+  if (signal.aborted) return null;
+
+  if (profileResult.success && profileResult.profile) {
+    const profile = profileResult.profile as Record<string, unknown>;
+    return {
+      ...profileResult.profile,
+      connectionStatus: (profile.connectionStatus as string) || "unknown",
+    } as LinkedInProfileData;
+  }
+  return null;
+}
+
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
@@ -35,6 +57,18 @@ export function useCockpitLogic() {
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
+  // Abort & mount guards
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const { contacts: allContacts, contactsMap, isLoading } = useCockpitContacts();
   const contacts = useMemo(() => {
     if (sourceTab === "all") return allContacts;
@@ -50,9 +84,9 @@ export function useCockpitLogic() {
     if (preselectionDone.current || isLoading || contacts.length === 0) return;
     preselectionDone.current = true;
     import("@/lib/cockpitPreselection").then(({ consumeCockpitPreselection }) => {
+      if (!mountedRef.current) return;
       const pendingIds = consumeCockpitPreselection();
       if (pendingIds.length === 0) return;
-      // Match by sourceId — cockpit contacts use sourceId field
       const matchingIds = contacts
         .filter(c => pendingIds.includes(c.sourceId))
         .map(c => c.id);
@@ -88,7 +122,7 @@ export function useCockpitLogic() {
     if (assignmentInfoMap.has(sourceId)) return;
     const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach")) || agents.find(a => a.is_active);
     if (!salesAgent) return;
-    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    try { await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id }); } catch (e: unknown) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); }
   }, [agents, assignmentInfoMap, assignClient]);
 
   // AI Action Executor
@@ -101,8 +135,8 @@ export function useCockpitLogic() {
         case "select_where": {
           const { field, operator, value } = action;
           selection.selectWhere((c: CockpitContact) => {
-            const fieldVal = (c as any)[field!];
-            if (operator === ">=") return fieldVal >= (value as number);
+            const fieldVal = (c as Record<string, unknown>)[field!];
+            if (operator === ">=") return (fieldVal as number) >= (value as number);
             if (operator === "==") return fieldVal === value;
             if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);
             return false;
@@ -152,6 +186,12 @@ export function useCockpitLogic() {
   }, [draggedContactId, selection.selectedIds, selection.count]);
 
   const handleDrop = useCallback(async (channel: DraftChannel, _contactId: string, _contactName: string) => {
+    // Cancel any previous in-flight drop operation
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const signal = controller.signal;
+
     const ids = getDraggedIds();
     if (ids.length === 0) return;
     const firstId = ids[0];
@@ -168,9 +208,12 @@ export function useCockpitLogic() {
     let liAuthOk = false;
     if (isLinkedInChannel && liBridge.isAvailable) {
       const authCheck = await liBridge.ensureAuthenticated(30000);
+      if (signal.aborted) return;
       liAuthOk = authCheck.ok;
       if (!liAuthOk) toast.error("LinkedIn non autenticato. Accedi a LinkedIn nel browser e riprova.");
     }
+
+    if (signal.aborted) return;
 
     if (isLinkedInChannel && liAuthOk && linkedinUrl) {
       toast.info(`URL LinkedIn già presente — lettura profilo diretta`);
@@ -178,10 +221,13 @@ export function useCockpitLogic() {
     } else if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
       setDraftState({ channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: null, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "searching", linkedinProfile: null, searchLog: [] });
       const searchResult = await linkedInLookup.searchSingle({ name: contact.name, company: contact.company, email: contact.email, role: contact.role, country: contact.country, sourceType: contact.sourceType, sourceId: contact.sourceId });
+      if (signal.aborted) return;
       if (searchResult.url) { linkedinUrl = searchResult.url; toast.success(`Profilo LinkedIn trovato: ${searchResult.profile?.name || linkedinUrl}`); }
       else toast.info("Profilo LinkedIn non trovato — generazione con dati DB");
       setDraftState(prev => ({ ...prev, contactLinkedinUrl: linkedinUrl, searchLog: searchResult.searchLog }));
     }
+
+    if (signal.aborted) return;
 
     const canScrapeLinkedIn = isLinkedInChannel && liAuthOk && linkedinUrl;
 
@@ -196,32 +242,35 @@ export function useCockpitLogic() {
     if (canScrapeLinkedIn) {
       try {
         setDraftState(prev => ({ ...prev, scrapingPhase: "visiting" }));
-        await new Promise(r => setTimeout(r, 800));
-        setDraftState(prev => ({ ...prev, scrapingPhase: "extracting" }));
-        const profileResult = await liBridge.extractProfile(linkedinUrl!);
-        if (profileResult.success && profileResult.profile) {
-          scrapedProfile = { ...profileResult.profile, connectionStatus: (profileResult.profile as any).connectionStatus || "unknown" };
+        scrapedProfile = await scrapeLinkedInProfile(liBridge, linkedinUrl!, signal);
+        if (signal.aborted) return;
+
+        if (scrapedProfile) {
           setDraftState(prev => ({ ...prev, scrapingPhase: "enriching", linkedinProfile: scrapedProfile }));
 
-          // Save to DB in background
+          // Save to DB in background (fire-and-forget, respects mount guard)
           import("@/integrations/supabase/client").then(async ({ supabase: sb }) => {
+            if (!mountedRef.current) return;
             try {
               const { data: partnerRows } = await sb.from("partners").select("id, enrichment_data").ilike("company_name", `%${contact.company}%`).limit(1);
               if (partnerRows?.[0]) {
-                const existing = (partnerRows[0].enrichment_data as Record<string, any>) || {};
+                const existing = (partnerRows[0].enrichment_data as Record<string, unknown>) || {};
                 await sb.from("partners").update({ enrichment_data: { ...existing, linkedin_profile_name: scrapedProfile?.name, linkedin_profile_headline: scrapedProfile?.headline, linkedin_profile_location: scrapedProfile?.location, linkedin_profile_about: scrapedProfile?.about?.slice(0, 2000), linkedin_profile_url: scrapedProfile?.profileUrl, linkedin_scraped_at: new Date().toISOString(), linkedin_summary: [scrapedProfile?.name, scrapedProfile?.headline, scrapedProfile?.about?.slice(0, 500)].filter(Boolean).join(" — ") } }).eq("id", partnerRows[0].id);
               }
-            } catch (e) { log.error("save linkedin profile failed", { message: e instanceof Error ? e.message : String(e) }); }
+            } catch (e: unknown) { log.error("save linkedin profile failed", { message: e instanceof Error ? e.message : String(e) }); }
           });
           await new Promise(r => setTimeout(r, 500));
+          if (signal.aborted) return;
         } else {
           toast.info("Profilo LinkedIn non estratto — generazione con dati DB");
         }
-      } catch (e) {
+      } catch (e: unknown) {
         log.error("linkedin scraping failed", { message: e instanceof Error ? e.message : String(e) });
         toast.info("Scraping LinkedIn fallito — generazione con dati DB");
       }
     }
+
+    if (signal.aborted) return;
 
     if (canScrapeLinkedIn && scrapedProfile) {
       setDraftState(prev => ({ ...prev, scrapingPhase: "reviewing", linkedinProfile: scrapedProfile, isGenerating: false }));
@@ -230,6 +279,7 @@ export function useCockpitLogic() {
 
     setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
     const result = await generate({ channel, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard", linkedin_profile: scrapedProfile || undefined });
+    if (signal.aborted) return;
     if (result) {
       setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));
       refetchCredits();
@@ -288,7 +338,7 @@ export function useCockpitLogic() {
   const handleBulkDelete = useCallback(() => setShowDeleteConfirm(true), []);
   const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
-    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
+    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch (e: unknown) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
     setShowDeleteConfirm(false);
   }, [selection, deleteContacts]);
 
