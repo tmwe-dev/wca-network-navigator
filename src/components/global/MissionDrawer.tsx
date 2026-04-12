@@ -31,6 +31,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [recipientSearch, setRecipientSearch] = useState("");
   const location = useLocation();
   const currentPath = location.pathname;
+  const seg = currentPath.replace(/^\/v2/, "");
   const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
   const isResizing = useRef(false);
 
@@ -74,11 +75,11 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     setNewLink("");
   };
 
-  const isOutreach = currentPath === "/outreach";
-  const isNetwork = currentPath === "/network";
-  const isCRM = currentPath === "/crm";
-  const isSettings = currentPath === "/settings";
-  const isEmailComposer = currentPath === "/email-composer";
+  const isOutreach = seg === "/outreach";
+  const isNetwork = seg === "/network";
+  const isCRM = seg === "/crm";
+  const isSettings = seg === "/settings";
+  const isEmailComposer = seg === "/email-composer";
 
   // Destinatari visible only in outreach-related contexts
   const showRecipients = isOutreach || isEmailComposer || isNetwork || isCRM;
