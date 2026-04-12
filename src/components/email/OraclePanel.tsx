@@ -5,7 +5,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, Mic, MicOff, Search, SlidersHorizontal, FileText, ImageIcon } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, Mic, MicOff, Search, SlidersHorizontal, FileText, ImageIcon, Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target,
+};
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
@@ -173,7 +177,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
                       : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
-                  <span className="text-xs">{t.icon}</span>
+                  {ICON_MAP[t.icon] ? (() => { const Icon = ICON_MAP[t.icon]; return <Icon className="w-3.5 h-3.5 text-current" />; })() : <span className="text-xs">{t.icon}</span>}
                   <span>{chipLabel}</span>
                   {isCustom && (
                     <span
@@ -237,7 +241,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             <SelectContent>
               {TONE_OPTIONS.map(t => (
                 <SelectItem key={t.value} value={t.value} className="text-xs">
-                  {t.icon} {t.label}
+                  {ICON_MAP[t.icon] ? (() => { const Icon = ICON_MAP[t.icon]; return <><Icon className="w-3.5 h-3.5 inline-block mr-1 text-current" />{t.label}</>; })() : <>{t.icon} {t.label}</>}
                 </SelectItem>
               ))}
             </SelectContent>

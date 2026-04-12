@@ -4,7 +4,12 @@
 import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RefreshCw, BookOpen, Search as SearchIcon } from "lucide-react";
+import { Sparkles, RefreshCw, BookOpen, Search as SearchIcon, Handshake, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
+import type { LucideProps } from "lucide-react";
+
+const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
+  Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target,
+};
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS } from "@/data/defaultEmailTypes";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +79,7 @@ export function OraclePanelV2({
                         : "border-border text-muted-foreground hover:border-primary/50",
                     )}
                   >
-                    <span className="mr-1">{t.icon}</span>{t.name}
+                    {ICON_MAP[t.icon] ? (() => { const Icon = ICON_MAP[t.icon]; return <Icon className="w-3 h-3 mr-1 inline-block text-current" />; })() : <span className="mr-1">{t.icon}</span>}{t.name}
                   </button>
                 ))}
               </div>
@@ -95,7 +100,7 @@ export function OraclePanelV2({
                         : "border-border text-muted-foreground hover:border-primary/50",
                     )}
                   >
-                    {t.icon} {t.label}
+                    {ICON_MAP[t.icon] ? (() => { const Icon = ICON_MAP[t.icon]; return <><Icon className="w-3 h-3 inline-block mr-0.5 text-current" />{t.label}</>; })() : <>{t.icon} {t.label}</>}
                   </button>
                 ))}
               </div>

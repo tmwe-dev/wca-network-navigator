@@ -15,7 +15,7 @@ export const DEFAULT_EMAIL_TYPES: EmailType[] = [
   {
     id: "primo_contatto",
     name: "Primo contatto",
-    icon: "🤝",
+    icon: "Handshake",
     category: "primo_contatto",
     tone: "professionale",
     kb_categories: ["identita", "vendita", "email_modelli"],
@@ -37,7 +37,7 @@ VINCOLI:
   {
     id: "follow_up",
     name: "Follow-up",
-    icon: "🔄",
+    icon: "RefreshCw",
     category: "follow_up",
     tone: "professionale",
     kb_categories: ["vendita", "negoziazione", "email_modelli"],
@@ -59,7 +59,7 @@ VINCOLI:
   {
     id: "richiesta_info",
     name: "Richiesta info",
-    icon: "📋",
+    icon: "ClipboardList",
     category: "richiesta",
     tone: "professionale",
     kb_categories: ["identita", "vendita"],
@@ -83,7 +83,7 @@ VINCOLI:
   {
     id: "proposta",
     name: "Proposta servizi",
-    icon: "💼",
+    icon: "Briefcase",
     category: "proposta_servizi",
     tone: "professionale",
     kb_categories: ["identita", "vendita", "negoziazione", "email_modelli"],
@@ -106,7 +106,7 @@ VINCOLI:
   {
     id: "partnership",
     name: "Partnership",
-    icon: "🌐",
+    icon: "Globe",
     category: "partnership",
     tone: "professionale",
     kb_categories: ["identita", "vendita", "negoziazione", "email_modelli"],
@@ -132,7 +132,7 @@ VINCOLI:
   {
     id: "network_espresso",
     name: "Network espresso",
-    icon: "✈️",
+    icon: "Plane",
     category: "partnership",
     tone: "professionale",
     kb_categories: ["identita", "vendita", "negoziazione"],
@@ -158,8 +158,8 @@ VINCOLI:
 ];
 
 export const TONE_OPTIONS = [
-  { value: "formale", label: "Formale", icon: "🎩" },
-  { value: "professionale", label: "Professionale", icon: "💼" },
-  { value: "amichevole", label: "Amichevole", icon: "😊" },
-  { value: "diretto", label: "Diretto", icon: "🎯" },
+  { value: "formale", label: "Formale", icon: "GraduationCap" },
+  { value: "professionale", label: "Professionale", icon: "Briefcase" },
+  { value: "amichevole", label: "Amichevole", icon: "Smile" },
+  { value: "diretto", label: "Diretto", icon: "Target" },
 ];
