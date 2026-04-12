@@ -309,7 +309,6 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
                 >
                   <ImageIcon className="w-4 h-4" />
                 </button>
-                </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-[10px]">Immagini</TooltipContent>
             </Tooltip>
