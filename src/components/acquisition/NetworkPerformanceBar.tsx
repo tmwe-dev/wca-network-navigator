@@ -69,7 +69,7 @@ function NetworkIcon({ name, s, isExcluded, isFailed }: {
       : rate > 50
         ? "border-emerald-500/60"
         : rate >= 10
-          ? "border-amber-500/60"
+          ? "border-primary/60"
           : "border-muted-foreground/30";
 
   return (
