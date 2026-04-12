@@ -179,7 +179,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
         <div className="flex items-center justify-between">
           <p className={`text-xs ${th.dim}`}>
             {isLoading ? "Caricamento..." : `${filtered.length} prospect`}
-            {selectedIds.size > 0 && <span className="ml-2 text-sky-400 font-medium">· {selectedIds.size} selezionati</span>}
+            {selectedIds.size > 0 && <span className="ml-2 text-primary font-medium">· {selectedIds.size} selezionati</span>}
           </p>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-1.5">
@@ -189,7 +189,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                 Attività ({selectedIds.size})
               </Button>
               <Button size="sm" onClick={handleSendToWorkspace} disabled={sending}
-                className="h-7 gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white">
+                className="h-7 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
                 {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SendIcon className="w-3.5 h-3.5" />}
                 Workspace ({selectedIds.size})
               </Button>
@@ -199,7 +199,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
       </div>
 
       <ScrollArea className="flex-1">
-        <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
+        <div className="divide-border divide-y">
           {isLoading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="p-3 space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /></div>
@@ -212,9 +212,9 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                     key={prospect.id}
                     className={cn(
                       "p-3 cursor-pointer transition-all duration-200 group flex items-start gap-2",
-                      isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
-                      q === "missing" && "border-l-4 border-l-red-500",
-                      q === "partial" && "border-l-4 border-l-amber-400",
+                      "hover:bg-muted/30",
+                      q === "missing" && "border-l-4 border-l-destructive",
+                      q === "partial" && "border-l-4 border-l-primary",
                       q === "complete" && "border-l-4 border-l-emerald-500",
                     )}
                   >
@@ -226,7 +226,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                     />
                     <div className="flex-1 min-w-0" onClick={() => setSelectedId(prospect.id)}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}>
+                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center bg-muted/30`}>
                           <Building2 className={`w-4 h-4 ${th.dim}`} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -245,8 +245,8 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-1 text-xs">
-                            <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                            <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                            <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-primary" : "text-muted-foreground/20")} />
+                            <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-primary" : "text-muted-foreground/20")} />
                             {prospect.dipendenti != null && (
                               <span className={`flex items-center gap-0.5 ${th.dim}`}>
                                 <Users className="w-3 h-3" />{prospect.dipendenti}
@@ -398,14 +398,14 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
       {contacts.length > 0 && (
         <Section title={`Management (${contacts.length})`}>
           {contacts.map((c: any) => (
-            <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
+            <div key={c.id} className={`p-2.5 rounded-lg border bg-card/40 border-border`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
-                {c.role && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? "bg-white/[0.06] text-slate-400" : "bg-slate-100 text-slate-500"}`}>{c.role}</span>}
+                {c.role && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{c.role}</span>}
                 <div className="flex items-center gap-1 ml-auto">
-                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                  <Phone className={cn("w-3.5 h-3.5", c.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-primary" : "text-muted-foreground/20")} />
+                  <Phone className={cn("w-3.5 h-3.5", c.phone ? "text-primary" : "text-muted-foreground/20")} />
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">

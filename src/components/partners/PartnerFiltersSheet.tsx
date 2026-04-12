@@ -77,11 +77,11 @@ function FilterChip({ active, icon: Icon, label, onClick, color = "sky" }: {
   color?: "sky" | "violet" | "emerald" | "amber" | "rose";
 }) {
   const colors: Record<string, string> = {
-    sky: active ? "border-sky-500/40 bg-sky-500/10 text-sky-400" : "border-border text-muted-foreground",
-    violet: active ? "border-violet-500/40 bg-violet-500/10 text-violet-400" : "border-border text-muted-foreground",
-    emerald: active ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" : "border-border text-muted-foreground",
-    amber: active ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : "border-border text-muted-foreground",
-    rose: active ? "border-rose-500/40 bg-rose-500/10 text-rose-400" : "border-border text-muted-foreground",
+    sky: active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground",
+    violet: active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground",
+    emerald: active ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500" : "border-border text-muted-foreground",
+    amber: active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground",
+    rose: active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground",
   };
   return (
     <button
@@ -215,7 +215,7 @@ export default function PartnerFiltersSheet({
           {/* ── Rating ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500" strokeWidth={1.5} /> Rating minimo</span>
+              <span className="flex items-center gap-2"><Star className="w-4 h-4 text-primary" strokeWidth={1.5} /> Rating minimo</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 space-y-2">
@@ -261,7 +261,7 @@ export default function PartnerFiltersSheet({
           {/* ── Transport Services ── */}
           <Collapsible defaultOpen>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2 text-sky-500">✈️ Trasporto</span>
+              <span className="flex items-center gap-2 text-primary">✈️ Trasporto</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
@@ -286,7 +286,7 @@ export default function PartnerFiltersSheet({
           {/* ── Specialty Services ── */}
           <Collapsible defaultOpen>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2 text-violet-400">⚡ Specialità</span>
+              <span className="flex items-center gap-2 text-primary">⚡ Specialità</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
@@ -355,7 +355,7 @@ export default function PartnerFiltersSheet({
           {/* ── Min Years WCA ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" strokeWidth={1.5} /> Anni in WCA</span>
+              <span className="flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" strokeWidth={1.5} /> Anni in WCA</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 space-y-2">

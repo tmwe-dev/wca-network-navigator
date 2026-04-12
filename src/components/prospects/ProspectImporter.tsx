@@ -334,7 +334,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
             </div>
           </div>
 
-          <div className={`flex-1 min-h-0 rounded-xl border overflow-hidden ${isDark ? "bg-white/[0.02] border-white/[0.08]" : "bg-white/40 border-slate-200/60"}`}>
+          <div className={`flex-1 min-h-0 rounded-xl border overflow-hidden bg-card/20 border-border`}>
             <SearchResultsTable
               results={searchResults}
               selected={selected}
@@ -357,21 +357,21 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
                 {status.active ? `Scaricamento profilo ${status.processed + 1} di ${status.total}...` : "Scraping completato"}
               </h3>
               {status.currentCompany && status.active && (
-                <p className={`text-xs mt-0.5 truncate ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+                <p className={`text-xs mt-0.5 truncate text-primary`}>
                   ➜ {status.currentCompany}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className={`text-[10px] ${isDark ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-emerald-50 text-emerald-600"}`}>
+              <Badge variant="secondary" className={`text-[10px] bg-emerald-500/15 text-emerald-500 border-emerald-500/20`}>
                 ✅ {status.saved} salvati
               </Badge>
               {status.errors > 0 && (
-                <Badge variant="secondary" className={`text-[10px] ${isDark ? "bg-red-500/15 text-red-400 border-red-500/20" : "bg-red-50 text-red-600"}`}>
+                <Badge variant="secondary" className={`text-[10px] bg-destructive/15 text-destructive border-destructive/20`}>
                   ❌ {status.errors} errori
                 </Badge>
               )}
-              <Badge variant="secondary" className={`text-[10px] ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
+              <Badge variant="secondary" className={`text-[10px] bg-muted text-muted-foreground`}>
                 {status.processed}/{status.total}
               </Badge>
             </div>

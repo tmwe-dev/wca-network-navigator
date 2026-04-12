@@ -387,14 +387,14 @@ export function BusinessCardsView() {
         <div className="flex items-center gap-3 pt-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/40" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
           </div>
-          <button onClick={toggleAll} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all", allSelected ? "bg-amber-500/15 text-amber-600 border-amber-500/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
+          <button onClick={toggleAll} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
             <CheckSquare className="w-3.5 h-3.5" /> {allSelected ? "Deseleziona" : "Seleziona tutti"}
           </button>
           <span className="text-xs text-muted-foreground">
             {filtered.length} biglietti · {groups.length} aziende
-            {selectedBca.size > 0 && <span className="ml-1 text-amber-500">· {selectedBca.size} sel.</span>}
+            {selectedBca.size > 0 && <span className="ml-1 text-primary">· {selectedBca.size} sel.</span>}
           </span>
           {selectedBca.size > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -448,18 +448,18 @@ export function BusinessCardsView() {
           ) : (
             <div className="space-y-3">
               {groups.map(group => (
-                <div key={group.key} className={cn("rounded-xl border overflow-hidden transition-all", group.isMatched ? "border-amber-500/30 bg-amber-500/[0.03]" : "border-border/60 bg-card/40")}>
+                <div key={group.key} className={cn("rounded-xl border overflow-hidden transition-all", group.isMatched ? "border-primary/30 bg-primary/[0.03]" : "border-border/60 bg-card/40")}>
                   <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
-                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border", group.isMatched ? "border-amber-500/30 bg-amber-500/10" : "border-border/40 bg-muted/30")}>
-                      {group.logoUrl ? <img src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-amber-500/60" : "text-muted-foreground/40")} />}
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border", group.isMatched ? "border-primary/30 bg-primary/10" : "border-border/40 bg-muted/30")}>
+                      {group.logoUrl ? <img src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary/60" : "text-muted-foreground/40")} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {group.countryCode && <span className="text-lg leading-none flex-shrink-0">{countryCodeToFlag(group.countryCode)}</span>}
                         <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
-                        {group.isMatched && <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">WCA</Badge>}
-                        {group.hasDeepSearch && <Brain className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]" />}
-                        {group.inHolding && <span title="In circuito di attesa"><Plane className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 animate-pulse" /></span>}
+                        {group.isMatched && <Badge variant="outline" className="text-[9px] bg-primary/15 text-primary border-primary/30 flex-shrink-0">WCA</Badge>}
+                        {group.hasDeepSearch && <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                        {group.inHolding && <span title="In circuito di attesa"><Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" /></span>}
                       </div>
                       <span className="text-[10px] text-muted-foreground">{group.cards.length} contatt{group.cards.length === 1 ? "o" : "i"}</span>
                     </div>
@@ -478,7 +478,7 @@ export function BusinessCardsView() {
                       {group.cards.map(card => {
                         const isSelected = selectedBca.has(card.id);
                         return (
-                          <div key={card.id} className={cn("flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-amber-500/[0.06]" : "hover:bg-muted/20")} onClick={() => toggleBca(card.id)}>
+                          <div key={card.id} className={cn("flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-primary/[0.06]" : "hover:bg-muted/20")} onClick={() => toggleBca(card.id)}>
                             <Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3 h-3" />
                             <span className="text-xs font-medium text-foreground truncate flex-1">{card.contact_name || "—"}</span>
                             {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
@@ -499,7 +499,7 @@ export function BusinessCardsView() {
                       {group.cards.map(card => {
                         const isSelected = selectedBca.has(card.id);
                         return (
-                          <div key={card.id} className={cn("relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-amber-500/40 bg-amber-500/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
+                          <div key={card.id} className={cn("relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
                             <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3.5 h-3.5" /></div>
                             <div className="space-y-2 pr-6">
                               <div className="text-sm font-semibold text-foreground">{card.contact_name || "—"}</div>
@@ -521,7 +521,7 @@ export function BusinessCardsView() {
                       {group.cards.map(card => {
                         const isSelected = selectedBca.has(card.id);
                         return (
-                          <div key={card.id} className={cn("relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm", isSelected ? "border-amber-500/40 bg-amber-500/[0.06] shadow-[0_0_8px_rgba(245,158,11,0.1)]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
+                          <div key={card.id} className={cn("relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => toggleBca(card.id)}>
                             <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => toggleBca(card.id)} className="w-3.5 h-3.5" /></div>
                             <div className="space-y-1.5 pr-6">
                               <div className="text-xs font-semibold text-foreground truncate">{card.contact_name || "—"}</div>

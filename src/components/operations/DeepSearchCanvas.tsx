@@ -60,22 +60,22 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
   return (
     <div className={cn(
       "absolute inset-0 z-30 flex flex-col animate-in slide-in-from-right-8 duration-200",
-      isDark ? "bg-slate-950/95 backdrop-blur-xl" : "bg-white/95 backdrop-blur-xl"
+      isDark ? "bg-background/95 backdrop-blur-xl" : "bg-card/95 backdrop-blur-xl"
     )}>
       {/* ═══ HEADER ═══ */}
       <div className={cn(
         "flex items-center gap-3 px-4 py-2.5 flex-shrink-0 border-b",
-        isDark ? "border-white/[0.08]" : "border-slate-200/60"
+        isDark ? "border-border" : "border-border"
       )}>
-        <Search className={cn("w-4 h-4", isDark ? "text-violet-400" : "text-violet-600")} />
-        <span className={cn("text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-800")}>
+        <Search className={cn("w-4 h-4 text-primary")} />
+        <span className={cn("text-sm font-semibold text-foreground")}>
           Deep Search
         </span>
-        <span className={cn("text-xs tabular-nums", isDark ? "text-slate-500" : "text-slate-400")}>
+        <span className={cn("text-xs tabular-nums text-muted-foreground")}>
           {done}/{total}
         </span>
         {running && (
-          <Loader2 className={cn("w-3.5 h-3.5 animate-spin", isDark ? "text-violet-400" : "text-violet-500")} />
+          <Loader2 className={cn("w-3.5 h-3.5 animate-spin text-primary")} />
         )}
         {isComplete && (
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -87,8 +87,8 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
             className={cn(
               "flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors",
               isDark
-                ? "bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/25"
-                : "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                ? "bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/25"
+                : "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20"
             )}
           >
             <Square className="w-3 h-3" /> Stop
@@ -98,7 +98,7 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
           onClick={onClose}
           className={cn(
             "p-1 rounded-lg transition-colors",
-            isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.06]" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            "text-muted-foreground hover:text-foreground hover:bg-muted/40"
           )}
         >
           <X className="w-4 h-4" />
@@ -107,8 +107,8 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
 
       {/* Progress bar */}
       <div className="px-4 py-1.5 flex-shrink-0">
-        <Progress value={pct} className={cn("h-1.5", isDark ? "bg-white/[0.06]" : "bg-slate-100")} />
-        <div className={cn("text-[10px] mt-0.5 tabular-nums", isDark ? "text-slate-600" : "text-slate-400")}>
+        <Progress value={pct} className={cn("h-1.5", "bg-muted")} />
+        <div className={cn("text-[10px] mt-0.5 tabular-nums text-muted-foreground")}>
           {pct}% completato
         </div>
       </div>
@@ -126,7 +126,7 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
           <div>
             <div className={cn(
               "text-[10px] uppercase tracking-wider font-semibold mb-1.5",
-              isDark ? "text-slate-600" : "text-slate-400"
+              "text-muted-foreground"
             )}>
               {isComplete ? "Risultati" : "Completati"}
             </div>
@@ -140,7 +140,7 @@ export function DeepSearchCanvas({ open, onClose, onStop, current, results, runn
 
         {/* Empty state */}
         {results.length === 0 && !running && (
-          <div className={cn("flex items-center justify-center py-8 text-sm", isDark ? "text-slate-600" : "text-slate-400")}>
+          <div className={cn("flex items-center justify-center py-8 text-sm text-muted-foreground")}>
             Nessun risultato
           </div>
         )}
@@ -155,26 +155,26 @@ function CurrentPartnerCard({ current, isDark }: { current: DeepSearchCurrent; i
     <div className={cn(
       "rounded-xl border p-3 space-y-2 animate-pulse",
       isDark
-        ? "bg-violet-500/[0.06] border-violet-500/20"
-        : "bg-violet-50/60 border-violet-200/60"
+        ? "bg-primary/[0.06] border-primary/20"
+        : "bg-primary/10 border-primary/20"
     )} style={{ animationDuration: "2s" }}>
       <div className="flex items-center gap-2.5">
         {current.logoUrl ? (
           <img src={current.logoUrl} className="w-8 h-8 rounded-lg object-contain bg-white/80" alt="" />
         ) : (
-          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", isDark ? "bg-white/[0.06]" : "bg-slate-100")}>
-            <Building2 className={cn("w-4 h-4", isDark ? "text-slate-500" : "text-slate-400")} />
+          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-muted/30")}>
+            <Building2 className={cn("w-4 h-4 text-muted-foreground")} />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className={cn("text-sm font-semibold truncate", isDark ? "text-slate-200" : "text-slate-800")}>
+          <div className={cn("text-sm font-semibold truncate text-foreground")}>
             {current.companyName}
           </div>
-          <div className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>
+          <div className={cn("text-[10px] text-muted-foreground")}>
             {current.countryCode && getCountryFlag(current.countryCode)} Ricerca in corso...
           </div>
         </div>
-        <Loader2 className={cn("w-4 h-4 animate-spin flex-shrink-0", isDark ? "text-violet-400" : "text-violet-500")} />
+        <Loader2 className={cn("w-4 h-4 animate-spin flex-shrink-0 text-primary")} />
       </div>
 
       {/* Searching indicators */}
@@ -189,7 +189,7 @@ function CurrentPartnerCard({ current, isDark }: { current: DeepSearchCurrent; i
             key={label}
             className={cn(
               "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded",
-              isDark ? "bg-white/[0.04] text-slate-600" : "bg-slate-100 text-slate-400"
+              "bg-muted/30 text-muted-foreground"
             )}
           >
             <Icon className="w-3 h-3" />
@@ -209,9 +209,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
   return (
     <div className={cn(
       "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors animate-in fade-in duration-300",
-      isDark
-        ? "hover:bg-white/[0.03]"
-        : "hover:bg-slate-50",
+      "hover:bg-muted/30",
       hasError && (isDark ? "opacity-60" : "opacity-70")
     )}>
       {/* Status icon */}
@@ -223,8 +221,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
 
       {/* Company name */}
       <span className={cn(
-        "text-xs font-medium truncate flex-1 min-w-0",
-        isDark ? "text-slate-300" : "text-slate-700"
+        "text-xs font-medium truncate flex-1 min-w-0 text-foreground"
       )}>
         {result.countryCode && <span className="mr-1">{getCountryFlag(result.countryCode)}</span>}
         {result.companyName}
@@ -234,7 +231,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
       {result.socialLinksFound > 0 && (
         <span className={cn(
           "inline-flex items-center gap-0.5 text-[10px] tabular-nums",
-          isDark ? "text-sky-400" : "text-sky-600"
+          "text-muted-foreground"
         )}>
           <UserCircle className="w-3 h-3" />
           {result.socialLinksFound}
@@ -245,7 +242,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
       {result.contactProfilesFound > 0 && (
         <span className={cn(
           "inline-flex items-center gap-0.5 text-[10px] tabular-nums",
-          isDark ? "text-violet-400" : "text-violet-600"
+          "text-primary"
         )}>
           <Linkedin className="w-3 h-3" />
           {result.contactProfilesFound}
@@ -254,7 +251,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
 
       {/* Logo indicator */}
       {result.logoFound && (
-        <span className={cn("text-[10px]", isDark ? "text-emerald-400" : "text-emerald-600")}>
+        <span className={cn("text-[10px] text-emerald-500")}>
           <Globe className="w-3 h-3" />
         </span>
       )}
@@ -263,7 +260,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
       {stars > 0 && (
         <span className={cn(
           "inline-flex items-center gap-0.5 text-[10px] tabular-nums",
-          isDark ? "text-amber-400" : "text-amber-600"
+          "text-primary"
         )}>
           <Star className="w-3 h-3 fill-current" />
           {stars}
@@ -272,7 +269,7 @@ function CompletedRow({ result, isDark }: { result: DeepSearchResult; isDark: bo
 
       {/* Rate limited warning */}
       {result.rateLimited && (
-        <span className="text-[9px] text-amber-500">⚡</span>
+        <span className="text-[9px] text-primary">⚡</span>
       )}
     </div>
   );
