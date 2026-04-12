@@ -2,12 +2,11 @@
  * useSupabaseQuery — Standardized wrapper for Supabase + React Query pattern.
  * Eliminates the repetitive fetch → map pattern used 20+ times in the codebase.
  */
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
-interface SupabaseQueryOptions<TRow> {
-  filters?: (query: PostgrestFilterBuilder<Record<string, unknown>, TRow, TRow[]>) => PostgrestFilterBuilder<Record<string, unknown>, TRow, TRow[]>;
+interface SupabaseQueryOptions {
+  filters?: (query: ReturnType<ReturnType<typeof supabase.from>["select"]>) => ReturnType<ReturnType<typeof supabase.from>["select"]>;
   staleTime?: number;
   enabled?: boolean;
 }
@@ -17,20 +16,18 @@ export function useSupabaseQuery<TRow extends Record<string, unknown>, TResult>(
   table: string,
   select: string,
   mapFn: (row: TRow) => TResult,
-  options?: SupabaseQueryOptions<TRow>,
+  options?: SupabaseQueryOptions,
 ) {
   return useQuery<TResult[]>({
     queryKey: key,
     queryFn: async () => {
-      let query = supabase.from(table).select(select) as unknown as PostgrestFilterBuilder<Record<string, unknown>, TRow, TRow[]>;
-      if (options?.filters) {
-        query = options.filters(query);
-      }
+      const base = supabase.from(table).select(select);
+      const query = options?.filters ? options.filters(base) : base;
       const { data, error } = await query;
       if (error) throw error;
-      return (data as TRow[]).map(mapFn);
+      return ((data ?? []) as unknown as TRow[]).map(mapFn);
     },
     staleTime: options?.staleTime,
     enabled: options?.enabled,
-  } satisfies UseQueryOptions<TResult[]>);
+  });
 }
