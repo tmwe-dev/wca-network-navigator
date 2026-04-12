@@ -106,7 +106,7 @@ VINCOLI:
   {
     id: "partnership",
     name: "Partnership",
-    icon: "🌐",
+    icon: "Globe",
     category: "partnership",
     tone: "professionale",
     kb_categories: ["identita", "vendita", "negoziazione", "email_modelli"],
