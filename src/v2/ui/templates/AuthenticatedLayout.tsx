@@ -1,6 +1,6 @@
 /**
  * AuthenticatedLayout template — Full sidebar with all nav items
- * Provides ALL providers and global overlays needed by V1 components
+ * Provides ALL providers, background hooks, and global overlays needed by V1 components
  */
 import * as React from "react";
 import { useEffect, useState, lazy, Suspense, useRef } from "react";
@@ -13,9 +13,11 @@ import {
   Calendar, Target, Gauge, Crosshair, UserCog,
   FlaskConical, Book, BarChart3, Earth, Search,
   ArrowUpDown, Cpu, Cog, Upload, Send, Menu, X,
-  Sparkles, SlidersHorizontal, Plus,
+  Sparkles, SlidersHorizontal, Plus, DatabaseZap,
+  Sun, Moon, Wifi, WifiOff, Command,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
+import { Toaster as SonnerToaster } from "sonner";
 
 // ── Providers (same order as V1 App.tsx + AppLayout.tsx) ──
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -26,6 +28,18 @@ import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
 import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRunner";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
+
+// ── Background hooks (same as V1 AppLayout) ──
+import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
+import { useWcaSync } from "@/hooks/useWcaSync";
+import { useOutreachQueue } from "@/hooks/useOutreachQueue";
+import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
+import { useWcaSession } from "@/hooks/useWcaSession";
+
+// ── Header components ──
+import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
+import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
+import { OperatorSelector } from "@/components/header/OperatorSelector";
 
 // ── Global overlays (lazy loaded) ──
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
@@ -128,8 +142,26 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [agentDashOpen, setAgentDashOpen] = useState(false);
 
+  // Theme toggle
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const toggleTheme = () => {
+    document.documentElement.classList.toggle("dark");
+    const next = !isDark;
+    setIsDark(next);
+    localStorage.setItem("dl_theme", next ? "dark" : "light");
+  };
+
   // DeepSearch runner
   const deepSearch = useDeepSearchRunner();
+
+  // Background monitoring hooks (same as V1 AppLayout)
+  useJobHealthMonitor();
+  useWcaSync();
+  const outreachQueue = useOutreachQueue();
+  const globalSync = useGlobalAutoSync();
+
+  // WCA Session status
+  const wcaSession = useWcaSession();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -189,13 +221,35 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     return location.pathname.startsWith(path);
   };
 
+  const wcaStatusColor = wcaSession.sessionActive === true
+    ? "text-emerald-400"
+    : wcaSession.isChecking
+      ? "text-yellow-400 animate-pulse"
+      : "text-muted-foreground";
+
+  const wcaStatusLabel = wcaSession.sessionActive === true
+    ? "WCA Online"
+    : wcaSession.isChecking
+      ? "Verifica…"
+      : wcaSession.sessionActive === false
+        ? "WCA Offline"
+        : "WCA";
+
   const sidebarContent = (
     <>
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-bold text-foreground">WCA v2</h2>
-        {profile?.displayName ? (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">{profile.displayName}</p>
-        ) : null}
+      {/* Brand header with glass effect */}
+      <div className="p-4 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Command className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-foreground leading-tight">WCA Partners</h2>
+            {profile?.displayName ? (
+              <p className="text-[10px] text-muted-foreground truncate">{profile.displayName}</p>
+            ) : null}
+          </div>
+        </div>
       </div>
       <nav className="flex-1 p-2 overflow-y-auto">
         {navGroups.map((group) => (
@@ -221,7 +275,29 @@ export function AuthenticatedLayout(): React.ReactElement | null {
           </div>
         ))}
       </nav>
-      <div className="p-2 border-t">
+      {/* Footer: WCA status, theme toggle, logout */}
+      <div className="p-2 border-t border-border/50 space-y-1">
+        {/* WCA Session Status */}
+        <button
+          onClick={() => wcaSession.ensureSession()}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+        >
+          {wcaSession.sessionActive === true ? (
+            <Wifi className={cn("h-3.5 w-3.5", wcaStatusColor)} />
+          ) : (
+            <WifiOff className={cn("h-3.5 w-3.5", wcaStatusColor)} />
+          )}
+          <span className={wcaStatusColor}>{wcaStatusLabel}</span>
+        </button>
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+        >
+          {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          {isDark ? "Light Mode" : "Dark Mode"}
+        </button>
+        {/* Logout */}
         <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={signOut}>
           <LogOut className="h-4 w-4" />
           Esci
@@ -243,19 +319,20 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <ViteChunkRecovery />
                     <BackgroundSyncIndicator />
                     <ConnectionBanner />
+                    <SonnerToaster position="top-right" richColors closeButton />
                     <Suspense fallback={null}>
                       <RuntimeDiagnosticPanel />
                     </Suspense>
 
                     <div className="flex h-screen bg-background">
-                      {/* Desktop sidebar */}
-                      <aside className="hidden md:flex w-56 flex-col border-r bg-card">
+                      {/* Desktop sidebar — glass-morphism */}
+                      <aside className="hidden md:flex w-56 flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
                         {sidebarContent}
                       </aside>
 
                       {/* Mobile header */}
                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
-                        <h2 className="text-sm font-bold text-foreground">WCA v2</h2>
+                        <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-1">
                           <button onClick={() => setIntelliflowOpen(true)} className="p-1">
                             <Sparkles className="h-4 w-4 text-purple-400" />
@@ -304,10 +381,44 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Target className="w-3 h-3 text-purple-300" />
                       </button>
 
-                      {/* Main content */}
-                      <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
-                        <Outlet />
-                      </main>
+                      {/* Main content area */}
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Desktop header — sticky operational bar */}
+                        <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                            <ActiveProcessIndicator />
+                            <ConnectionStatusBar
+                              onAiClick={() => setIntelliflowOpen(true)}
+                              outreachQueue={outreachQueue}
+                              nightPause={globalSync.nightPause}
+                              isNightTime={globalSync.isNightTime}
+                              manualOverride={globalSync.manualOverride}
+                              onToggleNightPause={globalSync.toggleNightPause}
+                              resumeMinutes={globalSync.resumeMinutes}
+                            />
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <OperatorSelector />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/settings?tab=enrichment")} aria-label="Arricchimento">
+                              <DatabaseZap className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setAgentDashOpen(true)} aria-label="Agent Operations">
+                              <Activity className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow AI">
+                              <Sparkles className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </header>
+
+                        {/* Page content */}
+                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
+                          <Outlet />
+                        </main>
+                      </div>
                     </div>
 
                     {/* Global overlays (lazy loaded, same as V1 AppLayout) */}
