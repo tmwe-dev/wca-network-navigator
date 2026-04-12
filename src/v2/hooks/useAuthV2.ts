@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import type { User, Session } from "@supabase/supabase-js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -208,11 +209,21 @@ export function useAuthV2(): UseAuthV2Return {
 
   const signInWithGoogle = useCallback(async () => {
     setError(null);
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/v2` },
-    });
-    if (authError) setError(authError.message);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError("Errore con Google Sign-In");
+        return;
+      }
+      if (result.redirected) {
+        return;
+      }
+      // Session set by lovable auth — onAuthStateChange will handle the rest
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore con Google Sign-In");
+    }
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {

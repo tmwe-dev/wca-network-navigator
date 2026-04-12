@@ -10,19 +10,42 @@ const log = createLogger("ConnectionBanner");
 /**
  * Shows a red banner when DB connection is lost.
  * Redirects to /auth if auth expires mid-session.
+ * Only polls when a session is active.
  */
 export function ConnectionBanner() {
   const [dbLost, setDbLost] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  // Track session state
   useEffect(() => {
-    // Lightweight heartbeat every 30s
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setHasSession(!!session);
+      if (event === "TOKEN_REFRESHED") setDbLost(false);
+      if (event === "SIGNED_OUT") {
+        setDbLost(false);
+        navigate("/auth", { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  // Heartbeat only when session is active
+  useEffect(() => {
+    if (!hasSession) {
+      clearInterval(intervalRef.current);
+      return;
+    }
+
     const heartbeat = async () => {
       try {
         const { error } = await checkProfileConnection();
         if (error) {
-          // RLS error means connection works, auth might be expired
           if (error.code === "PGRST301" || error.message?.includes("JWT")) {
             setDbLost(false);
             navigate("/auth", { replace: true });
@@ -40,19 +63,7 @@ export function ConnectionBanner() {
 
     intervalRef.current = setInterval(heartbeat, 30000);
     return () => clearInterval(intervalRef.current);
-  }, [navigate]);
-
-  // Also listen for auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED") setDbLost(false);
-      if (event === "SIGNED_OUT") {
-        setDbLost(false);
-        navigate("/auth", { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [hasSession, navigate]);
 
   if (!dbLost) return null;
 
