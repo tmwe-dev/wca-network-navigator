@@ -418,6 +418,31 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
 
+    // ─── Readiness Scoring ───
+    const readiness = {
+      sender: [
+        settings.ai_contact_alias || settings.ai_contact_name ? 25 : 0,
+        settings.ai_company_alias || settings.ai_company_name ? 25 : 0,
+        settings.ai_knowledge_base ? 25 : 0,
+        settings.ai_contact_role ? 15 : 0,
+        settings.ai_email_signature ? 10 : 0,
+      ].reduce((a, b) => a + b, 0),
+      recipient: [
+        intelligence.data_found.partner ? 30 : 0,
+        intelligence.data_found.contacts ? 15 : 0,
+        intelligence.data_found.networks ? 20 : 0,
+        intelligence.data_found.interactions ? 20 : 0,
+        (intelligence.data_found.linkedin || intelligence.data_found.linkedin_live) ? 15 : 0,
+      ].reduce((a, b) => a + b, 0),
+      kb: kbResult.text ? Math.min(100, kbResult.sections.length * 15) : (fullSalesKB ? 40 : 0),
+      scenario: [
+        email_type_id ? 40 : 0,
+        goal ? 30 : 0,
+        base_proposal ? 30 : 0,
+      ].reduce((a, b) => a + b, 0),
+    };
+    const readinessTotal = Math.round((readiness.sender + readiness.recipient + readiness.kb + readiness.scenario) / 4);
+
     // Language hint (AI can override based on context)
     const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
@@ -475,6 +500,7 @@ GUARDRAIL:
 - Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti
 - Usa alias/nome breve nel saluto, mai nome completo
 ${ch === "email" ? "- La prima riga dell'output DEVE essere 'Subject: <oggetto>' — SEMPRE, senza eccezioni" : ""}
+${readinessTotal < 30 ? `\nATTENZIONE INTERNA: readiness score basso (${readinessTotal}/100). Genera in modo più neutro e conservativo. Evita affermazioni specifiche su servizi o capabilities del mittente che non sono confermate dai dati.` : ""}
 
 DECISION OBJECT (decisione già presa — esegui, non ridecidere):
 ${JSON.stringify(decision, null, 2)}
@@ -579,6 +605,8 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
       website_source: websiteSource,
       linkedin_source: linkedinSource,
       decision_object: decision,
+      readiness,
+      readiness_total: readinessTotal,
     };
 
     return new Response(
@@ -593,6 +621,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
         language: effectiveLanguage,
         quality,
         model,
+        readiness_score: readinessTotal,
         _debug,
       }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }
