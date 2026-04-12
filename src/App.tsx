@@ -67,15 +67,7 @@ const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
 const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// queryClient is now shared from src/lib/queryClient.ts
 
 function PageFallback() {
   return (
