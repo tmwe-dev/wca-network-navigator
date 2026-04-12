@@ -225,14 +225,14 @@ export function useEmailComposerState() {
   const isEditedAfterGeneration = ai.aiGeneratedBody && (email.htmlBody !== ai.aiGeneratedBody || email.subject !== ai.aiGeneratedSubject);
 
   const templatesByCategory = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    templates.forEach((t: any) => { const cat = t.category || "altro"; if (!groups[cat]) groups[cat] = []; groups[cat].push(t); });
+    const groups: Record<string, EmailTemplate[]> = {};
+    (templates as EmailTemplate[]).forEach((t) => { const cat = t.category || "altro"; if (!groups[cat]) groups[cat] = []; groups[cat].push(t); });
     return groups;
   }, [templates]);
 
   // ── Prefill from navigation state ──
   useEffect(() => {
-    const s = location.state as any;
+    const s = location.state as EmailComposerLocationState | null;
     if (!s) return;
     if (s.prefilledRecipient) {
       const r = s.prefilledRecipient;
@@ -258,8 +258,8 @@ export function useEmailComposerState() {
     if (partner) return { found: true, companyName: partner.company_alias || partner.company_name, contactName: "", countryCode: partner.country_code || "", city: partner.city || "", partnerId: partner.id };
     const pc = await findPartnerContactByEmail(emailAddr);
     if (pc) {
-      const p = pc.partners as any;
-      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: (pc as any).contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
+      const p = pc.partners as { company_alias?: string | null; company_name?: string | null; country_code?: string | null; city?: string | null } | null;
+      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: (pc as { contact_alias?: string }).contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
     }
     const { findContactByEmail } = await import("@/data/contacts");
     const ic = await findContactByEmail(emailAddr);
@@ -298,7 +298,7 @@ export function useEmailComposerState() {
   }, [email.selectedAttachments]);
 
   // ── Build final HTML ──
-  const buildFinalHtml = useCallback((body: string, partner: any, contactName: string) => {
+  const buildFinalHtml = useCallback((body: string, partner: PartnerPreviewData, contactName: string) => {
     const companyDisplay = partner.companyAlias || partner.company_alias || partner.companyName || partner.company_name || "";
     const contactDisplay = partner.contactAlias || partner.contact_alias || contactName || "";
     let html = body
@@ -312,10 +312,10 @@ export function useEmailComposerState() {
       validLinks.forEach((l) => { html += `<li><a href="${encodeURI(l.url)}" target="_blank">${escapeHtml(l.label)}</a></li>`; });
       html += `</ul>`;
     }
-    const attachedTemplates = templates.filter((t: any) => email.selectedAttachments.includes(t.id));
+    const attachedTemplates = (templates as EmailTemplate[]).filter((t) => email.selectedAttachments.includes(t.id));
     if (attachedTemplates.length > 0) {
       html += `<br/><p><strong>Allegati:</strong></p><ul>`;
-      attachedTemplates.forEach((t: any) => { html += `<li><a href="${encodeURI(t.file_url)}" target="_blank">${escapeHtml(t.file_name)}</a></li>`; });
+      attachedTemplates.forEach((t) => { html += `<li><a href="${encodeURI(t.file_url)}" target="_blank">${escapeHtml(t.file_name)}</a></li>`; });
       html += `</ul>`;
     }
     return DOMPurify.sanitize(html, {
@@ -364,7 +364,7 @@ export function useEmailComposerState() {
       const effectiveGoal = [typePart, goalPart].filter(Boolean).join("\n\nISTRUZIONI SPECIFICHE DELL'UTENTE:\n");
       const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
-      const data = await invokeEdge<any>("generate-content", { body: {
+      const data = await invokeEdge<GenerateContentResponse>("generate-content", { body: {
         action: "email", goal: effectiveGoal, base_proposal: baseProposal, language: "italiano",
         document_ids: documents.map((d) => d.id), reference_urls: referenceLinks, quality: "standard",
         activity_id: "00000000-0000-0000-0000-000000000000", standalone: true,
@@ -381,8 +381,9 @@ export function useEmailComposerState() {
         dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
       }
       toast.success("Email generata con Oracolo 🔮");
-    } catch (err: any) {
-      toast.error("Errore generazione AI: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Sconosciuto";
+      toast.error("Errore generazione AI: " + message);
     } finally { dispatch({ type: "SET_AI_GENERATING", payload: false }); }
   }, [goal, baseProposal, documents, referenceLinks, recipients, recipientsWithEmail]);
 
