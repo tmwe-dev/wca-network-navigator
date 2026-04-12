@@ -67,7 +67,7 @@ export function BusinessCardsViewV2(): React.ReactElement {
               label={card.match_status}
             />
             {card.match_confidence != null && card.match_confidence > 0 && (
-              <span className="text-[10px] text-muted-foreground">{Math.round(card.match_confidence * 100)}%</span>
+              <span className="text-[10px] text-muted-foreground">{Math.round(card.match_confidence)}%</span>
             )}
           </div>
         </div>
