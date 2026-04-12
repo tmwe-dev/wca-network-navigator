@@ -18,7 +18,8 @@ import {
   Sun, Moon, Wifi, WifiOff, Command,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
-import { Toaster as SonnerToaster } from "sonner";
+import { Toaster as SonnerToaster, toast } from "sonner";
+import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 
 // ── Providers (same order as V1 App.tsx + AppLayout.tsx) ──
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -218,6 +219,33 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       window.removeEventListener("open-drawer", drawerHandler);
     };
   }, []);
+
+  // AI ↔ UI bridge: handles agent-dispatched commands
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      switch (detail.action_type) {
+        case "navigate":
+          if (detail.path) navigate(detail.path.startsWith("/v2") ? detail.path : "/v2" + detail.path);
+          break;
+        case "show_toast":
+          toast[detail.toast_type === "error" ? "error" : "success"](detail.message || "");
+          break;
+        case "apply_filters":
+          window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
+          break;
+        case "start_download_job":
+          if (detail.job_id) {
+            toast.success(`Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.`);
+            navigate("/v2/network");
+          }
+          break;
+      }
+    };
+    window.addEventListener("ai-ui-action", handler);
+    return () => window.removeEventListener("ai-ui-action", handler);
+  }, [navigate]);
 
   // Edge hover triggers for drawers
   const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -488,6 +516,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <Suspense fallback={null}>
                       <ContactRecordDrawer />
                     </Suspense>
+                    <ClaudeBadge />
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>
