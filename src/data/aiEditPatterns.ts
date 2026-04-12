@@ -19,7 +19,7 @@ export async function insertEditPattern(pattern: EditPatternInsert): Promise<voi
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  await (supabase as unknown as { from(table: string): ReturnType<typeof supabase.from> })
+  await supabase
     .from("ai_edit_patterns")
     .insert({ ...pattern, user_id: user.id });
 }
