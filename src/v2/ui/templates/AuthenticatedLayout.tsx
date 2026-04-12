@@ -161,34 +161,38 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   );
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 flex-col border-r bg-card">
-        {sidebarContent}
-      </aside>
-
-      {/* Mobile header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-foreground">WCA v2</h2>
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-1">
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {mobileOpen ? (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="w-64 bg-card border-r flex flex-col mt-12">
+    <MissionProvider>
+      <GlobalFiltersProvider>
+        <div className="flex h-screen bg-background">
+          {/* Desktop sidebar */}
+          <aside className="hidden md:flex w-56 flex-col border-r bg-card">
             {sidebarContent}
-          </div>
-          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
-        </div>
-      ) : null}
+          </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
-        <Outlet />
-      </main>
-    </div>
+          {/* Mobile header */}
+          <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-foreground">WCA v2</h2>
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="p-1">
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+
+          {/* Mobile sidebar overlay */}
+          {mobileOpen ? (
+            <div className="md:hidden fixed inset-0 z-40 flex">
+              <div className="w-64 bg-card border-r flex flex-col mt-12">
+                {sidebarContent}
+              </div>
+              <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
+            </div>
+          ) : null}
+
+          {/* Main content */}
+          <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
+            <Outlet />
+          </main>
+        </div>
+      </GlobalFiltersProvider>
+    </MissionProvider>
   );
 }
