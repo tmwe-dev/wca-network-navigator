@@ -114,7 +114,7 @@ export default function ContentSelect({ type, onSelect, selectedText, placeholde
         {selectedName && <Check className="w-4 h-4 text-primary shrink-0" />}
       </button>
 
-      {/* Picker Dialog — spacious grid with icons */}
+      {/* Picker Dialog */}
       <Dialog open={pickOpen} onOpenChange={setPickOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>

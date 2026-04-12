@@ -114,17 +114,17 @@ function CampaignHeaderControls({
     <>
       {/* Source toggle */}
       <Tabs value={source} onValueChange={(v) => onSourceChange(v as CampaignSource)}>
-        <TabsList className="bg-black/50 border border-amber-500/30">
-          <TabsTrigger value="partners" className="text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300">
+        <TabsList className="bg-card/50 border border-border">
+          <TabsTrigger value="partners" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
             <Building2 className="w-3.5 h-3.5 mr-1" />Partner
           </TabsTrigger>
-          <TabsTrigger value="bca" className="text-xs data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-300">
+          <TabsTrigger value="bca" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
             <CreditCard className="w-3.5 h-3.5 mr-1" />BCA
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="w-px h-6 bg-amber-500/30" />
+      <div className="w-px h-6 bg-border" />
 
       {/* Country combobox */}
       <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -133,30 +133,30 @@ function CampaignHeaderControls({
             variant="outline"
             role="combobox"
             aria-expanded={comboOpen}
-            className="w-56 justify-between bg-black/40 border-amber-500/30 text-amber-100 hover:bg-black/60 hover:text-amber-50"
+            className="w-56 justify-between"
           >
             {selectedName
               ? <span className="truncate">{getCountryFlag(selectedCountry!)} {selectedName}</span>
-              : <span className="text-slate-400">🌍 Cerca paese...</span>}
+              : <span className="text-muted-foreground">🌍 Cerca paese...</span>}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0 bg-black/95 backdrop-blur-xl border-amber-500/30 z-50" align="start">
-          <Command className="bg-transparent">
-            <CommandInput placeholder="Cerca paese..." className="text-amber-100" />
+        <PopoverContent className="w-64 p-0 z-50" align="start">
+          <Command>
+            <CommandInput placeholder="Cerca paese..." />
             <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30">
               <span className="text-[10px] text-muted-foreground mr-1">Ordina:</span>
               <button
                 onClick={() => setCountrySortBy("name")}
-                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "name" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "name" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted/30")}
               >A→Z</button>
               <button
                 onClick={() => setCountrySortBy("count")}
-                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "count" ? "bg-amber-500/20 text-amber-300" : "text-muted-foreground hover:bg-muted/30")}
+                className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", countrySortBy === "count" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted/30")}
               >#Partner</button>
             </div>
             <CommandList className="max-h-60">
-              <CommandEmpty className="text-slate-400">Nessun paese trovato</CommandEmpty>
+              <CommandEmpty className="text-muted-foreground">Nessun paese trovato</CommandEmpty>
               <CommandGroup>
                 {sortedCountries.map((country) => (
                   <CommandItem
@@ -166,12 +166,11 @@ function CampaignHeaderControls({
                       onCountrySelect(country.code);
                       setComboOpen(false);
                     }}
-                    className="text-slate-200 aria-selected:bg-amber-500/20 aria-selected:text-amber-100"
                   >
-                    <Check className={cn("mr-2 h-4 w-4", selectedCountry === country.code ? "opacity-100 text-amber-400" : "opacity-0")} />
+                    <Check className={cn("mr-2 h-4 w-4", selectedCountry === country.code ? "opacity-100 text-primary" : "opacity-0")} />
                     <span>{getCountryFlag(country.code)}</span>
                     <span className="ml-1.5 truncate">{country.name}</span>
-                    <span className={cn("ml-auto text-xs", country.count > 0 ? "text-amber-400" : "text-slate-600")}>
+                    <span className={cn("ml-auto text-xs", country.count > 0 ? "text-primary" : "text-muted-foreground/40")}>
                       {country.count}
                     </span>
                   </CommandItem>
@@ -183,33 +182,33 @@ function CampaignHeaderControls({
       </Popover>
 
       {/* Divider */}
-      <div className="w-px h-6 bg-amber-500/30" />
+      <div className="w-px h-6 bg-border" />
 
       {/* Stats badges */}
       <div className="flex items-center gap-3 text-sm">
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
-          <span className="font-mono text-blue-400">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.filter(c => c.count > 0).length}</span>
-          <span className="text-slate-400 text-xs">Paesi</span>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border">
+          <span className="font-mono text-foreground">{source === "bca" ? Object.keys(bcaCountryCounts).length : countries.filter(c => c.count > 0).length}</span>
+          <span className="text-muted-foreground text-xs">Paesi</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
           <span className="font-mono text-emerald-400">{countriesWithPartners}</span>
-          <span className="text-slate-400 text-xs">Attivi</span>
+          <span className="text-muted-foreground text-xs">Attivi</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30">
-          <span className="font-mono text-amber-400">{totalPartners}</span>
-          <span className="text-slate-400 text-xs">{source === "bca" ? "BCA" : "Partner"}</span>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
+          <span className="font-mono text-primary">{totalPartners}</span>
+          <span className="text-muted-foreground text-xs">{source === "bca" ? "BCA" : "Partner"}</span>
         </div>
       </div>
 
       {/* Reset button */}
       {selectedCountry && (
         <>
-          <div className="w-px h-6 bg-amber-500/30" />
+          <div className="w-px h-6 bg-border" />
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => onCountrySelect(null)}
-            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+            className="text-primary hover:text-primary/80 hover:bg-primary/10"
           >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Reset
@@ -223,16 +222,16 @@ function CampaignHeaderControls({
       {/* Campaign Summary in Header */}
       {campaignPartners.length > 0 && (
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Send className="w-4 h-4 text-emerald-400" />
             <span className="text-emerald-400">{campaignPartners.length}</span>
-            <span className="text-slate-500">aziende</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-amber-400">{uniqueCountries}</span>
-            <span className="text-slate-500">paesi</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-blue-400">{totalWithEmail}</span>
-            <span className="text-slate-500">email</span>
+            <span className="text-muted-foreground">aziende</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-primary">{uniqueCountries}</span>
+            <span className="text-muted-foreground">paesi</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-foreground">{totalWithEmail}</span>
+            <span className="text-muted-foreground">email</span>
           </div>
           <Button 
             onClick={onGenerateJobs} 
@@ -266,7 +265,7 @@ function FloatingCampaignPartners({
         variant="ghost"
         size="sm"
         onClick={onClearCampaign}
-        className="text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 px-2 py-1"
+        className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2 py-1"
       >
         <X className="w-3 h-3 mr-1" />
         Svuota
@@ -277,17 +276,17 @@ function FloatingCampaignPartners({
           <div 
             key={partner.id}
             className={cn(
-              "group flex items-center gap-2 bg-black/50 backdrop-blur-sm border rounded-lg px-3 py-1.5 text-sm",
-              partner.has_bca ? "border-purple-500/40" : "border-emerald-500/30"
+              "group flex items-center gap-2 bg-card/50 backdrop-blur-sm border rounded-lg px-3 py-1.5 text-sm",
+              partner.has_bca ? "border-primary/40" : "border-emerald-500/30"
             )}
           >
-            <span className="text-slate-300 truncate max-w-40">{partner.company_name}</span>
-            <span className="text-slate-500 text-xs">{getCountryFlag(partner.country_code)}</span>
+            <span className="text-foreground truncate max-w-40">{partner.company_name}</span>
+            <span className="text-muted-foreground text-xs">{getCountryFlag(partner.country_code)}</span>
             {partner.has_bca && <span className="text-[10px]">🤝</span>}
             {partner.email && <Mail className="w-3 h-3 text-emerald-500/60" />}
             <button
               onClick={() => onRemoveFromCampaign(partner.id)}
-              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
             >
               <X className="w-3 h-3" />
             </button>
@@ -327,7 +326,6 @@ export default function Campaigns() {
   // Get partners for selected country
   const countryPartners = useMemo(() => {
     if (source === "bca") {
-      // Deduplicate by id
       const seen = new Set<string>();
       return bcaCountryData.filter((p: any) => {
         if (seen.has(p.id)) return false;
@@ -503,29 +501,29 @@ export default function Campaigns() {
 
       {/* Goal picker dialog */}
       <Dialog open={showGoalDialog} onOpenChange={setShowGoalDialog}>
-        <DialogContent className="bg-black/95 border-amber-500/30 text-slate-100">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-400">
+            <DialogTitle className="flex items-center gap-2 text-primary">
               <Target className="w-5 h-5" />
               Seleziona Goal Campagna
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-slate-400 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {campaignPartners.length} aziende saranno inviate al Cockpit con il goal selezionato.
               {campaignPartners.filter(p => p.has_bca).length > 0 && (
-                <span className="text-purple-400 ml-1">
+                <span className="text-primary ml-1">
                   ({campaignPartners.filter(p => p.has_bca).length} incontrate di persona)
                 </span>
               )}
             </p>
             <Select value={selectedGoal} onValueChange={setSelectedGoal}>
-              <SelectTrigger className="bg-black/50 border-amber-500/30 text-slate-200">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black/95 border-amber-500/30">
+              <SelectContent>
                 {CAMPAIGN_GOALS.map(g => (
-                  <SelectItem key={g.value} value={g.value} className="text-slate-200 focus:bg-amber-500/20">
+                  <SelectItem key={g.value} value={g.value}>
                     {g.label}
                   </SelectItem>
                 ))}
@@ -533,7 +531,7 @@ export default function Campaigns() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowGoalDialog(false)} className="text-slate-400">
+            <Button variant="ghost" onClick={() => setShowGoalDialog(false)}>
               Annulla
             </Button>
             <Button onClick={handleGenerateJobs} className="space-button-primary">

@@ -92,7 +92,6 @@ export function ImportWizard({
     }
     setRegions(prev => {
       if (prev.includes(region)) {
-        // Remove region and its provinces
         const provs = PROVINCE_ITALIANE.filter(p => p.regione === region).map(p => p.sigla);
         setProvinces(pp => pp.filter(p => !provs.includes(p)));
         return prev.filter(r => r !== region);
@@ -132,20 +131,18 @@ export function ImportWizard({
   };
 
   // ── style helpers ──
-  const card = `rounded-xl border ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-slate-200/70"}`;
+  const card = `rounded-xl border ${isDark ? "bg-card/30 border-border" : "bg-card/60 border-border"}`;
   const chip = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${active
-      ? isDark
-        ? "bg-sky-500/20 text-sky-300 border-sky-500/30"
-        : "bg-sky-100 text-sky-700 border-sky-300"
+      ? "bg-primary/20 text-primary border-primary/30"
       : isDark
-        ? "bg-white/[0.04] text-slate-400 border-white/[0.08] hover:border-white/20"
-        : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+        ? "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
+        : "bg-card text-muted-foreground border-border hover:border-primary/20"
     }`;
   const btn = (variant: "primary" | "secondary" | "ghost") => {
-    if (variant === "primary") return `flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${isDark ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30" : "bg-sky-500 text-white hover:bg-sky-600"}`;
-    if (variant === "secondary") return `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${isDark ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.08] border border-white/[0.08]" : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"}`;
-    return `flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`;
+    if (variant === "primary") return `flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30`;
+    if (variant === "secondary") return `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all bg-muted/30 text-muted-foreground hover:bg-muted/50 border border-border`;
+    return `flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all text-muted-foreground hover:text-foreground`;
   };
 
   // ── Step bar ──
@@ -161,10 +158,10 @@ export function ImportWizard({
               onClick={() => done && setStep(s.id)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                 active
-                  ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-100 text-sky-700"
+                  ? "bg-primary/20 text-primary"
                   : done
-                    ? isDark ? "text-emerald-400 hover:bg-white/[0.04]" : "text-emerald-600 hover:bg-emerald-50"
-                    : isDark ? "text-slate-600" : "text-slate-400"
+                    ? "text-emerald-400 hover:bg-muted/30"
+                    : "text-muted-foreground/40"
               }`}
             >
               {done ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
@@ -174,7 +171,7 @@ export function ImportWizard({
               </span>
             </button>
             {i < STEPS.length - 1 && (
-              <div className={`w-6 h-px mx-0.5 ${done ? isDark ? "bg-emerald-500/40" : "bg-emerald-300" : isDark ? "bg-white/10" : "bg-slate-200"}`} />
+              <div className={`w-6 h-px mx-0.5 ${done ? "bg-emerald-500/40" : "bg-border"}`} />
             )}
           </div>
         );
@@ -192,15 +189,15 @@ export function ImportWizard({
         <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
           <StepBar />
           <div className={`${card} p-3 space-y-1`}>
-            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+            <h2 className="text-sm font-bold text-foreground">
               Seleziona il settore ATECO
             </h2>
-            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="text-xs text-muted-foreground">
               Scegli uno o più settori. Puoi espandere ogni sezione per selezionare gruppi specifici.
             </p>
           </div>
           {atecoCodes.length > 0 && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-sky-500/10 border border-sky-500/20 text-sky-300" : "bg-sky-50 border border-sky-200 text-sky-700"}`}>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-primary/10 border border-primary/20 text-primary">
               <Check className="w-3.5 h-3.5 shrink-0" />
               <span>{atecoCodes.length} codici selezionati: {atecoCodes.slice(0, 5).join(", ")}{atecoCodes.length > 5 ? `...+${atecoCodes.length - 5}` : ""}</span>
             </div>
@@ -219,20 +216,20 @@ export function ImportWizard({
               <div key={section.codice} className={`${card} overflow-hidden`}>
                 <button
                   onClick={() => setExpandedSection(isExpanded ? null : section.codice)}
-                  className={`w-full flex items-center gap-3 p-3 text-left transition-all hover:${isDark ? "bg-white/[0.03]" : "bg-slate-50/50"}`}
+                  className="w-full flex items-center gap-3 p-3 text-left transition-all hover:bg-muted/30"
                 >
                   <span className="text-xl w-8 shrink-0 text-center">{SECTION_ICONS[section.codice] || "📦"}</span>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    <div className="text-xs font-bold text-foreground">
                       Sezione {section.codice}
                     </div>
-                    <div className={`text-[10px] truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <div className="text-[10px] truncate text-muted-foreground">
                       {section.descrizione}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {selectedInSection > 0 && (
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${isDark ? "bg-sky-500/20 text-sky-300 border border-sky-500/30" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                         {selectedInSection}/{groups.length}
                       </span>
                     )}
@@ -240,18 +237,18 @@ export function ImportWizard({
                       onClick={e => { e.stopPropagation(); toggleSection(section.codice); }}
                       className={`text-[10px] px-2 py-1 rounded-lg font-medium transition-all border ${
                         allSelected
-                          ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-100 text-sky-700 border-sky-300"
-                          : isDark ? "bg-white/[0.04] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                          ? "bg-primary/20 text-primary border-primary/30"
+                          : "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
                       }`}
                     >
                       {allSelected ? "✓ Tutti" : "Seleziona tutti"}
                     </button>
-                    <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""} ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""} text-muted-foreground`} />
                   </div>
                 </button>
 
                 {isExpanded && (
-                  <div className={`px-3 pb-3 pt-1 border-t ${isDark ? "border-white/[0.06]" : "border-slate-100"}`}>
+                  <div className="px-3 pb-3 pt-1 border-t border-border">
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {groups.map(g => {
                         const active = atecoCodes.includes(g.codice);
@@ -261,8 +258,8 @@ export function ImportWizard({
                             onClick={() => toggleCode(g.codice)}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] border transition-all ${
                               active
-                                ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-100 text-sky-700 border-sky-300"
-                                : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:border-white/15" : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300"
+                                ? "bg-primary/20 text-primary border-primary/30"
+                                : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
                             }`}
                           >
                             {active && <Check className="w-3 h-3" />}
@@ -280,8 +277,8 @@ export function ImportWizard({
         </div>
 
         {/* Footer fisso */}
-        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
-          <span className={`text-xs ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-border">
+          <span className="text-xs text-muted-foreground">
             {atecoCodes.length === 0 ? "Nessun settore selezionato" : ""}
           </span>
           <div className="flex gap-2">
@@ -311,10 +308,10 @@ export function ImportWizard({
         <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
           <StepBar />
           <div className={`${card} p-3 space-y-1`}>
-            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+            <h2 className="text-sm font-bold text-foreground">
               Zona geografica
             </h2>
-            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="text-xs text-muted-foreground">
               Seleziona le regioni di interesse. Poi puoi affinare per provincia.
             </p>
           </div>
@@ -341,7 +338,7 @@ export function ImportWizard({
           {/* Province */}
           {visibleProvinces.length > 0 && (
             <div className={`${card} p-3 space-y-2`}>
-              <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
                 Province ({regions.join(", ")})
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -351,8 +348,8 @@ export function ImportWizard({
                     onClick={() => toggleProvince(p.sigla)}
                     className={`px-2 py-1 rounded-lg text-[11px] border transition-all ${
                       provinces.includes(p.sigla)
-                        ? isDark ? "bg-teal-500/20 text-teal-300 border-teal-500/30" : "bg-teal-50 text-teal-700 border-teal-300"
-                        : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:border-white/15" : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300"
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                        : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
                     }`}
                   >
                     <span className="font-mono font-bold">{p.sigla}</span> {p.nome}
@@ -363,7 +360,7 @@ export function ImportWizard({
           )}
 
           {(regions.length > 0 || provinces.length > 0) && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-teal-500/10 border border-teal-500/20 text-teal-300" : "bg-teal-50 border border-teal-200 text-teal-700"}`}>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               <span>
                 {regions.length > 0 ? `${regions.join(", ")}` : ""}
@@ -374,7 +371,7 @@ export function ImportWizard({
         </div>
 
         {/* Footer fisso */}
-        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-border">
           <button onClick={() => setStep(1)} className={btn("secondary")}>
             <ChevronLeft className="w-4 h-4" /> Indietro
           </button>
@@ -395,12 +392,12 @@ export function ImportWizard({
         onClick={onClick}
         className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center transition-all ${
           active
-            ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-100 text-sky-700 border-sky-300"
-            : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+            ? "bg-primary/20 text-primary border-primary/30"
+            : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
         }`}
       >
         <span className="text-xs font-bold">{label}</span>
-        <span className={`text-[10px] ${active ? "" : isDark ? "text-slate-600" : "text-slate-400"}`}>{desc}</span>
+        <span className={`text-[10px] ${active ? "" : "text-muted-foreground/60"}`}>{desc}</span>
       </button>
     );
 
@@ -410,10 +407,10 @@ export function ImportWizard({
         <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
           <StepBar />
           <div className={`${card} p-3 space-y-1`}>
-            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
-              Profilo aziendale <span className={`text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>(opzionale)</span>
+            <h2 className="text-sm font-bold text-foreground">
+              Profilo aziendale <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
             </h2>
-            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="text-xs text-muted-foreground">
               Filtra per dimensione aziendale e disponibilità di contatti.
             </p>
           </div>
@@ -423,7 +420,7 @@ export function ImportWizard({
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-3">
           {/* Fatturato */}
           <div className={`${card} p-3 space-y-2`}>
-            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-amber-400/80" : "text-amber-600"}`}>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">
               💰 Fatturato
             </p>
             <div className="grid grid-cols-4 gap-2">
@@ -435,7 +432,7 @@ export function ImportWizard({
 
           {/* Dipendenti */}
           <div className={`${card} p-3 space-y-2`}>
-            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-violet-400/80" : "text-violet-600"}`}>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">
               👥 Dipendenti
             </p>
             <div className="grid grid-cols-4 gap-2">
@@ -447,7 +444,7 @@ export function ImportWizard({
 
           {/* Contatti */}
           <div className={`${card} p-3 space-y-2`}>
-            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-emerald-400/80" : "text-emerald-600"}`}>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-400/80">
               📞 Contatti disponibili
             </p>
             <div className="flex gap-2">
@@ -455,8 +452,8 @@ export function ImportWizard({
                 onClick={() => setFilters(f => ({ ...f, has_phone: !f.has_phone, has_phone_and_email: false }))}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
                   filters.has_phone
-                    ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                    : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
                 }`}
               >
                 <Phone className="w-3.5 h-3.5" /> Ha telefono
@@ -465,8 +462,8 @@ export function ImportWizard({
                 onClick={() => setFilters(f => ({ ...f, has_email: !f.has_email, has_phone_and_email: false }))}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
                   filters.has_email
-                    ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                    : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" /> Ha email
@@ -475,8 +472,8 @@ export function ImportWizard({
                 onClick={() => setFilters(f => ({ ...f, has_phone_and_email: !f.has_phone_and_email, has_phone: false, has_email: false }))}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
                   filters.has_phone_and_email
-                    ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-50 text-sky-700 border-sky-300"
-                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                    ? "bg-primary/20 text-primary border-primary/30"
+                    : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"
                 }`}
               >
                 <Globe className="w-3.5 h-3.5" /> Entrambi
@@ -486,7 +483,7 @@ export function ImportWizard({
         </div>
 
         {/* Footer fisso */}
-        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-border">
           <button onClick={() => setStep(2)} className={btn("secondary")}>
             <ChevronLeft className="w-4 h-4" /> Indietro
           </button>
@@ -514,10 +511,10 @@ export function ImportWizard({
       <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
         <StepBar />
         <div className={`${card} p-3 space-y-1`}>
-          <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+          <h2 className="text-sm font-bold text-foreground">
             Riepilogo e avvio
           </h2>
-          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+          <p className="text-xs text-muted-foreground">
             Controlla i parametri e avvia la ricerca su Report Aziende.
           </p>
         </div>
@@ -527,74 +524,74 @@ export function ImportWizard({
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-2">
         {/* ATECO */}
         <div className={`${card} p-3 flex items-start gap-3`}>
-          <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+          <Building2 className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Settore ATECO</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Settore ATECO</p>
             {atecoCodes.length > 0 ? (
               <div className="flex flex-wrap gap-1 mt-1">
                 {atecoCodes.slice(0, 8).map(c => (
-                  <span key={c} className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isDark ? "bg-sky-500/15 text-sky-300" : "bg-sky-50 text-sky-700"}`}>{c}</span>
+                  <span key={c} className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-primary/15 text-primary">{c}</span>
                 ))}
-                {atecoCodes.length > 8 && <span className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>+{atecoCodes.length - 8} altri</span>}
+                {atecoCodes.length > 8 && <span className="text-[10px] text-muted-foreground">+{atecoCodes.length - 8} altri</span>}
               </div>
             ) : (
-              <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Tutti i settori</p>
+              <p className="text-xs mt-1 text-muted-foreground">Tutti i settori</p>
             )}
           </div>
-          <button onClick={() => setStep(1)} className={`text-[10px] shrink-0 px-2 py-1 rounded-lg ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.05]" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}>Modifica</button>
+          <button onClick={() => setStep(1)} className="text-[10px] shrink-0 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30">Modifica</button>
         </div>
 
         {/* Zona */}
         <div className={`${card} p-3 flex items-start gap-3`}>
-          <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? "text-teal-400" : "text-teal-500"}`} />
+          <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Zona geografica</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Zona geografica</p>
             {regions.length > 0 ? (
-              <p className={`text-xs mt-1 ${isDark ? "text-teal-300" : "text-teal-700"}`}>
+              <p className="text-xs mt-1 text-emerald-300">
                 {regions.join(", ")}
                 {provinces.length > 0 && ` · Prov: ${provinces.join(", ")}`}
               </p>
             ) : (
-              <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>🇮🇹 Tutta Italia</p>
+              <p className="text-xs mt-1 text-muted-foreground">🇮🇹 Tutta Italia</p>
             )}
           </div>
-          <button onClick={() => setStep(2)} className={`text-[10px] shrink-0 px-2 py-1 rounded-lg ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.05]" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}>Modifica</button>
+          <button onClick={() => setStep(2)} className="text-[10px] shrink-0 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30">Modifica</button>
         </div>
 
         {/* Profilo */}
         <div className={`${card} p-3 flex items-start gap-3`}>
-          <Search className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+          <Search className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Profilo aziendale</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Profilo aziendale</p>
             {hasFilters ? (
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {fatturatoPreset !== null && (
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/20" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
                     💰 {FATTURATO_PRESETS[fatturatoPreset].label} ({FATTURATO_PRESETS[fatturatoPreset].desc})
                   </span>
                 )}
                 {dipendentiPreset !== null && (
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? "bg-violet-500/15 text-violet-300 border border-violet-500/20" : "bg-violet-50 text-violet-700 border border-violet-200"}`}>
+                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
                     👥 {DIPENDENTI_PRESETS[dipendentiPreset].label} ({DIPENDENTI_PRESETS[dipendentiPreset].desc})
                   </span>
                 )}
-                {filters.has_phone && <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>📞 Ha telefono</span>}
-                {filters.has_email && <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>📧 Ha email</span>}
-                {filters.has_phone_and_email && <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/20" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>📞+📧 Entrambi</span>}
+                {filters.has_phone && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">📞 Ha telefono</span>}
+                {filters.has_email && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">📧 Ha email</span>}
+                {filters.has_phone_and_email && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">📞+📧 Entrambi</span>}
               </div>
             ) : (
-              <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Nessun filtro aggiuntivo</p>
+              <p className="text-xs mt-1 text-muted-foreground">Nessun filtro aggiuntivo</p>
             )}
           </div>
-          <button onClick={() => setStep(3)} className={`text-[10px] shrink-0 px-2 py-1 rounded-lg ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.05]" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}>Modifica</button>
+          <button onClick={() => setStep(3)} className="text-[10px] shrink-0 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30">Modifica</button>
         </div>
 
         {/* Extension status */}
         <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs ${isExtAvailable
-          ? isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-          : isDark ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-red-50 text-red-600 border border-red-200"
+          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+          : "bg-destructive/10 text-destructive border border-destructive/20"
         }`}>
-          <span className={`w-2 h-2 rounded-full shrink-0 ${isExtAvailable ? "bg-emerald-400" : "bg-red-400"} animate-pulse`} />
+          <span className={`w-2 h-2 rounded-full shrink-0 ${isExtAvailable ? "bg-emerald-400" : "bg-destructive"} animate-pulse`} />
           {isExtAvailable
             ? "✅ Estensione RA connessa — pronto per la ricerca"
             : "❌ Estensione RA non rilevata — installala e ricarica la pagina prima di procedere"
@@ -603,18 +600,14 @@ export function ImportWizard({
       </div>
 
       {/* Footer fisso */}
-      <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-border">
         <button onClick={() => setStep(3)} className={btn("secondary")}>
           <ChevronLeft className="w-4 h-4" /> Indietro
         </button>
         <button
           onClick={handleStart}
           disabled={!isExtAvailable}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 ${
-            isDark
-              ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
-              : "bg-sky-500 text-white hover:bg-sky-600 shadow-md shadow-sky-500/20"
-          }`}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30"
         >
           <Rocket className="w-5 h-5" />
           Cerca Aziende

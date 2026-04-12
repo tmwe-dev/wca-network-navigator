@@ -439,7 +439,7 @@ style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }
                          style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
                          aria-label="Apri Mission"
                       >
-                        <Target className="w-3 h-3 text-purple-300" />
+                        <Target className="w-3 h-3 text-primary" />
                       </button>
 
                       {/* Main content area */}
