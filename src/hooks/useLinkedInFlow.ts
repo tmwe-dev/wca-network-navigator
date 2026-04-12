@@ -1,7 +1,6 @@
 /**
  * useLinkedInFlow — Orchestration hook for LinkedIn batch enrichment.
  * Decomposed: helpers in useLinkedInFlowHelpers.ts, state in useLinkedInFlowState.ts
- * ~290 LOC (was 596)
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +41,18 @@ interface FlowContact {
   linkedinUrl?: string | null; website?: string | null; sourceType?: string;
 }
 
+interface PartnerLookupRow {
+  website?: string | null;
+  enrichment_data?: Record<string, unknown> | null;
+}
+
+interface OutreachResult {
+  subject?: string;
+  body?: string;
+  language?: string;
+  error?: string;
+}
+
 export function useLinkedInFlow() {
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
@@ -52,6 +63,12 @@ export function useLinkedInFlow() {
   const [currentStep, setCurrentStep] = useState<string | null>(null);
   const abortRef = useRef(false);
   const runningRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!activeJobId) return;
@@ -61,6 +78,7 @@ export function useLinkedInFlow() {
         event: "UPDATE", schema: "public", table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
       } as Record<string, string>, (payload: Record<string, Record<string, unknown>>) => {
+        if (!mountedRef.current) return;
         const row = payload.new;
         setProgress({
           total: row.total_count as number, processed: row.processed_count as number,
@@ -83,9 +101,11 @@ export function useLinkedInFlow() {
       error_count: errors, completed_at: new Date().toISOString(),
     });
     runningRef.current = false;
-    setPhase("completed");
-    setCurrentContact(null);
-    setCurrentStep(null);
+    if (mountedRef.current) {
+      setPhase("completed");
+      setCurrentContact(null);
+      setCurrentStep(null);
+    }
     toast.success(`LinkedIn Flow completato: ${successes} OK, ${errors} errori`);
   };
 
@@ -93,17 +113,18 @@ export function useLinkedInFlow() {
     const items = await findPendingFlowItems(jobId);
     if (items.length === 0) { await finalizeJob(jobId); return; }
 
-    const jobData = await getLinkedInFlowJobField(jobId, "config") as any;
+    const jobData = (await getLinkedInFlowJobField(jobId, "config")) as unknown as Record<string, unknown> | null;
     const jobConfig = (jobData?.config as Record<string, unknown>) || {};
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
       if (abortRef.current) {
         await updateLinkedInFlowJob(jobId, { status: "cancelled" });
-        runningRef.current = false; setPhase("idle");
+        runningRef.current = false;
+        if (mountedRef.current) setPhase("idle");
         toast.info("LinkedIn Flow interrotto"); return;
       }
-      setCurrentContact(item.contact_name || item.contact_id);
+      if (mountedRef.current) setCurrentContact(item.contact_name || item.contact_id);
       await updateLinkedInFlowItem(item.id, { status: "processing", started_at: new Date().toISOString() });
       const enrichment: Record<string, unknown> = { processed_at: new Date().toISOString() };
       let itemStatus = "completed";
@@ -112,14 +133,15 @@ export function useLinkedInFlow() {
       try {
         // STEP 1: LinkedIn Profile
         if (item.linkedin_url && liBridge.isAvailable) {
-          setPhase("scraping"); setCurrentStep("Scraping profilo LinkedIn...");
+          if (mountedRef.current) { setPhase("scraping"); setCurrentStep("Scraping profilo LinkedIn..."); }
           const result = await liBridge.extractProfile(item.linkedin_url);
           if (result.success && result.profile) {
+            const profileData = result.profile as Record<string, unknown>;
             enrichment.linkedin = {
               name: result.profile.name, headline: result.profile.headline,
               location: result.profile.location, about: result.profile.about,
               profileUrl: result.profile.profileUrl, photoUrl: result.profile.photoUrl,
-              connectionStatus: (result.profile as Record<string, unknown>).connectionStatus || "unknown",
+              connectionStatus: (profileData.connectionStatus as string) || "unknown",
             };
             enrichment.linkedin_ok = true;
             enrichment.connection_status = (enrichment.linkedin as Record<string, unknown>).connectionStatus;
@@ -132,10 +154,10 @@ export function useLinkedInFlow() {
 
         // STEP 2: Website Deep Search
         if (jobConfig.deep_search_web && pcBridge.isAvailable && item.company_name) {
-          setPhase("deep_search"); setCurrentStep("Deep Search sito web...");
-          const partner = await findPartnerByName(item.company_name);
-          const website = (partner as any)?.website;
-          const existingEnrichment = ((partner as any)?.enrichment_data as Record<string, string>) || {};
+          if (mountedRef.current) { setPhase("deep_search"); setCurrentStep("Deep Search sito web..."); }
+          const partner = await findPartnerByName(item.company_name) as PartnerLookupRow | null;
+          const website = partner?.website;
+          const existingEnrichment = (partner?.enrichment_data as Record<string, string>) || {};
           const cachedAt = existingEnrichment.website_scraped_at;
           const isCacheFresh = cachedAt && (Date.now() - new Date(cachedAt).getTime()) < 30 * 86400000;
 
@@ -145,7 +167,7 @@ export function useLinkedInFlow() {
               if (scrapeResult.success && scrapeResult.markdown) {
                 enrichment.website = { url: website, title: scrapeResult.metadata?.title, description: scrapeResult.metadata?.description, content_preview: scrapeResult.markdown.slice(0, 3000), word_count: scrapeResult.stats?.words, lang: scrapeResult.metadata?.lang, source: "partner_connect" };
                 enrichment.website_ok = true;
-                setCurrentStep("Analisi AI del sito...");
+                if (mountedRef.current) setCurrentStep("Analisi AI del sito...");
                 try {
                   const analysis = await pcBridge.brainAnalyze(`Analizza questa azienda per una partnership nel freight forwarding. Identifica: servizi offerti, rotte operative, specializzazioni, segnali di export. Contenuto: ${scrapeResult.markdown.slice(0, 2000)}`);
                   if (analysis.success) enrichment.website_analysis = analysis;
@@ -160,19 +182,19 @@ export function useLinkedInFlow() {
         }
 
         // STEP 3: Save to partner DB
-        setPhase("enriching"); setCurrentStep("Salvataggio dati...");
+        if (mountedRef.current) { setPhase("enriching"); setCurrentStep("Salvataggio dati..."); }
         if (item.company_name) await saveEnrichmentToPartner(item.company_name, enrichment);
 
         // STEP 4: AI Outreach
         if (jobConfig.generate_outreach && (enrichment.linkedin_ok || enrichment.website_ok)) {
-          setPhase("generating"); setCurrentStep("Generazione bozza AI...");
+          if (mountedRef.current) { setPhase("generating"); setCurrentStep("Generazione bozza AI..."); }
           try {
-            const outreach = await invokeEdge<{ subject?: string; body?: string; language?: string; error?: string } | null>("generate-content", {
+            const outreach = await invokeEdge<OutreachResult | null>("generate-content", {
               body: { action: "outreach", channel: "linkedin", contact_name: item.contact_name || "", company_name: item.company_name || "", quality: "standard", linkedin_profile: enrichment.linkedin || undefined },
               context: "useLinkedInFlow.outreach",
             });
             if (outreach && !outreach.error) enrichment.outreach = { subject: outreach.subject, body: outreach.body, language: outreach.language };
-          } catch (e) { log.warn("outreach generation skipped", { message: e instanceof Error ? e.message : String(e) }); }
+          } catch (e: unknown) { log.warn("outreach generation skipped", { message: e instanceof Error ? e.message : String(e) }); }
         }
 
         // STEP 5: Auto-connect
@@ -180,7 +202,7 @@ export function useLinkedInFlow() {
         const outreachBody = (enrichment.outreach as Record<string, string>)?.body;
         const shouldConnect = jobConfig.auto_connect && item.linkedin_url && liBridge.isAvailable && connStatus !== "connected" && connStatus !== "pending";
         if (shouldConnect && outreachBody) {
-          setCurrentStep("Invio richiesta collegamento...");
+          if (mountedRef.current) setCurrentStep("Invio richiesta collegamento...");
           try {
             const note = outreachBody.replace(/<[^>]+>/g, "").trim().slice(0, 295) + (outreachBody.length > 295 ? "..." : "");
             const connResult = await liBridge.sendConnectionRequest(item.linkedin_url!, note);
@@ -208,11 +230,11 @@ export function useLinkedInFlow() {
       const successes = await getCountByStatus(jobId, "completed");
       const errors = await getCountByStatus(jobId, "error");
       await updateLinkedInFlowJob(jobId, { processed_count: processed, success_count: successes, error_count: errors, updated_at: new Date().toISOString() });
-      setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
+      if (mountedRef.current) setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
 
       if (idx < items.length - 1) {
         const patternPause = getPatternPause(idx);
-        setCurrentStep(`Pausa ${patternPause}s...`);
+        if (mountedRef.current) setCurrentStep(`Pausa ${patternPause}s...`);
         await sleep(patternPause * 1000);
       }
     }
@@ -257,7 +279,7 @@ export function useLinkedInFlow() {
   const resumeFlow = useCallback(async () => {
     if (!activeJobId) return;
     abortRef.current = false; runningRef.current = true; setPhase("scraping");
-    const job = await getLinkedInFlowJobField(activeJobId, "delay_seconds") as any;
+    const job = (await getLinkedInFlowJobField(activeJobId, "delay_seconds")) as unknown as Record<string, unknown> | null;
     await updateLinkedInFlowJob(activeJobId, { status: "running" });
     processLoop(activeJobId, (job?.delay_seconds as number) || 15);
   }, [activeJobId, processLoop]);

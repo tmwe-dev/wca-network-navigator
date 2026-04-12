@@ -9,6 +9,8 @@ import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
 import type { ContactOrigin } from "@/pages/Cockpit";
 import { createLogger } from "@/lib/log";
 import { getContactsByIds } from "@/data/contacts";
+import { findBusinessCards } from "@/data/businessCards";
+import { addCockpitPreselection } from "@/lib/cockpitPreselection";
 
 const log = createLogger("useCockpitContacts");
 
@@ -82,6 +84,37 @@ interface PartnerRow {
   id: string;
 }
 
+interface BusinessCardRow {
+  id: string;
+  contact_name?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  event_name?: string | null;
+  met_at?: string | null;
+  created_at?: string;
+}
+
+interface ImportedContactRow {
+  id: string;
+  name?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  country?: string | null;
+  city?: string | null;
+  origin?: string | null;
+  created_at?: string;
+  enrichment_data?: Record<string, unknown> | null;
+  deep_search_at?: string | null;
+  contact_alias?: string | null;
+  company_alias?: string | null;
+}
+
 function extractPartnerMeta(partner: PartnerRow | undefined): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
   if (!partner) return {};
   const meta: { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } = {};
@@ -90,7 +123,7 @@ function extractPartnerMeta(partner: PartnerRow | undefined): { memberSince?: st
     const y = new Date().getFullYear() - new Date(partner.member_since).getFullYear();
     if (y >= 0) meta.memberYears = y;
   }
-  const ed = partner.enrichment_data as Record<string, unknown> | undefined;
+  const ed = partner.enrichment_data;
   if (ed) {
     const companyProfile = ed.company_profile as Record<string, unknown> | undefined;
     const contactProfile = ed.contact_profile as Record<string, unknown> | undefined;
@@ -131,19 +164,19 @@ export function useCockpitContacts() {
       const prcIds = queue.filter(q => q.source_type === "prospect_contact").map(q => q.source_id);
       const icIds = queue.filter(q => q.source_type === "contact").map(q => q.source_id);
 
-      // Fetch source data in parallel using DAL
+      // Fetch source data in parallel using DAL (top-level imports, no dynamic imports)
       const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
           ? getPartnerContactsByIds(pcIds, "id, name, title, email, direct_phone, mobile, partner_id, contact_alias")
           : Promise.resolve([]),
         bcIds.length > 0
-          ? (await import("@/data/businessCards")).findBusinessCards().then(cards => cards.filter((c: any) => bcIds.includes(c.id)))
+          ? findBusinessCards().then(cards => cards.filter((c: BusinessCardRow) => bcIds.includes(c.id)))
           : Promise.resolve([]),
         prcIds.length > 0
           ? getProspectContactsByIds(prcIds)
           : Promise.resolve([]),
         icIds.length > 0
-          ? import("@/data/contacts").then(({ getContactsByIds }) => getContactsByIds(icIds, "id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias"))
+          ? getContactsByIds(icIds, "id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias")
           : Promise.resolve([]),
       ]);
 
@@ -237,13 +270,13 @@ export function useCockpitContacts() {
           ...pMeta,
         });
       } else if (st === "business_card") {
-        const bc = bcMap[sid];
+        const bc = bcMap[sid] as BusinessCardRow | undefined;
         if (!bc) continue;
         result.push({
           id: `bc-${bc.id}`, queueId: item.id,
           name: bc.contact_name || "—", company: bc.company_name || "—",
           role: bc.position || "", country: "", language: "english",
-          lastContact: formatRelativeDate(bc.met_at || bc.created_at),
+          lastContact: formatRelativeDate(bc.met_at || bc.created_at || null),
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
           email: bc.email || "", phone: bc.mobile || bc.phone || "",
@@ -268,27 +301,29 @@ export function useCockpitContacts() {
           linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
-        const ic = icMap[sid];
+        const ic = icMap[sid] as ImportedContactRow | undefined;
         if (!ic) continue;
-        const icEd = (ic.enrichment_data as any) || {};
-        let icLinkedin = icEd.linkedin_profile_url || icEd.linkedin_url || icEd.social_links?.linkedin || "";
-        if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
-          const profiles = Object.values(icEd.contact_profiles) as any[];
-          const found = profiles.find((cp: any) => cp.linkedin_url);
-          if (found) icLinkedin = found.linkedin_url;
+        const icEd = ic.enrichment_data || {};
+        const contactProfiles = icEd.contact_profiles as Record<string, Record<string, unknown>> | undefined;
+        let icLinkedin = (icEd.linkedin_profile_url as string) || (icEd.linkedin_url as string) || ((icEd.social_links as Record<string, string> | undefined)?.linkedin) || "";
+        if (!icLinkedin && contactProfiles && typeof contactProfiles === "object") {
+          const profiles = Object.values(contactProfiles);
+          const found = profiles.find((cp) => typeof cp === "object" && cp !== null && "linkedin_url" in cp);
+          if (found) icLinkedin = found.linkedin_url as string;
         }
         const icPartnerId = item.partner_id;
         if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) icLinkedin = socialLinksMap[icPartnerId];
-        const icEnrich = (ic.enrichment_data as any) || {};
         const icMeta: Partial<CockpitContact> = {};
-        if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
-        if (icEnrich.company_profile?.specialties?.length) icMeta.specialties = icEnrich.company_profile.specialties.slice(0, 4);
+        const contactProfile = icEd.contact_profile as Record<string, unknown> | undefined;
+        const companyProfile = icEd.company_profile as Record<string, unknown> | undefined;
+        if (contactProfile?.seniority && typeof contactProfile.seniority === "string") icMeta.seniority = contactProfile.seniority;
+        if (companyProfile?.specialties && Array.isArray(companyProfile.specialties)) icMeta.specialties = (companyProfile.specialties as string[]).slice(0, 4);
         result.push({
           id: `ic-${ic.id}`, queueId: item.id,
           name: ic.name || "—", company: ic.company_name || "—",
           role: ic.position || "", country: ic.country || "",
-          language: inferLanguage(ic.country),
-          lastContact: formatRelativeDate(ic.created_at),
+          language: inferLanguage(ic.country || null),
+          lastContact: formatRelativeDate(ic.created_at || null),
           priority: computePriority(ic.email, ic.phone, ic.mobile),
           channels: inferChannels(ic.email, ic.phone, ic.mobile),
           email: ic.email || "", phone: ic.mobile || ic.phone || "",
@@ -305,15 +340,16 @@ export function useCockpitContacts() {
     }
 
     // Add scheduled return activities
+    interface ActivityMeta { name?: string; company?: string; country?: string; email?: string; phone?: string; mobile?: string }
     for (const act of scheduledActivities) {
-      const meta = (act.source_meta || {}) as any;
+      const meta = (act.source_meta || {}) as ActivityMeta;
       const existsAlready = result.some(r => r.sourceId === act.source_id);
       if (existsAlready) continue;
       result.push({
         id: `act-${act.id}`, queueId: act.id,
         name: meta.name || act.title || "—", company: meta.company || "—",
         role: "", country: meta.country || "",
-        language: inferLanguage(meta.country),
+        language: inferLanguage(meta.country || null),
         lastContact: formatRelativeDate(act.created_at),
         priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
         channels: inferChannels(meta.email, null, null),
@@ -380,7 +416,6 @@ export function useSendToCockpit() {
 
       await insertCockpitQueueItems(inserts);
 
-      const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
       addCockpitPreselection(items.map(i => i.sourceId));
 
       for (const item of items) {
@@ -391,7 +426,7 @@ export function useSendToCockpit() {
             countryCode: item.countryCode || null,
             userId: user.id,
           });
-        } catch (e) {
+        } catch (e: unknown) {
           log.warn("auto-assign failed", { sourceId: item.sourceId, message: e instanceof Error ? e.message : String(e) });
         }
       }
