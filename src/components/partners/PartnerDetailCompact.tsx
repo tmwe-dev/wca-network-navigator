@@ -320,7 +320,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <p className={`text-sm leading-relaxed whitespace-pre-line mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+            <p className="text-sm leading-relaxed whitespace-pre-line mt-1 text-foreground/80">
               {partner.profile_description}
             </p>
           </CollapsibleContent>
