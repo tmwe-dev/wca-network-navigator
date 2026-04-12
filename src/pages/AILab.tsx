@@ -1,11 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Play, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Play, CheckCircle, XCircle, AlertTriangle, Download, History, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+import {
+  insertTestRun, insertTestResults,
+  fetchRecentRuns, fetchRunResults, exportResultsToCSV,
+  type TestRunRow, type TestResultRow,
+} from "@/data/aiLabTestRuns";
 
 interface TestScenario {
   id: number;
@@ -82,31 +88,26 @@ const SCENARIOS: TestScenario[] = [
   { id: 30, name: "Email con tono caloroso vs formale", endpoint: "generate-email", payload: { standalone: true, goal: "Primo contatto informale con piccolo spedizioniere locale", oracle_type: "primo_contatto", oracle_tone: "caloroso", use_kb: true, quality: "standard", recipient_countries: "Italia" }, expectedChecks: { hasSubject: true } },
 ];
 
-function evaluateResult(scenario: TestScenario, response: any): { issues: string[]; score: number } {
+function evaluateResult(scenario: TestScenario, response: Record<string, unknown>): { issues: string[]; score: number } {
   const issues: string[] = [];
   let score = 10;
-  const body = response.body || response.full_content || "";
-  const subject = response.subject || "";
-  const debug = response._debug || {};
-  const fullContent = response.full_content || "";
+  const body = (response.body as string) || (response.full_content as string) || "";
+  const subject = (response.subject as string) || "";
+  const debug = (response._debug as Record<string, unknown>) || {};
+  const fullContent = (response.full_content as string) || "";
 
-  // Check subject
   if (scenario.expectedChecks.hasSubject) {
     if (!subject && !fullContent.includes("Subject:")) {
       issues.push("❌ Manca l'oggetto (Subject)");
       score -= 2;
     }
   }
-
-  // Check KB loaded
   if (scenario.expectedChecks.hasKB) {
     if (debug.kb_loaded === false && debug.sales_kb_loaded === false) {
       issues.push("❌ KB non caricata");
       score -= 3;
     }
   }
-
-  // Check word count
   if (scenario.expectedChecks.maxWords) {
     const wordCount = body.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
     if (wordCount > scenario.expectedChecks.maxWords) {
@@ -114,16 +115,12 @@ function evaluateResult(scenario: TestScenario, response: any): { issues: string
       score -= 1;
     }
   }
-
-  // Check no HTML
   if (scenario.expectedChecks.noHTML) {
     if (/<[a-z][\s\S]*>/i.test(body)) {
       issues.push("❌ Contiene HTML (non dovrebbe per questo canale)");
       score -= 2;
     }
   }
-
-  // Check keywords present
   if (scenario.expectedChecks.containsKeyword) {
     for (const kw of scenario.expectedChecks.containsKeyword) {
       if (!body.toLowerCase().includes(kw.toLowerCase()) && !fullContent.toLowerCase().includes(kw.toLowerCase())) {
@@ -132,8 +129,6 @@ function evaluateResult(scenario: TestScenario, response: any): { issues: string
       }
     }
   }
-
-  // Check keywords absent
   if (scenario.expectedChecks.notContainsKeyword) {
     for (const kw of scenario.expectedChecks.notContainsKeyword) {
       if (body.includes(kw) || fullContent.includes(kw)) {
@@ -142,13 +137,120 @@ function evaluateResult(scenario: TestScenario, response: any): { issues: string
       }
     }
   }
-
-  // Generic quality checks
   if (body.length < 50) { issues.push("❌ Risposta troppo corta"); score -= 3; }
   if (body.includes("SkyBus")) { issues.push("❌ ALLUCINAZIONE: menziona 'SkyBus' (non esiste)"); score -= 3; }
   if (body.includes("undefined") || body.includes("null")) { issues.push("❌ Contiene 'undefined' o 'null'"); score -= 2; }
 
   return { issues, score: Math.max(0, score) };
+}
+
+// ─── Persist helpers ───
+async function persistRun(
+  results: Map<number, TestResult>,
+  scenarios: TestScenario[],
+) {
+  const vals = Array.from(results.values()).filter(r => r.status !== "running" && r.status !== "pending");
+  if (vals.length === 0) return;
+
+  const totalScore = vals.reduce((s, r) => s + r.score, 0);
+  const maxScore = vals.length * 10;
+  const passCount = vals.filter(r => r.status === "pass").length;
+  const warnCount = vals.filter(r => r.status === "warn").length;
+  const failCount = vals.filter(r => r.status === "fail").length;
+
+  const runId = await insertTestRun({
+    totalScore, maxScore, passCount, warnCount, failCount,
+    summary: { endpointBreakdown: {} },
+  });
+  if (!runId) { toast.error("Errore salvataggio run"); return; }
+
+  const rows = vals.map((r) => {
+    const sc = scenarios.find(s => s.id === r.id);
+    return {
+      scenarioId: r.id,
+      scenarioName: sc?.name ?? `#${r.id}`,
+      endpoint: sc?.endpoint ?? "",
+      status: r.status,
+      score: r.score,
+      durationMs: r.durationMs ?? 0,
+      issues: r.issues,
+      outputSubject: r.subject ?? "",
+      outputBody: r.output ?? "",
+      debugInfo: (r.debug ?? {}) as Record<string, unknown>,
+    };
+  });
+
+  const ok = await insertTestResults(runId, rows);
+  if (ok) toast.success(`Run salvata (${vals.length} risultati)`);
+  else toast.error("Errore salvataggio risultati");
+}
+
+// ─── History sub-component ───
+function RunHistory({ onLoadRun }: { onLoadRun: (results: TestResultRow[]) => void }) {
+  const [runs, setRuns] = useState<TestRunRow[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && runs.length === 0) {
+      setLoading(true);
+      fetchRecentRuns(20).then(r => { setRuns(r); setLoading(false); });
+    }
+  }, [open, runs.length]);
+
+  const handleLoad = async (runId: string) => {
+    const results = await fetchRunResults(runId);
+    onLoadRun(results);
+  };
+
+  const handleExport = async (runId: string) => {
+    const results = await fetchRunResults(runId);
+    const csv = exportResultsToCSV(results);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ai-lab-run-${runId.slice(0, 8)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => setOpen(!open)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Storico run</CardTitle>
+          </div>
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="pt-0 pb-3 px-4 space-y-1">
+          {loading && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
+          {!loading && runs.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Nessuna run salvata.</p>}
+          {runs.map((run) => (
+            <div key={run.id} className="flex items-center justify-between gap-2 p-2 rounded border hover:bg-accent/50 transition-colors">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{new Date(run.started_at).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                <Badge variant="outline" className="text-[10px]">{run.total_score}/{run.max_score}</Badge>
+                <Badge variant="default" className="bg-green-600 text-[10px]">✅{run.pass_count}</Badge>
+                {run.warn_count > 0 && <Badge variant="default" className="bg-yellow-600 text-[10px]">⚠️{run.warn_count}</Badge>}
+                {run.fail_count > 0 && <Badge variant="destructive" className="text-[10px]">❌{run.fail_count}</Badge>}
+              </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => handleLoad(run.id)}>Carica</Button>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => handleExport(run.id)}>
+                  <Download className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      )}
+    </Card>
+  );
 }
 
 export default function AILab() {
@@ -177,7 +279,7 @@ export default function AILab() {
 
       const data = await resp.json();
       const { issues, score } = evaluateResult(scenario, data);
-      
+
       return {
         id: scenario.id,
         status: issues.some(i => i.startsWith("❌")) ? "fail" : issues.length > 0 ? "warn" : "pass",
@@ -188,22 +290,21 @@ export default function AILab() {
         score,
         durationMs: Date.now() - start,
       };
-    } catch (e: any) {
-      return { id: scenario.id, status: "fail", issues: [`❌ Errore: ${e.message}`], score: 0, durationMs: Date.now() - start };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { id: scenario.id, status: "fail", issues: [`❌ Errore: ${msg}`], score: 0, durationMs: Date.now() - start };
     }
   }, []);
 
   const runAllTests = useCallback(async () => {
     setRunning(true);
     const newResults = new Map<number, TestResult>();
-    
-    // Set all as running
+
     for (const s of SCENARIOS) {
       newResults.set(s.id, { id: s.id, status: "running", issues: [], score: 0 });
     }
     setResults(new Map(newResults));
 
-    // Run in batches of 3 to avoid rate limits
     for (let i = 0; i < SCENARIOS.length; i += 3) {
       const batch = SCENARIOS.slice(i, i + 3);
       const batchResults = await Promise.all(batch.map(s => runSingleTest(s)));
@@ -213,9 +314,31 @@ export default function AILab() {
       setResults(new Map(newResults));
       if (i + 3 < SCENARIOS.length) await new Promise(r => setTimeout(r, 1500));
     }
-    
+
     setRunning(false);
+
+    // Persist to DB
+    await persistRun(newResults, SCENARIOS);
   }, [runSingleTest]);
+
+  // Load historical run into UI
+  const handleLoadHistoricalRun = useCallback((rows: TestResultRow[]) => {
+    const loaded = new Map<number, TestResult>();
+    for (const r of rows) {
+      loaded.set(r.scenario_id, {
+        id: r.scenario_id,
+        status: r.status as TestResult["status"],
+        output: r.output_body ?? "",
+        subject: r.output_subject ?? "",
+        debug: r.debug_info,
+        issues: r.issues ?? [],
+        score: r.score,
+        durationMs: r.duration_ms,
+      });
+    }
+    setResults(loaded);
+    toast.info("Run storica caricata");
+  }, []);
 
   const totalScore = Array.from(results.values()).reduce((sum, r) => sum + r.score, 0);
   const maxScore = SCENARIOS.length * 10;
@@ -245,7 +368,10 @@ export default function AILab() {
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      {/* Run History */}
+      <RunHistory onLoadRun={handleLoadHistoricalRun} />
+
+      <ScrollArea className="h-[calc(100vh-280px)]">
         <div className="space-y-2">
           {SCENARIOS.map(scenario => {
             const result = results.get(scenario.id);
