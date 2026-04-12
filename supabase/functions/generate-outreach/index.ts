@@ -447,6 +447,13 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
     };
     const readinessTotal = Math.round((readiness.sender + readiness.recipient + readiness.kb + readiness.scenario) / 4);
 
+    // ─── Readiness Warnings ───
+    const readinessWarnings: string[] = [];
+    if (readiness.sender < 50) readinessWarnings.push("Profilo mittente incompleto: configura alias, azienda e ruolo in Impostazioni AI");
+    if (readiness.recipient < 30) readinessWarnings.push("Pochi dati sul destinatario: arricchisci il partner con LinkedIn, network o note");
+    if (readiness.kb < 30) readinessWarnings.push("Knowledge Base vuota o insufficiente: aggiungi entries in KB per risultati migliori");
+    if (readiness.scenario < 40) readinessWarnings.push("Scenario generico: specifica tipo email, goal e proposta per email più mirate");
+
     // Language hint (AI can override based on context)
     const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
@@ -612,6 +619,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
       decision_object: decision,
       readiness,
       readiness_total: readinessTotal,
+      readiness_warnings: readinessWarnings,
     };
 
     return new Response(
@@ -627,6 +635,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
         quality,
         model,
         readiness_score: readinessTotal,
+        readiness_warnings: readinessWarnings,
         _debug,
       }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }
