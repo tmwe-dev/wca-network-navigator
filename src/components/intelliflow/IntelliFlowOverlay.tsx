@@ -201,6 +201,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
   }[currentPage] || "Sistema";
 
   return (
+    <PageErrorBoundary>
     <AnimatePresence>
       {open && (
         <motion.div

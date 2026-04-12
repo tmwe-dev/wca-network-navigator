@@ -392,6 +392,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         />
       </SheetContent>
     </Sheet>
+    </PageErrorBoundary>
   );
 }
 
@@ -521,6 +522,5 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
         </div>
       )}
     </div>
-    </PageErrorBoundary>
   );
 }
