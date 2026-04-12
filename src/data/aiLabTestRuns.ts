@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 interface TestRunInsert {
   totalScore: number;
@@ -28,7 +29,7 @@ export async function insertTestRun(run: TestRunInsert): Promise<string | null> 
 
   const { data, error } = await supabase
     .from("ai_lab_test_runs")
-    .insert({
+    .insert([{
       user_id: user.id,
       completed_at: new Date().toISOString(),
       total_score: run.totalScore,
@@ -36,8 +37,8 @@ export async function insertTestRun(run: TestRunInsert): Promise<string | null> 
       pass_count: run.passCount,
       warn_count: run.warnCount,
       fail_count: run.failCount,
-      summary: run.summary,
-    })
+      summary: run.summary as Json,
+    }])
     .select("id")
     .single();
 
@@ -61,10 +62,10 @@ export async function insertTestResults(runId: string, results: TestResultInsert
     status: r.status,
     score: r.score,
     duration_ms: r.durationMs,
-    issues: r.issues,
+    issues: r.issues as unknown as Json,
     output_subject: r.outputSubject,
     output_body: r.outputBody,
-    debug_info: r.debugInfo,
+    debug_info: r.debugInfo as unknown as Json,
   }));
 
   const { error } = await supabase.from("ai_lab_test_results").insert(rows);
