@@ -1,32 +1,34 @@
 
 
-## Fix CORS dinamico — 3 file, zero logica IMAP toccata
+## Fix 4 anomalie funzionali — OraclePanel crash, confidenza %, note grezze, fetch template
 
-### Diagnosi
-Il dominio della preview Lovable (`*.lovableproject.com`) non è nella whitelist CORS. Il browser blocca le risposte delle edge function → "Errore scaricamento posta".
+### Problema 1 — Tooltip + SelectTrigger crash Radix
+In `OraclePanel.tsx` righe 233-240, un `Tooltip` wrappa un `SelectTrigger`. Radix non supporta due popper annidati → crash silenzioso → pagina vuota.
 
-### Modifiche
+**Fix**: Rimuovere `Tooltip`/`TooltipTrigger`/`TooltipContent` dal blocco tono. Wrappare il `Select` in un `<div title={...}>` con attributo `title` nativo.
 
-**File 1 — `supabase/functions/_shared/cors.ts`**
-- Aggiungere `"https://c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovableproject.com"` come terza entry nell'array `ALLOWED_ORIGINS` (prima dei localhost)
-- Da 4 a 5 entry, nient'altro cambia
+### Problema 2 — Confidenza match "7000%"
+Il DB salva `match_confidence` già come 0-100, ma il codice moltiplica ×100.
 
-**File 2 — `supabase/functions/_shared/handleEdgeError.ts`**
-- Aggiungere parametro opzionale `customHeaders?: Record<string, string>` a `edgeError()`
-- Nella riga headers: `...(customHeaders || corsHeaders)` — backward-compatible, chi non passa il parametro usa i default
+**Fix in 2 file**:
+- `BCADetailPanel.tsx` riga 177: `Math.round(card.match_confidence * 100)` → `Math.round(card.match_confidence)`
+- `BusinessCardsViewV2.tsx` riga 70: stessa correzione
 
-**File 3 — `supabase/functions/check-inbox/index.ts`**
-- Importare `getCorsHeaders` da `"../_shared/cors.ts"` (riga 8)
-- Subito dentro `Deno.serve`, prima del preflight (riga 25-26): estrarre origin e creare `dynCors`
-- Sostituire tutte le 3 occorrenze di `corsHeaders` con `dynCors`:
-  - Riga 26: preflight OPTIONS
-  - Riga 513: response di successo
-  - Riga 517: `edgeError("INTERNAL_ERROR", ..., undefined, dynCors)`
-- Riga 31: `edgeError("AUTH_REQUIRED", "Unauthorized", undefined, dynCors)`
+### Problema 3 — Note grezze illeggibili
+In `BCADetailPanel.tsx` riga 184, `card.notes` può contenere MIME/dati grezzi.
 
-### Dettagli tecnici
-- 5 occorrenze totali da aggiornare in check-inbox (preflight, auth error, success response, catch error)
-- `edgeError` resta backward-compatible: il 4° parametro è opzionale con default a `corsHeaders`
-- Zero `any` aggiunti
-- Deploy automatico post-salvataggio
+**Fix**: Aggiungere check `isGarbled` con regex `/[;|]{3,}|[\x00-\x1f]/`. Se true, mostrare solo i primi 120 caratteri + "..." + "(dati grezzi)" in grigio.
+
+### Problema 4 — Template fetch senza check HTTP
+In `useEmailComposerState.ts` riga 416, un 404 non lancia eccezione → HTML errore finisce nell'editor.
+
+**Fix**: Dopo `const res = await fetch(url);` aggiungere `if (!res.ok) throw new Error("HTTP " + res.status);`
+
+### File modificati
+1. `src/components/email/OraclePanel.tsx` — rimozione Tooltip da SelectTrigger
+2. `src/components/contacts/bca/BCADetailPanel.tsx` — fix confidenza + note grezze
+3. `src/v2/ui/organisms/network/BusinessCardsViewV2.tsx` — fix confidenza
+4. `src/hooks/useEmailComposerState.ts` — check res.ok
+
+Zero `any`. Nessuna modifica a logica AI/IMAP/routing.
 
