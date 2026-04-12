@@ -14,7 +14,7 @@ export function CommunicationStep({ data, onChange }: MissionStepProps) {
   const [emailTypes, setEmailTypes] = useState<EmailPromptEntry[]>([]);
 
   useEffect(() => {
-    findActiveEmailPrompts().then((d) => { if (d) setEmailTypes(d as EmailPromptEntry[]); });
+    findActiveEmailPrompts().then((d) => { if (d) setEmailTypes(d as unknown as EmailPromptEntry[]); });
   }, []);
 
   const modes: { key: CommunicationConfig["templateMode"]; label: string; desc: string }[] = [
