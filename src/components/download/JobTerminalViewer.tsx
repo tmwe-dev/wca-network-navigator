@@ -28,7 +28,6 @@ interface Props {
 function parseLogEntry(entry: LogEntry) {
   const { type, msg } = entry;
 
-  // Extract company name and WCA ID from OK/WARN lines
   const companyMatch = msg.match(/^(.+?)\s+\(#(\d+)\)\s*—\s*(.+)$/);
   if (companyMatch) {
     const companyName = companyMatch[1];
@@ -43,29 +42,17 @@ function parseLogEntry(entry: LogEntry) {
 
     return {
       kind: "result" as const,
-      companyName,
-      wcaId,
-      hasProfile,
-      hasEmail,
-      hasPhone,
-      emailCount,
-      phoneCount,
+      companyName, wcaId, hasProfile, hasEmail, hasPhone,
+      emailCount, phoneCount,
       success: hasEmail || hasPhone,
     };
   }
 
-  // START line
   const startMatch = msg.match(/Profilo #(\d+) \((\d+)\/(\d+)\)/);
   if (startMatch && type === "START") {
-    return {
-      kind: "start" as const,
-      wcaId: startMatch[1],
-      current: startMatch[2],
-      total: startMatch[3],
-    };
+    return { kind: "start" as const, wcaId: startMatch[1], current: startMatch[2], total: startMatch[3] };
   }
 
-  // SKIP line (member not found or page not loaded)
   if (type === "SKIP") {
     const skipMatch = msg.match(/#(\d+)/);
     return { kind: "skip" as const, wcaId: skipMatch?.[1] || "", message: msg };
@@ -87,7 +74,7 @@ function CompanyAvatar({ name, success }: { name: string; success: boolean }) {
     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
       success
         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-        : "bg-red-500/15 text-red-400 border border-red-500/20"
+        : "bg-destructive/15 text-destructive border border-destructive/20"
     }`}>
       {initials || <Building2 className="w-3.5 h-3.5" />}
     </div>
@@ -100,17 +87,17 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
     <div className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
       parsed.success
         ? "bg-emerald-500/[0.06] border border-emerald-500/10"
-        : "bg-red-500/[0.04] border border-red-500/10"
+        : "bg-destructive/[0.04] border border-destructive/10"
     }`}>
       <CompanyAvatar name={parsed.companyName} success={parsed.success} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-200 truncate">{parsed.companyName}</span>
-          <span className="text-[10px] text-slate-600 font-mono shrink-0">#{parsed.wcaId}</span>
+          <span className="text-sm font-medium text-foreground truncate">{parsed.companyName}</span>
+          <span className="text-[10px] text-muted-foreground font-mono shrink-0">#{parsed.wcaId}</span>
         </div>
         <div className="flex items-center gap-3 mt-0.5">
           {parsed.hasProfile && (
-            <span className="flex items-center gap-1 text-[10px] text-blue-400">
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <FileText className="w-3 h-3" /> Profilo
             </span>
           )}
@@ -119,7 +106,7 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
               <Mail className="w-3 h-3" /> {parsed.emailCount}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[10px] text-slate-600">
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Mail className="w-3 h-3" /> 0
             </span>
           )}
@@ -128,7 +115,7 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
               <Phone className="w-3 h-3" /> {parsed.phoneCount}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[10px] text-slate-600">
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Phone className="w-3 h-3" /> 0
             </span>
           )}
@@ -138,10 +125,10 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
         {parsed.success ? (
           <CheckCircle className="w-4 h-4 text-emerald-400" />
         ) : (
-          <XCircle className="w-4 h-4 text-red-400/60" />
+          <XCircle className="w-4 h-4 text-destructive/60" />
         )}
       </div>
-      <span className="text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+      <span className="text-[10px] text-muted-foreground font-mono shrink-0">{entry.ts}</span>
     </div>
   );
 }
@@ -150,14 +137,14 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
 function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "start" } }) {
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500/10 border border-sky-500/20 shrink-0">
-        <Zap className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 shrink-0">
+        <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
       </div>
-      <span className="text-xs text-slate-500">
-        Estrazione <span className="font-mono text-sky-400">#{parsed.wcaId}</span>
-        <span className="ml-2 text-slate-600">{parsed.current}/{parsed.total}</span>
+      <span className="text-xs text-muted-foreground">
+        Estrazione <span className="font-mono text-primary">#{parsed.wcaId}</span>
+        <span className="ml-2 text-muted-foreground/60">{parsed.current}/{parsed.total}</span>
       </span>
-      <span className="ml-auto text-[10px] text-slate-600 font-mono">{entry.ts}</span>
+      <span className="ml-auto text-[10px] text-muted-foreground font-mono">{entry.ts}</span>
     </div>
   );
 }
@@ -165,12 +152,12 @@ function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeo
 /* ── Skip row ── */
 function SkipRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "skip" } }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/20 shrink-0">
-        <SkipForward className="w-3.5 h-3.5 text-amber-400" />
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-primary/[0.04] border border-primary/10">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 shrink-0">
+        <SkipForward className="w-3.5 h-3.5 text-primary/80" />
       </div>
-      <span className="text-xs text-amber-400/80 truncate flex-1">{parsed.message}</span>
-      <span className="text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+      <span className="text-xs text-primary/80 truncate flex-1">{parsed.message}</span>
+      <span className="text-[10px] text-muted-foreground font-mono shrink-0">{entry.ts}</span>
     </div>
   );
 }
@@ -178,11 +165,11 @@ function SkipRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof
 /* ── Generic log line ── */
 function GenericRow({ entry }: { entry: LogEntry }) {
   const typeStyles: Record<string, { icon: typeof Terminal; color: string }> = {
-    INFO: { icon: Terminal, color: "text-slate-400" },
+    INFO: { icon: Terminal, color: "text-muted-foreground" },
     DONE: { icon: CheckCircle, color: "text-emerald-400" },
-    ERROR: { icon: AlertTriangle, color: "text-red-400" },
-    STOP: { icon: XCircle, color: "text-red-500" },
-    WARN: { icon: AlertTriangle, color: "text-amber-400" },
+    ERROR: { icon: AlertTriangle, color: "text-destructive" },
+    STOP: { icon: XCircle, color: "text-destructive" },
+    WARN: { icon: AlertTriangle, color: "text-primary/80" },
   };
   const style = typeStyles[entry.type] || typeStyles.INFO;
   const Icon = style.icon;
@@ -193,7 +180,7 @@ function GenericRow({ entry }: { entry: LogEntry }) {
         <Icon className={`w-3.5 h-3.5 ${style.color}`} />
       </div>
       <span className={`text-xs ${style.color}`}>{entry.msg}</span>
-      <span className="ml-auto text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+      <span className="ml-auto text-[10px] text-muted-foreground font-mono shrink-0">{entry.ts}</span>
     </div>
   );
 }
@@ -238,7 +225,6 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
 
   const entries = (logs || []).filter(e => e.type !== "GATE");
 
-  // Stats
   const results = entries.filter(e => {
     const p = parseLogEntry(e);
     return p.kind === "result";
@@ -251,15 +237,15 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden bg-slate-950 border-white/10">
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden bg-background border-border">
         {/* Header */}
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-white/[0.06]">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/40">
           <DialogTitle className="flex items-center gap-3 text-sm">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <Terminal className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <span className="text-slate-200 font-semibold">{countryName}</span>
+              <span className="text-foreground font-semibold">{countryName}</span>
               {isActive && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-emerald-400/70 font-normal">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -270,55 +256,45 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
           </DialogTitle>
           <DialogDescription className="sr-only">Log di esecuzione del job</DialogDescription>
 
-          {/* Mini stats */}
           {results.length > 0 && (
             <div className="flex items-center gap-4 mt-2 text-[11px]">
               <span className="flex items-center gap-1.5 text-emerald-400">
                 <CheckCircle className="w-3 h-3" /> {successCount} con contatti
               </span>
-              <span className="flex items-center gap-1.5 text-red-400/70">
+              <span className="flex items-center gap-1.5 text-destructive/70">
                 <XCircle className="w-3 h-3" /> {failCount} senza contatti
               </span>
-              <span className="flex items-center gap-1.5 text-slate-500">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="w-3 h-3" /> {results.length} processati
               </span>
             </div>
           )}
         </DialogHeader>
 
-        {/* Log entries */}
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
           style={{ maxHeight: "calc(85vh - 120px)" }}
         >
           {entries.length === 0 ? (
-            <div className="h-[300px] flex items-center justify-center text-slate-600 text-sm">
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
               <div className="text-center space-y-2">
-                <Terminal className="w-8 h-8 mx-auto text-slate-700" />
+                <Terminal className="w-8 h-8 mx-auto text-muted-foreground/30" />
                 <p>In attesa dei log...</p>
               </div>
             </div>
           ) : (
             entries.map((entry, idx) => {
               const parsed = parseLogEntry(entry);
-
-              if (parsed.kind === "result") {
-                return <ResultRow key={idx} entry={entry} parsed={parsed} />;
-              }
-              if (parsed.kind === "start") {
-                return <StartRow key={idx} entry={entry} parsed={parsed} />;
-              }
-              if (parsed.kind === "skip") {
-                return <SkipRow key={idx} entry={entry} parsed={parsed} />;
-              }
+              if (parsed.kind === "result") return <ResultRow key={idx} entry={entry} parsed={parsed} />;
+              if (parsed.kind === "start") return <StartRow key={idx} entry={entry} parsed={parsed} />;
+              if (parsed.kind === "skip") return <SkipRow key={idx} entry={entry} parsed={parsed} />;
               return <GenericRow key={idx} entry={entry} />;
             })
           )}
         </div>
 
-        {/* Auto-scroll indicator */}
         {!autoScroll && isActive && (
           <button
             onClick={() => {

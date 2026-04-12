@@ -134,12 +134,14 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Dynamic page title
+  // Dynamic page title + close sidebar on nav
   useEffect(() => {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     document.title = `${title} — WCA Partners`;
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   // ── Session readiness gate (prevents RLS race condition) ──
@@ -290,7 +292,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const wcaStatusColor = wcaSession.sessionActive === true
     ? "text-emerald-400"
     : wcaSession.isChecking
-      ? "text-yellow-400 animate-pulse"
+      ? "text-primary animate-pulse"
       : "text-muted-foreground";
 
   const wcaStatusLabel = wcaSession.sessionActive === true
@@ -386,17 +388,22 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <Toaster />
 
                     <div className="flex h-screen bg-background">
-                      {/* Desktop sidebar — glass-morphism */}
-                      <aside className="hidden md:flex w-56 flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
-                        {sidebarContent}
-                      </aside>
+                      {/* Desktop sidebar — on-demand overlay */}
+                      <div
+                        className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+                        onMouseLeave={() => setSidebarOpen(false)}
+                      >
+                        <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
+                          {sidebarContent}
+                        </div>
+                      </div>
 
                       {/* Mobile header */}
                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-1">
                           <button onClick={() => setIntelliflowOpen(true)} className="p-1">
-                            <Sparkles className="h-4 w-4 text-purple-400" />
+                            <Sparkles className="h-4 w-4 text-primary" />
                           </button>
                           <button onClick={() => setMobileOpen(!mobileOpen)} className="p-1">
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -420,7 +427,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         onMouseEnter={() => handleEdgeEnter("left")}
                         onMouseLeave={() => handleEdgeLeave("left")}
                         className={cn(
-                          "hidden md:flex fixed left-56 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
+                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
                           filtersOpen && "opacity-0 pointer-events-none"
                         )}
 style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
@@ -447,6 +454,9 @@ style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }
                         {/* Desktop header — sticky operational bar */}
                         <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
                           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+                              <Menu className="h-4 w-4" />
+                            </Button>
                             <ActiveProcessIndicator />
                             {location.pathname.startsWith("/v2/network") && (
                               <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
