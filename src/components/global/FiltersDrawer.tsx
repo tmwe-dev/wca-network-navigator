@@ -10,9 +10,6 @@ import {
   ListTodo, Zap,
 } from "lucide-react";
 import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA, ROUTE_EMAIL_COMPOSER } from "@/constants/routes";
-// re-open the destructured import block below — the line above closes the lucide import early
-// Actually let me check the full import block
-} from "lucide-react";
 import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
