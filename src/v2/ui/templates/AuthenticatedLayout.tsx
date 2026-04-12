@@ -6,6 +6,7 @@ import * as React from "react";
 import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   Globe, Users, Mail, Bot, Megaphone, Settings,
@@ -133,6 +134,36 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ── Session readiness gate (prevents RLS race condition) ──
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    let sub: { unsubscribe: () => void } | null = null;
+
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (session) {
+        setSessionReady(true);
+      } else {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+          if (s && mounted) setSessionReady(true);
+        });
+        sub = subscription;
+      }
+    };
+    check();
+    return () => { mounted = false; sub?.unsubscribe(); };
+  }, []);
+
+  // Invalidate all queries once session is ready so RLS-gated data loads
+  useEffect(() => {
+    if (sessionReady) {
+      queryClient.invalidateQueries();
+    }
+  }, [sessionReady]);
 
   // Overlay states (mirroring V1 AppLayout)
   const [commandOpen, setCommandOpen] = useState(false);
