@@ -22,6 +22,57 @@ const log = createLogger("EmailComposer");
 
 export interface LinkItem { label: string; url: string }
 
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  category: string | null;
+}
+
+interface EmailComposerLocationState {
+  prefilledRecipient?: {
+    partnerId?: string;
+    company?: string;
+    companyName?: string;
+    companyAlias?: string;
+    contactId?: string;
+    name?: string;
+    contactName?: string;
+    contactAlias?: string;
+    email?: string;
+    city?: string;
+    countryName?: string;
+    countryCode?: string;
+  };
+  prefilledSubject?: string;
+  prefilledBody?: string;
+}
+
+interface GenerateContentResponse {
+  body?: string;
+  subject?: string;
+}
+
+interface ImproveEmailResponse {
+  body?: string;
+  subject?: string;
+}
+
+interface PartnerPreviewData {
+  companyAlias?: string;
+  company_alias?: string;
+  companyName?: string;
+  company_name?: string;
+  contactAlias?: string;
+  contact_alias?: string;
+  city?: string;
+  countryName?: string;
+  country_name?: string;
+}
+
 // ── State shape ──────────────────────────────────────────────────────
 
 interface EmailState {
