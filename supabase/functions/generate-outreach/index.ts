@@ -1,13 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 
 
 /** Contextual KB injection for outreach */
-async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel, userId: string): Promise<{ text: string; sections: string[] }> {
+async function fetchKbEntriesForOutreach(supabase: ReturnType<typeof createClient>, quality: Quality, channel: Channel, userId: string): Promise<{ text: string; sections: string[] }> {
   const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
   
   // Select categories based on channel — using ACTUAL DB categories
@@ -30,9 +30,9 @@ async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channe
 
   if (!entries || entries.length === 0) return { text: "", sections: [] };
 
-  const sections = [...new Set(entries.map((e: any) => e.category))];
+  const sections = [...new Set(entries.map((e: { category: string }) => e.category))];
   const text = entries
-    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
+    .map((e: { title: string; content: string; chapter: string }) => `### ${e.title} [${e.chapter}]\n${e.content}`)
     .join("\n\n---\n\n");
 
   return { text, sections };
@@ -53,12 +53,15 @@ serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
 
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
   try {
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -71,7 +74,7 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub as string;
@@ -129,7 +132,7 @@ serve(async (req) => {
         if (partner.website) parts.push(`Website: ${partner.website}`);
         if (partner.lead_status) parts.push(`Status CRM: ${partner.lead_status}`);
         if (partner.enrichment_data) {
-          const ed = partner.enrichment_data as Record<string, any>;
+          const ed = partner.enrichment_data as Record<string, unknown>;
           if (ed.trade_lanes) parts.push(`Trade Lanes: ${JSON.stringify(ed.trade_lanes).slice(0, 300)}`);
           if (ed.specializations) parts.push(`Specializzazioni: ${JSON.stringify(ed.specializations).slice(0, 200)}`);
           if (ed.deep_search_summary) parts.push(`Deep Search: ${String(ed.deep_search_summary).slice(0, 400)}`);
@@ -150,7 +153,7 @@ serve(async (req) => {
         .limit(5);
       if (contactRows && contactRows.length > 0) {
         intelligence.data_found.contacts = true;
-        const cList = contactRows.map((c: any) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ");
+        const cList = contactRows.map((c: { name: string; title: string | null; email: string | null }) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ");
         contextParts.push(`[CONTATTI AZIENDA]\n${cList}`);
       } else {
         intelligence.data_found.contacts = false;
@@ -167,7 +170,7 @@ serve(async (req) => {
         .limit(10);
       if (netRows && netRows.length > 0) {
         intelligence.data_found.networks = true;
-        contextParts.push(`[NETWORK CONDIVISI]\n${netRows.map((n: any) => n.network_name).join(", ")}`);
+        contextParts.push(`[NETWORK CONDIVISI]\n${netRows.map((n: { network_name: string }) => n.network_name).join(", ")}`);
       } else {
         intelligence.data_found.networks = false;
       }
@@ -183,7 +186,7 @@ serve(async (req) => {
         .limit(20);
       if (svcRows && svcRows.length > 0) {
         intelligence.data_found.services = true;
-        contextParts.push(`[SERVIZI]\n${svcRows.map((s: any) => s.service_category).join(", ")}`);
+        contextParts.push(`[SERVIZI]\n${svcRows.map((s: { service_category: string }) => s.service_category).join(", ")}`);
       } else {
         intelligence.data_found.services = false;
       }
@@ -202,7 +205,7 @@ serve(async (req) => {
         const parts: string[] = [];
         if (ic.note) parts.push(`Note: ${String(ic.note).slice(0, 300)}`);
         if (ic.enrichment_data) {
-          const ed = ic.enrichment_data as Record<string, any>;
+          const ed = ic.enrichment_data as Record<string, unknown>;
           if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`);
         }
         if (parts.length) contextParts.push(`[CRM CONTATTO]\n${parts.join("\n")}`);
@@ -232,7 +235,7 @@ serve(async (req) => {
             message: guardResult.reason,
             recent_contact: guardResult.recentContact,
           }),
-          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
 
@@ -269,7 +272,7 @@ serve(async (req) => {
         .eq("matched_partner_id", partnerId)
         .limit(3);
       if (bcaRows && bcaRows.length > 0) {
-        const encounters = bcaRows.map((bc: any) => {
+        const encounters = bcaRows.map((bc: { contact_name: string | null; event_name: string | null; met_at: string | null; location: string | null }) => {
           const parts: string[] = [];
           if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
           if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
@@ -297,7 +300,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
         .limit(10);
       if (actRows && actRows.length > 0) {
         intelligence.data_found.activities = true;
-        const acts = actRows.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
+        const acts = actRows.map((a: { sent_at: string | null; activity_type: string; email_subject: string | null }) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
         contextParts.push(`[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`);
       } else {
         intelligence.data_found.activities = false;
@@ -331,7 +334,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
         .single();
       
       if (partnerFull?.website) {
-        const ed = (partnerFull.enrichment_data || {}) as Record<string, any>;
+        const ed = (partnerFull.enrichment_data || {}) as Record<string, unknown>;
         if (ed.website_summary) {
           websiteSource = "cached";
           contextParts.push(`[SITO AZIENDALE (cached)]\n${String(ed.website_summary).slice(0, 600)}`);
@@ -355,7 +358,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
           .select("enrichment_data")
           .eq("id", partnerId)
           .single();
-        const ed = (partnerEd?.enrichment_data || {}) as Record<string, any>;
+        const ed = (partnerEd?.enrichment_data || {}) as Record<string, unknown>;
 
         if (ed.linkedin_summary) {
           linkedinSource = "cached";
@@ -382,7 +385,7 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
       .like("key", "ai_%");
 
     const settings: Record<string, string> = {};
-    (settingsRows || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
+    (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
 
     // Resolve recipient name
     let recipientName = "";
@@ -568,10 +571,10 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
         model,
         _debug,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error("generate-outreach error:", e);
-    return mapErrorToResponse(e, corsHeaders);
+    return mapErrorToResponse(e, dynCors);
   }
 });
