@@ -20,6 +20,7 @@ import {
 import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
+import { Toaster } from "@/components/ui/toaster";
 
 // ── Providers (same order as V1 App.tsx + AppLayout.tsx) ──
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -379,6 +380,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <BackgroundSyncIndicator />
                     <ConnectionBanner />
                     <SonnerToaster position="top-right" richColors closeButton />
+                    <Toaster />
                     <Suspense fallback={null}>
                       <RuntimeDiagnosticPanel />
                     </Suspense>
