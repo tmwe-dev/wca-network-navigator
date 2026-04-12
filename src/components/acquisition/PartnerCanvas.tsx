@@ -95,8 +95,8 @@ function isContactComplete(c: CanvasContact): "green" | "orange" | "red" {
 
 const QUALITY_COLORS = {
   green: "bg-emerald-500",
-  orange: "bg-amber-500",
-  red: "bg-red-500",
+  orange: "bg-primary",
+  red: "bg-destructive",
 };
 
 function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
@@ -141,7 +141,6 @@ function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
 export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProps) {
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
-  // Progressive reveal
   useEffect(() => {
     setVisibleSections(new Set());
     if (!data) return;
@@ -178,28 +177,17 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
         isAnimatingOut && "scale-90 opacity-0"
       )}
     >
-      {/* Animated border */}
       <div
         className={cn(
           "rounded-2xl border p-5 space-y-4 transition-all duration-500",
           phase === "complete"
             ? "border-emerald-500/30 bg-emerald-500/[0.06] shadow-lg shadow-emerald-500/[0.08]"
             : phase === "extracting"
-              ? "border-violet-500/40 bg-violet-500/[0.04] shadow-lg shadow-violet-500/[0.08]"
+              ? "border-primary/40 bg-primary/[0.04] shadow-lg shadow-primary/[0.08]"
               : phase !== "idle"
-                ? "border-sky-500/40 bg-sky-500/[0.04] shadow-lg shadow-sky-500/[0.08]"
-                : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 bg-white/[0.02] dark:bg-white/[0.02] bg-white/40"
+                ? "border-primary/40 bg-primary/[0.04] shadow-lg shadow-primary/[0.08]"
+                : "border-border bg-card/40"
         )}
-        style={
-          phase !== "idle" && phase !== "complete"
-            ? {
-                backgroundImage:
-                  phase === "extracting"
-                    ? "linear-gradient(135deg, transparent 0%, hsl(270 100% 70% / 0.03) 100%)"
-                    : "linear-gradient(135deg, transparent 0%, hsl(199 89% 48% / 0.03) 100%)",
-              }
-            : undefined
-        }
       >
         {/* Phase indicator */}
         <div className="flex items-center justify-between">
@@ -217,26 +205,20 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
           )}
         >
           <div className="grid grid-cols-[minmax(80px,1fr)_2fr] gap-4">
-            {/* Logo column */}
             <div className="flex items-center justify-center min-h-[64px]">
               {data.logo_url ? (
-                <img
-                  src={data.logo_url}
-                  alt=""
-                  className="max-h-16 max-w-full object-contain"
-                />
+                <img src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" />
               ) : (
                 <Building2 className="w-10 h-10 text-muted-foreground/30" />
               )}
             </div>
-            {/* Info column */}
             <div className="min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-lg font-bold text-foreground truncate">{data.company_name}</h2>
                 {data.rating != null && data.rating > 0 && (
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 shrink-0">
-                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+                    <Star className="w-4 h-4 text-primary fill-primary" />
+                    <span className="text-sm font-bold text-primary">
                       {data.rating.toFixed(1)}
                     </span>
                   </div>
@@ -266,7 +248,7 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               Estrazione contatti in corso...
             </div>
           ) : phase === "complete" ? (
-            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-semibold">
+            <div className="p-3 rounded-lg bg-destructive/15 border border-destructive/30 text-xs text-destructive font-semibold">
               ⚠️ Nessun contatto trovato — dati incompleti
             </div>
           ) : null
@@ -292,8 +274,8 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                       <span className={cn(
                         "text-[10px] font-bold px-2 py-0.5 rounded-full",
                         data.contactSource === "extension"
-                          ? "bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30"
-                          : "bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30"
+                          ? "bg-primary/20 text-primary border border-primary/30"
+                          : "bg-muted text-muted-foreground border border-border"
                       )}>
                         {data.contactSource === "extension" ? "🔌 Extension" : "☁️ Server"}
                       </span>
@@ -302,10 +284,10 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                   <span className={cn(
                     "text-[11px] font-bold px-2.5 py-1 rounded-full",
                     allComplete
-                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                      ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
                       : completeCount === 0
-                        ? "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                        : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                        ? "bg-destructive/20 text-destructive border border-destructive/30"
+                        : "bg-primary/20 text-primary border border-primary/30"
                   )}>
                     {completeCount}/{total} completi
                   </span>
@@ -323,8 +305,8 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                     quality === "green"
                       ? "bg-emerald-500/10 border-emerald-500/30"
                       : quality === "orange"
-                        ? "bg-amber-500/10 border-amber-500/30"
-                        : "bg-red-500/15 border-red-500/30"
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-destructive/15 border-destructive/30"
                   )}
                 >
                   <div className={cn("w-2.5 h-2.5 rounded-full mt-1 shrink-0", QUALITY_COLORS[quality])} title={quality === "green" ? "Completo" : quality === "orange" ? "Parziale" : "Mancante"} />
@@ -335,17 +317,17 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                     )}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px]">
                       {c.email && (
-                        <span className="flex items-center gap-1 text-sky-500">
+                        <span className="flex items-center gap-1 text-muted-foreground">
                           <Mail className="w-3 h-3" /> {c.email}
                         </span>
                       )}
                       {c.direct_phone && (
-                        <span className="flex items-center gap-1 text-sky-500">
+                        <span className="flex items-center gap-1 text-muted-foreground">
                           <Phone className="w-3 h-3" /> {c.direct_phone}
                         </span>
                       )}
                       {c.mobile && (
-                        <span className="flex items-center gap-1 text-sky-500">
+                        <span className="flex items-center gap-1 text-muted-foreground">
                           <Smartphone className="w-3 h-3" /> {c.mobile}
                         </span>
                       )}
@@ -372,18 +354,10 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
             <div className="flex flex-wrap gap-1.5">
               {data.services.map((s) => {
                 const Icon = SERVICE_ICONS[s] || Package;
-                const isTransport = [
-                  "air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight", "project_cargo",
-                ].includes(s);
                 return (
                   <span
                     key={s}
-                    className={cn(
-                      "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border",
-                      isTransport
-                        ? "text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20"
-                        : "text-slate-600 dark:text-slate-400 bg-slate-500/10 border-slate-500/20"
-                    )}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border text-muted-foreground bg-muted border-border"
                   >
                     <Icon className="w-3 h-3" />
                     {s.replace(/_/g, " ")}
@@ -540,7 +514,7 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                   href={l.url}
                   target="_blank"
                   rel="noopener"
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-medium hover:bg-[#0a66c2]/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
                 >
                   <Linkedin className="w-3 h-3" />
                   {l.name}

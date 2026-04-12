@@ -14,7 +14,7 @@ function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
-    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-cyan-500/10" onClick={handleCopy}>
+    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10" onClick={handleCopy}>
       <Copy className="w-4 h-4" />
     </Button>
   );
@@ -33,12 +33,12 @@ export default function RACompanyDetail() {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-[hsl(240_6%_3%)] via-[hsl(240_6%_5%)] to-[hsl(240_6%_3%)]">
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
-          <div className="p-3 rounded-full bg-red-500/10 border border-red-500/30"><AlertCircle className="w-6 h-6 text-red-400" /></div>
+          <div className="p-3 rounded-full bg-destructive/10 border border-destructive/30"><AlertCircle className="w-6 h-6 text-destructive" /></div>
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-white/90">Azienda non trovata</h2>
-            <p className="text-sm text-white/60 mt-1">L'azienda che stai cercando non esiste o è stata eliminata</p>
+            <h2 className="text-lg font-semibold text-foreground/90">Azienda non trovata</h2>
+            <p className="text-sm text-muted-foreground mt-1">L'azienda che stai cercando non esiste o è stata eliminata</p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/v2/research/explorer")} className="border-white/10 hover:bg-white/5">
+          <Button variant="outline" onClick={() => navigate("/v2/research/explorer")} className="border-border hover:bg-muted/50">
             <ArrowLeft className="w-4 h-4 mr-2" /> Torna a Explorer
           </Button>
         </div>
@@ -49,7 +49,7 @@ export default function RACompanyDetail() {
   if (isLoading || !prospect) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-b from-[hsl(240_6%_3%)] via-[hsl(240_6%_5%)] to-[hsl(240_6%_3%)]">
-        <Loader2 className="w-8 h-8 text-cyan-400/50 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary/50 animate-spin" />
       </div>
     );
   }
@@ -61,11 +61,11 @@ export default function RACompanyDetail() {
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left: Company Info */}
-        <div className="flex-1 border-r border-white/5 overflow-hidden flex flex-col">
+        <div className="flex-1 border-r border-border/20 overflow-hidden flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-6 space-y-8">
               <section>
-                <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Informazioni Anagrafiche</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Informazioni Anagrafiche</h2>
                 <div className="grid grid-cols-2 gap-6">
                   {prospect.partita_iva && <InfoField label="P.IVA" value={prospect.partita_iva} mono />}
                   {prospect.codice_fiscale && <InfoField label="Codice Fiscale" value={prospect.codice_fiscale} mono />}
@@ -77,45 +77,45 @@ export default function RACompanyDetail() {
                 </div>
               </section>
 
-              <Separator className="bg-white/10" />
+              <Separator className="bg-border/30" />
 
               {prospect.codice_ateco && (
                 <>
                   <section>
-                    <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Settore Economico</h2>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-xl">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Settore Economico</h2>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border backdrop-blur-xl">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-medium text-white/50">Codice ATECO</label>
-                          <p className="text-lg font-mono font-bold text-cyan-400 mt-1.5">{prospect.codice_ateco}</p>
+                          <label className="text-xs font-medium text-muted-foreground">Codice ATECO</label>
+                          <p className="text-lg font-mono font-bold text-primary mt-1.5">{prospect.codice_ateco}</p>
                         </div>
                         {prospect.descrizione_ateco && (
                           <div>
-                            <label className="text-xs font-medium text-white/50">Descrizione</label>
-                            <p className="text-sm text-white/80 mt-1.5">{prospect.descrizione_ateco}</p>
+                            <label className="text-xs font-medium text-muted-foreground">Descrizione</label>
+                            <p className="text-sm text-foreground/80 mt-1.5">{prospect.descrizione_ateco}</p>
                           </div>
                         )}
                       </div>
                     </div>
                   </section>
-                  <Separator className="bg-white/10" />
+                  <Separator className="bg-border/30" />
                 </>
               )}
 
               <section>
-                <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Contatti</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Contatti</h2>
                 <div className="space-y-3">
                   {prospect.website && <ContactRow icon={Briefcase} label="Website" value={prospect.website} />}
                   {prospect.email && <ContactRow icon={Mail} label="Email" value={prospect.email} />}
-                  {prospect.pec && <ContactRow icon={Mail} label="PEC" value={prospect.pec} iconColor="text-purple-400" />}
+                  {prospect.pec && <ContactRow icon={Mail} label="PEC" value={prospect.pec} iconColor="text-primary" />}
                   {prospect.phone && <ContactRow icon={Phone} label="Telefono" value={prospect.phone} />}
                 </div>
               </section>
 
-              <Separator className="bg-white/10" />
+              <Separator className="bg-border/30" />
 
               <section>
-                <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Dati Finanziari</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Dati Finanziari</h2>
                 <div className="grid grid-cols-3 gap-4">
                   <FinCard label="Fatturato Medio" value={formatCurrency(prospect.fatturato)} />
                   <FinCard label="Utile Netto" value={formatCurrency(prospect.utile)} />
@@ -136,19 +136,19 @@ export default function RACompanyDetail() {
 function InfoField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <label className="text-xs font-medium text-white/50">{label}</label>
-      <p className={`text-sm mt-1.5 ${mono ? "font-mono text-cyan-400" : "text-white/80"}`}>{value}</p>
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <p className={`text-sm mt-1.5 ${mono ? "font-mono text-primary" : "text-foreground/80"}`}>{value}</p>
     </div>
   );
 }
 
 function ContactRow({ icon: Icon, label, value, iconColor }: { icon: any; label: string; value: string; iconColor?: string }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-white/10 to-white/5 border border-white/10 backdrop-blur-sm hover:border-white/20 transition-colors">
-      <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || "text-white/60"}`} />
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 border border-border backdrop-blur-sm hover:border-foreground/20 transition-colors">
+      <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || "text-muted-foreground"}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-white/50">{label}</p>
-        <p className="text-sm text-white/80 truncate">{value}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="text-sm text-foreground/80 truncate">{value}</p>
       </div>
       <CopyButton text={value} />
     </div>
@@ -157,9 +157,9 @@ function ContactRow({ icon: Icon, label, value, iconColor }: { icon: any; label:
 
 function FinCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-4 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-xl">
-      <p className="text-xs text-white/50 font-medium">{label}</p>
-      <p className="text-lg font-bold text-white/95 mt-2">{value}</p>
+    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border backdrop-blur-xl">
+      <p className="text-xs text-muted-foreground font-medium">{label}</p>
+      <p className="text-lg font-bold text-foreground/95 mt-2">{value}</p>
     </div>
   );
 }

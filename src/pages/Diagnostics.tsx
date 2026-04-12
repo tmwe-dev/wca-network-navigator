@@ -84,9 +84,9 @@ const APP_ROUTES = [
 function statusIcon(s: TestStatus) {
   switch (s) {
     case "pass": return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
-    case "fail": return <XCircle className="w-4 h-4 text-red-500 shrink-0" />;
-    case "warn": return <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />;
-    case "running": return <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />;
+    case "fail": return <XCircle className="w-4 h-4 text-destructive shrink-0" />;
+    case "warn": return <AlertTriangle className="w-4 h-4 text-primary shrink-0" />;
+    case "running": return <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />;
     default: return <Clock className="w-4 h-4 text-muted-foreground shrink-0" />;
   }
 }
@@ -112,7 +112,7 @@ export default function Diagnostics() {
     return Math.round(performance.now() - t);
   };
 
-  // ── 1. Auth test ───────────────────────────────────────────────
+  // ── 1. Auth test
   const testAuth = async () => {
     const id = "auth-session";
     upsert({ id, name: "Sessione autenticazione", category: "Auth", status: "running" });
@@ -138,7 +138,6 @@ export default function Diagnostics() {
       upsert({ id: id2, name: "User ID disponibile", category: "Auth", status: "fail", message: e.message });
     }
 
-    // Profile check
     const id3 = "auth-profile";
     upsert({ id: id3, name: "Profilo utente", category: "Auth", status: "running" });
     try {
@@ -150,7 +149,7 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 2. DB tables ───────────────────────────────────────────────
+  // ── 2. DB tables
   const testDBTables = async () => {
     for (const table of DB_TABLES) {
       if (abortRef.current) return;
@@ -168,14 +167,13 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 3. RPC functions ───────────────────────────────────────────
+  // ── 3. RPC functions
   const testRPC = async () => {
     for (const fn of RPC_FUNCTIONS) {
       if (abortRef.current) return;
       const id = `rpc-${fn}`;
       upsert({ id, name: fn, category: "RPC Functions", status: "running" });
       try {
-        // Special handling for functions with required params
         if (fn === "deduct_credits" || fn === "increment_contact_interaction") {
           upsert({ id, name: fn, category: "RPC Functions", status: "warn", message: "Richiede parametri — skip test distruttivo" });
           continue;
@@ -190,7 +188,7 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 4. Storage buckets ─────────────────────────────────────────
+  // ── 4. Storage buckets
   const testStorage = async () => {
     for (const bucket of STORAGE_BUCKETS) {
       if (abortRef.current) return;
@@ -208,7 +206,7 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 5. Edge Functions (OPTIONS ping) ───────────────────────────
+  // ── 5. Edge Functions (OPTIONS ping)
   const testEdgeFunctions = async () => {
     const baseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (!baseUrl) {
@@ -233,7 +231,6 @@ export default function Diagnostics() {
           });
           const text = await res.text();
           if (res.status === 500 && text.includes("boot")) throw new Error("Boot error");
-          // 400/401/422 are acceptable — function exists and responds
           if (res.status >= 500 && res.status !== 500) throw new Error(`HTTP ${res.status}`);
         });
         upsert({ id, name: fn, category: "Edge Functions", status: "pass", message: "Raggiungibile", durationMs: ms });
@@ -243,7 +240,7 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 6. Credits system ──────────────────────────────────────────
+  // ── 6. Credits system
   const testCredits = async () => {
     const id = "credits-balance";
     upsert({ id, name: "Saldo crediti", category: "Sistema Crediti", status: "running" });
@@ -266,9 +263,8 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 7. Data integrity checks ───────────────────────────────────
+  // ── 7. Data integrity checks
   const testDataIntegrity = async () => {
-    // Partners without country_code
     const id1 = "integrity-partner-country";
     upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: "running" });
     try {
@@ -279,7 +275,6 @@ export default function Diagnostics() {
       upsert({ id: id1, name: "Partner senza country_code", category: "Integrità Dati", status: "fail", message: (e as Error).message });
     }
 
-    // Partners with contacts
     const id2 = "integrity-contacts-coverage";
     upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "running" });
     try {
@@ -291,7 +286,6 @@ export default function Diagnostics() {
       upsert({ id: id2, name: "Copertura contatti partner", category: "Integrità Dati", status: "fail", message: (e as Error).message });
     }
 
-    // Orphan activities
     const id3 = "integrity-orphan-activities";
     upsert({ id: id3, name: "Attività senza partner", category: "Integrità Dati", status: "running" });
     try {
@@ -302,7 +296,6 @@ export default function Diagnostics() {
       upsert({ id: id3, name: "Attività senza partner", category: "Integrità Dati", status: "fail", message: e.message });
     }
 
-    // Download jobs stuck
     const id4 = "integrity-stuck-jobs";
     upsert({ id: id4, name: "Download jobs bloccati", category: "Integrità Dati", status: "running" });
     try {
@@ -310,14 +303,13 @@ export default function Diagnostics() {
       if (error) throw error;
       const stuck = (data || []).filter(j => {
         const age = Date.now() - new Date(j.updated_at).getTime();
-        return age > 30 * 60 * 1000; // 30 min
+        return age > 30 * 60 * 1000;
       });
       upsert({ id: id4, name: "Download jobs bloccati", category: "Integrità Dati", status: stuck.length === 0 ? "pass" : "warn", message: `${stuck.length} bloccati (>30min), ${(data || []).length} attivi` });
     } catch (e: any) {
       upsert({ id: id4, name: "Download jobs bloccati", category: "Integrità Dati", status: "fail", message: e.message });
     }
 
-    // Email queue stuck
     const id5 = "integrity-email-queue";
     upsert({ id: id5, name: "Coda email bloccata", category: "Integrità Dati", status: "running" });
     try {
@@ -329,9 +321,8 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 8. WCA-App Bridge check (Claude Engine V8) ────────────────
+  // ── 8. WCA-App Bridge check
   const testExtension = async () => {
-    // Test wca-app bridge health
     const id = "bridge-wca-app";
     upsert({ id, name: "wca-app Bridge", category: "Claude Engine V8", status: "running" });
     try {
@@ -344,7 +335,6 @@ export default function Diagnostics() {
       upsert({ id, name: "wca-app Bridge", category: "Claude Engine V8", status: "fail", message: e.message });
     }
 
-    // Test wca-app login
     const id2 = "bridge-wca-login";
     upsert({ id: id2, name: "Login WCA (server-side)", category: "Claude Engine V8", status: "running" });
     try {
@@ -362,7 +352,6 @@ export default function Diagnostics() {
       upsert({ id: id2, name: "Login WCA (server-side)", category: "Claude Engine V8", status: "fail", message: e.message });
     }
 
-    // Test cookie locale
     const id3 = "bridge-local-cookie";
     upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "running" });
     try {
@@ -376,7 +365,6 @@ export default function Diagnostics() {
       upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "fail", message: e.message });
     }
 
-    // Chrome extension (opzionale)
     const id4 = "ext-wca-chrome";
     upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "running" });
     try {
@@ -400,16 +388,15 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 9. Navigation / Routes ─────────────────────────────────────
+  // ── 9. Navigation / Routes
   const testNavigation = async () => {
     for (const route of APP_ROUTES) {
       const id = `nav-${route}`;
-      // We can't actually navigate, but we can check lazy imports resolve
       upsert({ id, name: route, category: "Navigazione (Route)", status: "pass", message: "Registrata" });
     }
   };
 
-  // ── Run all ────────────────────────────────────────────────────
+  // ── Run all
   const runAll = useCallback(async () => {
     setRunning(true);
     abortRef.current = false;
@@ -424,12 +411,11 @@ export default function Diagnostics() {
     await testDataIntegrity();
     await testExtension();
     await testNavigation();
-    await testEdgeFunctions(); // slowest last
+    await testEdgeFunctions();
 
     setRunning(false);
   }, []);
 
-  // Categories grouped
   const categories = [...new Set(results.map(r => r.category))];
   const byCat = (cat: string) => results.filter(r => r.category === cat);
 
@@ -477,9 +463,9 @@ export default function Diagnostics() {
         <div className="flex gap-4 p-3 rounded-lg border border-border bg-muted/30 text-sm font-medium">
           <span className="text-foreground">{summary.total} test</span>
           <span className="text-emerald-500">✓ {summary.pass}</span>
-          <span className="text-red-500">✕ {summary.fail}</span>
-          <span className="text-amber-500">⚠ {summary.warn}</span>
-          {summary.running > 0 && <span className="text-blue-500">⏳ {summary.running}</span>}
+          <span className="text-destructive">✕ {summary.fail}</span>
+          <span className="text-primary">⚠ {summary.warn}</span>
+          {summary.running > 0 && <span className="text-primary">⏳ {summary.running}</span>}
         </div>
       )}
 
@@ -507,8 +493,8 @@ export default function Diagnostics() {
               <CatIcon className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium text-sm text-foreground flex-1">{cat}</span>
               <span className="text-xs text-muted-foreground">{items.length} test</span>
-              {fails > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-500">{fails} fail</span>}
-              {warns > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500">{warns} warn</span>}
+              {fails > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">{fails} fail</span>}
+              {warns > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">{warns} warn</span>}
               {fails === 0 && warns === 0 && items.every(i => i.status === "pass") && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500">All pass</span>
               )}
@@ -525,7 +511,7 @@ export default function Diagnostics() {
                     {r.message && (
                       <span className={cn(
                         "text-xs truncate max-w-[300px]",
-                        r.status === "fail" ? "text-red-400" : r.status === "warn" ? "text-amber-400" : "text-muted-foreground"
+                        r.status === "fail" ? "text-destructive" : r.status === "warn" ? "text-primary" : "text-muted-foreground"
                       )}>{r.message}</span>
                     )}
                   </div>

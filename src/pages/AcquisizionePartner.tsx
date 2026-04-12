@@ -49,10 +49,10 @@ export default function AcquisizionePartner() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] gap-3 -m-6 relative overflow-hidden">
       {/* Ambient gradient backgrounds */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:block hidden" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-violet-500/[0.06] via-transparent to-transparent dark:block hidden" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-sky-500/[0.05] via-transparent to-transparent dark:block hidden animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-violet-50/30 dark:hidden" />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.06] via-transparent to-transparent dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-primary/[0.05] via-transparent to-transparent dark:block hidden animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-primary/5 dark:hidden" />
 
       <div className="relative z-10 flex flex-col h-full gap-2 p-3">
       {/* TWO-COLUMN LAYOUT */}
@@ -60,7 +60,7 @@ export default function AcquisizionePartner() {
         {/* LEFT COLUMN: Controls + Queue */}
         <div className="flex flex-col gap-2 min-h-0">
           {/* Toolbar */}
-          <div className="p-3 bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl shadow-lg shadow-black/[0.05]">
+          <div className="p-3 bg-card/60 backdrop-blur-xl border border-border rounded-2xl shadow-lg shadow-black/[0.05]">
             <AcquisitionToolbar
               selectedCountries={selectedCountries}
               onCountriesChange={setSelectedCountries}
@@ -99,7 +99,7 @@ export default function AcquisizionePartner() {
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${
                     sessionHealth === "active" ? "bg-emerald-500" :
-                    sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-amber-500 animate-pulse" :
+                    sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-primary animate-pulse" :
                     sessionHealth === "dead" ? "bg-destructive" : "bg-muted-foreground"
                   }`} />
                   <span>{
@@ -124,7 +124,7 @@ export default function AcquisizionePartner() {
 
           {/* Live Stats */}
           {(pipelineStatus === "running" || pipelineStatus === "paused" || pipelineStatus === "done") && liveStats.processed > 0 && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 rounded-xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 text-[10px]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 rounded-xl bg-card/60 backdrop-blur-xl border border-border text-[10px]">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <strong className="text-foreground">{liveStats.processed}/{queue.filter(q => selectedIds.has(q.wca_id)).length}</strong>
               </div>
@@ -134,17 +134,17 @@ export default function AcquisizionePartner() {
                   style={{ width: `${(liveStats.processed / Math.max(queue.filter(q => selectedIds.has(q.wca_id)).length, 1)) * 100}%` }}
                 />
               </div>
-              <span className="text-sky-500 flex items-center gap-0.5"><Mail className="w-3 h-3" />{liveStats.withEmail}</span>
-              <span className="text-violet-500 flex items-center gap-0.5"><Phone className="w-3 h-3" />{liveStats.withPhone}</span>
+              <span className="text-muted-foreground flex items-center gap-0.5"><Mail className="w-3 h-3" />{liveStats.withEmail}</span>
+              <span className="text-primary flex items-center gap-0.5"><Phone className="w-3 h-3" />{liveStats.withPhone}</span>
               <span className="text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />{liveStats.complete}</span>
               {liveStats.empty > 0 && <span className="text-destructive flex items-center gap-0.5"><XCircle className="w-3 h-3" />{liveStats.empty}</span>}
-              {liveStats.failedLoads > 0 && <span className="text-amber-500 flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />{liveStats.failedLoads}</span>}
+              {liveStats.failedLoads > 0 && <span className="text-primary flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />{liveStats.failedLoads}</span>}
             </div>
           )}
 
           {/* Network Performance */}
           {Object.keys(networkStats).length > 0 && (
-            <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60">
+            <div className="px-3 py-1.5 rounded-xl bg-card/60 backdrop-blur-xl border border-border">
               <NetworkPerformanceBar
                 stats={networkStats}
                 excludedNetworks={excludedNetworks}
@@ -156,7 +156,7 @@ export default function AcquisizionePartner() {
           )}
 
           {/* Partner Queue */}
-          <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05] min-h-0">
+          <div className="flex-1 flex flex-col bg-card/60 backdrop-blur-xl border border-border rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05] min-h-0">
             <PartnerQueue
               items={queue}
               activeIndex={activeIndex}
@@ -198,7 +198,7 @@ export default function AcquisizionePartner() {
 
         {/* RIGHT COLUMN: Canvas */}
         <div className="flex flex-col gap-2 min-h-0">
-          <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
+          <div className="flex-1 flex flex-col bg-card/60 backdrop-blur-xl border border-border rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
             <PartnerCanvas
               data={canvasData}
               phase={canvasPhase}

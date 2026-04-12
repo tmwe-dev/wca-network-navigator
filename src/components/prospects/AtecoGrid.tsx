@@ -67,27 +67,24 @@ function FilterMultiSelect({
   const selectedSet = new Set(selected);
   return (
     <div>
-      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</p>
+      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 text-muted-foreground`}>{label}</p>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs border transition-all ${isDark
-            ? "bg-white/5 border-white/10 text-slate-300 hover:bg-white/[0.08]"
-            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-          }`}>
-            <span className={selected.length === 0 ? (isDark ? "text-slate-500" : "text-slate-400") : ""}>
+          <button className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs border transition-all bg-card border-border text-foreground hover:bg-muted/50`}>
+            <span className={selected.length === 0 ? "text-muted-foreground" : ""}>
               {selected.length === 0 ? placeholder : `${selected.length} sel.`}
             </span>
             <ChevronsUpDown className="w-3 h-3 opacity-50" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className={`w-56 p-0 z-50 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
-          <Command className={isDark ? "bg-slate-900" : ""}>
-            <CommandInput placeholder="Cerca..." className={`text-xs ${isDark ? "text-white" : ""}`} />
+        <PopoverContent className="w-56 p-0 z-50 bg-card border-border" align="start">
+          <Command className="bg-card">
+            <CommandInput placeholder="Cerca..." className="text-xs" />
             <CommandList className="max-h-[300px] overflow-auto">
-              <CommandEmpty className={`text-xs ${isDark ? "text-slate-500" : ""}`}>Nessun risultato</CommandEmpty>
+              <CommandEmpty className="text-xs text-muted-foreground">Nessun risultato</CommandEmpty>
               {selected.length > 0 && (
                 <CommandGroup>
-                  <CommandItem onSelect={onClear} className={`text-xs ${isDark ? "text-rose-400" : "text-rose-500"}`}>
+                  <CommandItem onSelect={onClear} className="text-xs text-destructive">
                     <X className="w-3 h-3 mr-1" /> Deseleziona tutto
                   </CommandItem>
                 </CommandGroup>
@@ -98,17 +95,17 @@ function FilterMultiSelect({
                     key={opt.value}
                     value={`${opt.value} ${opt.label}`}
                     onSelect={() => onTgl(opt.value)}
-                    className={`text-xs ${isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}`}
+                    className="text-xs"
                   >
                     <div className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
                       selectedSet.has(opt.value)
-                        ? "bg-sky-500 border-sky-500"
-                        : isDark ? "border-slate-600" : "border-slate-300"
+                        ? "bg-primary border-primary"
+                        : "border-border"
                     }`}>
-                      {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-white" />}
+                      {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                     </div>
                     <span>{opt.label}</span>
-                    {opt.sub && <span className={`ml-auto text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>{opt.sub}</span>}
+                    {opt.sub && <span className="ml-auto text-[10px] text-muted-foreground">{opt.sub}</span>}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -120,10 +117,7 @@ function FilterMultiSelect({
         <div className="flex flex-wrap gap-1 mt-1">
           {selected.map(v => (
             <button key={v} onClick={() => onTgl(v)}
-              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${isDark
-                ? "bg-sky-500/15 text-sky-300 border border-sky-500/25"
-                : "bg-sky-50 text-sky-700 border border-sky-200"
-              }`}>
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
               {v} <X className="w-2.5 h-2.5 opacity-60" />
             </button>
           ))}
@@ -328,15 +322,15 @@ export function AtecoGrid({
       {/* Only in DB toggle */}
       <div className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all ${
         onlyInDb
-          ? isDark ? "bg-sky-500/10 border-sky-500/25" : "bg-sky-50 border-sky-200"
-          : isDark ? "bg-white/[0.03] border-white/[0.07]" : "bg-white/60 border-slate-200"
+          ? "bg-primary/10 border-primary/25"
+          : isDark ? "bg-white/[0.03] border-white/[0.07]" : "bg-card border-border"
       }`}>
         <div className="flex items-center gap-2">
-          <span className={`text-[11px] font-medium ${onlyInDb ? (isDark ? "text-sky-300" : "text-sky-700") : (isDark ? "text-slate-400" : "text-slate-500")}`}>
+          <span className={`text-[11px] font-medium ${onlyInDb ? "text-primary" : "text-muted-foreground"}`}>
             Solo nel DB
           </span>
           {totalInDb > 0 && (
-            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isDark ? "bg-white/[0.06] text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
               {totalInDb.toLocaleString()}
             </span>
           )}
@@ -355,9 +349,7 @@ export function AtecoGrid({
             <button
               key={code}
               onClick={() => onRemove(code)}
-              className={`group flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-                isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"
-              }`}
+              className="group flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all bg-primary/10 text-primary border border-primary/20"
             >
               {code}
               <X className="w-3 h-3 opacity-50 group-hover:opacity-100" />
@@ -374,12 +366,12 @@ export function AtecoGrid({
         const visibleCodes = groups.filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)).map(g => g.codice);
         const unselectedCount = visibleCodes.filter(c => !selectedSet.has(c)).length;
         return (
-          <div className={`flex items-center justify-between px-2 py-1.5 rounded-xl text-xs ${isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"}`}>
-            <span className={isDark ? "text-sky-300" : "text-sky-700"}>{visibleCodes.length} categorie filtrate</span>
+          <div className="flex items-center justify-between px-2 py-1.5 rounded-xl text-xs bg-primary/10 border border-primary/20">
+            <span className="text-primary">{visibleCodes.length} categorie filtrate</span>
             {unselectedCount > 0 && (
               <button
                 onClick={() => onSelectMultiple(visibleCodes)}
-                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${isDark ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30" : "bg-sky-500 text-white hover:bg-sky-600"}`}
+                className="px-2.5 py-1 rounded-lg font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Seleziona tutti ({visibleCodes.length})
               </button>
@@ -393,7 +385,7 @@ export function AtecoGrid({
         <div className="flex flex-col gap-0.5 pr-2">
           {filteredSections.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <FileText className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+              <FileText className="w-16 h-16 mx-auto text-muted-foreground/20" />
               <p className={`text-sm ${th.sub}`}>Nessun codice ATECO trovato</p>
             </div>
           ) : (
@@ -410,17 +402,17 @@ export function AtecoGrid({
 
               const sHighPriority = sAvgScore >= 12;
               const sPriorityClass = sHighPriority
-                ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                ? "bg-primary/[0.06] border-l-2 border-primary/40"
                 : "";
 
               return (
                 <Collapsible key={section.codice} open={isOpen} onOpenChange={() => toggleExpand(section.codice)}>
                   <div className={`flex items-center gap-1 rounded-xl px-2 py-1.5 transition-all ${sPriorityClass} ${
-                    isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+                    isDark ? "hover:bg-white/[0.04]" : "hover:bg-muted/50"
                   }`}>
                     <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
                       {isOpen
-                        ? <FolderOpen className={`w-4 h-4 shrink-0 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                        ? <FolderOpen className="w-4 h-4 shrink-0 text-primary" />
                         : <Folder className={`w-4 h-4 shrink-0 ${th.dim}`} />}
                       <span className={`text-xs font-bold uppercase tracking-wide ${th.h2}`}>{section.codice}</span>
                       <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{section.descrizione}</span>
@@ -434,10 +426,10 @@ export function AtecoGrid({
                     <button
                       onClick={e => { e.stopPropagation(); toggleBranch(section); }}
                       className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
-                        allSel ? "bg-sky-500 border-sky-500" : someSel ? "bg-sky-500/40 border-sky-400" : isDark ? "border-white/15 hover:border-white/30" : "border-slate-300 hover:border-slate-400"
+                        allSel ? "bg-primary border-primary" : someSel ? "bg-primary/40 border-primary" : isDark ? "border-white/15 hover:border-white/30" : "border-border hover:border-foreground/30"
                       }`}
                     >
-                      {(allSel || someSel) && <Check className="w-3 h-3 text-white" />}
+                      {(allSel || someSel) && <Check className="w-3 h-3 text-primary-foreground" />}
                     </button>
                     <span className={`text-[10px] font-mono w-8 text-right ${th.dim}`}>{sCount || ""}</span>
                   </div>
@@ -456,17 +448,17 @@ export function AtecoGrid({
                         const dScore = dRank ? calcScore(dRank) : 0;
                         const dHighPriority = dScore >= 12;
                         const dPriorityClass = dHighPriority
-                          ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                          ? "bg-primary/[0.06] border-l-2 border-primary/40"
                           : "";
 
                         return (
                           <Collapsible key={div.codice} open={isDivOpen} onOpenChange={() => toggleExpand(div.codice)}>
                             <div className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${dPriorityClass} ${
-                              isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+                              isDark ? "hover:bg-white/[0.04]" : "hover:bg-muted/50"
                             }`}>
                               <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
                                 {isDivOpen
-                                  ? <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-sky-400/70" : "text-sky-400"}`} />
+                                  ? <FolderOpen className="w-3.5 h-3.5 shrink-0 text-primary/70" />
                                   : <Folder className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} />}
                                 <span className={`text-xs font-semibold ${th.h2}`}>{div.codice}</span>
                                 <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{div.descrizione}</span>
@@ -480,10 +472,10 @@ export function AtecoGrid({
                               <button
                                 onClick={e => { e.stopPropagation(); toggleBranch(div); }}
                                 className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                                  allDSel ? "bg-sky-500 border-sky-500" : someDSel ? "bg-sky-500/40 border-sky-400" : isDark ? "border-white/15 hover:border-white/30" : "border-slate-300 hover:border-slate-400"
+                                  allDSel ? "bg-primary border-primary" : someDSel ? "bg-primary/40 border-primary" : isDark ? "border-white/15 hover:border-white/30" : "border-border hover:border-foreground/30"
                                 }`}
                               >
-                                {(allDSel || someDSel) && <Check className="w-2.5 h-2.5 text-white" />}
+                                {(allDSel || someDSel) && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                               </button>
                               <span className={`text-[10px] font-mono w-7 text-right ${th.dim}`}>{dCount || ""}</span>
                             </div>
@@ -497,7 +489,7 @@ export function AtecoGrid({
                                   const gScore = gRank ? calcScore(gRank) : 0;
                                   const gHighPriority = gScore >= 12;
                                   const gPriorityClass = gHighPriority && !isSel
-                                    ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                                    ? "bg-primary/[0.06] border-l-2 border-primary/40"
                                     : "";
 
                                   return (
@@ -506,15 +498,15 @@ export function AtecoGrid({
                                       onClick={() => onToggle(grp.codice)}
                                       className={`w-full flex items-center gap-1.5 rounded-lg px-2 py-1 text-left transition-all ${gPriorityClass} ${
                                         isSel
-                                          ? isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"
-                                          : isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
+                                          ? "bg-primary/10 border border-primary/20"
+                                          : isDark ? "hover:bg-white/[0.03]" : "hover:bg-muted/50"
                                       }`}
                                       title={gRank ? `Vol:${"★".repeat(gRank.volume)}  Val:${"★".repeat(gRank.valore)}  ${gRank.intl}\n${gRank.note}` : ""}
                                     >
                                       <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                                        isSel ? "bg-sky-500 border-sky-500" : isDark ? "border-white/15" : "border-slate-300"
+                                        isSel ? "bg-primary border-primary" : isDark ? "border-white/15" : "border-border"
                                       }`}>
-                                        {isSel && <Check className="w-2.5 h-2.5 text-white" />}
+                                        {isSel && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                                       </div>
                                       <span className={`text-[11px] font-medium ${th.h2}`}>{grp.codice}</span>
                                       <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{grp.descrizione}</span>
@@ -524,7 +516,7 @@ export function AtecoGrid({
                                         </span>
                                       )}
                                       {gCount > 0 && (
-                                        <span className={`text-[10px] font-mono ${isDark ? "text-sky-400/70" : "text-sky-500"}`}>{gCount}</span>
+                                        <span className="text-[10px] font-mono text-primary/70">{gCount}</span>
                                       )}
                                     </button>
                                   );
