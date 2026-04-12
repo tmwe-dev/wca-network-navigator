@@ -1,19 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Plan product_id → monthly credits mapping
+// ── Product ID constants ──
+const PRODUCT_PRO = "prod_TzN6hGJodCyQY7";
+const PRODUCT_MAX = "prod_TzN7J8XxVbc6cy";
+const PRODUCT_CREDIT_PACK_500 = "prod_TzNFL7HutpyhKK";
+
 const PLAN_CREDITS: Record<string, number> = {
-  "prod_TzN6hGJodCyQY7": 500,  // Pro
-  "prod_TzN7J8XxVbc6cy": 2000, // Max
+  [PRODUCT_PRO]: 500,
+  [PRODUCT_MAX]: 2000,
 };
 
-const CREDIT_PACK_PRODUCT = "prod_TzNFL7HutpyhKK";
 const CREDIT_PACK_AMOUNT = 500;
 
 serve(async (req) => {
@@ -26,7 +30,7 @@ serve(async (req) => {
   
   if (!signature || !webhookSecret) {
     logStep("Missing signature or webhook secret");
-    return new Response("Missing signature or secret", { status: 400 });
+    return edgeError("AUTH_REQUIRED", "Missing signature or secret");
   }
 
   const body = await req.text();
@@ -34,9 +38,9 @@ serve(async (req) => {
 
   try {
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-  } catch (err) {
-    logStep("Webhook signature verification failed", { error: err.message });
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (e: unknown) {
+    logStep("Webhook signature verification failed", { error: extractErrorMessage(e) });
+    return edgeError("AUTH_INVALID", `Webhook signature verification failed: ${extractErrorMessage(e)}`);
   }
 
   logStep("Event received", { type: event.type, id: event.id });
@@ -59,19 +63,18 @@ serve(async (req) => {
 
       // Find user by email
       const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-      const user = users?.users?.find(u => u.email === customerEmail);
+      const user = users?.users?.find((u: { email?: string }) => u.email === customerEmail);
       if (!user) {
         logStep("User not found", { email: customerEmail });
         return new Response("OK", { status: 200 });
       }
 
-      // Check if this is a subscription renewal or credit pack
       const lineItems = invoice.lines?.data || [];
       
       for (const item of lineItems) {
         const productId = typeof item.price?.product === 'string' 
           ? item.price.product 
-          : item.price?.product?.id;
+          : (item.price?.product as Stripe.Product | undefined)?.id;
 
         if (!productId) continue;
 
@@ -80,7 +83,6 @@ serve(async (req) => {
           const credits = PLAN_CREDITS[productId];
           logStep("Subscription renewal - adding credits", { userId: user.id, credits, productId });
 
-          // Reset balance to plan credits
           await supabaseAdmin
             .from("user_credits")
             .update({ balance: credits })
@@ -97,12 +99,15 @@ serve(async (req) => {
         }
 
         // Credit pack purchase
-        if (productId === CREDIT_PACK_PRODUCT) {
-          const qty = item.quantity || 1;
+        if (productId === PRODUCT_CREDIT_PACK_500) {
+          const qty = item.quantity || 0;
+          if (qty <= 0) {
+            logStep("Skipping credit pack with invalid quantity", { qty });
+            continue;
+          }
           const totalCredits = CREDIT_PACK_AMOUNT * qty;
           logStep("Credit pack purchase", { userId: user.id, totalCredits });
 
-          // Add credits to existing balance
           const { data: current } = await supabaseAdmin
             .from("user_credits")
             .select("balance")
@@ -127,9 +132,9 @@ serve(async (req) => {
         }
       }
     }
-  } catch (error) {
-    logStep("Error processing event", { error: error.message });
-    return new Response(`Error: ${error.message}`, { status: 500 });
+  } catch (e: unknown) {
+    logStep("Error processing event", { error: extractErrorMessage(e) });
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 
   return new Response("OK", { status: 200 });

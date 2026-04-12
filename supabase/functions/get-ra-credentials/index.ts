@@ -1,8 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { edgeError, extractErrorMessage } from '../_shared/handleEdgeError.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+interface AppSettingRow {
+  key: string;
+  value: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -16,23 +18,36 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return edgeError('AUTH_REQUIRED', 'Unauthorized')
     }
 
+    const token = authHeader.replace('Bearer ', '')
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Go directly to app_settings (no per-user RA creds table exists)
+    // Identify user from JWT
+    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token)
+    if (authError || !user) {
+      return edgeError('AUTH_INVALID', 'Invalid or expired token')
+    }
+
+    // Fetch credentials scoped to authenticated user
     const { data, error } = await supabase
       .from('app_settings')
       .select('key, value')
+      .eq('user_id', user.id)
       .in('key', ['ra_username', 'ra_password'])
 
     if (error) throw error
 
     const settings: Record<string, string> = {}
-    data?.forEach((row: any) => { settings[row.key] = row.value })
+    ;(data as AppSettingRow[] | null)?.forEach((row) => { if (row.value) settings[row.key] = row.value })
+
+    if (!settings['ra_username'] && !settings['ra_password']) {
+      return edgeError('NOT_FOUND', 'RA credentials not configured')
+    }
 
     return new Response(JSON.stringify({
       username: settings['ra_username'] || '',
@@ -40,11 +55,8 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-  } catch (error) {
-    console.error('get-ra-credentials error:', error)
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+  } catch (e: unknown) {
+    console.error('get-ra-credentials error:', e)
+    return edgeError('INTERNAL_ERROR', extractErrorMessage(e))
   }
 })
