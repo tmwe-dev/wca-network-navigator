@@ -474,8 +474,8 @@ export function CompanyList({
             })}
           </div>
         )}
+      </div>
 
-      {/* Footer */}
       {(selectedCount > 0 || selectedContactCount > 0) && (
         <div className="p-4 border-t border-border">
           <Button onClick={onAddToCampaign} className="w-full space-button-primary">
