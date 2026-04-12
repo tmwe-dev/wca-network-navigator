@@ -23,12 +23,15 @@ import {
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
+  if (req.method === "OPTIONS") return new Response(null, { headers: dynCors });
 
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return edgeError("AUTH_REQUIRED", "Unauthorized");
+    if (!authHeader) return edgeError("AUTH_REQUIRED", "Unauthorized", undefined, dynCors);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -510,10 +513,10 @@ Deno.serve(async (req) => {
         raw_size: (m.raw_size_bytes as number) || 0,
         raw_stored: !!(m.raw_storage_path),
       })),
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (err: unknown) {
     console.error("[check-inbox] Error:", extractErrorMessage(err));
-    return edgeError("INTERNAL_ERROR", extractErrorMessage(err));
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, dynCors);
   }
 });
