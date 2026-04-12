@@ -11,6 +11,7 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
   const picker = useEmailContactPicker();
 
   return (
+    <PageErrorBoundary>
     <div className="flex flex-col h-full">
       <PickerHeader picker={picker} />
 
@@ -25,5 +26,6 @@ export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => vo
         <ResultsList picker={picker} />
       </div>
     </div>
+    </PageErrorBoundary>
   );
 }
