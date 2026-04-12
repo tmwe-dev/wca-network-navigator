@@ -50,7 +50,7 @@ export default function Auth() {
           return;
         }
         await recordLogin(session.user.email);
-        navigate("/", { replace: true });
+        navigate("/v1", { replace: true });
       }
     });
 
@@ -61,7 +61,7 @@ export default function Auth() {
           await supabase.auth.signOut();
           return;
         }
-        navigate("/", { replace: true });
+        navigate("/v1", { replace: true });
       }
     });
 
