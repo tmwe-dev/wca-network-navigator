@@ -174,14 +174,23 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
       <div className="space-y-2 bg-gradient-to-br from-primary/5 via-card to-primary/5 rounded-lg p-3 border border-primary/10">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Stato</p>
         <Badge className={cn("text-[10px]", STATUS_COLORS[card.match_status] || STATUS_COLORS.pending)}>{STATUS_LABELS[card.match_status] || "In attesa"}</Badge>
-        {card.match_confidence > 0 && <p className="text-[10px] text-muted-foreground">Confidenza match: {Math.round(card.match_confidence * 100)}%</p>}
+        {card.match_confidence > 0 && <p className="text-[10px] text-muted-foreground">Confidenza match: {Math.round(card.match_confidence)}%</p>}
       </div>
 
       {card.tags && card.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">{card.tags.map((t) => <Badge key={t} variant="outline" className="text-[9px]">{t}</Badge>)}</div>
       )}
 
-      {card.notes && <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">{card.notes}</div>}
+      {card.notes && (() => {
+        const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
+        return (
+          <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">
+            {isGarbled ? (
+              <>{card.notes.slice(0, 120)}... <span className="text-muted-foreground/50 italic">(dati grezzi)</span></>
+            ) : card.notes}
+          </div>
+        );
+      })()}
 
       {card.company_name && (
         <Button variant="outline" size="sm" className="w-full text-xs gap-2 border-primary/15 hover:bg-primary/10"

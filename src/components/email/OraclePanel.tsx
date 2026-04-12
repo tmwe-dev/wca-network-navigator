@@ -229,15 +229,11 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         {/* === CONFIG RAPIDA — UNA RIGA === */}
         <div className="flex items-center gap-2 px-1 py-1">
           {/* Tone icon → Select */}
+          <div title={"Tono: " + (currentToneOption?.label || "Professionale")}>
           <Select value={tone} onValueChange={setTone}>
-            <Tooltip>
-              <TooltipTrigger asChild>
                 <SelectTrigger className="h-7 w-9 p-0 border-0 bg-transparent justify-center [&>svg:last-child]:hidden">
                   <span className="text-sm">{currentToneOption?.icon || "💼"}</span>
                 </SelectTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-[10px]">Tono: {currentToneOption?.label}</TooltipContent>
-            </Tooltip>
             <SelectContent>
               {TONE_OPTIONS.map(t => (
                 <SelectItem key={t.value} value={t.value} className="text-xs">
@@ -246,6 +242,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
               ))}
             </SelectContent>
           </Select>
+          </div>
 
           {/* KB toggle */}
           <Tooltip>
