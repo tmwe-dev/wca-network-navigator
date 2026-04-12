@@ -494,5 +494,6 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
         </motion.div>
       )}
     </AnimatePresence>
+    </PageErrorBoundary>
   );
 }

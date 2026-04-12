@@ -202,6 +202,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
   ];
 
   return (
+    <PageErrorBoundary>
     <TooltipProvider delayDuration={300}>
       <div className="hidden sm:flex items-center gap-1">
         {/* Connection status */}
@@ -322,5 +323,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
         )}
       </div>
     </TooltipProvider>
+    </PageErrorBoundary>
   );
 }
