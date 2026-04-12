@@ -21,7 +21,8 @@ export function useSupabaseQuery<TRow extends Record<string, unknown>, TResult>(
   return useQuery<TResult[]>({
     queryKey: key,
     queryFn: async () => {
-      const base = supabase.from(table).select(select);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const base = (supabase.from as (t: string) => ReturnType<typeof supabase.from>)(table).select(select);
       const query = options?.filters ? options.filters(base) : base;
       const { data, error } = await query;
       if (error) throw error;
