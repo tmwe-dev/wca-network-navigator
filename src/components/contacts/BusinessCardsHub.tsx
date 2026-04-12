@@ -31,7 +31,7 @@ import { deleteBusinessCards } from "@/data/businessCards";
 type ViewMode = "compact" | "card" | "expanded";
 
 export default function BusinessCardsHub() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<ViewMode>("compact");

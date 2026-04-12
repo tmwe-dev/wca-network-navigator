@@ -93,7 +93,7 @@ export function BusinessCardsView() {
   const qc = useQueryClient();
   const sendToCockpit = useSendToCockpit();
   const deepSearch = useDeepSearch();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");

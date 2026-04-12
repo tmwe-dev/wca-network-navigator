@@ -55,7 +55,7 @@ function usePartnerContacts() {
 }
 
 export function FocusFlowShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [activeTab, setActiveTab] = useState<string>("outreach");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiQuery, setAiQuery] = useState("");

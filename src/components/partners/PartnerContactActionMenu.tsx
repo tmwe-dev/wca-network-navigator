@@ -40,7 +40,7 @@ interface Props {
 }
 
 export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSendWhatsApp, waAvailable }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const qc = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);

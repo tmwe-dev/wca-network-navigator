@@ -52,7 +52,7 @@ export function PartnerListPanel({
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   type ProgressFilterKey = "deep" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);

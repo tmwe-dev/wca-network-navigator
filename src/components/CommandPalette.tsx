@@ -33,7 +33,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
 

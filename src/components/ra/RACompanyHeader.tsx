@@ -18,7 +18,7 @@ interface RACompanyHeaderProps {
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   return (
     <div className="flex-shrink-0 p-6 border-b border-white/5 bg-white/2 backdrop-blur-xl">

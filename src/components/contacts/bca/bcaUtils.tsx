@@ -71,7 +71,7 @@ export function googleLogoSearchUrl(companyName: string) {
 
 /* ═══ BCA Quick Actions ═══ */
 export function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const handleEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!card.email) return;

@@ -73,7 +73,7 @@ function WidgetCard({ title, children, icon: Icon, className }: { title: string;
 }
 
 export function CommandCenterShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [section, setSection] = useState<string>("home");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

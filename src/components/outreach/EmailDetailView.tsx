@@ -36,7 +36,7 @@ function formatDisplayDate(value: string): string {
 }
 
 export function EmailDetailView({ message, onClose }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);

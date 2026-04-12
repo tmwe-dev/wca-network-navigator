@@ -39,7 +39,7 @@ interface OraclePanelProps {
 }
 
 export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onInsertImage, generating, improving, hasBody }: OraclePanelProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);

@@ -46,7 +46,7 @@ interface PartnerDetailCompactProps {
 
 export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark }: PartnerDetailCompactProps) {
   const th = t(isDark);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [deepSearching, setDeepSearching] = useState(false);
   const [waSending, setWaSending] = useState<string | null>(null);

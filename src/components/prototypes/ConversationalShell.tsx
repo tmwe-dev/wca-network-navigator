@@ -54,7 +54,7 @@ interface HistoryEntry {
 }
 
 export function ConversationalShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [prompt, setPrompt] = useState("");
   const [activePanel, setActivePanel] = useState<PanelType>("none");
   const [selectedId, setSelectedId] = useState<string | null>(null);

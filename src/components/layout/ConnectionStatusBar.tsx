@@ -48,7 +48,7 @@ function saveCachedStatus(s: ChannelStatus) {
 }
 
 export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
   const fsExt = useFireScrapeExtensionBridge();

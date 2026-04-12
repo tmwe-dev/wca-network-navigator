@@ -28,7 +28,7 @@ interface AddContactDialogProps {
 export default function AddContactDialog({
   open, onOpenChange, defaultDestination = "contacts", partnerId, partnerName,
 }: AddContactDialogProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [destination, setDestination] = useState<Destination>(defaultDestination);
