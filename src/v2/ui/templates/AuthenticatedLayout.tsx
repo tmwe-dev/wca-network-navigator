@@ -55,6 +55,7 @@ const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFl
 const CommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
 const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
+const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
 
 // ── Sidebar nav items (grouped) ──
 
@@ -178,6 +179,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [agentDashOpen, setAgentDashOpen] = useState(false);
+  const [testExtOpen, setTestExtOpen] = useState(false);
 
   // Theme toggle
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
