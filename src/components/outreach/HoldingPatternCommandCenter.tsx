@@ -39,9 +39,9 @@ const CHANNEL_TABS: { key: HoldingChannel; label: string; icon: typeof Mail }[] 
 ];
 
 const CHANNEL_COLORS: Record<string, string> = {
-  email: "text-blue-500 bg-blue-500/10",
+  email: "text-muted-foreground bg-muted",
   whatsapp: "text-emerald-500 bg-emerald-500/10",
-  linkedin: "text-sky-600 bg-sky-600/10",
+  linkedin: "text-muted-foreground bg-muted",
 };
 
 export function HoldingPatternCommandCenter() {
@@ -195,7 +195,7 @@ export function HoldingPatternCommandCenter() {
                             </p>
                             {/* Direction badge */}
                             <div className="flex items-center gap-1.5 mt-1">
-                              <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", isInbound ? "text-emerald-500 border-emerald-500/30" : "text-blue-500 border-blue-500/30")}>
+                              <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", isInbound ? "text-emerald-500 border-emerald-500/30" : "text-muted-foreground border-border")}>
                                 {isInbound ? "Ricevuto" : "Inviato"}
                               </Badge>
                               <span className="text-[9px] text-muted-foreground">{msg.from_address}</span>
@@ -260,7 +260,7 @@ export function HoldingPatternCommandCenter() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-500 hover:bg-amber-500/10"
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10"
                     onClick={() => toast.info("Escalation telefonica avviata")}>
                     <PhoneForwarded className="w-4 h-4" />
                   </Button>
@@ -341,8 +341,8 @@ export function HoldingPatternCommandCenter() {
                   <div className="space-y-3">
                     <StrategyCard icon={AlertTriangle} label="Sentiment" value="Positivo — interesse dichiarato" color="text-emerald-500" />
                     <StrategyCard icon={TrendingUp} label="Intent Rilevato" value="Richiesta informazioni / preventivo" color="text-primary" />
-                    <StrategyCard icon={Mail} label="Azione Suggerita" value="Rispondere con dettagli tecnici e proposta call" color="text-amber-500" />
-                    <StrategyCard icon={Clock} label="Prossimo Step" value="Follow-up tra 3 giorni se nessuna risposta" color="text-blue-500" />
+                    <StrategyCard icon={Mail} label="Azione Suggerita" value="Rispondere con dettagli tecnici e proposta call" color="text-primary" />
+                    <StrategyCard icon={Clock} label="Prossimo Step" value="Follow-up tra 3 giorni se nessuna risposta" color="text-muted-foreground" />
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
                         <div className="h-full bg-primary/60 rounded-full" style={{ width: "92%" }} />
@@ -362,9 +362,9 @@ export function HoldingPatternCommandCenter() {
                       strategy.sentiment === "negative" ? "text-destructive" : "text-muted-foreground"
                     } />
                     <StrategyCard icon={TrendingUp} label="Intent Rilevato" value={strategy.intent} color="text-primary" />
-                    <StrategyCard icon={Mail} label="Azione Suggerita" value={strategy.suggestedAction} color="text-amber-500" />
+                    <StrategyCard icon={Mail} label="Azione Suggerita" value={strategy.suggestedAction} color="text-primary" />
                     {strategy.nextStepDate && (
-                      <StrategyCard icon={Clock} label="Prossimo Step" value={strategy.nextStepDate} color="text-blue-500" />
+                      <StrategyCard icon={Clock} label="Prossimo Step" value={strategy.nextStepDate} color="text-muted-foreground" />
                     )}
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">

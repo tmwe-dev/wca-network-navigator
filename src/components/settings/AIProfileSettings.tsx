@@ -238,13 +238,13 @@ export default function AIProfileSettings() {
       </Card>
 
       {/* ── Card 2b: Sales Knowledge Base (Legacy — migrating to KB Entries) ── */}
-      <Card className="border-amber-500/30">
+      <Card className="border-primary/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-amber-500" />
+              <TrendingUp className="w-4 h-4 text-primary" />
               <CardTitle className="text-base">Sales Knowledge Base</CardTitle>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">LEGACY</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">LEGACY</span>
             </div>
             <Button
               variant="outline"
@@ -256,7 +256,7 @@ export default function AIProfileSettings() {
             </Button>
           </div>
           <CardDescription>
-            <span className="text-amber-600 font-medium">⚠️ Questo campo sarà sostituito dalle schede KB atomiche.</span>{" "}
+            <span className="text-primary font-medium">⚠️ Questo campo sarà sostituito dalle schede KB atomiche.</span>{" "}
             Le tecniche di vendita inserite qui vengono già ignorate se esistono schede nella Knowledge Base strutturata (Impostazioni → Knowledge Base).
             Migra i contenuti come schede KB per un controllo più granulare.
           </CardDescription>

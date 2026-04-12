@@ -43,10 +43,10 @@ const channelIcon: Record<string, any> = {
 };
 
 const originConfig: Record<ContactOrigin, { label: string; bg: string; text: string; dot: string }> = {
-  wca: { label: "WCA", bg: "bg-chart-1/15", text: "text-chart-1", dot: "bg-chart-1" },
-  report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", dot: "bg-chart-4" },
-  import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", dot: "bg-chart-3" },
-  bca: { label: "BCA", bg: "bg-amber-500/15", text: "text-amber-500", dot: "bg-amber-500" },
+  wca: { label: "WCA", bg: "bg-primary/15", text: "text-primary", dot: "bg-primary" },
+  report_aziende: { label: "RA", bg: "bg-muted", text: "text-muted-foreground", dot: "bg-muted-foreground" },
+  import: { label: "Import", bg: "bg-muted", text: "text-muted-foreground", dot: "bg-muted-foreground" },
+  bca: { label: "BCA", bg: "bg-primary/15", text: "text-primary", dot: "bg-primary" },
   manual: { label: "Manuale", bg: "bg-emerald-500/15", text: "text-emerald-500", dot: "bg-emerald-500" },
 };
 
@@ -80,9 +80,9 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         className={cn(
           "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",
           isAiProcessed
-            ? isSelected ? "bg-amber-500/10 border border-amber-400/30" : "bg-amber-500/[0.08] hover:bg-amber-500/10"
+            ? isSelected ? "bg-primary/10 border border-primary/30" : "bg-primary/[0.08] hover:bg-primary/10"
             : contact.origin === "bca"
-            ? isSelected ? "bg-amber-500/10 border border-amber-500/30" : "hover:bg-amber-500/5"
+            ? isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-primary/5"
             : isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
         )}
       >
@@ -97,7 +97,7 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         <div className="flex-1 min-w-0 flex items-center gap-3">
           <span className="text-sm font-medium text-foreground truncate w-[120px] flex items-center gap-1">
             {contact.name}
-            {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
+            {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
           </span>
           <span className="text-xs text-foreground/80 truncate w-[130px]">{contact.company}</span>
           <span className="text-[11px] text-muted-foreground truncate w-[70px]">{contact.role}</span>

@@ -16,15 +16,15 @@ interface LogEntry {
 }
 
 const typeColors: Record<string, { dark: string; light: string }> = {
-  START: { dark: "text-sky-400", light: "text-sky-600" },
+  START: { dark: "text-muted-foreground", light: "text-muted-foreground" },
   OK: { dark: "text-emerald-400", light: "text-emerald-600" },
-  WAIT: { dark: "text-amber-400", light: "text-amber-600" },
-  PAUSE: { dark: "text-orange-400", light: "text-orange-600" },
-  RECOVERY: { dark: "text-violet-400", light: "text-violet-600" },
-  NIGHT: { dark: "text-indigo-400", light: "text-indigo-600" },
-  DONE: { dark: "text-emerald-300", light: "text-emerald-700" },
-  ERROR: { dark: "text-red-400", light: "text-red-600" },
-  INFO: { dark: "text-slate-400", light: "text-slate-500" },
+  WAIT: { dark: "text-primary", light: "text-primary" },
+  PAUSE: { dark: "text-primary", light: "text-primary" },
+  RECOVERY: { dark: "text-primary", light: "text-primary" },
+  NIGHT: { dark: "text-muted-foreground", light: "text-muted-foreground" },
+  DONE: { dark: "text-emerald-400", light: "text-emerald-600" },
+  ERROR: { dark: "text-destructive", light: "text-destructive" },
+  INFO: { dark: "text-muted-foreground", light: "text-muted-foreground" },
 };
 
 interface DownloadTerminalDialogProps {
@@ -80,10 +80,10 @@ export function DownloadTerminalEmbed() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent bg-slate-950/50"
+        className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent bg-card/50"
       >
         {entries.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-slate-600 text-xs text-center px-4">
+           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center px-4">
             {activeJob ? "In attesa di log..." : "Nessun job attivo."}
           </div>
         ) : (
@@ -93,9 +93,9 @@ export function DownloadTerminalEmbed() {
               const color = isDark ? colors.dark : colors.light;
               return (
                 <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
-                  <span className="text-slate-600 select-none shrink-0">{entry.ts}</span>
+                  <span className="text-muted-foreground/50 select-none shrink-0">{entry.ts}</span>
                   <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
-                  <span className="text-slate-300">{entry.msg}</span>
+                  <span className="text-foreground/80">{entry.msg}</span>
                 </div>
               );
             })}
@@ -128,8 +128,8 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 bg-slate-950 border-slate-800 text-slate-200 overflow-hidden [&>button]:text-slate-400 [&>button]:hover:text-slate-200">
-        <DialogHeader className="px-4 pt-4 pb-2 border-b border-white/[0.06]">
+      <DialogContent className="max-w-2xl p-0 bg-card border-border text-foreground overflow-hidden [&>button]:text-muted-foreground [&>button]:hover:text-foreground">
+        <DialogHeader className="px-4 pt-4 pb-2 border-b border-border">
           <DialogTitle className="flex items-center gap-2 text-sm font-mono text-emerald-400">
             <Terminal className="w-4 h-4" />
             Download Terminal
@@ -140,7 +140,7 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
               </span>
             )}
             {!activeJob && entries.length > 0 && (
-              <span className="ml-auto text-[10px] text-slate-500 font-mono font-normal">ULTIMO JOB</span>
+              <span className="ml-auto text-[10px] text-muted-foreground font-mono font-normal">ULTIMO JOB</span>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -148,10 +148,10 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-[400px] overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          className="h-[400px] overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         >
           {entries.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-slate-600 text-xs text-center px-4">
+           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center px-4">
               {activeJob ? "In attesa di log..." : "Nessun job attivo. Seleziona un paese e avvia un download."}
             </div>
           ) : (
@@ -161,9 +161,9 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
                 const color = isDark ? colors.dark : colors.light;
                 return (
                   <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
-                    <span className="text-slate-600 select-none shrink-0">{entry.ts}</span>
-                    <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
-                    <span className="text-slate-300">{entry.msg}</span>
+                  <span className="text-muted-foreground/50 select-none shrink-0">{entry.ts}</span>
+                   <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
+                    <span className="text-foreground/80">{entry.msg}</span>
                   </div>
                 );
               })}
