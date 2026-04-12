@@ -451,12 +451,13 @@ ${channelContext}
 
 CONTESTO:
 - Lingua suggerita: ${effectiveLanguage} (${country_code} → ${detected.languageLabel})
-- ${ch === "email" ? "La firma viene aggiunta automaticamente dal sistema." : ""}
+- ${ch === "email" ? "FORMATO OBBLIGATORIO: la prima riga DEVE essere 'Subject: <oggetto email>' seguita da una riga vuota e poi il corpo HTML. La firma viene aggiunta automaticamente dal sistema." : ""}
 
 GUARDRAIL:
 - Scrivi nella lingua del paese destinatario
 - Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti
-- Usa alias/nome breve nel saluto, mai nome completo`;
+- Usa alias/nome breve nel saluto, mai nome completo
+${ch === "email" ? "- La prima riga dell'output DEVE essere 'Subject: <oggetto>' — SEMPRE, senza eccezioni" : ""}`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
