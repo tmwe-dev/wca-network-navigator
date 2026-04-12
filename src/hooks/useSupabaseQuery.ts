@@ -7,19 +7,24 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type TableName = keyof Database["public"]["Tables"];
+type RowOf<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
-interface SupabaseQueryOptions<T extends TableName> {
-  filters?: (query: ReturnType<ReturnType<typeof supabase.from<T>>["select"]>) => ReturnType<ReturnType<typeof supabase.from<T>>["select"]>;
-  staleTime?: number;
-  enabled?: boolean;
+/** Apply additional filters to the query builder (eq, in, order, limit, etc.) */
+type FilterFn = (query: ReturnType<ReturnType<typeof supabase.from>["select"]>) =>
+  ReturnType<ReturnType<typeof supabase.from>["select"]>;
+
+interface SupabaseQueryOptions {
+  readonly filters?: FilterFn;
+  readonly staleTime?: number;
+  readonly enabled?: boolean;
 }
 
 export function useSupabaseQuery<T extends TableName, TResult>(
   key: readonly string[],
   table: T,
   select: string,
-  mapFn: (row: Database["public"]["Tables"][T]["Row"]) => TResult,
-  options?: SupabaseQueryOptions<T>,
+  mapFn: (row: RowOf<T>) => TResult,
+  options?: SupabaseQueryOptions,
 ) {
   return useQuery<TResult[]>({
     queryKey: key,
@@ -28,7 +33,7 @@ export function useSupabaseQuery<T extends TableName, TResult>(
       const query = options?.filters ? options.filters(base) : base;
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map(mapFn);
+      return ((data ?? []) as unknown as RowOf<T>[]).map(mapFn);
     },
     staleTime: options?.staleTime,
     enabled: options?.enabled,
