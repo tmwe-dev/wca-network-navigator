@@ -16,6 +16,7 @@ import {
 const log = createLogger("CampaignJobs");
 
 export default function CampaignJobs() {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const batchId = searchParams.get("batch");
   const { data: jobs = [] } = useCampaignJobs(batchId);
