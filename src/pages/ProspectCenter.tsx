@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download, Search, X } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
@@ -28,11 +28,22 @@ function StatItem({ icon: Icon, label, value, color, isDark }: { icon: any; labe
 }
 
 export default function ProspectCenter() {
-  const [isDark, setIsDark] = useState(() => {
-    const s = localStorage.getItem("dl_theme");
-    return s !== null ? s === "dark" : true;
-  });
-  const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("dl_theme", next ? "dark" : "light");
+    setIsDark(next);
+  };
 
   const [selectedAteco, setSelectedAteco] = useState<string[]>([]);
   const [regionFilter, setRegionFilter] = useState<string[]>([]);
