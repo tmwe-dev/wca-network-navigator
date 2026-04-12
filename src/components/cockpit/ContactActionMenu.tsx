@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import {
@@ -42,7 +42,7 @@ interface Props {
 }
 
 export function ContactActionMenu({ contact, children }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const qc = useQueryClient();
   const { handleSendWhatsApp: bridgeSendWhatsApp, waAvailable } = useDirectContactActions();
   const [noteOpen, setNoteOpen] = useState(false);

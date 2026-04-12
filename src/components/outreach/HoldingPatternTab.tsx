@@ -23,7 +23,7 @@ import { updateProspectLeadStatus } from "@/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("HoldingPatternTab");
@@ -56,7 +56,7 @@ const TIMELINE_ICONS: Record<string, typeof Mail> = {
 };
 
 export function HoldingPatternTab() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { data: items = [], isLoading } = useHoldingPatternList();
   const [selected, setSelected] = useState<HoldingItem | null>(null);
   const { data: timeline = [], isLoading: tlLoading } = useHoldingTimeline(selected);

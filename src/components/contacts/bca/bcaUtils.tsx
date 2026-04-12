@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptBusinessCard } from "@/lib/contactActionAdapter";
@@ -71,7 +71,7 @@ export function googleLogoSearchUrl(companyName: string) {
 
 /* ═══ BCA Quick Actions ═══ */
 export function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const handleEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!card.email) return;

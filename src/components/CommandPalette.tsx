@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   CommandDialog,
   CommandEmpty,
@@ -33,7 +33,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
 

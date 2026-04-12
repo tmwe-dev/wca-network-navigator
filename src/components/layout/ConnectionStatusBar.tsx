@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Zap, Loader2, CheckCircle2, Mail, MessageCircle, Linkedin, Plane, ListTodo } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
@@ -48,7 +48,7 @@ function saveCachedStatus(s: ChannelStatus) {
 }
 
 export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
   const fsExt = useFireScrapeExtensionBridge();

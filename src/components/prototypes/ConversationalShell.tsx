@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Sparkles, Network, Mail, Users, CalendarCheck, Settings, ArrowLeft, Send, Loader2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ interface HistoryEntry {
 }
 
 export function ConversationalShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [prompt, setPrompt] = useState("");
   const [activePanel, setActivePanel] = useState<PanelType>("none");
   const [selectedId, setSelectedId] = useState<string | null>(null);

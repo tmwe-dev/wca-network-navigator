@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function PartnerListPanel({
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   type ProgressFilterKey = "deep" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);

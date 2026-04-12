@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -39,7 +39,7 @@ interface OraclePanelProps {
 }
 
 export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onInsertImage, generating, improving, hasBody }: OraclePanelProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);

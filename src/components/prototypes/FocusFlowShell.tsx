@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Search, Sparkles, Settings, Menu, Radar, Network, Users, CalendarCheck, X, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ function usePartnerContacts() {
 }
 
 export function FocusFlowShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [activeTab, setActiveTab] = useState<string>("outreach");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiQuery, setAiQuery] = useState("");

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ interface RACompanyHeaderProps {
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   return (
     <div className="flex-shrink-0 p-6 border-b border-white/5 bg-white/2 backdrop-blur-xl">

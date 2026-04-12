@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +75,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
 
 /* ═══ Detail Side Panel ═══ */
 export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = card.mobile || card.phone;
 

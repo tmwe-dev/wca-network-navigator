@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, Plane,
   LayoutList, LayoutGrid, Rows3, Mail, Phone, SlidersHorizontal,
@@ -93,7 +93,7 @@ export function BusinessCardsView() {
   const qc = useQueryClient();
   const sendToCockpit = useSendToCockpit();
   const deepSearch = useDeepSearch();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");

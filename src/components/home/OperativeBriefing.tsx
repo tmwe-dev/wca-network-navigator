@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Bot, Loader2, RefreshCw, Zap, CheckCircle2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +30,7 @@ export function OperativeBriefing({
   const [executingIdx, setExecutingIdx] = useState<number | null>(null);
   const [completedIdx, setCompletedIdx] = useState<Set<number>>(new Set());
   const qc = useQueryClient();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   const executeAction = async (action: BriefingAction, idx: number) => {
     setExecutingIdx(idx);

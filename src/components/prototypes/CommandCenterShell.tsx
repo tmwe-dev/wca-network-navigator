@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Home, Users, Radar, CalendarCheck, Settings, Search, ArrowLeft, Activity, Mail, Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +73,7 @@ function WidgetCard({ title, children, icon: Icon, className }: { title: string;
 }
 
 export function CommandCenterShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [section, setSection] = useState<string>("home");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

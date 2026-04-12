@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,7 +46,7 @@ interface PartnerDetailCompactProps {
 
 export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark }: PartnerDetailCompactProps) {
   const th = t(isDark);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [deepSearching, setDeepSearching] = useState(false);
   const [waSending, setWaSending] = useState<string | null>(null);

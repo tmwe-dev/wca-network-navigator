@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ interface AddContactDialogProps {
 export default function AddContactDialog({
   open, onOpenChange, defaultDestination = "contacts", partnerId, partnerName,
 }: AddContactDialogProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [destination, setDestination] = useState<Destination>(defaultDestination);

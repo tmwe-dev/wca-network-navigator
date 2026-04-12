@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ import { deleteBusinessCards } from "@/data/businessCards";
 type ViewMode = "compact" | "card" | "expanded";
 
 export default function BusinessCardsHub() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<ViewMode>("compact");
