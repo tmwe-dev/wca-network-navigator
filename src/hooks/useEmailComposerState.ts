@@ -15,6 +15,7 @@ import { insertEmailDraft, insertEmailDraftReturning } from "@/data/emailDrafts"
 import { findPartnerByEmail } from "@/data/partners";
 import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
+import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
 import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 
@@ -521,9 +522,30 @@ export function useEmailComposerState() {
   }, []);
 
   const handleSendAndSave = useCallback(() => {
+    // Fire-and-forget: persist edit pattern for learning
+    if (state.editAnalysis) {
+      const lines = (email.htmlBody || "").replace(/<[^>]+>/g, "").split("\n").filter(Boolean);
+      const origLines = (ai.aiGeneratedBody || "").replace(/<[^>]+>/g, "").split("\n").filter(Boolean);
+      const hookFinal = lines.slice(0, 2).join(" ").slice(0, 300);
+      const hookOriginal = origLines.slice(0, 2).join(" ").slice(0, 300);
+      const ctaFinal = [...lines].reverse().find((l) => l.includes("?")) || lines[lines.length - 1] || "";
+      const ctaOriginal = [...origLines].reverse().find((l) => l.includes("?")) || origLines[origLines.length - 1] || "";
+      insertEditPattern({
+        email_type: state.oracleConfig?.emailType || undefined,
+        country_code: recipients[0]?.countryCode || undefined,
+        channel: "email",
+        hook_original: hookOriginal.slice(0, 500),
+        hook_final: hookFinal.slice(0, 500),
+        cta_original: ctaOriginal.slice(0, 500),
+        cta_final: ctaFinal.slice(0, 500),
+        tone_delta: state.editAnalysis.tone_shift || undefined,
+        length_delta_percent: state.editAnalysis.length_change ?? undefined,
+        significance: state.editAnalysis.significance || undefined,
+      }).catch(() => {/* silent */});
+    }
     closeLearningDialog();
     executeEnqueue();
-  }, [closeLearningDialog, executeEnqueue]);
+  }, [closeLearningDialog, executeEnqueue, state.editAnalysis, state.oracleConfig, email.htmlBody, ai.aiGeneratedBody, recipients]);
 
   const closeQueueMonitor = useCallback(() => {
     dispatch({ type: "SET_ACTIVE_DRAFT", payload: { id: null, status: "idle" } });
