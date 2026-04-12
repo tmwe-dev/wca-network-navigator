@@ -177,11 +177,11 @@ export function AppLayout() {
                     </div>
                     <div className="flex items-center gap-0.5 sm:gap-1">
                       <OperatorSelector />
-                      <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-primary" /></Button></InfoTooltip>
+                      <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
                     </div>
                   </div>
                 </TooltipProvider>
