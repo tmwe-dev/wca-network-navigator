@@ -11,14 +11,14 @@ import { toast } from "sonner";
 import { deleteEmailTemplate, createEmailTemplate } from "@/data/emailTemplates";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
-  pdf: <FileText className="w-8 h-8 text-red-500" />,
-  doc: <FileText className="w-8 h-8 text-blue-500" />,
-  docx: <FileText className="w-8 h-8 text-blue-500" />,
+  pdf: <FileText className="w-8 h-8 text-destructive" />,
+  doc: <FileText className="w-8 h-8 text-muted-foreground" />,
+  docx: <FileText className="w-8 h-8 text-muted-foreground" />,
   xls: <FileSpreadsheet className="w-8 h-8 text-emerald-500" />,
   xlsx: <FileSpreadsheet className="w-8 h-8 text-emerald-500" />,
-  png: <Image className="w-8 h-8 text-purple-500" />,
-  jpg: <Image className="w-8 h-8 text-purple-500" />,
-  jpeg: <Image className="w-8 h-8 text-purple-500" />,
+  png: <Image className="w-8 h-8 text-primary" />,
+  jpg: <Image className="w-8 h-8 text-primary" />,
+  jpeg: <Image className="w-8 h-8 text-primary" />,
 };
 
 const TEMPLATE_CATEGORIES = [

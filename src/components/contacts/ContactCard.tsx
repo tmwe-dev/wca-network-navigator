@@ -83,7 +83,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         "cursor-pointer border-b border-border/50 transition-colors text-xs",
         inHolding && "border-l-2 border-l-muted-foreground/40",
         isActive
-          ? isAiProcessed ? "bg-amber-500/15" : "bg-primary/15"
+          ? isAiProcessed ? "bg-primary/15" : "bg-primary/15"
           : isSelected ? "bg-primary/5" : "hover:bg-muted/40"
       )}
       onClick={handleRowClick}
@@ -130,7 +130,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             {isWcaMatched && (
               <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
             )}
-            {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
+            {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
             {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
           </div>
           {cPosition && (
@@ -194,9 +194,9 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 2: indicators */}
         <div className="flex items-center justify-center gap-0.5">
           {linkedinUrl && (
-            <span className="p-0.5 rounded bg-[hsl(210,80%,55%)]/10">
-              <Linkedin className="w-2.5 h-2.5 text-[hsl(210,80%,55%)]" />
-            </span>
+             <span className="p-0.5 rounded bg-muted">
+               <Linkedin className="w-2.5 h-2.5 text-muted-foreground" />
+             </span>
           )}
           {companyWebsite && (
             <span className="p-0.5 rounded bg-emerald-500/10">
@@ -226,7 +226,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
           {c.lead_status && c.lead_status !== "new" && (
             <Filterable field="leadStatus" value={c.lead_status} onFilterClick={onFilterClick}>
-              <span className="text-[9px] text-violet-400 bg-violet-500/15 px-1 py-0 rounded-full font-medium truncate">
+              <span className="text-[9px] text-primary bg-primary/15 px-1 py-0 rounded-full font-medium truncate">
                 {c.lead_status}
               </span>
             </Filterable>

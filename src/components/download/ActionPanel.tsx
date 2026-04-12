@@ -63,7 +63,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           )}
         </div>
         {logic.scanError && (
-          <div className={`p-3 rounded-lg border text-sm text-left ${isDark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
+          <div className="p-3 rounded-lg border text-sm text-left bg-destructive/10 border-destructive/30 text-destructive">
             ⚠️ {logic.scanError}
           </div>
         )}
@@ -90,7 +90,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         </div>
         <p className={`text-sm ${th.sub}`}>{countryLabel}</p>
         {directoryOnly && (
-          <div className={`p-2 rounded-lg border text-xs ${isDark ? "bg-sky-500/10 border-sky-500/20 text-sky-300" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
+          <div className="p-2 rounded-lg border text-xs bg-muted border-border text-muted-foreground">
             💡 Scarica solo l'elenco aziende dalla directory WCA senza aprire i singoli profili
           </div>
         )}
@@ -111,31 +111,31 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       <div className={`p-3 rounded-xl border space-y-1 ${th.infoBox}`}>
         <div onClick={() => !directoryOnly && logic.setDownloadMode("all")}
           className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-all ${!directoryOnly ? "cursor-pointer hover:opacity-80" : ""} ${
-            !directoryOnly && logic.downloadMode === "all" ? (isDark ? "bg-amber-500/15 border-l-2 border-amber-400" : "bg-amber-50 border-l-2 border-amber-500") : ""
+            !directoryOnly && logic.downloadMode === "all" ? "bg-primary/15 border-l-2 border-primary" : ""
           }`}>
           <span className={`text-sm ${th.body}`}>Nella directory</span>
           <span className={`font-mono font-bold ${th.hi}`}>{logic.totalCount}</span>
         </div>
         {!directoryOnly && (
           <>
-            <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
-            <div className="flex items-center justify-between px-2 py-1.5">
+             <div className="h-px bg-border" />
+             <div className="flex items-center justify-between px-2 py-1.5">
               <span className={`text-sm font-medium ${th.acEm}`}>✓ Con profilo</span>
               <span className={`font-mono font-bold ${th.acEm}`}>{logic.downloadedCount - logic.noProfileInDirectoryCount}</span>
             </div>
             {logic.noProfileInDirectoryCount > 0 && (
               <div onClick={() => logic.setDownloadMode("no_profile")}
-                className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
-                  logic.downloadMode === "no_profile" ? (isDark ? "bg-orange-500/15 border-l-2 border-orange-400" : "bg-orange-50 border-l-2 border-orange-500") : ""
-                }`}>
-                <span className={`text-sm font-medium ${isDark ? "text-orange-400" : "text-orange-600"}`}>⚠ Senza profilo</span>
-                <span className={`font-mono font-bold ${isDark ? "text-orange-400" : "text-orange-600"}`}>{logic.noProfileInDirectoryCount}</span>
+                 className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
+                   logic.downloadMode === "no_profile" ? "bg-primary/15 border-l-2 border-primary" : ""
+                 }`}>
+                 <span className="text-sm font-medium text-primary">⚠ Senza profilo</span>
+                 <span className="font-mono font-bold text-primary">{logic.noProfileInDirectoryCount}</span>
               </div>
             )}
             {logic.missingIds.length > 0 && (
               <div onClick={() => logic.setDownloadMode("new")}
-                className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
-                  logic.downloadMode === "new" ? (isDark ? "bg-sky-500/15 border-l-2 border-sky-400" : "bg-sky-50 border-l-2 border-sky-500") : ""
+                 className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
+                   logic.downloadMode === "new" ? "bg-muted border-l-2 border-muted-foreground" : ""
                 }`}>
                 <span className={`text-sm font-medium ${th.hi}`}>↓ Mai scaricati</span>
                 <span className={`font-mono font-bold ${th.hi}`}>{logic.missingIds.length}</span>
@@ -148,7 +148,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       {directoryOnly ? (
         <>
           {logic.hasCache && logic.totalCount > 0 && (
-            <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+             <div className="p-3 rounded-lg border text-sm bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               ✅ Directory già scaricata: {logic.totalCount} aziende trovate
             </div>
           )}
@@ -182,7 +182,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           </div>
 
           {logic.missingIds.length === 0 && logic.downloadMode === "new" && (
-            <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+            <div className="p-3 rounded-lg border text-sm bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               ✅ Tutti scaricati! Cambia modalità per aggiornare.
             </div>
           )}

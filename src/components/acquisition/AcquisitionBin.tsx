@@ -34,8 +34,8 @@ export function AcquisitionBin({ count, total, showComet, completeCount = 0, inc
         className={cn(
           "flex items-center justify-center gap-4 px-8 py-3.5 rounded-2xl border transition-all duration-300",
           "bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl shadow-lg shadow-black/[0.05]",
-          pulse
-            ? "border-sky-500/40 shadow-xl shadow-sky-500/[0.15] scale-105"
+           pulse
+             ? "border-primary/40 shadow-xl shadow-primary/[0.15] scale-105"
             : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60"
         )}
       >
@@ -88,8 +88,8 @@ export function AcquisitionBin({ count, total, showComet, completeCount = 0, inc
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: linear-gradient(135deg, hsl(199 89% 48%), hsl(38 92% 50%));
-          box-shadow: 0 0 20px hsl(199 89% 48% / 0.6), 0 0 40px hsl(38 92% 50% / 0.3);
+           background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)));
+           box-shadow: 0 0 20px hsl(var(--primary) / 0.6), 0 0 40px hsl(var(--primary) / 0.3);
           animation: comet-fly 0.6s ease-in forwards;
         }
       `}</style>

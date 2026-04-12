@@ -69,7 +69,7 @@ function NetworkIcon({ name, s, isExcluded, isFailed }: {
       : rate > 50
         ? "border-emerald-500/60"
         : rate >= 10
-          ? "border-amber-500/60"
+          ? "border-primary/60"
           : "border-muted-foreground/30";
 
   return (
@@ -162,7 +162,7 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
       {/* Counters */}
       {(activeCount > 0 || failedCount > 0) && (
         <span className="text-[10px] text-muted-foreground ml-1 whitespace-nowrap">
-          {activeCount > 0 && <span className="text-emerald-400">{activeCount} attivi</span>}
+          {activeCount > 0 && <span className="text-emerald-500">{activeCount} attivi</span>}
           {activeCount > 0 && failedCount > 0 && <span> | </span>}
           {failedCount > 0 && <span className="text-destructive">{failedCount} senza dati</span>}
         </span>
@@ -172,12 +172,12 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
       {regressions && regressions.length > 0 && (
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-0.5 ml-1 text-amber-500 animate-pulse">
-              <AlertTriangle className="w-4 h-4" />
+             <div className="flex items-center gap-0.5 ml-1 text-primary animate-pulse">
+               <AlertTriangle className="w-4 h-4" />
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs max-w-64">
-            <p className="font-semibold text-amber-500">⚠️ Regressione rilevata</p>
+            <p className="font-semibold text-primary">⚠️ Regressione rilevata</p>
             {regressions.map((r) => (
               <p key={r.network}>
                 {r.network}: aveva {r.previousSuccesses} successi, ora {r.consecutiveFailures} fallimenti consecutivi
