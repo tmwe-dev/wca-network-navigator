@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
 import type { Prospect } from "@/hooks/useProspects";
 
