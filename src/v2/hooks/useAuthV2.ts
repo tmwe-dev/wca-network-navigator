@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -44,6 +45,10 @@ interface AuthActions {
 
 export type UseAuthV2Return = AuthState & AuthActions;
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 // ── Helper: load profile ─────────────────────────────────────────────
 
 async function loadProfile(userId: string): Promise<UserProfile | null> {
@@ -78,26 +83,13 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
 // ── Helper: check whitelist ──────────────────────────────────────────
 
 async function isEmailAuthorized(email: string): Promise<boolean> {
-  const { data } = await supabase
-    .from("authorized_users")
-    .select("id")
-    .eq("email", email.toLowerCase())
-    .eq("is_active", true)
-    .maybeSingle();
-
-  return data !== null;
+  return rpcIsEmailAuthorized(normalizeEmail(email));
 }
 
 // ── Helper: record login ─────────────────────────────────────────────
 
 async function recordLogin(email: string): Promise<void> {
-  await supabase
-    .from("authorized_users")
-    .update({
-      last_login_at: new Date().toISOString(),
-      login_count: undefined, // will be handled by DB
-    })
-    .eq("email", email.toLowerCase());
+  await rpcRecordUserLogin(normalizeEmail(email));
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────
@@ -116,28 +108,35 @@ export function useAuthV2(): UseAuthV2Return {
   // ── Load user data after auth ────────────────────────────────────
 
   const loadUserData = useCallback(async (authUser: User) => {
-    const email = authUser.email;
-    if (!email) {
+    try {
+      const email = authUser.email;
+      if (!email) {
+        await supabase.auth.signOut();
+        setError("Account senza email associata.");
+        return;
+      }
+
+      const authorized = await isEmailAuthorized(email);
+      if (!authorized) {
+        await supabase.auth.signOut();
+        setError("Email non autorizzata. Contatta l'amministratore.");
+        return;
+      }
+
+      const [userProfile, userRoles] = await Promise.all([
+        loadProfile(authUser.id),
+        loadRoles(authUser.id),
+      ]);
+
+      setProfile(userProfile);
+      setRoles(userRoles);
+      await recordLogin(email);
+    } catch (err) {
       await supabase.auth.signOut();
-      setError("Account senza email associata.");
-      return;
+      setProfile(null);
+      setRoles([]);
+      setError(err instanceof Error ? err.message : "Errore durante il caricamento dell'utente.");
     }
-
-    const authorized = await isEmailAuthorized(email);
-    if (!authorized) {
-      await supabase.auth.signOut();
-      setError("Email non autorizzata. Contatta l'amministratore.");
-      return;
-    }
-
-    const [userProfile, userRoles] = await Promise.all([
-      loadProfile(authUser.id),
-      loadRoles(authUser.id),
-    ]);
-
-    setProfile(userProfile);
-    setRoles(userRoles);
-    await recordLogin(email);
   }, []);
 
   // ── Session listener ─────────────────────────────────────────────
@@ -200,7 +199,16 @@ export function useAuthV2(): UseAuthV2Return {
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     setError(null);
     setIsLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    const normalizedEmail = normalizeEmail(email);
+    const authorized = await isEmailAuthorized(normalizedEmail);
+    if (!authorized) {
+      setError("Email non autorizzata. Contatta l'amministratore.");
+      setIsLoading(false);
+      return;
+    }
+
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     if (authError) {
       setError(authError.message);
       setIsLoading(false);
@@ -209,19 +217,23 @@ export function useAuthV2(): UseAuthV2Return {
 
   const signInWithGoogle = useCallback(async () => {
     setError(null);
+    setIsLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/v2/login`,
       });
       if (result.error) {
         setError("Errore con Google Sign-In");
+        setIsLoading(false);
         return;
       }
       if (result.redirected) {
         return;
       }
       // Session set by lovable auth — onAuthStateChange will handle the rest
+      setTimeout(() => setIsLoading(false), 5000);
     } catch (err) {
+      setIsLoading(false);
       setError(err instanceof Error ? err.message : "Errore con Google Sign-In");
     }
   }, []);
@@ -230,7 +242,9 @@ export function useAuthV2(): UseAuthV2Return {
     setError(null);
     setIsLoading(true);
 
-    const authorized = await isEmailAuthorized(email);
+    const normalizedEmail = normalizeEmail(email);
+
+    const authorized = await isEmailAuthorized(normalizedEmail);
     if (!authorized) {
       setError("Email non autorizzata. Contatta l'amministratore per essere aggiunto alla whitelist.");
       setIsLoading(false);
@@ -238,15 +252,19 @@ export function useAuthV2(): UseAuthV2Return {
     }
 
     const { error: authError } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        emailRedirectTo: `${window.location.origin}/v2/login`,
+        data: { display_name: displayName },
+      },
     });
 
     if (authError) {
       setError(authError.message);
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -260,7 +278,7 @@ export function useAuthV2(): UseAuthV2Return {
 
   const resetPassword = useCallback(async (email: string) => {
     setError(null);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
       redirectTo: `${window.location.origin}/v2/reset-password`,
     });
     if (authError) setError(authError.message);

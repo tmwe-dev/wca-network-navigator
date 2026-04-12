@@ -4,7 +4,8 @@
  */
 
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,14 +22,22 @@ export function LoginPage(): React.ReactElement {
     signUp,
     resetPassword,
     isLoading,
+    isAuthenticated,
     error,
     clearError,
   } = useAuthV2();
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [resetSent, setResetSent] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/v2", { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
