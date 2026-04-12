@@ -44,15 +44,15 @@ function countryFlag(code: string | null): string {
 
 function confidenceColor(c: number): string {
   if (c >= 85) return "bg-emerald-500";
-  if (c >= 70) return "bg-chart-1";
-  if (c >= 50) return "bg-amber-500";
+  if (c >= 70) return "bg-primary";
+  if (c >= 50) return "bg-primary/70";
   return "bg-muted";
 }
 
 function confidenceBadge(c: number): string {
   if (c >= 85) return "bg-emerald-500/15 text-emerald-400";
-  if (c >= 70) return "bg-chart-1/15 text-chart-1";
-  return "bg-amber-500/15 text-amber-400";
+  if (c >= 70) return "bg-primary/15 text-primary";
+  return "bg-primary/10 text-primary/80";
 }
 
 export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -60,7 +60,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [results, setResults] = useState<MatchResult[]>([]);
   const [totalUnmatched, setTotalUnmatched] = useState(0);
   const [processed, setProcessed] = useState(0);
-  const [selected, setSelected] = useState<Map<string, string>>(new Map()); // card_id -> partner_id
+  const [selected, setSelected] = useState<Map<string, string>>(new Map());
   const [confirming, setConfirming] = useState(false);
   const [hasRun, setHasRun] = useState(false);
   const updateCard = useUpdateBusinessCard();
@@ -122,7 +122,6 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     qc.invalidateQueries({ queryKey: ["business-cards"] });
     qc.invalidateQueries({ queryKey: ["business-card-matches"] });
     toast({ title: `✅ ${ok} match confermati${fail > 0 ? ` · ${fail} errori` : ""}` });
-    // Remove confirmed from results
     setResults(prev => prev.filter(r => !selected.has(r.card_id)));
     setSelected(new Map());
     setConfirming(false);
@@ -130,10 +129,10 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col bg-card border-violet-500/20">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col bg-card border-primary/20">
         <DialogHeader>
           <DialogTitle className="text-sm flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet-400" />
+            <Sparkles className="w-4 h-4 text-primary" />
             AI Matching — Biglietti da Visita ↔ Partner
           </DialogTitle>
         </DialogHeader>
@@ -142,7 +141,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Button
             size="sm"
-            className="text-xs gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500"
+            className="text-xs gap-1.5"
             onClick={runAnalysis}
             disabled={loading}
           >
@@ -152,14 +151,14 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
           {results.length > 0 && (
             <>
-              <Button variant="outline" size="sm" className="text-xs gap-1 border-violet-500/15" onClick={selectAll}>
+              <Button variant="outline" size="sm" className="text-xs gap-1 border-primary/15" onClick={selectAll}>
                 Seleziona sicuri (≥70%)
               </Button>
-              <Badge variant="outline" className="text-[10px] h-6 border-violet-500/15">
+              <Badge variant="outline" className="text-[10px] h-6 border-primary/15">
                 {results.length} candidati trovati
               </Badge>
               {totalUnmatched > processed && (
-                <Badge variant="outline" className="text-[10px] h-6 border-amber-500/15 text-amber-400">
+                <Badge variant="outline" className="text-[10px] h-6 border-primary/15 text-primary">
                   +{totalUnmatched - processed} non analizzati
                 </Badge>
               )}
@@ -183,7 +182,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 mt-2">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
               <p className="text-xs text-muted-foreground">Analisi AI in corso… confronto nomi aziende</p>
             </div>
           )}
@@ -197,7 +196,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
           {!loading && !hasRun && (
             <div className="flex flex-col items-center justify-center py-16 gap-2">
-              <Sparkles className="w-8 h-8 text-violet-400/30" />
+              <Sparkles className="w-8 h-8 text-primary/30" />
               <p className="text-sm text-muted-foreground">Clicca "Avvia analisi AI" per trovare match</p>
               <p className="text-xs text-muted-foreground/60">L'AI confronterà i biglietti senza match con il database partner</p>
             </div>
@@ -217,17 +216,15 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                     )}
                     onClick={() => toggleSelect(match.card_id, candidate.partner_id)}
                   >
-                    {/* Checkbox */}
                     <div className="flex items-center justify-center w-10 shrink-0">
                       <Checkbox checked={isSelected} className="h-3.5 w-3.5" />
                     </div>
 
-                    {/* Left: BCA data */}
                     <div className="flex-1 min-w-0 py-2.5 pr-3 space-y-0.5">
                       {ci === 0 && (
                         <>
                           <div className="flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
                             <span className="text-sm font-semibold text-foreground truncate">{match.card_company}</span>
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-muted-foreground ml-5">
@@ -248,7 +245,6 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                       )}
                     </div>
 
-                    {/* Center: confidence */}
                     <div className="flex flex-col items-center justify-center w-20 shrink-0 gap-1">
                       <Badge className={cn("text-[10px] px-1.5", confidenceBadge(candidate.confidence))}>
                         {candidate.confidence}%
@@ -259,7 +255,6 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                       </div>
                     </div>
 
-                    {/* Right: Partner data */}
                     <div className="flex-1 min-w-0 py-2.5 pl-3 space-y-0.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm shrink-0">{countryFlag(candidate.partner_country_code)}</span>

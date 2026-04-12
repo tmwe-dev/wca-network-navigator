@@ -1,11 +1,5 @@
 /**
  * Telemetry — operator-facing observability page.
- *
- * Shows page_events, request_logs, ai_request_log so Luca can see
- * exactly what users (and agents) do in the platform: pages visited,
- * actions taken, edge function calls, AI request volume and cost.
- *
- * Backend: see migration 20260408095954_wave6_hardening_telemetry_staff.sql
  */
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -83,15 +77,15 @@ export default function Telemetry() {
   }, [range]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="px-6 py-4 border-b border-border bg-card">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl font-bold text-foreground">
               Telemetria
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Cosa sta succedendo nel sistema in tempo reale
             </p>
           </div>
@@ -99,7 +93,7 @@ export default function Telemetry() {
             <select
               value={range}
               onChange={(e) => setRange(e.target.value)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-card"
             >
               {RANGES.map((r) => (
                 <option key={r.key} value={r.key}>
@@ -109,15 +103,15 @@ export default function Telemetry() {
             </select>
           </div>
         </div>
-        <div className="inline-flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
+        <div className="inline-flex p-0.5 bg-muted rounded-lg text-xs font-medium">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-3 py-1.5 rounded-md transition ${
                 tab === t.key
-                  ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <span className="mr-1">{t.icon}</span>
@@ -161,7 +155,6 @@ function PageEventsView({ sinceIso }: { sinceIso: string }) {
   if (isLoading) return <SkeletonRows />;
   if (!data?.length) return <EmptyTelemetry label="Nessun evento nel periodo selezionato" />;
 
-  // KPI
   const total = data.length;
   const uniquePages = new Set(data.map((d) => d.page)).size;
   const uniqueSessions = new Set(data.map((d) => d.session_id).filter(Boolean)).size;
@@ -176,13 +169,11 @@ function PageEventsView({ sinceIso }: { sinceIso: string }) {
       </div>
 
       <Card title="Top pagine">
-        <ul className="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="text-sm divide-y divide-border">
           {topPages.map((p) => (
             <li key={p.key} className="flex items-center justify-between py-2">
-              <span className="font-mono text-xs text-slate-600 dark:text-slate-300">
-                {p.key}
-              </span>
-              <span className="text-xs text-slate-500">{p.count}</span>
+              <span className="font-mono text-xs text-foreground">{p.key}</span>
+              <span className="text-xs text-muted-foreground">{p.count}</span>
             </li>
           ))}
         </ul>
@@ -191,7 +182,7 @@ function PageEventsView({ sinceIso }: { sinceIso: string }) {
       <Card title={`Eventi recenti (${data.length})`}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="text-left text-[10px] uppercase text-slate-400">
+            <thead className="text-left text-[10px] uppercase text-muted-foreground">
               <tr>
                 <th className="py-2">Quando</th>
                 <th>Evento</th>
@@ -200,16 +191,16 @@ function PageEventsView({ sinceIso }: { sinceIso: string }) {
                 <th>Durata</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border">
               {data.slice(0, 100).map((e) => (
-                <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td className="py-1.5 text-slate-500 whitespace-nowrap">{fmtTime(e.created_at)}</td>
+                <tr key={e.id} className="hover:bg-muted/50">
+                  <td className="py-1.5 text-muted-foreground whitespace-nowrap">{fmtTime(e.created_at)}</td>
                   <td className="font-medium">{e.event_name}</td>
-                  <td className="font-mono text-slate-600 dark:text-slate-400">{e.page}</td>
-                  <td className="text-slate-500">
+                  <td className="font-mono text-muted-foreground">{e.page}</td>
+                  <td className="text-muted-foreground">
                     {e.entity_type ? `${e.entity_type}:${e.entity_id?.slice(0, 8)}` : "—"}
                   </td>
-                  <td className="text-slate-500">{e.duration_ms ? `${e.duration_ms}ms` : "—"}</td>
+                  <td className="text-muted-foreground">{e.duration_ms ? `${e.duration_ms}ms` : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -262,11 +253,11 @@ function RequestLogsView({ sinceIso }: { sinceIso: string }) {
       </div>
 
       <Card title="Top edge functions">
-        <ul className="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="text-sm divide-y divide-border">
           {topFns.map((p) => (
             <li key={p.key} className="flex items-center justify-between py-2">
               <span className="font-mono text-xs">{p.key}</span>
-              <span className="text-xs text-slate-500">{p.count}</span>
+              <span className="text-xs text-muted-foreground">{p.count}</span>
             </li>
           ))}
         </ul>
@@ -275,7 +266,7 @@ function RequestLogsView({ sinceIso }: { sinceIso: string }) {
       <Card title={`Chiamate recenti (${data.length})`}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="text-left text-[10px] uppercase text-slate-400">
+            <thead className="text-left text-[10px] uppercase text-muted-foreground">
               <tr>
                 <th className="py-2">Quando</th>
                 <th>Funzione</th>
@@ -284,18 +275,14 @@ function RequestLogsView({ sinceIso }: { sinceIso: string }) {
                 <th>Trace</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border">
               {data.slice(0, 100).map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td className="py-1.5 text-slate-500 whitespace-nowrap">{fmtTime(r.created_at)}</td>
+                <tr key={r.id} className="hover:bg-muted/50">
+                  <td className="py-1.5 text-muted-foreground whitespace-nowrap">{fmtTime(r.created_at)}</td>
                   <td className="font-mono">{r.function_name}</td>
-                  <td>
-                    <StatusPill status={r.status} />
-                  </td>
-                  <td className="text-slate-500">{r.latency_ms ? `${r.latency_ms}ms` : "—"}</td>
-                  <td className="font-mono text-[10px] text-slate-400">
-                    {r.trace_id?.slice(0, 8) ?? "—"}
-                  </td>
+                  <td><StatusPill status={r.status} /></td>
+                  <td className="text-muted-foreground">{r.latency_ms ? `${r.latency_ms}ms` : "—"}</td>
+                  <td className="font-mono text-[10px] text-muted-foreground">{r.trace_id?.slice(0, 8) ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -347,11 +334,11 @@ function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
       </div>
 
       <Card title="Per agente">
-        <ul className="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="text-sm divide-y divide-border">
           {byAgent.map((p) => (
             <li key={p.key} className="flex items-center justify-between py-2">
               <span className="font-medium">{p.key || "—"}</span>
-              <span className="text-xs text-slate-500">{p.count} richieste</span>
+              <span className="text-xs text-muted-foreground">{p.count} richieste</span>
             </li>
           ))}
         </ul>
@@ -360,7 +347,7 @@ function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
       <Card title={`Richieste recenti (${data.length})`}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="text-left text-[10px] uppercase text-slate-400">
+            <thead className="text-left text-[10px] uppercase text-muted-foreground">
               <tr>
                 <th className="py-2">Quando</th>
                 <th>Agente</th>
@@ -370,17 +357,15 @@ function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border">
               {data.slice(0, 100).map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td className="py-1.5 text-slate-500 whitespace-nowrap">{fmtTime(a.created_at)}</td>
+                <tr key={a.id} className="hover:bg-muted/50">
+                  <td className="py-1.5 text-muted-foreground whitespace-nowrap">{fmtTime(a.created_at)}</td>
                   <td className="font-medium">{a.agent_code ?? "—"}</td>
-                  <td className="font-mono text-slate-500">{a.model ?? "—"}</td>
-                  <td className="text-slate-500">{a.total_tokens ?? "—"}</td>
-                  <td className="text-slate-500">{a.latency_ms ? `${a.latency_ms}ms` : "—"}</td>
-                  <td>
-                    <StatusPill status={a.status} />
-                  </td>
+                  <td className="font-mono text-muted-foreground">{a.model ?? "—"}</td>
+                  <td className="text-muted-foreground">{a.total_tokens ?? "—"}</td>
+                  <td className="text-muted-foreground">{a.latency_ms ? `${a.latency_ms}ms` : "—"}</td>
+                  <td><StatusPill status={a.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -406,13 +391,13 @@ function KpiCard({
 }) {
   const toneCls =
     tone === "warn"
-      ? "text-amber-600 dark:text-amber-400"
+      ? "text-primary"
       : tone === "ok"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-slate-900 dark:text-slate-100";
+      ? "text-emerald-500"
+      : "text-foreground";
   return (
-    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <div className="text-[11px] uppercase font-semibold text-slate-400">{label}</div>
+    <div className="p-4 rounded-xl border border-border bg-card">
+      <div className="text-[11px] uppercase font-semibold text-muted-foreground">{label}</div>
       <div className={`text-2xl font-bold mt-1 ${toneCls}`}>{value}</div>
     </div>
   );
@@ -420,8 +405,8 @@ function KpiCard({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[11px] uppercase font-semibold text-slate-400">
+    <div className="rounded-xl border border-border bg-card">
+      <div className="px-4 py-2 border-b border-border text-[11px] uppercase font-semibold text-muted-foreground">
         {title}
       </div>
       <div className="p-4">{children}</div>
@@ -432,13 +417,13 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
     ok: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-    error: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-    timeout: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    rate_limited: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-    blocked: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
+    error: "bg-destructive/10 text-destructive",
+    timeout: "bg-primary/10 text-primary",
+    rate_limited: "bg-primary/10 text-primary",
+    blocked: "bg-muted text-muted-foreground",
   };
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded ${map[status] ?? "bg-slate-100 text-slate-700"}`}>
+    <span className={`text-[10px] px-2 py-0.5 rounded ${map[status] ?? "bg-muted text-muted-foreground"}`}>
       {status}
     </span>
   );
@@ -450,7 +435,7 @@ function SkeletonRows() {
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="h-10 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse"
+          className="h-10 rounded-lg bg-muted animate-pulse"
         />
       ))}
     </div>
@@ -459,10 +444,10 @@ function SkeletonRows() {
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="max-w-3xl p-4 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-300">
+    <div className="max-w-3xl p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-sm text-destructive">
       <div className="font-semibold mb-1">Errore caricamento telemetria</div>
       <div className="text-xs font-mono">{message}</div>
-      <div className="text-[11px] text-rose-600 mt-2">
+      <div className="text-[11px] text-destructive/80 mt-2">
         Verifica che la migration Wave 6 sia stata applicata e che le RLS permettano la lettura.
       </div>
     </div>
@@ -473,8 +458,8 @@ function EmptyTelemetry({ label }: { label: string }) {
   return (
     <div className="max-w-md mx-auto text-center py-16">
       <div className="text-5xl mb-3">📡</div>
-      <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</div>
-      <div className="text-xs text-slate-500 mt-1">
+      <div className="text-sm font-medium text-foreground">{label}</div>
+      <div className="text-xs text-muted-foreground mt-1">
         Le metriche compariranno appena l'app viene utilizzata.
       </div>
     </div>

@@ -72,7 +72,7 @@ function formatPhone(phone: string): string {
 function Section({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={cn(
-      "bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl p-4 space-y-2",
+      "bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2",
       className
     )}>
       {children}
@@ -83,7 +83,7 @@ function Section({ children, className }: { children: React.ReactNode; className
 function SectionTitle({ icon: Icon, children }: { icon: any; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="w-3.5 h-3.5 text-violet-400" strokeWidth={1.5} />
+      <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
       <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{children}</p>
     </div>
   );
@@ -95,10 +95,10 @@ function ContactQuickActions({ contact: c }: { contact: Contact }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {c.email && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10"
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10"
           onClick={() => handleSendEmail({ email: c.email!, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined })}
         >
-          <Mail className="w-3.5 h-3.5 text-violet-400" />
+          <Mail className="w-3.5 h-3.5 text-primary" />
           <span className="truncate max-w-[180px]">{c.email}</span>
         </Button>
       )}
@@ -111,9 +111,9 @@ function ContactQuickActions({ contact: c }: { contact: Contact }) {
         </Button>
       )}
       {(c.phone || c.mobile) && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-violet-500/15 hover:bg-violet-500/10" asChild>
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10" asChild>
           <a href={`tel:${c.phone || c.mobile}`}>
-            <Phone className="w-3.5 h-3.5 text-violet-400" /> {c.phone || c.mobile}
+            <Phone className="w-3.5 h-3.5 text-primary" /> {c.phone || c.mobile}
           </a>
         </Button>
       )}
@@ -230,8 +230,8 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
       {/* Header — glassmorphism */}
       <Section className="space-y-3">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/15 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-violet-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/20 border border-primary/15 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-bold text-foreground truncate">
@@ -251,10 +251,10 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
               {c.contact_alias && c.name && c.contact_alias !== c.name && (
                 <span className="text-muted-foreground text-xs ml-1">({c.name})</span>
               )}
-              {c.position && <span className="text-violet-400"> • {c.position}</span>}
+              {c.position && <span className="text-primary"> • {c.position}</span>}
             </p>
             {(c.company_alias || c.contact_alias) && (
-              <Sparkles className="w-3 h-3 text-violet-400 shrink-0" />
+              <Sparkles className="w-3 h-3 text-primary shrink-0" />
             )}
           </div>
         )}
@@ -285,7 +285,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="h-8 text-xs gap-1.5 text-violet-400 border-violet-500/20 hover:bg-violet-500/10"
+            className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
             onClick={handleGenerateAlias}
             disabled={aliasLoading}
           >
@@ -306,9 +306,9 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5">
-        {c.origin && <Badge variant="outline" className="text-[10px] border-violet-500/15">{c.origin}</Badge>}
+        {c.origin && <Badge variant="outline" className="text-[10px] border-primary/15">{c.origin}</Badge>}
         {c.contact_alias && (
-          <Badge variant="secondary" className="text-[10px] bg-violet-500/10 text-violet-300 border-0">
+          <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
             <Sparkles className="w-2.5 h-2.5 mr-0.5" /> {c.contact_alias}
           </Badge>
         )}
@@ -317,7 +317,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
             <Search className="w-2.5 h-2.5 mr-0.5" /> Deep Search
           </Badge>
         )}
-        <Badge variant="outline" className="text-[10px] border-violet-500/15">
+        <Badge variant="outline" className="text-[10px] border-primary/15">
           {c.interaction_count} interazioni
         </Badge>
       </div>
@@ -393,7 +393,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 text-xs gap-1 text-violet-400 hover:bg-violet-500/10"
+            className="h-6 text-xs gap-1 text-primary hover:bg-primary/10"
             onClick={() => setShowNewInteraction(true)}
           >
             <Plus className="w-3 h-3" /> Aggiungi
@@ -404,10 +404,10 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
 
       {/* New interaction dialog */}
       <Dialog open={showNewInteraction} onOpenChange={setShowNewInteraction}>
-        <DialogContent className="max-w-sm bg-card border-violet-500/20">
+        <DialogContent className="max-w-sm bg-card border-primary/20">
           <DialogHeader>
             <DialogTitle className="text-sm flex items-center gap-2">
-              <Plus className="w-4 h-4 text-violet-400" /> Nuova Interazione
+              <Plus className="w-4 h-4 text-primary" /> Nuova Interazione
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -446,8 +446,9 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
             </Select>
           </div>
           <DialogFooter>
-            <Button size="sm" className="text-xs" onClick={handleAddInteraction} disabled={!newTitle.trim()}>
-              Salva
+            <Button size="sm" className="text-xs gap-1.5" onClick={handleAddInteraction} disabled={createInteraction.isPending}>
+              {createInteraction.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+              Registra
             </Button>
           </DialogFooter>
         </DialogContent>

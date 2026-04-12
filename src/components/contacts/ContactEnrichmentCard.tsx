@@ -13,19 +13,19 @@ interface ContactEnrichmentCardProps {
 
 const confidenceColors: Record<string, string> = {
   high: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
-  medium: "bg-amber-500/15 text-amber-400 border-amber-500/20",
-  low: "bg-red-500/15 text-red-400 border-red-500/20",
+  medium: "bg-primary/15 text-primary border-primary/20",
+  low: "bg-destructive/15 text-destructive border-destructive/20",
 };
 
 const seniorityColors: Record<string, string> = {
-  senior: "bg-amber-500/20 text-amber-200 border-amber-500/30",
-  mid: "bg-sky-500/20 text-sky-200 border-sky-500/30",
+  senior: "bg-primary/20 text-primary border-primary/30",
+  mid: "bg-muted text-muted-foreground border-border",
   junior: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
 };
 
 function SocialButton({ url, label, icon }: { url: string; label: string; icon: string }) {
   return (
-    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 border-violet-500/15 hover:bg-violet-500/10" asChild>
+    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 border-primary/15 hover:bg-primary/10" asChild>
       <a href={url} target="_blank" rel="noopener noreferrer">
         <span>{icon}</span> {label}
         <ExternalLink className="w-2.5 h-2.5 ml-0.5 opacity-50" />
@@ -74,10 +74,10 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
   if (!hasCompanyData && !hasContactProfile && !hasSocialLinks && !deepSearchAt) return null;
 
   return (
-    <div className="bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl p-4 space-y-3">
+    <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-violet-400" />
+        <Sparkles className="w-4 h-4 text-primary" />
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Enrichment</p>
         {confidence && (
           <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 ml-1", confidenceColors[confidence])}>
@@ -102,7 +102,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className={cn(
                   "w-2 h-2 rounded-full",
-                  i < websiteQuality ? "bg-violet-400" : "bg-muted-foreground/20"
+                  i < websiteQuality ? "bg-primary" : "bg-muted-foreground/20"
                 )} />
               ))}
               <span className="text-[10px] text-muted-foreground ml-1">Sito web</span>
@@ -124,8 +124,8 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
       {hasContactProfile && (
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-violet-500/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
-              <Briefcase className="w-3.5 h-3.5 text-violet-400" />
+            <div className="flex items-center gap-2 cursor-pointer hover:bg-primary/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
+              <Briefcase className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-foreground">Profilo Professionale</span>
               {contactProfile.seniority && (
                 <span className={cn(
@@ -141,14 +141,14 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
           <CollapsibleContent>
             <div className="space-y-2 mt-1.5 pl-1">
               {contactProfile.linkedin_title && (
-                <p className="text-[11px] text-violet-400 font-medium">{contactProfile.linkedin_title}</p>
+                <p className="text-[11px] text-primary font-medium">{contactProfile.linkedin_title}</p>
               )}
               {contactProfile.background && (
                 <p className="text-[11px] text-foreground leading-relaxed">{contactProfile.background}</p>
               )}
               <div className="flex flex-wrap gap-1">
                 {contactProfile.languages?.map((l: string, i: number) => (
-                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-sky-500/20 text-sky-200">{l}</span>
+                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">{l}</span>
                 ))}
                 {contactProfile.interests?.map((int: string, i: number) => (
                   <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-emerald-200">{int}</span>
@@ -168,8 +168,8 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
       {hasCompanyData && (
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-violet-500/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
-              <Globe2 className="w-3.5 h-3.5 text-violet-400" />
+            <div className="flex items-center gap-2 cursor-pointer hover:bg-primary/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
+              <Globe2 className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-foreground">Profilo Aziendale</span>
               <ChevronDown className="w-3 h-3 text-muted-foreground ml-auto" />
             </div>
@@ -193,7 +193,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               {companyProfile.specialties?.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {companyProfile.specialties.map((s: string, i: number) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-200 border border-violet-500/30">
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
                       {s}
                     </span>
                   ))}
@@ -205,7 +205,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                     const label = typeof a === "string" ? a : (a?.name || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
-                        <Award className="w-3 h-3 text-amber-500" />
+                        <Award className="w-3 h-3 text-primary" />
                         <span>{label}</span>
                       </div>
                     );
@@ -222,10 +222,10 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
 
       {/* Token consumption */}
       {tokensUsed && tokensUsed.credits_consumed > 0 && (
-        <div className="flex items-center gap-2 pt-1 border-t border-violet-500/10">
+        <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
           <Coins className={cn("w-3.5 h-3.5",
             tokensUsed.credits_consumed > 50 ? "text-destructive" :
-            tokensUsed.credits_consumed > 20 ? "text-amber-500" : "text-emerald-500"
+            tokensUsed.credits_consumed > 20 ? "text-primary" : "text-emerald-500"
           )} />
           <span className="text-[10px] text-muted-foreground">
             {tokensUsed.credits_consumed} crediti AI
