@@ -53,11 +53,11 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end p-4 pointer-events-none">
-      <div className={`pointer-events-auto w-[440px] max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl ${isDark ? "bg-slate-900/95 border-white/10 shadow-black/40" : "bg-white/95 border-slate-200 shadow-slate-300/50"} backdrop-blur-xl`}>
+      <div className={`pointer-events-auto w-[440px] max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl ${isDark ? "bg-card/95 border-border shadow-black/40" : "bg-card/95 border-border shadow-lg"} backdrop-blur-xl`}>
         {/* Header */}
-        <div className={`flex items-center gap-3 px-4 py-3 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}>
-          <div className={`p-1.5 rounded-lg ${isDark ? "bg-violet-500/20" : "bg-violet-50"}`}>
-            <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-500"}`} />
+        <div className={`flex items-center gap-3 px-4 py-3 border-b border-border`}>
+          <div className={`p-1.5 rounded-lg bg-primary/10`}>
+            <Sparkles className={`w-4 h-4 text-primary`} />
           </div>
           <div className="flex-1">
             <h3 className={`text-sm font-semibold ${th.h2}`}>Segretario Operativo AI</h3>
@@ -66,11 +66,11 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
           {chat.activePlans.length > 0 && <ActivePlansBadge plans={chat.activePlans} isDark={isDark} />}
           {chat.messages.length > 0 && (
             <button onClick={() => { chat.clearMessages(); voice.stopSpeaking(); voice.resetSpoken(); }}
-              className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-white/10 text-slate-500" : "hover:bg-slate-100 text-slate-400"}`} title="Nuova conversazione">
+              className={`p-1.5 rounded-lg transition-colors hover:bg-muted text-muted-foreground`} title="Nuova conversazione">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
-          <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-white/10 text-slate-400" : "hover:bg-slate-100 text-slate-500"}`}>
+          <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors hover:bg-muted text-muted-foreground`}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -79,12 +79,12 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
         <div ref={chat.scrollRef} className="flex-1 overflow-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[60vh]">
           {chat.messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
-              <Bot className={`w-12 h-12 ${isDark ? "text-white/10" : "text-slate-200"}`} />
+              <Bot className={`w-12 h-12 text-muted-foreground/20`} />
               <p className={`text-xs text-center ${th.sub}`}>Sono il tuo segretario operativo.<br />Ho memoria, creo piani e agisco sul sistema.</p>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 {quickPrompts.map(q => (
                   <button key={q} onClick={() => { voice.stopSpeaking(); chat.sendMessage(q); }}
-                    className={`text-[10px] px-2.5 py-1 rounded-full border transition-colors ${isDark ? "border-white/10 text-slate-400 hover:bg-white/5" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                    className={`text-[10px] px-2.5 py-1 rounded-full border transition-colors border-border text-muted-foreground hover:bg-muted`}>
                     {q}
                   </button>
                 ))}
@@ -96,8 +96,8 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
                 msg.role === "user"
-                  ? isDark ? "bg-violet-600/30 text-violet-100 border border-violet-500/20" : "bg-violet-50 text-violet-900 border border-violet-200"
-                  : isDark ? "bg-white/5 text-slate-200 border border-white/5" : "bg-slate-50 text-slate-800 border border-slate-200"
+                  ? "bg-primary/10 text-foreground border border-primary/20"
+                  : "bg-muted/30 text-foreground border border-border"
               }`}>
                 {msg.role === "assistant" ? (() => {
                   const parsed = parseAiAgentResponse<StructuredPartner>(msg.content);
@@ -106,7 +106,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                       <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1">
                         <ReactMarkdown components={{
                           a: ({ href, children }) => href?.startsWith("/")
-                            ? <button className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
+                            ? <button className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
                             : <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
                         }}>{parsed.text}</ReactMarkdown>
                       </div>
@@ -121,7 +121,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
 
           {chat.isLoading && chat.messages[chat.messages.length - 1]?.role !== "assistant" && (
             <div className="flex justify-start">
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-white/5 text-slate-400 border border-white/5" : "bg-slate-50 text-slate-500 border border-slate-200"}`}>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-muted/30 text-muted-foreground border border-border`}>
                 <Loader2 className="w-3 h-3 animate-spin" /> Sto analizzando...
               </div>
             </div>
@@ -129,37 +129,37 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
         </div>
 
         {/* Voice bar */}
-        <div className={`px-3 py-1.5 border-t flex items-center gap-2 ${isDark ? "border-white/5" : "border-slate-100"}`}>
+        <div className={`px-3 py-1.5 border-t flex items-center gap-2 border-border`}>
           <button onClick={() => { voice.setVoiceEnabled(!voice.voiceEnabled); if (voice.voiceEnabled) voice.stopSpeaking(); }}
             className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
-              voice.voiceEnabled ? (isDark ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "bg-violet-50 text-violet-700 border border-violet-200")
-                : (isDark ? "bg-white/5 text-slate-500 border border-white/10" : "bg-slate-50 text-slate-400 border border-slate-200")
+              voice.voiceEnabled ? "bg-primary/10 text-primary border border-primary/30"
+                : "bg-muted text-muted-foreground border border-border"
             }`}>
             🔊 {voice.voiceEnabled ? "On" : "Off"}
           </button>
           {voice.voiceEnabled && (
             <select value={voice.selectedVoice} onChange={e => voice.setSelectedVoice(e.target.value)}
-              className={`text-[10px] rounded-lg px-2 py-1 border ${isDark ? "bg-white/5 border-white/10 text-slate-300" : "bg-white border-slate-200 text-slate-600"}`}>
+              className={`text-[10px] rounded-lg px-2 py-1 border bg-card border-border text-foreground`}>
               {VOICES.map(v => <option key={v.id} value={v.id}>{v.lang} {v.name}</option>)}
             </select>
           )}
         </div>
 
         {/* Input */}
-        <div className={`px-3 py-2 border-t ${isDark ? "border-white/10" : "border-slate-200"}`}>
+        <div className={`px-3 py-2 border-t border-border`}>
           <div className="flex items-end gap-2">
             <textarea ref={chat.inputRef} rows={1} value={chat.input} onChange={e => chat.setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); voice.stopSpeaking(); chat.sendMessage(chat.input); } }}
               placeholder="Scrivi un messaggio..."
-              className={`flex-1 resize-none rounded-xl px-3 py-2 text-xs border transition-colors ${isDark ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500/50" : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400"} outline-none`} />
+              className={`flex-1 resize-none rounded-xl px-3 py-2 text-xs border transition-colors bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary/50 outline-none`} />
             {voice.hasSpeechAPI && (
               <button onClick={() => voice.toggleListening((text) => { voice.stopSpeaking(); chat.sendMessage(text); })}
-                className={`p-2 rounded-xl transition-colors ${voice.isListening ? (isDark ? "bg-red-500/20 text-red-400" : "bg-red-50 text-red-500") : (isDark ? "hover:bg-white/10 text-slate-500" : "hover:bg-slate-100 text-slate-400")}`}>
+                className={`p-2 rounded-xl transition-colors ${voice.isListening ? "bg-destructive/20 text-destructive" : "hover:bg-muted text-muted-foreground"}`}>
                 {voice.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
             )}
             <button onClick={() => { voice.stopSpeaking(); chat.sendMessage(chat.input); }} disabled={!chat.input.trim() || chat.isLoading}
-              className={`p-2 rounded-xl transition-colors ${isDark ? "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 disabled:opacity-30" : "bg-violet-500 text-white hover:bg-violet-600 disabled:opacity-30"}`}>
+              className={`p-2 rounded-xl transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30`}>
               <Send className="w-4 h-4" />
             </button>
           </div>

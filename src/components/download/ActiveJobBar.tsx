@@ -74,9 +74,9 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
           <div className="flex items-center gap-2 min-w-0">
             {isRunning && isStalled ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                isDark ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-red-50 text-red-700 border border-red-200"
+                isDark ? "bg-destructive/20 text-destructive border border-destructive/30" : "bg-destructive/10 text-destructive border border-destructive/20"
               }`}>
-                <span className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="w-2 h-2 rounded-full bg-destructive" />
                 BLOCCATO
               </span>
             ) : isRunning ? (
@@ -88,27 +88,27 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
               </span>
             ) : isPending ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                isDark ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-blue-50 text-blue-700 border border-blue-200"
+                isDark ? "bg-muted text-muted-foreground border border-border" : "bg-muted text-muted-foreground border border-border"
               }`}>
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground" />
                 IN ATTESA
               </span>
             ) : isPaused ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                isDark ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                isDark ? "bg-primary/20 text-primary border border-primary/30" : "bg-primary/10 text-primary border border-primary/20"
               }`}>
-                <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span className="w-2 h-2 rounded-full bg-primary" />
                 IN PAUSA
               </span>
             ) : null}
-            <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+            <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-primary/20 text-primary border border-primary/30" : "bg-primary/10 text-primary border border-primary/20"}`}>
               🤖 Claude V8
             </span>
           </div>
 
           {/* Big percentage — centered */}
           <div className="flex-1 text-center">
-            <span className={`text-2xl font-black font-mono ${isDark ? "text-amber-400" : "text-sky-600"}`}>
+            <span className={`text-2xl font-black font-mono text-primary`}>
               {Math.round(progress)}%
             </span>
           </div>
@@ -119,7 +119,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
               <Button
                 size="sm"
                 onClick={handleResetJob}
-                className={`h-7 text-xs px-3 ${isDark ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-400 text-white"}`}
+                className={`h-7 text-xs px-3 bg-destructive hover:bg-destructive/90 text-destructive-foreground`}
               >
                 <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
               </Button>
@@ -181,9 +181,9 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
         </div>
 
         {/* Row 2: Full-width progress bar */}
-        <div className={`mt-2 w-full h-2.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
+        <div className={`mt-2 w-full h-2.5 rounded-full bg-muted`}>
           <div
-            className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`}
+            className={`h-full rounded-full transition-all bg-primary`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -215,19 +215,19 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
             </>
           )}
           {isRunning && (
-            <Loader2 className={`w-3 h-3 animate-spin ml-1 ${isDark ? "text-amber-400" : "text-sky-500"}`} />
+            <Loader2 className={`w-3 h-3 animate-spin ml-1 text-primary`} />
           )}
         </div>
 
         {mainJob.error_message && (
-          <div className={`mt-1 text-[10px] truncate ${isDark ? "text-amber-300/80" : "text-amber-600"}`}>
+          <div className={`mt-1 text-[10px] truncate ${isDark ? "text-primary/80" : "text-primary"}`}>
             ⚠ {mainJob.error_message}
           </div>
         )}
 
         {/* Expanded: other jobs */}
         {expanded && activeJobs.length > 1 && (
-          <div className={`mt-2 pt-2 border-t space-y-2 ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+          <div className={`mt-2 pt-2 border-t space-y-2 border-border`}>
             {activeJobs.slice(1).map((job) => (
               <ExpandedJobRow key={job.id} job={job} pauseResume={pauseResume} isDark={isDark} th={th} />
             ))}
@@ -253,7 +253,7 @@ function ExpandedJobRow({
   return (
     <div className="flex items-center gap-3">
       <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-        isRunning ? `animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}` : "bg-yellow-400"
+        isRunning ? `animate-pulse bg-primary` : "bg-primary/60"
       }`} />
       <span className={`text-xs flex-shrink-0 ${th.body}`}>
         {getCountryFlag(job.country_code)} {job.country_name}
@@ -261,9 +261,9 @@ function ExpandedJobRow({
       <span className={`text-[11px] font-mono ${th.dim}`}>
         {Math.round(progress)}%
       </span>
-      <div className={`flex-1 h-1 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
+      <div className={`flex-1 h-1 rounded-full bg-muted`}>
         <div
-          className={`h-full rounded-full ${isDark ? "bg-amber-500" : "bg-sky-500"}`}
+          className={`h-full rounded-full bg-primary`}
           style={{ width: `${progress}%` }}
         />
       </div>

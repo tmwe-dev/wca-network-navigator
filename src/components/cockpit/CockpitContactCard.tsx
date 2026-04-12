@@ -81,7 +81,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
   wca: { label: "WCA", bg: "bg-chart-1/15", text: "text-chart-1", border: "border-chart-1/30", dot: "bg-chart-1" },
   report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", border: "border-chart-4/30", dot: "bg-chart-4" },
   import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", border: "border-chart-3/30", dot: "bg-chart-3" },
-  bca: { label: "BCA", bg: "bg-amber-500/15", text: "text-amber-500", border: "border-amber-500/30", dot: "bg-amber-500" },
+  bca: { label: "BCA", bg: "bg-primary/15", text: "text-primary", border: "border-primary/30", dot: "bg-primary" },
   manual: { label: "Manuale", bg: "bg-emerald-500/15", text: "text-emerald-500", border: "border-emerald-500/30", dot: "bg-emerald-500" },
 };
 
@@ -89,7 +89,7 @@ const originAccent: Record<ContactOrigin, string> = {
   wca: "from-chart-1/60 to-chart-1/10",
   report_aziende: "from-chart-4/60 to-chart-4/10",
   import: "from-chart-3/60 to-chart-3/10",
-  bca: "from-amber-500/60 to-amber-500/10",
+  bca: "from-primary/60 to-primary/10",
   manual: "from-emerald-500/60 to-emerald-500/10",
 };
 
@@ -209,17 +209,17 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         className={cn(
           "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 transition-all duration-300 hover:shadow-lg overflow-hidden",
           isProcessing
-            ? "border-[hsl(210,80%,55%)]/40 bg-[hsl(210,80%,55%)]/[0.03] shadow-sm shadow-[hsl(210,80%,55%)]/5 cursor-default animate-soft-pulse"
+            ? "border-muted-foreground/40 bg-muted/[0.03] shadow-sm cursor-default animate-soft-pulse"
             : isWorked
             ? "border-emerald-500/60 bg-emerald-500/5 cursor-grab active:cursor-grabbing"
             : isAiProcessed
-            ? "border-amber-400/30 bg-amber-500/[0.08] cursor-grab active:cursor-grabbing hover:border-amber-400/50 hover:shadow-amber-500/10"
+            ? "border-primary/30 bg-primary/[0.08] cursor-grab active:cursor-grabbing hover:border-primary/50"
             : "cursor-grab active:cursor-grabbing",
           !isProcessing && !isWorked && !isAiProcessed && (
             contact.origin === "bca"
               ? isSelected
-                ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10"
-                : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
+                ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
+                : "border-primary/30 hover:border-primary/50"
               : isSelected
                 ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
                 : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
@@ -229,7 +229,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         {/* Left accent bar */}
         <div className={cn(
           "absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l-xl",
-          isAiProcessed ? "from-amber-400/80 to-amber-500/20"
+          isAiProcessed ? "from-primary/80 to-primary/20"
             : isWorked ? "from-emerald-500/80 to-emerald-500/20"
             : originAccent[contact.origin]
         )} />
@@ -254,11 +254,11 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                  {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                   <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                    className={cn("flex items-center gap-0.5 rounded-md p-0.5 transition-colors", hasAnyData ? "hover:bg-amber-500/10" : "hover:bg-muted/50")}
+                    className={cn("flex items-center gap-0.5 rounded-md p-0.5 transition-colors", hasAnyData ? "hover:bg-primary/10" : "hover:bg-muted/50")}
                   >
                     {isExpanded ? <ChevronUp className="w-2.5 h-2.5 text-muted-foreground" /> : <ChevronDown className="w-2.5 h-2.5 text-muted-foreground" />}
                   </button>
@@ -272,8 +272,8 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                 <div className="flex items-center gap-1">
                   {hasAnyData && (
                     <InfoTooltip content="Enrichment AI completato">
-                      <span className="p-0.5 rounded bg-amber-500/10">
-                        <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span className="p-0.5 rounded bg-primary/10">
+                        <Sparkles className="w-3 h-3 text-primary" />
                       </span>
                     </InfoTooltip>
                   )}
@@ -319,14 +319,14 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
             {/* AI headline preview (collapsed) */}
             {contactHeadline && !isExpanded && (
               <div className="flex items-center gap-1">
-                <Briefcase className="w-2.5 h-2.5 text-amber-400/70 shrink-0" />
+                <Briefcase className="w-2.5 h-2.5 text-primary/70 shrink-0" />
                 <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{contactHeadline}</span>
               </div>
             )}
 
             {/* Processing phase */}
             {isProcessing && enrichmentState?.scrapingPhase && (
-              <div className="text-[10px] font-medium text-[hsl(210,80%,55%)]">
+              <div className="text-[10px] font-medium text-muted-foreground">
                 {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
               </div>
             )}
@@ -391,8 +391,8 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
               <div className="mt-3 pt-3 border-t border-border/40 space-y-3">
                 {/* Live LinkedIn data */}
                 {hasLiveLinkedin && enrichmentState?.linkedinProfile && (
-                  <div className="rounded-lg border border-[hsl(210,80%,55%)]/30 bg-[hsl(210,80%,55%)]/[0.05] p-2.5 space-y-1">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(210,80%,55%)]">
+                   <div className="rounded-lg border border-muted-foreground/30 bg-muted/[0.05] p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
                       <Linkedin className="w-3 h-3" /> Dati LinkedIn Live
                     </div>
                     {enrichmentState.linkedinProfile.name && (

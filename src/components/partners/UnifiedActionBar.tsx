@@ -87,18 +87,18 @@ export function UnifiedActionBar({
 
   if (!isVisible) return null;
 
-  const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground";
+  const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-primary/10 hover:text-foreground";
 
   return (
     <>
-      <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
+      <div className="px-3 py-1.5 border-b border-primary/15 bg-gradient-to-r from-primary/[0.06] to-primary/[0.04] backdrop-blur-xl shrink-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Context label */}
           {isBulk && (
-            <span className="text-xs font-semibold text-violet-300 mr-1">{selectedIds.size} sel.</span>
+            <span className="text-xs font-semibold text-primary mr-1">{selectedIds.size} sel.</span>
           )}
           {isSingle && (
-            <span className="text-xs font-semibold text-violet-300 mr-1 truncate max-w-[140px]">
+            <span className="text-xs font-semibold text-primary mr-1 truncate max-w-[140px]">
               {focusedPartner.company_name}
             </span>
           )}
@@ -121,7 +121,7 @@ export function UnifiedActionBar({
               {needsEnrichment && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-background" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary border border-background" />
                   </TooltipTrigger>
                   <TooltipContent className="text-xs">Alias o enrichment mancante — Deep Search consigliata</TooltipContent>
                 </Tooltip>
@@ -132,7 +132,7 @@ export function UnifiedActionBar({
           {/* Deep Search progress */}
           {(deepSearching || singleDeepSearching) && (
             <>
-              <span className="text-[11px] flex items-center gap-1 text-violet-300">
+              <span className="text-[11px] flex items-center gap-1 text-primary">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 {deepSearchProgress ? `${deepSearchProgress.current}/${deepSearchProgress.total}` : "..."}
               </span>
@@ -180,7 +180,7 @@ export function UnifiedActionBar({
           {/* Clear — solo bulk */}
           {isBulk && (
             <button onClick={onClearSelection}
-              className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400"
+              className="ml-auto hover:bg-primary/20 rounded-full p-0.5 transition-colors text-primary"
               disabled={deepSearching}>
               <X className="w-3.5 h-3.5" />
             </button>
@@ -190,10 +190,10 @@ export function UnifiedActionBar({
 
       {/* Note Dialog */}
       <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-card border-violet-500/20">
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
           <DialogHeader>
             <DialogTitle className="text-sm flex items-center gap-2">
-              <StickyNote className="w-4 h-4 text-violet-400" />
+              <StickyNote className="w-4 h-4 text-primary" />
               Nota — {focusedPartner?.company_name}
             </DialogTitle>
           </DialogHeader>
@@ -201,7 +201,7 @@ export function UnifiedActionBar({
             placeholder="Scrivi una nota su questo partner..."
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            className="min-h-[80px] bg-card/60 border-violet-500/10 text-sm"
+            className="min-h-[80px] bg-card/60 border-primary/10 text-sm"
             rows={3}
           />
           <DialogFooter>
