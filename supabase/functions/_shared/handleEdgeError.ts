@@ -25,13 +25,18 @@ const STATUS_MAP: Record<ErrorCode, number> = {
   INTERNAL_ERROR: 500,
 };
 
-export function edgeError(code: ErrorCode, message: string, details?: string): Response {
+export function edgeError(
+  code: ErrorCode,
+  message: string,
+  details?: string,
+  customHeaders?: Record<string, string>,
+): Response {
   const status = STATUS_MAP[code];
   const body: EdgeErrorResponse = { error: message, code };
   if (details) body.details = details;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...(customHeaders || corsHeaders), "Content-Type": "application/json" },
   });
 }
 
