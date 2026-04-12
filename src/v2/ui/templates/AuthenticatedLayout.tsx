@@ -2,7 +2,7 @@
  * AuthenticatedLayout template — Full sidebar with all nav items
  */
 import * as React from "react";
-import { useEffect } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,11 @@ import {
   ArrowUpDown, Cpu, Cog, Upload, Send, Menu, X,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
-import { useState } from "react";
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
+import { MissionProvider } from "@/contexts/MissionContext";
+
+const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then((m) => ({ default: m.MissionDrawer })));
+const FiltersDrawer = lazy(() => import("@/components/global/FiltersDrawer").then((m) => ({ default: m.FiltersDrawer })));
 
 // ── Sidebar nav items (grouped) ──────────────────────────────────────
 
