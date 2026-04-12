@@ -135,7 +135,7 @@ export function useCockpitLogic() {
         case "select_where": {
           const { field, operator, value } = action;
           selection.selectWhere((c: CockpitContact) => {
-            const fieldVal = (c as Record<string, unknown>)[field!];
+            const fieldVal = (c as unknown as Record<string, unknown>)[field!];
             if (operator === ">=") return (fieldVal as number) >= (value as number);
             if (operator === "==") return fieldVal === value;
             if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);

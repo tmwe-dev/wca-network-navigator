@@ -175,19 +175,20 @@ export function useWhatsAppAdaptiveSync() {
       const timestamp = normalizeWhatsAppTimestamp(rawTime) || new Date().toISOString();
       const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
 
+      const row = {
+        user_id: sessionUserId,
+        channel: "whatsapp",
+        direction: finalDirection,
+        from_address: finalDirection === "outbound" ? undefined : contact,
+        to_address: finalDirection === "outbound" ? contact : undefined,
+        body_text: text,
+        message_id_external: extId,
+        raw_payload: msg as unknown as Record<string, unknown>,
+        created_at: timestamp,
+      };
       const { error, status } = await supabase
         .from("channel_messages")
-        .upsert({
-          user_id: sessionUserId,
-          channel: "whatsapp",
-          direction: finalDirection,
-          from_address: finalDirection === "outbound" ? undefined : contact,
-          to_address: finalDirection === "outbound" ? contact : undefined,
-          body_text: text,
-          message_id_external: extId,
-          raw_payload: msg as Record<string, unknown>,
-          created_at: timestamp,
-        }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+        .upsert(row, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
       if (!error && status === 201) {
         newCount++;

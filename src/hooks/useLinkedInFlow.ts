@@ -113,7 +113,7 @@ export function useLinkedInFlow() {
     const items = await findPendingFlowItems(jobId);
     if (items.length === 0) { await finalizeJob(jobId); return; }
 
-    const jobData = await getLinkedInFlowJobField(jobId, "config") as Record<string, unknown> | null;
+    const jobData = (await getLinkedInFlowJobField(jobId, "config")) as unknown as Record<string, unknown> | null;
     const jobConfig = (jobData?.config as Record<string, unknown>) || {};
 
     for (let idx = 0; idx < items.length; idx++) {
@@ -279,7 +279,7 @@ export function useLinkedInFlow() {
   const resumeFlow = useCallback(async () => {
     if (!activeJobId) return;
     abortRef.current = false; runningRef.current = true; setPhase("scraping");
-    const job = await getLinkedInFlowJobField(activeJobId, "delay_seconds") as Record<string, unknown> | null;
+    const job = (await getLinkedInFlowJobField(activeJobId, "delay_seconds")) as unknown as Record<string, unknown> | null;
     await updateLinkedInFlowJob(activeJobId, { status: "running" });
     processLoop(activeJobId, (job?.delay_seconds as number) || 15);
   }, [activeJobId, processLoop]);
