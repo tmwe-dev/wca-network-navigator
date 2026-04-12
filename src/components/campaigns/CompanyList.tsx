@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
@@ -60,7 +60,7 @@ function useBcaDetails(partnerIds: string[]) {
         .select("matched_partner_id, contact_name, event_name, met_at")
         .in("matched_partner_id", partnerIds);
       const map: Record<string, { contact_name: string | null; event_name: string | null; met_at: string | null }> = {};
-      (data ?? []).forEach((bc: any) => {
+      (data ?? []).forEach((bc) => {
         if (bc.matched_partner_id && !map[bc.matched_partner_id]) {
           map[bc.matched_partner_id] = { contact_name: bc.contact_name, event_name: bc.event_name, met_at: bc.met_at };
         }
@@ -93,6 +93,7 @@ export function CompanyList({
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
+  const listParentRef = useRef<HTMLDivElement>(null);
 
   // Get BCA details for visible partners
   const partnerIdsWithBca = useMemo(() => {
@@ -186,6 +187,13 @@ export function CompanyList({
       setSortAsc(field !== "contacts"); // contacts default desc
     }
   }, [sortField]);
+
+  const virtualizer = useVirtualizer({
+    count: filteredPartners.length,
+    getScrollElement: () => listParentRef.current,
+    estimateSize: () => 80,
+    overscan: 10,
+  });
 
   return (
     <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
@@ -289,28 +297,35 @@ export function CompanyList({
         )}
       </div>
 
-      {/* Partner List */}
-      <ScrollArea className="flex-1">
-        <div className="divide-y divide-border/50">
-          {filteredPartners.length === 0 ? (
-            <div className="p-8 text-center">
-              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-muted-foreground">
-                {partners.length === 0 
-                  ? "Clicca su un paese nel globo per vedere le aziende"
-                  : "Nessuna azienda corrisponde ai filtri"
-                }
-              </p>
-            </div>
-          ) : (
-            filteredPartners.map((partner) => {
+      {/* Virtualized Partner List */}
+      <div ref={listParentRef} className="flex-1 overflow-auto">
+        {filteredPartners.length === 0 ? (
+          <div className="p-8 text-center">
+            <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-muted-foreground">
+              {partners.length === 0 
+                ? "Clicca su un paese nel globo per vedere le aziende"
+                : "Nessuna azienda corrisponde ai filtri"
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const partner = filteredPartners[virtualItem.index];
               const hasBca = partner.is_bca || bcaPartnerIds?.has(partner.id);
               const bcaInfo = bcaDetails[partner.id];
               const contacts = contactsMap[partner.id] || [];
               const isExpanded = expandedPartners.has(partner.id);
 
               return (
-                <div key={partner.id}>
+                <div
+                  key={partner.id}
+                  ref={virtualizer.measureElement}
+                  data-index={virtualItem.index}
+                  className="absolute left-0 w-full border-b border-border/50"
+                  style={{ top: virtualItem.start }}
+                >
                   {/* Partner row */}
                   <div
                     className={cn(
@@ -456,12 +471,11 @@ export function CompanyList({
                   )}
                 </div>
               );
-            })
-          )}
-        </div>
-      </ScrollArea>
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* Footer */}
       {(selectedCount > 0 || selectedContactCount > 0) && (
         <div className="p-4 border-t border-border">
           <Button onClick={onAddToCampaign} className="w-full space-button-primary">
