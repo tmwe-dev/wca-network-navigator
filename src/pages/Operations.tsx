@@ -102,11 +102,23 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   const [internalView, setInternalView] = useState<"partners" | "bca">("partners");
   const networkView = activeView ?? internalView;
   const setNetworkView = activeView ? (() => {}) as any : setInternalView;
-  const [isDark, setIsDark] = useState(() => {
-    const s = localStorage.getItem("dl_theme");
-    return s !== null ? s === "dark" : true;
-  });
-  const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  // Sync with external theme changes (e.g. from V2 sidebar toggle)
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("dl_theme", next ? "dark" : "light");
+    setIsDark(next);
+  };
   const isMobile = useIsMobile();
 
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);

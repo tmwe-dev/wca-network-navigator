@@ -46,12 +46,8 @@ import { OperatorSelector } from "@/components/header/OperatorSelector";
 
 // ── Global overlays (lazy loaded) ──
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
-import { ConnectionBanner } from "@/components/system/ConnectionBanner";
-import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
-import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
 
 const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
-const RuntimeDiagnosticPanel = lazy(() => import("@/components/system/RuntimeDiagnosticPanel").then(m => ({ default: m.RuntimeDiagnosticPanel })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
 const FiltersDrawer = lazy(() => import("@/components/global/FiltersDrawer").then(m => ({ default: m.FiltersDrawer })));
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
@@ -383,14 +379,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                 <GlobalFiltersProvider>
                   <MissionProvider>
                     {/* Global system components */}
-                    <ViteChunkRecovery />
-                    <BackgroundSyncIndicator />
-                    <ConnectionBanner />
                     <SonnerToaster position="top-right" richColors closeButton />
                     <Toaster />
-                    <Suspense fallback={null}>
-                      <RuntimeDiagnosticPanel />
-                    </Suspense>
 
                     <div className="flex h-screen bg-background">
                       {/* Desktop sidebar — glass-morphism */}
