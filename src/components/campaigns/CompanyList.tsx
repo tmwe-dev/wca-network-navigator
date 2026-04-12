@@ -297,28 +297,35 @@ export function CompanyList({
         )}
       </div>
 
-      {/* Partner List */}
-      <ScrollArea className="flex-1">
-        <div className="divide-y divide-border/50">
-          {filteredPartners.length === 0 ? (
-            <div className="p-8 text-center">
-              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-muted-foreground">
-                {partners.length === 0 
-                  ? "Clicca su un paese nel globo per vedere le aziende"
-                  : "Nessuna azienda corrisponde ai filtri"
-                }
-              </p>
-            </div>
-          ) : (
-            filteredPartners.map((partner) => {
+      {/* Virtualized Partner List */}
+      <div ref={listParentRef} className="flex-1 overflow-auto">
+        {filteredPartners.length === 0 ? (
+          <div className="p-8 text-center">
+            <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-muted-foreground">
+              {partners.length === 0 
+                ? "Clicca su un paese nel globo per vedere le aziende"
+                : "Nessuna azienda corrisponde ai filtri"
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const partner = filteredPartners[virtualItem.index];
               const hasBca = partner.is_bca || bcaPartnerIds?.has(partner.id);
               const bcaInfo = bcaDetails[partner.id];
               const contacts = contactsMap[partner.id] || [];
               const isExpanded = expandedPartners.has(partner.id);
 
               return (
-                <div key={partner.id}>
+                <div
+                  key={partner.id}
+                  ref={virtualizer.measureElement}
+                  data-index={virtualItem.index}
+                  className="absolute left-0 w-full border-b border-border/50"
+                  style={{ top: virtualItem.start }}
+                >
                   {/* Partner row */}
                   <div
                     className={cn(
@@ -464,10 +471,9 @@ export function CompanyList({
                   )}
                 </div>
               );
-            })
-          )}
-        </div>
-      </ScrollArea>
+            })}
+          </div>
+        )}
 
       {/* Footer */}
       {(selectedCount > 0 || selectedContactCount > 0) && (
