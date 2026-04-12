@@ -87,7 +87,8 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
 
   const location = useLocation();
   const currentPage = location.pathname;
-  const isCockpit = currentPage === "/outreach";
+  const seg = currentPage.replace(/^\/v2/, "");
+  const isCockpit = seg === "/outreach";
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
