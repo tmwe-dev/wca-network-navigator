@@ -7,12 +7,12 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const roleBadgeColor: Record<string, string> = {
-  account: "bg-blue-500/20 text-blue-400",
-  strategy: "bg-amber-500/20 text-amber-400",
+  account: "bg-primary/20 text-primary",
+  strategy: "bg-primary/20 text-primary",
   sales: "bg-emerald-500/20 text-emerald-400",
-  research: "bg-violet-500/20 text-violet-400",
-  download: "bg-cyan-500/20 text-cyan-400",
-  outreach: "bg-rose-500/20 text-rose-400",
+  research: "bg-muted text-muted-foreground",
+  download: "bg-muted text-muted-foreground",
+  outreach: "bg-primary/20 text-primary",
 };
 
 interface Props {

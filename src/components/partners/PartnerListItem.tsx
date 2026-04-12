@@ -100,7 +100,7 @@ export function PartnerListItem({
                 </div>
                 {contactEmail && (
                   <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 text-[11px] text-sky-400 hover:underline truncate ml-[18px]">
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:underline truncate ml-[18px]">
                     <Mail className="w-3 h-3 shrink-0" />{contactEmail}
                   </a>
                 )}
@@ -124,7 +124,7 @@ export function PartnerListItem({
                 return (
                   <Tooltip key={i}>
                     <TooltipTrigger>
-                      <Icon className="w-3.5 h-3.5 text-sky-500/70" strokeWidth={1.5} />
+                      <Icon className="w-3.5 h-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                     </TooltipTrigger>
                     <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                   </Tooltip>
@@ -137,7 +137,7 @@ export function PartnerListItem({
           {networks.length > 0 && (
             <div className="flex items-center gap-1 mt-1">
               {networks.slice(0, 3).map((n: any) => (
-                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/[0.08] text-amber-500/80 font-medium truncate max-w-[80px]">
+                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
                   {n.network_name.replace("WCA ", "").substring(0, 10)}
                 </span>
               ))}
@@ -174,7 +174,7 @@ export function PartnerListItem({
           {hasDeepSearch && (
             <Tooltip>
               <TooltipTrigger>
-                <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
+                <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
               </TooltipTrigger>
               <TooltipContent>
                 Deep Search — {format(new Date(enrichment!.deep_search_at!), "d MMM yyyy", { locale: it })}

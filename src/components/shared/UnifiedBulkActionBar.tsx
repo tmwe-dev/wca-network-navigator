@@ -47,12 +47,12 @@ export function UnifiedBulkActionBar({
 }: UnifiedBulkActionBarProps) {
   if (count === 0) return null;
 
-  const btn = "h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100";
+  const btn = "h-6 px-2 text-[11px] gap-1 text-primary hover:bg-primary/15 hover:text-primary";
 
   return (
-    <div className="px-3 py-1.5 border-b border-violet-500/15 bg-violet-500/[0.06] backdrop-blur-xl shrink-0">
+    <div className="px-3 py-1.5 border-b border-primary/15 bg-primary/[0.06] backdrop-blur-xl shrink-0">
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs font-semibold text-violet-300">{count} sel.</span>
+        <span className="text-xs font-semibold text-primary">{count} sel.</span>
 
         {onWorkspace && (
           <Tooltip><TooltipTrigger asChild>
@@ -144,7 +144,7 @@ export function UnifiedBulkActionBar({
           </TooltipTrigger><TooltipContent className="text-xs">Elimina selezionati</TooltipContent></Tooltip>
         )}
 
-        <button onClick={onClear} className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
+        <button onClick={onClear} className="ml-auto hover:bg-primary/20 rounded-full p-0.5 transition-colors text-primary">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>

@@ -30,11 +30,11 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  primo_contatto: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  follow_up: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  richiesta: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  primo_contatto: "bg-primary/10 text-primary border-primary/20",
+  follow_up: "bg-primary/10 text-primary border-primary/20",
+  richiesta: "bg-muted text-muted-foreground border-border",
   proposta_servizi: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  partnership: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+  partnership: "bg-muted text-muted-foreground border-border",
   altro: "bg-muted text-muted-foreground border-border",
 };
 
@@ -216,7 +216,7 @@ export function PromptManager() {
   }, [allPrompts]);
 
   const sourceLabel = (s: string) => s === "email_type" ? "Tipo Email" : s === "goal" ? "Goal" : "Proposta";
-  const sourceColor = (s: string) => s === "email_type" ? "bg-primary/10 text-primary" : s === "goal" ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600";
+  const sourceColor = (s: string) => s === "email_type" ? "bg-primary/10 text-primary" : s === "goal" ? "bg-primary/10 text-primary" : "bg-emerald-500/10 text-emerald-600";
 
   return (
     <div className="space-y-4">

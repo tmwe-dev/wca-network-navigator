@@ -118,7 +118,7 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
     <div className="flex items-center gap-2.5 px-3 py-2">
       <div className={cn(
         "flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center",
-        isPaused ? "bg-amber-500/15 text-amber-500" : "bg-primary/10 text-primary"
+        isPaused ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary"
       )}>
         {isPaused ? <Pause className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
       </div>
@@ -134,14 +134,14 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
-                isPaused ? "bg-amber-500" : "bg-primary"
+                isPaused ? "bg-primary" : "bg-primary"
               )}
               style={{ width: `${process.progress}%` }}
             />
           </div>
         )}
         {process.errorMessage && isPaused && (
-          <p className="text-[10px] text-amber-500 mt-0.5 truncate">{process.errorMessage}</p>
+          <p className="text-[10px] text-primary mt-0.5 truncate">{process.errorMessage}</p>
         )}
       </div>
 
@@ -169,7 +169,7 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
         <span className={cn(
           "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full",
           isPaused
-            ? "bg-amber-500/15 text-amber-500"
+            ? "bg-primary/15 text-primary"
             : process.status === "running"
               ? "bg-emerald-500/15 text-emerald-500"
               : "bg-muted text-muted-foreground"

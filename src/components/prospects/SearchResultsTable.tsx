@@ -38,7 +38,7 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
         <button onClick={onSelectAll} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}>
           <CheckCheck className="w-3 h-3 inline mr-1" />Tutti
         </button>
-        <button onClick={onSelectNew} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-sky-500/15 hover:bg-sky-500/25 text-sky-300" : "bg-sky-50 hover:bg-sky-100 text-sky-600"}`}>
+        <button onClick={onSelectNew} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-primary/15 hover:bg-primary/25 text-primary" : "bg-primary/10 hover:bg-primary/15 text-primary"}`}>
           Solo nuovi ({newCount})
         </button>
         <button onClick={onDeselectAll} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-400" : "bg-slate-100 hover:bg-slate-200 text-slate-500"}`}>
@@ -57,7 +57,7 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
             <Database className="w-3 h-3" />
             {showInDb ? `Mostra in DB (${inDbCount})` : `Nascosti (${inDbCount})`}
           </button>
-          <Badge variant="outline" className={`text-[10px] ${isDark ? "border-sky-500/30 text-sky-400" : "border-sky-200 text-sky-600"}`}>
+          <Badge variant="outline" className={`text-[10px] ${isDark ? "border-primary/30 text-primary" : "border-primary/20 text-primary"}`}>
             {selected.size} selezionati
           </Badge>
         </div>
@@ -72,12 +72,12 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
               onClick={() => onToggle(r.url)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all ${
                 selected.has(r.url)
-                  ? isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"
+                  ? isDark ? "bg-primary/10 border border-primary/20" : "bg-primary/5 border border-primary/20"
                   : isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
               }`}
             >
               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                selected.has(r.url) ? "bg-sky-500 border-sky-500" : isDark ? "border-white/15" : "border-slate-300"
+                selected.has(r.url) ? "bg-primary border-primary" : isDark ? "border-border" : "border-border"
               }`}>
                 {selected.has(r.url) && <Check className="w-2.5 h-2.5 text-white" />}
               </div>
