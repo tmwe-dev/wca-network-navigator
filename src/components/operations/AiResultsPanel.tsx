@@ -53,10 +53,10 @@ function RatingStars({ rating }: { rating: number | null | undefined }) {
           key={i}
           className={`w-2.5 h-2.5 ${
             i < full
-              ? "fill-amber-400 text-amber-400"
+              ? "fill-primary text-primary"
               : i === full && half
-              ? "fill-amber-400/50 text-amber-400"
-              : "text-slate-300 dark:text-slate-600"
+              ? "fill-primary/50 text-primary"
+              : "text-muted-foreground/30"
           }`}
         />
       ))}
@@ -97,8 +97,8 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
           </div>
           <div className="flex items-center gap-2 mt-1">
             <RatingStars rating={partner.rating} />
-            {partner.email && <Mail className={`w-2.5 h-2.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`} />}
-            {partner.has_profile && <Globe className={`w-2.5 h-2.5 ${isDark ? "text-violet-400" : "text-violet-500"}`} />}
+            {partner.email && <Mail className={`w-2.5 h-2.5 text-emerald-500`} />}
+            {partner.has_profile && <Globe className={`w-2.5 h-2.5 text-primary`} />}
           </div>
         </div>
         <ChevronDown className={`w-3 h-3 shrink-0 mt-1 transition-transform ${isDark ? "text-slate-500" : "text-slate-400"} ${expanded ? "rotate-180" : ""}`} />
@@ -146,7 +146,7 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
           {(partner.services?.length || partner.certifications?.length) ? (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {partner.certifications?.map(c => (
-                <Badge key={c} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${isDark ? "border-amber-500/30 text-amber-300" : "border-amber-300 text-amber-700"}`}>
+                <Badge key={c} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 border-primary/30 text-primary`}>
                   {c}
                 </Badge>
               ))}
@@ -176,9 +176,7 @@ export function AiResultsPanel({ partners }: Props) {
     <div className={`mt-2 rounded-xl border ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50/50"}`}>
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className={`w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-medium ${
-          isDark ? "text-violet-300 hover:bg-white/5" : "text-violet-700 hover:bg-slate-100"
-        } rounded-t-xl transition-colors`}
+        className={`w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-medium text-primary hover:bg-muted/50 rounded-t-xl transition-colors`}
       >
         <span>{partners.length} partner trovati</span>
         {collapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}

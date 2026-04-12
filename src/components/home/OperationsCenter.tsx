@@ -15,8 +15,8 @@ import type { DownloadJob } from "@/hooks/useDownloadJobs";
 
 // ── Status helpers ──
 const STATUS_COLORS: Record<string, string> = {
-  running: "text-primary", pending: "text-amber-400", completed: "text-emerald-400",
-  failed: "text-destructive", paused: "text-amber-400", sent: "text-emerald-400",
+  running: "text-primary", pending: "text-primary", completed: "text-emerald-400",
+  failed: "text-destructive", paused: "text-primary", sent: "text-emerald-400",
   sending: "text-primary", cancelled: "text-muted-foreground",
 };
 
@@ -25,7 +25,7 @@ function StatusIcon({ status }: { status: string }) {
     case "running": case "sending": return <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />;
     case "completed": case "sent": return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />;
     case "failed": return <AlertTriangle className="h-3.5 w-3.5 text-destructive" />;
-    case "paused": return <Pause className="h-3.5 w-3.5 text-amber-400" />;
+    case "paused": return <Pause className="h-3.5 w-3.5 text-primary" />;
     default: return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
   }
 }
@@ -179,7 +179,7 @@ function EmailQueuePanel({ emails }: { emails: EmailQueueItem[] }) {
                 </span>
               )}
               {email.scheduled_at && email.status === "pending" && (
-                <span className="flex items-center gap-0.5 text-[10px] text-amber-400">
+                <span className="flex items-center gap-0.5 text-[10px] text-primary">
                   <Calendar className="h-3 w-3" />
                 </span>
               )}
@@ -211,7 +211,7 @@ function ActivitiesPanel({ activities }: { activities: ActivityLive[] }) {
         <div key={act.id} className={cn(
           "rounded-lg border p-3 space-y-1",
           act.status === "pending" && act.due_date && isPast(new Date(act.due_date)) ? "border-destructive/30 bg-destructive/5" :
-          act.status === "pending" ? "border-amber-500/30 bg-amber-500/5" :
+          act.status === "pending" ? "border-primary/30 bg-primary/5" :
           "border-border/40 bg-muted/10"
         )}>
           <div className="flex items-center justify-between">
@@ -252,11 +252,11 @@ export function OperationsCenter() {
       <div className="flex-shrink-0 p-4 border-b border-border/50">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           <StatCard label="Download attivi" value={stats.activeDownloads} icon={Download} accent="text-primary" />
-          <StatCard label="Task agenti" value={stats.runningTasks} icon={Bot} accent="text-violet-400" />
-          <StatCard label="Email in coda" value={stats.pendingEmails} icon={Mail} accent="text-amber-400" />
+          <StatCard label="Task agenti" value={stats.runningTasks} icon={Bot} accent="text-primary" />
+          <StatCard label="Email in coda" value={stats.pendingEmails} icon={Mail} accent="text-primary" />
           <StatCard label="Email inviate" value={stats.sentEmails} icon={Send} accent="text-emerald-400" />
-          <StatCard label="Email lette" value={stats.openedEmails} icon={Eye} accent="text-blue-400" />
-          <StatCard label="Attività aperte" value={stats.pendingActivities} icon={Activity} accent="text-orange-400" />
+          <StatCard label="Email lette" value={stats.openedEmails} icon={Eye} accent="text-muted-foreground" />
+          <StatCard label="Attività aperte" value={stats.pendingActivities} icon={Activity} accent="text-primary" />
         </div>
       </div>
 

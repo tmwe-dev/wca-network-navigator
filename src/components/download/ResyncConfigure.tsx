@@ -27,23 +27,23 @@ interface NetworkStats {
 
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 
-function t(dark: boolean) {
+function t(_dark: boolean) {
   return {
-    panel: dark ? "bg-black/40 backdrop-blur-xl" : "bg-white/80 backdrop-blur-lg shadow-lg",
-    h1: dark ? "text-slate-100" : "text-slate-800",
-    h2: dark ? "text-slate-100" : "text-slate-800",
-    sub: dark ? "text-slate-400" : "text-slate-500",
-    body: dark ? "text-slate-300" : "text-slate-600",
-    label: dark ? "text-slate-400" : "text-slate-500",
-    cardBg: dark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm",
-    btnPri: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
-    hi: dark ? "text-amber-400" : "text-sky-600",
-    acEm: dark ? "text-emerald-400" : "text-emerald-600",
-    acAmber: dark ? "text-amber-400" : "text-sky-600",
-    infoBox: dark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600",
-    input: dark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800",
-    hover: dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50",
-    dim: dark ? "text-slate-500" : "text-slate-400",
+    panel: "bg-card/80 backdrop-blur-xl",
+    h1: "text-foreground",
+    h2: "text-foreground",
+    sub: "text-muted-foreground",
+    body: "text-foreground/80",
+    label: "text-muted-foreground",
+    cardBg: "bg-card border-border",
+    btnPri: "bg-primary hover:bg-primary/90 text-primary-foreground",
+    hi: "text-primary",
+    acEm: "text-emerald-500",
+    acAmber: "text-primary",
+    infoBox: "bg-muted/50 border-border text-foreground/80",
+    input: "bg-muted border-border text-foreground",
+    hover: "hover:bg-accent/50",
+    dim: "text-muted-foreground",
   };
 }
 
@@ -245,8 +245,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       </div>
 
       {hasCookie === false && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
-          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/30 bg-primary/10">
+          <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
           <div>
             <p className={`text-sm font-medium ${th.h2}`}>Connessione WCA non disponibile</p>
             <p className={`text-xs mt-1 ${th.sub}`}>
@@ -256,7 +256,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         </div>
       )}
 
-      <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5`}>
+      <div className={`${th.panel} border border-border rounded-2xl p-5`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-sm font-medium ${th.h2}`}>Seleziona Network</h3>
           <button onClick={selectAll} className={`text-xs ${th.hi}`}>
@@ -290,7 +290,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
                         variant="outline"
                         className={isComplete
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]"
+                          : "bg-primary/10 text-primary border-primary/30 text-[10px]"
                         }
                       >
                         {isComplete ? "Completo" : `${ns.missing_contacts} mancanti`}
@@ -318,7 +318,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       </div>
 
       {selected.size > 0 && (
-        <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5 space-y-5`}>
+        <div className={`${th.panel} border border-border rounded-2xl p-5 space-y-5`}>
           <label className="flex items-center gap-3 cursor-pointer">
             <Checkbox
               checked={prioritizeMissing}
@@ -355,7 +355,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
                 <p className={`text-xs ${th.sub}`}>Partner totali</p>
               </div>
               <div>
-                <p className={`text-2xl font-bold text-amber-400`}>{totalMissing}</p>
+                <p className="text-2xl font-bold text-primary">{totalMissing}</p>
                 <p className={`text-xs ${th.sub}`}>Senza contatti</p>
               </div>
               <div>

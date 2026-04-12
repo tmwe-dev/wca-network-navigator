@@ -162,8 +162,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
       icon: Mail,
       count: counts?.email ?? 0,
       label: "Email non lette",
-      color: "text-blue-400",
-      bg: "bg-blue-500/15",
+      color: "text-primary",
+      bg: "bg-primary/15",
       onClick: () => navigate("/outreach", { state: { tab: "email" } }),
     },
     {
@@ -178,24 +178,24 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
       icon: Linkedin,
       count: counts?.linkedin ?? 0,
       label: "LinkedIn non letti",
-      color: "text-sky-400",
-      bg: "bg-sky-500/15",
+      color: "text-muted-foreground",
+      bg: "bg-muted/50",
       onClick: () => navigate("/outreach", { state: { tab: "linkedin" } }),
     },
     {
       icon: Plane,
       count: counts?.circuito ?? 0,
       label: "Contatti in circuito",
-      color: "text-amber-400",
-      bg: "bg-amber-500/15",
+      color: "text-primary",
+      bg: "bg-primary/15",
       onClick: () => navigate("/outreach", { state: { tab: "circuito" } }),
     },
     {
       icon: ListTodo,
       count: counts?.todo ?? 0,
       label: "Attività pendenti",
-      color: "text-purple-400",
-      bg: "bg-purple-500/15",
+      color: "text-primary",
+      bg: "bg-primary/15",
       onClick: () => navigate("/outreach", { state: { tab: "attivita" } }),
     },
   ];
@@ -248,8 +248,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNi
                 onClick={onToggleNightPause}
                 className={cn(
                   "h-7 px-2 flex items-center gap-1 rounded-lg text-[10px] font-semibold transition-all",
-                  nightPause
-                    ? "bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25"
+                nightPause
+                    ? "bg-muted text-muted-foreground hover:bg-muted/80"
                     : "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
                 )}
               >

@@ -122,32 +122,32 @@ export function AppLayout() {
               onMouseEnter={() => handleEdgeEnter("left")}
               onMouseLeave={() => handleEdgeLeave("left")}
               className={cn(
-                "fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer",
+                "fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 filtersOpen && "opacity-0 pointer-events-none"
               )}
               style={{
-                background: "hsla(270, 60%, 65%, 0.25)",
+                background: "hsl(var(--primary) / 0.25)",
                 backdropFilter: "blur(8px)",
               }}
               aria-label="Apri filtri"
             >
-              <SlidersHorizontal className="w-4 h-4 text-purple-300" />
+              <SlidersHorizontal className="w-4 h-4 text-primary" />
             </button>
             <button
               onClick={() => setMissionOpen(true)}
               onMouseEnter={() => handleEdgeEnter("right")}
               onMouseLeave={() => handleEdgeLeave("right")}
               className={cn(
-                "fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer",
+                "fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 missionOpen && "opacity-0 pointer-events-none"
               )}
               style={{
-                background: "hsla(270, 60%, 65%, 0.25)",
+                background: "hsl(var(--primary) / 0.25)",
                 backdropFilter: "blur(8px)",
               }}
               aria-label="Apri Mission"
             >
-              <Target className="w-4 h-4 text-purple-300" />
+              <Target className="w-4 h-4 text-primary" />
             </button>
             <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
               <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
@@ -181,7 +181,7 @@ export function AppLayout() {
                       <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
+                      <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-primary" /></Button></InfoTooltip>
                     </div>
                   </div>
                 </TooltipProvider>

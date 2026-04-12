@@ -270,10 +270,10 @@ export function CountryWorkbench({
             // Blue for first-state (default dir), Red for opposite
             const isDefaultDir = entry?.dir === DEFAULT_DIRS[s.field];
             const colorClass = isActive
-              ? isDefaultDir ? "text-blue-400" : "text-red-400"
+              ? isDefaultDir ? "text-primary" : "text-destructive"
               : "text-muted-foreground";
             const bgClass = isActive
-              ? isDefaultDir ? "bg-blue-500/15" : "bg-red-500/15"
+              ? isDefaultDir ? "bg-primary/15" : "bg-destructive/15"
               : "hover:bg-accent/50";
 
             return (
@@ -325,7 +325,7 @@ export function CountryWorkbench({
                             : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
                         )}
                       >
-                        <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-sky-400/80")} strokeWidth={1.8} />
+                        <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-xs">{formatServiceCategory(svc)}</TooltipContent>
@@ -459,7 +459,7 @@ export function CountryWorkbench({
                             return (
                               <Tooltip key={i}>
                                 <TooltipTrigger>
-                                  <Icon className="w-3.5 h-3.5 text-sky-400/80" strokeWidth={1.5} />
+                                  <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
                                 </TooltipTrigger>
                                 <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                               </Tooltip>
@@ -486,8 +486,8 @@ export function CountryWorkbench({
                 {/* Right column: Trophy → Flag+Network → Rating */}
                 <div className="flex flex-col items-end gap-1.5 shrink-0 self-start pt-0.5">
                   {years > 0 && (
-                    <span className="flex items-center gap-0.5 text-amber-400">
-                      <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    <span className="flex items-center gap-0.5 text-primary">
+                      <Trophy className="w-3.5 h-3.5 fill-primary text-primary" />
                       <span className="text-[11px] font-bold">{years}</span>
                     </span>
                   )}
@@ -510,7 +510,7 @@ export function CountryWorkbench({
                   {partner.rating > 0 && (
                     <div className="flex items-center gap-1">
                       <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />
-                      <span className="text-[10px] font-bold text-amber-400">{Number(partner.rating).toFixed(1)}</span>
+                      <span className="text-[10px] font-bold text-primary">{Number(partner.rating).toFixed(1)}</span>
                     </div>
                   )}
                 </div>

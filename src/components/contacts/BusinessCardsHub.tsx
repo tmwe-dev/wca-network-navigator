@@ -187,7 +187,7 @@ export default function BusinessCardsHub() {
               />
               <span className="text-[10px] text-muted-foreground">Tutti</span>
             </div>
-            <Badge variant="outline" className="text-[10px] h-7 px-2 border-violet-500/15">{cards.length} biglietti</Badge>
+            <Badge variant="outline" className="text-[10px] h-7 px-2 border-primary/15">{cards.length} biglietti</Badge>
 
             <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-md p-0.5">
               {([
@@ -207,10 +207,10 @@ export default function BusinessCardsHub() {
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-violet-400 animate-spin" /></div>
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
           ) : cards.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4"><ImagePlus className="w-8 h-8 text-violet-400/50" /></div>
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"><ImagePlus className="w-8 h-8 text-primary/50" /></div>
               <p className="text-sm text-muted-foreground">Nessun biglietto da visita</p>
             </div>
           ) : viewMode === "compact" ? (
@@ -242,13 +242,13 @@ export default function BusinessCardsHub() {
       </div>
 
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-        <DialogContent className="max-w-sm bg-card border-violet-500/20">
+        <DialogContent className="max-w-sm bg-card border-primary/20">
           <DialogHeader>
-            <DialogTitle className="text-sm flex items-center gap-2"><Handshake className="w-4 h-4 text-violet-400" /> Dettagli incontro</DialogTitle>
+            <DialogTitle className="text-sm flex items-center gap-2"><Handshake className="w-4 h-4 text-primary" /> Dettagli incontro</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex gap-2 flex-wrap">
-              {pendingImages > 0 && <Badge variant="outline" className="text-[10px] border-violet-500/20">📸 {pendingImages} foto</Badge>}
+              {pendingImages > 0 && <Badge variant="outline" className="text-[10px] border-primary/20">📸 {pendingImages} foto</Badge>}
               {pendingData > 0 && <Badge variant="outline" className="text-[10px] border-emerald-500/20">📄 {pendingData} file</Badge>}
             </div>
             <div><label className="text-xs text-muted-foreground">Evento / Fiera</label><Input value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="es. Cosmoprof 2026" className="h-8 text-xs mt-1" /></div>
