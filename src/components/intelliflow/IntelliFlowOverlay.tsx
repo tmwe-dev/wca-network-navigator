@@ -8,6 +8,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";

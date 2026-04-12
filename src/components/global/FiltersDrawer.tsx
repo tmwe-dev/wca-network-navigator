@@ -24,6 +24,7 @@ import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFilters
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { InboxFiltersSection } from "@/components/global/filters-drawer/InboxFiltersSection";
 import { BCAFiltersSection } from "@/components/global/filters-drawer/BCAFiltersSection";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 
 interface FiltersDrawerProps {
   open: boolean;

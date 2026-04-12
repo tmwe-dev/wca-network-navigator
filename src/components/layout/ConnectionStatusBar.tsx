@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";

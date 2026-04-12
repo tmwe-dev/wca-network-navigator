@@ -91,6 +91,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const c = state.contact;
 
   return (
+    <PageErrorBoundary>
     <div className="h-full overflow-y-auto p-5 space-y-4">
       <Section className="space-y-3">
         <div className="flex items-start gap-3">
@@ -228,5 +229,6 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+    </PageErrorBoundary>
   );
 }

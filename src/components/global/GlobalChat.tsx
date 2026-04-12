@@ -42,6 +42,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   };
 
   return (
+    <PageErrorBoundary>
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
         <div className="p-1.5 rounded-lg bg-primary/20"><Sparkles className="w-4 h-4 text-primary" /></div>
@@ -116,5 +117,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         </div>
       </div>
     </div>
+    </PageErrorBoundary>
   );
 }
