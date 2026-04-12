@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Building2, MapPin, Mail, Phone, Globe, ExternalLink, Award, Users, Network, FileText, Calendar, Printer } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
 import { formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
@@ -18,7 +18,7 @@ interface PartnerDetailModalProps {
 }
 
 export function PartnerDetailModal({ partner, partnerId, aiClassification, open, onOpenChange }: PartnerDetailModalProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   if (!partner) return null;
 

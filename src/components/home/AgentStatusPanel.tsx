@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function AgentStatusPanel({ agents: initialAgents }: Props) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [agents, setAgents] = useState(initialAgents);
 
   useEffect(() => { setAgents(initialAgents); }, [initialAgents]);
