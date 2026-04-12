@@ -15,12 +15,13 @@ import {
   FlaskConical, Book, BarChart3, Earth, Search,
   ArrowUpDown, Cpu, Cog, Upload, Send, Menu, X,
   Sparkles, SlidersHorizontal, Plus, DatabaseZap,
-  Sun, Moon, Wifi, WifiOff, Command,
+  Sun, Moon, Wifi, WifiOff, Command, ArrowRight,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // ── Providers (same order as V1 App.tsx + AppLayout.tsx) ──
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -54,6 +55,7 @@ const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFl
 const CommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
 const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
+const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
 
 // ── Sidebar nav items (grouped) ──
 
@@ -177,6 +179,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [agentDashOpen, setAgentDashOpen] = useState(false);
+  const [testExtOpen, setTestExtOpen] = useState(false);
 
   // Theme toggle
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -445,6 +448,16 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
                           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                             <ActiveProcessIndicator />
+                            {location.pathname.startsWith("/v2/network") && (
+                              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
+                                <ArrowRight className="h-3 w-3" /> CRM
+                              </Button>
+                            )}
+                            {location.pathname.startsWith("/v2/crm") && (
+                              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/network")}>
+                                <ArrowRight className="h-3 w-3" /> Network
+                              </Button>
+                            )}
                             <ConnectionStatusBar
                               onAiClick={() => setIntelliflowOpen(true)}
                               outreachQueue={outreachQueue}
@@ -454,6 +467,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                               onToggleNightPause={globalSync.toggleNightPause}
                               resumeMinutes={globalSync.resumeMinutes}
                             />
+                            <div id="campaign-controls-portal" />
                           </div>
                           <div className="flex items-center gap-0.5">
                             <OperatorSelector />
@@ -465,6 +479,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setAgentDashOpen(true)} aria-label="Agent Operations">
                               <Activity className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni">
+                              <FlaskConical className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow AI">
                               <Sparkles className="h-4 w-4" />
@@ -509,6 +526,18 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Suspense fallback={null}>
                         <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
                       </Suspense>
+                    )}
+                    {testExtOpen && (
+                      <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+                        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>🧪 Test Estensioni</DialogTitle>
+                          </DialogHeader>
+                          <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+                            <TestExtensionsContent />
+                          </Suspense>
+                        </DialogContent>
+                      </Dialog>
                     )}
 
                     {/* Global drawers */}
