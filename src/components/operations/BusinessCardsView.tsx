@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Send, Search, RefreshCw, CheckSquare, Plane,
   LayoutList, LayoutGrid, Rows3, Mail, Phone, SlidersHorizontal,

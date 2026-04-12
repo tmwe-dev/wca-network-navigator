@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptBusinessCard } from "@/lib/contactActionAdapter";

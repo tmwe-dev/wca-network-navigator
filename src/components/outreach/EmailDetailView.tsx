@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, Shield, User, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
