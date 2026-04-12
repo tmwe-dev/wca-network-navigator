@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { bgSyncSubscribe, bgSyncStop, type BgSyncProgress } from "@/lib/backgroundSync";
+import { ROUTE_OUTREACH } from "@/constants/routes";
 
 export function BackgroundSyncIndicator() {
   const [progress, setProgress] = useState<BgSyncProgress | null>(null);
@@ -20,7 +21,7 @@ export function BackgroundSyncIndicator() {
   }, []);
 
   // Don't show on outreach page (it has its own panel) or if idle/dismissed
-  const isOnOutreach = location.pathname.startsWith("/outreach") || location.pathname.startsWith("/v2/outreach");
+  const isOnOutreach = location.pathname.startsWith(`/${ROUTE_OUTREACH}`) || location.pathname.startsWith(`/v2/${ROUTE_OUTREACH}`);
   if (!progress || progress.status === "idle" || isOnOutreach || dismissed) return null;
 
   const isDone = progress.status === "done";

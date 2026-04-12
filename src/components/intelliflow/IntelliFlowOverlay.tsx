@@ -14,6 +14,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
 import { useLocation } from "react-router-dom";
+import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA } from "@/constants/routes";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -51,19 +52,19 @@ const QUICK_PROMPTS: Record<string, string[]> = {
     "Attività in scadenza",
     "Stato campagne attive",
   ],
-  "/outreach": [
+  [`/${ROUTE_OUTREACH}`]: [
     "Filtra contatti italiani",
     "Seleziona tutti con priorità alta",
     "Prepara email per i contatti selezionati",
     "Deep search dei selezionati",
   ],
-  "/network": [
+  [`/${ROUTE_NETWORK}`]: [
     "Scarica tutti i partner",
     "Scarica partner USA",
     "Aggiorna profili mancanti",
     "Stato download attivi",
   ],
-  "/crm": [
+  [`/${ROUTE_CRM}`]: [
     "Contatti importati per origine",
     "Contatti senza email",
     "Statistiche per paese",
@@ -89,7 +90,7 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
   const location = useLocation();
   const currentPage = location.pathname;
   const seg = currentPage.replace(/^\/v2/, "");
-  const isCockpit = seg === "/outreach";
+  const isCockpit = seg === `/${ROUTE_OUTREACH}`;
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -192,12 +193,12 @@ export default function IntelliFlowOverlay({ open, onClose, cockpitContacts, onC
     : "Caricamento dati…";
 
   const pageLabel = {
-    "/outreach": "Cockpit",
-    "/network": "Network",
-    "/crm": "CRM",
+    [`/${ROUTE_OUTREACH}`]: "Cockpit",
+    [`/${ROUTE_NETWORK}`]: "Network",
+    [`/${ROUTE_CRM}`]: "CRM",
     "/": "Dashboard",
     "/global": "Global",
-    "/agenda": "Agenda",
+    [`/${ROUTE_AGENDA}`]: "Agenda",
   }[currentPage] || "Sistema";
 
   return (
