@@ -72,7 +72,7 @@ export function PartnerAIBar({ viewContext }: Props) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
-        <Bot className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+        <Bot className="w-3.5 h-3.5 text-primary shrink-0" />
         <div className="relative flex-1">
           <Input
             ref={inputRef}
@@ -80,7 +80,7 @@ export function PartnerAIBar({ viewContext }: Props) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Chiedi info su partner, paesi, network, blacklist…"
-            className="h-7 text-xs pr-8 border-violet-500/15 bg-card/60"
+            className="h-7 text-xs pr-8 border-primary/15 bg-card/60"
             disabled={loading}
           />
           <Button
@@ -96,9 +96,9 @@ export function PartnerAIBar({ viewContext }: Props) {
       </div>
 
       {lastResponse && (
-        <div className="bg-violet-500/5 border border-violet-500/15 rounded-md px-2 py-1.5">
+        <div className="bg-primary/5 border border-primary/15 rounded-md px-2 py-1.5">
           <button
-            className="flex items-center gap-1 text-[10px] font-medium text-violet-400 w-full text-left"
+            className="flex items-center gap-1 text-[10px] font-medium text-primary w-full text-left"
             onClick={() => setExpanded(!expanded)}
           >
             <Bot className="w-3 h-3" />

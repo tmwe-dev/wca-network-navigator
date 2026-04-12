@@ -202,7 +202,7 @@ export function CountryOverview({
             className={cn(
               "flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-all",
               contactFilter === "email"
-                ? "bg-sky-500/10 border-sky-500/30 text-sky-600 dark:text-sky-400"
+                ? "bg-primary/10 border-primary/30 text-primary"
                 : "bg-muted border-border text-muted-foreground hover:bg-accent"
             )}
           >
@@ -300,7 +300,7 @@ export function CountryOverview({
                           <div
                             className={cn(
                               "h-full rounded-full transition-all",
-                              completePct >= 75 ? "bg-emerald-500" : completePct >= 40 ? "bg-amber-500" : "bg-destructive"
+                              completePct >= 75 ? "bg-emerald-500" : completePct >= 40 ? "bg-primary" : "bg-destructive"
                             )}
                             style={{ width: `${completePct}%` }}
                           />
@@ -349,7 +349,7 @@ export function CountryOverview({
                               selectedId === partner.id && "bg-accent",
                               isSelected && "bg-primary/5",
                               q === "missing" && "border-l-4 border-l-destructive",
-                              q === "partial" && "border-l-4 border-l-amber-400",
+                              q === "partial" && "border-l-4 border-l-primary",
                               q === "complete" && "border-l-4 border-l-primary",
                             )}
                           >
@@ -373,7 +373,7 @@ export function CountryOverview({
                                 </span>
                                 {partner.rating > 0 && (
                                   <span className="flex items-center gap-0.5">
-                                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                    <Star className="w-3 h-3 fill-primary text-primary" />
                                     {partner.rating.toFixed(1)}
                                   </span>
                                 )}
@@ -384,10 +384,10 @@ export function CountryOverview({
                                 <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
                               )}
                               {pHasEmail && (
-                                <Mail className="w-3.5 h-3.5 text-sky-500" />
+                                <Mail className="w-3.5 h-3.5 text-primary" />
                               )}
                               {q === "complete" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                              {q === "partial" && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                              {q === "partial" && <AlertTriangle className="w-4 h-4 text-primary" />}
                               {q === "missing" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                               <span className="text-[10px] text-muted-foreground">
                                 {contactCount} cont.

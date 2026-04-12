@@ -40,14 +40,14 @@ const PHASE_LABELS: Record<DownloadProgress["phase"], string> = {
 };
 
 const PHASE_COLORS: Record<DownloadProgress["phase"], string> = {
-  idle: "text-slate-400",
-  login: "text-blue-400",
-  discover: "text-cyan-400",
-  compare: "text-amber-400",
+  idle: "text-muted-foreground",
+  login: "text-primary",
+  discover: "text-primary",
+  compare: "text-primary",
   download: "text-emerald-400",
   done: "text-emerald-500",
-  error: "text-red-400",
-  paused: "text-yellow-400",
+  error: "text-destructive",
+  paused: "text-muted-foreground",
 };
 
 export function DownloadProgressBar({
@@ -67,15 +67,15 @@ export function DownloadProgressBar({
             key={job.countryCode}
             className={cn(
               "rounded-xl border px-3 py-2 flex items-center gap-3 mb-1",
-              isDark ? "bg-yellow-500/10 border-yellow-500/30" : "bg-yellow-50 border-yellow-200"
+              "bg-primary/10 border-primary/30"
             )}
           >
-            <Pause className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+            <Pause className="w-4 h-4 text-primary flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <span className={cn("text-xs font-bold", isDark ? "text-yellow-300" : "text-yellow-700")}>
+              <span className="text-xs font-bold text-foreground">
                 {getCountryFlag(job.countryCode)} {job.countryName}
               </span>
-              <span className={cn("text-[10px] ml-2", isDark ? "text-yellow-400/70" : "text-yellow-600")}>
+              <span className="text-[10px] ml-2 text-muted-foreground">
                 {job.doneCount}/{job.totalCount} · {job.pendingCount} rimanenti
               </span>
             </div>
@@ -83,7 +83,7 @@ export function DownloadProgressBar({
               <Button
                 size="sm"
                 onClick={() => onResume(job.countryCode, job.countryName)}
-                className={cn("h-7 text-xs px-3", isDark ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-yellow-500 hover:bg-yellow-400 text-white")}
+                className="h-7 text-xs px-3"
               >
                 <Play className="w-3.5 h-3.5 mr-1" /> Riprendi
               </Button>
@@ -100,7 +100,7 @@ export function DownloadProgressBar({
     <div className="flex-shrink-0 mx-4 mb-2">
       <div className={cn(
         "rounded-xl border px-3 py-2",
-        isDark ? "bg-white/[0.04] backdrop-blur-xl border-amber-500/40" : "bg-white/60 backdrop-blur-xl border-sky-300 shadow-sm"
+        isDark ? "bg-white/[0.04] backdrop-blur-xl border-primary/40" : "bg-card/60 backdrop-blur-xl border-primary/30 shadow-sm"
       )}>
         {/* Row 1: Phase badge + percentage + controls */}
         <div className="flex items-center gap-2">
@@ -108,10 +108,10 @@ export function DownloadProgressBar({
           <span className={cn(
             "flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border",
             phase === "error"
-              ? isDark ? "bg-red-500/15 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"
+              ? "bg-destructive/15 border-destructive/30 text-destructive"
               : phase === "done"
-                ? isDark ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-600"
-                : isDark ? "bg-amber-500/15 border-amber-500/30 text-amber-300" : "bg-amber-50 border-amber-200 text-amber-600"
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-500"
+                : "bg-primary/15 border-primary/30 text-primary"
           )}>
             {phase === "done" && <CheckCircle2 className="w-3 h-3" />}
             {phase === "error" && <AlertTriangle className="w-3 h-3" />}
@@ -122,14 +122,14 @@ export function DownloadProgressBar({
           {/* Claude V8 badge */}
           <span className={cn(
             "text-[9px] px-1.5 py-0.5 rounded-full border",
-            isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600"
+            "bg-primary/10 border-primary/20 text-primary"
           )}>
             🤖 V8
           </span>
 
           {/* Country */}
           {countryCode && (
-            <span className={cn("text-xs font-medium", isDark ? "text-slate-300" : "text-slate-600")}>
+            <span className="text-xs font-medium text-foreground">
               {getCountryFlag(countryCode)}
             </span>
           )}
@@ -148,7 +148,7 @@ export function DownloadProgressBar({
                 size="sm"
                 variant="ghost"
                 onClick={onStop}
-                className={cn("h-6 w-6 p-0", isDark ? "text-red-400 hover:bg-red-500/20" : "text-red-500 hover:bg-red-50")}
+                className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
                 title="Ferma"
               >
                 <Square className="w-3.5 h-3.5" />
@@ -159,11 +159,11 @@ export function DownloadProgressBar({
 
         {/* Row 2: Progress bar */}
         {showBar && (
-          <div className={cn("mt-1.5 w-full h-2 rounded-full", isDark ? "bg-slate-800" : "bg-slate-200")}>
+          <div className="mt-1.5 w-full h-2 rounded-full bg-muted">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
-                phase === "done" ? "bg-emerald-500" : phase === "paused" ? "bg-yellow-500" : isDark ? "bg-amber-500" : "bg-sky-500"
+                phase === "done" ? "bg-emerald-500" : phase === "paused" ? "bg-muted-foreground" : "bg-primary"
               )}
               style={{ width: `${pct}%` }}
             />
@@ -171,7 +171,7 @@ export function DownloadProgressBar({
         )}
 
         {/* Row 3: Message + counter */}
-        <div className={cn("mt-1 flex items-center gap-2 text-[11px]", isDark ? "text-slate-400" : "text-slate-500")}>
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="truncate flex-1">{message}</span>
           {showBar && total > 0 && (
             <span className="font-mono font-bold tabular-nums flex-shrink-0">

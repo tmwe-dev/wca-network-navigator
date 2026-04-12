@@ -66,19 +66,19 @@ const ENRICH_FILTERS: { value: EnrichFilter; label: string; icon: ReactNode }[] 
 ];
 
 const ORIGIN_ACCENT: Record<string, string> = {
-  wca: "border-l-blue-500",
-  contacts: "border-l-green-500",
-  email: "border-l-amber-500",
-  cockpit: "border-l-teal-500",
-  bca: "border-l-purple-500",
+  wca: "border-l-primary",
+  contacts: "border-l-emerald-500",
+  email: "border-l-primary",
+  cockpit: "border-l-emerald-500",
+  bca: "border-l-primary",
 };
 
 const ORIGIN_BADGE_CLASS: Record<string, string> = {
-  wca: "bg-blue-500/10 text-blue-700 border-blue-200",
-  contacts: "bg-green-500/10 text-green-700 border-green-200",
-  email: "bg-amber-500/10 text-amber-700 border-amber-200",
-  cockpit: "bg-teal-500/10 text-teal-700 border-teal-200",
-  bca: "bg-purple-500/10 text-purple-700 border-purple-200",
+  wca: "bg-primary/10 text-primary border-border",
+  contacts: "bg-emerald-500/10 text-emerald-700 border-border",
+  email: "bg-primary/10 text-primary border-border",
+  cockpit: "bg-emerald-500/10 text-emerald-700 border-border",
+  bca: "bg-primary/10 text-primary border-border",
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -582,7 +582,7 @@ export default function EnrichmentSettings() {
                     <Linkedin className="w-3.5 h-3.5 text-muted-foreground/20" />
                   )}
                   {row.hasLogo ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                   ) : (
                     <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
                   )}

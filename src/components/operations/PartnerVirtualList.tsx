@@ -107,16 +107,16 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                     <p className={cn("font-bold text-xs truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
                     {inHolding && (
                       <span title="In circuito di attesa">
-                        <Plane className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
+                        <Plane className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
                       </span>
                     )}
                     {partner.company_alias && (
-                      <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-teal-900/30 text-teal-400" : "bg-teal-100 text-teal-700")}>{partner.company_alias}</span>
+                      <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-emerald-900/30 text-emerald-400" : "bg-emerald-100 text-emerald-700")}>{partner.company_alias}</span>
                     )}
                     {years > 0 && (
                       <span className="flex items-center gap-0.5 shrink-0">
-                        <Trophy className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        <span className="text-[10px] font-bold text-amber-500">{years}</span>
+                        <Trophy className="w-3 h-3 text-primary fill-primary" />
+                        <span className="text-[10px] font-bold text-primary">{years}</span>
                       </span>
                     )}
                   </div>
@@ -144,7 +144,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {primaryContact?.email && (
                     <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
-                      className={cn("p-1 rounded-md transition-all", isDark ? "text-sky-400 hover:bg-sky-500/20" : "text-sky-600 hover:bg-sky-50")}>
+                      className={cn("p-1 rounded-md transition-all", isDark ? "text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10")}>
                       <Send className="w-3 h-3" />
                     </button>
                   )}

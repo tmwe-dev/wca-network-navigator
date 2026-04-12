@@ -76,12 +76,12 @@ export function AttivitaTab() {
 
   const priorityColor = (p: string) => {
     if (p === "high" || p === "urgent") return "text-destructive";
-    if (p === "medium") return "text-amber-500";
+    if (p === "medium") return "text-primary";
     return "text-muted-foreground";
   };
 
   const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-    pending: { label: "In attesa", color: "text-amber-500", bg: "bg-amber-500/15", icon: Clock },
+    pending: { label: "In attesa", color: "text-primary", bg: "bg-primary/15", icon: Clock },
     in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
     completed: { label: "Completata", color: "text-emerald-500", bg: "bg-emerald-500/15", icon: CheckCircle2 },
   };
@@ -100,7 +100,7 @@ export function AttivitaTab() {
         <span className="text-xs font-semibold">Attività</span>
         <div className="flex items-center gap-1.5 ml-auto">
           <Badge variant="outline" className="text-[9px] px-1.5 h-4">{stats.total} totali</Badge>
-          <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-amber-500 border-amber-500/30">{stats.pending} attesa</Badge>
+          <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.pending} attesa</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.in_progress} corso</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-emerald-500 border-emerald-500/30">{stats.completed} fatte</Badge>
         </div>
@@ -193,7 +193,7 @@ export function AttivitaTab() {
                       {/* Source meta note */}
                       {item.source_meta?.note && (
                         <div className="flex items-start gap-1.5 p-2 rounded-md bg-amber-500/5 border border-amber-500/20">
-                          <StickyNote className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                          <StickyNote className="w-3 h-3 text-primary mt-0.5 shrink-0" />
                           <p className="text-[11px] text-foreground">{item.source_meta.note}</p>
                         </div>
                       )}

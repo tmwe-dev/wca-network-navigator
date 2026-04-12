@@ -68,20 +68,20 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
     }
   };
 
-  const panel = isDark ? "bg-white/[0.06] backdrop-blur-xl border-white/[0.1]" : "bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/30 border-white/80";
-  const h2 = isDark ? "text-slate-100" : "text-slate-800";
-  const sub = isDark ? "text-slate-400" : "text-slate-500";
-  const body = isDark ? "text-slate-300" : "text-slate-600";
-  const input = isDark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800";
-  const cardBg = isDark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm";
+  const panel = "bg-card/80 backdrop-blur-xl border-border";
+  const h2 = "text-foreground";
+  const sub = "text-muted-foreground";
+  const body = "text-foreground/80";
+  const input = "bg-muted border-border text-foreground";
+  const cardBg = "bg-card border-border";
 
   return (
-    <div className={`${panel} border rounded-2xl p-6 space-y-5`}>
+      <div className={`${panel} rounded-2xl p-6 space-y-5`}>
       <div className="flex items-center gap-3">
-        <Globe className={`w-5 h-5 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
+        <Globe className="w-5 h-5 text-primary" />
         <div>
-          <h2 className={`text-lg font-semibold ${h2}`}>WCA Browser</h2>
-          <p className={`text-sm ${sub}`}>Testa lo scraping diretto su un singolo profilo</p>
+          <h2 className="text-lg font-semibold text-foreground">WCA Browser</h2>
+          <p className="text-sm text-muted-foreground">Testa lo scraping diretto su un singolo profilo</p>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
         <Button
           onClick={handlePreview}
           disabled={loading || !wcaId}
-          className={isDark ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           <span className="ml-2">{loading ? "Analisi..." : "Anteprima"}</span>
@@ -122,9 +122,9 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
 
           {/* Error */}
           {result.error && (
-            <div className={`flex items-start gap-2 p-3 rounded-xl border ${isDark ? "border-red-500/30 bg-red-500/10" : "border-red-200 bg-red-50"}`}>
-              <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-              <p className={`text-sm ${isDark ? "text-red-300" : "text-red-700"}`}>{result.error}</p>
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-destructive/30 bg-destructive/10">
+              <XCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-sm text-destructive">{result.error}</p>
             </div>
           )}
 
@@ -134,7 +134,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
               {/* Company Info */}
               <div className={`p-4 rounded-xl border space-y-2 ${cardBg}`}>
                 <div className="flex items-center gap-2">
-                  <Building2 className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-sky-600"}`} />
+                  <Building2 className="w-4 h-4 text-primary" />
                   <span className={`font-semibold ${h2}`}>{result.partner.company_name}</span>
                 </div>
                 <div className={`text-sm ${body} space-y-1`}>
@@ -146,7 +146,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
                 {result.partner.networks.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {result.partner.networks.map((n, i) => (
-                      <Badge key={i} variant="outline" className={`text-xs ${isDark ? "border-amber-500/30 text-amber-400" : "border-sky-200 text-sky-700"}`}>
+                      <Badge key={i} variant="outline" className="text-xs border-primary/30 text-primary">
                         {n.name}
                       </Badge>
                     ))}
@@ -177,7 +177,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
                 </div>
 
                 {result.partner.contacts.map((c, i) => (
-                  <div key={i} className={`p-3 rounded-lg border text-sm space-y-1 ${isDark ? "bg-slate-900/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+                  <div key={i} className="p-3 rounded-lg border text-sm space-y-1 bg-muted/30 border-border">
                     <div className="flex items-center gap-2">
                       <User className={`w-3.5 h-3.5 ${sub}`} />
                       <span className={`font-medium ${h2}`}>{c.name || c.title}</span>
@@ -193,13 +193,13 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
                     )}
                     {c.phone && (
                       <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-blue-500" />
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className={body}>{c.phone}</span>
                       </div>
                     )}
                     {c.mobile && (
                       <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-purple-500" />
+                        <Phone className="w-3.5 h-3.5 text-primary" />
                         <span className={body}>{c.mobile} (mobile)</span>
                       </div>
                     )}
@@ -218,7 +218,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
 
           {/* Not found */}
           {result.success && !result.found && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${isDark ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"}`}>
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
               <AlertCircle className={`w-4 h-4 ${sub}`} />
               <span className={`text-sm ${body}`}>Nessun membro trovato per ID {result.wcaId}</span>
             </div>
@@ -235,8 +235,8 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
                 HTML Raw ({result.htmlSnippet.length} caratteri)
               </button>
               {showHtml && (
-                <ScrollArea className={`mt-2 h-60 rounded-lg border p-3 ${isDark ? "bg-slate-900 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
-                  <pre className={`text-xs whitespace-pre-wrap font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              <ScrollArea className="mt-2 h-60 rounded-lg border p-3 bg-muted/30 border-border">
+                  <pre className="text-xs whitespace-pre-wrap font-mono text-muted-foreground">
                     {result.htmlSnippet}
                   </pre>
                 </ScrollArea>

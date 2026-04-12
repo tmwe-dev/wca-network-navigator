@@ -21,11 +21,11 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  pending: { icon: <Clock className="w-3 h-3" />, color: "text-amber-400", label: "In attesa" },
-  proposed: { icon: <Sparkles className="w-3 h-3" />, color: "text-purple-400", label: "Proposto" },
-  running: { icon: <Loader2 className="w-3 h-3 animate-spin" />, color: "text-blue-400", label: "In corso" },
+  pending: { icon: <Clock className="w-3 h-3" />, color: "text-primary", label: "In attesa" },
+  proposed: { icon: <Sparkles className="w-3 h-3" />, color: "text-primary", label: "Proposto" },
+  running: { icon: <Loader2 className="w-3 h-3 animate-spin" />, color: "text-primary", label: "In corso" },
   completed: { icon: <CheckCircle className="w-3 h-3" />, color: "text-emerald-400", label: "Completato" },
-  failed: { icon: <XCircle className="w-3 h-3" />, color: "text-red-400", label: "Fallito" },
+  failed: { icon: <XCircle className="w-3 h-3" />, color: "text-destructive", label: "Fallito" },
 };
 
 function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
@@ -58,9 +58,9 @@ function TaskRow({ task, showAgent }: { task: AgentTaskRow; showAgent?: string }
       className={cn(
         "flex items-start gap-2.5 p-3 rounded-lg border transition-all",
         task.status === "running"
-          ? "border-blue-500/30 bg-blue-500/5 shadow-sm shadow-blue-500/10"
+          ? "border-primary/30 bg-primary/5 shadow-sm shadow-primary/10"
           : task.status === "proposed"
-            ? "border-purple-500/30 bg-purple-500/5"
+            ? "border-primary/30 bg-primary/5"
             : "border-border/40 bg-card/30"
       )}
     >
@@ -106,7 +106,7 @@ function AgentCard({ agent }: { agent: AgentWithTasks }) {
   return (
     <div className={cn(
       "rounded-xl border p-3 transition-all",
-      isWorking ? "border-blue-500/40 bg-blue-500/5 shadow-sm" : "border-border/50 bg-card/30"
+      isWorking ? "border-primary/40 bg-primary/5 shadow-sm" : "border-border/50 bg-card/30"
     )}>
       <div className="flex items-center gap-2.5 mb-2">
         {avatarSrc ? (
@@ -126,8 +126,8 @@ function AgentCard({ agent }: { agent: AgentWithTasks }) {
         </div>
       </div>
       <div className="flex gap-3 text-[10px]">
-        {running > 0 && <span className="text-blue-400">⚡ {running} attivi</span>}
-        {pending > 0 && <span className="text-amber-400">⏳ {pending} in coda</span>}
+        {running > 0 && <span className="text-primary">⚡ {running} attivi</span>}
+        {pending > 0 && <span className="text-primary">⏳ {pending} in coda</span>}
         <span className="text-emerald-400">✓ {completed}</span>
       </div>
     </div>
@@ -144,8 +144,8 @@ function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: 
       {/* Stats */}
       <div className="flex flex-wrap gap-2">
         <StatCard label="Totali" value={stats.total} icon={<BarChart3 className="w-4 h-4" />} color="bg-muted/50" />
-        <StatCard label="In attesa" value={stats.pending} icon={<Timer className="w-4 h-4 text-amber-400" />} color="bg-amber-500/10" />
-        <StatCard label="Attivi" value={stats.running} icon={<Zap className="w-4 h-4 text-blue-400" />} color="bg-blue-500/10" />
+        <StatCard label="In attesa" value={stats.pending} icon={<Timer className="w-4 h-4 text-primary" />} color="bg-primary/10" />
+        <StatCard label="Attivi" value={stats.running} icon={<Zap className="w-4 h-4 text-primary" />} color="bg-primary/10" />
         <StatCard label="Completati" value={stats.completed} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} color="bg-emerald-500/10" />
       </div>
 
@@ -268,7 +268,7 @@ export function AgentOperationsDashboard({ open, onOpenChange }: Props) {
             {stats.running > 0 && (
               <div className="flex items-center gap-1.5 ml-2">
                 <LivePulse />
-                <span className="text-xs text-blue-400 font-medium">{stats.running} attivi</span>
+                <span className="text-xs text-primary font-medium">{stats.running} attivi</span>
               </div>
             )}
           </div>

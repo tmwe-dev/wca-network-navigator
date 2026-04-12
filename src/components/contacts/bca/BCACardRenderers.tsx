@@ -41,7 +41,7 @@ export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleL
         {card.contact_name && <span className="flex items-center gap-1 shrink-0"><User className="w-3 h-3" />{card.contact_name}</span>}
         {card.position && <span className="truncate max-w-[120px]">{card.position}</span>}
         {city && <span className="flex items-center gap-0.5 shrink-0"><MapPin className="w-2.5 h-2.5" />{city}</span>}
-        {card.event_name && <span className="flex items-center gap-0.5 truncate max-w-[120px]"><Handshake className="w-2.5 h-2.5 text-violet-400" />{card.event_name}</span>}
+        {card.event_name && <span className="flex items-center gap-0.5 truncate max-w-[120px]"><Handshake className="w-2.5 h-2.5 text-primary" />{card.event_name}</span>}
         {wcaYear && <Badge variant="outline" className="text-[8px] h-4 px-1 border-chart-1/20 text-chart-1 shrink-0">WCA {wcaYear}</Badge>}
       </div>
     </div>
@@ -61,14 +61,14 @@ export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogl
 
   return (
     <div className={cn(
-      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
-      isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
+      "relative bg-gradient-to-br from-primary/5 via-card to-primary/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
+      isSelected ? "border-primary/40 shadow-sm" : "border-primary/10 hover:border-primary/20",
     )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       {hasPhoto ? (
         <AspectRatio ratio={16 / 9}><img src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" loading="lazy" /></AspectRatio>
       ) : (
-        <div className="h-8 bg-gradient-to-r from-emerald-500/10 to-violet-500/10 flex items-center justify-center gap-1">
+        <div className="h-8 bg-gradient-to-r from-emerald-500/10 to-primary/10 flex items-center justify-center gap-1">
           <FileText className="w-3 h-3 text-emerald-400" /><span className="text-[9px] text-emerald-400 font-medium">Da file</span>
         </div>
       )}
@@ -104,8 +104,8 @@ export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onG
 
   return (
     <div className={cn(
-      "relative bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
-      isSelected ? "border-primary/40 shadow-sm" : "border-violet-500/10 hover:border-violet-500/20",
+      "relative bg-gradient-to-br from-primary/5 via-card to-primary/5 border rounded-xl overflow-hidden transition-all cursor-pointer",
+      isSelected ? "border-primary/40 shadow-sm" : "border-primary/10 hover:border-primary/20",
     )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       <div className="flex gap-3 p-3">
@@ -120,7 +120,7 @@ export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onG
           <p className="text-[11px] text-muted-foreground truncate">{card.contact_name || "—"}{card.position ? ` · ${card.position}` : ""}</p>
           {card.event_name && (
             <div className="flex items-center gap-1">
-              <Handshake className="w-3 h-3 text-violet-400 shrink-0" />
+              <Handshake className="w-3 h-3 text-primary shrink-0" />
               <span className="text-[10px] text-muted-foreground truncate">{card.event_name}</span>
               {card.met_at && <span className="text-[10px] text-muted-foreground/60">{format(new Date(card.met_at), "dd MMM yy", { locale: it })}</span>}
             </div>
