@@ -56,7 +56,7 @@ const TIMELINE_ICONS: Record<string, typeof Mail> = {
 };
 
 export function HoldingPatternTab() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { data: items = [], isLoading } = useHoldingPatternList();
   const [selected, setSelected] = useState<HoldingItem | null>(null);
   const { data: timeline = [], isLoading: tlLoading } = useHoldingTimeline(selected);

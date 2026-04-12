@@ -53,7 +53,7 @@ function contactQuality(p: Prospect): "complete" | "partial" | "missing" {
 
 export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFilter, quickSearch, advFilters }: ProspectListPanelProps) {
   const th = t(isDark);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "fatturato" | "dipendenti">("name");
@@ -303,7 +303,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
 function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBack: () => void; isDark: boolean }) {
   const th = t(isDark);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["prospect-contacts", prospect.id],
