@@ -69,6 +69,10 @@ export function useOutreachGenerator() {
       about?: string;
       profileUrl?: string;
     };
+    email_type_id?: string;
+    email_type_prompt?: string;
+    email_type_structure?: string;
+    oracle_tone?: string;
   }) => {
     if (!params.channel) return null;
     setIsGenerating(true);

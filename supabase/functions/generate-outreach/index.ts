@@ -90,6 +90,10 @@ serve(async (req) => {
       base_proposal,
       quality: rawQuality,
       linkedin_profile,
+      email_type_id,
+      email_type_prompt,
+      email_type_structure,
+      oracle_tone,
     } = await req.json();
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
@@ -377,6 +381,19 @@ ISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di 
 
     // ─── End Recipient Intelligence ───
 
+    // ─── Decision Object ───
+    const decision = {
+      email_type: email_type_id || (interactionHistoryCount > 0 ? "follow_up" : "primo_contatto"),
+      relationship_stage: interactionHistoryCount === 0 ? "cold" : interactionHistoryCount < 3 ? "warming" : "active",
+      language: effectiveLanguage,
+      tone: oracle_tone || "professionale",
+      hook_strategy: intelligence.data_found.networks ? "shared_network" : intelligence.data_found.partner ? "company_reference" : "sector_relevance",
+      cta_type: interactionHistoryCount === 0 ? "light_interest_probe" : interactionHistoryCount < 3 ? "micro_commitment" : "direct_action",
+      forbidden_elements: ["overclaiming", "multi_cta", ...(interactionHistoryCount === 0 ? ["price", "discount"] : [])],
+      max_length_lines: ch === "email" ? 12 : ch === "linkedin" ? 6 : 4,
+      persuasion_pattern: email_type_id === "follow_up" ? "strategic_no" : email_type_id === "partnership" ? "loss_aversion" : "label_technique",
+    };
+
     // Fetch AI settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
@@ -457,7 +474,12 @@ GUARDRAIL:
 - Scrivi nella lingua del paese destinatario
 - Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti
 - Usa alias/nome breve nel saluto, mai nome completo
-${ch === "email" ? "- La prima riga dell'output DEVE essere 'Subject: <oggetto>' — SEMPRE, senza eccezioni" : ""}`;
+${ch === "email" ? "- La prima riga dell'output DEVE essere 'Subject: <oggetto>' — SEMPRE, senza eccezioni" : ""}
+
+DECISION OBJECT (decisione già presa — esegui, non ridecidere):
+${JSON.stringify(decision, null, 2)}
+
+${email_type_prompt ? `STRUTTURA EMAIL OBBLIGATORIA (tipo: ${email_type_id}):\n${email_type_prompt}\n\nFORMATO: ${email_type_structure || "hook → corpo → CTA"}\n` : ""}`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
@@ -556,6 +578,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecni
       interaction_history_count: interactionHistoryCount,
       website_source: websiteSource,
       linkedin_source: linkedinSource,
+      decision_object: decision,
     };
 
     return new Response(
