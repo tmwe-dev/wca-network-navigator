@@ -31,7 +31,7 @@ export function ImportSettingsTab(): React.ReactElement {
   return (
     <div className="space-y-6">
       <FormSection title="Importazione Contatti" description="Storico importazioni e accesso rapido al wizard.">
-        <Button onClick={() => navigate("/import")} className="gap-2">
+        <Button onClick={() => navigate("/v2/import")} className="gap-2">
           <Upload className="h-4 w-4" /> Apri wizard importazione
         </Button>
 

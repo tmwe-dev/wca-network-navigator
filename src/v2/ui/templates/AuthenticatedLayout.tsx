@@ -137,6 +137,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Dynamic page title
+  useEffect(() => {
+    const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
+    const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
+    document.title = `${title} — WCA Partners`;
+  }, [location.pathname]);
+
   // ── Session readiness gate (prevents RLS race condition) ──
   const [sessionReady, setSessionReady] = useState(false);
 
