@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Search,
   MapPin,
@@ -53,7 +53,7 @@ function groupAtecoBySection(categories: Array<{ codice: string; descrizione: st
 }
 
 export default function RAExplorer() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [selectedAtecoCodes, setSelectedAtecoCodes] = useState<string[]>([]);
