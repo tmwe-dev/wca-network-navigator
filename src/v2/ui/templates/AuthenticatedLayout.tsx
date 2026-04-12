@@ -448,6 +448,16 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
                           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                             <ActiveProcessIndicator />
+                            {location.pathname.startsWith("/v2/network") && (
+                              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
+                                <ArrowRight className="h-3 w-3" /> CRM
+                              </Button>
+                            )}
+                            {location.pathname.startsWith("/v2/crm") && (
+                              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/network")}>
+                                <ArrowRight className="h-3 w-3" /> Network
+                              </Button>
+                            )}
                             <ConnectionStatusBar
                               onAiClick={() => setIntelliflowOpen(true)}
                               outreachQueue={outreachQueue}
@@ -457,6 +467,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                               onToggleNightPause={globalSync.toggleNightPause}
                               resumeMinutes={globalSync.resumeMinutes}
                             />
+                            <div id="campaign-controls-portal" />
                           </div>
                           <div className="flex items-center gap-0.5">
                             <OperatorSelector />
@@ -468,6 +479,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setAgentDashOpen(true)} aria-label="Agent Operations">
                               <Activity className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni">
+                              <FlaskConical className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow AI">
                               <Sparkles className="h-4 w-4" />
