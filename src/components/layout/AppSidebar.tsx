@@ -172,7 +172,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           <TooltipTrigger asChild>
             {wcaStatus === "expired" ? (
               <Link
-                to="/settings"
+                to="/v1/settings"
                 className="flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <span className="relative flex-shrink-0">
