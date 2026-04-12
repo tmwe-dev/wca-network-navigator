@@ -1,79 +1,22 @@
 /**
- * AILabPage — AI playground for prompts and agents
+ * AILabPage V2 — Thin wrapper mounting V1 AILab
+ * AI Lab playground
  */
 import * as React from "react";
-import { useAILabV2 } from "@/v2/hooks/useAILabV2";
-import { Button } from "../atoms/Button";
-import { Play, Code } from "lucide-react";
+import { Suspense, lazy } from "react";
+
+const V1Component = lazy(() => import("@/pages/AILab"));
 
 export function AILabPage(): React.ReactElement {
-  const { prompt, setPrompt, model, setModel, response, running, prompts, run } = useAILabV2();
-
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">AI Lab</h1>
-        <p className="text-sm text-muted-foreground">Playground per prompt e modelli AI.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Modello</label>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-            >
-              <option value="openai/gpt-5-mini">GPT-5 Mini</option>
-              <option value="openai/gpt-5">GPT-5</option>
-              <option value="openai/gpt-5-nano">GPT-5 Nano</option>
-              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Prompt</label>
-            <textarea
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground min-h-[200px] font-mono"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Inserisci il tuo prompt..."
-            />
-          </div>
-          <Button onClick={run} isLoading={running} className="gap-2">
-            <Play className="h-4 w-4" />Esegui
-          </Button>
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
-
-        {/* Output */}
-        <div className="space-y-4">
-          <label className="text-sm font-medium text-foreground">Risposta</label>
-          <div className="rounded-md border bg-muted/30 p-4 min-h-[200px] text-sm text-foreground whitespace-pre-wrap font-mono">
-            {response || "La risposta apparirà qui..."}
-          </div>
-        </div>
-      </div>
-
-      {/* Prompt library */}
-      {prompts.length > 0 ? (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-foreground flex items-center gap-2"><Code className="h-4 w-4" />Prompt operativi</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {prompts.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPrompt(p.instructions)}
-                className="text-left p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-              >
-                <p className="font-medium text-sm text-foreground">{p.title}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.instructions}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
+      }
+    >
+      <V1Component />
+    </Suspense>
   );
 }
