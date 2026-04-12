@@ -20,7 +20,7 @@ export function BackgroundSyncIndicator() {
   }, []);
 
   // Don't show on outreach page (it has its own panel) or if idle/dismissed
-  const isOnOutreach = location.pathname.startsWith("/outreach");
+  const isOnOutreach = location.pathname.startsWith("/outreach") || location.pathname.startsWith("/v2/outreach");
   if (!progress || progress.status === "idle" || isOnOutreach || dismissed) return null;
 
   const isDone = progress.status === "done";
