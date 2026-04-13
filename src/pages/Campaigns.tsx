@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
+const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").then(m => ({ default: m.CampaignGlobe })));
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
 import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
@@ -465,10 +465,12 @@ export default function Campaigns() {
 
       {/* Globe as full background */}
       <div className="absolute inset-0">
-        <CampaignGlobe
-          selectedCountry={selectedCountry}
-          onCountrySelect={handleCountrySelect}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Caricamento globo...</div>}>
+          <CampaignGlobe
+            selectedCountry={selectedCountry}
+            onCountrySelect={handleCountrySelect}
+          />
+        </Suspense>
       </div>
 
       {/* Left side - Company List */}
