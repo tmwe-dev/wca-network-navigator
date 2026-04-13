@@ -88,8 +88,8 @@ export function useCampaignData() {
       country_name: p.country_name,
       email: p.email,
       partner_type: p.partner_type || "freight_forwarder",
-      partner_certifications: [] as string[],
-      partner_services: [] as string[],
+      partner_certifications: [] as { certification: string }[],
+      partner_services: [] as { service_category: string }[],
       is_bca: false,
     }));
   }, [countryPartnersData, bcaCountryData, source]);
