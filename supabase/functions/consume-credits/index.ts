@@ -17,9 +17,10 @@ function isValidProvider(p: string): p is Provider {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: dynCors });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
