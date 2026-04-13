@@ -3,7 +3,7 @@
  */
 import { useEffect, useState, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
-import { CampaignAnalyticsTab } from "@/components/analytics/CampaignAnalyticsTab";
+const CampaignAnalyticsTab = lazy(() => import("@/components/analytics/CampaignAnalyticsTab").then(m => ({ default: m.CampaignAnalyticsTab })));
 import { Button } from "@/components/ui/button";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignHeaderControls } from "@/components/campaigns/CampaignHeaderControls";

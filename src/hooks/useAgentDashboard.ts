@@ -40,6 +40,7 @@ export function useAgentDashboard() {
         .order("created_at");
       return (agents ?? []) as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
     },
+    staleTime: 5 * 60_000,
   });
 
   const tasksQuery = useQuery({

@@ -18,6 +18,7 @@ export function useAppSettings() {
       });
       return map;
     },
+    staleTime: 5 * 60_000,
   });
 }
 

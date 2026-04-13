@@ -23,6 +23,7 @@ export function useWorkspacePresets() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 5 * 60_000,
   });
 
   const save = useMutation({

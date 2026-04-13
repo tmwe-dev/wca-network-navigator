@@ -14,8 +14,10 @@ import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
-import { DashboardCharts } from "@/components/analytics/DashboardCharts";
-import { ResponseRateCard } from "@/components/analytics/ResponseRateCard";
+import { Suspense, lazy } from "react";
+
+const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
+const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
