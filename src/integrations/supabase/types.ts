@@ -944,6 +944,45 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_config: {
+        Row: {
+          alert_on_degraded: boolean | null
+          alert_on_error_rate: number | null
+          cooldown_minutes: number | null
+          created_at: string | null
+          email_alert: string | null
+          enabled: boolean | null
+          id: string
+          last_alert_at: string | null
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          alert_on_degraded?: boolean | null
+          alert_on_error_rate?: number | null
+          cooldown_minutes?: number | null
+          created_at?: string | null
+          email_alert?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_alert_at?: string | null
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          alert_on_degraded?: boolean | null
+          alert_on_error_rate?: number | null
+          cooldown_minutes?: number | null
+          created_at?: string | null
+          email_alert?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_alert_at?: string | null
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       app_error_logs: {
         Row: {
           component_stack: string | null
