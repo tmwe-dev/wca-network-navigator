@@ -5,6 +5,7 @@
  */
 import { useState, useCallback } from "react";
 import { format } from "date-fns";
+import type { Database } from "@/integrations/supabase/types";
 import { it } from "date-fns/locale";
 import {
   Mail, MessageCircle, Linkedin, Loader2, Plane, ArrowRight,
@@ -62,12 +63,12 @@ export function HoldingPatternCommandCenter() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
       const { error } = await supabase.from("activities").insert({
-        activity_type: "send_email" as any,
+        activity_type: "send_email" as Database["public"]["Enums"]["activity_type"],
         title: `Risposta approvata: ${selectedMessage.subject || "Senza oggetto"}`,
         description: `Risposta al messaggio da ${selectedMessage.from_address}`,
         source_id: selectedMessage.id,
         source_type: "holding_pattern_approval",
-        status: "pending" as any,
+        status: "pending" as Database["public"]["Enums"]["activity_status"],
         priority: "medium",
         user_id: session.user.id,
         partner_id: selectedGroup.partnerId || null,
@@ -94,12 +95,12 @@ export function HoldingPatternCommandCenter() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
       const { error } = await supabase.from("activities").insert({
-        activity_type: "phone_call" as any,
+        activity_type: "phone_call" as Database["public"]["Enums"]["activity_type"],
         title: `Escalation telefonica: ${selectedGroup.companyName}`,
         description: `Escalation da email ${selectedMessage.from_address} — ${selectedMessage.subject || "Senza oggetto"}`,
         source_id: selectedMessage.id,
         source_type: "holding_pattern_escalation",
-        status: "pending" as any,
+        status: "pending" as Database["public"]["Enums"]["activity_status"],
         priority: "high",
         user_id: session.user.id,
         partner_id: selectedGroup.partnerId || null,
