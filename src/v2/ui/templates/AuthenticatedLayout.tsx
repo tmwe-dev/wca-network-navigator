@@ -100,6 +100,24 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   const deepSearch = useDeepSearchRunner();
 
+  // Onboarding check
+  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
+    queryKey: ["onboarding-completed", profile?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("key", "onboarding_completed")
+        .maybeSingle();
+      return data?.value === "true";
+    },
+    staleTime: Infinity,
+    enabled: isAuthenticated && sessionReady,
+  });
+
   useJobHealthMonitor();
   useWcaSync();
   const outreachQueue = useOutreachQueue();
