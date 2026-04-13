@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox, Target, LogOut, Activity, Crown,
+  Send, Inbox, Target, LogOut, Activity, Crown,
+  Gamepad2, Shield, Brain,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -31,14 +32,16 @@ function getNavSections(pathname: string) {
         { title: "Nuova Missione", url: "/v1/mission-builder", icon: Target },
         { title: "Outreach", url: "/v1/outreach", icon: Rocket },
         { title: "Inreach", url: "/v1/inreach", icon: Inbox },
-        { title: "Email Composer", url: "/v1/email-composer", icon: Mail },
+        { title: "Email", url: "/v1/email-composer", icon: Mail },
         { title: "Agenda", url: "/v1/agenda", icon: Calendar },
       ],
     },
     {
       label: "AI",
       items: [
-        { title: "Agenti", url: "/v1/agents", icon: Bot },
+        { title: "AI Arena", url: "/v1/ai-arena", icon: Gamepad2 },
+        { title: "AI Control", url: "/v1/ai-control", icon: Shield },
+        { title: "Email Intelligence", url: "/v1/email-intelligence", icon: Brain },
         { title: "Chat Agenti", url: "/v1/agent-chat", icon: MessageCircle },
         { title: "Staff Direzionale", url: "/v1/staff-direzionale", icon: Crown },
       ],
@@ -46,7 +49,6 @@ function getNavSections(pathname: string) {
     {
       label: "Legacy",
       items: [
-        { title: "Global", url: "/v1/global", icon: Earth },
         { title: "Campagne", url: "/v1/campaigns", icon: Send },
       ],
     },
@@ -144,7 +146,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                         )}
                       />
                       <span className="truncate">{item.title}</span>
-                      {item.url === "/outreach" && pendingCount > 0 && (
+                      {item.url === "/v1/outreach" && pendingCount > 0 && (
                         <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
                           {pendingCount > 99 ? "99+" : pendingCount}
                         </span>
