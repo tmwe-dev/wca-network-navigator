@@ -448,6 +448,206 @@ serve(async (req) => {
       }
     }
 
+    // ═══ GAP 2: AUTO-ESCALATION basata su classificazione ═══
+    const ESCALATION_CATEGORIES = ["interested", "meeting_request"];
+    const POSITIVE_SENTIMENTS = ["positive", "very_positive"];
+
+    if (
+      ESCALATION_CATEGORIES.includes(classification.category) &&
+      POSITIVE_SENTIMENTS.includes(classification.sentiment)
+    ) {
+      if (input.partner_id) {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("lead_status")
+          .eq("id", input.partner_id)
+          .single();
+
+        if (partner) {
+          const statusMap: Record<string, string> = {
+            "new": "contacted",
+            "contacted": "in_progress",
+            "in_progress": classification.category === "meeting_request" ? "negotiation" : "in_progress",
+          };
+          const newStatus = statusMap[partner.lead_status];
+          if (newStatus && newStatus !== partner.lead_status) {
+            await supabase
+              .from("partners")
+              .update({ lead_status: newStatus, last_interaction_at: new Date().toISOString() })
+              .eq("id", input.partner_id);
+
+            logSupervisorAudit(supabase, {
+              user_id: input.user_id, actor_type: "system", actor_name: "classify-email-response",
+              action_category: "contact_updated",
+              action_detail: `Lead status auto-update: ${partner.lead_status} → ${newStatus}`,
+              target_type: "partner", partner_id: input.partner_id,
+              decision_origin: "system_trigger",
+              metadata: { old_status: partner.lead_status, new_status: newStatus, trigger: `email_classified_as_${classification.category}_${classification.sentiment}`, email_address: input.email_address, confidence: classification.confidence },
+            });
+          }
+        }
+      }
+
+      if (input.contact_id) {
+        const { data: contact } = await supabase
+          .from("imported_contacts")
+          .select("lead_status")
+          .eq("id", input.contact_id)
+          .single();
+
+        if (contact) {
+          const statusMap: Record<string, string> = {
+            "new": "contacted",
+            "contacted": "in_progress",
+            "in_progress": classification.category === "meeting_request" ? "negotiation" : "in_progress",
+          };
+          const newStatus = statusMap[contact.lead_status];
+          if (newStatus && newStatus !== contact.lead_status) {
+            await supabase
+              .from("imported_contacts")
+              .update({ lead_status: newStatus })
+              .eq("id", input.contact_id);
+
+            logSupervisorAudit(supabase, {
+              user_id: input.user_id, actor_type: "system", actor_name: "classify-email-response",
+              action_category: "contact_updated",
+              action_detail: `Imported contact lead status auto-update: ${contact.lead_status} → ${newStatus}`,
+              target_type: "imported_contact",
+              decision_origin: "system_trigger",
+              metadata: { contact_id: input.contact_id, old_status: contact.lead_status, new_status: newStatus, trigger: `email_classified_as_${classification.category}_${classification.sentiment}` },
+            });
+          }
+        }
+      }
+    }
+
+    // ═══ GAP 2: AUTO-DOWNGRADE per not_interested ═══
+    if (classification.category === "not_interested" && classification.confidence >= 0.80) {
+      if (input.partner_id) {
+        await supabase
+          .from("partners")
+          .update({ lead_status: "lost" })
+          .eq("id", input.partner_id)
+          .in("lead_status", ["contacted", "in_progress"]);
+      }
+      if (input.contact_id) {
+        await supabase
+          .from("imported_contacts")
+          .update({ lead_status: "lost" })
+          .eq("id", input.contact_id)
+          .in("lead_status", ["contacted", "in_progress"]);
+      }
+    }
+
+    // ═══ GAP 5: KB LEARNING — pattern per singolo sender ═══
+    try {
+      const { data: patternCheck } = await supabase
+        .from("email_classifications")
+        .select("id", { count: "exact" })
+        .eq("user_id", input.user_id)
+        .eq("email_address", input.email_address)
+        .eq("category", classification.category)
+        .gte("confidence", 0.75);
+
+      const patternCount = patternCheck?.length ?? 0;
+
+      if (patternCount >= 5) {
+        const domain = input.email_address.split("@")[1];
+        const patternTag = `email_pattern_${domain}_${classification.category}`;
+
+        const { data: existingKB } = await supabase
+          .from("kb_entries")
+          .select("id")
+          .eq("user_id", input.user_id)
+          .contains("tags", [patternTag])
+          .limit(1);
+
+        if (!existingKB?.length) {
+          const { data: recentClassifications } = await supabase
+            .from("email_classifications")
+            .select("ai_summary, keywords, sentiment")
+            .eq("user_id", input.user_id)
+            .eq("email_address", input.email_address)
+            .eq("category", classification.category)
+            .order("classified_at", { ascending: false })
+            .limit(5);
+
+          const summaries = recentClassifications
+            ?.map((c: any) => c.ai_summary)
+            .filter(Boolean)
+            .join("; ") || "";
+
+          const keywords = [...new Set(
+            recentClassifications?.flatMap((c: any) => c.keywords || []) || []
+          )].slice(0, 10);
+
+          const dominantSentiment = (recentClassifications as any)?.[0]?.sentiment || "neutral";
+
+          await supabase.from("kb_entries").insert({
+            user_id: input.user_id,
+            category: "email_management",
+            chapter: "pattern_appresi",
+            title: `Pattern email: ${input.email_address} → ${classification.category}`,
+            content: [
+              `L'indirizzo ${input.email_address} (dominio: ${domain}) invia consistentemente email di tipo "${classification.category}".`,
+              `Sentiment dominante: ${dominantSentiment}.`,
+              `Temi ricorrenti: ${keywords.join(", ")}.`,
+              `Contesto: ${summaries.slice(0, 500)}`,
+              `Questo pattern è basato su ${patternCount} classificazioni con confidence ≥ 75%.`,
+              `Azione consigliata: trattare automaticamente le email da questo sender come "${classification.category}".`,
+            ].join("\n"),
+            tags: ["email_classification", "auto_learned", patternTag, `category_${classification.category}`, `domain_${domain}`],
+            priority: 4,
+            is_active: true,
+          });
+        }
+      }
+
+      // ═══ GAP 5: KB LEARNING — pattern per dominio ═══
+      const domainForKB = input.email_address.split("@")[1];
+      if (domainForKB) {
+        const { data: domainStats } = await supabase
+          .from("email_classifications")
+          .select("email_address, category")
+          .eq("user_id", input.user_id)
+          .like("email_address", `%@${domainForKB}`)
+          .eq("category", classification.category)
+          .gte("confidence", 0.70);
+
+        const uniqueAddresses = new Set(domainStats?.map((d: any) => d.email_address) || []);
+
+        if (uniqueAddresses.size >= 3) {
+          const domainPatternTag = `domain_pattern_${domainForKB}_${classification.category}`;
+
+          const { data: existingDomainKB } = await supabase
+            .from("kb_entries")
+            .select("id")
+            .eq("user_id", input.user_id)
+            .contains("tags", [domainPatternTag])
+            .limit(1);
+
+          if (!existingDomainKB?.length) {
+            await supabase.from("kb_entries").insert({
+              user_id: input.user_id,
+              category: "email_management",
+              chapter: "pattern_dominio",
+              title: `Pattern dominio: @${domainForKB} → ${classification.category}`,
+              content: [
+                `Il dominio @${domainForKB} ha ${uniqueAddresses.size} indirizzi distinti classificati come "${classification.category}".`,
+                `Indirizzi: ${[...uniqueAddresses].slice(0, 10).join(", ")}.`,
+                `Consiglio: tutte le email da @${domainForKB} possono essere pre-classificate come "${classification.category}".`,
+              ].join("\n"),
+              tags: ["email_classification", "domain_pattern", "auto_learned", domainPatternTag, `domain_${domainForKB}`],
+              priority: 5,
+              is_active: true,
+            });
+          }
+        }
+      }
+    } catch (kbErr) {
+      console.warn("[classify] KB learning error (non-blocking):", kbErr);
+    }
+
     // Supervisor audit (fire-and-forget)
     logSupervisorAudit(supabase, {
       user_id: input.user_id, actor_type: "ai_agent", actor_name: aiResult.modelUsed,

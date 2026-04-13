@@ -27,6 +27,7 @@ import {
   loadOperativePrompts,
   loadMemoryContext,
   loadSystemDoctrine,
+  loadRecentEmailContext,
   compressMessages,
 } from "./contextLoader.ts";
 import { extractContextTags } from "../_shared/contextTagExtractor.ts";
@@ -211,25 +212,27 @@ Non eseguire tool di scrittura o modifica`;
     const ctxTags = extractContextTags(conversationContext);
 
     // ── Load all context in parallel ──
-    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string, doctrineContext: string;
+    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string, doctrineContext: string, emailContext: string;
     if (isConversational) {
       // Lightweight context for voice mode
-      [memoryContext, userProfile, kbContext, doctrineContext] = await Promise.all([
+      [memoryContext, userProfile, kbContext, doctrineContext, emailContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId, ctxTags),
         loadSystemDoctrine(supabase),
+        loadRecentEmailContext(supabase, userId, lastUserMsg),
       ]);
       opPrompts = "";
       missionHistory = "";
     } else {
-      [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext] = await Promise.all([
+      [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext, emailContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId, ctxTags),
         loadOperativePrompts(supabase, userId),
         loadMissionHistory(supabase, userId),
         loadSystemDoctrine(supabase),
+        loadRecentEmailContext(supabase, userId, lastUserMsg),
       ]);
     }
 
@@ -243,6 +246,7 @@ Non eseguire tool di scrittura o modifica`;
       { key: "profile", content: userProfile, priority: 90, minTokens: 100 },
       { key: "memory", content: memoryContext, priority: 80, minTokens: 200 },
       { key: "kb", content: kbContext, priority: 70, minTokens: 200 },
+      { key: "email_context", content: emailContext, priority: 65, minTokens: 100 },
       { key: "operative_prompts", content: opPrompts, priority: 60, minTokens: 100 },
       { key: "mission_history", content: missionHistory, priority: 50, minTokens: 0 },
     ].filter(b => b.content?.trim());
