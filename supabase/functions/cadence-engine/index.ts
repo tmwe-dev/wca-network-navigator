@@ -20,17 +20,16 @@ interface CadenceRule {
 
 interface ActionRow {
   id: string;
-  mission_id: string | null;
+  mission_id: string;
   user_id: string;
   action_type: string;
-  partner_id: string | null;
-  contact_id: string | null;
   status: string;
   scheduled_at: string;
   cadence_rule: CadenceRule | null;
   trigger_condition: string | null;
   parent_action_id: string | null;
   position: number;
+  metadata: Record<string, unknown> | null;
 }
 
 Deno.serve(async (req) => {
@@ -45,7 +44,7 @@ Deno.serve(async (req) => {
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
       .from("mission_actions")
-      .select("id, mission_id, user_id, action_type, partner_id, contact_id, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position")
+      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata")
       .lte("scheduled_at", new Date().toISOString())
       .not("scheduled_at", "is", null)
       .eq("status", "pending")
