@@ -112,19 +112,19 @@ export function PartnerListPanel({
 
   // ── Filtered & sorted partners ──
   const holdingCount = useMemo(() => {
-    return (partners || []).filter((p: any) => p.lead_status && p.lead_status !== "new").length;
+    return (partners || []).filter((p: { lead_status?: string }) => p.lead_status && p.lead_status !== "new").length;
   }, [partners]);
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
     if (progressFilter === "deep") {
-      list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
     }
 
     // Country tab filter
     if (activeCountryTab) {
-      list = list.filter((p: any) => p.country_code === activeCountryTab);
+      list = list.filter((p: { country_code?: string }) => p.country_code === activeCountryTab);
     }
 
     return list;
@@ -135,10 +135,10 @@ export function PartnerListPanel({
     if (countryCodes.length <= 1) return [];
     let list = partners || [];
     if (progressFilter === "deep") {
-      list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
     }
     const counts: Record<string, number> = {};
-    for (const p of list as any[]) {
+    for (const p of list as { country_code?: string }[]) {
       const cc = p.country_code || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     }
@@ -163,12 +163,12 @@ export function PartnerListPanel({
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
     if (!userId) { toast.error("Utente non autenticato"); return; }
-    const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
+    const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
 
     if (destination === "cockpit") {
       const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] = [];
-      for (const p of partnerList as any[]) {
-        const contacts = (p.partner_contacts || []) as any[];
+      for (const p of partnerList as { id: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string; mobile?: string; direct_phone?: string }[] }[]) {
+        const contacts = p.partner_contacts || [];
         if (contacts.length > 0) {
           for (const c of contacts) {
             items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: userId, status: "queued" });
@@ -185,9 +185,9 @@ export function PartnerListPanel({
       }
       toast.success(`${partnerList.length} partner inviati a Cockpit`);
     } else {
-      const inserts = partnerList.map((p: any) => {
+      const inserts = partnerList.map((p: { id: string; company_name?: string; country_code?: string; city?: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string }[] }) => {
         const contacts = p.partner_contacts || [];
-        const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+        const primary = contacts.find((c) => c.is_primary) || contacts[0];
         return {
           activity_type: "send_email" as const,
           title: `Email a ${p.company_name}`,
@@ -206,7 +206,7 @@ export function PartnerListPanel({
           user_id: userId,
         };
       });
-      await createActivities(inserts as any);
+      await createActivities(inserts as Parameters<typeof createActivities>[0]);
       toast.success(`${inserts.length} partner inviati a Workspace`);
     }
     setSelectedIds(new Set());
@@ -221,7 +221,7 @@ export function PartnerListPanel({
   // Auto-select first partner when list loads and nothing is selected
   useEffect(() => {
     if (!selectedPartnerId && filteredPartners.length > 0 && onSelectPartner) {
-      onSelectPartner((filteredPartners[0] as any).id);
+      onSelectPartner((filteredPartners[0] as { id: string }).id);
     }
   }, [filteredPartners, selectedPartnerId, onSelectPartner]);
 
@@ -344,7 +344,7 @@ export function PartnerListPanel({
               isDark={isDark}
               onDownload={() => {}}
               onDeepSearch={() => {
-                const ids = filteredPartners.map((p: any) => p.id);
+                const ids = filteredPartners.map((p: { id: string }) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
               }}
               onGenerateAlias={(type) => onGenerateAliases?.(countryCodes, type)}
@@ -358,7 +358,7 @@ export function PartnerListPanel({
             <Checkbox
               checked={filteredPartners.length > 0 && selectedIds.size === filteredPartners.length}
               onCheckedChange={(checked) => {
-                if (checked) setSelectedIds(new Set(filteredPartners.map((p: any) => p.id)));
+                if (checked) setSelectedIds(new Set(filteredPartners.map((p: { id: string }) => p.id)));
                 else setSelectedIds(new Set());
               }}
               aria-label="Seleziona tutti"
@@ -386,17 +386,17 @@ export function PartnerListPanel({
               } : undefined}
               deepSearchLoading={deepSearchRunning}
               onLinkedIn={() => {
-                const partner = (partners || []).find((p: any) => selectedIds.has(p.id));
+                const partner = (partners || []).find((p: { id: string }) => selectedIds.has(p.id));
                 if (partner) {
-                  const name = (partner as any).company_name || "";
+                  const name = (partner as { company_name?: string }).company_name || "";
                   window.open(`https://www.google.com/search?q=${encodeURIComponent(name + " LinkedIn")}`, "_blank");
                 }
               }}
               onWhatsApp={() => {
-                const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
-                for (const p of partnerList as any[]) {
+                const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
+                for (const p of partnerList as { id: string; partner_contacts?: { mobile?: string; direct_phone?: string }[] }[]) {
                   const contacts = p.partner_contacts || [];
-                  const c = contacts.find((c: any) => c.mobile || c.direct_phone);
+                  const c = contacts.find((c) => c.mobile || c.direct_phone);
                   if (c) {
                     const phone = (c.mobile || c.direct_phone || "").replace(/[^0-9+]/g, "");
                     if (phone) { window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank"); break; }

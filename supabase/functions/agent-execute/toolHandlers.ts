@@ -1,5 +1,21 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
 
+// ── Local interfaces for typed row shapes ──
+interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; }
+interface DirectoryCountRow { country_code: string; member_count: number; }
+interface ServiceRow { service_category: string; }
+interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; contacts_missing_count: number; last_processed_company: string | null; error_message: string | null; created_at: string; }
+interface EmailQueueRow { id: string; status: string; scheduled_at: string | null; sent_at: string | null; recipient_email: string; subject: string; }
+interface AgentTaskRow { id: string; agent_id: string; description: string; status: string; task_type: string; created_at: string; result_summary: string | null; }
+interface ActivityRow { id: string; title: string; status: string; activity_type: string; scheduled_at: string | null; due_date: string | null; source_meta: Record<string, unknown> | null; partner_id: string | null; description: string | null; created_at: string; }
+interface ChannelMessageRow { id: string; channel: string; direction: string; from_address: string | null; to_address: string | null; subject: string | null; body_text: string | null; email_date: string | null; read_at: string | null; partner_id: string | null; category: string | null; created_at: string; thread_id?: string | null; in_reply_to?: string | null; }
+interface AgentRow { id: string; name: string; role: string; is_active: boolean; stats: Record<string, unknown>; avatar_emoji: string; updated_at: string; system_prompt: string; knowledge_base: unknown; }
+interface WorkPlanStep { index?: number; title?: string; description?: string; status?: string; tool?: string; args?: Record<string, unknown>; }
+interface KbEntry { title: string; content: string; added_at: string; }
+interface HoldingItem { id: string; source: string; name: string; country: string; city?: string; email: string | null; status: string; days_waiting: number; interactions?: number; }
+interface AbTestVariant { agent_name: string; tone: string; percentage: number; }
+interface AbTestConfig { enabled?: boolean; variants?: AbTestVariant[]; }
+
 export async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
   switch (name) {
     case "search_partners": {
