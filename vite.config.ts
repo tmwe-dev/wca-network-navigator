@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import viteCompression from "vite-plugin-compression";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -69,6 +70,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
     }),
+    mode === "production" && viteCompression({ algorithm: "gzip", threshold: 1024 }),
+    mode === "production" && viteCompression({ algorithm: "brotliCompress", threshold: 1024 }),
   ].filter(Boolean),
   resolve: {
     alias: {

@@ -5,6 +5,7 @@ import * as React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { prefetchRoute } from "@/lib/prefetchRoutes";
 import {
   Globe, Users, Mail, Bot, Megaphone, Settings,
   Activity, LogOut, LayoutDashboard, ArrowDownLeft,
@@ -144,6 +145,7 @@ export function LayoutSidebarNav({
               <button
                 key={navItem.path}
                 data-testid={`nav-${navId}`}
+                onMouseEnter={() => prefetchRoute(navItem.path)}
                 onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
