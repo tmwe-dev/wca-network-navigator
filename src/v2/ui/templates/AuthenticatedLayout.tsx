@@ -102,7 +102,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   // Onboarding check
   const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
-    queryKey: ["onboarding-completed", profile?.id],
+    queryKey: ["onboarding-completed", profile?.displayName],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return true;
