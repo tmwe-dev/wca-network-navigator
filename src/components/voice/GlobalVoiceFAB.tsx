@@ -8,6 +8,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "./VoiceLanguageSelector";
 
 type VoiceState = "idle" | "listening" | "speaking";
 
@@ -42,11 +43,33 @@ function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
 export default function GlobalVoiceFAB() {
   const { data: settings } = useAppSettings();
   const [state, setState] = useState<VoiceState>("idle");
+  const [voiceLang, setVoiceLang] = useState<string>("it");
+  const [visible, setVisible] = useState(true);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortRef = useRef(false);
 
-  const voiceId = settings?.["elevenlabs_default_voice_id"] || "JBFqnCBsd6RMkjVDRZzb";
+  // Load saved language from settings
+  useEffect(() => {
+    if (settings?.elevenlabs_language && VOICE_LANGUAGE_MAP[settings.elevenlabs_language]) {
+      setVoiceLang(settings.elevenlabs_language);
+    }
+  }, [settings?.elevenlabs_language]);
+
+  // Listen for header toggle
+  useEffect(() => {
+    const handler = () => setVisible((v) => !v);
+    window.addEventListener("toggle-voice-fab", handler);
+    return () => window.removeEventListener("toggle-voice-fab", handler);
+  }, []);
+
+  // Resolve voice ID: custom > language map > default
+  const resolvedVoiceId =
+    settings?.elevenlabs_default_voice_id ||
+    VOICE_LANGUAGE_MAP[voiceLang]?.voiceId ||
+    "JBFqnCBsd6RMkjVDRZzb";
+
+  const langConfig = VOICE_LANGUAGE_MAP[voiceLang] || VOICE_LANGUAGE_MAP.it;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -91,7 +114,11 @@ export default function GlobalVoiceFAB() {
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ text: text.slice(0, 2000), voiceId }),
+            body: JSON.stringify({
+              text: text.slice(0, 2000),
+              voiceId: resolvedVoiceId,
+              language: voiceLang,
+            }),
           },
         );
 
@@ -123,7 +150,7 @@ export default function GlobalVoiceFAB() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [voiceId],
+    [resolvedVoiceId, voiceLang],
   );
 
   const processTranscript = useCallback(
@@ -170,7 +197,7 @@ export default function GlobalVoiceFAB() {
     setState("listening");
 
     const recognition = new SpeechRec();
-    recognition.lang = "it-IT";
+    recognition.lang = langConfig.sttCode;
     recognition.continuous = false;
     recognition.interimResults = false;
     recognitionRef.current = recognition;
@@ -183,8 +210,8 @@ export default function GlobalVoiceFAB() {
 
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       if (e.error === "not-allowed" || e.error === "service-not-available") {
-        // Try en-US fallback
-        if (recognition.lang === "it-IT") {
+        if (recognition.lang !== "en-US") {
+          console.warn(`[GlobalVoiceFAB] STT failed for ${recognition.lang}, falling back to en-US`);
           recognition.lang = "en-US";
           try {
             recognition.start();
@@ -195,7 +222,6 @@ export default function GlobalVoiceFAB() {
         }
         setState("idle");
       } else if (e.error !== "aborted" && !abortRef.current) {
-        // Restart on transient errors
         try {
           recognition.start();
         } catch {
@@ -205,7 +231,7 @@ export default function GlobalVoiceFAB() {
     };
 
     recognition.onend = () => {
-      // If still in listening state and not aborted, the result handler will take over
+      // result handler takes over
     };
 
     try {
@@ -213,7 +239,7 @@ export default function GlobalVoiceFAB() {
     } catch {
       setState("idle");
     }
-  }, [processTranscript]);
+  }, [processTranscript, langConfig.sttCode]);
 
   const handleClick = useCallback(() => {
     if (state === "idle") {
@@ -222,6 +248,25 @@ export default function GlobalVoiceFAB() {
       stopAll();
     }
   }, [state, startListening, stopAll]);
+
+  const cycleLang = useCallback(async () => {
+    const idx = VOICE_LANG_KEYS.indexOf(voiceLang);
+    const next = VOICE_LANG_KEYS[(idx + 1) % VOICE_LANG_KEYS.length];
+    setVoiceLang(next);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("app_settings").upsert(
+          { user_id: user.id, key: "elevenlabs_language", value: next },
+          { onConflict: "user_id,key" },
+        );
+      }
+    } catch {
+      // best effort
+    }
+  }, [voiceLang]);
+
+  if (!visible) return null;
 
   const stateConfig = {
     idle: {
@@ -246,9 +291,20 @@ export default function GlobalVoiceFAB() {
 
   return (
     <div className="fixed bottom-20 right-6 z-50">
+      {/* Language cycle button (idle only) */}
+      {state === "idle" && (
+        <button
+          onClick={cycleLang}
+          className="absolute -top-10 right-1 w-7 h-7 bg-background border border-border shadow-sm rounded-full flex items-center justify-center text-xs select-none hover:bg-muted transition-colors"
+          aria-label="Cambia lingua vocale"
+        >
+          {langConfig.flag}
+        </button>
+      )}
+
       {/* Agent badge */}
       <span className="absolute -top-2 -left-2 text-[10px] font-mono font-bold bg-background border border-border rounded-full px-1.5 py-0.5 z-10 select-none">
-        LUCA
+        LUCA {langConfig.flag}
       </span>
 
       <button

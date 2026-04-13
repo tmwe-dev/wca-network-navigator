@@ -23,7 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voiceId } = await req.json();
+    const { text, voiceId, language } = await req.json();
 
     if (!text || !voiceId) {
       return new Response(JSON.stringify({ error: "text and voiceId are required" }), {
@@ -105,6 +105,7 @@ serve(async (req) => {
             style,
             use_speaker_boost: useSpeakerBoost,
           },
+          ...(language && modelId !== "eleven_monolingual_v1" ? { language_code: language } : {}),
         }),
       }
     );

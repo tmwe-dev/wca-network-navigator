@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
-import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Plus, FlaskConical, DatabaseZap, Activity } from "lucide-react";
+import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Plus, FlaskConical, DatabaseZap, Activity, Mic, MicOff } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
@@ -38,6 +38,7 @@ export function AppLayout() {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [testExtOpen, setTestExtOpen] = useState(false);
   const [agentDashOpen, setAgentDashOpen] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
@@ -181,6 +182,7 @@ export function AppLayout() {
                       <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-red-500 hover:text-red-600" : "text-foreground/70 hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
                       <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
                     </div>
                   </div>
