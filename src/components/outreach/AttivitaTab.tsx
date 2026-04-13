@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, Mail, Phone, Users, RotateCcw, ChevronDown, CalendarIcon, StickyNote, Bot } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -18,6 +19,7 @@ import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { MOCK_ACTIVITIES } from "@/lib/outreachMockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 
 const ACTIVITY_ICONS: Record<string, any> = {
   send_email: Mail,
@@ -28,14 +30,19 @@ const ACTIVITY_ICONS: Record<string, any> = {
 };
 
 export function AttivitaTab() {
+  const qc = useQueryClient();
   const { filters: gf } = useGlobalFilters();
-  const filter = (gf.attivitaStatus || "all") as string;
-  const priorityFilter = gf.attivitaPriority || "all";
-  const searchTerm = gf.search || "";
   const { mockEnabled } = useOutreachMock();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
+
+  // Local filter state
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+
+  const searchTerm = gf.search || "";
 
   const { data: activities, isLoading } = useQuery({
     queryKey: ["activities-outreach"],
@@ -44,7 +51,7 @@ export function AttivitaTab() {
         .from("activities")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       return data || [];
     },
     enabled: !mockEnabled,
@@ -53,19 +60,19 @@ export function AttivitaTab() {
   const all = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
 
   const filtered = useMemo(() => {
-    let result = filter === "all" ? all : all.filter((a: any) => a.status === filter);
-    if (priorityFilter !== "all") {
-      result = result.filter((a: any) => a.priority === priorityFilter);
-    }
+    let result = all as any[];
+    if (statusFilter !== "all") result = result.filter(a => a.status === statusFilter);
+    if (typeFilter !== "all") result = result.filter(a => a.activity_type === typeFilter);
+    if (priorityFilter !== "all") result = result.filter(a => a.priority === priorityFilter);
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      result = result.filter((a: any) =>
+      result = result.filter(a =>
         a.title.toLowerCase().includes(q) ||
         (a.description && a.description.toLowerCase().includes(q))
       );
     }
     return result;
-  }, [all, filter, priorityFilter, searchTerm]);
+  }, [all, statusFilter, typeFilter, priorityFilter, searchTerm]);
 
   const stats = {
     total: all.length,
@@ -84,6 +91,8 @@ export function AttivitaTab() {
     pending: { label: "In attesa", color: "text-primary", bg: "bg-primary/15", icon: Clock },
     in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
     completed: { label: "Completata", color: "text-emerald-500", bg: "bg-emerald-500/15", icon: CheckCircle2 },
+    approved: { label: "Approvata", color: "text-emerald-500", bg: "bg-emerald-500/15", icon: CheckCircle2 },
+    cancelled: { label: "Annullata", color: "text-destructive", bg: "bg-destructive/15", icon: AlertTriangle },
   };
 
   const handleToggle = (id: string) => {
@@ -92,18 +101,78 @@ export function AttivitaTab() {
     setRescheduleDate(undefined);
   };
 
+  const handleComplete = async (id: string) => {
+    try {
+      const { error } = await supabase.from("activities")
+        .update({ status: "completed" as any, completed_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["activities-outreach"] });
+      toast.success("Attività completata");
+    } catch { toast.error("Errore"); }
+  };
+
+  const handleSaveNote = async (id: string) => {
+    if (!noteText.trim()) return;
+    try {
+      const { error } = await supabase.from("activities")
+        .update({ description: noteText.trim() } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await logAuditEntry({ action_category: "activity_updated", action_detail: `Nota aggiunta`, decision_origin: "manual", target_type: "activity", target_id: id });
+      qc.invalidateQueries({ queryKey: ["activities-outreach"] });
+      toast.success("Nota salvata");
+      setNoteText("");
+    } catch { toast.error("Errore salvataggio nota"); }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Compact stats header */}
+      {/* Stats header */}
       <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2">
         <ListTodo className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-semibold">Attività</span>
         <div className="flex items-center gap-1.5 ml-auto">
           <Badge variant="outline" className="text-[9px] px-1.5 h-4">{stats.total} totali</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.pending} attesa</Badge>
-          <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.in_progress} corso</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-emerald-500 border-emerald-500/30">{stats.completed} fatte</Badge>
         </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="shrink-0 px-4 py-1.5 border-b border-border/30 flex items-center gap-2 flex-wrap">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-7 w-[120px] text-[11px]"><SelectValue placeholder="Stato" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="pending">In attesa</SelectItem>
+            <SelectItem value="in_progress">In corso</SelectItem>
+            <SelectItem value="completed">Completata</SelectItem>
+            <SelectItem value="approved">Approvata</SelectItem>
+            <SelectItem value="cancelled">Annullata</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="h-7 w-[120px] text-[11px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i tipi</SelectItem>
+            <SelectItem value="send_email">Email</SelectItem>
+            <SelectItem value="phone_call">Telefono</SelectItem>
+            <SelectItem value="meeting">Meeting</SelectItem>
+            <SelectItem value="follow_up">Follow-up</SelectItem>
+            <SelectItem value="other">Altro</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="h-7 w-[110px] text-[11px]"><SelectValue placeholder="Priorità" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="high">Alta</SelectItem>
+            <SelectItem value="medium">Media</SelectItem>
+            <SelectItem value="low">Bassa</SelectItem>
+          </SelectContent>
+        </Select>
+        <Badge variant="outline" className="text-[10px] h-5">{filtered.length} risultati</Badge>
       </div>
 
       {/* List */}
@@ -115,10 +184,8 @@ export function AttivitaTab() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={CheckCircle2}
-            title={filter === "all" ? "Nessuna attività" : "Nessuna attività con questi filtri"}
-            description={filter === "all"
-              ? "Le attività verranno create automaticamente quando lavori dal Cockpit"
-              : "Cambia filtri nella sidebar per vedere le altre attività"}
+            title={statusFilter === "all" && typeFilter === "all" ? "Nessuna attività" : "Nessuna attività con questi filtri"}
+            description="Le attività verranno create automaticamente quando lavori dal Cockpit"
           />
         ) : (
           <div className="p-2 space-y-1">
@@ -182,19 +249,11 @@ export function AttivitaTab() {
                         </div>
                       )}
 
-                      {/* Description / notes */}
+                      {/* Description */}
                       {item.description && item.activity_type !== "send_email" && item.activity_type !== "email" && (
                         <div>
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase">Descrizione</p>
                           <p className="text-xs text-foreground mt-0.5">{item.description}</p>
-                        </div>
-                      )}
-
-                      {/* Source meta note */}
-                      {item.source_meta?.note && (
-                        <div className="flex items-start gap-1.5 p-2 rounded-md bg-amber-500/5 border border-amber-500/20">
-                          <StickyNote className="w-3 h-3 text-primary mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-foreground">{item.source_meta.note}</p>
                         </div>
                       )}
 
@@ -207,7 +266,13 @@ export function AttivitaTab() {
                       )}
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-2 pt-1 border-t border-border/20">
+                      <div className="flex items-center gap-2 pt-1 border-t border-border/20 flex-wrap">
+                        {item.status !== "completed" && (
+                          <Button size="sm" variant="default" className="h-7 text-[10px] gap-1" onClick={() => handleComplete(item.id)}>
+                            <CheckCircle2 className="w-3 h-3" /> Completa
+                          </Button>
+                        )}
+
                         {/* Reschedule */}
                         <Popover>
                           <PopoverTrigger asChild>
@@ -223,9 +288,9 @@ export function AttivitaTab() {
                                 setRescheduleDate(d);
                                 if (d && item.id) {
                                   try {
-                                    const { updateActivitySchedule, logAuditEntry } = await import("@/data/outreachPipeline");
                                     await updateActivitySchedule(item.id, d.toISOString());
                                     await logAuditEntry({ action_category: "activity_updated", action_detail: `Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`, decision_origin: "manual", target_type: "activity", target_id: item.id });
+                                    qc.invalidateQueries({ queryKey: ["activities-outreach"] });
                                     toast.success(`Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`);
                                   } catch { toast.error("Errore salvataggio"); }
                                 }
@@ -251,10 +316,7 @@ export function AttivitaTab() {
                                 placeholder="Scrivi una nota..."
                                 className="text-xs min-h-[80px] resize-none"
                               />
-                              <Button size="sm" className="w-full h-7 text-xs" onClick={() => {
-                                toast.success("Nota salvata");
-                                setNoteText("");
-                              }}>
+                              <Button size="sm" className="w-full h-7 text-xs" onClick={() => handleSaveNote(item.id)}>
                                 Salva
                               </Button>
                             </div>
