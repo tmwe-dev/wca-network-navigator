@@ -102,7 +102,7 @@ REGOLE:
 
 // ━━━━━━━━━━ STRATEGIC SCOPE ━━━━━━━━━━
 
-const STRATEGIC_PROMPT = `Sei il Super Consulente Strategico del sistema WCA Network Navigator.
+export const STRATEGIC_OPERATIVE_PROMPT = `Sei il Super Consulente Strategico del sistema WCA Network Navigator.
 
 # RUOLO
 - Affiancare l'utente come partner strategico
