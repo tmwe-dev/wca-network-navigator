@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2, Clock } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2, Clock, FlaskConical } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
@@ -16,6 +16,7 @@ const SchedulingTab = lazyRetry(() => import("@/components/outreach/SchedulingTa
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
 const HoldingPatternTab = lazyRetry(() => import("@/components/outreach/HoldingPatternCommandCenter").then(m => ({ default: m.HoldingPatternCommandCenter })));
 const CodaAITab = lazyRetry(() => import("@/components/outreach/CodaAITab").then(m => ({ default: m.CodaAITab })));
+const ABTestResultsTab = lazyRetry(() => import("@/components/outreach/ABTestResults").then(m => ({ default: m.ABTestResults })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -35,6 +36,7 @@ export default function Outreach() {
     { value: "attivita", label: "Attività", icon: ListTodo },
     { value: "circuito", label: "Circuito", icon: Plane },
     { value: "coda-ai", label: "Coda AI", icon: Bot },
+    { value: "ab-test", label: "A/B Test", icon: FlaskConical },
   ];
 
   return (
@@ -70,6 +72,7 @@ export default function Outreach() {
             {tab === "attivita" && <AttivitaTab />}
             {tab === "circuito" && <HoldingPatternTab />}
             {tab === "coda-ai" && <CodaAITab />}
+            {tab === "ab-test" && <ABTestResultsTab />}
           </Suspense>
         </div>
       </div>
