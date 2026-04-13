@@ -24,6 +24,7 @@ import {
   loadKBContext,
   loadOperativePrompts,
   loadMemoryContext,
+  loadSystemDoctrine,
   compressMessages,
 } from "./contextLoader.ts";
 
@@ -157,26 +158,30 @@ Non eseguire tool di scrittura o modifica`;
     }
 
     // ── Load all context in parallel ──
-    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string;
+    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string, doctrineContext: string;
     if (isConversational) {
       // Lightweight context for voice mode
-      [memoryContext, userProfile, kbContext] = await Promise.all([
+      [memoryContext, userProfile, kbContext, doctrineContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId),
+        loadSystemDoctrine(supabase),
       ]);
       opPrompts = "";
       missionHistory = "";
     } else {
-      [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
+      [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId),
         loadOperativePrompts(supabase, userId),
         loadMissionHistory(supabase, userId),
+        loadSystemDoctrine(supabase),
       ]);
     }
 
+    // System doctrine goes first (before user KB)
+    if (doctrineContext) systemPrompt += doctrineContext;
     if (userProfile) systemPrompt += userProfile;
     if (memoryContext) systemPrompt += memoryContext;
     if (kbContext) systemPrompt += kbContext;

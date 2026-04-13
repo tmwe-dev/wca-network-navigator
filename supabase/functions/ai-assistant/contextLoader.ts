@@ -158,6 +158,27 @@ export async function loadKBContext(supabase: SupabaseClient, query?: string, us
   return `\n\nKNOWLEDGE BASE AZIENDALE:\n${entries}`;
 }
 
+// ━━━ Load System Doctrine (always loaded, not query-dependent) ━━━
+
+export async function loadSystemDoctrine(supabase: SupabaseClient): Promise<string> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, content, tags, priority")
+    .eq("category", "system_doctrine")
+    .eq("is_active", true)
+    .is("user_id", null)
+    .order("priority", { ascending: false })
+    .limit(10);
+
+  if (!data?.length) return "";
+
+  const entries = (data as Record<string, unknown>[]).map(e =>
+    `### ${e.title}\n${e.content}`
+  ).join("\n\n");
+
+  return `\n\nDOTTRINA OPERATIVA (Knowledge Base Sistema):\n${entries}`;
+}
+
 // ━━━ Load Operative Prompts ━━━
 
 export async function loadOperativePrompts(supabase: SupabaseClient, userId: string): Promise<string> {
