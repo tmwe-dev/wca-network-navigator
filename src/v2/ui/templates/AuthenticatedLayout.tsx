@@ -556,6 +556,9 @@ style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }
                       <ContactRecordDrawer />
                     </Suspense>
                     <ClaudeBadge />
+                    <Suspense fallback={null}>
+                      <GlobalVoiceFAB />
+                    </Suspense>
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>
