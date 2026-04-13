@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from "react"; // restored
+import { useState, useCallback, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
+import { CRMFilterSidebar } from "@/components/contacts/CRMFilterSidebar";
 import { Users, X } from "lucide-react";
 import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
