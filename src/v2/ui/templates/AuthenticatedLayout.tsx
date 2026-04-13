@@ -53,6 +53,7 @@ const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").the
 const FiltersDrawer = lazy(() => import("@/components/global/FiltersDrawer").then(m => ({ default: m.FiltersDrawer })));
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const CommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
+const GlobalVoiceFAB = lazy(() => import("@/components/voice/GlobalVoiceFAB"));
 const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
