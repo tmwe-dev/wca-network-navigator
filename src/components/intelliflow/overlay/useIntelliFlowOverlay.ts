@@ -8,6 +8,7 @@ import { countBusinessCards } from "@/data/businessCards";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import type { AiOperation } from "@/components/ai/AiOperationCard";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import type { StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA } from "@/constants/routes";
