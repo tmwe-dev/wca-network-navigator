@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
+import { useCallback, useRef } from "react";
 
 type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
 type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
@@ -16,6 +18,16 @@ export interface MissionPlan {
   summary: string;
   totalContacts: number;
   idempotencyKey: string;
+}
+
+export interface MissionProgress {
+  total: number;
+  completed: number;
+  failed: number;
+  executing: number;
+  approved: number;
+  retry_pending: number;
+  updated_at: string;
 }
 
 function generateIdempotencyKey(data: Record<string, unknown>): string {
@@ -33,6 +45,7 @@ function generateIdempotencyKey(data: Record<string, unknown>): string {
 export function useMissionActions(missionId?: string) {
   const qc = useQueryClient();
   const key = ["mission-actions", missionId];
+  const abortRef = useRef<AbortController | null>(null);
 
   const query = useQuery({
     queryKey: key,
@@ -57,7 +70,6 @@ export function useMissionActions(missionId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Non autenticato");
 
-      // Check idempotency
       const { data: existing } = await supabase
         .from("mission_actions")
         .select("id")
@@ -119,12 +131,82 @@ export function useMissionActions(missionId?: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Execute mission actions via slot-based system */
+  const executeMissionWithSlots = useCallback(async (
+    execMissionId: string,
+    userId: string,
+    onProgress?: (p: MissionProgress) => void,
+  ) => {
+    // Abort any previous execution loop
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let consecutiveNoSlot = 0;
+
+    while (!controller.signal.aborted) {
+      try {
+        const res = await invokeEdge<{
+          status: string;
+          progress?: MissionProgress;
+          error?: string;
+        }>("mission-executor", {
+          body: { mission_id: execMissionId, user_id: userId },
+          context: "executeMissionWithSlots",
+        });
+
+        if (controller.signal.aborted) break;
+
+        if (res.status === "no_slot") {
+          consecutiveNoSlot++;
+          if (res.progress) onProgress?.(res.progress);
+
+          // Check if truly complete
+          if (res.progress && (res.progress.completed + res.progress.failed) >= res.progress.total) {
+            toast.success(`Missione completata: ${res.progress.completed} successi, ${res.progress.failed} fallimenti`);
+            break;
+          }
+
+          if (consecutiveNoSlot >= 3) {
+            await new Promise(r => setTimeout(r, 5000));
+            consecutiveNoSlot = 0;
+          }
+          continue;
+        }
+
+        consecutiveNoSlot = 0;
+        if (res.progress) {
+          onProgress?.(res.progress);
+          qc.invalidateQueries({ queryKey: ["mission-actions", execMissionId] });
+        }
+
+        // Check completion
+        if (res.progress && (res.progress.completed + res.progress.failed) >= res.progress.total) {
+          toast.success(`Missione completata: ${res.progress.completed} successi, ${res.progress.failed} fallimenti`);
+          break;
+        }
+      } catch (e) {
+        console.error("Mission execution error:", e);
+        await new Promise(r => setTimeout(r, 10000));
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: key });
+  }, [qc, key]);
+
+  const stopExecution = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
   return {
     actions: query.data ?? [],
     isLoading: query.isLoading,
     createActions,
     approveAll,
     cancelAll,
+    executeMissionWithSlots,
+    stopExecution,
     generateIdempotencyKey,
   };
 }

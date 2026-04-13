@@ -2515,10 +2515,15 @@ export type Database = {
           error_message: string | null
           id: string
           idempotency_key: string | null
+          last_error: string | null
           metadata: Json | null
           mission_id: string
+          next_retry_at: string | null
           position: number
           recovery_log: Json | null
+          retry_count: number | null
+          slot_acquired_at: string | null
+          slot_released_at: string | null
           started_at: string | null
           status: string
           updated_at: string
@@ -2533,10 +2538,15 @@ export type Database = {
           error_message?: string | null
           id?: string
           idempotency_key?: string | null
+          last_error?: string | null
           metadata?: Json | null
           mission_id: string
+          next_retry_at?: string | null
           position?: number
           recovery_log?: Json | null
+          retry_count?: number | null
+          slot_acquired_at?: string | null
+          slot_released_at?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -2551,13 +2561,54 @@ export type Database = {
           error_message?: string | null
           id?: string
           idempotency_key?: string | null
+          last_error?: string | null
           metadata?: Json | null
           mission_id?: string
+          next_retry_at?: string | null
           position?: number
           recovery_log?: Json | null
+          retry_count?: number | null
+          slot_acquired_at?: string | null
+          slot_released_at?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mission_slot_config: {
+        Row: {
+          channel: string
+          concurrent_slots: number
+          created_at: string
+          id: string
+          max_per_day: number
+          max_per_hour: number
+          retry_backoff_minutes: number
+          retry_max: number
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          concurrent_slots?: number
+          created_at?: string
+          id?: string
+          max_per_day?: number
+          max_per_hour?: number
+          retry_backoff_minutes?: number
+          retry_max?: number
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          concurrent_slots?: number
+          created_at?: string
+          id?: string
+          max_per_day?: number
+          max_per_hour?: number
+          retry_backoff_minutes?: number
+          retry_max?: number
           user_id?: string
         }
         Relationships: []
@@ -2739,6 +2790,7 @@ export type Database = {
           plan_json: Json | null
           plan_status: string | null
           processed_contacts: number
+          progress_snapshot: Json | null
           schedule_config: Json | null
           status: string
           target_filters: Json
@@ -2761,6 +2813,7 @@ export type Database = {
           plan_json?: Json | null
           plan_status?: string | null
           processed_contacts?: number
+          progress_snapshot?: Json | null
           schedule_config?: Json | null
           status?: string
           target_filters?: Json
@@ -2783,6 +2836,7 @@ export type Database = {
           plan_json?: Json | null
           plan_status?: string | null
           processed_contacts?: number
+          progress_snapshot?: Json | null
           schedule_config?: Json | null
           status?: string
           target_filters?: Json
@@ -3996,6 +4050,15 @@ export type Database = {
       }
     }
     Functions: {
+      acquire_mission_slot: {
+        Args: {
+          p_channel: string
+          p_max_concurrent?: number
+          p_mission_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
       deduct_credits: {
         Args: {
@@ -4137,6 +4200,11 @@ export type Database = {
         }[]
       }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
+      release_mission_slot: {
+        Args: { p_action_id: string; p_error?: string; p_success: boolean }
+        Returns: undefined
+      }
+      update_mission_progress: { Args: { p_mission_id: string }; Returns: Json }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"
