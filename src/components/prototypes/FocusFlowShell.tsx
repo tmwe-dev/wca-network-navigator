@@ -91,7 +91,7 @@ export function FocusFlowShell() {
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Header minimal */}
       <header className="h-12 border-b border-border/60 flex items-center gap-3 px-4 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")} aria-label="Indietro">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-semibold text-foreground">WCA Partners</span>
@@ -99,7 +99,7 @@ export function FocusFlowShell() {
         <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Impostazioni">
           <Sparkles className="h-4 w-4 text-primary" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")} aria-label="Impostazioni">
           <Settings className="h-4 w-4" />
         </Button>
       </header>
@@ -115,7 +115,7 @@ export function FocusFlowShell() {
             className="pl-10 pr-4 h-9 text-sm bg-background border-border/60 rounded-lg"
           />
           {aiQuery && (
-            <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8"
+            <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8" aria-label="Chiudi"
               onClick={() => setAiQuery("")}>
               <X className="h-3.5 w-3.5" />
             </Button>

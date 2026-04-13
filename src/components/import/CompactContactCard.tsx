@@ -151,7 +151,6 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onViewDetail(); }}
               title="Dettaglio"
-              aria-label="Visualizza"
             >
               <Eye className="w-3 h-3" />
             </Button>
