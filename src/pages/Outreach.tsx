@@ -28,6 +28,7 @@ export default function Outreach() {
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
   const tabs: VerticalTab[] = [
+    { value: "piano-lavori", label: "Piano Lavori", icon: ClipboardList },
     { value: "cockpit", label: "Cockpit", icon: Rocket },
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
     { value: "attivita", label: "Attività", icon: ListTodo },
