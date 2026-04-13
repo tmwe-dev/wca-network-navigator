@@ -4,6 +4,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+type ActivityStatus = Database["public"]["Enums"]["activity_status"];
+type ActivityType = Database["public"]["Enums"]["activity_type"];
+type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
+type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Update"];
+
 // ── Pending items (Da Inviare) ──
 export async function findPendingOutreach() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -166,69 +171,69 @@ export async function fetchOutreachStats() {
 
 // ── Mutations ──
 export async function updateActivitySchedule(id: string, scheduledAt: string) {
-  const { error } = await supabase.from("activities").update({ scheduled_at: scheduledAt } as any).eq("id", id);
+  const { error } = await supabase.from("activities").update({ scheduled_at: scheduledAt } satisfies ActivityUpdate).eq("id", id);
   if (error) throw error;
 }
 
 export async function cancelActivity(id: string) {
-  const { error } = await supabase.from("activities").update({ status: "cancelled" } as any).eq("id", id);
+  const { error } = await supabase.from("activities").update({ status: "cancelled" } satisfies ActivityUpdate).eq("id", id);
   if (error) throw error;
 }
 
 export async function cancelMissionAction(id: string) {
-  const { error } = await supabase.from("mission_actions").update({ status: "cancelled" } as any).eq("id", id);
+  const { error } = await supabase.from("mission_actions").update({ status: "cancelled" } satisfies MissionActionUpdate).eq("id", id);
   if (error) throw error;
 }
 
 export async function retryMissionAction(id: string) {
   const { error } = await supabase.from("mission_actions")
-    .update({ status: "planned", retry_count: 0, last_error: null } as any)
+    .update({ status: "planned", retry_count: 0, last_error: null } satisfies MissionActionUpdate)
     .eq("id", id);
   if (error) throw error;
 }
 
 export async function updateMissionActionSchedule(id: string, scheduledAt: string) {
-  const { error } = await supabase.from("mission_actions").update({ scheduled_at: scheduledAt } as any).eq("id", id);
+  const { error } = await supabase.from("mission_actions").update({ scheduled_at: scheduledAt } satisfies MissionActionUpdate).eq("id", id);
   if (error) throw error;
 }
 
 export async function cancelPendingAction(id: string) {
-  const { error } = await supabase.from("ai_pending_actions").update({ status: "rejected" } as any).eq("id", id);
+  const { error } = await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", id);
   if (error) throw error;
 }
 
 // ── Mission controls ──
 export async function pauseMission(missionId: string) {
-  const { error: e1 } = await supabase.from("outreach_missions" as any)
+  const { error: e1 } = await supabase.from("outreach_missions")
     .update({ status: "paused" }).eq("id", missionId);
   if (e1) throw e1;
   const { error: e2 } = await supabase.from("mission_actions")
-    .update({ status: "paused" as any }).eq("mission_id", missionId).in("status", ["planned", "approved"]);
+    .update({ status: "paused" } satisfies MissionActionUpdate).eq("mission_id", missionId).in("status", ["planned", "approved"]);
   if (e2) throw e2;
 }
 
 export async function resumeMission(missionId: string) {
-  const { error: e1 } = await supabase.from("outreach_missions" as any)
+  const { error: e1 } = await supabase.from("outreach_missions")
     .update({ status: "in_progress" }).eq("id", missionId);
   if (e1) throw e1;
   const { error: e2 } = await supabase.from("mission_actions")
-    .update({ status: "approved" as any }).eq("mission_id", missionId).eq("status", "paused" as any);
+    .update({ status: "approved" } satisfies MissionActionUpdate).eq("mission_id", missionId).eq("status", "paused");
   if (e2) throw e2;
 }
 
 export async function cancelMission(missionId: string) {
-  const { error: e1 } = await supabase.from("outreach_missions" as any)
+  const { error: e1 } = await supabase.from("outreach_missions")
     .update({ status: "cancelled" }).eq("id", missionId);
   if (e1) throw e1;
   const { error: e2 } = await supabase.from("mission_actions")
-    .update({ status: "cancelled" as any }).eq("mission_id", missionId).in("status", ["planned", "approved", "paused"]);
+    .update({ status: "cancelled" } satisfies MissionActionUpdate).eq("mission_id", missionId).in("status", ["planned", "approved", "paused"]);
   if (e2) throw e2;
 }
 
 // ── Campaign queue controls ──
 export async function pauseCampaignQueue(campaignId: string) {
   const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "paused" as any })
+    .update({ status: "paused" })
     .eq("draft_id", campaignId).eq("status", "pending");
   if (error) throw error;
 }
@@ -236,20 +241,20 @@ export async function pauseCampaignQueue(campaignId: string) {
 export async function resumeCampaignQueue(campaignId: string) {
   const { error } = await supabase.from("email_campaign_queue")
     .update({ status: "pending" })
-    .eq("draft_id", campaignId).eq("status", "paused" as any);
+    .eq("draft_id", campaignId).eq("status", "paused");
   if (error) throw error;
 }
 
 export async function cancelCampaignQueue(campaignId: string) {
   const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "cancelled" as any })
+    .update({ status: "cancelled" })
     .eq("draft_id", campaignId).in("status", ["pending", "paused"]);
   if (error) throw error;
 }
 
 export async function cancelCampaignItem(itemId: string) {
   const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "cancelled" as any }).eq("id", itemId);
+    .update({ status: "cancelled" }).eq("id", itemId);
   if (error) throw error;
 }
 
@@ -265,7 +270,8 @@ export async function logAuditEntry(entry: {
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("supervisor_audit_log" as any).insert({
+  // supervisor_audit_log may not be in generated types yet — use dynamic access
+  await (supabase.from as Function)("supervisor_audit_log").insert({
     user_id: user.id,
     actor_type: "user",
     ...entry,

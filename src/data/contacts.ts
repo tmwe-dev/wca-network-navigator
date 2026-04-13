@@ -5,10 +5,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { QueryClient } from "@tanstack/react-query";
+import type { Database } from "@/integrations/supabase/types";
 
 // ─── Types ──────────────────────────────────────────────
 
 export type LeadStatus = "new" | "contacted" | "in_progress" | "negotiation" | "converted" | "lost";
+
+type ImportedContactRow = Database["public"]["Tables"]["imported_contacts"]["Row"];
+type ImportedContactInsert = Database["public"]["Tables"]["imported_contacts"]["Insert"];
 
 export interface ContactFilters {
   search?: string;
@@ -56,50 +60,56 @@ export const contactKeys = {
 // ─── Constants ──────────────────────────────────────────
 const DEFAULT_PAGE_SIZE = 200;
 
+// ─── Query Builder type ─────────────────────────────────
+// The Supabase query builder is complex with generics; we use a lightweight alias
+// to avoid `any` while preserving chainability.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ContactQueryBuilder = any;
+
 // ─── Query Helpers ──────────────────────────────────────
 
 function applyContactFilters(
-  q: any,
+  q: ContactQueryBuilder,
   filters: ContactFilters
-) {
+): ContactQueryBuilder {
   // Quality filter — base
-  q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null") as any;
+  q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
-  if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId) as any;
+  if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
 
   if (filters.search) {
     const s = sanitizeSearchTerm(filters.search);
     if (s) {
       q = q.or(
         `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`
-      ) as any;
+      );
     }
   }
-  if (filters.countries?.length) q = q.in("country", filters.countries) as any;
-  else if (filters.country) q = q.eq("country", filters.country) as any;
+  if (filters.countries?.length) q = q.in("country", filters.countries);
+  else if (filters.country) q = q.eq("country", filters.country);
 
-  if (filters.origins?.length) q = q.in("origin", filters.origins) as any;
-  else if (filters.origin) q = q.eq("origin", filters.origin) as any;
+  if (filters.origins?.length) q = q.in("origin", filters.origins);
+  else if (filters.origin) q = q.eq("origin", filters.origin);
 
-  if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus) as any;
-  if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom) as any;
-  if (filters.dateTo) q = q.lte("created_at", filters.dateTo) as any;
-  if (filters.hasDeepSearch === true) q = q.not("deep_search_at", "is", null) as any;
-  if (filters.hasDeepSearch === false) q = q.is("deep_search_at", null) as any;
-  if (filters.hasAlias === true) q = q.not("company_alias", "is", null) as any;
-  if (filters.holdingPattern === "out") q = q.eq("interaction_count", 0) as any;
-  else if (filters.holdingPattern === "in") q = q.gt("interaction_count", 0) as any;
+  if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
+  if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom);
+  if (filters.dateTo) q = q.lte("created_at", filters.dateTo);
+  if (filters.hasDeepSearch === true) q = q.not("deep_search_at", "is", null);
+  if (filters.hasDeepSearch === false) q = q.is("deep_search_at", null);
+  if (filters.hasAlias === true) q = q.not("company_alias", "is", null);
+  if (filters.holdingPattern === "out") q = q.eq("interaction_count", 0);
+  else if (filters.holdingPattern === "in") q = q.gt("interaction_count", 0);
 
-  if (filters.channel === "with_email") q = q.not("email", "is", null) as any;
-  else if (filters.channel === "with_phone") q = q.not("phone", "is", null) as any;
+  if (filters.channel === "with_email") q = q.not("email", "is", null);
+  else if (filters.channel === "with_phone") q = q.not("phone", "is", null);
 
-  if (filters.quality === "enriched") q = q.not("deep_search_at", "is", null) as any;
-  else if (filters.quality === "not_enriched") q = q.is("deep_search_at", null) as any;
-  else if (filters.quality === "with_alias") q = q.not("company_alias", "is", null) as any;
-  else if (filters.quality === "no_alias") q = q.is("company_alias", null) as any;
+  if (filters.quality === "enriched") q = q.not("deep_search_at", "is", null);
+  else if (filters.quality === "not_enriched") q = q.is("deep_search_at", null);
+  else if (filters.quality === "with_alias") q = q.not("company_alias", "is", null);
+  else if (filters.quality === "no_alias") q = q.is("company_alias", null);
 
-  if (filters.wcaMatch === "matched") q = q.not("wca_partner_id", "is", null) as any;
-  else if (filters.wcaMatch === "unmatched") q = q.is("wca_partner_id", null) as any;
+  if (filters.wcaMatch === "matched") q = q.not("wca_partner_id", "is", null);
+  else if (filters.wcaMatch === "unmatched") q = q.is("wca_partner_id", null);
 
   return q;
 }
@@ -115,11 +125,11 @@ export async function findContacts(filters: ContactFilters = {}) {
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
 
-  q = applyContactFilters(q, filters) as any;
+  q = applyContactFilters(q, filters);
 
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  q = q.range(from, to) as any;
+  q = q.range(from, to);
 
   const { data, error, count } = await q;
   if (error) throw error;
@@ -159,9 +169,9 @@ export async function getHoldingPatternStats() {
   if (error) throw error;
 
   const stats: Record<string, number> = { contacted: 0, in_progress: 0, negotiation: 0, converted: 0, lost: 0, total: 0 };
-  (data ?? []).forEach((r: any) => {
+  (data ?? []).forEach((r: { lead_status: string | null }) => {
     stats.total++;
-    if (stats[r.lead_status] !== undefined) stats[r.lead_status]++;
+    if (r.lead_status && stats[r.lead_status] !== undefined) stats[r.lead_status]++;
   });
   return stats;
 }
@@ -172,7 +182,7 @@ export async function getContactFilterOptions() {
 
   const origins: string[] = [];
   const countries: string[] = [];
-  (data ?? []).forEach((r: any) => {
+  (data ?? []).forEach((r: { filter_type: string; filter_value: string }) => {
     if (r.filter_type === "origin") origins.push(r.filter_value);
     else if (r.filter_type === "country") countries.push(r.filter_value);
   });
@@ -211,7 +221,7 @@ export async function createContactInteraction(interaction: {
     .insert(interaction);
   if (iError) throw iError;
 
-  await supabase.rpc("increment_contact_interaction" as any, {
+  await supabase.rpc("increment_contact_interaction", {
     p_contact_id: interaction.contact_id,
   });
 }
@@ -245,6 +255,8 @@ export async function getContactById(id: string) {
 }
 
 export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
+  // Dynamic select requires flexible return type for diverse consumers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: any[] = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
@@ -260,7 +272,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
 
 export async function insertContacts(contacts: Record<string, unknown>[]) {
   for (let i = 0; i < contacts.length; i += 100) {
-    const { error } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100) as any);
+    const { error } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100) as ImportedContactInsert[]);
     if (error) throw error;
   }
 }
@@ -302,7 +314,7 @@ export async function updateContactEnrichment(id: string, enrichmentPatch: Recor
   const merged = structuredClone({ ...existing, ...enrichmentPatch });
   const { error } = await supabase
     .from("imported_contacts")
-    .update({ enrichment_data: merged as any })
+    .update({ enrichment_data: merged as unknown as ImportedContactRow["enrichment_data"] })
     .eq("id", id);
   if (error) throw error;
 }
@@ -330,7 +342,7 @@ export async function fetchGroupContactIds(groupType: string, groupKey: string, 
       break;
   }
   const { data } = await q.limit(1000);
-  return (data ?? []).map((r: any) => r.id);
+  return (data ?? []).map((r: { id: string }) => r.id);
 }
 
 // ─── Cache Invalidation ────────────────────────────────
