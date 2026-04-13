@@ -660,4 +660,44 @@ export const ALL_TOOLS: Record<string, any> = {
       },
     },
   },
+  get_email_classifications: {
+    type: "function",
+    function: {
+      name: "get_email_classifications",
+      description: "Query email classifications with filters.",
+      parameters: { type: "object", properties: { email_address: { type: "string" }, partner_id: { type: "string" }, category: { type: "string" }, limit: { type: "number" } } },
+    },
+  },
+  get_conversation_context: {
+    type: "function",
+    function: {
+      name: "get_conversation_context",
+      description: "Get conversation context for an email address.",
+      parameters: { type: "object", properties: { email_address: { type: "string" } }, required: ["email_address"] },
+    },
+  },
+  get_address_rules: {
+    type: "function",
+    function: {
+      name: "get_address_rules",
+      description: "Get email address rules.",
+      parameters: { type: "object", properties: { email_address: { type: "string" }, is_active: { type: "boolean" }, limit: { type: "number" } } },
+    },
+  },
+  suggest_next_contacts: {
+    type: "function",
+    function: {
+      name: "suggest_next_contacts",
+      description: "Suggest never-contacted partners for outreach.",
+      parameters: { type: "object", properties: { focus: { type: "string" }, channel: { type: "string" }, batch_size: { type: "number" } } },
+    },
+  },
+  detect_language: {
+    type: "function",
+    function: {
+      name: "detect_language",
+      description: "Detect language for a country code.",
+      parameters: { type: "object", properties: { country_code: { type: "string" } }, required: ["country_code"] },
+    },
+  },
 };

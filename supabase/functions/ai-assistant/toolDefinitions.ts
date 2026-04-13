@@ -957,4 +957,84 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  // ── Wave 5 — Intelligence & Arena tools ──
+  {
+    type: "function",
+    function: {
+      name: "get_email_classifications",
+      description: "Query email classifications with filters. Returns category, confidence, summary, sentiment.",
+      parameters: {
+        type: "object",
+        properties: {
+          email_address: { type: "string", description: "Filter by email address" },
+          partner_id: { type: "string", description: "Filter by partner UUID" },
+          category: { type: "string", description: "Filter by category" },
+          limit: { type: "number", description: "Max results (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_conversation_context",
+      description: "Get conversation context for an email address: history, sentiment, response rate.",
+      parameters: {
+        type: "object",
+        properties: {
+          email_address: { type: "string", description: "Email address to look up" },
+        },
+        required: ["email_address"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_address_rules",
+      description: "Get email address rules: auto-execute settings, tone, topics, confidence threshold.",
+      parameters: {
+        type: "object",
+        properties: {
+          email_address: { type: "string", description: "Filter by email address" },
+          is_active: { type: "boolean", description: "Filter by active status" },
+          limit: { type: "number", description: "Max results (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_next_contacts",
+      description: "Suggest never-contacted partners for outreach. Calls AI Arena suggest internally.",
+      parameters: {
+        type: "object",
+        properties: {
+          focus: { type: "string", enum: ["tutti", "italia", "estero"], description: "Geographic focus" },
+          channel: { type: "string", enum: ["email", "whatsapp", "linkedin"], description: "Preferred channel" },
+          batch_size: { type: "number", description: "Number of suggestions (1-10)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "detect_language",
+      description: "Detect the appropriate language for a country code.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "ISO 2-letter country code" },
+        },
+        required: ["country_code"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];

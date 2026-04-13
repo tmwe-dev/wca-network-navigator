@@ -315,6 +315,49 @@ export async function executeTool(
     case "create_download_job": return executeCreateDownloadJob(supabase, args);
     case "download_single_partner": return executeDownloadSinglePartner(supabase, args);
     case "get_procedure": return executeGetProcedure(args);
+
+    case "get_email_classifications": {
+      let q = supabase.from("email_classifications").select("id, email_address, category, confidence, ai_summary, sentiment, urgency, keywords, action_suggested, classified_at, partner_id").order("classified_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+      if (args.email_address) q = q.eq("email_address", args.email_address);
+      if (args.partner_id) q = q.eq("partner_id", args.partner_id);
+      if (args.category) q = q.eq("category", args.category);
+      if (userId) q = q.eq("user_id", userId);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: data?.length, classifications: data };
+    }
+    case "get_conversation_context": {
+      const { data, error } = await supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address)).maybeSingle();
+      if (error) return { error: error.message };
+      if (!data) return { message: "No conversation context found for this address." };
+      return data;
+    }
+    case "get_address_rules": {
+      let q = supabase.from("email_address_rules").select("*").order("interaction_count", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+      if (args.email_address) q = q.eq("email_address", args.email_address);
+      if (args.is_active !== undefined) q = q.eq("is_active", !!args.is_active);
+      if (userId) q = q.eq("user_id", userId);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: data?.length, rules: data };
+    }
+    case "suggest_next_contacts": {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/ai-arena-suggest`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authHeader || serviceKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ focus: args.focus || "tutti", preferred_channel: args.channel || "email", batch_size: Math.min(Number(args.batch_size) || 5, 10), excluded_ids: [] }),
+      });
+      if (!res.ok) return { error: await res.text() };
+      return await res.json();
+    }
+    case "detect_language": {
+      const { getLanguageHint } = await import("../_shared/textUtils.ts");
+      const hint = getLanguageHint(String(args.country_code || "US"));
+      return { country_code: args.country_code, ...hint };
+    }
+
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
