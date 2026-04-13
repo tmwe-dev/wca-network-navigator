@@ -152,7 +152,7 @@ export function CodaAITab() {
             size="icon" aria-label="Azione"
             variant="ghost"
             className="h-7 w-7"
-            onClick={() = aria-label="Aggiorna"> queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] })}
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
@@ -201,12 +201,12 @@ export function CodaAITab() {
                   <Button size="icon" aria-label="Visualizza" variant="ghost" className="h-7 w-7" onClick={() => setPreviewAction(action)} title="Anteprima">
                     <Eye className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                    onClick={() = aria-label="Conferma"> approveAction.mutate(action.id)} disabled={approveAction.isPending} title="Approva">
+                  <Button size="icon" aria-label="Conferma" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                    onClick={() => approveAction.mutate(action.id)} disabled={approveAction.isPending} title="Approva">
                     <Check className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                    onClick={() = aria-label="Chiudi"> rejectAction.mutate(action.id)} disabled={rejectAction.isPending} title="Rifiuta">
+                  <Button size="icon" aria-label="Rifiuta" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                    onClick={() => rejectAction.mutate(action.id)} disabled={rejectAction.isPending} title="Rifiuta">
                     <X className="w-3.5 h-3.5" />
                   </Button>
                 </div>
