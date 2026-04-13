@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
 import { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
@@ -69,6 +70,12 @@ serve(async (req) => {
       return edgeError("AUTH_INVALID", "Unauthorized");
     }
     const userId: string = claimsData.claims.sub as string;
+
+    // ── Rate limiting ──
+    const rl = checkRateLimit(`ai-assistant:${userId}`, { maxTokens: 15, refillRate: 0.25 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl, dynCors);
+    }
 
     // ── AI Provider + credit gate ──
     const provider = await resolveAiProvider(supabase, userId);

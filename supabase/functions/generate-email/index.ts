@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 
 // ── Type definitions for DB entities ──
@@ -242,6 +243,12 @@ serve(async (req) => {
       });
     }
     const userId = claimsData.claims.sub as string;
+
+    // ── Rate limiting ──
+    const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl, dynCors);
+    }
 
     const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
 
