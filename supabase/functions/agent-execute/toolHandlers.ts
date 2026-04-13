@@ -912,6 +912,61 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       return { success: true, campaign_id: data.id, name: data.title, steps: steps.length, message: `Campagna "${args.name}" creata con ${steps.length} step.` };
     }
 
+    case "review_pending_actions": {
+      let q = supabase.from("ai_pending_actions")
+        .select("id, action_type, email_address, partner_id, confidence, reasoning, suggested_content, source, created_at")
+        .eq("user_id", userId).eq("status", "pending")
+        .order("created_at", { ascending: false }).limit(Math.min(Number(args.limit) || 10, 50));
+      if (args.action_type) q = q.eq("action_type", String(args.action_type));
+      if (args.source) q = q.eq("source", String(args.source));
+      if (args.email_address) q = q.eq("email_address", String(args.email_address));
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: (data || []).length, actions: data || [] };
+    }
+
+    case "approve_pending_action": {
+      const { data: act, error: e } = await supabase.from("ai_pending_actions").select("*").eq("id", args.action_id).eq("user_id", userId).single();
+      if (e || !act) return { error: "Azione non trovata" };
+      if ((act as any).status !== "pending") return { error: `Già ${(act as any).status}` };
+      await supabase.from("ai_pending_actions").update({ status: "approved", executed_at: new Date().toISOString() }).eq("id", args.action_id);
+      if ((act as any).decision_log_id) await supabase.from("ai_decision_log").update({ user_review: args.modified_content ? "modified" : "approved" }).eq("id", (act as any).decision_log_id);
+      if ((act as any).email_address) {
+        const { data: rule } = await supabase.from("email_address_rules").select("ai_confidence_threshold").eq("user_id", userId).eq("email_address", (act as any).email_address).maybeSingle();
+        if (rule) await supabase.from("email_address_rules").update({ ai_confidence_threshold: Math.max(0.50, ((rule as any).ai_confidence_threshold || 0.75) - 0.01), interaction_count: supabase.rpc ? undefined : undefined }).eq("user_id", userId).eq("email_address", (act as any).email_address);
+      }
+      return { success: true, message: `Azione "${(act as any).action_type}" approvata.` };
+    }
+
+    case "reject_pending_action": {
+      const { data: act, error: e } = await supabase.from("ai_pending_actions").select("*").eq("id", args.action_id).eq("user_id", userId).single();
+      if (e || !act) return { error: "Azione non trovata" };
+      await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", args.action_id);
+      if ((act as any).decision_log_id) await supabase.from("ai_decision_log").update({ user_review: "rejected", user_correction: args.reason || null }).eq("id", (act as any).decision_log_id);
+      if ((act as any).email_address) {
+        const { data: rule } = await supabase.from("email_address_rules").select("ai_confidence_threshold").eq("user_id", userId).eq("email_address", (act as any).email_address).maybeSingle();
+        if (rule) await supabase.from("email_address_rules").update({ ai_confidence_threshold: Math.min(0.99, ((rule as any).ai_confidence_threshold || 0.75) + 0.05) }).eq("user_id", userId).eq("email_address", (act as any).email_address);
+      }
+      return { success: true, message: `Azione "${(act as any).action_type}" rifiutata.` };
+    }
+
+    case "get_ai_performance": {
+      const days = Math.min(Number(args.days) || 30, 90);
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      let q = supabase.from("ai_decision_log").select("decision_type, was_auto_executed, user_review, confidence, email_address").eq("user_id", userId).gte("created_at", since).limit(1000);
+      if (args.email_address) q = q.eq("email_address", String(args.email_address));
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      const d = (data || []) as any[];
+      const approved = d.filter(x => x.user_review === "approved" || x.user_review === "modified").length;
+      const rejected = d.filter(x => x.user_review === "rejected").length;
+      const reviewed = approved + rejected;
+      return {
+        total: d.length, auto_executed: d.filter(x => x.was_auto_executed).length,
+        approved, rejected, accuracy_pct: reviewed > 0 ? Math.round((approved / reviewed) * 100) : null,
+      };
+    }
+
     default:
       return { error: `Tool sconosciuto: ${name}` };
   }
