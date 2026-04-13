@@ -103,5 +103,9 @@ verify_jwt = false
 [functions.whatsapp-ai-extract]
 verify_jwt = false
 
+
+[functions.generate-work-plan]
+verify_jwt = false
+
 [functions.analyze-email-edit]
 verify_jwt = false
