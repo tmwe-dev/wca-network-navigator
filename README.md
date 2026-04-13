@@ -1,73 +1,37 @@
-# Welcome to your Lovable project
-README
-## Project info
+# WCA Network Navigator
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+CRM con intelligenza artificiale per il freight forwarding globale.
 
-## How can I edit this code?
+## Stack
+- React 18 + TypeScript + Vite
+- Supabase (PostgreSQL + Auth + Edge Functions)
+- AI Gateway: OpenAI, Anthropic, Google Gemini, xAI, Qwen, OpenRouter
+- ElevenLabs per agenti vocali
+- Three.js per visualizzazioni 3D
+- Tailwind CSS + shadcn/ui
 
-There are several ways of editing your application.
+## Setup
+1. `npm install`
+2. Copia `.env.example` in `.env` e configura le variabili
+3. `npm run dev`
 
-**Use Lovable**
+## Struttura
+- `src/pages/` — Pagine dell'applicazione
+- `src/components/` — Componenti React organizzati per dominio
+- `src/v2/` — Componenti e pagine evolute
+- `src/data/` — Data Access Layer
+- `src/hooks/` — Hook personalizzati
+- `supabase/functions/` — 65+ Edge Functions in Deno
+- `supabase/migrations/` — Migrazioni database
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Funzionalità Principali
+- CRM con pipeline Kanban e lead scoring AI
+- Outreach engine con missioni e cadenza automatica
+- Email Intelligence con classificazione AI e gestione sender
+- Sistema di memoria Hydra a 3 livelli (L1/L2/L3)
+- Knowledge Base con RAG semantico (pgvector 1536-dim)
+- 47 tool AI per agenti conversazionali
+- Agenti vocali con ElevenLabs
+- AI Arena con ContactCard 3D
+- Multi-canale: Email, WhatsApp, LinkedIn
+- A/B testing email con significatività statistica
