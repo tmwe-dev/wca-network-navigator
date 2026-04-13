@@ -30,6 +30,7 @@ const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: str
   advance_gate: { icon: Workflow, color: "text-pink-400 bg-pink-400/10", label: "Avanza Gate" },
   change_channel: { icon: Zap, color: "text-amber-400 bg-amber-400/10", label: "Cambia Canale" },
   schedule_followup: { icon: Clock, color: "text-sky-400 bg-sky-400/10", label: "Follow-up" },
+  prompt_refinement: { icon: Sparkles, color: "text-violet-400 bg-violet-400/10", label: "Refinement Prompt" },
 };
 
 const SOURCE_META: Record<string, { icon: typeof Bot; label: string }> = {
