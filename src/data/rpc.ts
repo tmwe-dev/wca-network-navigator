@@ -4,28 +4,65 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export async function rpcGetCountryStats() {
+interface CountryStatRow {
+  country_code: string;
+  total_partners: number;
+  hq_count: number;
+  branch_count: number;
+  with_profile: number;
+  without_profile: number;
+  with_email: number;
+  with_phone: number;
+  with_both: number;
+  with_deep_search: number;
+  with_company_alias: number;
+  with_contact_alias: number;
+}
+
+interface ContactGroupCountRow {
+  group_type: string;
+  group_key: string;
+  group_label: string;
+  contact_count: number;
+  with_email: number;
+  with_phone: number;
+  with_deep_search: number;
+  with_alias: number;
+}
+
+interface ContactFilterOptionRow {
+  filter_type: string;
+  filter_value: string;
+}
+
+interface DirectoryCountRow {
+  country_code: string;
+  member_count: number;
+  is_verified: boolean;
+}
+
+export async function rpcGetCountryStats(): Promise<CountryStatRow[]> {
   const { data, error } = await supabase.rpc("get_country_stats");
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as CountryStatRow[];
 }
 
-export async function rpcGetContactGroupCounts() {
+export async function rpcGetContactGroupCounts(): Promise<ContactGroupCountRow[]> {
   const { data, error } = await supabase.rpc("get_contact_group_counts");
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as ContactGroupCountRow[];
 }
 
-export async function rpcGetContactFilterOptions() {
+export async function rpcGetContactFilterOptions(): Promise<ContactFilterOptionRow[]> {
   const { data, error } = await supabase.rpc("get_contact_filter_options");
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as ContactFilterOptionRow[];
 }
 
-export async function rpcGetDirectoryCounts() {
+export async function rpcGetDirectoryCounts(): Promise<DirectoryCountRow[]> {
   const { data, error } = await supabase.rpc("get_directory_counts");
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as DirectoryCountRow[];
 }
 
 export async function rpcMatchContactsToWca() {
@@ -35,20 +72,21 @@ export async function rpcMatchContactsToWca() {
 }
 
 export async function rpcIsEmailAuthorized(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_email_authorized" as any, { p_email: email });
+  const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
   if (error) throw error;
   return data === true;
 }
 
 export async function rpcRecordUserLogin(email: string): Promise<void> {
-  await supabase.rpc("record_user_login" as any, { p_email: email });
+  await supabase.rpc("record_user_login", { p_email: email });
 }
 
 /**
  * Generic RPC call for diagnostics — intentionally dynamic.
  */
 export async function rpcCall(fn: string, params?: Record<string, unknown>) {
-  const { data, error } = await supabase.rpc(fn as any, params as any);
+  // Diagnostics tool: dynamic function name requires cast
+  const { data, error } = await (supabase.rpc as Function)(fn, params);
   if (error) throw error;
   return data;
 }
@@ -57,7 +95,8 @@ export async function rpcCall(fn: string, params?: Record<string, unknown>) {
  * Generic table count for diagnostics — intentionally dynamic.
  */
 export async function countTableRows(table: string) {
-  const { count, error } = await (supabase as any).from(table).select("*", { count: "exact", head: true });
+  // Diagnostics: dynamic table name requires untyped access
+  const { count, error } = await (supabase.from as Function)(table).select("*", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
 }
@@ -66,7 +105,7 @@ export async function countTableRows(table: string) {
  * Generic view count with filter for diagnostics.
  */
 export async function countViewRows(view: string, filter?: { column: string; value: unknown }) {
-  let q = (supabase as any).from(view).select("*", { count: "exact", head: true });
+  let q = (supabase.from as Function)(view).select("*", { count: "exact", head: true });
   if (filter) q = q.eq(filter.column, filter.value);
   const { count, error } = await q;
   if (error) throw error;
