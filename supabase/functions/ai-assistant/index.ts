@@ -395,10 +395,12 @@ Non eseguire tool di scrittura o modifica`;
       // Retry with fallback models on tool-loop calls too
       let toolLoopOk = false;
       for (const tryModel of fallbackModels) {
+        const loopBody: Record<string, unknown> = { model: tryModel, messages: allMessages };
+        if (activeTools) loopBody.tools = activeTools;
         response = await fetch(provider.url, {
           method: "POST",
           headers: aiHeaders,
-          body: JSON.stringify({ model: tryModel, messages: allMessages, tools: TOOL_DEFINITIONS }),
+          body: JSON.stringify(loopBody),
         });
         if (response.ok) { toolLoopOk = true; break; }
         const errStatus = response.status;
