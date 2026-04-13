@@ -124,7 +124,6 @@ export function CompactContactCard({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Visualizza"
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onQuickEmail(); }}
               title="Crea attività email"
