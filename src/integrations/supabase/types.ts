@@ -459,7 +459,11 @@ export type Database = {
           context_page: string | null
           created_at: string
           decay_rate: number
+          embedding: string | null
+          embedding_model: string | null
+          embedding_updated_at: string | null
           expires_at: string | null
+          feedback: string | null
           id: string
           importance: number
           last_accessed_at: string | null
@@ -478,7 +482,11 @@ export type Database = {
           context_page?: string | null
           created_at?: string
           decay_rate?: number
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_updated_at?: string | null
           expires_at?: string | null
+          feedback?: string | null
           id?: string
           importance?: number
           last_accessed_at?: string | null
@@ -497,7 +505,11 @@ export type Database = {
           context_page?: string | null
           created_at?: string
           decay_rate?: number
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_updated_at?: string | null
           expires_at?: string | null
+          feedback?: string | null
           id?: string
           importance?: number
           last_accessed_at?: string | null
@@ -3855,7 +3867,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_memory_pending_embedding: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string | null
+          level: number | null
+          memory_type: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string | null
+          level?: number | null
+          memory_type?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string | null
+          level?: number | null
+          memory_type?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
@@ -3942,6 +3977,26 @@ export type Database = {
       }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
+      match_ai_memory_enhanced: {
+        Args: {
+          filter_levels?: number[]
+          filter_types?: string[]
+          filter_user_id?: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          confidence: number
+          content: string
+          id: string
+          importance: number
+          level: number
+          memory_type: string
+          similarity: number
+          tags: string[]
+        }[]
+      }
       match_contacts_to_wca: {
         Args: never
         Returns: {
