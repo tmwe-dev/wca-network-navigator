@@ -129,7 +129,7 @@ export function SmartInboxView() {
     if (!item) return;
     try {
       await invokeEdge("manage-email-folders", {
-        body: { action, uids: [String(item.imap_uid ?? emailId)] },
+        body: { action, uids: [emailId] },
         context: `SmartInboxView.${action}`,
       });
       toast.success(action === "archive" ? "Archiviata" : "Spostata in spam");
