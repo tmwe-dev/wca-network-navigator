@@ -22,12 +22,12 @@ interface ImportedContactRecord {
 
 interface BusinessCardRecord {
   id: string;
-  contact_name?: string;
-  company_name?: string;
-  position?: string;
-  email?: string;
-  phone?: string;
-  mobile?: string;
+  contact_name?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
   matched_partner_id?: string | null;
   lead_status?: string;
 }
