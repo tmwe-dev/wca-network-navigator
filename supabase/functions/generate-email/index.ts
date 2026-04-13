@@ -548,6 +548,68 @@ serve(async (req) => {
       stylePreferencesContext = `\nPREFERENZE DI STILE APPRESE (dall'editing dell'utente):\n${(styleMemories as StyleMemoryRow[]).map((m) => `- ${m.content}`).join("\n")}\nAPPLICA queste preferenze nella generazione.\n`;
     }
 
+    // ─── Edit Patterns from user corrections (ai_edit_patterns) ───
+    let editPatternsContext = "";
+    {
+      const countryFilter = partner?.country_code || null;
+      const typeFilter = emailCategory || null;
+
+      // Try specific filters first
+      let epQuery = supabase
+        .from("ai_edit_patterns")
+        .select("email_type, country_code, hook_original, hook_final, cta_original, cta_final, tone_delta, formality_shift, length_delta_percent")
+        .eq("user_id", userId)
+        .in("significance", ["medium", "high"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (countryFilter) epQuery = epQuery.eq("country_code", countryFilter);
+      if (typeFilter) epQuery = epQuery.eq("email_type", typeFilter);
+
+      let { data: editPatterns } = await epQuery;
+
+      // Fallback: broader query without country/type filters
+      if ((!editPatterns || editPatterns.length === 0) && (countryFilter || typeFilter)) {
+        const { data: fallback } = await supabase
+          .from("ai_edit_patterns")
+          .select("email_type, country_code, hook_original, hook_final, cta_original, cta_final, tone_delta, formality_shift, length_delta_percent")
+          .eq("user_id", userId)
+          .in("significance", ["medium", "high"])
+          .order("created_at", { ascending: false })
+          .limit(10);
+        editPatterns = fallback;
+      }
+
+      if (editPatterns && editPatterns.length > 0) {
+        const lines = editPatterns.map((ep) =>
+          `- ${ep.email_type || "generico"} verso ${ep.country_code || "??"}: Hook cambiato da '${(ep.hook_original || "").slice(0, 60)}' a '${(ep.hook_final || "").slice(0, 60)}', CTA da '${(ep.cta_original || "").slice(0, 60)}' a '${(ep.cta_final || "").slice(0, 60)}', tono: ${ep.tone_delta || "invariato"}, formalità: ${ep.formality_shift || "invariata"}, lunghezza: ${ep.length_delta_percent || 0}%`
+        );
+        editPatternsContext = `\nPATTERN DI EDITING DELL'UTENTE (modifiche precedenti alle email generate):\n${lines.join("\n")}\nADATTA lo stile in base a questi pattern.\n`;
+      }
+    }
+
+    // ─── Response Patterns (real data from response_patterns table) ───
+    let responseInsightsContext = "";
+    {
+      let rpQuery = supabase
+        .from("response_patterns")
+        .select("country_code, channel, email_type, total_sent, total_responses, response_rate, avg_response_time_hours, pattern_confidence")
+        .eq("user_id", userId)
+        .gte("pattern_confidence", 0.5)
+        .gte("total_sent", 3)
+        .order("pattern_confidence", { ascending: false })
+        .limit(5);
+      if (partner?.country_code) rpQuery = rpQuery.eq("country_code", partner.country_code);
+
+      const { data: responsePatterns } = await rpQuery;
+
+      if (responsePatterns && responsePatterns.length > 0) {
+        const lines = responsePatterns.map((rp) =>
+          `- ${rp.country_code || "Global"} ${rp.channel} ${rp.email_type || "generico"}: ${rp.total_responses}/${rp.total_sent} risposte (${Math.round(Number(rp.response_rate))}%), tempo medio risposta: ${rp.avg_response_time_hours != null ? `${rp.avg_response_time_hours}h` : "N/A"}, confidence: ${rp.pattern_confidence}`
+        );
+        responseInsightsContext = `\nINSIGHT DALLE RISPOSTE RICEVUTE (dati reali):\n${lines.join("\n")}\n`;
+      }
+    }
+
     // ─── Import commercial intelligence modules ───
     const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
 
@@ -804,6 +866,8 @@ ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
 ${stylePreferencesContext}
+${editPatternsContext}
+${responseInsightsContext}
 GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
