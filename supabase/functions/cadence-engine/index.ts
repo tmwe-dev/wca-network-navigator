@@ -31,7 +31,6 @@ interface ActionRow {
   trigger_condition: string | null;
   parent_action_id: string | null;
   position: number;
-  payload: Record<string, unknown> | null;
 }
 
 Deno.serve(async (req) => {
@@ -46,7 +45,7 @@ Deno.serve(async (req) => {
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
       .from("mission_actions")
-      .select("id, mission_id, user_id, action_type, partner_id, contact_id, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, payload")
+      .select("id, mission_id, user_id, action_type, partner_id, contact_id, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position")
       .lte("scheduled_at", new Date().toISOString())
       .not("scheduled_at", "is", null)
       .eq("status", "pending")
@@ -88,8 +87,16 @@ async function processAction(
   action: ActionRow,
   counters: { executed: () => void; pendingReview: () => void; cancelled: () => void },
 ) {
-  // Extract target email from payload
-  const targetEmail = (action.payload as any)?.email_address || (action.payload as any)?.recipient_email || null;
+  // Extract target email — try partner contacts or use partner email
+  let targetEmail: string | null = null;
+  if (action.partner_id) {
+    const { data: pc } = await supabase.from("partner_contacts").select("email").eq("partner_id", action.partner_id).limit(1).maybeSingle();
+    targetEmail = pc?.email ?? null;
+    if (!targetEmail) {
+      const { data: p } = await supabase.from("partners").select("email").eq("id", action.partner_id).maybeSingle();
+      targetEmail = p?.email ?? null;
+    }
+  }
 
   // Load conversation context
   let convCtx: any = null;
