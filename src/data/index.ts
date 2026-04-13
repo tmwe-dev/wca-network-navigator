@@ -6,7 +6,6 @@
 // We keep the partners version as the default and alias the contacts version
 export * from "./partners";
 export {
-  LeadStatus,
   contactKeys,
   findContacts,
   findHoldingPatternContacts,
@@ -28,7 +27,7 @@ export {
   fetchGroupContactIds,
   invalidateContactCache,
 } from "./contacts";
-export type { ContactFilters, ContactInteraction } from "./contacts";
+export type { LeadStatus, ContactFilters, ContactInteraction } from "./contacts";
 export * from "./contactInteractions";
 export * from "./partnerRelations";
 export * from "./businessCards";
