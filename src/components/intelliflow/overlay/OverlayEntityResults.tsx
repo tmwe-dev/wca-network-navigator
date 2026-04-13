@@ -1,10 +1,10 @@
 import { Users, FileText, BarChart3 } from "lucide-react";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
-import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
+import { LiveOperationCards, type AiOperation } from "@/components/ai/LiveOperationCards";
 
 interface OverlayEntityResultsProps {
   partners: StructuredPartner[];
-  operations: unknown[];
+  operations: AiOperation[];
 }
 
 export function OverlayEntityResults({ partners, operations }: OverlayEntityResultsProps) {

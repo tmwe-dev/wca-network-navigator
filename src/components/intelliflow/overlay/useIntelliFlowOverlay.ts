@@ -68,7 +68,7 @@ export function useIntelliFlowOverlay({ open, onClose, cockpitContacts, onCockpi
 
   const panelData = useMemo(() => {
     const allPartners: StructuredPartner[] = [];
-    const allOperations: unknown[] = [];
+    const allOperations: Record<string, unknown>[] = [];
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
       const parsed = parseAiAgentResponse<StructuredPartner>(msg.content);
