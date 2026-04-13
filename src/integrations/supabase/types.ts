@@ -4120,6 +4120,87 @@ export type Database = {
         }
         Relationships: []
       }
+      supervisor_audit_log: {
+        Row: {
+          action_category: string
+          action_detail: string
+          actor_id: string | null
+          actor_name: string | null
+          actor_type: string
+          ai_decision_log_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          decision_origin: string
+          email_address: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          partner_id: string | null
+          session_id: string | null
+          target_id: string | null
+          target_label: string | null
+          target_type: string | null
+          user_id: string
+        }
+        Insert: {
+          action_category: string
+          action_detail: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_type: string
+          ai_decision_log_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_origin?: string
+          email_address?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          session_id?: string | null
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string | null
+          user_id: string
+        }
+        Update: {
+          action_category?: string
+          action_detail?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_type?: string
+          ai_decision_log_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_origin?: string
+          email_address?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          session_id?: string | null
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_audit_log_ai_decision_log_id_fkey"
+            columns: ["ai_decision_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_decision_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_audit_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string

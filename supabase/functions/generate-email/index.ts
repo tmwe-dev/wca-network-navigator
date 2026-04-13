@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 
 import { loadEntityFromActivity, loadStandalonePartner, assembleContextBlocks } from "./contextAssembler.ts";
@@ -117,6 +118,17 @@ serve(async (req) => {
 
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
+
+    // Supervisor audit (fire-and-forget)
+    logSupervisorAudit(supabase, {
+      user_id: userId, actor_type: "ai_agent", actor_name: model,
+      action_category: "email_drafted",
+      action_detail: `Bozza email generata per ${contactEmail}: ${subject}`,
+      target_type: "email", target_label: subject,
+      partner_id: partner?.id || undefined, email_address: contactEmail || undefined,
+      decision_origin: "ai_auto",
+      metadata: { model, quality, tokens: result.usage?.promptTokens },
+    });
 
     return new Response(JSON.stringify({
       subject, body, full_content: result.content || "",
