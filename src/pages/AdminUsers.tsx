@@ -26,6 +26,23 @@ export default function AdminUsers() {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
 
+  const { data: myProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ["my-operator-admin-check"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from("operators").select("is_admin").eq("user_id", user.id).maybeSingle();
+      return data;
+    },
+  });
+
+  if (profileLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (myProfile && !myProfile.is_admin) {
+    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
+  }
+
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["authorized-users"],
     queryFn: async () => {

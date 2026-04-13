@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useOperators, useUpsertOperator, useDeleteOperator, type Operator } from "@/hooks/useOperators";
-import { useCurrentOperator } from "@/hooks/useOperators";
+import { useOperators, useUpsertOperator, useDeleteOperator, useCurrentOperator, type Operator } from "@/hooks/useOperators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
