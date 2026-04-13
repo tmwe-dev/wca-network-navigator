@@ -16,6 +16,7 @@ interface MemoryRow {
   pending_promotion: boolean;
   promoted_at: string | null;
   feedback: string | null;
+  user_id: string | null;
   embedding: unknown;
 }
 
@@ -56,7 +57,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const stats = { promoted_l1_to_l2: 0, promoted_l2_candidate: 0, promoted_l2_to_l3: 0, decayed: 0, pruned: 0, embeddings_generated: 0, conflicts_detected: 0 };
+    const stats = { promoted_l1_to_l2: 0, promoted_l2_candidate: 0, promoted_l2_to_l3: 0, decayed: 0, pruned: 0, embeddings_generated: 0, conflicts_detected: 0, consolidated: 0 };
 
     // ── 1. L1 → L2 Promotion ──
     // Criteria: access_count >= 3 AND confidence >= 0.40
@@ -217,6 +218,77 @@ serve(async (req) => {
       const ids = (prunable as Array<{ id: string }>).map((m) => m.id);
       await supabase.from("ai_memory").delete().in("id", ids);
       stats.pruned = ids.length;
+    }
+
+    // ── 5. Consolidation: merge duplicate memories (similarity > 0.85) ──
+    const consolidatedIds = new Set<string>();
+
+    for (const targetLevel of [1, 2]) {
+      const { data: memoriesForConsolidation } = await supabase
+        .from("ai_memory")
+        .select("id, content, memory_type, level, confidence, importance, tags, embedding, user_id")
+        .eq("level", targetLevel)
+        .not("embedding", "is", null)
+        .order("confidence", { ascending: false })
+        .limit(200);
+
+      if (!memoriesForConsolidation?.length) continue;
+
+      const byUser = new Map<string, Array<Record<string, unknown>>>();
+      for (const mem of memoriesForConsolidation as Record<string, unknown>[]) {
+        const uid = (mem.user_id as string) || "__system__";
+        if (!byUser.has(uid)) byUser.set(uid, []);
+        byUser.get(uid)!.push(mem);
+      }
+
+      for (const [, userMemories] of byUser) {
+        for (let i = 0; i < userMemories.length; i++) {
+          const anchor = userMemories[i];
+          if (consolidatedIds.has(anchor.id as string)) continue;
+          if (!anchor.embedding) continue;
+
+          try {
+            const { data: similar } = await supabase.rpc("match_ai_memory_enhanced", {
+              query_embedding: anchor.embedding,
+              match_count: 5,
+              match_threshold: 0.85,
+              filter_user_id: (anchor.user_id as string) || null,
+              filter_levels: [targetLevel],
+              filter_types: null,
+            });
+
+            if (!similar || similar.length <= 1) continue;
+
+            for (const dup of similar as Array<{ id: string; similarity: number }>) {
+              if (dup.id === anchor.id) continue;
+              if (consolidatedIds.has(dup.id)) continue;
+
+              consolidatedIds.add(dup.id);
+
+              const currentConf = anchor.confidence as number;
+              const boosted = Math.min(1.0, currentConf + 0.02);
+              if (boosted > currentConf) {
+                await supabase
+                  .from("ai_memory")
+                  .update({ confidence: boosted })
+                  .eq("id", anchor.id as string);
+                anchor.confidence = boosted;
+              }
+            }
+          } catch (consolErr: unknown) {
+            console.warn("[memory-promoter] Consolidation check failed:", consolErr instanceof Error ? consolErr.message : String(consolErr));
+          }
+        }
+      }
+    }
+
+    if (consolidatedIds.size > 0) {
+      const idsToDelete = Array.from(consolidatedIds);
+      for (let i = 0; i < idsToDelete.length; i += 50) {
+        const batch = idsToDelete.slice(i, i + 50);
+        await supabase.from("ai_memory").delete().in("id", batch);
+      }
+      stats.consolidated = consolidatedIds.size;
     }
 
     console.log("[memory-promoter] Stats:", JSON.stringify(stats));
