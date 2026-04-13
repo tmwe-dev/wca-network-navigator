@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { aiChat, AiGatewayError, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,

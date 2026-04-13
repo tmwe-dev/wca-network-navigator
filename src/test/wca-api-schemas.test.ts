@@ -1,16 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  DiscoverResultSchema,
-  ScrapeResultSchema,
-  CheckIdsResultSchema,
-  JobStartResultSchema,
-  WcaMemberSchema,
-  ScrapeProfileSchema,
-  safeParseDiscover,
-  safeParseScrape,
-  safeParseCheckIds,
-  safeParseJobStart,
-} from "@/lib/api/wcaAppApi.schemas";
+import { DiscoverResultSchema, CheckIdsResultSchema, JobStartResultSchema, WcaMemberSchema, ScrapeProfileSchema, safeParseDiscover, safeParseScrape, safeParseCheckIds, safeParseJobStart } from "@/lib/api/wcaAppApi.schemas";
 
 describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   describe("WcaMemberSchema", () => {

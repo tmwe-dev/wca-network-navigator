@@ -14,7 +14,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import type { ChannelKind, ChannelSession, SessionStatus } from "./types";
-import { upsertAppSetting } from "@/data/appSettings";
 
 const log = createLogger("sessionTracker");
 

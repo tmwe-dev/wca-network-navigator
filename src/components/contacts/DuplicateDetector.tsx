@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Merge, Ban, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { clean } from "./contactHelpers";
 
 interface DuplicateGroup {

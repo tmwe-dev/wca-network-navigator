@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
-import { TABS_CONFIG, type PickerTab, type PartnerSort, type ContactSort, type BcaSort } from "./types";
+import { TABS_CONFIG, type PartnerSort, type ContactSort, type BcaSort } from "./types";
 import type { UseEmailContactPickerReturn } from "@/hooks/useEmailContactPicker";
 
 const ICON_MAP = { Globe, Users, CreditCard } as const;

@@ -1,12 +1,8 @@
 import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import {
-  Search, MapPin, Building2, Users, TrendingUp, Mail, Phone,
-  Briefcase, ChevronDown, ChevronRight, ExternalLink, Loader2,
-} from "lucide-react";
+import { Search, MapPin, Building2, Briefcase, ChevronDown, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRAProspects, useRAProspectContacts } from "@/hooks/useRAProspects";

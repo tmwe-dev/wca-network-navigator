@@ -3,7 +3,6 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Sparkles, Network, Mail, Users, CalendarCheck, Settings, ArrowLeft, Send, Loader2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";

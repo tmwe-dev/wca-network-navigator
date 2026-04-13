@@ -9,13 +9,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sendLinkedIn as sendLinkedInUnified } from "@/lib/inbox/sendMessage";
 

@@ -6,7 +6,7 @@
  * Tutte le chiamate passano per wcaAppApi.ts.
  */
 
-import { wcaScrape, wcaDiscover, wcaLogin } from "@/lib/api/wcaAppApi";
+import { wcaScrape, wcaDiscover } from "@/lib/api/wcaAppApi";
 
 // ─── Types (invariati) ─────────────────────────────────────────
 

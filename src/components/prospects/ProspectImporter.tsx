@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug, Search } from "lucide-react";
+import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { supabase } from "@/integrations/supabase/client";

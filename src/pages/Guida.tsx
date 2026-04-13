@@ -14,9 +14,7 @@ import ResultsSection from "@/components/guida/ResultsSection";
 import RoadmapSection from "@/components/guida/RoadmapSection";
 import ClosingSection from "@/components/guida/ClosingSection";
 import TutorialSection from "@/components/guida/TutorialSection";
-import {
-  Globe, Users, Mail, Send, Sparkles, Building2, Calendar, Settings, Chrome, Search, Puzzle,
-} from "lucide-react";
+import { Globe, Users, Mail, Send, Sparkles, Calendar, Settings, Chrome, Puzzle } from "lucide-react";
 
 const sectionLabels = [
   "Copertina", "Tagline", "La Sfida",

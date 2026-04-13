@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, Users, Mail, Search, Mic, Brain, Shield, Zap, FileText, Layers, GitMerge, CreditCard, Upload, BarChart3, Bell, BookOpen } from "lucide-react";
+import { Database, Mail, Search, Mic, Brain, Shield, FileText, Layers, GitMerge, CreditCard, Upload, BarChart3, Bell, BookOpen } from "lucide-react";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 

@@ -3,7 +3,7 @@
  * Provides start, pause, resume, and real-time status monitoring.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 

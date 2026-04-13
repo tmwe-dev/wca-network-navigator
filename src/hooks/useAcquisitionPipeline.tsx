@@ -13,7 +13,7 @@ import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useScrapingSettings, getPatternPause } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
-import { useAcquisitionPipelineState, EMPTY_STATS } from "./useAcquisitionPipelineState";
+import { useAcquisitionPipelineState } from "./useAcquisitionPipelineState";
 import { useAcquisitionPipelineActions } from "./useAcquisitionPipelineActions";
 import { updateDownloadJob } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";

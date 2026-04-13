@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";

@@ -1,30 +1,25 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search, Brain, Phone, Mail, Calendar, Building2, CheckSquare, RefreshCw,
-} from "lucide-react";
+import { Globe, Users, Eye, CreditCard } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { type FilterKey } from "@/components/download/CountryGrid";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { rpcGetDirectoryCounts } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {

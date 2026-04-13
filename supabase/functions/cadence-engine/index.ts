@@ -3,7 +3,7 @@
  * Runs hourly, checks trigger conditions, and creates/executes pending actions.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
+import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 

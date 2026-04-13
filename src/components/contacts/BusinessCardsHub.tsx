@@ -18,7 +18,6 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { isImageFile, isDataFile } from "@/lib/businessCardFileParser";
-import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 
 // Sub-components
 import { CompactRow, CardGridItem, ExpandedCardItem } from "./bca/BCACardRenderers";

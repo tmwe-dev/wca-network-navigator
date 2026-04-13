@@ -4,7 +4,7 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Trophy, Mail, Globe, X } from "lucide-react";
+import { Trophy, Globe, X } from "lucide-react";
 
 interface SessionStats {
   proposed: number;

@@ -1,7 +1,4 @@
-import {
-  MapPin, Globe, Star, Building2, Warehouse, Calendar, Users,
-  Truck, Loader2, Linkedin,
-} from "lucide-react";
+import { MapPin, Globe, Star, Building2, Warehouse, Calendar, Users, Truck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { usePartnerCanvas } from "./partner-canvas/usePartnerCanvas";

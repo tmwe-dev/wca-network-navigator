@@ -1,24 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Loader2,
-  Search,
-  Inbox,
-  Database,
-  Mail,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Plane,
-  Filter,
-} from "lucide-react";
+import { Loader2, Search, Inbox, Database, Mail, CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
-import { useResetSync } from "@/hooks/useEmailSync";
+import { useChannelMessages, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useEmailCount } from "@/hooks/useEmailCount";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";

@@ -19,12 +19,7 @@ import {
   useCreateImportFromParsedRows,
   type ImportLog,
 } from "@/hooks/useImportLogs";
-import {
-  parseFile,
-  transformRow,
-  TARGET_COLUMNS,
-  TARGET_SCHEMA,
-} from "@/lib/import";
+import { parseFile, transformRow, TARGET_COLUMNS } from "@/lib/import";
 import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } from "@/data/importLogs";
 
 // ── Utility helpers ──

@@ -10,7 +10,6 @@ import { useSelection } from "@/hooks/useSelection";
 import type { AICommand } from "@/components/contacts/ContactAIBar";
 import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
-import { findContacts } from "@/data/contacts";
 
 interface Deps {
   selection: ReturnType<typeof useSelection>;

@@ -10,7 +10,6 @@ import { Volume2, Play, Settings2, Loader2, RefreshCw, Square, AlertCircle, Chec
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { useAgents } from "@/hooks/useAgents";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createLogger } from "@/lib/log";
 import VoiceLanguageSelector, { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";

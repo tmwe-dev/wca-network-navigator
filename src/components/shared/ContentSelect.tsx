@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Plus, Check, Handshake, RefreshCw, Search, Briefcase, Globe,
-  FileText, Target, Pencil,
-} from "lucide-react";
+import { Plus, Check, Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import {
   CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,

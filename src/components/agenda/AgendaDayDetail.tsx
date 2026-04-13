@@ -9,10 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Mail, MessageCircle, Linkedin, Phone, StickyNote,
-  MoreVertical, CheckCircle2, Clock, Calendar as CalendarIcon, ArrowUpRight,
-} from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2, Calendar as CalendarIcon, ArrowUpRight } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
 import { useSelection } from "@/hooks/useSelection";
 import { getCountryFlag } from "@/lib/countries";

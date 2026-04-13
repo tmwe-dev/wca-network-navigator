@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import { it } from "date-fns/locale";
-import { Check, CheckCheck, Paperclip, Mic, Upload, Send, X, Loader2, Radio } from "lucide-react";
+import { Check, CheckCheck, Paperclip, Mic, Upload, Send, Loader2, Radio } from "lucide-react";
 import { MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";

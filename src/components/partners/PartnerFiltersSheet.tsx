@@ -18,12 +18,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Star, ChevronDown, Filter, X, Check, ChevronsUpDown,
-  Globe, Network, ShieldCheck, Building2, Trophy, CalendarClock, Phone, Mail, Sparkles, Handshake,
-} from "lucide-react";
+import { Star, ChevronDown, Filter, X, Check, ChevronsUpDown, Globe, Network, ShieldCheck, Building2, Trophy, CalendarClock, Handshake } from "lucide-react";
 import { PartnerFilters } from "@/hooks/usePartners";
-import { getCountryFlag, formatServiceCategory } from "@/lib/countries";
+import { formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";

@@ -2,7 +2,6 @@
  * Scope configurations for unified-assistant.
  * Contains system prompts, tools, and local tool handlers for each scope.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PLATFORM_TOOLS } from "./platformTools.ts";
 import { escapeLike } from "./sqlEscape.ts";
 

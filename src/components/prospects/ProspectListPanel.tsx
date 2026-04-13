@@ -5,11 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Search, Mail, Phone, MapPin, Building2, User,
-  ArrowLeft, ExternalLink, Euro, Users, ChevronRight, Star, Shield,
-  Send as SendIcon, Loader2, ClipboardList,
-} from "lucide-react";
+import { Search, Mail, Phone, MapPin, Building2, User, ArrowLeft, ExternalLink, Users, ChevronRight, Shield, Send as SendIcon, Loader2, ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryProspects } from "@/data/prospects";
@@ -23,8 +19,6 @@ import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog
 import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
-import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
-import { findProspects } from "@/data/prospects";
 import { createActivities } from "@/data/activities";
 
 interface ProspectListPanelProps {

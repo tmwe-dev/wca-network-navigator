@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, CheckCircle2, Handshake } from "lucide-react";
+import { Calendar, MapPin, CheckCircle2, Handshake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";

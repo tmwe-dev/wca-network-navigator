@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pause, Play, X, Download, Mail, Phone, Users } from "lucide-react";
-import { useDownloadJobs, usePauseResumeJob, type DownloadJob } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs, usePauseResumeJob } from "@/hooks/useDownloadJobs";
 import { Progress } from "@/components/ui/progress";
 
 function countryFlag(code: string) {

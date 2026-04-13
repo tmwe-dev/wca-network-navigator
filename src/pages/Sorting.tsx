@@ -6,7 +6,6 @@ import { SortingList } from "@/components/sorting/SortingList";
 import { SortingCanvas } from "@/components/sorting/SortingCanvas";
 import { useSortingJobs, useBulkReview, useCancelJobs, useSendJob } from "@/hooks/useSortingJobs";
 import { useDeleteActivities } from "@/hooks/useActivities";
-import type { SortingJob } from "@/hooks/useSortingJobs";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import {

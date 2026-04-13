@@ -1,5 +1,5 @@
 import SectionWrapper from "./SectionWrapper";
-import { Search, Globe, FileText, Brain, Image, MessageCircle, Linkedin } from "lucide-react";
+import { Search, FileText, Brain, Image, MessageCircle, Linkedin } from "lucide-react";
 
 const steps = [
   { icon: Search, title: "Scoperta Sito Web", desc: "Estrazione dominio dall'email aziendale o ricerca via Partner Connect" },

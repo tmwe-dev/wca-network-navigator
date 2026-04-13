@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, Mail, Phone, Linkedin, Globe, Building2 } from "lucide-react";
+import { Search, Mail, Phone, Linkedin, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

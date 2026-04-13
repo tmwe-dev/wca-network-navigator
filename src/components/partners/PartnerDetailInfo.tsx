@@ -7,7 +7,7 @@ import {
   Building2, ArrowUpRight, ShieldCheck, FileText,
   Hash, ChevronDown, Box,
 } from "lucide-react";
-import { getCountryFlag, getYearsMember, formatServiceCategory, resolveCountryCode } from "@/lib/countries";
+import { getCountryFlag, formatServiceCategory, resolveCountryCode } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -15,7 +15,6 @@ import { EnrichmentCard } from "@/components/partners/EnrichmentCard";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
-import { getBranchCountries } from "@/lib/partnerUtils";
 
 const PartnerMiniGlobe = lazy(() =>
   import("@/components/partners/PartnerMiniGlobe").then((m) => ({ default: m.PartnerMiniGlobe }))

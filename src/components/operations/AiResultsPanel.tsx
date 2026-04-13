@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { ChevronDown, ChevronUp, Star, Heart, Globe, Mail, Phone, ExternalLink, Building2, MapPin } from "lucide-react";
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { Badge } from "@/components/ui/badge";
 
 export interface StructuredPartner {

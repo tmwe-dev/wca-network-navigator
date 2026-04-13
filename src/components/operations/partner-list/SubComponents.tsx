@@ -3,10 +3,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Download, Telescope, Building2, UserCircle, CheckCircle2,
-  Linkedin, MessageCircle, Mail, Phone, Globe,
-} from "lucide-react";
+import { Download, Telescope, Building2, UserCircle, CheckCircle2, Linkedin, MessageCircle } from "lucide-react";
 
 /* ── Icon Indicator (circular with badge) — tri-state ── */
 export function IconIndicator({ icon: Icon, count, label, isDark, onClick, active, verified }: {

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, Loader2, CheckCircle2, Building2, User, MapPin, Mail, Phone } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useUpdateBusinessCard } from "@/hooks/useBusinessCards";
 import { toast } from "@/hooks/use-toast";

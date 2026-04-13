@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarIcon, ChevronLeft, ChevronRight, Rocket, Users, FileText, Clock } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Rocket, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";

@@ -7,7 +7,7 @@ import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { useAllActivities } from "@/hooks/useActivities";
-import { useDownloadJobs, type DownloadJob } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";

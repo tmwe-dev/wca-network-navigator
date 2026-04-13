@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, MessageCircle, Linkedin, Phone, Loader2, CalendarIcon, Send, X, Bot, Rocket, Clock } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Phone, Loader2, CalendarIcon, X, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";

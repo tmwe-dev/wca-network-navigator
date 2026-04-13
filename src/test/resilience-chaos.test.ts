@@ -2,7 +2,7 @@
  * RESILIENCE CHAOS TESTS — Scorecard Area F
  * Validates system behavior under failure conditions.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // ── Test 1: SMTP failure must NOT produce a false "sent" ──
 describe("SMTP failure resilience", () => {

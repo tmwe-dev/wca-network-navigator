@@ -3,12 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Search, ArrowRight, Mail, Phone, ChevronLeft, ChevronRight, Users,
-} from "lucide-react";
+import { Search, ArrowRight, Mail, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { CompactContactCard } from "./CompactContactCard";
 import { AdvancedActivityForm } from "./AdvancedActivityForm";
 import type { ImportedContact } from "@/hooks/useImportLogs";

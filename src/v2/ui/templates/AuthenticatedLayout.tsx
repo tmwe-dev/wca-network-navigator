@@ -11,7 +11,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
-import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";

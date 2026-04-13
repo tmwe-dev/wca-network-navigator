@@ -4,8 +4,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, CheckCircle2, Search, Link2 } from "lucide-react";
+import { UserPlus, Loader2, CheckCircle2, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { insertContacts } from "@/data/contacts";
 import { searchPartnersByNameAlias } from "@/data/partners";

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Bot, Check, ChevronRight, MessageCircle, Loader2, Sparkles, Send, Globe } from "lucide-react";
+import { Check, ChevronRight, MessageCircle, Loader2, Sparkles, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { createLogger } from "@/lib/log";

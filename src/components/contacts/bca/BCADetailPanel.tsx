@@ -3,10 +3,7 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building2, Mail, Phone, MessageCircle, Send, Handshake,
-  Globe, Loader2, Search, ArrowRight, Briefcase, CheckCircle2,
-} from "lucide-react";
+import { Building2, Mail, Phone, MessageCircle, Send, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCAOcrConfidence } from "./BCAOcrConfidence";
 import { BCACreateContact } from "./BCACreateContact";

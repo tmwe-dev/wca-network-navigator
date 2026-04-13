@@ -3,16 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-import {
-  ArrowLeft, MapPin, Star, X, User, Search, Trophy,
-  ChevronUp, ChevronDown, Globe,
-} from "lucide-react";
+import { ArrowLeft, MapPin, Star, X, User, Search, Trophy, ChevronUp, ChevronDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { formatServiceCategory } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
-import type { SortField, SortDir, SortEntry, PartnerRowData } from "./CountryWorkbenchTypes";
+import type { SortField, SortEntry, PartnerRowData } from "./CountryWorkbenchTypes";
 import { DEFAULT_DIRS } from "./CountryWorkbenchTypes";
 
 interface CountryWorkbenchFiltersProps {

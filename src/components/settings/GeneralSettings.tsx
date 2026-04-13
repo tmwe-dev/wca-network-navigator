@@ -10,7 +10,6 @@ import {
   Mail, Send, AlertCircle, Eye, EyeOff, FileText, Bot,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import TemplateManager from "@/components/settings/TemplateManager";
 import AIProfileSettings from "@/components/settings/AIProfileSettings";

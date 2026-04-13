@@ -14,11 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  MoreVertical, CheckCircle2, StickyNote, CalendarClock,
-  Phone, Users, MoreHorizontal, CalendarIcon, Mail,
-  MessageCircle, Send, Calendar as CalendarIconAlt,
-} from "lucide-react";
+import { MoreVertical, CheckCircle2, StickyNote, CalendarClock, Phone, Users, MoreHorizontal, CalendarIcon, Mail, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";

@@ -2,7 +2,7 @@
  * ResultsList — Renders partner / contact / BCA results
  */
 import { useRef } from "react";
-import { ChevronRight, Mail, X, Check, MapPin } from "lucide-react";
+import { ChevronRight, Mail, Check, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";

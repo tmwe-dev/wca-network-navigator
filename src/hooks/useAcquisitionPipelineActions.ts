@@ -3,16 +3,13 @@
  * Scan, start, pause, cancel, network exclusion handlers.
  */
 import { useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByCountries } from "@/data/partners";
 import { toast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
 import { updateDownloadJob, createDownloadJob } from "@/data/downloadJobs";
 import type { useAcquisitionPipelineState } from "./useAcquisitionPipelineState";
 import type { LiveStats } from "./useAcquisitionPipelineState";
 import { EMPTY_STATS } from "./useAcquisitionPipelineState";
-import type { Json } from "@/integrations/supabase/types";
 
 type State = ReturnType<typeof useAcquisitionPipelineState>;
 

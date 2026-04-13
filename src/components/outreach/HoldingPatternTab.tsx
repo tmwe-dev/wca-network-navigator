@@ -9,15 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { HoldingPatternIndicator } from "@/components/contacts/HoldingPatternIndicator";
-import {
-  useHoldingPatternList,
-  useHoldingTimeline,
-  type HoldingItem,
-  type TimelineEntry,
-} from "@/hooks/useHoldingPattern";
+import { useHoldingPatternList, useHoldingTimeline, type HoldingItem } from "@/hooks/useHoldingPattern";
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
-import { supabase } from "@/integrations/supabase/client";
 import { updateLeadStatus } from "@/data/partners";
 import { updateProspectLeadStatus } from "@/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";

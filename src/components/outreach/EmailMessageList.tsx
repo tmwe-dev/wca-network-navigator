@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Building2, User, Plane } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CompanyLogo, CompanyLogoInline, CountryFlag, extractDomainFromEmail } from "@/components/ui/CompanyLogo";
+import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { cn } from "@/lib/utils";

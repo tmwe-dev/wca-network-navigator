@@ -3,8 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Star, StarOff, Phone, Mail, Globe, Brain,
 } from "lucide-react";
-import { PartnerRating } from "@/components/partners/PartnerRating";
-import { getCountryFlag, getYearsMember, formatPartnerType } from "@/lib/countries";
+import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";

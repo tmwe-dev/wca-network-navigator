@@ -1,10 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import {
-  Mail, Phone, User, MapPin, Handshake, FileText,
-  Building2, Rows3,
-} from "lucide-react";
+import { Mail, Phone, User, MapPin, Handshake, FileText, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";

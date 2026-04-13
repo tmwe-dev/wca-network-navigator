@@ -5,7 +5,6 @@ import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);

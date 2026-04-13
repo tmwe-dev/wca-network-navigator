@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useRAProspect, useRAProspectContacts, useRAProspectInteractions, useUpdateRALeadStatus } from "@/hooks/useRAProspects";
-import type { RALeadStatus } from "@/types/ra";
 import { RACompanyHeader } from "@/components/ra/RACompanyHeader";
 import { RACompanyKPI, formatCurrency } from "@/components/ra/RACompanyKPI";
 import { RACompanySidebar } from "@/components/ra/RACompanySidebar";

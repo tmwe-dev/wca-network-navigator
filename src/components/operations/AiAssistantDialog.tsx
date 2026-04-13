@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Mic, MicOff, ListChecks } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Mic, MicOff } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { useNavigate } from "react-router-dom";

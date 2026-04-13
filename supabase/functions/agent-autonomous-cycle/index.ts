@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { getCETHour, isOutsideWorkHours } from "../_shared/timeUtils.ts";
+import { isOutsideWorkHours } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
 
 const supabase = createClient(

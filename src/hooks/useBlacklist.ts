@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getPartnersByIds } from "@/data/partners";
 import type { Database } from "@/integrations/supabase/types";
 import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
 

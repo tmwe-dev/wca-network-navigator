@@ -1,7 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, Phone, ChevronRight, User, Brain, Handshake } from "lucide-react";
-import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { asEnrichment } from "@/lib/partnerUtils";
 import { format } from "date-fns";

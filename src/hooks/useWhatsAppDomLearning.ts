@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
 import { createLogger } from "@/lib/log";
-import { upsertAppSetting, getAppSettingByKey, findAppSettingId, updateAppSettingByKey, insertAppSetting } from "@/data/appSettings";
+import { upsertAppSetting, getAppSettingByKey } from "@/data/appSettings";
 
 const log = createLogger("useWhatsAppDomLearning");
 

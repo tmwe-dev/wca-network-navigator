@@ -4,10 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Target, FileText, Paperclip, Link2, X, Plus, Loader2, Save, Trash2,
-  ExternalLink,
-} from "lucide-react";
+import { Target, FileText, Paperclip, Link2, X, Plus, Loader2, ExternalLink } from "lucide-react";
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "@/hooks/use-toast";

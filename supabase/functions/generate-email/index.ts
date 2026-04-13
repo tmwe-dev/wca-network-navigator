@@ -5,7 +5,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";

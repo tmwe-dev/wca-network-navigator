@@ -3,7 +3,7 @@
  * Manages all the reactive state for the acquisition pipeline UI.
  */
 import { useState, useRef } from "react";
-import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
+import { QueueItem, CanvasData, CanvasPhase } from "@/components/acquisition/types";
 import { NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 
 export type PipelineStatus = "idle" | "scanning" | "running" | "paused" | "done";

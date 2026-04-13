@@ -10,20 +10,7 @@ import { useMission } from "@/contexts/MissionContext";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
-import {
-  pickerReducer,
-  INITIAL_PICKER_STATE,
-  type PickerAction,
-  type PickerState,
-  type CountryStat,
-  type PartnerRow,
-  type PartnerContactRow,
-  type ImportedContactRow,
-  type BcaRow,
-  type PartnerSort,
-  type ContactSort,
-  type BcaSort,
-} from "@/components/global/email-picker/types";
+import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
 
 const log = createLogger("EmailComposerContactPicker");
 

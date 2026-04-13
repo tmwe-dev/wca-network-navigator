@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { Wand2, ThumbsUp, Download, X, CheckCircle2, Upload, FileText, Users } from "lucide-react";
+import { motion } from "framer-motion";
+import { Wand2, ThumbsUp, Download, X } from "lucide-react";
 import TemplateSuggest from "./TemplateSuggest";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;

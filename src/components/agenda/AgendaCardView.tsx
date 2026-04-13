@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { Search, Mail, Phone, Globe, User, Building2, MapPin } from "lucide-react";
+import { Search, Mail, Phone, User, Building2, MapPin } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 

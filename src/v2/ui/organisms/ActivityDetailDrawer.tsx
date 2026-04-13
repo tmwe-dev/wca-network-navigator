@@ -6,9 +6,7 @@ import type { Activity } from "@/v2/core/domain/entities";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
 import { isOverdue } from "@/v2/core/domain/rules/activity-rules";
-import {
-  X, Mail, Phone, Calendar, Clock, User, FileText, CheckCircle,
-} from "lucide-react";
+import { X, Mail, Calendar, Clock, User, FileText, CheckCircle } from "lucide-react";
 
 export interface ActivityDetailDrawerProps {
   readonly activity: Activity | null;

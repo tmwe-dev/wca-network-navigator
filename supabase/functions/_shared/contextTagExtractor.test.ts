@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractContextTags, type ConversationContext } from "./contextTagExtractor.ts";
+import { extractContextTags } from "./contextTagExtractor.ts";
 
 describe("extractContextTags", () => {
   it("estrae paese da messaggio con nome paese", () => {

@@ -4,7 +4,6 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { aiChat } from "../_shared/aiGateway.ts";
-import { isLikelyPersonName } from "../_shared/textUtils.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
 

@@ -8,7 +8,6 @@ import { BulkActionBar } from "./enrichment/BulkActionBar";
 import { EnrichmentRowList } from "./enrichment/EnrichmentRowList";
 import { DeepSearchOptionsDialog } from "./enrichment/DeepSearchOptionsDialog";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
-import { ListSkeleton } from "@/components/ui/ListSkeleton";
 
 // Re-export kept for backward compat
 export { EnrichmentFilters } from "./enrichment/EnrichmentFilters";

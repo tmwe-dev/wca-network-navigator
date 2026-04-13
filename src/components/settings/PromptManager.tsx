@@ -9,12 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import {
-  Plus, Trash2, Save, Loader2, Sparkles, Pencil,
-  Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target, Mail,
-} from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Sparkles, Handshake, RefreshCw, Search, Briefcase, Globe, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createLogger } from "@/lib/log";
 

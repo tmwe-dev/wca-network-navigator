@@ -4,8 +4,8 @@
  * All WCA API calls go through wca-app.vercel.app.
  * This wraps them in Result<T> with proper error handling.
  */
-import { type Result, ok, err } from "../../core/domain/result";
-import { ioError, fromUnknown, type AppError } from "../../core/domain/errors";
+import { type Result } from "../../core/domain/result";
+import { type AppError } from "../../core/domain/errors";
 import { withCircuitBreaker } from "../../bridge/circuit-breaker";
 
 const WCA_APP_BASE_URL = "https://wca-app.vercel.app";

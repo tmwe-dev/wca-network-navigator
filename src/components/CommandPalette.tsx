@@ -9,27 +9,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  Download,
-  Building2,
-  Star,
-  Mail,
-  Rocket,
-  Gamepad2,
-  Send,
-  Brain,
-  Settings,
-  Globe,
-  MessageCircle,
-  Target,
-  BarChart3,
-  Wrench,
-  BookOpen,
-  Inbox,
-} from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Building2, Star, Mail, Rocket, Gamepad2, Send, Brain, Settings, Globe, MessageCircle, Target, BarChart3, Wrench, BookOpen, Inbox } from "lucide-react";
 import { searchPartners } from "@/data/partners";
 
 interface Partner {
