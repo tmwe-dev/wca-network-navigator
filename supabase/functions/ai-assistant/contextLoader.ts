@@ -122,40 +122,93 @@ export async function loadMissionHistory(supabase: SupabaseClient, userId: strin
 
 // ━━━ Load KB Context ━━━
 
-export async function loadKBContext(supabase: SupabaseClient, query?: string, userId?: string): Promise<string> {
-  if (query && query.trim().length >= 8) {
+export async function loadKBContext(
+  supabase: SupabaseClient,
+  query?: string,
+  userId?: string,
+  contextTags?: { tags: string[]; categories: string[]; priority_boost: number },
+): Promise<string> {
+  const parts: string[] = [];
+  const seenIds = new Set<string>();
+
+  // ── LEVEL 1: Contextual tag-based loading ──
+  if (contextTags && (contextTags.tags.length > 0 || contextTags.categories.length > 0)) {
     try {
-      const { ragSearchKb } = await import("../_shared/embeddings.ts");
-      const matches = await ragSearchKb(supabase, query, {
-        matchCount: 8, matchThreshold: 0.25, minPriority: 3, onlyActive: true,
-      });
-      if (matches.length > 0) {
-        const entries = matches
-          .map((e: Record<string, unknown>) => `### ${e.title} [sim=${(e.similarity as number).toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+      let q = supabase
+        .from("kb_entries")
+        .select("id, title, content, category, tags, priority")
+        .eq("is_active", true);
+
+      // user or system entries
+      if (userId) {
+        q = q.or(`user_id.eq.${userId},user_id.is.null`);
+      } else {
+        q = q.is("user_id", null);
+      }
+
+      if (contextTags.categories.length > 0) {
+        q = q.in("category", contextTags.categories);
+      }
+      if (contextTags.tags.length > 0) {
+        q = q.overlaps("tags", contextTags.tags);
+      }
+
+      q = q.order("priority", { ascending: false }).limit(8);
+      const { data } = await q;
+
+      if (data?.length) {
+        for (const e of data as Record<string, unknown>[]) seenIds.add(e.id as string);
+        const entries = (data as Record<string, unknown>[])
+          .map((e) => `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
           .join("\n\n");
-        return `\n\nKNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`;
+        parts.push(`KNOWLEDGE BASE CONTESTUALE (tags: ${contextTags.tags.join(", ")}):\n${entries}`);
       }
     } catch (e: unknown) {
-      console.warn("RAG retrieval failed, falling back to top-priority:", extractErrorMessage(e));
+      console.warn("Context tag KB loading failed:", extractErrorMessage(e));
     }
   }
 
-  const { data } = await supabase
-    .from("kb_entries")
-    .select("title, content, category, tags")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .gte("priority", 5)
-    .order("priority", { ascending: false })
-    .limit(10);
+  // ── LEVEL 2: RAG semantic retrieval ──
+  if (query && query.trim().length >= 8) {
+    try {
+      const { ragSearchKb } = await import("../_shared/embeddings.ts");
+      const ragCount = seenIds.size > 0 ? 4 : 8;
+      const matches = await ragSearchKb(supabase, query, {
+        matchCount: ragCount, matchThreshold: 0.25, minPriority: 3, onlyActive: true,
+      });
+      const filtered = matches.filter((e: Record<string, unknown>) => !seenIds.has(e.id as string));
+      if (filtered.length > 0) {
+        const entries = filtered
+          .map((e: Record<string, unknown>) => `### ${e.title} [sim=${(e.similarity as number).toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+          .join("\n\n");
+        parts.push(`KNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`);
+      }
+    } catch (e: unknown) {
+      console.warn("RAG retrieval failed:", extractErrorMessage(e));
+    }
+  }
 
-  if (!data?.length) return "";
+  // ── LEVEL 3: Fallback by priority ──
+  if (parts.length === 0) {
+    const { data } = await supabase
+      .from("kb_entries")
+      .select("title, content, category, tags")
+      .eq("is_active", true)
+      .gte("priority", 5)
+      .or(userId ? `user_id.eq.${userId},user_id.is.null` : "user_id.is.null")
+      .order("priority", { ascending: false })
+      .limit(10);
 
-  const entries = (data as Record<string, unknown>[]).map(e =>
-    `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`
-  ).join("\n\n");
+    if (data?.length) {
+      const entries = (data as Record<string, unknown>[])
+        .map((e) => `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+        .join("\n\n");
+      parts.push(`KNOWLEDGE BASE AZIENDALE:\n${entries}`);
+    }
+  }
 
-  return `\n\nKNOWLEDGE BASE AZIENDALE:\n${entries}`;
+  if (parts.length === 0) return "";
+  return "\n\n" + parts.join("\n\n");
 }
 
 // ━━━ Load System Doctrine (always loaded, not query-dependent) ━━━

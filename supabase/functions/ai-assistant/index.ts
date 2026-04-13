@@ -27,6 +27,8 @@ import {
   loadSystemDoctrine,
   compressMessages,
 } from "./contextLoader.ts";
+import { extractContextTags } from "../_shared/contextTagExtractor.ts";
+import type { ConversationContext } from "../_shared/contextTagExtractor.ts";
 
 // ━━━ Service-level Supabase client ━━━
 const supabase = createClient(
