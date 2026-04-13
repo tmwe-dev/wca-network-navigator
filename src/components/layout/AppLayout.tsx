@@ -56,6 +56,9 @@ export function AppLayout() {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen((o) => !o); }
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen((o) => !o); }
+      if (e.key === "n" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v1/email-composer"); }
+      if (e.key === "m" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v1/mission-builder"); }
+      if (e.key === "Escape") { setCommandOpen(false); setIntelliflowOpen(false); setMissionOpen(false); setFiltersOpen(false); }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
@@ -123,7 +126,7 @@ export function AppLayout() {
               onMouseEnter={() => handleEdgeEnter("left")}
               onMouseLeave={() => handleEdgeLeave("left")}
               className={cn(
-                "fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 filtersOpen && "opacity-0 pointer-events-none"
               )}
               style={{
@@ -139,7 +142,7 @@ export function AppLayout() {
               onMouseEnter={() => handleEdgeEnter("right")}
               onMouseLeave={() => handleEdgeLeave("right")}
               className={cn(
-                "fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 missionOpen && "opacity-0 pointer-events-none"
               )}
               style={{
@@ -179,17 +182,17 @@ export function AppLayout() {
                     <div className="flex items-center gap-0.5 sm:gap-1">
                       <OperatorSelector />
                       <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-red-500 hover:text-red-600" : "text-foreground/70 hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
+                      <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="hidden md:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
+                      <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-destructive hover:text-destructive/80" : "text-foreground/70 hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
                       <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
                     </div>
                   </div>
                 </TooltipProvider>
               </header>
 
-              <main className={cn("flex-1 min-h-0 overflow-hidden mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
+              <main className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
                 <Outlet />
               </main>
             </div>

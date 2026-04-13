@@ -46,6 +46,18 @@ export default function SuperHome3D() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
+  const { data: hasSetup, isLoading: setupLoading } = useQuery({
+    queryKey: ["onboarding-check"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase.from("app_settings")
+        .select("value").eq("key", "ai_company_name").eq("user_id", user.id).maybeSingle();
+      return !!data?.value;
+    },
+    staleTime: 5 * 60_000,
+  });
+
   const { data: activities = [] } = useAllActivities();
   const { data: jobs = [] } = useDownloadJobs();
   const { data: prospectStats } = useProspectStats();
@@ -82,6 +94,12 @@ export default function SuperHome3D() {
   const handleBriefingAction = useCallback((action: BriefingAction) => {
     setActionPrompt(action.prompt);
   }, []);
+
+  // Redirect to onboarding if not set up
+  if (!setupLoading && hasSetup === false) {
+    navigate("/onboarding", { replace: true });
+    return null;
+  }
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">

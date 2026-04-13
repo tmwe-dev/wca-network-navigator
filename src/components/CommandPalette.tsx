@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAppNavigate } from "@/hooks/useAppNavigate";
+import { useNavigate } from "react-router-dom";
 import {
   CommandDialog,
   CommandEmpty,
@@ -16,7 +16,19 @@ import {
   Download,
   Building2,
   Star,
-  Phone,
+  Mail,
+  Rocket,
+  Gamepad2,
+  Send,
+  Brain,
+  Settings,
+  Globe,
+  MessageCircle,
+  Target,
+  BarChart3,
+  Wrench,
+  BookOpen,
+  Inbox,
 } from "lucide-react";
 import { searchPartners } from "@/data/partners";
 
@@ -32,8 +44,34 @@ interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const NAV_ITEMS = [
+  { label: "Dashboard", icon: LayoutDashboard, path: "/v1" },
+  { label: "Network", icon: Globe, path: "/v1/network" },
+  { label: "CRM Contatti", icon: Users, path: "/v1/crm" },
+  { label: "Outreach", icon: Rocket, path: "/v1/outreach" },
+  { label: "Inreach", icon: Inbox, path: "/v1/inreach" },
+  { label: "Nuova Email", icon: Mail, path: "/v1/email-composer" },
+  { label: "AI Arena", icon: Gamepad2, path: "/v1/ai-arena" },
+  { label: "AI Control", icon: Target, path: "/v1/ai-control" },
+  { label: "Email Intelligence", icon: Brain, path: "/v1/email-intelligence" },
+  { label: "Campagne", icon: Send, path: "/v1/campaigns" },
+  { label: "Agenda", icon: Calendar, path: "/v1/agenda" },
+  { label: "Chat Agenti", icon: MessageCircle, path: "/v1/agent-chat" },
+  { label: "Staff Direzionale", icon: BookOpen, path: "/v1/staff-direzionale" },
+  { label: "Mission Builder", icon: Target, path: "/v1/mission-builder" },
+  { label: "Telemetria", icon: BarChart3, path: "/v1/telemetry" },
+  { label: "Diagnostica", icon: Wrench, path: "/v1/diagnostics" },
+  { label: "Impostazioni", icon: Settings, path: "/v1/settings" },
+];
+
+const QUICK_ACTIONS = [
+  { label: "Nuova Missione", icon: Target, path: "/v1/mission-builder" },
+  { label: "Nuova Email", icon: Mail, path: "/v1/email-composer" },
+  { label: "Visualizza Preferiti", icon: Star, path: "/v1/network?favorites=true" },
+];
+
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
 
@@ -49,31 +87,32 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const runCommand = (command: () => void) => {
     onOpenChange(false);
+    setSearch("");
     command();
   };
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput 
-        placeholder="Search partners, pages..." 
+        placeholder="Cerca partner, pagine, azioni..." 
         value={search}
         onValueChange={setSearch}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>Nessun risultato trovato.</CommandEmpty>
         
         {partners.length > 0 && (
-          <CommandGroup heading="Partners">
+          <CommandGroup heading="Partner">
             {partners.map((partner) => (
               <CommandItem
                 key={partner.id}
-                onSelect={() => runCommand(() => navigate(`/partners/${partner.id}`))}
+                onSelect={() => runCommand(() => navigate(`/v1/network`))}
               >
                 <Building2 className="mr-2 h-4 w-4" />
                 <div className="flex flex-col">
                   <span>{partner.company_name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {partner.city}, {partner.country_name}
+                    {partner.city}{partner.country_name ? `, ${partner.country_name}` : ""}
                   </span>
                 </div>
               </CommandItem>
@@ -81,32 +120,30 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        <CommandGroup heading="Navigation">
-          <CommandItem onSelect={() => runCommand(() => navigate("/"))}>
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/partners"))}>
-            <Users className="mr-2 h-4 w-4" />
-            <span>Partners</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/reminders"))}>
-            <Calendar className="mr-2 h-4 w-4" />
-            <span>Reminders</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/export"))}>
-            <Download className="mr-2 h-4 w-4" />
-            <span>Export</span>
-          </CommandItem>
+        <CommandGroup heading="Navigazione">
+          {NAV_ITEMS.map((item) => (
+            <CommandItem
+              key={item.path}
+              onSelect={() => runCommand(() => navigate(item.path))}
+            >
+              <item.icon className="mr-2 h-4 w-4" />
+              <span>{item.label}</span>
+            </CommandItem>
+          ))}
         </CommandGroup>
 
         <CommandSeparator />
 
-        <CommandGroup heading="Quick Actions">
-          <CommandItem onSelect={() => runCommand(() => navigate("/partners?favorites=true"))}>
-            <Star className="mr-2 h-4 w-4" />
-            <span>View Favorites</span>
-          </CommandItem>
+        <CommandGroup heading="Azioni Rapide">
+          {QUICK_ACTIONS.map((item) => (
+            <CommandItem
+              key={item.label}
+              onSelect={() => runCommand(() => navigate(item.path))}
+            >
+              <item.icon className="mr-2 h-4 w-4" />
+              <span>{item.label}</span>
+            </CommandItem>
+          ))}
         </CommandGroup>
       </CommandList>
     </CommandDialog>

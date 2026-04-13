@@ -178,7 +178,18 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         {isLoading ? (
           <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
         ) : contacts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto trovato</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div className="rounded-full bg-muted/40 p-4 mb-4">
+              <Search className="h-8 w-8 text-muted-foreground/60" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">Nessun contatto trovato</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mb-4">
+              Importa contatti da CSV, scaricali dalla directory WCA, o aggiungili manualmente.
+            </p>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.dispatchEvent(new CustomEvent("open-add-contact"))}>
+              <UserPlus className="w-3.5 h-3.5" /> Aggiungi contatto
+            </Button>
+          </div>
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
             {virtualizer.getVirtualItems().map((vItem) => {
