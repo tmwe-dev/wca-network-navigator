@@ -3340,29 +3340,35 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_config: Json | null
           created_at: string
           display_name: string | null
           id: string
           language: string
           onboarding_completed: boolean
+          operator_role: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ai_config?: Json | null
           created_at?: string
           display_name?: string | null
           id?: string
           language?: string
           onboarding_completed?: boolean
+          operator_role?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ai_config?: Json | null
           created_at?: string
           display_name?: string | null
           id?: string
           language?: string
           onboarding_completed?: boolean
+          operator_role?: string | null
           updated_at?: string
           user_id?: string
         }
