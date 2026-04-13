@@ -1,1 +1,1 @@
-export { default } from "./ContentManagerOrchestrator";
+export { default } from "../ContentManager";
