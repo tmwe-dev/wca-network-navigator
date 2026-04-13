@@ -74,6 +74,26 @@ export function PendingActionsPanel() {
       if (action?.decision_log_id) {
         await supabase.from("ai_decision_log").update({ user_review: "approved" }).eq("id", action.decision_log_id);
       }
+      // Handle prompt_refinement: apply suggestions to agent system_prompt
+      if (action?.action_type === "prompt_refinement" && action.suggested_content) {
+        try {
+          const suggestions = JSON.parse(action.suggested_content);
+          // Find agent from reasoning or via pending action context
+          const { data: agents } = await supabase.from("agents").select("id, system_prompt").eq("user_id", (await supabase.auth.getUser()).data.user?.id || "").eq("is_active", true);
+          if (agents?.length) {
+            const agent = agents[0];
+            let updatedPrompt = agent.system_prompt || "";
+            for (const s of suggestions) {
+              if (s.current_text && updatedPrompt.includes(s.current_text)) {
+                updatedPrompt = updatedPrompt.replace(s.current_text, s.suggested_text);
+              } else if (s.suggested_text) {
+                updatedPrompt += `\n\n${s.suggested_text}`;
+              }
+            }
+            await supabase.from("agents").update({ system_prompt: updatedPrompt }).eq("id", agent.id);
+          }
+        } catch (e) { console.warn("prompt refinement apply failed:", e); }
+      }
     },
     onSuccess: () => { toast.success("Azione approvata"); qc.invalidateQueries({ queryKey: ["ai-pending-actions"] }); },
     onError: () => toast.error("Errore nell'approvazione"),
