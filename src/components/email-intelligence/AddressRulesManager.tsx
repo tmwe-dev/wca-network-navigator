@@ -81,6 +81,15 @@ export function AddressRulesManager() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["email-address-rules"] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Regola eliminata"); qc.invalidateQueries({ queryKey: ["email-address-rules"] }); },
+    onError: () => toast.error("Errore nell'eliminazione"),
+  });
+
   const openEdit = (rule?: any) => {
     setEditingRule(rule ?? {
       email_address: "",
