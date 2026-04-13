@@ -33,6 +33,54 @@ export async function fetchKbEntriesForOutreach(
   return { text, sections };
 }
 
+// ── Conversation Intelligence ──
+
+export async function loadConversationContextOutreach(
+  supabase: SupabaseClient, userId: string, emailAddress: string | null,
+): Promise<string> {
+  if (!emailAddress) return "";
+
+  const [ctxRes, rulesRes, classRes] = await Promise.all([
+    supabase.from("contact_conversation_context").select("conversation_summary, last_exchanges, response_rate, avg_response_time_hours, dominant_sentiment")
+      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
+    supabase.from("email_address_rules").select("tone_override, topics_to_emphasize, topics_to_avoid, email_prompts(instructions)")
+      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
+    supabase.from("email_classifications")
+      .select("category, confidence, ai_summary, sentiment")
+      .eq("user_id", userId).eq("email_address", emailAddress)
+      .order("classified_at", { ascending: false }).limit(3),
+  ]);
+
+  const parts: string[] = [];
+  const ctx = ctxRes.data;
+  const rules = rulesRes.data;
+  const classes = classRes.data ?? [];
+
+  if (ctx) {
+    if (ctx.conversation_summary) parts.push(`CONVERSATION HISTORY: ${ctx.conversation_summary}`);
+    const exchanges = Array.isArray(ctx.last_exchanges) ? (ctx.last_exchanges as any[]).slice(-5) : [];
+    if (exchanges.length) {
+      parts.push(`Last exchanges:\n${exchanges.map((ex: any) => `  ${ex.date || "?"} - ${ex.subject || "N/A"} - ${ex.sentiment || "neutral"}`).join("\n")}`);
+    }
+    parts.push(`RESPONSE PATTERN: Rate ${Math.round(ctx.response_rate ?? 0)}%, avg ${ctx.avg_response_time_hours != null ? `${Math.round(ctx.avg_response_time_hours)}h` : "N/A"}, sentiment: ${ctx.dominant_sentiment || "neutral"}`);
+  }
+
+  if (rules) {
+    const rp: string[] = [];
+    if (rules.tone_override) rp.push(`Tone=${rules.tone_override}`);
+    if (rules.topics_to_emphasize?.length) rp.push(`Emphasize=${rules.topics_to_emphasize.join(", ")}`);
+    if (rules.topics_to_avoid?.length) rp.push(`Avoid=${rules.topics_to_avoid.join(", ")}`);
+    if (rp.length) parts.push(`SENDER RULES: ${rp.join(", ")}`);
+    if ((rules as any).email_prompts?.instructions) parts.push(`SENDER PROMPT: ${(rules as any).email_prompts.instructions}`);
+  }
+
+  if (classes.length) {
+    parts.push(`RECENT CLASSIFICATIONS:\n${classes.map((c: any) => `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || ""}`).join("\n")}`);
+  }
+
+  return parts.length ? `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n` : "";
+}
+
 // ── Intelligence assembly ──
 
 export interface RecipientIntelligence {
@@ -50,6 +98,7 @@ export interface OutreachContextBlocks {
   metInPersonContext: string;
   historyText: string;
   interactionHistoryCount: number;
+  conversationIntelligenceContext: string;
   salesKBSlice: string;
   salesKBSections: string[];
   settings: Record<string, string>;
@@ -254,9 +303,14 @@ export async function assembleOutreachContext(
     console.warn("[generate-outreach] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
   }
 
+  // ── Conversation Intelligence ──
+  const conversationIntelligenceContext = await loadConversationContextOutreach(
+    supabase, userId, params.contact_email || null,
+  );
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
-    historyText, interactionHistoryCount,
+    historyText, interactionHistoryCount, conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
     settings, partnerId, websiteSource, linkedinSource,
   };
