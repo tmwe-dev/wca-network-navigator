@@ -73,7 +73,7 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
           "h-6 w-6 rounded-full",
           feedback === "up" && "text-green-500 bg-green-500/10"
         )}
-        onClick={() => handleFeedback("up")}
+        onClick={() = aria-label="Positivo"> handleFeedback("up")}
         aria-label="Positivo"
       >
         <ThumbsUp className="h-3 w-3" />
@@ -85,7 +85,7 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
           "h-6 w-6 rounded-full",
           feedback === "down" && "text-red-500 bg-red-500/10"
         )}
-        onClick={() => handleFeedback("down")}
+        onClick={() = aria-label="Negativo"> handleFeedback("down")}
         aria-label="Negativo"
       >
         <ThumbsDown className="h-3 w-3" />

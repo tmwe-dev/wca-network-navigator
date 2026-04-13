@@ -156,7 +156,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
       )}>
         {!sidebarOpen ? (
           <div className="flex flex-col items-center pt-2 gap-2">
-            <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
+            <Button size="icon" variant="ghost" onClick={() = aria-label="Visualizza"> setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
               <PanelLeftOpen className="w-4 h-4" />
             </Button>
             <div className="w-8 h-8 rounded-full bg-blue-500/15 flex items-center justify-center">
@@ -172,7 +172,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
           <>
             <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
+                <Button size="icon" variant="ghost" onClick={() = aria-label="Visualizza"> setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={readNow} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">

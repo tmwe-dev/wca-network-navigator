@@ -141,7 +141,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
                     size="icon"
                     variant="ghost"
                     className="h-5 w-5 text-white hover:bg-white/20"
-                    onClick={(e) => { e.stopPropagation(); copyUrl(img.url); }}
+                    onClick={(e) = aria-label="Azione"> { e.stopPropagation(); copyUrl(img.url); }}
                     title="Copia URL"
                     aria-label="Copia"
                   >
@@ -151,7 +151,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
                     size="icon"
                     variant="ghost"
                     className="h-5 w-5 text-white hover:bg-destructive/50"
-                    onClick={(e) => { e.stopPropagation(); deleteImage.mutate(img.name); }}
+                    onClick={(e) = aria-label="Azione"> { e.stopPropagation(); deleteImage.mutate(img.name); }}
                     title="Elimina"
                     aria-label="Elimina"
                   >
