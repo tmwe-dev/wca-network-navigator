@@ -87,7 +87,7 @@ export async function loadEntityFromActivity(
   let partner: PartnerData | null = activity.partners;
   let contact: ContactData | null = activity.selected_contact;
   let contactEmail: string | null = null;
-  let sourceType = activity.source_type || "partner";
+  const sourceType = activity.source_type || "partner";
 
   if (sourceType === "contact" && activity.source_id) {
     const { data: ic } = await supabase

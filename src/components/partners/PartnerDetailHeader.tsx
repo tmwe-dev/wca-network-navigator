@@ -15,7 +15,7 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { Box } from "lucide-react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface PartnerDetailHeaderProps {
   partner: Record<string, any>;
   enrichment: Record<string, any> | null;

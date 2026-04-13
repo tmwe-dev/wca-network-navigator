@@ -791,7 +791,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         });
       }
       if (!args.source_type || args.source_type === "crm" || args.source_type === "all") {
-        let cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
+        const cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         const { data: contacts } = await cq.limit(Number(args.limit) || 50);
         (contacts || []).forEach((c: Record<string, unknown>) => {

@@ -86,7 +86,7 @@ export function parseAiAgentResponse<TPartner = unknown>(content: string): Parse
   const partners = structured?.type === "partners" && Array.isArray(structured.data) ? structured.data : [];
 
   const jobCreated = safeJsonParse<JobCreatedInfo | null>(jobPayload, null);
-  let operations = safeJsonParse<AiOperation[]>(opsPayload, []);
+  const operations = safeJsonParse<AiOperation[]>(opsPayload, []);
 
   // Auto-generate operation card from jobCreated if no explicit one exists
   if (jobCreated && !operations.some(o => o.job_id === jobCreated.job_id)) {

@@ -90,7 +90,7 @@ async function processAction(
 ) {
   // Extract target email from metadata
   const meta = action.metadata as Record<string, unknown> | null;
-  let targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
+  const targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
   const partnerId: string | null = (meta?.partner_id as string) || null;
 
   // Load conversation context

@@ -217,7 +217,7 @@ export function useActionPanelLogic({
     }
 
     try {
-      let cookie = getWcaCookie();
+      const cookie = getWcaCookie();
       if (!cookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         const data = await res.json();

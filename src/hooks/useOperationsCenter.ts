@@ -60,7 +60,7 @@ export function useOperationsCenter() {
 
       // Get agent names
       const agentIds = [...new Set((data || []).map((t: any) => t.agent_id))];
-      let agentMap: Record<string, { name: string; emoji: string }> = {};
+      const agentMap: Record<string, { name: string; emoji: string }> = {};
       if (agentIds.length > 0) {
         const { data: agents } = await supabase
           .from("agents")

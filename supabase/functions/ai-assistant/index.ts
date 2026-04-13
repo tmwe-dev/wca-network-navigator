@@ -365,7 +365,7 @@ Non eseguire tool di scrittura o modifica`;
 
     let result = await response.json();
     let assistantMessage = result.choices?.[0]?.message;
-    let totalUsage = { prompt_tokens: 0, completion_tokens: 0 };
+    const totalUsage = { prompt_tokens: 0, completion_tokens: 0 };
     if (result.usage) {
       totalUsage.prompt_tokens += result.usage.prompt_tokens || 0;
       totalUsage.completion_tokens += result.usage.completion_tokens || 0;

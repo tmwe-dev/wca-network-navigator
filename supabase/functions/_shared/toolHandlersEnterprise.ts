@@ -33,7 +33,7 @@ interface PlaybookTriggerConditions {
 }
 
 // Variable declared at module scope, set by executeSearchKb closure
-let userId = "";
+const userId = "";
 
 export function createEnterpriseHandlers(supabase: SupabaseClient) {
 

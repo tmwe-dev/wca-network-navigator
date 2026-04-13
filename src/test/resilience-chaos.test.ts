@@ -52,7 +52,7 @@ describe("DB failure after send resilience", () => {
   it("should detect when email was sent but DB update fails", () => {
     // Scenario: SMTP OK → DB update throws → must NOT lose track
     let emailSent = false;
-    let dbUpdated = false;
+    const dbUpdated = false;
     let recoveryNeeded = false;
 
     try {

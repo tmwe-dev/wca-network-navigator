@@ -10,7 +10,7 @@ import { describe, it, expect } from "vitest";
 describe("Email Sending — False positive detection", () => {
   it("SMTP rejection must not create a 'sent' record", () => {
     let emailStatus = "sending";
-    let interactionCreated = false;
+    const interactionCreated = false;
 
     try {
       // Simulate SMTP rejection
