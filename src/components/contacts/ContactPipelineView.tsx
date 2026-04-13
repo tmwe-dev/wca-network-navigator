@@ -102,7 +102,7 @@ export function ContactPipelineView(): React.ReactElement {
       const { data } = await supabase
         .from("activities")
         .select("id, partner_id, activity_type, status, created_at")
-        .in("activity_type", ["send_email", "email", "outreach", "linkedin_message", "whatsapp"])
+        .in("activity_type", ["send_email", "linkedin_message", "whatsapp_message", "follow_up"])
         .limit(1000);
       return data || [];
     },

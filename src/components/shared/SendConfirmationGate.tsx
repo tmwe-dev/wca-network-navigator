@@ -119,7 +119,7 @@ export function SendConfirmationGate({
     warnings.push({ icon: <Shield className="h-3.5 w-3.5" />, text: "Nessuna regola AI configurata per questo indirizzo", severity: "info" });
   }
 
-  const followUpNum = context?.interaction_count ? context.interaction_count + 1 : 1;
+  const followUpNum = context?.interaction_count != null && context.interaction_count > 0 ? context.interaction_count + 1 : 1;
   const sanitized = DOMPurify.sanitize(payload.bodyHtml || "", {
     ALLOWED_TAGS: ["p","br","strong","em","ul","ol","li","a","h1","h2","h3","div","span","table","tr","td","th","hr","blockquote","b","i","u"],
     ALLOWED_ATTR: ["href","target","style","class"],
