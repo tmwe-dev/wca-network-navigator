@@ -70,11 +70,10 @@ export function SystemHealthDashboard() {
               </Badge>
               {status === "fail" && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Last OK: {
-                    history.findLast((h) => h.checks[service] === "ok")?.timestamp
-                      ? new Date(history.findLast((h) => h.checks[service] === "ok")!.timestamp).toLocaleTimeString()
-                      : "N/A"
-                  }
+                  Last OK: {(() => {
+                    const lastOk = [...history].reverse().find((h: HealthCheck) => h.checks[service] === "ok");
+                    return lastOk ? new Date(lastOk.timestamp).toLocaleTimeString() : "N/A";
+                  })()}
                 </p>
               )}
             </CardContent>
