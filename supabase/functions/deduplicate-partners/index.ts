@@ -1,5 +1,16 @@
+/**
+ * deduplicate-partners — Finds and merges duplicate partner records.
+ *
+ * Groups partners by normalized company_name + country_code, identifies duplicates,
+ * and merges them by keeping the most data-rich record as primary.
+ *
+ * @endpoint POST /functions/v1/deduplicate-partners
+ * @auth Required (Bearer token)
+ * @rateLimit 5 requests/minute per user
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 
 Deno.serve(async (req) => {
@@ -27,6 +38,11 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
+
+    // Rate limit
+    const rl = checkRateLimit(`dedup:${userId}`, { maxTokens: 5, refillRate: 0.1 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

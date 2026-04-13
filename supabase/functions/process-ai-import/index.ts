@@ -1,7 +1,17 @@
+/**
+ * process-ai-import — AI-powered contact import enrichment Edge Function.
+ *
+ * Takes an import_log_id, fetches pending imported_contacts, and uses AI to
+ * normalize/enrich fields (company names, countries, roles). Processes in batches of 25.
+ *
+ * @endpoint POST /functions/v1/process-ai-import
+ * @auth Required (Bearer token)
+ * @rateLimit 10 requests/minute per user
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 const BATCH_SIZE = 25;
 
@@ -14,7 +24,24 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+    }
+
+    const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "AUTH_INVALID" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+    }
+    const userId = claimsData.claims.sub as string;
+
+    // Rate limit
+    const rl = checkRateLimit(`ai-import:${userId}`, { maxTokens: 10, refillRate: 0.1 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

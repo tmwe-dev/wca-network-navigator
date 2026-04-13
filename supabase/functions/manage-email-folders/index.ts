@@ -1,10 +1,20 @@
+/**
+ * manage-email-folders — IMAP folder operations (move, archive, spam, list, create).
+ *
+ * Performs IMAP operations on email folders AFTER emails have been downloaded and categorized.
+ * Does NOT touch email download (check-inbox).
+ *
+ * @endpoint POST /functions/v1/manage-email-folders
+ * @auth Required (Bearer token)
+ * @rateLimit 30 requests/minute per user
+ *
+ * @input { action: "move"|"archive"|"spam"|"list_folders"|"create_folder", uids?: string[], target_folder?: string }
+ * @output { success, message, folders? }
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)

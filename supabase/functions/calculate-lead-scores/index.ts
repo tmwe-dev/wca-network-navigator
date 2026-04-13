@@ -1,5 +1,16 @@
+/**
+ * calculate-lead-scores — Batch lead scoring Edge Function.
+ *
+ * Calculates a numeric lead_score for all imported_contacts based on data completeness,
+ * interaction history, and engagement signals. Runs in batches of 500.
+ *
+ * @endpoint POST /functions/v1/calculate-lead-scores
+ * @auth Required (Bearer token)
+ * @rateLimit 10 requests/minute per user
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
