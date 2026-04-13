@@ -58,7 +58,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb } = await req.json();
+    const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb, email_type_id, email_type_structure } = await req.json();
     if (!html_body) throw new Error("html_body is required");
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -84,9 +84,35 @@ serve(async (req) => {
       console.warn("[improve-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
     }
 
+    // ─── Decision Object ───
+    const decision = {
+      email_type: email_type_id || "generico",
+      tone: oracle_tone || settings.ai_tone || "professionale",
+      max_length_lines: 12,
+      improvement_focus: email_type_id === "follow_up"
+        ? "urgenza_soft_e_cta"
+        : email_type_id === "primo_contatto"
+          ? "hook_e_personalizzazione"
+          : "struttura_e_impatto",
+    };
+
+    // ─── Readiness Scoring (simplified for improve) ───
+    const readiness = {
+      sender: [
+        settings.ai_contact_alias || settings.ai_contact_name ? 30 : 0,
+        settings.ai_company_alias || settings.ai_company_name ? 30 : 0,
+        settings.ai_knowledge_base ? 20 : 0,
+        settings.ai_contact_role ? 20 : 0,
+      ].reduce((a, b) => a + b, 0),
+      kb: kbResult.text ? Math.min(100, kbResult.sections.length * 20) : 0,
+    };
+
     const systemPrompt = `Sei un esperto copywriter, stratega di vendita B2B e consulente di comunicazione nel settore della logistica internazionale e del freight forwarding.
 
 Il tuo compito è MIGLIORARE un'email scritta manualmente dall'utente. NON riscriverla da zero — mantieni il messaggio, lo stile e l'intento dell'autore.
+
+DECISION OBJECT (contesto per il miglioramento):
+${JSON.stringify(decision, null, 2)}
 
 ## Come migliorare:
 1. ANALIZZA l'email e identifica punti deboli (hook mancante, CTA assente, tono piatto, struttura confusa)
@@ -105,6 +131,7 @@ PROFILO MITTENTE:
 ${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
 ${use_kb !== false && salesKBSlice ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${kbResult.sections.join(", ")}):\nApplica queste tecniche dove migliorano l'email.\n\n${salesKBSlice}\n` : ""}
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
+${email_type_structure ? `STRUTTURA EMAIL RICHIESTA:\n${email_type_structure}\n` : ""}
 
 REGOLE DI MIGLIORAMENTO:
 1. Mantieni la STESSA lingua dell'email originale
@@ -157,10 +184,15 @@ ${html_body}`;
     // Clean markdown code fences if present
     improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
-    return new Response(JSON.stringify({ subject: improvedSubject, body: improvedBody }), {
+    return new Response(JSON.stringify({
+      subject: improvedSubject,
+      body: improvedBody,
+      readiness,
+      decision,
+    }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: unknown) {
     console.error("improve-email error:", e);
     return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));
   }
