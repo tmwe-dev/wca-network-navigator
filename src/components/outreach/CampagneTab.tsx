@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, Clock, CheckCircle2, XCircle, Loader2, Send } from "lucide-react";
+import { Mail, Phone, Clock, CheckCircle2, XCircle, Loader2, Send, Pause, Play, X } from "lucide-react";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
+import { toast } from "sonner";
+import { cancelCampaignItem } from "@/data/outreachPipeline";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
