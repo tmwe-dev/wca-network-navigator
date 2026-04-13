@@ -324,6 +324,74 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_decision_log: {
+        Row: {
+          ai_reasoning: string | null
+          confidence: number | null
+          contact_id: string | null
+          created_at: string | null
+          decision_output: Json | null
+          decision_type: string
+          email_address: string | null
+          execution_time_ms: number | null
+          id: string
+          input_context: Json | null
+          model_used: string | null
+          partner_id: string | null
+          tokens_used: number | null
+          user_correction: string | null
+          user_id: string
+          user_review: string | null
+          was_auto_executed: boolean | null
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_output?: Json | null
+          decision_type: string
+          email_address?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          input_context?: Json | null
+          model_used?: string | null
+          partner_id?: string | null
+          tokens_used?: number | null
+          user_correction?: string | null
+          user_id: string
+          user_review?: string | null
+          was_auto_executed?: boolean | null
+        }
+        Update: {
+          ai_reasoning?: string | null
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_output?: Json | null
+          decision_type?: string
+          email_address?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          input_context?: Json | null
+          model_used?: string | null
+          partner_id?: string | null
+          tokens_used?: number | null
+          user_correction?: string | null
+          user_id?: string
+          user_review?: string | null
+          was_auto_executed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_decision_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_edit_patterns: {
         Row: {
           channel: string | null
@@ -547,6 +615,78 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ai_pending_actions: {
+        Row: {
+          action_payload: Json | null
+          action_type: string
+          confidence: number | null
+          contact_id: string | null
+          created_at: string | null
+          decision_log_id: string | null
+          email_address: string | null
+          executed_at: string | null
+          expires_at: string | null
+          id: string
+          partner_id: string | null
+          reasoning: string | null
+          source: string | null
+          status: string | null
+          suggested_content: string | null
+          user_id: string
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_type: string
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_log_id?: string | null
+          email_address?: string | null
+          executed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          partner_id?: string | null
+          reasoning?: string | null
+          source?: string | null
+          status?: string | null
+          suggested_content?: string | null
+          user_id: string
+        }
+        Update: {
+          action_payload?: Json | null
+          action_type?: string
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          decision_log_id?: string | null
+          email_address?: string | null
+          executed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          partner_id?: string | null
+          reasoning?: string | null
+          source?: string | null
+          status?: string | null
+          suggested_content?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_pending_actions_decision_log_id_fkey"
+            columns: ["decision_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_decision_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_pending_actions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_plan_templates: {
         Row: {
@@ -1339,6 +1479,68 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_conversation_context: {
+        Row: {
+          avg_response_time_hours: number | null
+          contact_id: string | null
+          conversation_summary: string | null
+          created_at: string | null
+          dominant_sentiment: string | null
+          email_address: string
+          id: string
+          interaction_count: number | null
+          last_exchanges: Json | null
+          last_interaction_at: string | null
+          partner_id: string | null
+          preferred_language: string | null
+          response_rate: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_response_time_hours?: number | null
+          contact_id?: string | null
+          conversation_summary?: string | null
+          created_at?: string | null
+          dominant_sentiment?: string | null
+          email_address: string
+          id?: string
+          interaction_count?: number | null
+          last_exchanges?: Json | null
+          last_interaction_at?: string | null
+          partner_id?: string | null
+          preferred_language?: string | null
+          response_rate?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_response_time_hours?: number | null
+          contact_id?: string | null
+          conversation_summary?: string | null
+          created_at?: string | null
+          dominant_sentiment?: string | null
+          email_address?: string
+          id?: string
+          interaction_count?: number | null
+          last_exchanges?: Json | null
+          last_interaction_at?: string | null
+          partner_id?: string | null
+          preferred_language?: string | null
+          response_rate?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_conversation_context_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_interactions: {
         Row: {
           contact_id: string
@@ -1678,38 +1880,74 @@ export type Database = {
       }
       email_address_rules: {
         Row: {
+          ai_confidence_threshold: number | null
+          auto_action: string | null
+          auto_action_params: Json | null
+          auto_execute: boolean | null
           category: string | null
           created_at: string
           display_name: string | null
           email_address: string
           exclusive_agent_id: string | null
           id: string
+          interaction_count: number | null
+          is_active: boolean | null
+          last_interaction_at: string | null
           notes: string | null
+          preferred_channel: string | null
           prompt_id: string | null
+          success_rate: number | null
+          tone_override: string | null
+          topics_to_avoid: string[] | null
+          topics_to_emphasize: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ai_confidence_threshold?: number | null
+          auto_action?: string | null
+          auto_action_params?: Json | null
+          auto_execute?: boolean | null
           category?: string | null
           created_at?: string
           display_name?: string | null
           email_address: string
           exclusive_agent_id?: string | null
           id?: string
+          interaction_count?: number | null
+          is_active?: boolean | null
+          last_interaction_at?: string | null
           notes?: string | null
+          preferred_channel?: string | null
           prompt_id?: string | null
+          success_rate?: number | null
+          tone_override?: string | null
+          topics_to_avoid?: string[] | null
+          topics_to_emphasize?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ai_confidence_threshold?: number | null
+          auto_action?: string | null
+          auto_action_params?: Json | null
+          auto_execute?: boolean | null
           category?: string | null
           created_at?: string
           display_name?: string | null
           email_address?: string
           exclusive_agent_id?: string | null
           id?: string
+          interaction_count?: number | null
+          is_active?: boolean | null
+          last_interaction_at?: string | null
           notes?: string | null
+          preferred_channel?: string | null
           prompt_id?: string | null
+          success_rate?: number | null
+          tone_override?: string | null
+          topics_to_avoid?: string[] | null
+          topics_to_emphasize?: string[] | null
           updated_at?: string
           user_id?: string
         }
@@ -1844,6 +2082,83 @@ export type Database = {
             columns: ["draft_id"]
             isOneToOne: false
             referencedRelation: "email_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_classifications: {
+        Row: {
+          action_suggested: string | null
+          ai_summary: string | null
+          body_preview: string | null
+          category: string
+          classified_at: string | null
+          confidence: number
+          contact_id: string | null
+          created_at: string | null
+          detected_patterns: string[] | null
+          direction: string
+          email_address: string
+          id: string
+          keywords: string[] | null
+          partner_id: string | null
+          reasoning: string | null
+          sentiment: string | null
+          source_activity_id: string | null
+          subject: string | null
+          urgency: string | null
+          user_id: string
+        }
+        Insert: {
+          action_suggested?: string | null
+          ai_summary?: string | null
+          body_preview?: string | null
+          category?: string
+          classified_at?: string | null
+          confidence?: number
+          contact_id?: string | null
+          created_at?: string | null
+          detected_patterns?: string[] | null
+          direction?: string
+          email_address: string
+          id?: string
+          keywords?: string[] | null
+          partner_id?: string | null
+          reasoning?: string | null
+          sentiment?: string | null
+          source_activity_id?: string | null
+          subject?: string | null
+          urgency?: string | null
+          user_id: string
+        }
+        Update: {
+          action_suggested?: string | null
+          ai_summary?: string | null
+          body_preview?: string | null
+          category?: string
+          classified_at?: string | null
+          confidence?: number
+          contact_id?: string | null
+          created_at?: string | null
+          detected_patterns?: string[] | null
+          direction?: string
+          email_address?: string
+          id?: string
+          keywords?: string[] | null
+          partner_id?: string | null
+          reasoning?: string | null
+          sentiment?: string | null
+          source_activity_id?: string | null
+          subject?: string | null
+          urgency?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_classifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2509,6 +2824,8 @@ export type Database = {
         Row: {
           action_label: string
           action_type: string
+          cadence_rule: Json | null
+          classification_id: string | null
           completed_at: string | null
           created_at: string
           danger_level: string
@@ -2519,19 +2836,24 @@ export type Database = {
           metadata: Json | null
           mission_id: string
           next_retry_at: string | null
+          parent_action_id: string | null
           position: number
           recovery_log: Json | null
           retry_count: number | null
+          scheduled_at: string | null
           slot_acquired_at: string | null
           slot_released_at: string | null
           started_at: string | null
           status: string
+          trigger_condition: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           action_label?: string
           action_type?: string
+          cadence_rule?: Json | null
+          classification_id?: string | null
           completed_at?: string | null
           created_at?: string
           danger_level?: string
@@ -2542,19 +2864,24 @@ export type Database = {
           metadata?: Json | null
           mission_id: string
           next_retry_at?: string | null
+          parent_action_id?: string | null
           position?: number
           recovery_log?: Json | null
           retry_count?: number | null
+          scheduled_at?: string | null
           slot_acquired_at?: string | null
           slot_released_at?: string | null
           started_at?: string | null
           status?: string
+          trigger_condition?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           action_label?: string
           action_type?: string
+          cadence_rule?: Json | null
+          classification_id?: string | null
           completed_at?: string | null
           created_at?: string
           danger_level?: string
@@ -2565,17 +2892,28 @@ export type Database = {
           metadata?: Json | null
           mission_id?: string
           next_retry_at?: string | null
+          parent_action_id?: string | null
           position?: number
           recovery_log?: Json | null
           retry_count?: number | null
+          scheduled_at?: string | null
           slot_acquired_at?: string | null
           slot_released_at?: string | null
           started_at?: string | null
           status?: string
+          trigger_condition?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mission_actions_parent_action_id_fkey"
+            columns: ["parent_action_id"]
+            isOneToOne: false
+            referencedRelation: "mission_actions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mission_slot_config: {
         Row: {
