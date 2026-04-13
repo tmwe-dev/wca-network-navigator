@@ -117,8 +117,7 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
   return fetchAllRows((from, to) => {
     let query = supabase
       .from("partners")
-      .select(PARTNER_LIST_SELECT)
-      .eq("is_active", true);
+      .select(PARTNER_LIST_SELECT);
 
     if (filters?.search) {
       const s = sanitizeSearchTerm(filters.search);
@@ -138,7 +137,6 @@ export async function findPartnersByCountry(countryCode: string): Promise<Partne
     supabase
       .from("partners")
       .select(`*, partner_services (service_category), partner_certifications (certification)`)
-      .eq("is_active", true)
       .eq("country_code", countryCode)
       .order("company_name")
       .range(from, to)
@@ -177,7 +175,6 @@ export async function getPartnerStats() {
       supabase
         .from("partners")
         .select("id, country_code, country_name, partner_type, member_since")
-        .eq("is_active", true)
         .range(from, to)
   );
 
@@ -207,8 +204,7 @@ export async function getPartnerStats() {
 export async function countActivePartners() {
   const { count, error } = await supabase
     .from("partners")
-    .select("*", { count: "exact", head: true })
-    .eq("is_active", true);
+    .select("*", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
 }
@@ -217,8 +213,7 @@ export async function countActivePartners() {
 export async function getDistinctCountries() {
   const { data, error } = await supabase
     .from("partners")
-    .select("country_code")
-    .eq("is_active", true);
+    .select("country_code");
   if (error) throw error;
   const unique = new Set((data ?? []).map(r => r.country_code));
   return [...unique];
@@ -250,7 +245,6 @@ export async function searchPartners(term: string, limit = 10) {
     .from("partners")
     .select("id, company_name, country_code, city, logo_url")
     .ilike("company_name", `%${s}%`)
-    .eq("is_active", true)
     .limit(limit);
   if (error) throw error;
   return data ?? [];
