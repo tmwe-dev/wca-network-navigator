@@ -3,9 +3,10 @@ import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, MessageCircle, User, Sparkles, Handshake,
-  Globe2, Linkedin, Mail, Search,
+  Globe2, Linkedin, Mail, Search, Plane,
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
+import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { cn } from "@/lib/utils";

@@ -84,7 +84,7 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
       }
 
       // Holding pattern
-      if (filters?.holdingPattern === "out") query = query.eq("interaction_count", 0);
+      if (filters?.holdingPattern === "out") query = query.or("interaction_count.eq.0,interaction_count.is.null");
       else if (filters?.holdingPattern === "in") query = query.gt("interaction_count", 0);
 
       // Channel
