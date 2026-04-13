@@ -11,8 +11,6 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { cancelCampaignItem } from "@/data/outreachPipeline";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 
 type QueueFilter = "all" | "pending" | "sent" | "failed";
 
