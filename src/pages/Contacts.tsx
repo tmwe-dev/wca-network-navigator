@@ -68,7 +68,17 @@ export default function Contacts() {
   const hasDetail = !!selectedContact;
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className="h-full overflow-hidden flex">
+      <CRMFilterSidebar
+        sortField={sortField}
+        onSortChange={setSortField}
+        groupBy={groupBy}
+        onGroupByChange={setGroupBy}
+        activeFilters={activeFilters}
+        onFilterChange={(key, values) => setActiveFilters(prev => ({ ...prev, [key]: values }))}
+        onClearAll={() => setActiveFilters({})}
+      />
+      <div className="flex-1 min-w-0">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Column 1 — Contact list: always gets majority of space */}
         <ResizablePanel defaultSize={hasDetail ? 55 : 100} minSize={40} maxSize={80}>
