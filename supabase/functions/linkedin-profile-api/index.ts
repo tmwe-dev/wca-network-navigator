@@ -1,14 +1,13 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const PROXYCURL_API_KEY = Deno.env.get("PROXYCURL_API_KEY");
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { linkedin_url } = await req.json();
@@ -16,7 +15,7 @@ Deno.serve(async (req) => {
     if (!linkedin_url) {
       return new Response(JSON.stringify({ error: "linkedin_url is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -28,7 +27,7 @@ Deno.serve(async (req) => {
         fallback: true,
       }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -48,20 +47,20 @@ Deno.serve(async (req) => {
       if (response.status === 404) {
         return new Response(JSON.stringify({ success: false, error: "Profile not found", fallback: true }), {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
 
       if (response.status === 429) {
         return new Response(JSON.stringify({ success: false, error: "Rate limited", fallback: true }), {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
 
       return new Response(JSON.stringify({ success: false, error: `API error: ${response.status}`, fallback: true }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -94,13 +93,13 @@ Deno.serve(async (req) => {
     };
 
     return new Response(JSON.stringify({ success: true, profile, source: "api" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("linkedin-profile-api error:", err);
     return new Response(JSON.stringify({ error: err.message, fallback: true }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

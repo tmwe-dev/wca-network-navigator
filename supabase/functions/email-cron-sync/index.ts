@@ -1,11 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 /**
  * Email Cron Sync — runs every 5 minutes via pg_cron.
@@ -13,9 +9,11 @@ const corsHeaders = {
  * Uses shared work-hours logic (CET timezone, reads from app_settings).
  */
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -35,7 +33,7 @@ Deno.serve(async (req: Request) => {
     if (syncErr) throw syncErr;
     if (!syncUsers || syncUsers.length === 0) {
       return new Response(JSON.stringify({ message: "No users with IMAP configured" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -90,13 +88,13 @@ Deno.serve(async (req: Request) => {
     console.log(`[email-cron-sync] Processed ${results.length} users:`, JSON.stringify(results));
 
     return new Response(JSON.stringify({ processed: results.length, results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("[email-cron-sync] Fatal error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

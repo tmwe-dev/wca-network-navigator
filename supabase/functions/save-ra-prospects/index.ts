@@ -1,21 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { prospects } = await req.json()
     if (!Array.isArray(prospects) || prospects.length === 0) {
       return new Response(JSON.stringify({ success: false, message: 'Nessun prospect da salvare' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...dynCors, 'Content-Type': 'application/json' },
       })
     }
 
@@ -104,7 +103,7 @@ Deno.serve(async (req) => {
       errors,
       message: `Salvati ${saved} prospect${errors > 0 ? `, ${errors} errori` : ''}`,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...dynCors, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('save-ra-prospects error:', error)
@@ -113,7 +112,7 @@ Deno.serve(async (req) => {
       message: 'Errore: ' + (error instanceof Error ? error.message : 'Sconosciuto'),
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...dynCors, 'Content-Type': 'application/json' },
     })
   }
 })

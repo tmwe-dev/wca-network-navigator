@@ -9,7 +9,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError, ALLOWED_MODELS, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
@@ -19,13 +19,16 @@ serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
 
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
   try {
     // ── Auth (JWT del cliente Supabase) ──
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const supabase = createClient(
@@ -37,7 +40,7 @@ serve(async (req) => {
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -50,13 +53,13 @@ serve(async (req) => {
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Empty prompt" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     if (prompt.length > MAX_PROMPT_LEN) {
       return new Response(JSON.stringify({ error: `Prompt too long (max ${MAX_PROMPT_LEN})` }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -77,9 +80,9 @@ serve(async (req) => {
       latencyMs: result.latencyMs,
     }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return mapErrorToResponse(err, corsHeaders);
+    return mapErrorToResponse(err, dynCors);
   }
 });

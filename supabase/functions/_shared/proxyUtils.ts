@@ -3,7 +3,7 @@
  * Forwards requests from legacy function endpoints to macro-functions
  * with an injected routing field (scope/action).
  */
-import { corsHeaders, corsPreflight } from "./cors.ts";
+import { getCorsHeaders, corsPreflight } from "./cors.ts";
 
 export async function proxyToMacro(
   req: Request,
@@ -12,6 +12,9 @@ export async function proxyToMacro(
 ): Promise<Response> {
   const pre = corsPreflight(req);
   if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   const body = await req.json();
   Object.assign(body, inject);
@@ -30,7 +33,7 @@ export async function proxyToMacro(
   const data = await resp.text();
   return new Response(data, {
     status: resp.status,
-    headers: { ...corsHeaders, "Content-Type": resp.headers.get("Content-Type") || "application/json" },
+    headers: { ...dynCors, "Content-Type": resp.headers.get("Content-Type") || "application/json" },
   });
 }
 
@@ -40,6 +43,9 @@ export async function forwardToFunction(
   body: Record<string, unknown>,
   headers: Headers,
 ): Promise<Response> {
+  const origin = headers.get("origin");
+  const fwdCors = getCorsHeaders(origin);
+
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${fnName}`;
   const resp = await fetch(url, {
     method: "POST",
@@ -54,6 +60,6 @@ export async function forwardToFunction(
   const data = await resp.text();
   return new Response(data, {
     status: resp.status,
-    headers: { ...corsHeaders, "Content-Type": resp.headers.get("Content-Type") || "application/json" },
+    headers: { ...fwdCors, "Content-Type": resp.headers.get("Content-Type") || "application/json" },
   });
 }

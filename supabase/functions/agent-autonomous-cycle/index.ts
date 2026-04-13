@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCETHour, isOutsideWorkHours } from "../_shared/timeUtils.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -158,13 +155,17 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     // Get all users with active agents
     const { data: allAgents } = await supabase.from("agents").select("id, user_id, name, role, territory_codes, is_active").eq("is_active", true);
     if (!allAgents || allAgents.length === 0) {
-      return new Response(JSON.stringify({ message: "No active agents" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ message: "No active agents" }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // Group by user
@@ -263,13 +264,13 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, cycle: new Date().toISOString(), results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
 
   } catch (err) {
     console.error("autonomous-cycle error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

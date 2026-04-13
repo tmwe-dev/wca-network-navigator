@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const VALID_SERVICES = [
   'air_freight', 'ocean_fcl', 'ocean_lcl', 'road_freight', 'rail_freight',
@@ -59,16 +56,18 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -86,7 +85,7 @@ Deno.serve(async (req) => {
       if (!credits || credits.balance < 5) {
         return new Response(
           JSON.stringify({ success: false, error: 'Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 402, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -96,7 +95,7 @@ Deno.serve(async (req) => {
     if (!partnerId || !profileData) {
       return new Response(
         JSON.stringify({ success: false, error: 'partnerId and profileData required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -196,12 +195,12 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
       return new Response(
         JSON.stringify({ success: false, error: `AI error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -221,7 +220,7 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
       console.error('No tool call in response:', JSON.stringify(aiData))
       return new Response(
         JSON.stringify({ success: false, error: 'AI returned no classification' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -259,13 +258,13 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
         success: true,
         classification,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   }
 })

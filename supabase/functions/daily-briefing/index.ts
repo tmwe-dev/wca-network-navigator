@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 const supabase = createClient(
@@ -11,6 +11,9 @@ const supabase = createClient(
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const now = new Date();
@@ -220,7 +223,7 @@ Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci 
         actions: [],
         agentStatus,
         stats,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     let parsed: { completed?: string; todo?: string; suspended?: string; summary?: string; actions: any[] };
@@ -239,13 +242,13 @@ Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci 
       actions: parsed.actions || [],
       agentStatus,
       stats,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (e) {
     console.error("daily-briefing error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

@@ -1,11 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 /* ── CA Certificates (same as check-inbox) ── */
 
@@ -166,9 +162,11 @@ function getCaCertsForHost(host: string): string[] {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -186,7 +184,7 @@ Deno.serve(async (req) => {
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
       return new Response(JSON.stringify({ error: "message_id is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -201,13 +199,13 @@ Deno.serve(async (req) => {
     if (msgErr) throw msgErr;
     if (!msg) {
       return new Response(JSON.stringify({ success: false, skipped: true, reason: "message_not_found" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     if (!msg.imap_uid) {
       // Not an IMAP message (e.g. outbound/manual) — nothing to sync, return success
       return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_imap_uid" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -237,12 +235,12 @@ Deno.serve(async (req) => {
     await client.disconnect();
 
     return new Response(JSON.stringify({ success: true, uid: msg.imap_uid }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error(`[mark-imap-seen] Error: ${err.message}`);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

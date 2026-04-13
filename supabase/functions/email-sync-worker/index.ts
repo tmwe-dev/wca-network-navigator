@@ -1,10 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 /**
  * Email Sync Worker — server-side autonomous email download.
@@ -15,15 +11,17 @@ const corsHeaders = {
  * to maximize throughput within one invocation.
  */
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   // ── Auth check: require valid Bearer token ──
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -40,7 +38,7 @@ Deno.serve(async (req: Request) => {
     const { error: claimsErr } = await authClient.auth.getClaims(token);
     if (claimsErr) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
   }
@@ -60,7 +58,7 @@ Deno.serve(async (req: Request) => {
     if (jobsErr) throw jobsErr;
     if (!jobs || jobs.length === 0) {
       return new Response(JSON.stringify({ message: "No running jobs" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -207,13 +205,13 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify({ processed: results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("[sync-worker] Fatal error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

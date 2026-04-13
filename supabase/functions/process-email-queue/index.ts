@@ -1,24 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     // ── Auth check ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -29,7 +27,7 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(authHeader.replace("Bearer ", ""));
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub as string;
@@ -41,7 +39,7 @@ Deno.serve(async (req) => {
 
     if (!draft_id) {
       return new Response(JSON.stringify({ error: "Missing draft_id" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -49,14 +47,14 @@ Deno.serve(async (req) => {
     if (action === "pause") {
       await supabase.from("email_drafts").update({ queue_status: "paused" }).eq("id", draft_id);
       return new Response(JSON.stringify({ success: true, action: "paused" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     if (action === "cancel") {
       await supabase.from("email_drafts").update({ queue_status: "cancelled", queue_completed_at: new Date().toISOString() }).eq("id", draft_id);
       await supabase.from("email_campaign_queue").update({ status: "cancelled" }).eq("draft_id", draft_id).eq("status", "pending");
       return new Response(JSON.stringify({ success: true, action: "cancelled" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -78,7 +76,7 @@ Deno.serve(async (req) => {
     if (!smtpHost || !smtpUser || !smtpPass) {
       await supabase.from("email_drafts").update({ queue_status: "error" }).eq("id", draft_id);
       return new Response(JSON.stringify({ error: "SMTP non configurato" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -91,7 +89,7 @@ Deno.serve(async (req) => {
     const { data: draft } = await supabase.from("email_drafts").select("queue_delay_seconds, queue_status").eq("id", draft_id).single();
     if (!draft) {
       return new Response(JSON.stringify({ error: "Draft not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -133,7 +131,7 @@ Deno.serve(async (req) => {
       }).eq("id", draft_id);
 
       return new Response(JSON.stringify({ success: true, completed: true, sent, failed }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -273,12 +271,12 @@ Deno.serve(async (req) => {
       failed: failedCount,
       remaining: remaining || 0,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("process-email-queue error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });
