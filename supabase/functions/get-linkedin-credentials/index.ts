@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { edgeError, extractErrorMessage } from '../_shared/handleEdgeError.ts'
-import { corsHeaders } from '../_shared/cors.ts'
+import { dynCors } from '../_shared/cors.ts'
 
 interface AppSettingRow {
   key: string;
@@ -9,7 +9,7 @@ interface AppSettingRow {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: dynCors })
   }
 
   try {
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       email: settings['linkedin_email'] || '',
       password: settings['linkedin_password'] || '',
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...dynCors, 'Content-Type': 'application/json' },
     })
   } catch (e: unknown) {
     console.error('get-linkedin-credentials error:', e)
