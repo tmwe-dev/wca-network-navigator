@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders, corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -204,6 +205,17 @@ async function processAction(
       executed_at: new Date().toISOString(),
     });
 
+    // Supervisor audit
+    logSupervisorAudit(supabase, {
+      user_id: action.user_id, actor_type: "cron", actor_name: "cadence-engine",
+      action_category: "cadence_executed",
+      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: eseguito`,
+      target_type: "mission", target_id: action.id,
+      partner_id: partnerId || undefined, email_address: targetEmail || undefined,
+      decision_origin: "ai_auto",
+      metadata: { trigger_condition: trigger, cadence_step: action.cadence_rule?.current_step },
+    });
+
     counters.executed();
   } else {
     // Create pending action for human review
@@ -218,6 +230,17 @@ async function processAction(
       confidence: 0.85,
       source: "cadence_engine",
       status: "pending",
+    });
+
+    // Supervisor audit
+    logSupervisorAudit(supabase, {
+      user_id: action.user_id, actor_type: "cron", actor_name: "cadence-engine",
+      action_category: "cadence_scheduled",
+      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: in attesa approvazione`,
+      target_type: "mission", target_id: action.id,
+      partner_id: partnerId || undefined, email_address: targetEmail || undefined,
+      decision_origin: "system_cron",
+      metadata: { trigger_condition: trigger },
     });
 
     counters.pendingReview();

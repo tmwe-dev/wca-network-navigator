@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -426,6 +427,18 @@ serve(async (req) => {
         }
       }
     }
+
+    // Supervisor audit (fire-and-forget)
+    logSupervisorAudit(supabase, {
+      user_id: input.user_id, actor_type: "ai_agent", actor_name: aiResult.modelUsed,
+      action_category: "email_classified",
+      action_detail: `Email da ${input.email_address} classificata: ${classification.category} (${Math.round(classification.confidence * 100)}%)`,
+      target_type: "email",
+      partner_id: input.partner_id || undefined, email_address: input.email_address,
+      decision_origin: actionTaken === "auto_executed" ? "ai_auto" : "manual",
+      ai_decision_log_id: decisionLogId || undefined,
+      metadata: { category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+    });
 
     console.log(`[classify-email-response] Done: category=${classification.category} confidence=${classification.confidence} action=${actionTaken}`);
 

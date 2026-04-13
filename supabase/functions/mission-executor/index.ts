@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -131,6 +132,19 @@ serve(async (req) => {
         .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", mission_id);
     }
+
+    // Supervisor audit (fire-and-forget)
+    const partnerId = (action?.metadata as Record<string, unknown>)?.partner_id as string | undefined;
+    const targetEmail = (action?.metadata as Record<string, unknown>)?.email as string | undefined;
+    logSupervisorAudit(supabase, {
+      user_id, actor_type: "system",
+      action_category: success ? "mission_completed" : "mission_failed",
+      action_detail: `Mission action ${mission.channel}: ${success ? "completata" : "fallita"}`,
+      target_type: "mission", target_id: mission_id,
+      partner_id: partnerId, email_address: targetEmail,
+      decision_origin: "system_trigger",
+      metadata: { channel: mission.channel, error, action_id: actionId },
+    });
 
     return json({
       status: success ? "completed" : "failed",
