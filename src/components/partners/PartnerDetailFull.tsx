@@ -8,8 +8,9 @@ import { PartnerDetailHeader } from "./PartnerDetailHeader";
 import { PartnerDetailInfo } from "./PartnerDetailInfo";
 import { PartnerDetailActivity } from "./PartnerDetailActivity";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface PartnerDetailFullProps {
-  partner: Record<string, unknown>;
+  partner: Record<string, any>;
   onToggleFavorite: () => void;
 }
 

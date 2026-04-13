@@ -4,22 +4,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
-interface Strategy {
-  draftReply: string;
-  sentiment: string;
-  intent: string;
-  suggestedAction: string;
-  nextStepDate?: string;
-  confidence: number;
-}
+import type { HoldingStrategy } from "@/hooks/useHoldingStrategy";
 
 interface HoldingMessageThreadProps {
   selectedMessage: ChannelMessage;
-  strategy: Strategy | null;
+  strategy: HoldingStrategy | null;
   isAnalyzing: boolean;
   strategyError: string | null;
   mockEnabled: boolean;
-  onStrategyChange: (s: Strategy) => void;
+  onStrategyChange: (s: HoldingStrategy) => void;
 }
 
 function StrategyCard({ icon: Icon, label, value, color }: {

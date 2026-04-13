@@ -65,9 +65,10 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface PartnerDetailInfoProps {
-  partner: Record<string, unknown>;
-  enrichment: Record<string, unknown> | null;
+  partner: Record<string, any>;
+  enrichment: Record<string, any> | null;
   contacts: PartnerContact[];
   networks: PartnerNetwork[];
   allServices: PartnerService[];
