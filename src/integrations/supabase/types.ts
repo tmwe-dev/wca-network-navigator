@@ -2340,6 +2340,7 @@ export type Database = {
       }
       kb_entries: {
         Row: {
+          access_count: number | null
           category: string
           chapter: string
           content: string
@@ -2349,6 +2350,7 @@ export type Database = {
           embedding_updated_at: string | null
           id: string
           is_active: boolean
+          last_accessed_at: string | null
           priority: number
           sort_order: number
           tags: string[]
@@ -2357,6 +2359,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          access_count?: number | null
           category?: string
           chapter?: string
           content?: string
@@ -2366,6 +2369,7 @@ export type Database = {
           embedding_updated_at?: string | null
           id?: string
           is_active?: boolean
+          last_accessed_at?: string | null
           priority?: number
           sort_order?: number
           tags?: string[]
@@ -2374,6 +2378,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          access_count?: number | null
           category?: string
           chapter?: string
           content?: string
@@ -2383,6 +2388,7 @@ export type Database = {
           embedding_updated_at?: string | null
           id?: string
           is_active?: boolean
+          last_accessed_at?: string | null
           priority?: number
           sort_order?: number
           tags?: string[]
@@ -4064,6 +4070,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: undefined
       }
+      increment_kb_access: { Args: { entry_ids: string[] }; Returns: undefined }
       increment_memory_access: {
         Args: { memory_ids: string[] }
         Returns: undefined

@@ -192,7 +192,7 @@ export async function loadKBContext(
   if (parts.length === 0) {
     const { data } = await supabase
       .from("kb_entries")
-      .select("title, content, category, tags")
+      .select("id, title, content, category, tags")
       .eq("is_active", true)
       .gte("priority", 5)
       .or(userId ? `user_id.eq.${userId},user_id.is.null` : "user_id.is.null")
@@ -200,6 +200,7 @@ export async function loadKBContext(
       .limit(10);
 
     if (data?.length) {
+      for (const e of data as Record<string, unknown>[]) seenIds.add(e.id as string);
       const entries = (data as Record<string, unknown>[])
         .map((e) => `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
         .join("\n\n");
@@ -208,6 +209,14 @@ export async function loadKBContext(
   }
 
   if (parts.length === 0) return "";
+
+  // Track KB access counts (fire-and-forget)
+  if (seenIds.size > 0) {
+    supabase.rpc("increment_kb_access", { entry_ids: Array.from(seenIds) })
+      .then(() => {})
+      .catch((e: unknown) => console.warn("increment_kb_access failed:", extractErrorMessage(e)));
+  }
+
   return "\n\n" + parts.join("\n\n");
 }
 
