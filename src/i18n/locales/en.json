@@ -117,5 +117,91 @@
     "preferences": "Preferences",
     "italian": "Italiano",
     "english": "English"
+  },
+  "outreach": {
+    "title": "Outreach",
+    "missions": "Missions",
+    "new_mission": "New Mission",
+    "channel": "Channel",
+    "total_contacts": "Total Contacts",
+    "processed": "Processed",
+    "status": "Status"
+  },
+  "campaigns": {
+    "title": "Campaigns",
+    "new_campaign": "New Campaign",
+    "scheduled": "Scheduled",
+    "sending": "Sending",
+    "sent": "Sent",
+    "failed": "Failed",
+    "queue": "Email Queue"
+  },
+  "settings_page": {
+    "profile": "AI Profile",
+    "api_keys": "API Keys",
+    "email_accounts": "Email Accounts",
+    "voice": "Voice",
+    "language": "Language",
+    "preferences": "Preferences",
+    "save_success": "Settings saved",
+    "save_error": "Error saving settings"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "system_health": "System Health",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "errors_24h": "Errors 24h",
+    "ai_latency": "AI Latency",
+    "emails_today": "Emails Today"
+  },
+  "ai": {
+    "assistant": "AI Assistant",
+    "thinking": "Thinking...",
+    "send": "Send",
+    "type_message": "Type a message...",
+    "no_response": "No response",
+    "retry": "Retry",
+    "arena": "AI Arena",
+    "lab": "AI Lab",
+    "agents": "AI Agents"
+  },
+  "partners": {
+    "detail": "Partner Detail",
+    "info": "Information",
+    "activity": "Activity",
+    "emails": "Emails",
+    "notes": "Notes",
+    "lead_score": "Lead Score",
+    "new": "New",
+    "contacted": "Contacted",
+    "in_progress": "In Progress",
+    "negotiation": "Negotiation",
+    "won": "Won",
+    "lost": "Lost"
+  },
+  "status": {
+    "loading": "Loading...",
+    "no_results": "No results",
+    "error_generic": "An error occurred",
+    "error_network": "Network error",
+    "error_auth": "Session expired",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "updated": "Updated",
+    "created": "Created"
+  },
+  "actions": {
+    "call": "Call",
+    "email": "Email",
+    "whatsapp": "WhatsApp",
+    "linkedin": "LinkedIn",
+    "assign": "Assign",
+    "archive": "Archive",
+    "escalate": "Escalate",
+    "reply": "Reply",
+    "forward": "Forward",
+    "mark_read": "Mark as read",
+    "mark_unread": "Mark as unread"
   }
 }
