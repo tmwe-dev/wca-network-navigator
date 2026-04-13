@@ -28,6 +28,7 @@ export interface OutreachPromptContext {
   relationshipBlock: string;
   branchBlock: string;
   metInPersonContext: string;
+  conversationIntelligenceContext: string;
   salesKBSlice: string;
   salesKBSections: string[];
   commercialLevers: string;
@@ -47,7 +48,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     channel: ch, quality, contact_name, contact_email, company_name, country_code,
     language, goal, base_proposal, oracle_tone, email_type_id, email_type_prompt, email_type_structure,
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
-    salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
+    conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
   } = ctx;
 
   let recipientName = "";
@@ -73,6 +74,7 @@ MITTENTE (TU):
 KNOWLEDGE BASE AZIENDALE:
 ${settings.ai_knowledge_base || "Non configurata"}
 ${salesKBSlice ? `\n# ARSENAL STRATEGICO (${salesKBSections.join(", ") || "legacy"}):\nApplica queste tecniche nel messaggio.\n\n${salesKBSlice}\n` : ""}
+${conversationIntelligenceContext}
 STILE:
 - Tono: ${settings.ai_tone || "professionale"}
 `;
