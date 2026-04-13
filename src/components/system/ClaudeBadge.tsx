@@ -16,13 +16,12 @@ export function ClaudeBadge() {
     >
       {/* Logo Claude — cerchio con simbolo */}
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110"
+        className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
         style={{
-          background: "linear-gradient(135deg, #D97706, #F59E0B)",
-          boxShadow: "0 0 12px rgba(217,119,6,0.4)",
+          background: "linear-gradient(135deg, hsla(36,80%,50%,0.5), hsla(40,90%,60%,0.5))",
         }}
       >
-        <span className="text-white text-xs font-bold">C</span>
+        <span className="text-white/80 text-xs font-bold">C</span>
       </div>
 
       {/* Pannello espanso */}
