@@ -123,7 +123,7 @@ interface UseGlobalChatOptions {
 }
 
 export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { data: appSettings } = useAppSettings();
   const { messages, addMessages, newConversation } = useAIConversation("global");
 

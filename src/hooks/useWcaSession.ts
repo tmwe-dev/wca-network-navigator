@@ -9,7 +9,7 @@ import { useState, useCallback } from "react";
 import { setWcaCookie } from "@/lib/wcaCookieStore";
 import { createLogger } from "@/lib/log";
 
-const log = createLogger("useWcaSession");
+const _log = createLogger("useWcaSession");
 
 const WCA_APP_LOGIN = "https://wca-app.vercel.app/api/login";
 
@@ -38,7 +38,7 @@ export function useWcaSession() {
       setSessionActive(false);
       setLastError(data.error || "Login WCA fallito");
       return false;
-    } catch (err) {
+    } catch (_err) {
       setSessionActive(false);
       setLastError("wca-app non raggiungibile");
       return false;

@@ -47,7 +47,7 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
   );
 
   const estimatedContacts = 0; // placeholder — actual count would come from a query
-  const estimatedDays = selectedTemplate
+  const _estimatedDays = selectedTemplate
     ? Math.ceil(estimatedContacts / batchSize[0]) + (selectedTemplate.total_duration_days || 0)
     : 0;
 

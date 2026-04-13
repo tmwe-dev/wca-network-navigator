@@ -104,7 +104,7 @@ export function ConversationalShell() {
     setPrompt("");
   }, [prompt, allContacts.length, cockpitContacts.length, activities]);
 
-  const openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
+  const _openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">

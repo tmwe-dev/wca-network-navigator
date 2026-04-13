@@ -54,7 +54,7 @@ describe("UI vs DB consistency", () => {
     };
 
     // Verify no illegal transition exists in the code
-    for (const [from, tos] of Object.entries(validTransitions)) {
+    for (const [_from, tos] of Object.entries(validTransitions)) {
       expect(Array.isArray(tos)).toBe(true);
     }
 

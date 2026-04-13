@@ -35,7 +35,7 @@ export function useRAScrapingState() {
   const [isScraping, setIsScraping] = useState(false);
   const [activeTab, setActiveTab] = useState("search");
   const [statusLogs, setStatusLogs] = useState<string[]>([]);
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [_activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const availableProvinces = PROVINCE_ITALIANE.filter((p) => selectedRegions.has(p.regione));
 

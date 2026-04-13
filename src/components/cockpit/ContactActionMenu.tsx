@@ -40,7 +40,7 @@ interface Props {
 export function ContactActionMenu({ contact, children }: Props) {
   const navigate = useAppNavigate();
   const qc = useQueryClient();
-  const { handleSendWhatsApp: bridgeSendWhatsApp, waAvailable } = useDirectContactActions();
+  const { handleSendWhatsApp: bridgeSendWhatsApp, _waAvailable } = useDirectContactActions();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [noteText, setNoteText] = useState("");

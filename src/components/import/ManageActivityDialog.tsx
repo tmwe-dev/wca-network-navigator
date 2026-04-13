@@ -52,7 +52,7 @@ export function ManageActivityDialog({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
-  const [dueTime, setDueTime] = useState("09:00");
+  const [_dueTime, _setDueTime] = useState("09:00");
 
   useEffect(() => {
     if (activity) {

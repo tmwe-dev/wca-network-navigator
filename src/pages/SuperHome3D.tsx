@@ -85,7 +85,7 @@ export default function SuperHome3D() {
     }
   };
 
-  const signals = useMemo(() => {
+  const _signals = useMemo(() => {
     const s: { label: string; value: string }[] = [];
     if (activeJobs > 0) s.push({ label: "Job download attivi", value: String(activeJobs) });
     if (readyContacts > 0) s.push({ label: "Contatti pronti all'outreach", value: formatCompact(readyContacts) });

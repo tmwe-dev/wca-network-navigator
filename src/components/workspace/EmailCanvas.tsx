@@ -62,7 +62,7 @@ export default function EmailCanvas({
   const trackActivity = useTrackActivity();
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
-  const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
+  const _hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
   const { data: socialLinks = [] } = useSocialLinks(partnerId);
   const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
   const contactLinkedIn = socialLinks.find(

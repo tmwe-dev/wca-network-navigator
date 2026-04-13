@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
     // Deduplicate relations on the keeper (remove duplicate services/networks/certs)
     // For partner_services: remove duplicate service_category per partner
-    const { data: dupServices } = await supabase.rpc("get_directory_counts"); // dummy - we do it manually
+    const { data: _dupServices } = await supabase.rpc("get_directory_counts"); // dummy - we do it manually
     // Actually let's do a manual cleanup query approach
     // We'll handle this in a follow-up if needed
 

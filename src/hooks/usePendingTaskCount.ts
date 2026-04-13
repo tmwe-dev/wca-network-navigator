@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
 export function usePendingTaskCount() {
-  const [realtimeCount, setRealtimeCount] = useState<number | null>(null);
+  const [realtimeCount, _setRealtimeCount] = useState<number | null>(null);
 
   const query = useQuery({
     queryKey: ["pending-task-count"],

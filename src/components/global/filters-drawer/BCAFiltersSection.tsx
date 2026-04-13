@@ -18,7 +18,7 @@ export function BCAFiltersSection() {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
+        const { _supabase } = await import("@/integrations/supabase/client");
         const data = await findBusinessCards();
         if (!data) return;
         const evCounts: Record<string, number> = {};

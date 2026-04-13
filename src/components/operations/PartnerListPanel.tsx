@@ -45,7 +45,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  directoryOnly: _directoryOnlyProp, _onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
@@ -90,9 +90,9 @@ export function PartnerListPanel({
     }
   }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const toggleFavorite = useToggleFavorite();
+  const _toggleFavorite = useToggleFavorite();
 
-  const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
+  const { stats, verified, _missingDeep } = usePartnerListStats({ countryCodes, partners });
   const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {

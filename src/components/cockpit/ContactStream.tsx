@@ -53,7 +53,7 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
+  viewMode, searchQuery, _onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,

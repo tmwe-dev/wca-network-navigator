@@ -126,7 +126,7 @@ ${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v
       if (jsonMatch) {
         schema = JSON.parse(jsonMatch[0]);
       }
-    } catch (parseErr) {
+    } catch (_parseErr) {
       console.error("Failed to parse AI response:", content);
       return new Response(JSON.stringify({ error: "Failed to parse AI selectors", raw: content }), {
         status: 500,

@@ -34,7 +34,7 @@ const PARTNER_TYPES = [
   { value: "courier", label: "Courier" },
 ];
 
-const SERVICES = [
+const _SERVICES = [
   ...TRANSPORT_SERVICES,
   ...SPECIALTY_SERVICES,
 ];

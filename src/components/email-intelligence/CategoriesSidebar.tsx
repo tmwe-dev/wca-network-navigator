@@ -9,7 +9,7 @@ import {
   RefreshCw, Bot, AlertOctagon, HelpCircle as Uncategorized, Inbox,
 } from 'lucide-react';
 
-interface CategoryStat {
+interface _CategoryStat {
   id: string;
   name: string;
   icon: React.ReactNode;

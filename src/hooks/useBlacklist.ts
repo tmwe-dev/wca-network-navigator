@@ -6,7 +6,7 @@ import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries,
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
 type BlacklistEntryInsert = Database["public"]["Tables"]["blacklist_entries"]["Insert"];
 type BlacklistSyncLogRow = Database["public"]["Tables"]["blacklist_sync_log"]["Row"];
-type BlacklistSyncLogInsert = Database["public"]["Tables"]["blacklist_sync_log"]["Insert"];
+type _BlacklistSyncLogInsert = Database["public"]["Tables"]["blacklist_sync_log"]["Insert"];
 
 export type BlacklistEntry = BlacklistEntryRow;
 export type BlacklistSyncLog = BlacklistSyncLogRow;

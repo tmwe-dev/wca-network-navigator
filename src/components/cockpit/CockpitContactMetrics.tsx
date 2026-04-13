@@ -79,7 +79,7 @@ interface CockpitContactMetricsProps {
   scrapingPhase?: string;
 }
 
-export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, enrichmentState }: CockpitContactMetricsProps) {
+export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, _enrichmentState }: CockpitContactMetricsProps) {
   const oc = originConfig[contact.origin];
   const e = contact.enrichmentData;
   const hasLinkedin = hasLiveLinkedin || !!(e?.linkedin_url || e?.linkedin_profile_url || contact.linkedinUrl);

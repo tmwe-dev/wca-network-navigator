@@ -27,7 +27,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) return json({ error: "Unauthorized" }, 401);
-    const userId = claimsData.claims.sub as string;
+    const _userId = claimsData.claims.sub as string;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

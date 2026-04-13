@@ -332,11 +332,11 @@ async function readResponse(imap: ImapConn): Promise<string> {
   while (true) {
     // Check if we have a complete tagged response
     const tagPattern = `A${imap.tag} `;
-    const okPattern = "* OK";
+    const _okPattern = "* OK";
     
     if (result.includes("\r\n")) {
       const lines = result.split("\r\n");
-      const lastComplete = lines.slice(0, -1).join("\r\n");
+      const _lastComplete = lines.slice(0, -1).join("\r\n");
       
       // Check for tagged response completion
       for (const line of lines) {

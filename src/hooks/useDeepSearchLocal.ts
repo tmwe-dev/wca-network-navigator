@@ -13,7 +13,7 @@ import {
   delay, aiCall, calculateRating, type GoogleSearchResult,
 } from "./useDeepSearchHelpers";
 
-const log = createLogger("useDeepSearchLocal");
+const _log = createLogger("useDeepSearchLocal");
 
 export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();

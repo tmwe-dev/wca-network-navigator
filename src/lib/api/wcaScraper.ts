@@ -192,7 +192,7 @@ export async function scrapeWcaDirectory(
   countryCode: string,
   network?: string,
   pageIndex?: number,
-  pageSize?: number
+  _pageSize?: number
 ): Promise<DirectoryResult> {
   try {
     const result = await wcaDiscover(countryCode, pageIndex || 1);

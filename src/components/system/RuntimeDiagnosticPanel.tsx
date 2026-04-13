@@ -110,7 +110,7 @@ export function RuntimeDiagnosticPanel() {
 
   if (!open || !diag) return null;
 
-  const statusDot = (ok: boolean) => (
+  const _statusDot = (ok: boolean) => (
     <span className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-emerald-400" : "bg-red-400"}`} />
   );
 

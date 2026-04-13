@@ -63,7 +63,7 @@ export function FocusFlowShell() {
   const { contacts: cockpitRaw = [] } = useCockpitContacts();
   const { data: partnerContacts = [] } = usePartnerContacts();
   const { data: activities = [] } = useAllActivities();
-  const { data: prospectStats } = useProspectStats();
+  const { data: _prospectStats } = useProspectStats();
 
   const cockpitContacts: UnifiedContact[] = useMemo(() =>
     cockpitRaw.map(c => ({

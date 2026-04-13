@@ -54,14 +54,14 @@ export default function GoalBar({
   goal, baseProposal, onGoalChange, onBaseProposalChange,
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
-  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset,
+  presets, activePresetId, onLoadPreset, onSavePreset, _onDeletePreset,
 }: GoalBarProps) {
   const safeDocuments = documents ?? [];
   const safeLinks = referenceLinks ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [linkInput, setLinkInput] = useState("");
   const [presetName, setPresetName] = useState("");
-  const [showSave, setShowSave] = useState(false);
+  const [_showSave, setShowSave] = useState(false);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,13 +76,13 @@ export default function GoalBar({
     setLinkInput("");
   };
 
-  const handlePresetSelect = (value: string) => {
+  const _handlePresetSelect = (value: string) => {
     if (value === "__save__") { setShowSave(true); return; }
     const preset = presets.find((p) => p.id === value);
     if (preset) onLoadPreset(preset);
   };
 
-  const handleSavePreset = () => {
+  const _handleSavePreset = () => {
     const name = presetName.trim();
     if (!name) { toast({ title: "Inserisci un nome", variant: "destructive" }); return; }
     onSavePreset(name, activePresetId || undefined);

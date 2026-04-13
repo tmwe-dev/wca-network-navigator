@@ -18,7 +18,7 @@ function formatCurrency(n: number | null) {
 
 export default function RAExplorer() {
   const navigate = useAppNavigate();
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [_selectedSection, _setSelectedSection] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [selectedAtecoCodes, setSelectedAtecoCodes] = useState<string[]>([]);
   const [selectedProspect, setSelectedProspect] = useState<RAProspect | null>(null);

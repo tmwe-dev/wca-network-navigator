@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Download, Telescope, Building2, UserCircle, CheckCircle2, Linkedin, MessageCircle } from "lucide-react";
 
 /* ── Icon Indicator (circular with badge) — tri-state ── */
-export function IconIndicator({ icon: Icon, count, label, isDark, onClick, active, verified }: {
+export function IconIndicator({ icon: Icon, count, label, _isDark, onClick, active, verified }: {
   icon: any; count: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean; verified?: boolean;
 }) {
@@ -48,7 +48,7 @@ export function IconIndicator({ icon: Icon, count, label, isDark, onClick, activ
 }
 
 /* ── Status Dot (for partner cards) ── */
-export function StatusDot({ ok, label, isDark }: { ok: boolean; label: string; isDark: boolean }) {
+export function StatusDot({ ok, label, _isDark }: { ok: boolean; label: string; isDark: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -106,7 +106,7 @@ export function EnrichedStatusIcons({ hasProfile, hasEmail, hasPhone, hasDeep, h
 }
 
 /* ── Horizontal Wizard Step ── */
-export function HorizStep({ step, active, done, isDark, icon: Icon, label, missing }: {
+export function HorizStep({ step, active, done, _isDark, icon: Icon, label, missing }: {
   step: number; active: boolean; done: boolean; isDark: boolean;
   icon: any; label: string; missing: number;
 }) {
@@ -135,7 +135,7 @@ export function HorizStep({ step, active, done, isDark, icon: Icon, label, missi
 }
 
 /* ── Download Choice Card (compact) ── */
-export function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, description, count, color }: {
+export function DownloadChoice({ selected, onClick, _isDark, icon: Icon, title, description, count, color }: {
   selected: boolean; onClick: () => void; isDark: boolean;
   icon: any; title: string; description: string; count: number; color: string;
 }) {
@@ -168,7 +168,7 @@ export function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, d
 }
 
 /* ── Filter Action Bar ── */
-export function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearch, onGenerateAlias, deepSearchRunning, aliasGenerating }: {
+export function FilterActionBar({ filter, count, _isDark, onDownload, onDeepSearch, onGenerateAlias, deepSearchRunning, aliasGenerating }: {
   filter: string;
   count: number;
   isDark: boolean;

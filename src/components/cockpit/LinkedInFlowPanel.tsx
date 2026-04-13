@@ -28,7 +28,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const [deepSearchWeb, setDeepSearchWeb] = useState(true);
 
   const withLinkedIn = selectedContacts.filter(c => c.linkedinUrl);
-  const withoutLinkedIn = selectedContacts.filter(c => !c.linkedinUrl);
+  const _withoutLinkedIn = selectedContacts.filter(c => !c.linkedinUrl);
   const progressPct = flow.progress.total > 0
     ? Math.round((flow.progress.processed / flow.progress.total) * 100)
     : 0;

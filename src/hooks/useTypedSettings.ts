@@ -11,7 +11,7 @@
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 
 // ── Credential keys ──
-const CREDENTIAL_KEYS = [
+const _CREDENTIAL_KEYS = [
   "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_from",
   "imap_host", "imap_port", "imap_user", "imap_pass",
   "linkedin_cookie", "linkedin_user_agent",
@@ -60,7 +60,7 @@ function mapCredentials(raw: Record<string, string>): CredentialSettings {
 }
 
 // ── AI Config keys ──
-const AI_CONFIG_KEYS = [
+const _AI_CONFIG_KEYS = [
   "ai_tone", "ai_language", "ai_sales_knowledge_base",
   "ai_custom_email_types", "ai_custom_goals", "ai_custom_proposals",
   "ai_deep_search_config",

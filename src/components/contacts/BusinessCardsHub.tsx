@@ -42,7 +42,7 @@ export default function BusinessCardsHub() {
   const [metAt, setMetAt] = useState("");
   const [location, setLocation] = useState("");
 
-  const { handleSendEmail, handleSendWhatsApp, waAvailable } = useDirectContactActions();
+  const { handleSendEmail, handleSendWhatsApp, _waAvailable } = useDirectContactActions();
   const { processFiles, uploading, progress } = useUploadAndParse();
   const { data: cards = [], isLoading, refetch } = useBusinessCards({
     event_name: eventFilter || undefined,

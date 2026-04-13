@@ -45,7 +45,7 @@ const openDrawer = (drawer: "mission" | "filters") => {
 };
 
 export function ActiveContextBar() {
-  const { goal, setGoal, baseProposal, setBaseProposal, recipients, removeRecipient } = useMission();
+  const { goal, setGoal, baseProposal, setBaseProposal, recipients, _removeRecipient } = useMission();
   const { filters } = useGlobalFilters();
 
   const activeFilterCount = [

@@ -23,7 +23,7 @@ interface UseActionPanelProps {
 }
 
 export function useActionPanelLogic({
-  selectedCountries, networks, networkKeys, delay, directoryOnly, onJobCreated,
+  selectedCountries, networks, networkKeys, delay, _directoryOnly, onJobCreated,
 }: UseActionPanelProps) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();

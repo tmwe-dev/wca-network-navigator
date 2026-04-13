@@ -23,7 +23,7 @@ interface ExpandedGroupContentProps {
 export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern, sortKey, searchFilter }: ExpandedGroupContentProps) {
   const [page, setPage] = useState(0);
   const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
-  const { data: activeInteractions } = useContactInteractions(selectedId);
+  const { data: _activeInteractions } = useContactInteractions(selectedId);
   const rawContacts = data?.items ?? [];
 
   const filtered = useMemo(() => {

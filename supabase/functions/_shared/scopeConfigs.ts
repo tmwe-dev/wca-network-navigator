@@ -257,7 +257,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         creditLabel: "Cockpit Assistant",
         buildPrompt: (body, basePrompt) => {
           const contacts = body.contacts || [];
-          const contactSummary = contacts.map((c: Record<string, unknown>) =>
+          const _contactSummary = contacts.map((c: Record<string, unknown>) =>
             `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${(c.channels||[]).join(",")}`
           ).join("\n");
           return basePrompt; // System prompt stays the same, user message includes contacts

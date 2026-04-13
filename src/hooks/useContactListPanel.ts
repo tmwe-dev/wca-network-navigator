@@ -106,8 +106,8 @@ export function useContactListPanel() {
     addOpen: false,
   });
 
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [_openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [_selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
 
   const groupBy = gf.groupBy || "country";
   const activeGroupTab = gf.crmGroupTab || "";

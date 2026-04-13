@@ -50,7 +50,7 @@ interface CountrySelectProps {
 function CountrySelectWidget({ countries, selected, onSelect }: CountrySelectProps) {
   const [open, setOpen] = useState(true);
 
-  const toggle = (code: string) => {
+  const _toggle = (code: string) => {
     const updated = selected.includes(code) ? selected.filter(c => c !== code) : [...selected, code];
     onSelect(updated);
   };

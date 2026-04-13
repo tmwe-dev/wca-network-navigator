@@ -22,7 +22,7 @@ type Phase = "idle" | "searching" | "results" | "scraping" | "done";
 
 export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filters }: Props) {
   const th = t(isDark);
-  const { isAvailable, scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
+  const { isAvailable, _scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
 
   const [phase, setPhase] = useState<Phase>("idle");

@@ -62,7 +62,7 @@ interface AppSidebarProps {
   onToggle: () => void;
 }
 
-export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ _collapsed, _onToggle }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(

@@ -22,11 +22,11 @@ export function BCACreateContact({ card }: Props) {
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [partnerResults, setPartnerResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [_searching, setSearching] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(card.matched_partner_id);
 
   // Split contact_name into first/last
-  const nameParts = useMemo(() => {
+  const _nameParts = useMemo(() => {
     if (!card.contact_name) return { first: "", last: "" };
     const parts = card.contact_name.trim().split(/\s+/);
     return { first: parts[0] || "", last: parts.slice(1).join(" ") || "" };

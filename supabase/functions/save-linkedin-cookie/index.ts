@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
   if (pre) return pre;
 
   const origin = req.headers.get("origin");
-  const dynCors = getCorsHeaders(origin);
+  const _dynCors = getCorsHeaders(origin);
 
   try {
     const { cookie } = await req.json()

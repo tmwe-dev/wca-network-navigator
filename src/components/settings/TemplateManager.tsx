@@ -49,7 +49,7 @@ export default function TemplateManager() {
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["email-templates"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, _error } = await supabase
         .from("email_templates")
         .select("*")
         .order("created_at", { ascending: false });

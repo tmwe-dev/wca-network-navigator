@@ -22,7 +22,7 @@ export function useAcquisitionPipelineActions(
     runExtensionLoop: (jobId: string, items: any[], startFrom?: number) => Promise<LiveStats>;
   }
 ) {
-  const { extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
+  const { _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
 
   const handleScan = useCallback(async () => {
     if (state.selectedCountries.length === 0) {

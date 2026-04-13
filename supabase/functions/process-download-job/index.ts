@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   if (pre) return pre;
 
   const origin = req.headers.get("origin");
-  const dynCors = getCorsHeaders(origin);
+  const _dynCors = getCorsHeaders(origin);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

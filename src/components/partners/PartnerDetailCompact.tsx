@@ -54,8 +54,8 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const enrichment = partner.enrichment_data as any;
-  const branchCountries = getBranchCountries(partner);
+  const _enrichment = partner.enrichment_data as any;
+  const _branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
@@ -127,8 +127,8 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       setWaSending(null);
     }
   }, [partner, waAvailable, sendWhatsApp]);
-  const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-  const specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
+  const _transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
+  const _specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
 
   return (
     <div className="p-4 space-y-4">
