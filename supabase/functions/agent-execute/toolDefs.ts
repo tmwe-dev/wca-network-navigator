@@ -660,54 +660,44 @@ export const ALL_TOOLS: Record<string, any> = {
       },
     },
   },
-  // ━━━ AI Governance Tools ━━━
-  review_pending_actions: {
+  get_email_classifications: {
     type: "function",
     function: {
-      name: "review_pending_actions",
-      description: "Mostra le azioni AI in attesa di approvazione.",
-      parameters: {
-        type: "object",
-        properties: {
-          action_type: { type: "string" }, source: { type: "string" },
-          email_address: { type: "string" }, limit: { type: "number" },
-        },
-      },
+      name: "get_email_classifications",
+      description: "Query email classifications with filters.",
+      parameters: { type: "object", properties: { email_address: { type: "string" }, partner_id: { type: "string" }, category: { type: "string" }, limit: { type: "number" } } },
     },
   },
-  approve_pending_action: {
+  get_conversation_context: {
     type: "function",
     function: {
-      name: "approve_pending_action",
-      description: "Approva un'azione AI pendente ed eseguila.",
-      parameters: {
-        type: "object",
-        properties: { action_id: { type: "string" }, modified_content: { type: "string" } },
-        required: ["action_id"],
-      },
+      name: "get_conversation_context",
+      description: "Get conversation context for an email address.",
+      parameters: { type: "object", properties: { email_address: { type: "string" } }, required: ["email_address"] },
     },
   },
-  reject_pending_action: {
+  get_address_rules: {
     type: "function",
     function: {
-      name: "reject_pending_action",
-      description: "Rifiuta un'azione AI pendente con motivazione opzionale.",
-      parameters: {
-        type: "object",
-        properties: { action_id: { type: "string" }, reason: { type: "string" } },
-        required: ["action_id"],
-      },
+      name: "get_address_rules",
+      description: "Get email address rules.",
+      parameters: { type: "object", properties: { email_address: { type: "string" }, is_active: { type: "boolean" }, limit: { type: "number" } } },
     },
   },
-  get_ai_performance: {
+  suggest_next_contacts: {
     type: "function",
     function: {
-      name: "get_ai_performance",
-      description: "Mostra le statistiche di performance dell'AI.",
-      parameters: {
-        type: "object",
-        properties: { days: { type: "number" }, email_address: { type: "string" } },
-      },
+      name: "suggest_next_contacts",
+      description: "Suggest never-contacted partners for outreach.",
+      parameters: { type: "object", properties: { focus: { type: "string" }, channel: { type: "string" }, batch_size: { type: "number" } } },
+    },
+  },
+  detect_language: {
+    type: "function",
+    function: {
+      name: "detect_language",
+      description: "Detect language for a country code.",
+      parameters: { type: "object", properties: { country_code: { type: "string" } }, required: ["country_code"] },
     },
   },
 };

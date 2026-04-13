@@ -6,7 +6,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
-import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -316,274 +315,49 @@ export async function executeTool(
     case "create_download_job": return executeCreateDownloadJob(supabase, args);
     case "download_single_partner": return executeDownloadSinglePartner(supabase, args);
     case "get_procedure": return executeGetProcedure(args);
-    case "review_pending_actions": return executeReviewPendingActions(supabase, args, userId!);
-    case "approve_pending_action": return executeApprovePendingAction(supabase, args, userId!);
-    case "reject_pending_action": return executeRejectPendingAction(supabase, args, userId!);
-    case "get_ai_performance": return executeGetAiPerformance(supabase, args, userId!);
+
+    case "get_email_classifications": {
+      let q = supabase.from("email_classifications").select("id, email_address, category, confidence, ai_summary, sentiment, urgency, keywords, action_suggested, classified_at, partner_id").order("classified_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+      if (args.email_address) q = q.eq("email_address", args.email_address);
+      if (args.partner_id) q = q.eq("partner_id", args.partner_id);
+      if (args.category) q = q.eq("category", args.category);
+      if (userId) q = q.eq("user_id", userId);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: data?.length, classifications: data };
+    }
+    case "get_conversation_context": {
+      const { data, error } = await supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address)).maybeSingle();
+      if (error) return { error: error.message };
+      if (!data) return { message: "No conversation context found for this address." };
+      return data;
+    }
+    case "get_address_rules": {
+      let q = supabase.from("email_address_rules").select("*").order("interaction_count", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+      if (args.email_address) q = q.eq("email_address", args.email_address);
+      if (args.is_active !== undefined) q = q.eq("is_active", !!args.is_active);
+      if (userId) q = q.eq("user_id", userId);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: data?.length, rules: data };
+    }
+    case "suggest_next_contacts": {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/ai-arena-suggest`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authHeader || serviceKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ focus: args.focus || "tutti", preferred_channel: args.channel || "email", batch_size: Math.min(Number(args.batch_size) || 5, 10), excluded_ids: [] }),
+      });
+      if (!res.ok) return { error: await res.text() };
+      return await res.json();
+    }
+    case "detect_language": {
+      const { getLanguageHint } = await import("../_shared/textUtils.ts");
+      const hint = getLanguageHint(String(args.country_code || "US"));
+      return { country_code: args.country_code, ...hint };
+    }
+
     default: return { error: `Tool sconosciuto: ${name}` };
   }
-}
-
-// ━━━ AI Governance Executors ━━━
-
-async function executeReviewPendingActions(supabase: SupabaseClient, args: Record<string, unknown>, userId: string): Promise<unknown> {
-  let query = supabase
-    .from("ai_pending_actions")
-    .select("id, action_type, email_address, partner_id, confidence, reasoning, suggested_content, source, status, created_at")
-    .eq("user_id", userId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false })
-    .limit(Math.min(Number(args.limit) || 10, 50));
-
-  if (args.action_type) query = query.eq("action_type", String(args.action_type));
-  if (args.source) query = query.eq("source", String(args.source));
-  if (args.email_address) query = query.eq("email_address", String(args.email_address));
-
-  const { data, error } = await query;
-  if (error) return { error: error.message };
-
-  // Enrich with partner names
-  const actions = (data || []) as any[];
-  const partnerIds = [...new Set(actions.map(a => a.partner_id).filter(Boolean))];
-  let partnerNames: Record<string, string> = {};
-  if (partnerIds.length) {
-    const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
-    if (partners) partnerNames = Object.fromEntries((partners as any[]).map(p => [p.id, p.company_name]));
-  }
-
-  return {
-    count: actions.length,
-    actions: actions.map(a => ({
-      ...a,
-      partner_name: partnerNames[a.partner_id] || null,
-    })),
-  };
-}
-
-async function executeApprovePendingAction(supabase: SupabaseClient, args: Record<string, unknown>, userId: string): Promise<unknown> {
-  const actionId = String(args.action_id);
-  const modifiedContent = args.modified_content ? String(args.modified_content) : null;
-
-  const { data: action, error: fetchErr } = await supabase
-    .from("ai_pending_actions")
-    .select("*")
-    .eq("id", actionId)
-    .eq("user_id", userId)
-    .single();
-
-  if (fetchErr || !action) return { error: "Azione pendente non trovata." };
-  if ((action as any).status !== "pending") return { error: `Azione già ${(action as any).status}.` };
-
-  const act = action as any;
-
-  // Update pending action
-  await supabase.from("ai_pending_actions").update({
-    status: "approved",
-    executed_at: new Date().toISOString(),
-    suggested_content: modifiedContent || act.suggested_content,
-  }).eq("id", actionId);
-
-  // Update decision log
-  if (act.decision_log_id) {
-    await supabase.from("ai_decision_log").update({
-      user_review: modifiedContent ? "modified" : "approved",
-      user_correction: modifiedContent || null,
-    }).eq("id", act.decision_log_id);
-  }
-
-  // Execute based on action type
-  let executionResult = "approved";
-  if (act.action_type === "create_task" || act.action_type === "create_reminder") {
-    await supabase.from("activities").insert({
-      user_id: userId,
-      title: `[AI] ${act.reasoning?.slice(0, 100) || act.action_type}`,
-      activity_type: act.action_type === "create_reminder" ? "reminder" : "task",
-      source_id: act.partner_id || actionId,
-      source_type: act.partner_id ? "partner" : "system",
-      partner_id: act.partner_id || null,
-      description: modifiedContent || act.suggested_content || act.reasoning,
-      status: "pending",
-      priority: "medium",
-    });
-    executionResult = "task_created";
-  }
-
-  // Update email_address_rules: adaptive threshold (lower on approval)
-  if (act.email_address) {
-    await supabase.rpc("deduct_credits", { p_user_id: userId, p_amount: 0, p_operation: "noop" }).then(() => {});
-    // Adaptive: lower threshold slightly on approval
-    const { data: rule } = await supabase.from("email_address_rules")
-      .select("ai_confidence_threshold, interaction_count, success_rate")
-      .eq("user_id", userId).eq("email_address", act.email_address).maybeSingle();
-
-    if (rule) {
-      const newThreshold = Math.max(0.50, ((rule as any).ai_confidence_threshold || 0.75) - 0.01);
-      const newCount = ((rule as any).interaction_count || 0) + 1;
-      const oldSuccessRate = (rule as any).success_rate || 50;
-      const newSuccessRate = Math.round(((oldSuccessRate * ((rule as any).interaction_count || 1)) + 100) / newCount);
-      await supabase.from("email_address_rules").update({
-        ai_confidence_threshold: newThreshold,
-        interaction_count: newCount,
-        success_rate: Math.min(100, newSuccessRate),
-        last_interaction_at: new Date().toISOString(),
-      }).eq("user_id", userId).eq("email_address", act.email_address);
-    }
-  }
-
-  // Supervisor audit
-  logSupervisorAudit(supabase, {
-    user_id: userId, actor_type: "user",
-    action_category: "pending_action_approved",
-    action_detail: `Azione AI approvata: ${act.action_type} per ${act.email_address || "N/A"}`,
-    target_type: "pending_action", target_id: actionId,
-    partner_id: act.partner_id || undefined, email_address: act.email_address || undefined,
-    decision_origin: modifiedContent ? "ai_modified" : "ai_approved",
-    ai_decision_log_id: act.decision_log_id || undefined,
-    metadata: { action_type: act.action_type, confidence: act.confidence, was_modified: !!modifiedContent },
-  });
-
-  return {
-    success: true,
-    action_id: actionId,
-    action_type: act.action_type,
-    execution_result: executionResult,
-    message: `Azione "${act.action_type}" approvata${modifiedContent ? " con modifiche" : ""} e ${executionResult === "task_created" ? "task creato" : "eseguita"}.`,
-  };
-}
-
-async function executeRejectPendingAction(supabase: SupabaseClient, args: Record<string, unknown>, userId: string): Promise<unknown> {
-  const actionId = String(args.action_id);
-  const reason = args.reason ? String(args.reason) : null;
-
-  const { data: action, error: fetchErr } = await supabase
-    .from("ai_pending_actions")
-    .select("*")
-    .eq("id", actionId)
-    .eq("user_id", userId)
-    .single();
-
-  if (fetchErr || !action) return { error: "Azione pendente non trovata." };
-  if ((action as any).status !== "pending") return { error: `Azione già ${(action as any).status}.` };
-
-  const act = action as any;
-
-  await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", actionId);
-
-  if (act.decision_log_id) {
-    await supabase.from("ai_decision_log").update({
-      user_review: "rejected",
-      user_correction: reason || null,
-    }).eq("id", act.decision_log_id);
-  }
-
-  // Adaptive threshold: raise on rejection
-  if (act.email_address) {
-    const { data: rule } = await supabase.from("email_address_rules")
-      .select("ai_confidence_threshold, interaction_count, success_rate")
-      .eq("user_id", userId).eq("email_address", act.email_address).maybeSingle();
-
-    if (rule) {
-      const newThreshold = Math.min(0.99, ((rule as any).ai_confidence_threshold || 0.75) + 0.05);
-      const newCount = ((rule as any).interaction_count || 0) + 1;
-      const oldSuccessRate = (rule as any).success_rate || 50;
-      const newSuccessRate = Math.round(((oldSuccessRate * ((rule as any).interaction_count || 1)) + 0) / newCount);
-      await supabase.from("email_address_rules").update({
-        ai_confidence_threshold: newThreshold,
-        interaction_count: newCount,
-        success_rate: Math.max(0, newSuccessRate),
-        last_interaction_at: new Date().toISOString(),
-      }).eq("user_id", userId).eq("email_address", act.email_address);
-    }
-  }
-
-  // Supervisor audit
-  logSupervisorAudit(supabase, {
-    user_id: userId, actor_type: "user",
-    action_category: "pending_action_rejected",
-    action_detail: `Azione AI rifiutata: ${act.action_type} per ${act.email_address || "N/A"}. Motivo: ${reason || "non specificato"}`,
-    target_type: "pending_action", target_id: actionId,
-    partner_id: act.partner_id || undefined, email_address: act.email_address || undefined,
-    decision_origin: "ai_rejected",
-    ai_decision_log_id: act.decision_log_id || undefined,
-    metadata: { action_type: act.action_type, confidence: act.confidence, rejection_reason: reason },
-  });
-
-  return {
-    success: true,
-    action_id: actionId,
-    action_type: act.action_type,
-    message: `Azione "${act.action_type}" rifiutata.${reason ? ` Motivo: ${reason}` : ""}`,
-  };
-}
-
-async function executeGetAiPerformance(supabase: SupabaseClient, args: Record<string, unknown>, userId: string): Promise<unknown> {
-  const days = Math.min(Number(args.days) || 30, 90);
-  const sinceDate = new Date(Date.now() - days * 86400000).toISOString();
-  const emailFilter = args.email_address ? String(args.email_address) : null;
-
-  let query = supabase
-    .from("ai_decision_log")
-    .select("decision_type, was_auto_executed, user_review, confidence, email_address, created_at")
-    .eq("user_id", userId)
-    .gte("created_at", sinceDate);
-
-  if (emailFilter) query = query.eq("email_address", emailFilter);
-
-  const { data, error } = await query.limit(1000);
-  if (error) return { error: error.message };
-
-  const decisions = (data || []) as any[];
-  const total = decisions.length;
-  const autoExecuted = decisions.filter(d => d.was_auto_executed).length;
-  const approved = decisions.filter(d => d.user_review === "approved").length;
-  const rejected = decisions.filter(d => d.user_review === "rejected").length;
-  const modified = decisions.filter(d => d.user_review === "modified").length;
-  const reviewed = approved + rejected + modified;
-  const accuracyPct = reviewed > 0 ? Math.round(((approved + modified) / reviewed) * 100) : null;
-
-  // Breakdown by type
-  const byType: Record<string, { total: number; approved: number; rejected: number; auto: number }> = {};
-  for (const d of decisions) {
-    const t = d.decision_type || "unknown";
-    if (!byType[t]) byType[t] = { total: 0, approved: 0, rejected: 0, auto: 0 };
-    byType[t].total++;
-    if (d.was_auto_executed) byType[t].auto++;
-    if (d.user_review === "approved" || d.user_review === "modified") byType[t].approved++;
-    if (d.user_review === "rejected") byType[t].rejected++;
-  }
-
-  // Critical contacts (accuracy < 70%)
-  const byEmail: Record<string, { total: number; approved: number; rejected: number }> = {};
-  for (const d of decisions) {
-    if (!d.email_address) continue;
-    if (!byEmail[d.email_address]) byEmail[d.email_address] = { total: 0, approved: 0, rejected: 0 };
-    byEmail[d.email_address].total++;
-    if (d.user_review === "approved" || d.user_review === "modified") byEmail[d.email_address].approved++;
-    if (d.user_review === "rejected") byEmail[d.email_address].rejected++;
-  }
-  const criticalContacts = Object.entries(byEmail)
-    .filter(([, v]) => (v.approved + v.rejected) >= 3 && v.approved / (v.approved + v.rejected) < 0.7)
-    .map(([email, v]) => ({
-      email_address: email,
-      accuracy_pct: Math.round((v.approved / (v.approved + v.rejected)) * 100),
-      total_decisions: v.total,
-      rejected: v.rejected,
-    }))
-    .sort((a, b) => a.accuracy_pct - b.accuracy_pct);
-
-  return {
-    period_days: days,
-    total_decisions: total,
-    auto_executed: { count: autoExecuted, pct: total > 0 ? Math.round((autoExecuted / total) * 100) : 0 },
-    human_reviewed: { approved, rejected, modified, accuracy_pct: accuracyPct },
-    breakdown_by_type: Object.entries(byType).map(([type, stats]) => ({
-      decision_type: type,
-      ...stats,
-      accuracy_pct: (stats.approved + stats.rejected) > 0
-        ? Math.round((stats.approved / (stats.approved + stats.rejected)) * 100)
-        : null,
-    })),
-    critical_contacts: criticalContacts,
-    ...(emailFilter ? { filtered_by: emailFilter } : {}),
-  };
 }
