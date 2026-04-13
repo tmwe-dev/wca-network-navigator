@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Mic, MicOff, X, Plus, History, Trash2, Zap, MessageSquare, PanelRightOpen, PanelRightClose, Loader2 } from "lucide-react";
 import VoicePresence from "./VoicePresence";

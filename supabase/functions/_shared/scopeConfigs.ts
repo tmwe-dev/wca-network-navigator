@@ -2,7 +2,6 @@
  * Scope configurations for unified-assistant.
  * Contains system prompts, tools, and local tool handlers for each scope.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PLATFORM_TOOLS } from "./platformTools.ts";
 import { escapeLike } from "./sqlEscape.ts";
 
@@ -258,7 +257,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         creditLabel: "Cockpit Assistant",
         buildPrompt: (body, basePrompt) => {
           const contacts = body.contacts || [];
-          const contactSummary = contacts.map((c: Record<string, unknown>) =>
+          const _contactSummary = contacts.map((c: Record<string, unknown>) =>
             `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${(c.channels||[]).join(",")}`
           ).join("\n");
           return basePrompt; // System prompt stays the same, user message includes contacts

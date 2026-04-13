@@ -97,7 +97,7 @@ async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<string> 
     }
   };
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -123,7 +123,7 @@ interface UseGlobalChatOptions {
 }
 
 export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { data: appSettings } = useAppSettings();
   const { messages, addMessages, newConversation } = useAIConversation("global");
 

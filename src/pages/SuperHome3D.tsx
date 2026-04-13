@@ -7,7 +7,7 @@ import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { useAllActivities } from "@/hooks/useActivities";
-import { useDownloadJobs, type DownloadJob } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
@@ -85,7 +85,7 @@ export default function SuperHome3D() {
     }
   };
 
-  const signals = useMemo(() => {
+  const _signals = useMemo(() => {
     const s: { label: string; value: string }[] = [];
     if (activeJobs > 0) s.push({ label: "Job download attivi", value: String(activeJobs) });
     if (readyContacts > 0) s.push({ label: "Contatti pronti all'outreach", value: formatCompact(readyContacts) });

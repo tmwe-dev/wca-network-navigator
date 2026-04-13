@@ -1,4 +1,4 @@
-import { Activity, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatItem {

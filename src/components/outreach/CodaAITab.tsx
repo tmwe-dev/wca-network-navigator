@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, X, Eye, Bot, Loader2, RefreshCw, Clock, Mail, MessageCircle, Linkedin } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useOutreachMock } from "@/hooks/useOutreachMock";

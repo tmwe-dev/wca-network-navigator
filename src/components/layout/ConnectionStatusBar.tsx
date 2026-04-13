@@ -48,7 +48,7 @@ function saveCachedStatus(s: ChannelStatus) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
 }
 
-export function ConnectionStatusBar({ onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
+export function ConnectionStatusBar({ _onAiClick, outreachQueue, nightPause, isNightTime: isNight, _manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
   const navigate = useAppNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();

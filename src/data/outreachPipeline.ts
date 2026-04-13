@@ -4,8 +4,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type ActivityStatus = Database["public"]["Enums"]["activity_status"];
-type ActivityType = Database["public"]["Enums"]["activity_type"];
+type _ActivityStatus = Database["public"]["Enums"]["activity_status"];
+type _ActivityType = Database["public"]["Enums"]["activity_type"];
 type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Update"];
 

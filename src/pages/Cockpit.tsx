@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";

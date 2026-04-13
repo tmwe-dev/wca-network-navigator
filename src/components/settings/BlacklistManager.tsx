@@ -3,13 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Upload, Loader2, ShieldAlert, RefreshCw, CheckCircle2, AlertTriangle,
-  FileSpreadsheet, Calendar, Hash, Building2, MapPin, DollarSign,
-} from "lucide-react";
+import { Upload, Loader2, ShieldAlert, RefreshCw, CheckCircle2, AlertTriangle, FileSpreadsheet, Calendar, MapPin, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 // ExcelJS loaded lazily to reduce bundle size
 const getExcelJS = () => import("exceljs").then(m => m.default);

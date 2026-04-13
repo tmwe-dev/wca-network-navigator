@@ -3,8 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Star, StarOff, Phone, Mail, Globe, Brain,
 } from "lucide-react";
-import { PartnerRating } from "@/components/partners/PartnerRating";
-import { getCountryFlag, getYearsMember, formatPartnerType } from "@/lib/countries";
+import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -15,7 +14,7 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { Box } from "lucide-react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface PartnerDetailHeaderProps {
   partner: Record<string, any>;
   enrichment: Record<string, any> | null;

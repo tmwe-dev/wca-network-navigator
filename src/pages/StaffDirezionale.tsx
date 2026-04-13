@@ -4,7 +4,7 @@
  * Supporta drag & drop file, microfono, TTS e job list.
  */
 import { useState } from "react";
-import { useAgents, type Agent } from "@/hooks/useAgents";
+import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackPage } from "@/hooks/useTrackPage";

@@ -61,7 +61,7 @@ export default function AddContactDialog({
 
       if (destination === "contacts") {
         // Get or create "manual" import log
-        let { data: existingLog } = await supabase
+        const { data: existingLog } = await supabase
           .from("import_logs")
           .select("id")
           .eq("user_id", user.id)
@@ -152,7 +152,7 @@ export default function AddContactDialog({
         queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
-        let { data: existingLog } = await supabase
+        const { data: existingLog } = await supabase
           .from("import_logs")
           .select("id")
           .eq("user_id", user.id)

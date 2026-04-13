@@ -94,7 +94,7 @@ async function loadAllRows<T>(
 ): Promise<T[]> {
   const all: T[] = [];
   let page = 0;
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     let q = supabase.from(table as "partners").select(select) as unknown as ReturnType<typeof supabase.from>;
     if (filters) q = filters(q);

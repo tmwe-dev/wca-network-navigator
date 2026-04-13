@@ -368,7 +368,7 @@ export async function executePlatformTool(
 
     case "schedule_email": {
       const scheduledAt = String(args.scheduled_at);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic table insert
+       
       const { data, error } = await supabase.from("email_campaign_queue").insert({
         recipient_email: String(args.to_email), recipient_name: args.to_name ? String(args.to_name) : null,
         subject: String(args.subject), html_body: String(args.html_body),
@@ -684,7 +684,7 @@ export async function executePlatformTool(
       const ids = args.ids as string[];
       const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic table name requires cast
+       
       const { error } = await supabase.from(table as "partners").delete().in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }

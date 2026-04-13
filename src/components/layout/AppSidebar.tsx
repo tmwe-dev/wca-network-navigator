@@ -1,11 +1,6 @@
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  Calendar, Mail, Globe, Home, Moon, Sun, Settings,
-  Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Send, Inbox, Target, LogOut, Activity, Crown,
-  Gamepad2, Shield, Brain,
-} from "lucide-react";
+import { Calendar, Mail, Globe, Home, Moon, Sun, Settings, Wifi, WifiOff, Users, Command, Rocket, MessageCircle, Send, Inbox, Target, LogOut, Activity, Crown, Gamepad2, Shield, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,7 +62,7 @@ interface AppSidebarProps {
   onToggle: () => void;
 }
 
-export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ _collapsed, _onToggle }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(

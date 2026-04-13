@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
@@ -45,7 +44,7 @@ export function AgentChat({ agent }: Props) {
     try {
       const data = await invokeEdge<any>("agent-execute", { body: { agent_id: agent.id, chat_messages: newMsgs }, context: "AgentChat.agent_execute" });
       setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
-    } catch (e) {
+    } catch (_e) {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
     } finally {
       setLoading(false);

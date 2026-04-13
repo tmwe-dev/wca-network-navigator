@@ -10,20 +10,7 @@ import { useMission } from "@/contexts/MissionContext";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
-import {
-  pickerReducer,
-  INITIAL_PICKER_STATE,
-  type PickerAction,
-  type PickerState,
-  type CountryStat,
-  type PartnerRow,
-  type PartnerContactRow,
-  type ImportedContactRow,
-  type BcaRow,
-  type PartnerSort,
-  type ContactSort,
-  type BcaSort,
-} from "@/components/global/email-picker/types";
+import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
 
 const log = createLogger("EmailComposerContactPicker");
 
@@ -157,7 +144,7 @@ export function useEmailContactPicker() {
 
   // ── Filtered & sorted lists ──
   const filteredPartners = useMemo(() => {
-    let list = state.hideHolding ? partners.filter(p => p.lead_status !== "holding_pattern") : partners;
+    const list = state.hideHolding ? partners.filter(p => p.lead_status !== "holding_pattern") : partners;
     const sorted = [...list];
     switch (state.partnerSort) {
       case "name": sorted.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "")); break;
@@ -167,7 +154,7 @@ export function useEmailContactPicker() {
   }, [partners, state.hideHolding, state.partnerSort]);
 
   const filteredContacts = useMemo(() => {
-    let list = state.hideHolding ? contacts.filter(c => c.lead_status !== "holding_pattern") : contacts;
+    const list = state.hideHolding ? contacts.filter(c => c.lead_status !== "holding_pattern") : contacts;
     const sorted = [...list];
     switch (state.contactSort) {
       case "name": sorted.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
@@ -189,7 +176,7 @@ export function useEmailContactPicker() {
   }, [filteredContacts]);
 
   const filteredBca = useMemo(() => {
-    let list = state.hideHolding ? bcaCards.filter(c => c.lead_status !== "holding_pattern") : bcaCards;
+    const list = state.hideHolding ? bcaCards.filter(c => c.lead_status !== "holding_pattern") : bcaCards;
     const sorted = [...list];
     switch (state.bcaSort) {
       case "name": sorted.sort((a, b) => (a.contact_name || "").localeCompare(b.contact_name || "")); break;

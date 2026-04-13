@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle, Linkedin, Phone, Send, Loader2 } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Phone, Send } from "lucide-react";
 import type { UnifiedRecord } from "@/hooks/useContactRecord";
 import { toast } from "@/hooks/use-toast";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
@@ -13,7 +13,7 @@ interface Props {
 
 export function ContactRecordActions({ record }: Props): ReactElement {
   const [liDmOpen, setLiDmOpen] = useState(false);
-  const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
+  const { handleSendEmail, handleSendWhatsApp, _waSending, _waAvailable } = useDirectContactActions();
 
   const handleEmail = () => {
     if (record.email) {

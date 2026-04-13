@@ -2,22 +2,19 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import {
-  Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X, ArrowUpDown,
-} from "lucide-react";
+import { Search, Telescope, Plane, RotateCcw, X, ArrowUpDown } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
-import { getCountryFlag, getYearsMember } from "@/lib/countries";
+import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,7 +45,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  directoryOnly: _directoryOnlyProp, _onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
@@ -93,9 +90,9 @@ export function PartnerListPanel({
     }
   }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const toggleFavorite = useToggleFavorite();
+  const _toggleFavorite = useToggleFavorite();
 
-  const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
+  const { stats, verified, _missingDeep } = usePartnerListStats({ countryCodes, partners });
   const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {

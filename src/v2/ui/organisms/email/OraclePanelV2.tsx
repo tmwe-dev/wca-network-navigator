@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RefreshCw, BookOpen, Search as SearchIcon, Handshake, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
+import { Sparkles, RefreshCw, BookOpen, Handshake, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
 import albertTalkGif from "@/assets/albert-talk.gif";
 import type { LucideProps } from "lucide-react";
 

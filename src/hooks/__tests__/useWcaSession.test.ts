@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 vi.mock("@/lib/wcaCookieStore", () => ({ setWcaCookie: vi.fn() }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), error: vi.fn() }) }));

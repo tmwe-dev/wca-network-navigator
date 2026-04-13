@@ -8,20 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Star,
-  StarOff,
-  Phone,
-  Mail,
-  Globe,
-  MapPin,
-  MessageCircle,
-  GlobeIcon,
-  Building2,
-  UserCheck,
-  UserX,
-  AlertTriangle,
-} from "lucide-react";
+import { Star, StarOff, Phone, Mail, Globe, MapPin, MessageCircle, UserCheck, UserX, AlertTriangle } from "lucide-react";
 import {
   getCountryFlag,
   getYearsMember,

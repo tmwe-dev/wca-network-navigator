@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, BarChart3, X } from "lucide-react";
+import { Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, BarChart3 } from "lucide-react";
 import { t } from "@/components/download/theme";
 
 export interface ProspectFilters {

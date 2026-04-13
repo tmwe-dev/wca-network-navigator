@@ -2,10 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadScoreBadge } from "./LeadScoreBadge";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle, MessageCircle, User, Sparkles, Handshake,
-  Globe2, Linkedin, Mail, Search, Plane,
-} from "lucide-react";
+import { AlertTriangle, MessageCircle, User, Sparkles, Handshake, Globe2, Linkedin, Mail, Search } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
@@ -47,7 +44,7 @@ function Filterable({ field, value, children, onFilterClick, className }: {
   );
 }
 
-export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, _onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
   const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);

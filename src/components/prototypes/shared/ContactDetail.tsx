@@ -1,4 +1,4 @@
-import { Mail, Phone, Linkedin, Globe, Building2, MapPin, X, Send } from "lucide-react";
+import { Mail, Phone, Linkedin, Building2, MapPin, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { UnifiedContact } from "./UnifiedContactList";

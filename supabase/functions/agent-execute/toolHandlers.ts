@@ -2,8 +2,8 @@ import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./s
 
 // ── Local interfaces for typed row shapes ──
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
-interface DirectoryCountRow { country_code: string; member_count: number; }
-interface ServiceRow { service_category: string; }
+interface _DirectoryCountRow { country_code: string; member_count: number; }
+interface _ServiceRow { service_category: string; }
 interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; contacts_missing_count: number; last_processed_company: string | null; error_message: string | null; created_at: string; }
 interface EmailQueueRow { id: string; status: string; scheduled_at: string | null; sent_at: string | null; recipient_email: string; subject: string; }
 interface AgentTaskRow { id: string; agent_id: string; description: string; status: string; task_type: string; created_at: string; result_summary: string | null; }
@@ -15,8 +15,8 @@ interface KbEntry { title: string; content: string; added_at: string; }
 interface HoldingItem { id: string; source: string; name: string; country: string; city?: string; email: string | null; status: string; days_waiting: number; interactions?: number; }
 interface AbTestVariant { agent_name: string; tone: string; percentage: number; }
 interface AbTestConfig { enabled?: boolean; variants?: AbTestVariant[]; }
-interface PartnerRow { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown?: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; [key: string]: unknown; }
-interface ContactRow { id: string; name: string | null; company_name: string | null; email: string | null; phone: string | null; country: string | null; lead_status: string | null; created_at: string; [key: string]: unknown; }
+interface _PartnerRow { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown?: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; [key: string]: unknown; }
+interface _ContactRow { id: string; name: string | null; company_name: string | null; email: string | null; phone: string | null; country: string | null; lead_status: string | null; created_at: string; [key: string]: unknown; }
 interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: string]: unknown; }
 
 export async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
@@ -791,7 +791,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         });
       }
       if (!args.source_type || args.source_type === "crm" || args.source_type === "all") {
-        let cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
+        const cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         const { data: contacts } = await cq.limit(Number(args.limit) || 50);
         (contacts || []).forEach((c: Record<string, unknown>) => {

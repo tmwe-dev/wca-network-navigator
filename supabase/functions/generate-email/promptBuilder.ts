@@ -120,7 +120,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: stri
     metInPersonContext, cachedEnrichmentContext, documentsContext,
     stylePreferencesContext, editPatternsContext, responseInsightsContext,
     conversationIntelligenceContext,
-    salesKBSlice, salesKBSections, signatureBlock,
+    salesKBSlice, salesKBSections, _signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
   } = ctx;
 

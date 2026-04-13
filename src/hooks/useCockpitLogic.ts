@@ -13,7 +13,6 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("useCockpitLogic");
 import { useClientAssignments, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommandBar";
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";

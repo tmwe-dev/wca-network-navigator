@@ -2,10 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
-  Trash2, ArrowUpDown, ArrowUp, ArrowDown, Plane,
-} from "lucide-react";
+import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -10,8 +10,8 @@ import { createLogger } from "@/lib/log";
 import type { TrackActivityParams } from "@/types/tracking";
 import type { Database } from "@/integrations/supabase/types";
 
-type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
-type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
+type _ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
+type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
 
 const log = createLogger("useTrackActivity");
 

@@ -99,7 +99,7 @@ export class ApiError extends Error {
         else if (typeof b.message === "string") message = b.message;
         details = b;
       }
-    } catch (e) {
+    } catch (_e) {
       console.debug("operation failed");
       /* body non JSON o vuoto: lascia il default */
     }

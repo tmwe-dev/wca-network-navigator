@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Play, Pause, XCircle, CheckCircle2, AlertCircle, Clock, Send, Loader2, Mail } from "lucide-react";
+import { Play, Pause, XCircle, CheckCircle2, AlertCircle, Clock, Loader2, Mail } from "lucide-react";
 import { useEmailCampaignQueue, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
-import type { QueueStats } from "@/hooks/useEmailCampaignQueue";
 
 interface CampaignQueueMonitorProps {
   draftId: string;

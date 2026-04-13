@@ -2,7 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
-import { Mail, MapPin, Handshake, ChevronDown, Users, Phone } from "lucide-react";
+import { Mail, MapPin, ChevronDown, Users, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PartnerContact } from "@/hooks/usePartnerContacts";
 

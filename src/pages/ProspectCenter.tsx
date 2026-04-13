@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download, Search, X } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
@@ -8,7 +8,6 @@ import { ProspectAdvancedFilters, EMPTY_FILTERS, type ProspectFilters } from "@/
 import { Input } from "@/components/ui/input";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
 
 function formatCurrency(n: number | null) {
   if (n == null) return "—";
@@ -17,7 +16,7 @@ function formatCurrency(n: number | null) {
   return `€${n.toFixed(0)}`;
 }
 
-function StatItem({ icon: Icon, label, value, color, isDark }: { icon: any; label: string; value: string | number; color: string; isDark: boolean }) {
+function StatItem({ icon: Icon, label, value, color, _isDark }: { icon: any; label: string; value: string | number; color: string; isDark: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-4 h-4 ${color}`} />

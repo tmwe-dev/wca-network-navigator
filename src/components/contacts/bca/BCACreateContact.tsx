@@ -4,8 +4,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, CheckCircle2, Search, Link2 } from "lucide-react";
+import { UserPlus, Loader2, CheckCircle2, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { insertContacts } from "@/data/contacts";
 import { searchPartnersByNameAlias } from "@/data/partners";
@@ -23,11 +22,11 @@ export function BCACreateContact({ card }: Props) {
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [partnerResults, setPartnerResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [_searching, setSearching] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(card.matched_partner_id);
 
   // Split contact_name into first/last
-  const nameParts = useMemo(() => {
+  const _nameParts = useMemo(() => {
     if (!card.contact_name) return { first: "", last: "" };
     const parts = card.contact_name.trim().split(/\s+/);
     return { first: parts[0] || "", last: parts.slice(1).join(" ") || "" };

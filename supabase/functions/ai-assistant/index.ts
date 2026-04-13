@@ -6,7 +6,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
@@ -365,7 +364,7 @@ Non eseguire tool di scrittura o modifica`;
 
     let result = await response.json();
     let assistantMessage = result.choices?.[0]?.message;
-    let totalUsage = { prompt_tokens: 0, completion_tokens: 0 };
+    const totalUsage = { prompt_tokens: 0, completion_tokens: 0 };
     if (result.usage) {
       totalUsage.prompt_tokens += result.usage.prompt_tokens || 0;
       totalUsage.completion_tokens += result.usage.completion_tokens || 0;

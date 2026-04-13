@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useTrackActivity } from "@/hooks/useTrackActivity";
@@ -23,7 +22,7 @@ interface SendEmailDialogProps {
 }
 
 export function SendEmailDialog({
-  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, isDark,
+  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, _isDark,
 }: SendEmailDialogProps) {
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");

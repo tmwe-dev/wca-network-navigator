@@ -1,5 +1,5 @@
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { Mail, MessageCircle } from "lucide-react";
 import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptBusinessCard } from "@/lib/contactActionAdapter";
 import { resolveCountryCode } from "@/lib/countries";

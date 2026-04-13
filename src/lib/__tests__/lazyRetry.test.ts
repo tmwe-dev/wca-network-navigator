@@ -12,7 +12,7 @@ describe("lazyRetry", () => {
     const factory = vi.fn().mockResolvedValue({ default: () => "ok" });
     const Comp = lazyRetry(factory);
     // Access the internal _payload to trigger the factory
-    const result = await (Comp as any)._payload._result();
+    const _result = await (Comp as any)._payload._result();
     expect(factory).toHaveBeenCalledTimes(1);
   });
 

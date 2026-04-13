@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Merge, Ban, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { clean } from "./contactHelpers";
 
 interface DuplicateGroup {
@@ -86,7 +85,7 @@ export function DuplicateDetector() {
       }
 
       setDuplicates(groups);
-    } catch (e) {
+    } catch (_e) {
       toast.error("Errore nella scansione duplicati");
     } finally {
       setLoading(false);
@@ -106,7 +105,7 @@ export function DuplicateDetector() {
       if (error) throw error;
       toast.success(`Uniti ${data.deletedRecords} duplicati`);
       scan();
-    } catch (e) {
+    } catch (_e) {
       toast.error("Errore durante il merge");
     } finally {
       setMerging(null);
@@ -173,7 +172,7 @@ export function DuplicateDetector() {
               </div>
             </div>
             <div className="divide-y divide-border/20">
-              {dup.group.map((c, ci) => (
+              {dup.group.map((c, _ci) => (
                 <div key={c.id} className="px-3 py-2 grid grid-cols-5 gap-2 text-xs">
                   <div>
                     <span className="text-[9px] text-muted-foreground block">Azienda</span>

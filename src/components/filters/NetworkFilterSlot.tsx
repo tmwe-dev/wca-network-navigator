@@ -1,6 +1,6 @@
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
-import { Search, ArrowUpDown, Sparkles, Wifi, Globe, Users } from "lucide-react";
+import { Search, ArrowUpDown, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const SORT = [

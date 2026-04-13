@@ -3,10 +3,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Send, ChevronRight, Trophy, Loader2, Plane } from "lucide-react";
-import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-import { getEffectiveLogoUrl, getEnrichmentSnippet, hasLinkedIn, hasWhatsApp, asEnrichment } from "@/lib/partnerUtils";
+import { getEffectiveLogoUrl, getEnrichmentSnippet, hasLinkedIn, hasWhatsApp } from "@/lib/partnerUtils";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { EnrichedStatusIcons } from "./partner-list/SubComponents";
 

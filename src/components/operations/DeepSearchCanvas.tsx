@@ -41,7 +41,7 @@ interface Props {
 
 export function DeepSearchCanvas({ open, onClose, onStop, current, results, running, isDark }: Props) {
   const historyRef = useRef<HTMLDivElement>(null);
-  const th = t(isDark);
+  const _th = t(isDark);
 
   // Auto-scroll history
   useEffect(() => {

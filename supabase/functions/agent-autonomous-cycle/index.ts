@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { getCETHour, isOutsideWorkHours } from "../_shared/timeUtils.ts";
+import { isOutsideWorkHours } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
 
 const supabase = createClient(
@@ -13,8 +12,8 @@ const supabase = createClient(
 // Defaults — overridden by app_settings at runtime
 const DEFAULT_BUDGET_PER_AGENT = 10;
 const DEFAULT_CYCLE_LOOKBACK_MINUTES = 12;
-const DEFAULT_WORK_START_HOUR = 6;
-const DEFAULT_WORK_END_HOUR = 24; // midnight
+const _DEFAULT_WORK_START_HOUR = 6;
+const _DEFAULT_WORK_END_HOUR = 24; // midnight
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -92,7 +91,7 @@ async function screenIncomingMessages(userId: string, agents: Array<Record<strin
   if (!messages || messages.length === 0) return 0;
 
   // Filter out messages that already have agent_tasks
-  const msgIds = messages.map(m => m.id);
+  const _msgIds = messages.map(m => m.id);
   const { data: existingTasks } = await supabase
     .from("agent_tasks")
     .select("target_filters")

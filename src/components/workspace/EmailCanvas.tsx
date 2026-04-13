@@ -4,19 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import {
-  Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw,
-  Mail, User, Building2, CheckCircle2, AlertCircle,
-  ChevronLeft, ChevronRight, Zap, AtSign, AlertTriangle
-} from "lucide-react";
+import { Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw, Mail, User, AlertCircle, ChevronLeft, ChevronRight, Zap, AtSign, AlertTriangle } from "lucide-react";
 import { type AllActivity } from "@/hooks/useActivities";
-import { type GeneratedEmail, useEmailGenerator } from "@/hooks/useEmailGenerator";
+import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useSocialLinks } from "@/hooks/useSocialLinks";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
@@ -67,7 +62,7 @@ export default function EmailCanvas({
   const trackActivity = useTrackActivity();
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
-  const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
+  const _hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
   const { data: socialLinks = [] } = useSocialLinks(partnerId);
   const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
   const contactLinkedIn = socialLinks.find(

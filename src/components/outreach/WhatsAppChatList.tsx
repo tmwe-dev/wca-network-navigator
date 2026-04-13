@@ -25,7 +25,7 @@ interface WhatsAppChatListProps {
 }
 
 export function WhatsAppChatList({
-  threads, isLoading, activeTab, openTabs,
+  threads, isLoading, _activeTab, openTabs,
   focusedChat, syncEnabled, onOpenChat,
 }: WhatsAppChatListProps) {
   const [search, setSearch] = useState("");

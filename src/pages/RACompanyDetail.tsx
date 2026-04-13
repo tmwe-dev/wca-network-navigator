@@ -5,13 +5,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useRAProspect, useRAProspectContacts, useRAProspectInteractions, useUpdateRALeadStatus } from "@/hooks/useRAProspects";
-import type { RALeadStatus } from "@/types/ra";
 import { RACompanyHeader } from "@/components/ra/RACompanyHeader";
 import { RACompanyKPI, formatCurrency } from "@/components/ra/RACompanyKPI";
 import { RACompanySidebar } from "@/components/ra/RACompanySidebar";
 
 function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+  const [_copied, setCopied] = useState(false);
   const handleCopy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10" onClick={handleCopy}>

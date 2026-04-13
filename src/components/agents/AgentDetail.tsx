@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Power } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { Agent } from "@/hooks/useAgents";
 import { useAgents } from "@/hooks/useAgents";
 import { AgentPromptEditor } from "./AgentPromptEditor";

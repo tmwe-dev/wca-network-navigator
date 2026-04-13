@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkRateLimit, type RateLimitResult } from "./rateLimiter.ts";
+import { checkRateLimit } from "./rateLimiter.ts";
 
 describe("checkRateLimit", () => {
   it("permette il primo request", () => {

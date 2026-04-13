@@ -26,7 +26,7 @@ interface AssignedRule {
 
 export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDropZoneProps) {
   const [rules, setRules] = useState<AssignedRule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRules();

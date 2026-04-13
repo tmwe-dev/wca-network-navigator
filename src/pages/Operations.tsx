@@ -1,30 +1,25 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search, Brain, Phone, Mail, Calendar, Building2, CheckSquare, RefreshCw,
-} from "lucide-react";
+import { Globe, Users, Eye, CreditCard } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { type FilterKey } from "@/components/download/CountryGrid";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { rpcGetDirectoryCounts } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
@@ -113,7 +108,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
     return () => observer.disconnect();
   }, []);
 
-  const toggleTheme = () => {
+  const _toggleTheme = () => {
     const next = !isDark;
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("dl_theme", next ? "dark" : "light");
@@ -123,9 +118,9 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const { filters } = useGlobalFilters();
-  const filterMode = (filters.quality === "all" ? "all" : filters.quality) as FilterKey;
+  const _filterMode = (filters.quality === "all" ? "all" : filters.quality) as FilterKey;
   const directoryOnly = filters.networkDirectoryOnly;
-  const [aiOpen, setAiOpen] = useState(false);
+  const [_aiOpen, _setAiOpen] = useState(false);
   const deepSearch = useDeepSearch();
   const [aliasGenerating, setAliasGenerating] = useState(false);
   const queryClient = useQueryClient();
@@ -168,13 +163,13 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
-    const WCA = (window as any).__WCA_COUNTRIES;
+    const _WCA = (window as any).__WCA_COUNTRIES;
     return activeCountryCodes.map(code => {
       const found = WCA_COUNTRIES.find((c: any) => c.code === code);
       return found?.name || code;
     });
   }, [activeCountryCodes]);
-  const hasSelection = activeCountryCodes.length > 0;
+  const _hasSelection = activeCountryCodes.length > 0;
 
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
@@ -300,7 +295,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 }
 
 /* ── Stat Pill — tri-state color by value ── */
-function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant = "info" }: {
+function StatPill({ icon: Icon, value, label, _isDark, onClick, active, variant = "info" }: {
   icon: any; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
   variant?: "info" | "warn" | "ok";

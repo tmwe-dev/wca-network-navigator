@@ -25,7 +25,7 @@ export function useCountryStats() {
     queryKey: ["country-stats"],
     queryFn: async () => {
       const data = await rpcGetCountryStats();
-      const error = null;
+      const _error = null;
 
       const byCountry: Record<string, CountryStats> = {};
       let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;

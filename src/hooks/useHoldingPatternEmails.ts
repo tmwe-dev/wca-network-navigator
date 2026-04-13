@@ -4,7 +4,6 @@
  * Returns a Set of "p:<partnerId>" or "c:<contactId>" strings.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByIdsFiltered } from "@/data/partners";
 import { getContactsByIds } from "@/data/contacts";
 

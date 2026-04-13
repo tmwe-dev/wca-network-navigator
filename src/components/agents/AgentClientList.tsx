@@ -27,7 +27,7 @@ export function AgentClientList({ agent }: Props) {
     <div className="space-y-1.5 py-2">
       <p className="text-xs text-muted-foreground px-1 mb-2">{clients.length} clienti assegnati</p>
       {clients.map((c) => {
-        const meta = (c as any).source_meta;
+        const _meta = (c as any).source_meta;
         return (
           <div
             key={c.id}

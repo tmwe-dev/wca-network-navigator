@@ -2,7 +2,6 @@
  * VoiceLanguageSelector — Dropdown per selezione lingua vocale STT/TTS.
  */
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Globe } from "lucide-react";
 
 export const VOICE_LANGUAGE_MAP: Record<string, { label: string; flag: string; sttCode: string; voiceId: string; voiceName: string }> = {
   it: { label: "Italiano", flag: "🇮🇹", sttCode: "it-IT", voiceId: "FGY2WhTYpPnrIDTdsKH5", voiceName: "Laura" },

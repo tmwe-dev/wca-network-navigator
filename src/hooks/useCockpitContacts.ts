@@ -186,8 +186,8 @@ export function useCockpitContacts() {
         ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
       ].filter(Boolean);
       const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
-      let socialLinksMap: Record<string, string> = {};
-      let contactSocialMap: Record<string, string> = {};
+      const socialLinksMap: Record<string, string> = {};
+      const contactSocialMap: Record<string, string> = {};
       if (uniqueSocialPartnerIds.length > 0) {
         const slData = await findSocialLinksByPartnerIds(uniqueSocialPartnerIds, "linkedin");
         for (const sl of slData) {
@@ -205,7 +205,7 @@ export function useCockpitContacts() {
         ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
       ].filter(Boolean);
       const uniquePartnerIds = [...new Set(partnerIds)];
-      let partnersMap: Record<string, PartnerRow> = {};
+      const partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
         const pData = await getPartnersByIds(uniquePartnerIds, "id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status");
         for (const p of pData || []) partnersMap[p.id] = p as unknown as PartnerRow;

@@ -3,7 +3,6 @@
  * Returns pre-built text blocks ready for the promptBuilder.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { isLikelyPersonName } from "../_shared/textUtils.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { Channel } from "./promptBuilder.ts";
 

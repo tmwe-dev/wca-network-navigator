@@ -8,7 +8,7 @@ const BASE = `${SUPABASE_URL}/functions/v1/ai-assistant`;
 
 Deno.test("ai-assistant: OPTIONS returns CORS headers", async () => {
   const res = await fetch(BASE, { method: "OPTIONS" });
-  const body = await res.text();
+  const _body = await res.text();
   assertEquals(res.status, 200);
   assertExists(res.headers.get("access-control-allow-origin"));
 });

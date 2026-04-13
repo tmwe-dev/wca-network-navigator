@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clean, getContactQuality, sortContacts, formatPhone, countryFlag } from "@/components/contacts/contactHelpers";
+import { clean, getContactQuality, sortContacts, formatPhone } from "@/components/contacts/contactHelpers";
 
 describe("Contact Helpers", () => {
   describe("clean()", () => {

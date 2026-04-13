@@ -5,7 +5,7 @@ import { useUpdateActivity } from "@/hooks/useActivities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { User, AlertTriangle, CheckCircle2, ChevronDown, Mail, ArrowRightLeft } from "lucide-react";
+import { User, AlertTriangle, CheckCircle2, Mail, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ContactPickerProps {

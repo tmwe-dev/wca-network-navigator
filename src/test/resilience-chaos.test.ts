@@ -2,7 +2,7 @@
  * RESILIENCE CHAOS TESTS — Scorecard Area F
  * Validates system behavior under failure conditions.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // ── Test 1: SMTP failure must NOT produce a false "sent" ──
 describe("SMTP failure resilience", () => {
@@ -52,7 +52,7 @@ describe("DB failure after send resilience", () => {
   it("should detect when email was sent but DB update fails", () => {
     // Scenario: SMTP OK → DB update throws → must NOT lose track
     let emailSent = false;
-    let dbUpdated = false;
+    const dbUpdated = false;
     let recoveryNeeded = false;
 
     try {

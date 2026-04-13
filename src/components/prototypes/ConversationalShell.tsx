@@ -3,7 +3,6 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Sparkles, Network, Mail, Users, CalendarCheck, Settings, ArrowLeft, Send, Loader2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";
@@ -105,7 +104,7 @@ export function ConversationalShell() {
     setPrompt("");
   }, [prompt, allContacts.length, cockpitContacts.length, activities]);
 
-  const openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
+  const _openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">

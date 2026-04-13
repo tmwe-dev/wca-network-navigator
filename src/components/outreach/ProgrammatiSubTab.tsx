@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Mail, MessageCircle, Linkedin, Phone, Loader2, CalendarIcon, List, LayoutGrid, X, FastForward, Clock } from "lucide-react";
+import { Loader2, CalendarIcon, List, LayoutGrid, X, FastForward, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { it } from "date-fns/locale";

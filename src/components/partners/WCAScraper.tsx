@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -97,7 +97,7 @@ export function WCAScraper() {
 
     const total = endId - startId + 1;
     let processed = 0;
-    let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
+    const localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
 
     for (let id = startId; id <= endId; id++) {
       if (abortRef.current) break;

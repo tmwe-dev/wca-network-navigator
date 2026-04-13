@@ -2,7 +2,6 @@
  * ContactSegments — Dropdown with predefined contact filter segments.
  */
 import * as React from "react";
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {

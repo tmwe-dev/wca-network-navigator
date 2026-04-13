@@ -148,7 +148,7 @@ export function AssignActivityDialog({
       resetForm();
       onOpenChange(false);
       onSuccess();
-    } catch (err) {
+    } catch (_err) {
       toast.error("Errore nella creazione");
     } finally {
       setCreating(false);

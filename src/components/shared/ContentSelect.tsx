@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Plus, Check, Handshake, RefreshCw, Search, Briefcase, Globe,
-  FileText, Target, Pencil,
-} from "lucide-react";
+import { Plus, Check, Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import {
   CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,
@@ -138,7 +135,7 @@ export default function ContentSelect({ type, onSelect, selectedText, placeholde
                     <span className="text-[10px] bg-muted/50 text-muted-foreground px-1.5 py-0.5 rounded-full">{catItems.length}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
-                    {catItems.map((item, idx) => {
+                    {catItems.map((item, _idx) => {
                       const globalIdx = items.indexOf(item);
                       const ItemIcon = CYCLE_ICONS[globalIdx % CYCLE_ICONS.length];
                       const isSelected = item.text === selectedText;

@@ -29,7 +29,7 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
   
   const hoveredRef = useRef<number | null>(null);
   const tempMatrix = useMemo(() => new THREE.Matrix4(), []);
-  const tempColor = useMemo(() => new THREE.Color(), []);
+  const _tempColor = useMemo(() => new THREE.Color(), []);
   const tempPosition = useMemo(() => new THREE.Vector3(), []);
   
   // Pre-compute positions once

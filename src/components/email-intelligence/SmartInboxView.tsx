@@ -2,17 +2,13 @@
  * SmartInboxView — Split-view email classification browser
  */
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  ThumbsUp, ThumbsDown, MessageCircle, CalendarCheck, AlertTriangle,
-  RotateCcw, Bot, Ban, HelpCircle, Inbox, CheckCircle,
-  Archive, ShieldBan, FolderInput,
-} from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageCircle, CalendarCheck, AlertTriangle, RotateCcw, Bot, Ban, HelpCircle, Inbox, CheckCircle, Archive, ShieldBan } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";

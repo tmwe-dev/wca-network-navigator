@@ -6,7 +6,6 @@ import { SortingList } from "@/components/sorting/SortingList";
 import { SortingCanvas } from "@/components/sorting/SortingCanvas";
 import { useSortingJobs, useBulkReview, useCancelJobs, useSendJob } from "@/hooks/useSortingJobs";
 import { useDeleteActivities } from "@/hooks/useActivities";
-import type { SortingJob } from "@/hooks/useSortingJobs";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import {
@@ -17,7 +16,7 @@ import {
 const log = createLogger("Sorting");
 
 export default function Sorting() {
-  const { data: jobs = [], isLoading } = useSortingJobs();
+  const { data: jobs = [], _isLoading } = useSortingJobs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);

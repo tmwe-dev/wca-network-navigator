@@ -351,7 +351,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const { data, error } = await query;
     if (error) return { error: error.message };
     const partnerIds = [...new Set((data || []).filter((c: Record<string, unknown>) => c.matched_partner_id).map((c: Record<string, unknown>) => c.matched_partner_id))];
-    let partnerNames: Record<string, string> = {};
+    const partnerNames: Record<string, string> = {};
     if (partnerIds.length > 0) {
       const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
       for (const p of (partners || []) as Array<{ id: string; company_name: string }>) partnerNames[p.id] = p.company_name;

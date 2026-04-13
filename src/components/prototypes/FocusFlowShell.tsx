@@ -1,9 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import { Search, Sparkles, Settings, Menu, Radar, Network, Users, CalendarCheck, X, ArrowLeft } from "lucide-react";
+import { Search, Sparkles, Settings, Radar, Network, Users, CalendarCheck, X, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";
@@ -64,7 +63,7 @@ export function FocusFlowShell() {
   const { contacts: cockpitRaw = [] } = useCockpitContacts();
   const { data: partnerContacts = [] } = usePartnerContacts();
   const { data: activities = [] } = useAllActivities();
-  const { data: prospectStats } = useProspectStats();
+  const { data: _prospectStats } = useProspectStats();
 
   const cockpitContacts: UnifiedContact[] = useMemo(() =>
     cockpitRaw.map(c => ({

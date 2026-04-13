@@ -4,14 +4,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  ClipboardList, Sparkles, Briefcase, Send, StickyNote,
-  X, Loader2, Square, Save, AlertCircle, Inbox,
-} from "lucide-react";
+import { ClipboardList, Sparkles, Briefcase, Send, StickyNote, X, Loader2, Square, Save, Inbox } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
 import { createInteraction } from "@/data/interactions";
 

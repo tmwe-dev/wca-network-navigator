@@ -3,10 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Plus, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { useAgentTasks, type AgentTask } from "@/hooks/useAgentTasks";
+import { useAgentTasks } from "@/hooks/useAgentTasks";
 import type { Agent } from "@/hooks/useAgents";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   pending: <Clock className="w-3.5 h-3.5 text-muted-foreground" />,

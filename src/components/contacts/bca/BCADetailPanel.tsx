@@ -3,10 +3,7 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building2, Mail, Phone, MessageCircle, Send, Handshake,
-  Globe, Loader2, Search, ArrowRight, Briefcase, CheckCircle2,
-} from "lucide-react";
+import { Building2, Mail, Phone, MessageCircle, Send, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCAOcrConfidence } from "./BCAOcrConfidence";
 import { BCACreateContact } from "./BCACreateContact";
@@ -77,12 +74,12 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
 }
 
 /* ═══ Detail Side Panel ═══ */
-export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
+export function BusinessCardDetailPanel({ card, _onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
   const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = card.mobile || card.phone;
 
-  const handleCockpit = useCallback(async () => {
+  const _handleCockpit = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;

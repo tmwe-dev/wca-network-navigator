@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug, Search } from "lucide-react";
+import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ type Phase = "idle" | "searching" | "results" | "scraping" | "done";
 
 export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filters }: Props) {
   const th = t(isDark);
-  const { isAvailable, scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
+  const { isAvailable, _scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
 
   const [phase, setPhase] = useState<Phase>("idle");

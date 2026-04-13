@@ -1,8 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  Target, Handshake, RefreshCw, Search, Briefcase, Globe, FileText,
-  Pencil, Check, Plus,
-} from "lucide-react";
+import { Target, Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Pencil, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -1,10 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Search, ArrowUpDown, Shield, Database, Layers, Users, Sparkles, Wifi,
-  Plane, Globe, Check,
-} from "lucide-react";
+import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";

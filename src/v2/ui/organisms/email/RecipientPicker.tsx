@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, X, Plus } from "lucide-react";
 import type { EmailRecipient } from "@/v2/hooks/useEmailComposerV2";
-import { cn } from "@/lib/utils";
 
 interface RecipientPickerProps {
   readonly recipients: readonly EmailRecipient[];

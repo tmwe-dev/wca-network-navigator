@@ -7,7 +7,7 @@ import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import { EMAIL_VARIABLES } from "@/v2/hooks/useEmailComposerV2";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Variable, Paperclip, Eye } from "lucide-react";
+import { Variable, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 
 interface EmailEditorPanelProps {

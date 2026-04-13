@@ -1,10 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import {
-  Linkedin, Search, Loader2, StopCircle, CheckCircle2, XCircle,
-  Building2, Image, Brain, Mail,
-} from "lucide-react";
+import { Linkedin, Search, Loader2, StopCircle, CheckCircle2, XCircle, Image } from "lucide-react";
 import type { SourceFilter } from "./EnrichmentFilters";
 
 interface BatchProgress {

@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import {
-  Mail, Phone, MessageCircle, Users, Search, Megaphone, StickyNote,
-  Bot, Linkedin, ChevronDown, ChevronUp, Filter as FilterIcon,
-} from "lucide-react";
+import { Mail, Phone, MessageCircle, Users, Search, Megaphone, StickyNote, Bot, Linkedin, Filter as FilterIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import type { ContactInteraction } from "@/hooks/useContacts";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   email_sent: { icon: Mail, color: "text-blue-400", label: "Email inviata" },

@@ -86,7 +86,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
       try {
         const partner = await getPartnerWebsite(ids[i]);
         if (partner?.website) {
-          let enrichBody: Record<string, any> = { partnerId: partner.id };
+          const enrichBody: Record<string, any> = { partnerId: partner.id };
 
           // Try client-side scraping via FireScrape for better quality
           if (fsAvailable) {

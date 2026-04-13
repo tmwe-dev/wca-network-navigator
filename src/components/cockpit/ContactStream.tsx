@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
-import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2, Plane } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2, Linkedin, Loader2, Plane } from "lucide-react";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
@@ -53,7 +53,7 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
+  viewMode, searchQuery, _onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,

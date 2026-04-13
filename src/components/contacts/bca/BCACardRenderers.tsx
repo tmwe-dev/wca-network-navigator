@@ -1,10 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import {
-  Mail, Phone, User, MapPin, Handshake, FileText,
-  Building2, Rows3,
-} from "lucide-react";
+import { Mail, Phone, User, MapPin, Handshake, FileText, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -12,7 +9,7 @@ import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { BCAQuickActions, STATUS_COLORS, STATUS_LABELS, getCardOriginClasses, getCardCountryCode, countryFlag, getWcaYear } from "./bcaUtils";
 
 /* ═══ Compact List Row ═══ */
-export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
+export function CompactRow({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
@@ -49,7 +46,7 @@ export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleL
 }
 
 /* ═══ Card Grid Item ═══ */
-export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
+export function CardGridItem({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
@@ -92,7 +89,7 @@ export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogl
 }
 
 /* ═══ Expanded Card ═══ */
-export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo }: {
+export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;

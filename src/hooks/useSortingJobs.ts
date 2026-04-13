@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 const log = createLogger("useSortingJobs");
 
 type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
-type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
+type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
 
 export interface SortingJob {
   id: string;

@@ -8,7 +8,6 @@ import { ContactRecordAgent } from "./ContactRecordAgent";
 import { ContactEnrichmentCard } from "@/components/contacts/ContactEnrichmentCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, forwardRef, type ReactNode } from "react";

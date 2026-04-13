@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -17,7 +17,7 @@ vi.mock("@/data/aiConversations", () => ({
 
 import { useAIConversation } from "../useAIConversation";
 import { supabase } from "@/integrations/supabase/client";
-import { findConversations, createConversation } from "@/data/aiConversations";
+import { findConversations } from "@/data/aiConversations";
 
 const mockUser = { id: "user-1" };
 

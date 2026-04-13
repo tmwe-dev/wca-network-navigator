@@ -3,7 +3,6 @@ import { useOperationsCenter, type AgentTaskLive, type EmailQueueItem, type Acti
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Activity, Bot, Mail, Download, Clock, CheckCircle2,
   AlertTriangle, Loader2, Pause, Send, Eye, Calendar

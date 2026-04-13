@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Mail, MessageCircle, Linkedin, Phone, StickyNote } from "lucide-react";
 import { useReminders } from "@/hooks/useReminders";

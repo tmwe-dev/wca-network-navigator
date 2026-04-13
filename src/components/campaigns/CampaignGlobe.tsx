@@ -61,7 +61,7 @@ function Earth({
         currentRotation.current.y = resetStartRotationRef.current.y + (targetRotation.current.y - resetStartRotationRef.current.y) * eased + delta * 0.08 * eased;
         
         // Smooth zoom out
-        const currentZ = camera.position.z;
+        const _currentZ = camera.position.z;
         const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
         camera.position.z = targetZ;
         
@@ -179,7 +179,7 @@ function GlobeScene({
   countryPartners,
   userInteracting,
   isResetting,
-  onStartReset
+  _onStartReset
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;

@@ -45,8 +45,8 @@ export function getModel(quality: Quality): string {
 
 export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt: string; userPrompt: string } {
   const {
-    channel: ch, quality, contact_name, contact_email, company_name, country_code,
-    language, goal, base_proposal, oracle_tone, email_type_id, email_type_prompt, email_type_structure,
+    channel: ch, _quality, contact_name, contact_email, company_name, country_code,
+    language, goal, base_proposal, _oracle_tone, email_type_id, email_type_prompt, email_type_structure,
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
   } = ctx;

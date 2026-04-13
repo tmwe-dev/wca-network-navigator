@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
@@ -60,7 +60,7 @@ export function useOperationsCenter() {
 
       // Get agent names
       const agentIds = [...new Set((data || []).map((t: any) => t.agent_id))];
-      let agentMap: Record<string, { name: string; emoji: string }> = {};
+      const agentMap: Record<string, { name: string; emoji: string }> = {};
       if (agentIds.length > 0) {
         const { data: agents } = await supabase
           .from("agents")

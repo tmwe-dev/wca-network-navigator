@@ -3,16 +3,13 @@
  * Drag-and-drop updates lead_status in the database.
  */
 import * as React from "react";
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  UserPlus, Send, Clock, Handshake, Star, Snowflake,
-  ArrowRight, AlertTriangle, GripVertical,
-} from "lucide-react";
+import { UserPlus, Send, Clock, Handshake, Star, Snowflake, ArrowRight, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 

@@ -3,7 +3,7 @@
  * Runs hourly, checks trigger conditions, and creates/executes pending actions.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
+import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
@@ -90,7 +90,7 @@ async function processAction(
 ) {
   // Extract target email from metadata
   const meta = action.metadata as Record<string, unknown> | null;
-  let targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
+  const targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
   const partnerId: string | null = (meta?.partner_id as string) || null;
 
   // Load conversation context

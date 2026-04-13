@@ -8,7 +8,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Building2, Send, Mail, Check, ChevronsUpDown, Briefcase, CreditCard } from "lucide-react";
+import { RefreshCw, Building2, Send, Check, ChevronsUpDown, Briefcase, CreditCard } from "lucide-react";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";

@@ -27,7 +27,7 @@ const INITIAL: BackfillProgress = {
 };
 
 // Ultra-conservative: 1 thread, long delays
-const MAX_THREADS_PER_SESSION = 1;
+const _MAX_THREADS_PER_SESSION = 1;
 const DELAY_BETWEEN_ACTIONS_MS = 18_000; // 18s between actions (6x WA's ~3s)
 
 function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
@@ -45,7 +45,7 @@ function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
   const abortRef = useRef(false);
-  const { isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
+  const { _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
 
   const startBackfill = useCallback(async () => {
     if (progress.status === "running") return;

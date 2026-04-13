@@ -11,7 +11,6 @@ import { createLogger } from "@/lib/log";
 import type { ImportLog, ImportedContact } from "./useImportLogQueries";
 import { insertPartnerContact } from "@/data/partnerRelations";
 import { insertActivity } from "@/data/activities";
-import { createPartner } from "@/data/partners";
 import { updateImportLog } from "@/data/importLogs";
 
 const log = createLogger("useImportLogActions");

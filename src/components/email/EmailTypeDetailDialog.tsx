@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Copy, Save } from "lucide-react";
+import { Copy, Save } from "lucide-react";
 import type { EmailType } from "@/data/defaultEmailTypes";
 
 interface Props {

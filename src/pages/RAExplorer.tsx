@@ -1,12 +1,8 @@
 import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import {
-  Search, MapPin, Building2, Users, TrendingUp, Mail, Phone,
-  Briefcase, ChevronDown, ChevronRight, ExternalLink, Loader2,
-} from "lucide-react";
+import { Search, MapPin, Building2, Briefcase, ChevronDown, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRAProspects, useRAProspectContacts } from "@/hooks/useRAProspects";
@@ -22,7 +18,7 @@ function formatCurrency(n: number | null) {
 
 export default function RAExplorer() {
   const navigate = useAppNavigate();
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [_selectedSection, _setSelectedSection] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [selectedAtecoCodes, setSelectedAtecoCodes] = useState<string[]>([]);
   const [selectedProspect, setSelectedProspect] = useState<RAProspect | null>(null);

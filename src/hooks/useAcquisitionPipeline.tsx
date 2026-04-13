@@ -13,7 +13,7 @@ import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useScrapingSettings, getPatternPause } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
-import { useAcquisitionPipelineState, EMPTY_STATS } from "./useAcquisitionPipelineState";
+import { useAcquisitionPipelineState } from "./useAcquisitionPipelineState";
 import { useAcquisitionPipelineActions } from "./useAcquisitionPipelineActions";
 import { updateDownloadJob } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
@@ -56,7 +56,7 @@ export function useAcquisitionPipeline() {
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0): Promise<LiveStats> => {
     let localStats = { ...state.liveStats };
     let consecutiveEmpty = 0;
-    const AUTO_EXCLUDE_THRESHOLD = scrapingSettings.excludeThreshold;
+    const _AUTO_EXCLUDE_THRESHOLD = scrapingSettings.excludeThreshold;
 
     const keepAliveInterval = setInterval(async () => {
       try { await updateDownloadJob(jobId, {}); } catch { /* non-blocking */ }
@@ -194,7 +194,7 @@ export function useAcquisitionPipeline() {
       }
 
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
-      if (!hasAnyContact) consecutiveEmpty++; else consecutiveEmpty = 0;
+      if (!hasAnyContact) _consecutiveEmpty++; else consecutiveEmpty = 0;
 
       // Enrich + Deep Search
       const parallelTasks: Promise<void>[] = [];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Phone, MapPin, CheckCircle2, FileText, Calendar, Save, User, Users, Paperclip } from "lucide-react";
+import { Mail, Phone, MapPin, CheckCircle2, FileText, Calendar, Save, User, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";

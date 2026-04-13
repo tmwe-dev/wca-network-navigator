@@ -4,7 +4,6 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { aiChat } from "../_shared/aiGateway.ts";
-import { isLikelyPersonName } from "../_shared/textUtils.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
 
@@ -87,7 +86,7 @@ export async function loadEntityFromActivity(
   let partner: PartnerData | null = activity.partners;
   let contact: ContactData | null = activity.selected_contact;
   let contactEmail: string | null = null;
-  let sourceType = activity.source_type || "partner";
+  const sourceType = activity.source_type || "partner";
 
   if (sourceType === "contact" && activity.source_id) {
     const { data: ic } = await supabase
