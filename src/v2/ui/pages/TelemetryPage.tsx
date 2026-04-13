@@ -1,13 +1,23 @@
 /**
- * TelemetryPage V2 — Thin wrapper mounting V1 Telemetry
- * Telemetry metriche e log
+ * TelemetryPage V2 — Admin-only page for telemetry metrics and logs.
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";
+import { useRequireRole } from "@/v2/hooks/useRequireRole";
 
 const V1Component = lazy(() => import("@/pages/Telemetry"));
 
 export function TelemetryPage(): React.ReactElement {
+  const isAdmin = useRequireRole({ role: "admin" });
+
+  if (!isAdmin) {
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        Accesso riservato agli amministratori.
+      </div>
+    );
+  }
+
   return (
     <Suspense
       fallback={

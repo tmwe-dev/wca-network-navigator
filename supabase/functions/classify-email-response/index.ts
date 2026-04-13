@@ -4,6 +4,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,24 @@ serve(async (req) => {
   const headers = { ...dynCors, "Content-Type": "application/json" };
 
   try {
+    // 0. Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers });
+    }
+    const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "AUTH_INVALID" }), { status: 401, headers });
+    }
+
+    // Rate limiting
+    const rl = checkRateLimit(`classify:${claimsData.claims.sub}`, { maxTokens: 60, refillRate: 1 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
     // 1. Validate input
     const body = await req.json();
     const input = validateRequest(body);

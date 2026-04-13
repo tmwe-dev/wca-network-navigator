@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight, supabase } from "./shared.ts";
 import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -37,6 +38,10 @@ serve(async (req) => {
       }
       userId = user.id;
     }
+
+    // Rate limiting
+    const rl = checkRateLimit(`agent-execute:${userId}`, { maxTokens: 15, refillRate: 0.25 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const body = await req.json();
     const { agent_id, task_id, chat_messages } = body;

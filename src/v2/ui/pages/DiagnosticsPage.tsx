@@ -1,13 +1,23 @@
 /**
- * DiagnosticsPage V2 — Thin wrapper mounting V1 Diagnostics
- * Diagnostics test connessioni
+ * DiagnosticsPage V2 — Admin-only page for diagnostics and connection tests.
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";
+import { useRequireRole } from "@/v2/hooks/useRequireRole";
 
 const V1Component = lazy(() => import("@/pages/Diagnostics"));
 
 export function DiagnosticsPage(): React.ReactElement {
+  const isAdmin = useRequireRole({ role: "admin" });
+
+  if (!isAdmin) {
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        Accesso riservato agli amministratori.
+      </div>
+    );
+  }
+
   return (
     <Suspense
       fallback={
