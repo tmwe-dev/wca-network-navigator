@@ -246,7 +246,7 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
         )}
         <div className="flex items-center gap-2 max-w-2xl mx-auto">
           <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf" className="hidden" onChange={handleFileSelect} />
-          <Button size="icon" variant="ghost" onClick={() = aria-label="Azione"> fileInputRef.current?.click()} disabled={isUploading} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Allega file">
+          <Button size="icon" variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Allega file">
             <Paperclip className="w-4 h-4" />
           </Button>
           <Input

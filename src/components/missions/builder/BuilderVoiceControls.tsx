@@ -31,7 +31,7 @@ export function BuilderVoiceControls({
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(chatInput); } }}
           placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Descrivi la tua missione..."}
           className="min-h-[40px] max-h-[80px] resize-none text-sm" rows={1} />
-        <Button size="icon" onClick={() = aria-label="Invia"> onSend(chatInput)} disabled={isChatLoading || !chatInput.trim()} className="flex-shrink-0" aria-label="Invia">
+        <Button size="icon" onClick={() => onSend(chatInput)} disabled={isChatLoading || !chatInput.trim()} className="flex-shrink-0" aria-label="Invia">
           <Send className="w-4 h-4" />
         </Button>
       </div>

@@ -227,7 +227,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
                 ? "text-primary hover:bg-primary/15"
                 : "text-muted-foreground"
             )}
-            onClick={() = aria-label="Azione"> send()}
+            onClick={() => send()}
             disabled={loading || !input.trim()}
             aria-label="Invia"
           >

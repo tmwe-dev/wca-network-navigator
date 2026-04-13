@@ -92,7 +92,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                 {partner.company_name}
               </Link>
               {partner.company_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">{partner.company_alias}</span>}
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() = aria-label="Preferito"> onToggleFavorite(partner.id, !partner.is_favorite)}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => onToggleFavorite(partner.id, !partner.is_favorite)}>
                 {partner.is_favorite ? (
                   <Star className="w-3.5 h-3.5 fill-primary text-primary" />
                 ) : (

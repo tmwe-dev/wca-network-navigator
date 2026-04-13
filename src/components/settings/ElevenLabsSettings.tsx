@@ -265,7 +265,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
                 size="icon"
                 className="shrink-0 h-10 w-10"
                 disabled={!selectedVoiceId}
-                onClick={() = aria-label="Azione"> selectedVoiceId && playPreview(selectedVoiceId)}
+                onClick={() => selectedVoiceId && playPreview(selectedVoiceId)}
               >
                 {playingId === selectedVoiceId ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>

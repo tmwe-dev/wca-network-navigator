@@ -67,7 +67,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
               placeholder="Titolo documento"
               className="text-sm"
             />
-            <Button size="icon" variant="ghost" onClick={() = aria-label="Elimina"> removeEntry(i)} aria-label="Elimina">
+            <Button size="icon" variant="ghost" onClick={() => removeEntry(i)} aria-label="Elimina">
               <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
           </div>

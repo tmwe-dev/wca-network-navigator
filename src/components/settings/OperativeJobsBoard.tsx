@@ -187,24 +187,24 @@ export default function OperativeJobsBoard() {
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
                   {job.status === "running" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Pausa" onClick={() = aria-label="Pausa"> updateStatus.mutate({ id: job.id, status: "paused" })}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Pausa" onClick={() => updateStatus.mutate({ id: job.id, status: "paused" })}>
                       <Pause className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {job.status === "paused" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Riprendi" onClick={() = aria-label="Esegui"> updateStatus.mutate({ id: job.id, status: "running" })}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Riprendi" onClick={() => updateStatus.mutate({ id: job.id, status: "running" })}>
                       <Play className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {job.status !== "completed" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Completa" onClick={() = aria-label="Azione"> updateStatus.mutate({ id: job.id, status: "completed" })}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Completa" onClick={() => updateStatus.mutate({ id: job.id, status: "completed" })}>
                       <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Rigenera prompt" onClick={() = aria-label="Aggiorna"> generatePrompt.mutate(job)} disabled={generatePrompt.isPending}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Rigenera prompt" onClick={() => generatePrompt.mutate(job)} disabled={generatePrompt.isPending}>
                     {generatePrompt.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() = aria-label="Elimina"> deleteJob.mutate(job.id)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() => deleteJob.mutate(job.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>

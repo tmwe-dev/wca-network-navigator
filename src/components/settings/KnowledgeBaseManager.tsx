@@ -188,10 +188,10 @@ export function KnowledgeBaseManager() {
                         {entry.tags.slice(0, 3).map(t => (
                           <Badge key={t} variant="secondary" className="text-[9px] px-1">{t}</Badge>
                         ))}
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() = aria-label="Modifica"> setEditEntry({ ...entry })}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditEntry({ ...entry })}>
                           <Pencil className="w-3 h-3" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() = aria-label="Elimina"> remove.mutate(entry.id)}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove.mutate(entry.id)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>

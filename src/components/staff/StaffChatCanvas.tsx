@@ -175,7 +175,7 @@ export function StaffChatCanvas({ agent }: Props) {
           <Button
             size="icon"
             variant="outline"
-            onClick={() = aria-label="Azione"> fileInputRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
             className="rounded-xl shrink-0"
             title="Allega file"
           >
