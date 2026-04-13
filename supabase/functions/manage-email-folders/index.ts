@@ -94,7 +94,7 @@ serve(async (req) => {
     const loginResp = await sendCommand(`LOGIN "${IMAP_USER}" "${IMAP_PASSWORD}"`);
     if (!loginResp.includes("OK")) {
       conn.close();
-      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     let result: any = {};
@@ -200,12 +200,12 @@ serve(async (req) => {
     await sendCommand("LOGOUT");
     conn.close();
 
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(result), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("manage-email-folders error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
