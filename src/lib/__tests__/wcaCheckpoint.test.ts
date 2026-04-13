@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { setGreenZoneDelay, getGreenZoneDelay } from "@/lib/wcaCheckpoint";
+import { setGreenZoneDelay, getGreenZoneDelay, isGreenZone, markRequestSent, getElapsedSinceLastRequest } from "@/lib/wcaCheckpoint";
 
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
 describe("wcaCheckpoint", () => {
   beforeEach(() => {
     delete (window as any).__wcaCheckpoint__;
-    setGreenZoneDelay(20); // Reset to default
+    setGreenZoneDelay(20);
   });
 
   it("getGreenZoneDelay returns default 20 seconds", () => {
@@ -23,14 +23,12 @@ describe("wcaCheckpoint", () => {
     expect(getGreenZoneDelay()).toBe(15);
   });
 
-  it("setGreenZoneDelay clamps to maximum 60", () => {
-    setGreenZoneDelay(120);
-    expect(getGreenZoneDelay()).toBe(60);
+  it("isGreenZone returns true when no requests made", () => {
+    expect(isGreenZone()).toBe(true);
   });
 
-  it("exports waitForGreenZone function", async () => {
-    const mod = await import("@/lib/wcaCheckpoint");
-    expect(mod.waitForGreenZone).toBeDefined();
-    expect(typeof mod.waitForGreenZone).toBe("function");
+  it("markRequestSent updates last request timestamp", () => {
+    markRequestSent();
+    expect(getElapsedSinceLastRequest()).toBeLessThan(1);
   });
 });

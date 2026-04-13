@@ -1,39 +1,31 @@
 import { describe, it, expect } from "vitest";
-import type { GoogleSearchResultLike, LinkedInProfileCandidate } from "@/lib/linkedinSearch";
+import { getEmailDomain, isLinkedInProfileUrl, normalizeLinkedInProfileUrl, cleanGoogleLinkedInTitle } from "@/lib/linkedinSearch";
 
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
 describe("linkedinSearch", () => {
-  it("GoogleSearchResultLike has url, title, description fields", () => {
-    const result: GoogleSearchResultLike = {
-      url: "https://linkedin.com/in/john",
-      title: "John Doe",
-      description: "CEO at Acme",
-    };
-    expect(result.url).toContain("linkedin.com");
-    expect(result.title).toBe("John Doe");
+  it("getEmailDomain extracts domain from email", () => {
+    expect(getEmailDomain("john@acme.com")).toBe("acme.com");
   });
 
-  it("LinkedInProfileCandidate requires profileUrl", () => {
-    const candidate: LinkedInProfileCandidate = {
-      name: "Jane",
-      headline: "CTO",
-      profileUrl: "https://linkedin.com/in/jane",
-    };
-    expect(candidate.profileUrl).toContain("/in/");
+  it("getEmailDomain returns null for invalid email", () => {
+    expect(getEmailDomain(null)).toBeNull();
+    expect(getEmailDomain("")).toBeNull();
   });
 
-  it("exports buildLinkedInSearchQuery function", async () => {
-    const mod = await import("@/lib/linkedinSearch");
-    expect(mod.buildLinkedInSearchQuery).toBeDefined();
-    expect(typeof mod.buildLinkedInSearchQuery).toBe("function");
+  it("isLinkedInProfileUrl detects /in/ paths", () => {
+    expect(isLinkedInProfileUrl("https://www.linkedin.com/in/john-doe")).toBe(true);
+    expect(isLinkedInProfileUrl("https://google.com")).toBe(false);
   });
 
-  it("buildLinkedInSearchQuery includes company name in query", async () => {
-    const { buildLinkedInSearchQuery } = await import("@/lib/linkedinSearch");
-    const query = buildLinkedInSearchQuery("Acme Corp", "Italy");
-    expect(query).toContain("Acme");
-    expect(typeof query).toBe("string");
-    expect(query.length).toBeGreaterThan(5);
+  it("normalizeLinkedInProfileUrl cleans URL", () => {
+    const result = normalizeLinkedInProfileUrl("https://www.linkedin.com/in/john-doe?trk=abc");
+    expect(result).toContain("/in/john-doe");
+  });
+
+  it("cleanGoogleLinkedInTitle strips LinkedIn prefix", () => {
+    const result = cleanGoogleLinkedInTitle("John Doe - CEO - LinkedIn");
+    expect(result).not.toContain("LinkedIn");
+    expect(result).toContain("John");
   });
 });

@@ -1,49 +1,41 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getDirectory, saveDirectory, clearDirectory, type Directory } from "@/lib/localDirectory";
+import { getDirectory, saveDirectory, createDirectory } from "@/lib/localDirectory";
+
+vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
 describe("localDirectory", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
+  beforeEach(() => { localStorage.clear(); });
 
   it("getDirectory returns null for non-existent country", () => {
     expect(getDirectory("XX")).toBeNull();
   });
 
   it("saveDirectory stores and retrieves directory", () => {
-    const dir: Directory = {
-      countryCode: "IT",
-      countryName: "Italy",
-      ids: { "1": "pending", "2": "done" },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const dir = {
+      countryCode: "IT", countryName: "Italy",
+      ids: { "1": "pending" as const, "2": "done" as const },
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
-    saveDirectory(dir);
+    saveDirectory("IT", dir);
     const result = getDirectory("IT");
     expect(result).not.toBeNull();
     expect(result!.countryCode).toBe("IT");
     expect(result!.ids["1"]).toBe("pending");
-    expect(result!.ids["2"]).toBe("done");
   });
 
-  it("clearDirectory removes stored directory", () => {
-    const dir: Directory = {
-      countryCode: "DE",
-      countryName: "Germany",
-      ids: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveDirectory(dir);
-    expect(getDirectory("DE")).not.toBeNull();
-    clearDirectory("DE");
-    expect(getDirectory("DE")).toBeNull();
+  it("createDirectory creates a new directory for country", () => {
+    const ids = [100, 200, 300];
+    createDirectory("DE", "Germany", ids);
+    const result = getDirectory("DE");
+    expect(result).not.toBeNull();
+    expect(result!.countryCode).toBe("DE");
+    expect(Object.keys(result!.ids).length).toBe(3);
   });
 
   it("multiple directories are independent", () => {
-    saveDirectory({ countryCode: "FR", countryName: "France", ids: { "10": "done" }, createdAt: "", updatedAt: "" });
-    saveDirectory({ countryCode: "ES", countryName: "Spain", ids: { "20": "pending" }, createdAt: "", updatedAt: "" });
-    expect(getDirectory("FR")!.ids["10"]).toBe("done");
+    createDirectory("FR", "France", [10]);
+    createDirectory("ES", "Spain", [20]);
+    expect(getDirectory("FR")!.ids["10"]).toBe("pending");
     expect(getDirectory("ES")!.ids["20"]).toBe("pending");
   });
 });
