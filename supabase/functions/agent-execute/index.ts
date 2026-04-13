@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, supabase } from "./shared.ts";
+import { getCorsHeaders, corsPreflight, supabase } from "./shared.ts";
 import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization") || "";
@@ -23,7 +24,7 @@ serve(async (req) => {
       const { data: { user: tokenUser }, error: tokenError } = await authClient.auth.getUser(token);
       if (tokenError || !tokenUser) {
         return new Response(JSON.stringify({ error: "Non autenticato" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       userId = tokenUser.id;
@@ -31,7 +32,7 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await authClient.auth.getUser();
       if (authError || !user) {
         return new Response(JSON.stringify({ error: "Non autenticato" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       userId = user.id;
@@ -42,7 +43,7 @@ serve(async (req) => {
 
     if (!agent_id) {
       return new Response(JSON.stringify({ error: "agent_id richiesto" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -52,7 +53,7 @@ serve(async (req) => {
 
     if (agentErr || !agent) {
       return new Response(JSON.stringify({ error: "Agente non trovato" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -244,7 +245,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
 
       if (!response || !response.ok) {
         return new Response(JSON.stringify({ error: "Errore AI", response: "Mi dispiace, tutti i modelli sono temporaneamente non disponibili." }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
 
@@ -277,7 +278,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
       }
 
       return new Response(JSON.stringify({ response: msg?.content || "Nessuna risposta." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -285,7 +286,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
     if (task_id) {
       const { data: task, error: taskErr } = await supabase.from("agent_tasks").select("*").eq("id", task_id).eq("user_id", userId).single();
       if (taskErr || !task) {
-        return new Response(JSON.stringify({ error: "Task non trovato" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Task non trovato" }), { status: 404, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
 
       await supabase.from("agent_tasks").update({ status: "running", started_at: new Date().toISOString() }).eq("id", task_id);
@@ -348,18 +349,18 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
       });
 
       return new Response(JSON.stringify({ success: taskStatus === "completed", result: resultSummary }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     return new Response(JSON.stringify({ error: "Specificare chat_messages o task_id" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
     });
 
   } catch (err) {
     console.error("agent-execute error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore interno" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });
