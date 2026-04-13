@@ -3260,6 +3260,57 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_timing_templates: {
+        Row: {
+          auto_translate: boolean | null
+          created_at: string | null
+          description: string | null
+          goal: string
+          id: string
+          is_system: boolean | null
+          max_attempts: number | null
+          preferred_language: string | null
+          sequence: Json
+          source_type: string
+          template_name: string
+          total_duration_days: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auto_translate?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          goal: string
+          id?: string
+          is_system?: boolean | null
+          max_attempts?: number | null
+          preferred_language?: string | null
+          sequence?: Json
+          source_type: string
+          template_name: string
+          total_duration_days?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auto_translate?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          goal?: string
+          id?: string
+          is_system?: boolean | null
+          max_attempts?: number | null
+          preferred_language?: string | null
+          sequence?: Json
+          source_type?: string
+          template_name?: string
+          total_duration_days?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       partner_certifications: {
         Row: {
           certification: Database["public"]["Enums"]["certification_type"]
