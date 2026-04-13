@@ -447,7 +447,7 @@ Non eseguire tool di scrittura o modifica`;
 
     let finalContent = assistantMessage?.content || "";
     if (finalContent) {
-      finalContent = appendStructured(finalContent);
+      if (!isConversational) finalContent = appendStructured(finalContent);
       if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
       return new Response(JSON.stringify({ content: finalContent }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
