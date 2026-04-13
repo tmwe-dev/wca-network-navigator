@@ -6,28 +6,28 @@ describe("heuristicMapper - autoMapColumns", () => {
     const result = autoMapColumns(["Nome", "Email", "Telefono"], []);
     const nameMapping = result.find((m: any) => m.source === "Nome");
     expect(nameMapping).toBeDefined();
-    expect(nameMapping!.target).toBe("name");
+    expect(nameMapping!.targetColumn).toBe("name");
   });
 
   it("maps 'Email' header to email field", () => {
     const result = autoMapColumns(["Email"], []);
     const emailMapping = result.find((m: any) => m.source === "Email");
     expect(emailMapping).toBeDefined();
-    expect(emailMapping!.target).toBe("email");
+    expect(emailMapping!.targetColumn).toBe("email");
   });
 
   it("maps 'Telefono' header to phone field", () => {
     const result = autoMapColumns(["Telefono"], []);
     const phoneMapping = result.find((m: any) => m.source === "Telefono");
     expect(phoneMapping).toBeDefined();
-    expect(phoneMapping!.target).toBe("phone");
+    expect(phoneMapping!.targetColumn).toBe("phone");
   });
 
   it("maps 'Azienda' to company_name", () => {
     const result = autoMapColumns(["Azienda"], []);
     const companyMapping = result.find((m: any) => m.source === "Azienda");
     expect(companyMapping).toBeDefined();
-    expect(companyMapping!.target).toBe("company_name");
+    expect(companyMapping!.targetColumn).toBe("company_name");
   });
 
   it("returns mapping for unknown headers with low confidence", () => {
@@ -35,6 +35,6 @@ describe("heuristicMapper - autoMapColumns", () => {
     expect(result.length).toBe(1);
     // Should be unmapped or have low confidence
     const mapping = result[0] as any;
-    expect(mapping.target === "__unmapped__" || mapping.confidence < 0.5).toBe(true);
+    expect(mapping.targetColumn === "__unmapped__" || mapping.confidence < 0.5).toBe(true);
   });
 });
