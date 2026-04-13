@@ -957,4 +957,69 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  // ━━━ AI Governance Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "review_pending_actions",
+      description: "Mostra le azioni AI in attesa di approvazione. Può filtrare per tipo azione, sorgente, o email.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_type: { type: "string", description: "Filter by action type (send_email, reply, create_task, etc.)" },
+          source: { type: "string", description: "Filter by source (ai_classifier, cadence_engine, workflow_gate, ai_assistant)" },
+          email_address: { type: "string", description: "Filter by target email address" },
+          limit: { type: "number", description: "Max results (default 10)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "approve_pending_action",
+      description: "Approva un'azione AI pendente ed eseguila. L'utente può modificare il contenuto prima dell'approvazione.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_id: { type: "string", description: "UUID of the pending action to approve" },
+          modified_content: { type: "string", description: "Optional modified content to use instead of AI-suggested content" },
+        },
+        required: ["action_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reject_pending_action",
+      description: "Rifiuta un'azione AI pendente con motivazione opzionale.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_id: { type: "string", description: "UUID of the pending action to reject" },
+          reason: { type: "string", description: "Optional rejection reason" },
+        },
+        required: ["action_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_ai_performance",
+      description: "Mostra le statistiche di performance dell'AI: accuracy, decisioni auto-eseguite, contatti critici.",
+      parameters: {
+        type: "object",
+        properties: {
+          days: { type: "number", description: "Period in days (default 30)" },
+          email_address: { type: "string", description: "Optional: filter stats for a specific email address" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
