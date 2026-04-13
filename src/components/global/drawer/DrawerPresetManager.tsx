@@ -6,14 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Bookmark, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
-
-interface Preset { id: string; name: string }
+import type { WorkspacePreset } from "@/hooks/useWorkspacePresets";
 
 interface Props {
-  presets: Preset[];
+  presets: WorkspacePreset[];
   activePresetId: string | null;
   quality: EmailQuality;
-  onLoadPreset: (p: Preset) => void;
+  onLoadPreset: (p: WorkspacePreset) => void;
   onSavePreset: (name: string, id?: string) => void;
   onDeletePreset: (id: string) => void;
   onSetQuality: (q: EmailQuality) => void;

@@ -33,9 +33,9 @@ export function RecipientsSection({ search, setSearch }: Props) {
     m.addRecipient({
       partnerId: p.id as string,
       companyName: p.company_name as string,
-      email: p.email as string | undefined,
-      city: p.city as string | undefined,
-      countryName: p.country_name as string | undefined,
+      email: (p.email as string) ?? null,
+      city: (p.city as string) ?? "",
+      countryName: (p.country_name as string) ?? "",
       countryCode: (p.country_code as string) || undefined,
       isEnriched: !!p.enriched_at,
     });
