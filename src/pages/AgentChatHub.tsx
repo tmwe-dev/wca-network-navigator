@@ -93,6 +93,49 @@ export default function AgentChatHub() {
     } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   };
 
+  const handleFeedback = useCallback(async (msgIndex: number, type: "positive" | "negative") => {
+    const key = `${activeId}-${msgIndex}`;
+    if (feedbackGiven.has(key)) return;
+    setFeedbackGiven(prev => new Set(prev).add(key));
+
+    const msgs = activeId ? chatMapRef.current.get(activeId) ?? [] : [];
+    const msg = msgs[msgIndex];
+    const userMsg = msgs[msgIndex - 1];
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (type === "negative") {
+        await invokeEdge("save-correction-memory", {
+          body: {
+            correction_type: "chat_response_negative",
+            original_value: msg?.content?.substring(0, 300) || "",
+            corrected_value: "Risposta non soddisfacente",
+            context: `Risposta AI non soddisfacente. Domanda utente: "${userMsg?.content?.substring(0, 200) || ""}". Migliorare su questo tipo di richiesta.`,
+          },
+          context: "AgentChatHub.feedback",
+        });
+        toast.info("Feedback registrato — l'AI migliorerà");
+      } else {
+        await supabase.from("ai_memory").insert({
+          user_id: user.id,
+          memory_type: "preference",
+          content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
+          tags: ["feedback_positivo", "stile_approvato"],
+          level: 1,
+          importance: 3,
+          confidence: 0.7,
+          decay_rate: 0.01,
+          source: "user_positive_feedback",
+        } as Record<string, unknown>);
+        toast.success("Feedback positivo registrato");
+      }
+    } catch (e) {
+      log.debug("feedback save failed", { error: e instanceof Error ? e.message : String(e) });
+    }
+  }, [activeId, feedbackGiven]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
