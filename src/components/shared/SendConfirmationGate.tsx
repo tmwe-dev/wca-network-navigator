@@ -207,7 +207,7 @@ export function SendConfirmationGate({
           )}
 
           {/* Contact context */}
-          {context && context.interaction_count > 0 && (
+          {context && (context.interaction_count ?? 0) > 0 && (
             <div className="bg-muted/20 rounded-lg p-2.5 space-y-1 text-xs text-muted-foreground">
               {context.last_interaction_at && (
                 <div>Ultimo contatto: {formatDistanceToNow(new Date(context.last_interaction_at), { addSuffix: true, locale: it })} — Follow-up #{followUpNum}</div>
