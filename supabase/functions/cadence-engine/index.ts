@@ -202,7 +202,7 @@ async function processAction(
       partner_id: action.partner_id,
       email_address: targetEmail,
       action_type: mapActionType(action.action_type),
-      action_payload: action.payload || {},
+      action_payload: {},
       reasoning: `Cadence auto-execution: trigger "${trigger}" met`,
       confidence: 0.85,
       source: "cadence_engine",
@@ -219,7 +219,7 @@ async function processAction(
       partner_id: action.partner_id,
       email_address: targetEmail,
       action_type: mapActionType(action.action_type),
-      action_payload: action.payload || {},
+      action_payload: {},
       reasoning: `Cadence trigger "${trigger}" met. Awaiting review.`,
       confidence: 0.85,
       source: "cadence_engine",
@@ -318,7 +318,6 @@ async function scheduleNextStep(
     trigger_condition: "no_response",
     parent_action_id: action.id,
     cadence_rule: { ...rule, current_step: nextStep },
-    payload: action.payload,
   });
 }
 
