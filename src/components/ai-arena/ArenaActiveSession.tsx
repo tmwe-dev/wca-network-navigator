@@ -152,6 +152,7 @@ export function ArenaActiveSession({
 
         {current && (
           <div className="w-full max-w-3xl space-y-4">
+            <React.Suspense fallback={<div className="h-[300px] flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
             <ContactCard3D
               contact={{
                 company_name: current.company_name,
