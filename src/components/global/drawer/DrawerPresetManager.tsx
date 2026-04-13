@@ -5,18 +5,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bookmark, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import QualitySelector from "@/components/workspace/QualitySelector";
+import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
 
 interface Preset { id: string; name: string }
 
 interface Props {
   presets: Preset[];
   activePresetId: string | null;
-  quality: string;
+  quality: EmailQuality;
   onLoadPreset: (p: Preset) => void;
   onSavePreset: (name: string, id?: string) => void;
   onDeletePreset: (id: string) => void;
-  onSetQuality: (q: string) => void;
+  onSetQuality: (q: EmailQuality) => void;
 }
 
 export function DrawerPresetManager({ presets, activePresetId, quality, onLoadPreset, onSavePreset, onDeletePreset, onSetQuality }: Props) {
