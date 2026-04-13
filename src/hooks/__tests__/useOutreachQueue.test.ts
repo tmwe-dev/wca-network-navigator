@@ -35,9 +35,8 @@ describe("useOutreachQueue", () => {
     expect(result.current.paused).toBe(false);
   });
 
-  it("exposes start/stop/pause functions", () => {
+  it("exposes setPaused function", () => {
     const { result } = renderHook(() => useOutreachQueue());
-    expect(typeof result.current.start).toBe("function");
-    expect(typeof result.current.stop).toBe("function");
+    expect(typeof result.current.setPaused).toBe("function");
   });
 });

@@ -32,23 +32,23 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("useContacts", () => {
   it("fetches contacts with default filters", async () => {
-    vi.mocked(findContacts).mockResolvedValue([{ id: "c1", name: "Mario" }] as any);
+    vi.mocked(findContacts).mockResolvedValue({ items: [{ id: "c1" }], totalCount: 1, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.items).toHaveLength(1);
   });
 
   it("passes filters to findContacts", async () => {
-    vi.mocked(findContacts).mockResolvedValue([]);
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     renderHook(() => useContacts({ country: "IT" }), { wrapper });
     await waitFor(() => expect(findContacts).toHaveBeenCalledWith({ country: "IT" }));
   });
 
   it("returns empty array when no contacts match", async () => {
-    vi.mocked(findContacts).mockResolvedValue([]);
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts({ search: "xyz" }), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data).toEqual([]);
+    expect(result.current.data?.items).toEqual([]);
   });
 
   it("handles error from data layer", async () => {
@@ -64,7 +64,7 @@ describe("useContacts", () => {
   });
 
   it("re-fetches when filters change", async () => {
-    vi.mocked(findContacts).mockResolvedValue([]);
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result, rerender } = renderHook(
       ({ f }) => useContacts(f),
       { wrapper, initialProps: { f: {} } }
