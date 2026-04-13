@@ -1,14 +1,15 @@
 /**
- * EmailIntelligencePage V2 — Email Intelligence with 3 tabs
+ * EmailIntelligencePage V2 — Email Intelligence with 4 tabs
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BrainCircuit, Inbox, BookOpen, UserCircle } from "lucide-react";
+import { BrainCircuit, Inbox, BookOpen, UserCircle, Users2 } from "lucide-react";
 
 const SmartInboxView = lazy(() => import("@/components/email-intelligence/SmartInboxView").then(m => ({ default: m.SmartInboxView })));
 const AddressRulesManager = lazy(() => import("@/components/email-intelligence/AddressRulesManager").then(m => ({ default: m.AddressRulesManager })));
 const SenderProfilesView = lazy(() => import("@/components/email-intelligence/SenderProfilesView").then(m => ({ default: m.SenderProfilesView })));
+const SenderManagementTab = lazy(() => import("@/components/email-intelligence/SenderManagementTab").then(m => ({ default: m.SenderManagementTab })));
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -23,7 +24,7 @@ export function EmailIntelligencePage(): React.ReactElement {
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Email Intelligence</h1>
-          <p className="text-xs text-muted-foreground">Classificazione AI, regole per indirizzo e profili sender</p>
+          <p className="text-xs text-muted-foreground">Classificazione AI, regole, profili e gestione sender</p>
         </div>
       </div>
 
@@ -32,6 +33,7 @@ export function EmailIntelligencePage(): React.ReactElement {
           <TabsTrigger value="inbox" className="gap-1.5 text-xs"><Inbox className="h-3.5 w-3.5" />Smart Inbox</TabsTrigger>
           <TabsTrigger value="rules" className="gap-1.5 text-xs"><BookOpen className="h-3.5 w-3.5" />Regole Indirizzi</TabsTrigger>
           <TabsTrigger value="profiles" className="gap-1.5 text-xs"><UserCircle className="h-3.5 w-3.5" />Profili Sender</TabsTrigger>
+          <TabsTrigger value="management" className="gap-1.5 text-xs"><Users2 className="h-3.5 w-3.5" />Gestione Sender</TabsTrigger>
         </TabsList>
         <TabsContent value="inbox" className="flex-1 mt-4">
           <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
@@ -41,6 +43,9 @@ export function EmailIntelligencePage(): React.ReactElement {
         </TabsContent>
         <TabsContent value="profiles" className="flex-1 mt-4">
           <Suspense fallback={<TabFallback />}><SenderProfilesView /></Suspense>
+        </TabsContent>
+        <TabsContent value="management" className="flex-1 mt-4 overflow-hidden">
+          <Suspense fallback={<TabFallback />}><SenderManagementTab /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
