@@ -111,7 +111,7 @@ export function HoldingPatternCommandCenter() {
   }, [selectedMessage, selectedGroup]);
 
   // Use mock data when enabled
-  const displayGroups = mockEnabled ? MOCK_HOLDING_GROUPS as any as HoldingMessageGroup[] : groups;
+  const displayGroups = mockEnabled ? MOCK_HOLDING_GROUPS as unknown as HoldingMessageGroup[] : groups;
 
   const handleSelectMessage = async (msg: ChannelMessage, group: HoldingMessageGroup) => {
     setSelectedGroup(group);
@@ -178,14 +178,14 @@ export function HoldingPatternCommandCenter() {
             />
           ) : (
             <div className="p-2 space-y-2">
-              {displayGroups.map((group: any) => (
+              {displayGroups.map((group: HoldingMessageGroup) => (
                 <div key={group.partnerId} className="rounded-lg border border-border/30 overflow-hidden">
                   {/* Company header card */}
                   <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/20 border-b border-border/20">
                     {/* Logo or initial */}
                     <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
-                      {(group as any).logoUrl ? (
-                        <img src={(group as any).logoUrl} alt="" className="w-6 h-6 object-contain" />
+                    {(group as Record<string, unknown>).logoUrl ? (
+                        <img src={(group as Record<string, unknown>).logoUrl as string} alt="" className="w-6 h-6 object-contain" />
                       ) : (
                         group.companyName?.charAt(0)?.toUpperCase()
                       )}
@@ -195,15 +195,15 @@ export function HoldingPatternCommandCenter() {
                         <span className="text-[11px] font-bold text-foreground truncate uppercase">
                           {group.companyName}
                         </span>
-                        {(group as any).countryCode && (
-                          <span className="text-xs shrink-0">{getCountryFlag((group as any).countryCode)}</span>
+                        {(group as Record<string, unknown>).countryCode && (
+                          <span className="text-xs shrink-0">{getCountryFlag((group as Record<string, unknown>).countryCode as string)}</span>
                         )}
-                        {(group as any).isImportedContact && (
+                        {(group as Record<string, unknown>).isImportedContact && (
                           <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
                         )}
                       </div>
-                      {(group as any).contactName && (
-                        <p className="text-[10px] text-muted-foreground truncate">{(group as any).contactName}</p>
+                      {(group as Record<string, unknown>).contactName && (
+                        <p className="text-[10px] text-muted-foreground truncate">{(group as Record<string, unknown>).contactName as string}</p>
                       )}
                     </div>
                     {group.unreadCount > 0 && (
@@ -212,7 +212,7 @@ export function HoldingPatternCommandCenter() {
                   </div>
                   {/* Messages */}
                   <div className="divide-y divide-border/10">
-                    {group.messages.slice(0, 5).map((msg: any) => {
+                    {group.messages.slice(0, 5).map((msg: ChannelMessage) => {
                       const isInbound = msg.direction === "inbound";
                       const isSelected = selectedMessage?.id === msg.id;
                       const isUnread = !msg.read_at;
