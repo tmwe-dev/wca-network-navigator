@@ -12,6 +12,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "./sqlEscape.ts";
 
+// ── Local interfaces for query row shapes ──
+interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; }
+interface DirectoryCountRow { country_code: string; member_count: number; }
+interface PartnerSummary { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; }
+interface ServiceRow { service_category: string; }
+interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; error_message: string | null; created_at: string; }
+interface EmailQueueRow { id: string; status: string; scheduled_at: string | null; sent_at: string | null; recipient_email: string; subject: string; }
+interface AgentTaskRow { id: string; agent_id: string; description: string; status: string; task_type: string; created_at: string; result_summary: string | null; }
+interface ActivityRow { id: string; title: string; status: string; activity_type: string; scheduled_at: string | null; due_date: string | null; source_meta: Record<string, unknown> | null; partner_id: string | null; priority: string; created_at: string; description: string | null; }
+interface ChannelMessageRow { id: string; channel: string; direction: string; from_address: string | null; to_address: string | null; subject: string | null; body_text: string | null; email_date: string | null; read_at: string | null; partner_id: string | null; category: string | null; created_at: string; thread_id?: string | null; in_reply_to?: string | null; }
+interface AgentRow { id: string; name: string; role: string; is_active: boolean; stats: Record<string, unknown>; avatar_emoji: string; updated_at: string; }
+interface WorkPlanStep { index?: number; title?: string; description?: string; status?: string; }
+interface HoldingItem { id: string; source: string; name: string; country: string; city?: string; email: string | null; status: string; days_waiting: number; interactions?: number; }
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SUPABASE CLIENT (service role — shared across handlers)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -137,8 +151,8 @@ export async function executePlatformTool(
         isCount ? { count: "exact", head: true } : undefined
       );
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
-      if (args.city) query = query.ilike("city", `%${escapeLike(args.city as string)}%`);
-      if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name as string)}%`);
+      if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
+      if (args.search_name) query = query.ilike("company_name", `%${escapeLike(String(args.search_name))}%`);
       if (args.has_email === true) query = query.not("email", "is", null);
       if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
       if (args.has_profile === false) query = query.is("raw_profile_html", null);
@@ -149,29 +163,29 @@ export async function executePlatformTool(
       const { data, error, count } = await query;
       if (error) return { error: error.message };
       if (isCount) return { count };
-      return { count: data?.length, partners: (data || []).map((p: any) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.raw_profile_html, lead_status: p.lead_status })) };
+      return { count: data?.length, partners: (data || []).map((p: { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; rating: number | null; raw_profile_html: string | null; lead_status: string | null }) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.raw_profile_html, lead_status: p.lead_status })) };
     }
 
     case "get_partner_detail": {
-      let partner: any = null;
-      if (args.partner_id) { const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single(); partner = data; }
-      else if (args.company_name) { const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name as string)}%`).limit(1).single(); partner = data; }
+      let partner: PartnerSummary | null = null;
+      if (args.partner_id) { const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single(); partner = data as PartnerSummary | null; }
+      else if (args.company_name) { const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(String(args.company_name))}%`).limit(1).single(); partner = data as PartnerSummary | null; }
       if (!partner) return { error: "Partner non trovato" };
       const [contactsRes, networksRes, servicesRes] = await Promise.all([
         supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", partner.id),
         supabase.from("partner_networks").select("network_name, expires").eq("partner_id", partner.id),
         supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
       ]);
-      return { id: partner.id, company_name: partner.company_name, city: partner.city, country_code: partner.country_code, email: partner.email, phone: partner.phone, website: partner.website, rating: partner.rating, lead_status: partner.lead_status, has_profile: !!partner.raw_profile_html, profile_summary: partner.raw_profile_markdown?.substring(0, 1500) || null, contacts: contactsRes.data || [], networks: networksRes.data || [], services: (servicesRes.data || []).map((s: any) => s.service_category) };
+      return { id: partner.id, company_name: partner.company_name, city: partner.city, country_code: partner.country_code, email: partner.email, phone: partner.phone, website: partner.website, rating: partner.rating, lead_status: partner.lead_status, has_profile: !!partner.raw_profile_html, profile_summary: partner.raw_profile_markdown?.substring(0, 1500) || null, contacts: contactsRes.data || [], networks: networksRes.data || [], services: (servicesRes.data || []).map((s: ServiceRow) => s.service_category) };
     }
 
     case "get_country_overview": {
       const { data, error } = await supabase.rpc("get_country_stats");
       if (error) return { error: error.message };
-      let stats = data || [];
-      if (args.country_code) stats = stats.filter((s: any) => s.country_code === String(args.country_code).toUpperCase());
-      stats.sort((a: any, b: any) => (b.total_partners || 0) - (a.total_partners || 0));
-      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s: any) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
+      let stats = (data || []) as CountryStatRow[];
+      if (args.country_code) stats = stats.filter((s) => s.country_code === String(args.country_code).toUpperCase());
+      stats.sort((a, b) => (b.total_partners || 0) - (a.total_partners || 0));
+      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
     }
 
     case "update_partner": {
@@ -216,10 +230,10 @@ export async function executePlatformTool(
     case "search_contacts": {
       const isCount = !!args.count_only;
       let query = supabase.from("imported_contacts").select(isCount ? "id" : "id, name, company_name, email, phone, country, lead_status, created_at", isCount ? { count: "exact", head: true } : undefined);
-      if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name as string)}%`);
-      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
-      if (args.country) query = query.ilike("country", `%${escapeLike(args.country as string)}%`);
-      if (args.email) query = query.ilike("email", `%${escapeLike(args.email as string)}%`);
+      if (args.search_name) query = query.ilike("name", `%${escapeLike(String(args.search_name))}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(String(args.country))}%`);
+      if (args.email) query = query.ilike("email", `%${escapeLike(String(args.email))}%`);
       if (args.origin) query = query.eq("origin", args.origin);
       if (args.lead_status) query = query.eq("lead_status", args.lead_status);
       if (args.has_email === true) query = query.not("email", "is", null);
@@ -232,9 +246,9 @@ export async function executePlatformTool(
     }
 
     case "get_contact_detail": {
-      let contact: any = null;
-      if (args.contact_id) { const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single(); contact = data; }
-      else if (args.contact_name) { const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single(); contact = data; }
+      let contact: Record<string, unknown> | null = null;
+      if (args.contact_id) { const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single(); contact = data as Record<string, unknown> | null; }
+      else if (args.contact_name) { const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(String(args.contact_name))}%`).limit(1).single(); contact = data as Record<string, unknown> | null; }
       if (!contact) return { error: "Contatto non trovato" };
       return contact;
     }
@@ -252,9 +266,9 @@ export async function executePlatformTool(
     // ── Prospects ──
     case "search_prospects": {
       let query = supabase.from("prospects").select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
-      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
-      if (args.city) query = query.ilike("city", `%${escapeLike(args.city as string)}%`);
-      if (args.province) query = query.ilike("province", `%${escapeLike(args.province as string)}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+      if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
+      if (args.province) query = query.ilike("province", `%${escapeLike(String(args.province))}%`);
       if (args.lead_status) query = query.eq("lead_status", args.lead_status);
       if (args.min_fatturato) query = query.gte("fatturato", Number(args.min_fatturato));
       query = query.limit(Math.min(Number(args.limit) || 20, 50));
@@ -270,7 +284,7 @@ export async function executePlatformTool(
       if (args.activity_type) query = query.eq("activity_type", args.activity_type);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length || 0, activities: (data || []).map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+      return { count: data?.length || 0, activities: (data || []).map((a: { source_meta: Record<string, unknown> | null } & Record<string, unknown>) => ({ ...a, company_name: (a.source_meta as Record<string, unknown> | null)?.company_name || null })) };
     }
 
     case "create_activity": {
@@ -281,7 +295,7 @@ export async function executePlatformTool(
         title: String(args.title), description: args.description ? String(args.description) : null,
         activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
         partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
-        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as any,
+        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
@@ -325,7 +339,7 @@ export async function executePlatformTool(
     case "search_memory": {
       let query = supabase.from("ai_memory").select("content, memory_type, tags, importance, created_at").eq("user_id", userId).order("importance", { ascending: false }).limit(Number(args.limit) || 10);
       if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
-      if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text as string)}%`);
+      if (args.search_text) query = query.ilike("content", `%${escapeLike(String(args.search_text))}%`);
       const { data, error } = await query;
       if (error) return { error: error.message };
       return { count: data?.length || 0, memories: data || [] };
@@ -354,12 +368,13 @@ export async function executePlatformTool(
 
     case "schedule_email": {
       const scheduledAt = String(args.scheduled_at);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic table insert
       const { data, error } = await supabase.from("email_campaign_queue").insert({
         recipient_email: String(args.to_email), recipient_name: args.to_name ? String(args.to_name) : null,
         subject: String(args.subject), html_body: String(args.html_body),
         partner_id: args.partner_id ? String(args.partner_id) : "00000000-0000-0000-0000-000000000000",
         scheduled_at: scheduledAt, status: "pending", user_id: userId,
-      } as any).select("id").single();
+      } as Record<string, unknown>).select("id").single();
       if (error) return { error: error.message };
       return { success: true, queue_id: data.id, scheduled_at: scheduledAt, message: `Email programmata per ${scheduledAt}.` };
     }
@@ -391,51 +406,51 @@ export async function executePlatformTool(
       if (args.to_date) query = query.lte("email_date", args.to_date);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length || 0, messages: (data || []).map((m: any) => ({ id: m.id, channel: m.channel, from: m.from_address, subject: m.subject, preview: m.body_text?.substring(0, 300) || "", date: m.email_date, read: !!m.read_at, partner_id: m.partner_id, category: m.category })) };
+      return { count: data?.length || 0, messages: (data || []).map((m: ChannelMessageRow) => ({ id: m.id, channel: m.channel, from: m.from_address, subject: m.subject, preview: m.body_text?.substring(0, 300) || "", date: m.email_date, read: !!m.read_at, partner_id: m.partner_id, category: m.category })) };
     }
 
     case "get_conversation_history": {
       let pid = args.partner_id as string;
       if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
-      const timeline: any[] = [];
+      const timeline: { type: string; direction?: string; subject?: string; from?: string; date: string; preview?: string; subtype?: string; title?: string; status?: string; notes?: string }[] = [];
       if (pid) {
         const { data: emails } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
           .eq("user_id", userId).or(`partner_id.eq.${pid}`).order("email_date", { ascending: false }).limit(30);
-        (emails || []).forEach((e: any) => timeline.push({ type: "email", direction: e.direction, subject: e.subject, from: e.from_address, date: e.email_date, preview: e.body_text?.substring(0, 200) }));
+        (emails || []).forEach((e: ChannelMessageRow) => timeline.push({ type: "email", direction: e.direction, subject: e.subject ?? undefined, from: e.from_address ?? undefined, date: e.email_date || e.created_at, preview: e.body_text?.substring(0, 200) }));
         const { data: acts } = await supabase.from("activities").select("id, title, activity_type, status, created_at, description")
           .or(`partner_id.eq.${pid},source_id.eq.${pid}`).order("created_at", { ascending: false }).limit(30);
-        (acts || []).forEach((a: any) => timeline.push({ type: "activity", subtype: a.activity_type, title: a.title, status: a.status, date: a.created_at }));
+        (acts || []).forEach((a: { activity_type: string; title: string; status: string; created_at: string }) => timeline.push({ type: "activity", subtype: a.activity_type, title: a.title, status: a.status, date: a.created_at }));
         const { data: ints } = await supabase.from("interactions").select("id, interaction_type, subject, notes, created_at")
           .eq("partner_id", pid).order("created_at", { ascending: false }).limit(30);
-        (ints || []).forEach((i: any) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.subject, date: i.created_at }));
+        (ints || []).forEach((i: { interaction_type: string; subject: string; created_at: string }) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.subject, date: i.created_at }));
       }
       timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       return { count: timeline.length, timeline: timeline.slice(0, Number(args.limit) || 50) };
     }
 
     case "get_email_thread": {
-      let messages: any[] = [];
+      let messages: ChannelMessageRow[] = [];
       if (args.thread_id) {
         const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date")
           .eq("user_id", userId).eq("thread_id", args.thread_id).order("email_date", { ascending: true });
-        messages = data || [];
+        messages = (data || []) as ChannelMessageRow[];
       }
       if (messages.length === 0 && args.partner_id) {
         const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date")
           .eq("user_id", userId).eq("partner_id", args.partner_id).eq("channel", "email").order("email_date", { ascending: true }).limit(Number(args.limit) || 50);
-        messages = data || [];
+        messages = (data || []) as ChannelMessageRow[];
       }
       if (messages.length === 0 && args.email_address) {
         const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date")
           .eq("user_id", userId).eq("channel", "email").or(`from_address.ilike.%${args.email_address}%,to_address.ilike.%${args.email_address}%`)
           .order("email_date", { ascending: true }).limit(Number(args.limit) || 50);
-        messages = data || [];
+        messages = (data || []) as ChannelMessageRow[];
       }
-      return { count: messages.length, thread: messages.map((m: any) => ({ id: m.id, direction: m.direction, from: m.from_address, to: m.to_address, subject: m.subject, preview: m.body_text?.substring(0, 500), date: m.email_date })) };
+      return { count: messages.length, thread: messages.map((m) => ({ id: m.id, direction: m.direction, from: m.from_address, to: m.to_address, subject: m.subject, preview: m.body_text?.substring(0, 500), date: m.email_date })) };
     }
 
     case "get_holding_pattern": {
-      const items: any[] = [];
+      const items: HoldingItem[] = [];
       const activeStatuses = ["contacted", "in_progress"];
       const now = new Date();
       if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
@@ -443,7 +458,7 @@ export async function executePlatformTool(
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
         const { data: partners } = await pq.limit(Number(args.limit) || 50);
-        (partners || []).forEach((p: any) => {
+        (partners || []).forEach((p: { id: string; company_name: string; country_code: string; city: string; email: string | null; lead_status: string; last_interaction_at: string | null; interaction_count: number }) => {
           const days = p.last_interaction_at ? Math.floor((now.getTime() - new Date(p.last_interaction_at).getTime()) / 86400000) : 999;
           if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
           if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
@@ -454,7 +469,7 @@ export async function executePlatformTool(
         const cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         const { data: contacts } = await cq.limit(Number(args.limit) || 50);
-        (contacts || []).forEach((c: any) => {
+        (contacts || []).forEach((c: { id: string; name: string; company_name: string; country: string; city: string; email: string | null; lead_status: string; last_interaction_at: string | null; interaction_count: number }) => {
           const days = c.last_interaction_at ? Math.floor((now.getTime() - new Date(c.last_interaction_at).getTime()) / 86400000) : 999;
           if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
           if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
@@ -470,9 +485,9 @@ export async function executePlatformTool(
       const { data: dirData } = await supabase.rpc("get_directory_counts");
       const { data: statsData } = await supabase.rpc("get_country_stats");
       const dirMap: Record<string, number> = {};
-      for (const r of (dirData || []) as any[]) dirMap[r.country_code] = Number(r.member_count);
-      const statsMap: Record<string, any> = {};
-      for (const r of (statsData || []) as any[]) statsMap[r.country_code] = r;
+      for (const r of (dirData || []) as DirectoryCountRow[]) dirMap[r.country_code] = Number(r.member_count);
+      const statsMap: Record<string, CountryStatRow> = {};
+      for (const r of (statsData || []) as CountryStatRow[]) statsMap[r.country_code] = r;
       if (args.country_code) {
         const code = String(args.country_code).toUpperCase();
         return { country_code: code, directory_members: dirMap[code] || 0, db_partners: statsMap[code]?.total_partners || 0, gap: (dirMap[code] || 0) - (statsMap[code]?.total_partners || 0) };
@@ -496,7 +511,7 @@ export async function executePlatformTool(
 
     case "deep_search_contact": {
       let cid = args.contact_id as string;
-      if (!cid && args.contact_name) { const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single(); if (data) cid = data.id; }
+      if (!cid && args.contact_name) { const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(String(args.contact_name))}%`).limit(1).single(); if (data) cid = data.id; }
       if (!cid) return { error: "Contatto non trovato" };
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
@@ -509,8 +524,8 @@ export async function executePlatformTool(
     // ── Business Cards ──
     case "search_business_cards": {
       let query = supabase.from("business_cards").select("id, company_name, contact_name, email, event_name, match_status, created_at").order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
-      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
-      if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name as string)}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+      if (args.event_name) query = query.ilike("event_name", `%${escapeLike(String(args.event_name))}%`);
       const { data, error } = await query;
       return error ? { error: error.message } : { count: data?.length || 0, cards: data || [] };
     }
@@ -521,16 +536,16 @@ export async function executePlatformTool(
         supabase.rpc("get_country_stats"), supabase.rpc("get_directory_counts"),
         supabase.from("download_jobs").select("id, status").in("status", ["running", "pending"]),
       ]);
-      const rows = statsRes.data || [];
-      const totals = rows.reduce((acc: any, r: any) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
-      const dirTotal = (dirRes.data || []).reduce((s: number, r: any) => s + (Number(r.member_count) || 0), 0);
+      const rows = (statsRes.data || []) as CountryStatRow[];
+      const totals = rows.reduce((acc: { partners: number; with_profile: number; with_email: number }, r: CountryStatRow) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
+      const dirTotal = ((dirRes.data || []) as DirectoryCountRow[]).reduce((s: number, r: DirectoryCountRow) => s + (Number(r.member_count) || 0), 0);
       return { total_countries: rows.length, total_partners: totals.partners, with_profile: totals.with_profile, with_email: totals.with_email, directory_members: dirTotal, active_jobs: jobsRes.data?.length || 0 };
     }
 
     case "check_blacklist": {
       let query = supabase.from("blacklist_entries").select("company_name, country, total_owed_amount, claims, status");
-      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
-      if (args.country) query = query.ilike("country", `%${escapeLike(args.country as string)}%`);
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(String(args.country))}%`);
       const { data, error } = await query.limit(20);
       if (error) return { error: error.message };
       return { count: data?.length || 0, entries: data || [] };
@@ -544,10 +559,10 @@ export async function executePlatformTool(
         supabase.from("activities").select("id, title, status, activity_type, scheduled_at, due_date").neq("status", "cancelled").order("created_at", { ascending: false }).limit(15),
       ]);
       return {
-        downloads: { active: (dlJobs.data || []).filter((j: any) => ["running", "pending"].includes(j.status)).length, jobs: (dlJobs.data || []).map((j: any) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}` })) },
-        emails: { pending: (emailQ.data || []).filter((e: any) => e.status === "pending").length, sent: (emailQ.data || []).filter((e: any) => e.status === "sent").length },
-        agent_tasks: { running: (agTasks.data || []).filter((t: any) => ["pending", "running"].includes(t.status)).length, recent: (agTasks.data || []).slice(0, 8) },
-        activities: { pending: (acts.data || []).filter((a: any) => a.status === "pending").length, recent: (acts.data || []).slice(0, 8) },
+        downloads: { active: (dlJobs.data || []).filter((j: DownloadJobRow) => ["running", "pending"].includes(j.status)).length, jobs: (dlJobs.data || []).map((j: DownloadJobRow) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}` })) },
+        emails: { pending: (emailQ.data || []).filter((e: EmailQueueRow) => e.status === "pending").length, sent: (emailQ.data || []).filter((e: EmailQueueRow) => e.status === "sent").length },
+        agent_tasks: { running: (agTasks.data || []).filter((t: AgentTaskRow) => ["pending", "running"].includes(t.status)).length, recent: (agTasks.data || []).slice(0, 8) },
+        activities: { pending: (acts.data || []).filter((a: ActivityRow) => a.status === "pending").length, recent: (acts.data || []).slice(0, 8) },
       };
     }
 
@@ -588,14 +603,14 @@ export async function executePlatformTool(
     // ── Agent Management ──
     case "create_agent_task": {
       let agentQuery = supabase.from("agents").select("id, name").eq("user_id", userId);
-      if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${escapeLike(args.agent_name as string)}%`);
+      if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${escapeLike(String(args.agent_name))}%`);
       else if (args.agent_role) agentQuery = agentQuery.eq("role", args.agent_role);
       const { data: agents } = await agentQuery.limit(1);
       if (!agents || agents.length === 0) return { error: `Agente non trovato.` };
       const targetAgent = agents[0];
       const { data, error } = await supabase.from("agent_tasks").insert({
         agent_id: targetAgent.id, user_id: userId, task_type: String(args.task_type || "research"),
-        description: String(args.description), target_filters: (args.target_filters || {}) as any,
+        description: String(args.description), target_filters: (args.target_filters || {}) as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, task_id: data.id, agent_name: targetAgent.name, message: `Task creato per ${targetAgent.name}.` };
@@ -606,40 +621,40 @@ export async function executePlatformTool(
       if (args.status) query = query.eq("status", args.status);
       const { data: tasks, error } = await query;
       if (error) return { error: error.message };
-      const agentIds = [...new Set((tasks || []).map((t: any) => t.agent_id))];
+      const agentIds = [...new Set((tasks || []).map((t: AgentTaskRow) => t.agent_id))];
       const { data: agentsData } = await supabase.from("agents").select("id, name").in("id", agentIds);
       const nameMap: Record<string, string> = {};
-      for (const a of (agentsData || []) as any[]) nameMap[a.id] = a.name;
-      let results = (tasks || []).map((t: any) => ({ ...t, agent_name: nameMap[t.agent_id] || "?" }));
-      if (args.agent_name) results = results.filter((t: any) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
+      for (const a of (agentsData || []) as { id: string; name: string }[]) nameMap[a.id] = a.name;
+      let results = (tasks || []).map((t: AgentTaskRow) => ({ ...t, agent_name: nameMap[t.agent_id] || "?" }));
+      if (args.agent_name) results = results.filter((t) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
       return { count: results.length, tasks: results };
     }
 
     case "get_team_status": {
       const { data: agents } = await supabase.from("agents").select("id, name, role, is_active, stats, avatar_emoji, updated_at").eq("user_id", userId).order("name");
       if (!agents) return { error: "Nessun agente trovato" };
-      const agentIds = agents.map((a: any) => a.id);
+      const agentIds = agents.map((a: AgentRow) => a.id);
       const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
-      const taskStats: Record<string, any> = {};
-      for (const t of (tasks || []) as any[]) {
+      const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
+      for (const t of (tasks || []) as { agent_id: string; status: string }[]) {
         if (!taskStats[t.agent_id]) taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
-        if (taskStats[t.agent_id][t.status] !== undefined) taskStats[t.agent_id][t.status]++;
+        if (taskStats[t.agent_id][t.status as keyof typeof taskStats[string]] !== undefined) taskStats[t.agent_id][t.status as keyof typeof taskStats[string]]++;
       }
       return {
-        team_size: agents.length, active_agents: agents.filter((a: any) => a.is_active).length,
-        agents: agents.map((a: any) => ({ name: a.name, role: a.role, emoji: a.avatar_emoji, is_active: a.is_active, stats: a.stats, tasks: taskStats[a.id] || { pending: 0, running: 0, completed: 0, failed: 0 }, last_activity: a.updated_at })),
+        team_size: agents.length, active_agents: agents.filter((a: AgentRow) => a.is_active).length,
+        agents: agents.map((a: AgentRow) => ({ name: a.name, role: a.role, emoji: a.avatar_emoji, is_active: a.is_active, stats: a.stats, tasks: taskStats[a.id] || { pending: 0, running: 0, completed: 0, failed: 0 }, last_activity: a.updated_at })),
       };
     }
 
     // ── Work Plans ──
     case "create_work_plan": {
-      const steps = (args.steps as any[] || []).map((s: any, i: number) => ({ index: i, title: s.title || `Step ${i + 1}`, description: s.description || "", status: "pending" }));
+      const rawSteps = (args.steps as WorkPlanStep[] || []).map((s: WorkPlanStep, i: number) => ({ index: i, title: s.title || `Step ${i + 1}`, description: s.description || "", status: "pending" }));
       const { data, error } = await supabase.from("ai_work_plans").insert({
         user_id: userId, title: String(args.title), description: String(args.description || ""),
-        steps: steps as any, status: "active", tags: (args.tags || []) as any,
+        steps: rawSteps as unknown as Record<string, unknown>[], status: "active", tags: (args.tags || []) as string[],
       }).select("id, title").single();
       if (error) return { error: error.message };
-      return { success: true, plan_id: data.id, title: data.title, total_steps: steps.length };
+      return { success: true, plan_id: data.id, title: data.title, total_steps: rawSteps.length };
     }
 
     case "list_work_plans": {
@@ -647,7 +662,7 @@ export async function executePlatformTool(
       if (args.status) query = query.eq("status", args.status);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      const plans = (data || []).map((p: any) => ({ ...p, total_steps: Array.isArray(p.steps) ? p.steps.length : 0, completed_steps: Array.isArray(p.steps) ? p.steps.filter((s: any) => s.status === "completed").length : 0 }));
+      const plans = (data || []).map((p: { id: string; title: string; description: string | null; status: string; current_step: number; steps: unknown; tags: string[]; created_at: string }) => ({ ...p, total_steps: Array.isArray(p.steps) ? p.steps.length : 0, completed_steps: Array.isArray(p.steps) ? (p.steps as WorkPlanStep[]).filter((s) => s.status === "completed").length : 0 }));
       return { count: plans.length, plans };
     }
 
@@ -669,7 +684,8 @@ export async function executePlatformTool(
       const ids = args.ids as string[];
       const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      const { error } = await supabase.from(table as any).delete().in("id", ids);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic table name requires cast
+      const { error } = await supabase.from(table as "partners").delete().in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 
