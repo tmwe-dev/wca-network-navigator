@@ -5,7 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
@@ -44,7 +44,10 @@ const toolDeps: ToolExecutorDeps = { supabase, readH, writeH, entH };
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     // ── Auth ──
@@ -71,13 +74,19 @@ serve(async (req) => {
       if (credits && credits.balance <= 0) {
         return new Response(
           JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
     }
 
     // ── Parse request ──
-    const { messages, context } = await req.json();
+    const { messages, context, mode, scope } = await req.json();
+
+    // ── Detect conversational mode ──
+    const isConversational: boolean =
+      mode === "conversational" ||
+      context?.conversational === true ||
+      context?.mode === "conversational";
 
     const lastUserMsg: string | undefined = Array.isArray(messages)
       ? [...messages].reverse().find((m: Record<string, unknown>) => m?.role === "user" && typeof m.content === "string")?.content as string | undefined
@@ -87,7 +96,7 @@ serve(async (req) => {
     const operatorBriefing: string | undefined =
       typeof context?.operatorBriefing === "string" ? context.operatorBriefing : undefined;
     let activeWorkflowBlock = "";
-    if (context?.partnerId && typeof context.partnerId === "string") {
+    if (!isConversational && context?.partnerId && typeof context.partnerId === "string") {
       try {
         const { data: ws } = await supabase
           .from("partner_workflow_state")
@@ -109,16 +118,64 @@ serve(async (req) => {
     }
 
     // ── Build system prompt ──
-    let systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
+    let systemPrompt: string;
+    if (isConversational) {
+      systemPrompt = `Sei LUCA, il Super Consulente Strategico del sistema WCA Network Navigator.
+
+MODALITÀ CONVERSAZIONALE — Stai parlando a voce con l'utente.
+
+IL TUO RUOLO:
+Sei un partner strategico che ragiona, pianifica e consiglia
+Discuti di strategie commerciali, priorità operative, opportunità di mercato
+Proponi soluzioni concrete basate sui dati che conosci
+NON leggere testi di email o messaggi — discutine il contenuto e la strategia
+NON eseguire azioni operative (download, bulk update, invio email) — suggeriscile soltanto
+
+STILE VOCALE:
+Rispondi in italiano, tono professionale ma amichevole
+Risposte BREVI: massimo 3-4 frasi per turno (verranno lette ad alta voce dal TTS)
+Vai dritto al punto, niente formattazione markdown, niente tabelle, niente emoji
+Se serve approfondire, chiedi se l'utente vuole i dettagli
+Usa frasi naturali come in una conversazione dal vivo
+
+COSA PUOI FARE:
+Analizzare la situazione di un mercato/paese/partner
+Proporre strategie di approccio commerciale
+Consigliare priorità per la giornata
+Discutere il tono e l'approccio di comunicazioni
+Suggerire quale agente o funzione attivare per un task
+Ragionare su pattern nei dati (paesi caldi, partner dormienti, opportunità)
+
+COSA NON FARE:
+Non leggere ad alta voce il corpo di email o messaggi
+Non mostrare tabelle o liste lunghe
+Non usare formattazione markdown (grassetto, intestazioni, elenchi puntati)
+Non emettere blocchi STRUCTURED_DATA, OPERATIONS, UI_ACTIONS
+Non eseguire tool di scrittura o modifica`;
+    } else {
+      systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
+    }
 
     // ── Load all context in parallel ──
-    const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
-      loadMemoryContext(supabase, userId),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId),
-      loadOperativePrompts(supabase, userId),
-      loadMissionHistory(supabase, userId),
-    ]);
+    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string;
+    if (isConversational) {
+      // Lightweight context for voice mode
+      [memoryContext, userProfile, kbContext] = await Promise.all([
+        loadMemoryContext(supabase, userId),
+        loadUserProfile(supabase, userId),
+        loadKBContext(supabase, lastUserMsg, userId),
+      ]);
+      opPrompts = "";
+      missionHistory = "";
+    } else {
+      [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
+        loadMemoryContext(supabase, userId),
+        loadUserProfile(supabase, userId),
+        loadKBContext(supabase, lastUserMsg, userId),
+        loadOperativePrompts(supabase, userId),
+        loadMissionHistory(supabase, userId),
+      ]);
+    }
 
     if (userProfile) systemPrompt += userProfile;
     if (memoryContext) systemPrompt += memoryContext;
@@ -167,17 +224,22 @@ serve(async (req) => {
 
     // ── AI call with model fallback ──
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    const activeTools = isConversational ? undefined : TOOL_DEFINITIONS;
     const fallbackModels = provider.isUserKey
       ? [provider.model]
-      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+      : isConversational
+        ? ["google/gemini-2.5-flash", "openai/gpt-5-mini"]
+        : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {
-      console.log(`[AI] Trying model: ${tryModel}`);
+      console.log(`[AI] Trying model: ${tryModel}${isConversational ? " (conversational)" : ""}`);
+      const fetchBody: Record<string, unknown> = { model: tryModel, messages: allMessages };
+      if (activeTools) fetchBody.tools = activeTools;
       response = await fetch(provider.url, {
         method: "POST",
         headers: aiHeaders,
-        body: JSON.stringify({ model: tryModel, messages: allMessages, tools: TOOL_DEFINITIONS }),
+        body: JSON.stringify(fetchBody),
       });
       if (response.ok) {
         if (tryModel !== provider.model) console.log(`[AI] Fallback model ${tryModel} succeeded`);
@@ -188,16 +250,16 @@ serve(async (req) => {
       console.error(`AI gateway error (${tryModel}):`, errStatus, errText);
       if (errStatus === 429 || errStatus === 402) {
         const errorMsg = errStatus === 429 ? "Troppe richieste, riprova tra poco." : "Crediti AI esauriti.";
-        return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
       if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
-        return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
     }
 
     if (!response || !response.ok) {
       console.error("[AI] All models failed");
-      return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     let result = await response.json();
@@ -333,10 +395,12 @@ serve(async (req) => {
       // Retry with fallback models on tool-loop calls too
       let toolLoopOk = false;
       for (const tryModel of fallbackModels) {
+        const loopBody: Record<string, unknown> = { model: tryModel, messages: allMessages };
+        if (activeTools) loopBody.tools = activeTools;
         response = await fetch(provider.url, {
           method: "POST",
           headers: aiHeaders,
-          body: JSON.stringify({ model: tryModel, messages: allMessages, tools: TOOL_DEFINITIONS }),
+          body: JSON.stringify(loopBody),
         });
         if (response.ok) { toolLoopOk = true; break; }
         const errStatus = response.status;
@@ -345,17 +409,17 @@ serve(async (req) => {
         if (errStatus === 429 || errStatus === 402) {
           if (provider.isUserKey) {
             const errorMsg = errStatus === 429 ? "Troppe richieste al provider AI, riprova tra poco." : "Crediti AI esauriti.";
-            return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
           }
           continue;
         }
         if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
-          return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
         }
       }
       if (!toolLoopOk) {
         console.error("[AI] All models failed in tool loop");
-        return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
 
       result = await response.json();
@@ -383,9 +447,9 @@ serve(async (req) => {
 
     let finalContent = assistantMessage?.content || "";
     if (finalContent) {
-      finalContent = appendStructured(finalContent);
+      if (!isConversational) finalContent = appendStructured(finalContent);
       if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
-      return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ content: finalContent }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // Fallback: one more call without tools
@@ -396,7 +460,7 @@ serve(async (req) => {
       body: JSON.stringify({ model: provider.model, messages: allMessages }),
     });
     if (!finalResponse.ok) {
-      return new Response(JSON.stringify({ error: "Errore finale" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Errore finale" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
     const finalResult = await finalResponse.json();
     if (finalResult.usage) {
@@ -404,9 +468,11 @@ serve(async (req) => {
       totalUsage.completion_tokens += finalResult.usage.completion_tokens || 0;
     }
 
-    const finalText = appendStructured(finalResult.choices?.[0]?.message?.content || "Nessuna risposta");
+    const finalText = isConversational
+      ? (finalResult.choices?.[0]?.message?.content || "Nessuna risposta")
+      : appendStructured(finalResult.choices?.[0]?.message?.content || "Nessuna risposta");
     if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
-    return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ content: finalText }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (e: unknown) {
     console.error("ai-assistant error:", extractErrorMessage(e));

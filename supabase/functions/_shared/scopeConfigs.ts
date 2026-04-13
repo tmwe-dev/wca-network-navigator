@@ -102,7 +102,7 @@ REGOLE:
 
 // ━━━━━━━━━━ STRATEGIC SCOPE ━━━━━━━━━━
 
-const STRATEGIC_PROMPT = `Sei il Super Consulente Strategico del sistema WCA Network Navigator.
+export const STRATEGIC_OPERATIVE_PROMPT = `Sei il Super Consulente Strategico del sistema WCA Network Navigator.
 
 # RUOLO
 - Affiancare l'utente come partner strategico
@@ -299,7 +299,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
 
     case "strategic":
       return {
-        systemPrompt: STRATEGIC_PROMPT,
+        systemPrompt: STRATEGIC_OPERATIVE_PROMPT,
         tools: [], // Strategic advisor has no tools
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
