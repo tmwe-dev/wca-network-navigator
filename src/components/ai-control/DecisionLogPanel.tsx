@@ -108,7 +108,7 @@ export function DecisionLogPanel() {
                 <div key={row.id} className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className={`text-[10px] px-1.5 ${dt.color}`}>{dt.label}</Badge>
-                    {row.was_auto_executed && <Zap className="h-3.5 w-3.5 text-amber-400" title="Auto-eseguita" />}
+                    {row.was_auto_executed && <Zap className="h-3.5 w-3.5 text-amber-400" />}
                     <ReviewIcon className={`h-3.5 w-3.5 ${review?.color ?? "text-muted-foreground"}`} />
                     {row.confidence != null && (
                       <Badge variant="outline" className="text-[10px]">{Math.round(row.confidence * 100)}%</Badge>

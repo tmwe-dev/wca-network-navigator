@@ -16,6 +16,7 @@ import {
   ArrowUpDown, Cpu, Cog, Upload, Send, Menu, X,
   Sparkles, SlidersHorizontal, Plus, DatabaseZap,
   Sun, Moon, Wifi, WifiOff, Command, ArrowRight,
+  BrainCircuit, ShieldCheck,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
@@ -107,6 +108,8 @@ const navGroups: readonly NavGroup[] = [
       { label: "Staff", path: "/v2/staff", icon: <UserCog className="h-4 w-4" /> },
       { label: "AI Lab", path: "/v2/ai-lab", icon: <FlaskConical className="h-4 w-4" /> },
       { label: "Knowledge", path: "/v2/knowledge-base", icon: <Book className="h-4 w-4" /> },
+      { label: "Email Intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
+      { label: "AI Control", path: "/v2/ai-control", icon: <ShieldCheck className="h-4 w-4" /> },
     ],
   },
   {
