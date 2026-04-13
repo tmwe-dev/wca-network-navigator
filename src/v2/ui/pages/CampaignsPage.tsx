@@ -8,6 +8,7 @@ const CampaignsV1 = lazy(() => import("@/pages/Campaigns"));
 
 export function CampaignsPage(): React.ReactElement {
   return (
+    <div data-testid="page-campaigns" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -17,5 +18,6 @@ export function CampaignsPage(): React.ReactElement {
     >
       <CampaignsV1 />
     </Suspense>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ const V1Component = lazy(() => import("@/pages/AgentChatHub"));
 
 export function AgentChatHubPage(): React.ReactElement {
   return (
+    <div data-testid="page-agents" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -17,5 +18,6 @@ export function AgentChatHubPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

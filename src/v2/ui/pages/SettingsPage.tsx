@@ -9,6 +9,7 @@ const V1Component = lazy(() => import("@/pages/Settings"));
 
 export function SettingsPage(): React.ReactElement {
   return (
+    <div data-testid="page-settings" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -18,5 +19,6 @@ export function SettingsPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }
