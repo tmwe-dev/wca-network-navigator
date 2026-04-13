@@ -497,7 +497,7 @@ Deno.serve(async (req) => {
                   .from("activities")
                   .select("id, sent_at")
                   .eq("thread_id", threadId)
-                  .eq("activity_type", "email")
+                   .eq("activity_type", "send_email")
                   .eq("response_received", false)
                   .order("sent_at", { ascending: false })
                   .limit(1);
@@ -511,7 +511,7 @@ Deno.serve(async (req) => {
                   .from("activities")
                   .select("id, sent_at")
                   .eq("partner_id", partnerId)
-                  .eq("activity_type", "email")
+                  .eq("activity_type", "send_email")
                   .eq("response_received", false)
                   .gte("sent_at", thirtyDaysAgo)
                   .order("sent_at", { ascending: false })
