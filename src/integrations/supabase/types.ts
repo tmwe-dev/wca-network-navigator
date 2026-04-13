@@ -2593,6 +2593,9 @@ export type Database = {
           is_selected: boolean
           is_transferred: boolean
           last_interaction_at: string | null
+          lead_score: number | null
+          lead_score_breakdown: Json | null
+          lead_score_updated_at: string | null
           lead_status: string
           mobile: string | null
           name: string | null
@@ -2626,6 +2629,9 @@ export type Database = {
           is_selected?: boolean
           is_transferred?: boolean
           last_interaction_at?: string | null
+          lead_score?: number | null
+          lead_score_breakdown?: Json | null
+          lead_score_updated_at?: string | null
           lead_status?: string
           mobile?: string | null
           name?: string | null
@@ -2659,6 +2665,9 @@ export type Database = {
           is_selected?: boolean
           is_transferred?: boolean
           last_interaction_at?: string | null
+          lead_score?: number | null
+          lead_score_breakdown?: Json | null
+          lead_score_updated_at?: string | null
           lead_status?: string
           mobile?: string | null
           name?: string | null

@@ -13,6 +13,7 @@ import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactEnrichmentCard } from "./ContactEnrichmentCard";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
+import { LeadScoreBadge } from "./LeadScoreBadge";
 import { type LeadStatus } from "@/hooks/useContacts";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -104,6 +105,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
               <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.company_name}</p>
             )}
           </div>
+          <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} size="md" />
         </div>
         {(c.name || c.contact_alias) && (
           <div className="flex items-center gap-2 ml-[52px]">
@@ -196,7 +198,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
             <Plus className="w-3 h-3" /> Aggiungi
           </Button>
         </div>
-        <ContactInteractionTimeline interactions={interactions} />
+        <ContactInteractionTimeline contactId={contact.id} contactEmail={contact.email} />
       </Section>
 
       <Dialog open={state.showNewInteraction} onOpenChange={(v) => dispatch({ type: "SHOW_INTERACTION", value: v })}>

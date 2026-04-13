@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles, Kanban } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -9,6 +9,7 @@ import { useTrackPage } from "@/hooks/useTrackPage";
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 const ContactPipelineView = lazy(() => import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })));
+const DuplicateDetector = lazy(() => import("@/components/contacts/DuplicateDetector").then((m) => ({ default: m.DuplicateDetector })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -29,6 +30,7 @@ export default function CRM() {
     { value: "contatti", label: "Contatti", icon: UserCheck },
     { value: "pipeline", label: "Pipeline", icon: Kanban },
     { value: "biglietti", label: "Biglietti", icon: ContactRound },
+    { value: "duplicati", label: "Duplicati", icon: Copy },
   ];
 
   return (
@@ -77,6 +79,11 @@ export default function CRM() {
         {tab === "biglietti" && (
           <Suspense fallback={<TabFallback />}>
             <BusinessCardsHub />
+          </Suspense>
+        )}
+        {tab === "duplicati" && (
+          <Suspense fallback={<TabFallback />}>
+            <DuplicateDetector />
           </Suspense>
         )}
       </div>
