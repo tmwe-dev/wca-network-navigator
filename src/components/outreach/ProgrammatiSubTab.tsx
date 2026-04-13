@@ -72,6 +72,7 @@ export function ProgrammatiSubTab() {
   const handleCancel = async (item: ScheduledItem) => {
     try {
       if (item.type === "mission_action") await cancelMissionAction(item.realId);
+      else if (item.type === "activity") await cancelActivity(item.realId);
       await logAuditEntry({ action_category: "cadence_cancelled", action_detail: `Annullato programmato: ${item.label}`, decision_origin: "manual" });
       qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
       toast.success("Annullato");
@@ -81,6 +82,7 @@ export function ProgrammatiSubTab() {
   const handleMoveToToday = async (item: ScheduledItem) => {
     try {
       if (item.type === "mission_action") await updateMissionActionSchedule(item.realId, new Date().toISOString());
+      else if (item.type === "activity") await updateActivitySchedule(item.realId, new Date().toISOString());
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Anticipato a oggi: ${item.label}`, decision_origin: "manual" });
       qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
       toast.success("Spostato a oggi");
