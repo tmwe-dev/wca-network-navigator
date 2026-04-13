@@ -87,16 +87,10 @@ async function processAction(
   action: ActionRow,
   counters: { executed: () => void; pendingReview: () => void; cancelled: () => void },
 ) {
-  // Extract target email — try partner contacts or use partner email
-  let targetEmail: string | null = null;
-  if (action.partner_id) {
-    const { data: pc } = await supabase.from("partner_contacts").select("email").eq("partner_id", action.partner_id).limit(1).maybeSingle();
-    targetEmail = pc?.email ?? null;
-    if (!targetEmail) {
-      const { data: p } = await supabase.from("partners").select("email").eq("id", action.partner_id).maybeSingle();
-      targetEmail = p?.email ?? null;
-    }
-  }
+  // Extract target email from metadata
+  const meta = action.metadata as Record<string, unknown> | null;
+  let targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
+  const partnerId: string | null = (meta?.partner_id as string) || null;
 
   // Load conversation context
   let convCtx: any = null;
