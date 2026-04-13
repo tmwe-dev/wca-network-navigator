@@ -3,7 +3,7 @@
  */
 import { useEffect, useState, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
-import { CampaignAnalyticsTab } from "@/components/analytics/CampaignAnalyticsTab";
+const CampaignAnalyticsTab = lazy(() => import("@/components/analytics/CampaignAnalyticsTab").then(m => ({ default: m.CampaignAnalyticsTab })));
 import { Button } from "@/components/ui/button";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignHeaderControls } from "@/components/campaigns/CampaignHeaderControls";
@@ -34,7 +34,7 @@ export default function Campaigns() {
       </div>
 
       {c.viewMode === "analytics" ? (
-        <div className="flex-1 min-h-0"><CampaignAnalyticsTab /></div>
+        <div className="flex-1 min-h-0"><Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}><CampaignAnalyticsTab /></Suspense></div>
       ) : (
         <div className="flex-1 relative overflow-hidden">
           {headerContainer && createPortal(

@@ -15,7 +15,8 @@ import {
   Check, SkipForward, Ban, Edit3, Settings2, Timer,
   Target, Loader2, Inbox, Globe,
 } from "lucide-react";
-import { ContactCard3D } from "@/components/ai-arena/ContactCard3D";
+
+const ContactCard3D = React.lazy(() => import("@/components/ai-arena/ContactCard3D").then(m => ({ default: m.ContactCard3D })));
 import { ConfirmationEffects } from "@/components/ai-arena/ConfirmationEffects";
 import { SessionSummary } from "@/components/ai-arena/SessionSummary";
 import { TypewriterText } from "@/components/ai-arena/TypewriterText";
@@ -151,6 +152,7 @@ export function ArenaActiveSession({
 
         {current && (
           <div className="w-full max-w-3xl space-y-4">
+            <React.Suspense fallback={<div className="h-[300px] flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
             <ContactCard3D
               contact={{
                 company_name: current.company_name,
@@ -165,6 +167,7 @@ export function ArenaActiveSession({
               }}
               animState={animState}
             />
+            </React.Suspense>
 
             <AnimatePresence mode="wait">
               <motion.div

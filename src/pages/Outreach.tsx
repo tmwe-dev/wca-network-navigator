@@ -8,7 +8,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { cn } from "@/lib/utils";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
-import { OutreachMiniCharts } from "@/components/analytics/OutreachMiniCharts";
+
+const OutreachMiniCharts = lazyRetry(() => import("@/components/analytics/OutreachMiniCharts").then(m => ({ default: m.OutreachMiniCharts })));
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
@@ -60,7 +61,9 @@ export default function Outreach() {
         </Tooltip>
       </div>
 
-      <OutreachMiniCharts />
+      <Suspense fallback={<div className="h-24 animate-pulse bg-muted rounded-lg" />}>
+        <OutreachMiniCharts />
+      </Suspense>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />

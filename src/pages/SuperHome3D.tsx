@@ -14,8 +14,10 @@ import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
-import { DashboardCharts } from "@/components/analytics/DashboardCharts";
-import { ResponseRateCard } from "@/components/analytics/ResponseRateCard";
+import { Suspense, lazy } from "react";
+
+const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
+const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
@@ -144,10 +146,14 @@ export default function SuperHome3D() {
         <ActiveJobsWidget jobs={jobs} />
 
         {/* Charts */}
-        <DashboardCharts />
+        <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+          <DashboardCharts />
+        </Suspense>
 
         {/* Response Rate */}
-        <ResponseRateCard />
+        <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
+          <ResponseRateCard />
+        </Suspense>
 
         {/* Navigation cards */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
