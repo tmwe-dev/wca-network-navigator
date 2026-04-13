@@ -2,9 +2,34 @@
 // Grouped by domain for readability
 
 // ── Partners & Contacts ──
+// partners exports updateLeadStatus (for partners); contacts also exports updateLeadStatus (for contacts)
+// We keep the partners version as the default and alias the contacts version
 export * from "./partners";
-export { updateLeadStatus as updateContactLeadStatus } from "./contacts";
-export * from "./contacts";
+export {
+  LeadStatus,
+  type ContactFilters,
+  type ContactInteraction,
+  contactKeys,
+  findContacts,
+  findHoldingPatternContacts,
+  getHoldingPatternStats,
+  getContactFilterOptions,
+  findContactInteractions,
+  updateLeadStatus as updateContactLeadStatus,
+  createContactInteraction,
+  deleteContacts,
+  updateContact,
+  getContactById,
+  getContactsByIds,
+  insertContacts,
+  toggleContactSelection,
+  markContactTransferred,
+  findContactByEmail,
+  updateContactEnrichment,
+  updateContactStatus,
+  fetchGroupContactIds,
+  invalidateContactCache,
+} from "./contacts";
 export * from "./contactInteractions";
 export * from "./partnerRelations";
 export * from "./businessCards";
@@ -14,9 +39,14 @@ export * from "./prospects";
 
 // ── Communication ──
 export * from "./channelMessages";
+// emailCampaigns exports countEmailDrafts; emailDrafts also exports countEmailDrafts
+// We keep the emailCampaigns version as default and alias the emailDrafts version
 export * from "./emailCampaigns";
-export { countEmailDrafts as countEmailDraftsOnly } from "./emailDrafts";
-export * from "./emailDrafts";
+export {
+  countEmailDrafts as countEmailDraftsStandalone,
+  insertEmailDraft,
+  insertEmailDraftReturning,
+} from "./emailDrafts";
 export * from "./emailPrompts";
 export * from "./emailTemplates";
 export * from "./interactions";
