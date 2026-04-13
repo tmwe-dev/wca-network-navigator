@@ -135,4 +135,4 @@ export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRe
       )}
     </AnimatePresence>
   );
-}
+});
