@@ -146,7 +146,8 @@ const ROLE_LEVELS: Record<string, number> = { admin: 2, operator: 1 };
 // ── Component ──
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
+  const { isAuthenticated, isLoading, profile, signOut, roles, isAdmin } = useAuthV2();
+  const userLevel = getUserRoleLevel(roles, isAdmin);
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -341,7 +342,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
             <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {group.title}
             </p>
-            {group.items.map((navItem) => (
+            {group.items.filter((navItem) => !navItem.minRole || userLevel >= (ROLE_LEVELS[navItem.minRole] ?? 0)).map((navItem) => (
               <button
                 key={navItem.path}
                 onClick={() => { navigate(navItem.path); setMobileOpen(false); }}
