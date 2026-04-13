@@ -311,3 +311,5 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
     </div>
   );
 }
+
+export default CampaignGlobe;
