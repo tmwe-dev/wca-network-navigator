@@ -6,6 +6,7 @@ import * as React from "react";
 import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
@@ -43,6 +44,7 @@ const GlobalVoiceFAB = lazy(() => import("@/components/voice/GlobalVoiceFAB"));
 const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
+const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
