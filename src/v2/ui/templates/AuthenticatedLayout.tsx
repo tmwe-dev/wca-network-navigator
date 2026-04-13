@@ -46,6 +46,7 @@ const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDial
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
+const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -252,24 +253,39 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         </div>
                       </div>
 
-                      {mobileOpen ? (
-                        <div className="md:hidden fixed inset-0 z-40 flex">
-                          <div className="w-64 bg-card border-r flex flex-col mt-12">
-                            <LayoutSidebarNav
-                              profileName={profile?.displayName}
-                              wcaStatusColor={wcaStatusColor}
-                              wcaStatusLabel={wcaStatusLabel}
-                              wcaSessionActive={wcaSession.sessionActive}
-                              onWcaReconnect={() => wcaSession.ensureSession()}
-                              isDark={isDark}
-                              onToggleTheme={toggleTheme}
-                              onSignOut={signOut}
-                              onMobileClose={() => setMobileOpen(false)}
+                      {/* Mobile sidebar overlay with Framer Motion */}
+                      <AnimatePresence>
+                        {mobileOpen && (
+                          <div className="md:hidden fixed inset-0 z-40 flex">
+                            <motion.div
+                              initial={{ x: "-100%" }}
+                              animate={{ x: 0 }}
+                              exit={{ x: "-100%" }}
+                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                              className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
+                            >
+                              <LayoutSidebarNav
+                                profileName={profile?.displayName}
+                                wcaStatusColor={wcaStatusColor}
+                                wcaStatusLabel={wcaStatusLabel}
+                                wcaSessionActive={wcaSession.sessionActive}
+                                onWcaReconnect={() => wcaSession.ensureSession()}
+                                isDark={isDark}
+                                onToggleTheme={toggleTheme}
+                                onSignOut={signOut}
+                                onMobileClose={() => setMobileOpen(false)}
+                              />
+                            </motion.div>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="flex-1 bg-black/50"
+                              onClick={() => setMobileOpen(false)}
                             />
                           </div>
-                          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
-                        </div>
-                      ) : null}
+                        )}
+                      </AnimatePresence>
 
                       {/* Edge hover triggers */}
                       <button
@@ -310,7 +326,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           outreachQueue={outreachQueue}
                           globalSync={globalSync}
                         />
-                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
+                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={location.pathname}
