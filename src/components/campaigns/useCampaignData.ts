@@ -38,10 +38,12 @@ interface CountryPartnerRaw {
   country_code: string;
   country_name: string;
   email: string | null;
-  partner_type?: string;
-  partner_certifications?: string[];
-  partner_services?: string[];
+  partner_type: string | null;
+  partner_certifications?: { certification: string }[];
+  partner_services?: { service_category: string }[];
   is_bca?: boolean;
+  bca_event?: string;
+  bca_contact?: string;
 }
 
 export function useCampaignData() {
