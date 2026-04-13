@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { cn } from "@/lib/utils";
+import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
@@ -35,6 +36,7 @@ export default function Outreach() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <OutreachStatsHeader />
       {/* Mock toggle header */}
       <div className="shrink-0 flex items-center justify-end px-3 py-1 border-b border-border/30">
         <Tooltip>

@@ -219,9 +219,16 @@ export function AttivitaTab() {
                             <Calendar
                               mode="single"
                               selected={rescheduleDate}
-                              onSelect={(d) => {
+                              onSelect={async (d) => {
                                 setRescheduleDate(d);
-                                if (d) toast.success(`Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`);
+                                if (d && item.id) {
+                                  try {
+                                    const { updateActivitySchedule, logAuditEntry } = await import("@/data/outreachPipeline");
+                                    await updateActivitySchedule(item.id, d.toISOString());
+                                    await logAuditEntry({ action_category: "activity_updated", action_detail: `Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`, decision_origin: "manual", target_type: "activity", target_id: item.id });
+                                    toast.success(`Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`);
+                                  } catch { toast.error("Errore salvataggio"); }
+                                }
                               }}
                               className="p-3 pointer-events-auto"
                             />
