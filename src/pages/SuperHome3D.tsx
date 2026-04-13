@@ -146,10 +146,14 @@ export default function SuperHome3D() {
         <ActiveJobsWidget jobs={jobs} />
 
         {/* Charts */}
-        <DashboardCharts />
+        <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+          <DashboardCharts />
+        </Suspense>
 
         {/* Response Rate */}
-        <ResponseRateCard />
+        <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
+          <ResponseRateCard />
+        </Suspense>
 
         {/* Navigation cards */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">

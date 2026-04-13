@@ -167,6 +167,7 @@ export function ArenaActiveSession({
               }}
               animState={animState}
             />
+            </React.Suspense>
 
             <AnimatePresence mode="wait">
               <motion.div

@@ -61,7 +61,9 @@ export default function Outreach() {
         </Tooltip>
       </div>
 
-      <OutreachMiniCharts />
+      <Suspense fallback={<div className="h-24 animate-pulse bg-muted rounded-lg" />}>
+        <OutreachMiniCharts />
+      </Suspense>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />

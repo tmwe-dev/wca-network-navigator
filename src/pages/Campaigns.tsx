@@ -34,7 +34,7 @@ export default function Campaigns() {
       </div>
 
       {c.viewMode === "analytics" ? (
-        <div className="flex-1 min-h-0"><CampaignAnalyticsTab /></div>
+        <div className="flex-1 min-h-0"><Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}><CampaignAnalyticsTab /></Suspense></div>
       ) : (
         <div className="flex-1 relative overflow-hidden">
           {headerContainer && createPortal(
