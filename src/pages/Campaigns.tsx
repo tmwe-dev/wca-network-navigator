@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
+import { CampaignAnalyticsTab } from "@/components/analytics/CampaignAnalyticsTab";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").then(m => ({ default: m.CampaignGlobe })));
 import { CompanyList } from "@/components/campaigns/CompanyList";
-import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
+import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target, BarChart3 } from "lucide-react";
 import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
 import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
