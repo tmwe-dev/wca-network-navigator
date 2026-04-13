@@ -944,6 +944,51 @@ export type Database = {
         }
         Relationships: []
       }
+      app_error_logs: {
+        Row: {
+          component_stack: string | null
+          created_at: string | null
+          edge_function_name: string | null
+          error_message: string | null
+          error_stack: string | null
+          error_type: string
+          http_status: number | null
+          id: string
+          metadata: Json | null
+          page_url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_stack?: string | null
+          created_at?: string | null
+          edge_function_name?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          error_type: string
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_stack?: string | null
+          created_at?: string | null
+          edge_function_name?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          error_type?: string
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string

@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("GlobalErrorBoundary");
@@ -28,6 +29,26 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       stack: error.stack,
       componentStack: errorInfo.componentStack,
     });
+    this.logErrorToDb(error, errorInfo);
+  }
+
+  private async logErrorToDb(error: Error, info: ErrorInfo) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("app_error_logs").insert({
+        user_id: user.id,
+        error_type: "react_crash",
+        error_message: error.message,
+        error_stack: error.stack?.substring(0, 2000) ?? null,
+        component_stack: info.componentStack?.substring(0, 2000) ?? null,
+        page_url: window.location.pathname,
+        user_agent: navigator.userAgent,
+        metadata: { timestamp: new Date().toISOString() },
+      });
+    } catch (e) {
+      log.warn("Failed to persist error log", { error: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   private getDiagnosticInfo(): string {
@@ -38,32 +59,21 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       `Route: ${window.location.pathname}`,
       `UserAgent: ${navigator.userAgent}`,
     ];
-
-    // Try to get user id from localStorage session
     try {
       const storageKey = Object.keys(localStorage).find(k => k.includes("supabase") && k.includes("auth"));
       if (storageKey) {
         const session = JSON.parse(localStorage.getItem(storageKey) || "{}");
         lines.push(`UserID: ${session?.user?.id || "unknown"}`);
       }
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); lines.push("UserID: unknown"); }
-
-    // Last WCA error
+    } catch { lines.push("UserID: unknown"); }
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
-
-    lines.push("");
-    lines.push(`Error: ${error?.message || "Unknown"}`);
-    lines.push("");
-    lines.push(`Stack:\n${error?.stack || "N/A"}`);
-
+    } catch { /* best-effort */ }
+    lines.push("", `Error: ${error?.message || "Unknown"}`, "", `Stack:\n${error?.stack || "N/A"}`);
     if (errorInfo?.componentStack) {
-      lines.push("");
-      lines.push(`Component Stack:\n${errorInfo.componentStack}`);
+      lines.push("", `Component Stack:\n${errorInfo.componentStack}`);
     }
-
     return lines.join("\n");
   }
 
@@ -82,7 +92,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-lg w-full text-center space-y-6">
           <div className="text-5xl">💥</div>
-          <h1 className="text-xl font-semibold text-foreground">Unexpected runtime error</h1>
+          <h1 className="text-xl font-semibold text-foreground">Qualcosa è andato storto</h1>
           <p className="text-sm text-muted-foreground">
             L'applicazione ha riscontrato un errore imprevisto. Puoi ricaricare la pagina o copiare le informazioni diagnostiche per il supporto.
           </p>
