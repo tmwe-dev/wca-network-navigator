@@ -131,6 +131,37 @@ export async function loadKBContext(
   const parts: string[] = [];
   const seenIds = new Set<string>();
 
+  // ── LEVEL 0: Always load system_core doctrine ──
+  try {
+    let coreQ = supabase
+      .from("kb_entries")
+      .select("id, title, content")
+      .eq("is_active", true)
+      .eq("category", "system_doctrine")
+      .overlaps("tags", ["system_core"]);
+
+    if (userId) {
+      coreQ = coreQ.or(`user_id.eq.${userId},user_id.is.null`);
+    } else {
+      coreQ = coreQ.is("user_id", null);
+    }
+
+    const { data: coreEntries } = await coreQ
+      .order("priority", { ascending: false })
+      .limit(10);
+
+    if (coreEntries?.length) {
+      for (const e of coreEntries as Array<{ id: string; title: string; content: string }>) {
+        if (!seenIds.has(e.id)) {
+          seenIds.add(e.id);
+          parts.push(`[KB:${e.title}]\n${e.content}`);
+        }
+      }
+    }
+  } catch (e: unknown) {
+    console.warn("System doctrine loading failed:", extractErrorMessage(e));
+  }
+
   // ── LEVEL 1: Contextual tag-based loading ──
   if (contextTags && (contextTags.tags.length > 0 || contextTags.categories.length > 0)) {
     try {
