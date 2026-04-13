@@ -59,6 +59,9 @@ export function AttivitaTab() {
     if (priorityFilter !== "all") {
       result = result.filter((a: any) => a.priority === priorityFilter);
     }
+    if (channelFilter !== "all") {
+      result = result.filter((a: any) => a.activity_type === channelFilter);
+    }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       result = result.filter((a: any) =>
@@ -67,7 +70,7 @@ export function AttivitaTab() {
       );
     }
     return result;
-  }, [all, filter, priorityFilter, searchTerm]);
+  }, [all, filter, priorityFilter, channelFilter, searchTerm]);
 
   const stats = {
     total: all.length,
