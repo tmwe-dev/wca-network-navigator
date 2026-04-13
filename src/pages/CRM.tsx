@@ -71,8 +71,16 @@ export default function CRM() {
         })}
 
         <button
+          onClick={() => scoreMutation.mutate()}
+          disabled={scoreMutation.isPending}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent disabled:opacity-50"
+        >
+          {scoreMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+          Ricalcola Score
+        </button>
+        <button
           onClick={() => setShowAIMatch(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto bg-gradient-to-r from-violet-500/15 to-purple-500/15 text-violet-300 border border-violet-500/30 hover:from-violet-500/25 hover:to-purple-500/25 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20 shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5" />
           AI Match
