@@ -8,6 +8,9 @@ import {
   Globe, Loader2, Search, ArrowRight, Briefcase, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BCAOcrConfidence } from "./BCAOcrConfidence";
+import { BCACreateContact } from "./BCACreateContact";
+import { BCASmartActions } from "./BCASmartActions";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
