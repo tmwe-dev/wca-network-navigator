@@ -119,7 +119,7 @@ export function PartnerListPanel({
     let list = partners || [];
 
     if (progressFilter === "deep") {
-      list = list.filter((p: { enrichment_data?: Record<string, unknown> }) => !(p.enrichment_data && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
     }
 
     // Country tab filter
@@ -135,7 +135,7 @@ export function PartnerListPanel({
     if (countryCodes.length <= 1) return [];
     let list = partners || [];
     if (progressFilter === "deep") {
-      list = list.filter((p: { enrichment_data?: Record<string, unknown> }) => !(p.enrichment_data && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
     }
     const counts: Record<string, number> = {};
     for (const p of list as { country_code?: string }[]) {
