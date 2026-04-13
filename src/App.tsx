@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { Sentry } from "@/lib/sentry";
 import { V2Routes } from "@/v2/routes";
 import { Loader2 } from "lucide-react";
