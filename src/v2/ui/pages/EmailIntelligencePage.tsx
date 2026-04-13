@@ -72,7 +72,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6 space-y-4">
+    <div data-testid="page-email-intelligence" className="flex flex-col h-full p-4 md:p-6 space-y-4">
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
           <BrainCircuit className="h-5 w-5 text-primary" />

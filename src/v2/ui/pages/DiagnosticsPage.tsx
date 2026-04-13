@@ -19,6 +19,7 @@ export function DiagnosticsPage(): React.ReactElement {
   }
 
   return (
+    <div data-testid="page-diagnostics" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -28,5 +29,6 @@ export function DiagnosticsPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }
