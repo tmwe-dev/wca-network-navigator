@@ -4,6 +4,7 @@ import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -219,6 +220,18 @@ Deno.serve(async (req) => {
         thread_id: threadId,
       });
     }
+
+    // Supervisor audit (fire-and-forget)
+    const userId = claimsData.claims.sub as string;
+    logSupervisorAudit(supabase, {
+      user_id: userId, actor_type: "user",
+      action_category: "email_sent",
+      action_detail: `Email inviata a ${body.to}: ${subject}`,
+      target_type: "email", target_label: subject,
+      partner_id: partner_id || undefined, email_address: body.to,
+      decision_origin: "manual",
+      metadata: { subject, recipient: body.to },
+    });
 
     return new Response(
       JSON.stringify({ success: true }),

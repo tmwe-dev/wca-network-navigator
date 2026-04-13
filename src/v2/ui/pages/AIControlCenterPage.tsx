@@ -1,14 +1,15 @@
 /**
- * AIControlCenterPage V2 — AI Control Center with 3 tabs
+ * AIControlCenterPage V2 — AI Control Center with 4 tabs
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, ClipboardList, Brain, TrendingUp } from "lucide-react";
+import { ShieldCheck, ClipboardList, Brain, TrendingUp, Eye } from "lucide-react";
 
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
 const DecisionLogPanel = lazy(() => import("@/components/ai-control/DecisionLogPanel").then(m => ({ default: m.DecisionLogPanel })));
 const AIPerformancePanel = lazy(() => import("@/components/ai-control/AIPerformancePanel").then(m => ({ default: m.AIPerformancePanel })));
+const SupervisorFeedPanel = lazy(() => import("@/components/ai-control/SupervisorFeedPanel").then(m => ({ default: m.SupervisorFeedPanel })));
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -32,6 +33,7 @@ export function AIControlCenterPage(): React.ReactElement {
           <TabsTrigger value="pending" className="gap-1.5 text-xs"><ClipboardList className="h-3.5 w-3.5" />Azioni Pending</TabsTrigger>
           <TabsTrigger value="decisions" className="gap-1.5 text-xs"><Brain className="h-3.5 w-3.5" />Decisioni AI</TabsTrigger>
           <TabsTrigger value="performance" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" />Performance</TabsTrigger>
+          <TabsTrigger value="supervisor" className="gap-1.5 text-xs"><Eye className="h-3.5 w-3.5" />Supervisore</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="flex-1 mt-4">
           <Suspense fallback={<TabFallback />}><PendingActionsPanel /></Suspense>
@@ -41,6 +43,9 @@ export function AIControlCenterPage(): React.ReactElement {
         </TabsContent>
         <TabsContent value="performance" className="flex-1 mt-4">
           <Suspense fallback={<TabFallback />}><AIPerformancePanel /></Suspense>
+        </TabsContent>
+        <TabsContent value="supervisor" className="flex-1 mt-4">
+          <Suspense fallback={<TabFallback />}><SupervisorFeedPanel /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
