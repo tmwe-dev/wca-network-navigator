@@ -43,7 +43,7 @@ export function WhatsAppChatList({
   if (!sidebarOpen) {
     return (
       <div className="flex flex-col items-center pt-2 gap-2 w-[48px] min-w-[48px] border-r border-border bg-background shrink-0">
-        <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
+        <Button size="icon" variant="ghost" onClick={() = aria-label="Visualizza"> setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
           <PanelLeftOpen className="w-4 h-4" />
         </Button>
         <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
@@ -62,7 +62,7 @@ export function WhatsAppChatList({
     <div className="flex flex-col border-r border-border bg-background shrink-0 w-[280px] min-w-[280px]">
       <div className="flex-shrink-0 p-2 border-b border-border">
         <div className="flex items-center gap-1.5 mb-1.5">
-          <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
+          <Button size="icon" variant="ghost" onClick={() = aria-label="Visualizza"> setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
             <PanelLeftClose className="w-3.5 h-3.5" />
           </Button>
           <span className="text-xs font-medium text-muted-foreground">

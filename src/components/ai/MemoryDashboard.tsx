@@ -133,15 +133,15 @@ export default function MemoryDashboard() {
         <div className="flex items-center gap-1 shrink-0">
           {m.pending_promotion && (
             <>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500" onClick={() => promoteMutation.mutate({ id: m.id, approve: true })} aria-label="Conferma">
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500" onClick={() = aria-label="Conferma"> promoteMutation.mutate({ id: m.id, approve: true })} aria-label="Conferma">
                 <Check className="h-3.5 w-3.5" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => promoteMutation.mutate({ id: m.id, approve: false })} aria-label="Chiudi">
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() = aria-label="Chiudi"> promoteMutation.mutate({ id: m.id, approve: false })} aria-label="Chiudi">
                 <X className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => deleteMutation.mutate(m.id)} aria-label="Elimina">
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() = aria-label="Elimina"> deleteMutation.mutate(m.id)} aria-label="Elimina">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
