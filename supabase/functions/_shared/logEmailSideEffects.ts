@@ -14,6 +14,8 @@ interface EmailSideEffectParams {
   html: string;
   agent_id?: string;
   source_meta?: Record<string, unknown>;
+  message_id_external?: string;
+  thread_id?: string;
 }
 
 export async function logEmailSideEffects({
@@ -25,6 +27,8 @@ export async function logEmailSideEffects({
   html,
   agent_id,
   source_meta,
+  message_id_external,
+  thread_id,
 }: EmailSideEffectParams): Promise<void> {
   const now = new Date().toISOString();
 
@@ -55,6 +59,8 @@ export async function logEmailSideEffects({
     priority: "medium",
     ...(agent_id ? { executed_by_agent_id: agent_id } : {}),
     ...(source_meta ? { source_meta } : {}),
+    ...(message_id_external ? { message_id_external } : {}),
+    ...(thread_id ? { thread_id } : {}),
   });
 
   // 3. Update partner: escalate lead_status from 'new' to 'contacted'
