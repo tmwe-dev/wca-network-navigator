@@ -51,16 +51,17 @@ export async function scanDirectory(
 
       if (cached && cached.length > 0) {
         for (const entry of cached) {
-          const members = (entry.members as any[]) || [];
-          members.forEach((m: any) => {
-            if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
+          const members = (entry.members as Array<Record<string, unknown>>) || [];
+          members.forEach((m) => {
+            const wcaId = m.wca_id as number | undefined;
+            if (wcaId && !allMembers.find((x) => x.wca_id === wcaId)) {
               allMembers.push({
-                wca_id: m.wca_id,
-                company_name: m.company_name || `WCA ${m.wca_id}`,
+                wca_id: wcaId,
+                company_name: (m.company_name as string) || `WCA ${wcaId}`,
                 country_code: code,
-                city: m.city || "",
+                city: (m.city as string) || "",
                 status: "pending",
-                alreadyDownloaded: existingWcaIds.has(m.wca_id),
+                alreadyDownloaded: existingWcaIds.has(wcaId),
               });
             }
           });
@@ -85,7 +86,7 @@ export async function scanDirectory(
         }
 
         if (scanResult?.members) {
-          const membersJson = scanResult.members.map((m: any) => ({
+          const membersJson = scanResult.members.map((m) => ({
             company_name: m.company_name,
             city: m.city,
             country_code: code,
@@ -94,13 +95,13 @@ export async function scanDirectory(
           await upsertDirectoryCache({
               country_code: code,
               network_name: net,
-              members: membersJson as any,
+              members: membersJson as unknown as Record<string, unknown>[],
               total_results: scanResult.members.length,
               scanned_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });
 
-          scanResult.members.forEach((m: any) => {
+          scanResult.members.forEach((m) => {
             if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
               allMembers.push({
                 wca_id: m.wca_id,
@@ -177,9 +178,10 @@ export async function loadPartnerPreview(wcaId: number) {
     findPartnerNetworks(partner.id),
     findPartnerServices(partner.id),
     findPartnerSocialLinks(partner.id),
-  ]) as [any[], any[], any[], any[]];
+  ]);
 
-  const ed = partner.enrichment_data as any;
+  interface SocialLinkRow { platform?: string; url?: string; [key: string]: unknown }
+  const ed = asEnrichment(partner.enrichment_data);
 
   return {
     company_name: partner.company_name,
@@ -189,17 +191,17 @@ export async function loadPartnerPreview(wcaId: number) {
     logo_url: partner.logo_url || undefined,
     contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
     services: (svcs || []).map(s => s.service_category),
-    key_markets: ed?.key_markets || [],
-    key_routes: ed?.key_routes || [],
+    key_markets: (ed as Record<string, unknown>)?.key_markets as string[] || [],
+    key_routes: (ed as Record<string, unknown>)?.key_routes as string[] || [],
     networks: (nets || []).map(n => n.network_name),
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
     profile_description: partner.profile_description || undefined,
-    linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
-    warehouse_sqm: ed?.warehouse_sqm,
-    employees: ed?.employee_count,
-    founded: ed?.founding_year ? String(ed.founding_year) : undefined,
-    fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
+    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin").map((l) => ({ name: "LinkedIn", url: l.url })),
+    warehouse_sqm: (ed as Record<string, unknown>)?.warehouse_sqm as number | undefined,
+    employees: (ed as Record<string, unknown>)?.employee_count as number | undefined,
+    founded: (ed as Record<string, unknown>)?.founding_year ? String((ed as Record<string, unknown>).founding_year) : undefined,
+    fleet: (ed as Record<string, unknown>)?.has_own_fleet ? ((ed as Record<string, unknown>).fleet_details as string || "Sì") : undefined,
     contactSource: "extension" as const,
   };
 }

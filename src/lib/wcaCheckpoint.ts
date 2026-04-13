@@ -19,10 +19,11 @@ interface CheckpointState {
 }
 
 function getState(): CheckpointState {
-  if (!(window as any)[CHECKPOINT_KEY]) {
-    (window as any)[CHECKPOINT_KEY] = { lastRequestTs: 0 };
+  const win = window as unknown as Record<string, unknown>;
+  if (!win[CHECKPOINT_KEY]) {
+    win[CHECKPOINT_KEY] = { lastRequestTs: 0 };
   }
-  return (window as any)[CHECKPOINT_KEY];
+  return win[CHECKPOINT_KEY] as CheckpointState;
 }
 
 /** Green zone threshold in seconds (raised from 15 to 20 to reduce WCA anti-bot triggers) */

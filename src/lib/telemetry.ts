@@ -124,10 +124,11 @@ export async function withTelemetry<T>(
     const result = await fn();
     trackAction(actionName, { ...props, ok: true }, Math.round(performance.now() - start));
     return result;
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     trackAction(
       actionName,
-      { ...props, ok: false, error: e?.message ?? String(e) },
+      { ...props, ok: false, error: msg },
       Math.round(performance.now() - start)
     );
     throw e;
