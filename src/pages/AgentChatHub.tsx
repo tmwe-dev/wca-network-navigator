@@ -234,15 +234,39 @@ export default function AgentChatHub() {
               )}
             >
               {msg.role === "assistant" ? (
-                <div className="flex items-start gap-2">
-                  <div className="prose prose-sm dark:prose-invert prose-p:my-1 prose-headings:my-2 max-w-none flex-1">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <div>
+                  <div className="flex items-start gap-2">
+                    <div className="prose prose-sm dark:prose-invert prose-p:my-1 prose-headings:my-2 max-w-none flex-1">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                    {activeAgent?.elevenlabs_voice_id && (
+                      <button onClick={() => playTTS(msg.content)} className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                  {activeAgent?.elevenlabs_voice_id && (
-                    <button onClick={() => playTTS(msg.content)} className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                      <Volume2 className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 mt-1.5 -ml-1">
+                    <button
+                      onClick={() => handleFeedback(i, "positive")}
+                      disabled={feedbackGiven.has(`${activeId}-${i}`)}
+                      className={cn(
+                        "p-1 rounded-full transition-colors",
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10"
+                      )}
+                    >
+                      <ThumbsUp className="w-3 h-3" />
                     </button>
-                  )}
+                    <button
+                      onClick={() => handleFeedback(i, "negative")}
+                      disabled={feedbackGiven.has(`${activeId}-${i}`)}
+                      className={cn(
+                        "p-1 rounded-full transition-colors",
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                      )}
+                    >
+                      <ThumbsDown className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 msg.content
