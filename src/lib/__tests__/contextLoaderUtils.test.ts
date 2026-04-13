@@ -8,7 +8,7 @@ describe("extractMentions", () => {
   });
 
   it("extracts proper names from text", () => {
-    const result = extractMentions("Ask Jane Doe about it");
+    const result = extractMentions("Contact Jane Doe about it");
     expect(result.mentionedNames).toEqual(["Jane Doe"]);
   });
 
