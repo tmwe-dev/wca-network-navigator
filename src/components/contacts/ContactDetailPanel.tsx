@@ -58,7 +58,8 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = c.mobile || c.phone;
-  const linkedinUrl = c.enrichment_data?.linkedin_url || c.enrichment_data?.linkedin_profile_url;
+  const ed = c.enrichment_data as Record<string, any> | null;
+  const linkedinUrl: string | undefined = ed?.linkedin_url || ed?.linkedin_profile_url;
   return (
     <div className="flex flex-wrap gap-1.5">
       {c.email && (
