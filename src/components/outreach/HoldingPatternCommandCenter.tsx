@@ -183,8 +183,8 @@ export function HoldingPatternCommandCenter() {
                   <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/20 border-b border-border/20">
                     {/* Logo or initial */}
                     <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
-                      {group.logoUrl ? (
-                        <img src={group.logoUrl} alt="" className="w-6 h-6 object-contain" />
+                      {(group as any).logoUrl ? (
+                        <img src={(group as any).logoUrl} alt="" className="w-6 h-6 object-contain" />
                       ) : (
                         group.companyName?.charAt(0)?.toUpperCase()
                       )}
@@ -196,6 +196,9 @@ export function HoldingPatternCommandCenter() {
                         </span>
                         {(group as any).countryCode && (
                           <span className="text-xs shrink-0">{getCountryFlag((group as any).countryCode)}</span>
+                        )}
+                        {(group as any).isImportedContact && (
+                          <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
                         )}
                       </div>
                       {(group as any).contactName && (
