@@ -167,6 +167,77 @@ export async function loadStandalonePartner(
   return { partner, contact, contactEmail, sourceType: "partner" };
 }
 
+// ── Conversation Intelligence loader ──
+
+interface ConversationIntelligence {
+  convCtx: any | null;
+  rules: any | null;
+  classifications: any[];
+}
+
+export async function loadConversationContext(
+  supabase: SupabaseClient, userId: string, emailAddress: string | null, partnerId: string | null,
+): Promise<ConversationIntelligence> {
+  if (!emailAddress) return { convCtx: null, rules: null, classifications: [] };
+
+  const [ctxRes, rulesRes, classRes] = await Promise.all([
+    supabase.from("contact_conversation_context").select("*")
+      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
+    supabase.from("email_address_rules").select("*, email_prompts(*)")
+      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
+    supabase.from("email_classifications")
+      .select("category, confidence, ai_summary, sentiment, action_suggested, classified_at")
+      .eq("user_id", userId).eq("email_address", emailAddress)
+      .order("classified_at", { ascending: false }).limit(3),
+  ]);
+
+  return {
+    convCtx: ctxRes.data ?? null,
+    rules: rulesRes.data ?? null,
+    classifications: classRes.data ?? [],
+  };
+}
+
+export function buildConversationBlock(intel: ConversationIntelligence): string {
+  const parts: string[] = [];
+  const { convCtx, rules, classifications } = intel;
+
+  if (convCtx) {
+    const exchanges = Array.isArray(convCtx.last_exchanges) ? convCtx.last_exchanges as any[] : [];
+    if (convCtx.conversation_summary) {
+      parts.push(`CONVERSATION HISTORY: ${convCtx.conversation_summary}`);
+    }
+    if (exchanges.length) {
+      const last5 = exchanges.slice(-5).map((ex: any) =>
+        `  ${ex.date || "?"} - ${ex.subject || "N/A"} - sentiment: ${ex.sentiment || "neutral"} - ${ex.summary || ""}`
+      );
+      parts.push(`Last ${last5.length} exchanges:\n${last5.join("\n")}`);
+    }
+    parts.push(`RESPONSE PATTERN: Response rate ${Math.round(convCtx.response_rate ?? 0)}%, avg response time ${convCtx.avg_response_time_hours != null ? `${Math.round(convCtx.avg_response_time_hours)}h` : "N/A"}, dominant sentiment: ${convCtx.dominant_sentiment || "neutral"}`);
+  }
+
+  if (rules) {
+    const ruleParts: string[] = [];
+    if (rules.tone_override) ruleParts.push(`Tone=${rules.tone_override}`);
+    if (rules.topics_to_emphasize?.length) ruleParts.push(`Emphasize=${rules.topics_to_emphasize.join(", ")}`);
+    if (rules.topics_to_avoid?.length) ruleParts.push(`Avoid=${rules.topics_to_avoid.join(", ")}`);
+    if (ruleParts.length) parts.push(`SENDER RULES: ${ruleParts.join(", ")}`);
+    if (rules.email_prompts?.instructions) {
+      parts.push(`SENDER PROMPT: ${rules.email_prompts.instructions}`);
+    }
+  }
+
+  if (classifications.length) {
+    const classLines = classifications.map((c: any) =>
+      `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || "no summary"}`
+    );
+    parts.push(`RECENT CLASSIFICATIONS:\n${classLines.join("\n")}`);
+  }
+
+  if (!parts.length) return "";
+  return `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n`;
+}
+
 // ── Context blocks assembly ──
 
 export interface ContextBlocks {
@@ -180,6 +251,7 @@ export interface ContextBlocks {
   stylePreferencesContext: string;
   editPatternsContext: string;
   responseInsightsContext: string;
+  conversationIntelligenceContext: string;
   salesKBSlice: string;
   salesKBSections: string[];
   signatureBlock: string;
