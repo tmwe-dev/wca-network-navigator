@@ -27,7 +27,7 @@ export function OutreachMiniCharts() {
         .from("activities")
         .select("created_at")
         .gte("created_at", sevenDaysAgo)
-        .in("activity_type", ["email_draft", "email_sent", "outreach_email"]);
+        .in("activity_type", ["send_email", "follow_up"]);
 
       const dayMap = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
