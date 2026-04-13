@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2 } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2, ClipboardList } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
@@ -9,6 +9,7 @@ import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { cn } from "@/lib/utils";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
 
+const WorkPlanDashboard = lazyRetry(() => import("@/components/outreach/WorkPlanDashboard").then(m => ({ default: m.WorkPlanDashboard })));
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
@@ -20,13 +21,14 @@ function TabFallback() {
 }
 
 export default function Outreach() {
-  const [tab, setTab] = useState("cockpit");
+  const [tab, setTab] = useState("piano-lavori");
   const { setOutreachTab } = useGlobalFilters();
   const { mockEnabled, toggleMock } = useOutreachMock();
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
   const tabs: VerticalTab[] = [
+    { value: "piano-lavori", label: "Piano Lavori", icon: ClipboardList },
     { value: "cockpit", label: "Cockpit", icon: Rocket },
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
     { value: "attivita", label: "Attività", icon: ListTodo },
@@ -59,6 +61,7 @@ export default function Outreach() {
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">
           <Suspense fallback={<TabFallback />}>
+            {tab === "piano-lavori" && <WorkPlanDashboard />}
             {tab === "cockpit" && <Cockpit />}
             {tab === "inuscita" && <InUscitaTab />}
             {tab === "attivita" && <AttivitaTab />}
