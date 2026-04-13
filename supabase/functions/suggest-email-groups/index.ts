@@ -46,7 +46,7 @@ serve(async (req) => {
       .eq("user_id", user.id);
 
     if (!groups || groups.length === 0) {
-      return new Response(JSON.stringify({ error: "No groups configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "No groups configured" }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // 2. Load uncategorized addresses with enough emails
@@ -60,7 +60,7 @@ serve(async (req) => {
       .limit(batchSize);
 
     if (!addresses || addresses.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, suggestions: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ processed: 0, suggestions: [] }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // 3. For each address, get last 5 subjects
@@ -92,7 +92,7 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -145,7 +145,7 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     const aiData = await aiResponse.json();
@@ -159,7 +159,7 @@ serve(async (req) => {
       }
     } catch (e) {
       console.error("Parse error:", e);
-      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // 5. Save suggestions
@@ -182,13 +182,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ processed, suggestions: classifications }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error("suggest-email-groups error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
