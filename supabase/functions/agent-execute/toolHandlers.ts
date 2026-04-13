@@ -15,6 +15,8 @@ interface KbEntry { title: string; content: string; added_at: string; }
 interface HoldingItem { id: string; source: string; name: string; country: string; city?: string; email: string | null; status: string; days_waiting: number; interactions?: number; }
 interface AbTestVariant { agent_name: string; tone: string; percentage: number; }
 interface AbTestConfig { enabled?: boolean; variants?: AbTestVariant[]; }
+
+export async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
   switch (name) {
     case "search_partners": {
       const isCount = !!args.count_only;
