@@ -6,6 +6,7 @@ import {
   Globe2, Linkedin, Mail, Search,
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
+import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { cn } from "@/lib/utils";
@@ -131,6 +132,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
             )}
             {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
+            <HoldingPatternBadge interactionCount={c.interaction_count ?? 0} lastInteractionAt={c.last_interaction_at} size="sm" />
             {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
           </div>
           {cPosition && (

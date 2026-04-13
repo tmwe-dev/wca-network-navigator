@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, Mail, Phone, Users, RotateCcw, ChevronDown, CalendarIcon, StickyNote, Bot } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -34,6 +35,7 @@ export function AttivitaTab() {
   const searchTerm = gf.search || "";
   const { mockEnabled } = useOutreachMock();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [channelFilter, setChannelFilter] = useState("all");
   const [noteText, setNoteText] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
 
@@ -57,6 +59,9 @@ export function AttivitaTab() {
     if (priorityFilter !== "all") {
       result = result.filter((a: any) => a.priority === priorityFilter);
     }
+    if (channelFilter !== "all") {
+      result = result.filter((a: any) => a.activity_type === channelFilter);
+    }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       result = result.filter((a: any) =>
@@ -65,7 +70,7 @@ export function AttivitaTab() {
       );
     }
     return result;
-  }, [all, filter, priorityFilter, searchTerm]);
+  }, [all, filter, priorityFilter, channelFilter, searchTerm]);
 
   const stats = {
     total: all.length,
@@ -92,16 +97,55 @@ export function AttivitaTab() {
     setRescheduleDate(undefined);
   };
 
+  const { setFilter } = useGlobalFilters();
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Compact stats header */}
-      <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2">
-        <ListTodo className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-semibold">Attività</span>
+      {/* Filter bar */}
+      <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2 flex-wrap">
+        <ListTodo className="w-3.5 h-3.5 text-primary shrink-0" />
+        <span className="text-xs font-semibold shrink-0">Attività</span>
+
+        <Select value={filter} onValueChange={(v) => setFilter("attivitaStatus", v)}>
+          <SelectTrigger className="h-6 text-[10px] w-[110px] px-2">
+            <SelectValue placeholder="Stato" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="pending">In attesa</SelectItem>
+            <SelectItem value="in_progress">In corso</SelectItem>
+            <SelectItem value="completed">Completate</SelectItem>
+            <SelectItem value="cancelled">Annullate</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={priorityFilter as string} onValueChange={(v) => setFilter("attivitaPriority", v)}>
+          <SelectTrigger className="h-6 text-[10px] w-[100px] px-2">
+            <SelectValue placeholder="Priorità" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="high">Alta</SelectItem>
+            <SelectItem value="medium">Media</SelectItem>
+            <SelectItem value="low">Bassa</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={channelFilter} onValueChange={setChannelFilter}>
+          <SelectTrigger className="h-6 text-[10px] w-[100px] px-2">
+            <SelectValue placeholder="Canale" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti</SelectItem>
+            <SelectItem value="send_email">Email</SelectItem>
+            <SelectItem value="phone_call">Telefono</SelectItem>
+            <SelectItem value="meeting">Meeting</SelectItem>
+          </SelectContent>
+        </Select>
+
         <div className="flex items-center gap-1.5 ml-auto">
           <Badge variant="outline" className="text-[9px] px-1.5 h-4">{stats.total} totali</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.pending} attesa</Badge>
-          <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.in_progress} corso</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-emerald-500 border-emerald-500/30">{stats.completed} fatte</Badge>
         </div>
       </div>

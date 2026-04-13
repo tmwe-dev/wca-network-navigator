@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from "react"; // restored
+import { useState, useCallback, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
+import { CRMFilterSidebar } from "@/components/contacts/CRMFilterSidebar";
 import { Users, X } from "lucide-react";
 import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
@@ -12,6 +13,9 @@ const log = createLogger("Contacts");
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [sortField, setSortField] = useState("name");
+  const [groupBy, setGroupBy] = useState("none");
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
 
@@ -64,7 +68,17 @@ export default function Contacts() {
   const hasDetail = !!selectedContact;
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className="h-full overflow-hidden flex">
+      <CRMFilterSidebar
+        sortField={sortField}
+        onSortChange={setSortField}
+        groupBy={groupBy}
+        onGroupByChange={setGroupBy}
+        activeFilters={activeFilters}
+        onFilterChange={(key, values) => setActiveFilters(prev => ({ ...prev, [key]: values }))}
+        onClearAll={() => setActiveFilters({})}
+      />
+      <div className="flex-1 min-w-0">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Column 1 — Contact list: always gets majority of space */}
         <ResizablePanel defaultSize={hasDetail ? 55 : 100} minSize={40} maxSize={80}>
@@ -112,6 +126,7 @@ export default function Contacts() {
           </>
         )}
       </ResizablePanelGroup>
+      </div>
     </div>
   );
 }
