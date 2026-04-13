@@ -388,6 +388,22 @@ export async function executeTool(
         .eq("id", actionId)
         .eq("user_id", userId);
       if (error) return { error: error.message };
+
+      // Save rejection as L1 memory for learning
+      if (reason && userId) {
+        deps.supabase.from("ai_memory").insert({
+          user_id: userId,
+          memory_type: "decision",
+          content: `L'utente ha rifiutato un'azione AI (${actionId}). Motivo: "${reason}". Non ripetere questo tipo di azione in futuro senza chiedere conferma.`,
+          tags: ["feedback_negativo", "correzione_utente", "azione_rifiutata"],
+          level: 1,
+          importance: 4,
+          confidence: 0.6,
+          decay_rate: 0.01,
+          source: "user_rejection",
+        }).then(() => {}).catch((e: unknown) => console.warn("rejection memory save failed:", extractErrorMessage(e)));
+      }
+
       return { success: true, message: `Azione ${actionId} rifiutata.` };
     }
 

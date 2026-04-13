@@ -258,6 +258,29 @@ Non eseguire tool di scrittura o modifica`;
       }
     }
 
+    // ── Detect conversational repetitions ──
+    if (Array.isArray(messages) && messages.length >= 2) {
+      const repetitionWarning = detectRepetitions(messages);
+      if (repetitionWarning) {
+        systemPrompt += "\n\n" + repetitionWarning;
+        // Fire-and-forget: save repetition as L1 memory
+        if (userId) {
+          const lastMsg = [...messages].reverse().find((m: Record<string, unknown>) => m.role === "user")?.content;
+          supabase.from("ai_memory").insert({
+            user_id: userId,
+            memory_type: "conversation",
+            content: `L'utente ha dovuto ripetere una richiesta. Ultima: "${String(lastMsg || "").substring(0, 200)}". Migliorare comprensione.`,
+            tags: ["ripetizione", "feedback_implicito", "da_migliorare"],
+            level: 1,
+            importance: 3,
+            confidence: 0.5,
+            decay_rate: 0.02,
+            source: "repetition_detection",
+          }).then(() => {}).catch(() => {});
+        }
+      }
+    }
+
     // ── Rolling summary compression ──
     const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || provider.apiKey;
     const compressedMessages = await compressMessages(supabase, messages, LOVABLE_KEY, userId);
