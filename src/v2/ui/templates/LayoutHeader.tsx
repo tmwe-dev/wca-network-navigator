@@ -3,6 +3,7 @@
  */
 import * as React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "../atoms/Button";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
@@ -43,6 +44,7 @@ export function LayoutHeader({
 }: Props): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
@@ -53,12 +55,12 @@ export function LayoutHeader({
         <ActiveProcessIndicator />
         {location.pathname.startsWith("/v2/network") && (
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
-            <ArrowRight className="h-3 w-3" /> CRM
+            <ArrowRight className="h-3 w-3" /> {t("nav.crm")}
           </Button>
         )}
         {location.pathname.startsWith("/v2/crm") && (
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/network")}>
-            <ArrowRight className="h-3 w-3" /> Network
+            <ArrowRight className="h-3 w-3" /> {t("nav.network")}
           </Button>
         )}
         <ConnectionStatusBar
@@ -74,16 +76,16 @@ export function LayoutHeader({
       </div>
       <div className="flex items-center gap-0.5">
         <OperatorSelector />
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAddContact} aria-label="Aggiungi contatto">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAddContact} aria-label={t("common.add_contact")}>
           <Plus className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/v2/settings?tab=enrichment")} aria-label="Arricchimento">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/v2/settings?tab=enrichment")} aria-label={t("common.enrichment")}>
           <DatabaseZap className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAgentDash} aria-label="Agent Operations">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAgentDash} aria-label={t("common.agent_operations")}>
           <Activity className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onTestExt} aria-label="Test Estensioni">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onTestExt} aria-label={t("common.test_extensions")}>
           <FlaskConical className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAiClick} aria-label="IntelliFlow AI">

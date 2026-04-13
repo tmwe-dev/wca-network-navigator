@@ -19,6 +19,7 @@ import MemoryDashboard from "@/components/ai/MemoryDashboard";
 import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -62,8 +63,13 @@ export default function Settings() {
         ) : (
           <div className="max-w-4xl">
             {tab === "generale" && (
-              <div className="float-panel p-5">
-                <GeneralSettings settings={settings} updateSetting={updateSetting} />
+              <div className="space-y-4">
+                <div className="float-panel p-5">
+                  <GeneralSettings settings={settings} updateSetting={updateSetting} />
+                </div>
+                <div className="float-panel p-5">
+                  <LanguageSwitcher />
+                </div>
               </div>
             )}
             {tab === "wca" && (
