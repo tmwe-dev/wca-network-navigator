@@ -2026,6 +2026,9 @@ export type Database = {
       email_address_rules: {
         Row: {
           ai_confidence_threshold: number | null
+          ai_suggested_group: string | null
+          ai_suggestion_accepted: boolean | null
+          ai_suggestion_confidence: number | null
           auto_action: string | null
           auto_action_params: Json | null
           auto_execute: boolean | null
@@ -2041,10 +2044,12 @@ export type Database = {
           group_color: string | null
           group_description: string | null
           group_icon: string | null
+          group_id: string | null
           group_name: string | null
           id: string
           interaction_count: number | null
           is_active: boolean | null
+          last_email_at: string | null
           last_interaction_at: string | null
           notes: string | null
           preferred_channel: string | null
@@ -2058,6 +2063,9 @@ export type Database = {
         }
         Insert: {
           ai_confidence_threshold?: number | null
+          ai_suggested_group?: string | null
+          ai_suggestion_accepted?: boolean | null
+          ai_suggestion_confidence?: number | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -2073,10 +2081,12 @@ export type Database = {
           group_color?: string | null
           group_description?: string | null
           group_icon?: string | null
+          group_id?: string | null
           group_name?: string | null
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
           preferred_channel?: string | null
@@ -2090,6 +2100,9 @@ export type Database = {
         }
         Update: {
           ai_confidence_threshold?: number | null
+          ai_suggested_group?: string | null
+          ai_suggestion_accepted?: boolean | null
+          ai_suggestion_confidence?: number | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -2105,10 +2118,12 @@ export type Database = {
           group_color?: string | null
           group_description?: string | null
           group_icon?: string | null
+          group_id?: string | null
           group_name?: string | null
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
           preferred_channel?: string | null
@@ -2126,6 +2141,13 @@ export type Database = {
             columns: ["exclusive_agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_address_rules_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "email_sender_groups"
             referencedColumns: ["id"]
           },
           {
@@ -2436,32 +2458,44 @@ export type Database = {
       }
       email_sender_groups: {
         Row: {
+          auto_action: string | null
+          auto_action_params: Json | null
           colore: string
           created_at: string
           descrizione: string | null
           icon: string | null
           id: string
+          is_default: boolean | null
           nome_gruppo: string
+          sort_order: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_action?: string | null
+          auto_action_params?: Json | null
           colore?: string
           created_at?: string
           descrizione?: string | null
           icon?: string | null
           id?: string
+          is_default?: boolean | null
           nome_gruppo: string
+          sort_order?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_action?: string | null
+          auto_action_params?: Json | null
           colore?: string
           created_at?: string
           descrizione?: string | null
           icon?: string | null
           id?: string
+          is_default?: boolean | null
           nome_gruppo?: string
+          sort_order?: number
           updated_at?: string
           user_id?: string
         }
@@ -4745,6 +4779,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      check_domain_group_pattern: {
+        Args: { p_domain: string; p_min_count?: number; p_user_id: string }
+        Returns: {
+          count: number
+          group_id: string
+          group_name: string
+        }[]
       }
       decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
       deduct_credits: {
