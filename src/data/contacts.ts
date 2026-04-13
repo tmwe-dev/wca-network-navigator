@@ -314,7 +314,7 @@ export async function updateContactEnrichment(id: string, enrichmentPatch: Recor
   const merged = structuredClone({ ...existing, ...enrichmentPatch });
   const { error } = await supabase
     .from("imported_contacts")
-    .update({ enrichment_data: merged } satisfies Pick<ImportedContactRow, "enrichment_data">)
+    .update({ enrichment_data: merged as unknown as ImportedContactRow["enrichment_data"] })
     .eq("id", id);
   if (error) throw error;
 }

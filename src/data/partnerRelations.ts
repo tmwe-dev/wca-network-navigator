@@ -5,16 +5,19 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type PartnerContactRow = Database["public"]["Tables"]["partner_contacts"]["Row"];
 type PartnerContactInsert = Database["public"]["Tables"]["partner_contacts"]["Insert"];
-type PartnerSocialLinkRow = Database["public"]["Tables"]["partner_social_links"]["Row"];
+type PartnerNetworkInsert = Database["public"]["Tables"]["partner_networks"]["Insert"];
+type PartnerServiceInsert = Database["public"]["Tables"]["partner_services"]["Insert"];
+type PartnerCertInsert = Database["public"]["Tables"]["partner_certifications"]["Insert"];
 type PartnerSocialLinkInsert = Database["public"]["Tables"]["partner_social_links"]["Insert"];
 
 // ── partner_contacts ──
-export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<Partial<PartnerContactRow>[]> {
+// Dynamic select → callers determine shape, so we use a flexible return type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<any[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId);
   if (error) throw error;
-  return (data ?? []) as Partial<PartnerContactRow>[];
+  return data ?? [];
 }
 
 export async function findPartnerContactByEmail(email: string) {
@@ -60,7 +63,7 @@ export async function findPartnerNetworks(partnerId: string) {
 
 export async function insertPartnerNetworks(networks: Record<string, unknown>[]) {
   if (networks.length === 0) return;
-  const { error } = await supabase.from("partner_networks").insert(networks as Database["public"]["Tables"]["partner_networks"]["Insert"][]);
+  const { error } = await supabase.from("partner_networks").insert(networks as PartnerNetworkInsert[]);
   if (error) throw error;
 }
 
@@ -73,7 +76,7 @@ export async function findPartnerServices(partnerId: string) {
 
 export async function insertPartnerServices(services: Record<string, unknown>[]) {
   if (services.length === 0) return;
-  const { error } = await supabase.from("partner_services").insert(services as Database["public"]["Tables"]["partner_services"]["Insert"][]);
+  const { error } = await supabase.from("partner_services").insert(services as PartnerServiceInsert[]);
   if (error) throw error;
 }
 
@@ -86,7 +89,7 @@ export async function findPartnerCertifications(partnerId: string) {
 
 export async function insertPartnerCertifications(certs: Record<string, unknown>[]) {
   if (certs.length === 0) return;
-  const { error } = await supabase.from("partner_certifications").insert(certs as Database["public"]["Tables"]["partner_certifications"]["Insert"][]);
+  const { error } = await supabase.from("partner_certifications").insert(certs as PartnerCertInsert[]);
   if (error) throw error;
 }
 
@@ -99,7 +102,7 @@ export async function findPartnerSocialLinks(partnerId: string) {
 
 export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
   let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
-  if (platform) q = q.eq("platform", platform);
+  if (platform) q = q.eq("platform", platform as Database["public"]["Enums"]["social_platform"]);
   const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
@@ -111,15 +114,18 @@ export async function insertPartnerSocialLink(link: { partner_id: string; contac
 }
 
 // ── partner_contacts by IDs ──
-export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<Partial<PartnerContactRow>[]> {
+// Dynamic select → flexible return type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<any[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids);
   if (error) throw error;
-  return (data ?? []) as Partial<PartnerContactRow>[];
+  return data ?? [];
 }
 
 // ── prospect_contacts by IDs ──
-export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<Record<string, unknown>[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<any[]> {
   const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids);
   if (error) throw error;
-  return (data ?? []) as Record<string, unknown>[];
+  return data ?? [];
 }
