@@ -8,9 +8,10 @@ import { Button } from "../atoms/Button";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import {
   Menu, ArrowRight, Plus, DatabaseZap, Activity,
-  FlaskConical, Sparkles,
+  FlaskConical, Sparkles, WifiOff,
 } from "lucide-react";
 
 interface OutreachQueue {
@@ -45,14 +46,21 @@ export function LayoutHeader({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const isOnline = useOnlineStatus();
 
   return (
-    <header className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
+    <header role="banner" className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onToggleSidebar} aria-label="Toggle sidebar">
           <Menu className="h-4 w-4" />
         </Button>
         <ActiveProcessIndicator />
+        {!isOnline && (
+          <div className="flex items-center gap-1 text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </div>
+        )}
         {location.pathname.startsWith("/v2/network") && (
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
             <ArrowRight className="h-3 w-3" /> {t("nav.crm")}

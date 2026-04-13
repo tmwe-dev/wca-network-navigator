@@ -47,6 +47,7 @@ const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOpe
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
 const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
+const PWAInstallPrompt = lazy(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -350,6 +351,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           </AnimatePresence>
                         </main>
                         <Suspense fallback={null}><MobileBottomNav /></Suspense>
+                        <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                       </div>
                     </div>
 

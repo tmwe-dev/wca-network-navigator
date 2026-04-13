@@ -117,5 +117,91 @@
     "preferences": "Preferenze",
     "italian": "Italiano",
     "english": "English"
+  },
+  "outreach": {
+    "title": "Outreach",
+    "missions": "Missioni",
+    "new_mission": "Nuova Missione",
+    "channel": "Canale",
+    "total_contacts": "Contatti Totali",
+    "processed": "Processati",
+    "status": "Stato"
+  },
+  "campaigns": {
+    "title": "Campagne",
+    "new_campaign": "Nuova Campagna",
+    "scheduled": "Programmata",
+    "sending": "In Invio",
+    "sent": "Inviata",
+    "failed": "Errore",
+    "queue": "Coda Email"
+  },
+  "settings_page": {
+    "profile": "Profilo AI",
+    "api_keys": "Chiavi API",
+    "email_accounts": "Account Email",
+    "voice": "Voce",
+    "language": "Lingua",
+    "preferences": "Preferenze",
+    "save_success": "Impostazioni salvate",
+    "save_error": "Errore nel salvataggio"
+  },
+  "diagnostics": {
+    "title": "Diagnostica",
+    "system_health": "Stato Sistema",
+    "healthy": "Operativo",
+    "degraded": "Degradato",
+    "errors_24h": "Errori 24h",
+    "ai_latency": "Latenza AI",
+    "emails_today": "Email Oggi"
+  },
+  "ai": {
+    "assistant": "Assistente AI",
+    "thinking": "Sto pensando...",
+    "send": "Invia",
+    "type_message": "Scrivi un messaggio...",
+    "no_response": "Nessuna risposta",
+    "retry": "Riprova",
+    "arena": "AI Arena",
+    "lab": "AI Lab",
+    "agents": "Agenti AI"
+  },
+  "partners": {
+    "detail": "Dettaglio Partner",
+    "info": "Informazioni",
+    "activity": "Attività",
+    "emails": "Email",
+    "notes": "Note",
+    "lead_score": "Punteggio Lead",
+    "new": "Nuovo",
+    "contacted": "Contattato",
+    "in_progress": "In Corso",
+    "negotiation": "Negoziazione",
+    "won": "Vinto",
+    "lost": "Perso"
+  },
+  "status": {
+    "loading": "Caricamento...",
+    "no_results": "Nessun risultato",
+    "error_generic": "Si è verificato un errore",
+    "error_network": "Errore di rete",
+    "error_auth": "Sessione scaduta",
+    "saved": "Salvato",
+    "deleted": "Eliminato",
+    "updated": "Aggiornato",
+    "created": "Creato"
+  },
+  "actions": {
+    "call": "Chiama",
+    "email": "Email",
+    "whatsapp": "WhatsApp",
+    "linkedin": "LinkedIn",
+    "assign": "Assegna",
+    "archive": "Archivia",
+    "escalate": "Escalate",
+    "reply": "Rispondi",
+    "forward": "Inoltra",
+    "mark_read": "Segna come letto",
+    "mark_unread": "Segna come non letto"
   }
 }
