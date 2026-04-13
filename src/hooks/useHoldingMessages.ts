@@ -37,7 +37,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
         getPartnersByLeadStatus(HOLDING_STATUSES, "id, company_name, email, lead_status"),
         supabase
           .from("imported_contacts")
-          .select("id, first_name, last_name, email, lead_status")
+          .select("id, name, email, lead_status, company_name")
           .eq("user_id", userId)
           .in("lead_status", HOLDING_STATUSES),
       ]);
@@ -51,11 +51,13 @@ export function useHoldingMessages(channel: HoldingChannel) {
         .filter(Boolean) as string[];
 
       // Step 2: Get messages for these partners AND contacts on the specified channel
+      const selectCols = "id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, body_text, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header";
+
       const [partnerMsgs, contactMsgs] = await Promise.all([
         partnerIds.length > 0
           ? supabase
               .from("channel_messages")
-              .select("id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, body_text, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header")
+              .select(selectCols)
               .eq("channel", channel)
               .in("partner_id", partnerIds)
               .order("email_date", { ascending: false, nullsFirst: false })
@@ -66,7 +68,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
         contactEmails.length > 0
           ? supabase
               .from("channel_messages")
-              .select("id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, body_text, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header")
+              .select(selectCols)
               .eq("channel", channel)
               .eq("user_id", userId)
               .eq("direction", "inbound")
@@ -84,7 +86,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
         ...(contactMsgs.data || []),
       ];
 
-      // Step 3: Deduplicate by message_id_external or subject+from+date
+      // Step 3: Deduplicate
       const seen = new Set<string>();
       const deduped: ChannelMessage[] = [];
       for (const msg of allMessages as unknown as ChannelMessage[]) {
@@ -99,8 +101,8 @@ export function useHoldingMessages(channel: HoldingChannel) {
         deduped.push(msg);
       }
 
-      // Step 4: Build contact email→contact map for imported contacts
-      const contactEmailMap = new Map<string, typeof holdingContacts[0]>();
+      // Step 4: Build contact email→contact map
+      const contactEmailMap = new Map<string, (typeof holdingContacts)[number]>();
       for (const c of holdingContacts) {
         if (c.email) contactEmailMap.set(c.email.toLowerCase(), c);
       }
@@ -112,7 +114,6 @@ export function useHoldingMessages(channel: HoldingChannel) {
         const pid = msg.partner_id;
 
         if (pid && partnerMap.has(pid)) {
-          // Partner-based group
           if (!groupMap.has(pid)) {
             const p = partnerMap.get(pid)!;
             groupMap.set(pid, {
@@ -129,7 +130,6 @@ export function useHoldingMessages(channel: HoldingChannel) {
           group.messages.push(msg);
           if (!msg.read_at) group.unreadCount++;
         } else if (!pid && msg.from_address) {
-          // Imported contact-based group
           const addr = msg.from_address.toLowerCase();
           const contact = contactEmailMap.get(addr);
           if (!contact) continue;
@@ -138,7 +138,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
           if (!groupMap.has(groupKey)) {
             groupMap.set(groupKey, {
               partnerId: contact.id,
-              companyName: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || addr,
+              companyName: contact.name || contact.company_name || addr,
               email: contact.email,
               leadStatus: contact.lead_status || "contacted",
               messages: [],
@@ -153,7 +153,6 @@ export function useHoldingMessages(channel: HoldingChannel) {
         }
       }
 
-      // Sort groups by latest message date
       return Array.from(groupMap.values()).sort(
         (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
       );

@@ -148,6 +148,73 @@ serve(async (req) => {
       if (myClients?.length) {
         contextBlock += `\n--- I TUOI CLIENTI ASSEGNATI (${myClients.length}) ---\n`;
         contextBlock += `Tipi: ${myClients.filter(c => c.source_type === 'partner').length} partner, ${myClients.filter(c => c.source_type === 'contact').length} contatti\n`;
+
+        // ═══ GAP 4: Carica email recenti dei clienti assegnati ═══
+        const clientEmails: string[] = [];
+        for (const client of myClients.slice(0, 10)) {
+          let email: string | null = null;
+          if (client.source_type === "partner") {
+            const { data } = await supabase.from("partners").select("email").eq("id", client.source_id).single();
+            email = data?.email || null;
+          } else if (client.source_type === "contact" || client.source_type === "imported_contact") {
+            const { data } = await supabase.from("imported_contacts").select("email").eq("id", client.source_id).single();
+            email = data?.email || null;
+          }
+          if (email) clientEmails.push(email.toLowerCase());
+        }
+
+        if (clientEmails.length > 0) {
+          const { data: clientMsgs } = await supabase
+            .from("channel_messages")
+            .select("from_address, to_address, direction, subject, body_text, created_at, category")
+            .eq("user_id", userId)
+            .in("from_address", clientEmails)
+            .eq("direction", "inbound")
+            .order("created_at", { ascending: false })
+            .limit(30);
+
+          if (clientMsgs?.length) {
+            contextBlock += `\n\n--- EMAIL RECENTI DAI TUOI CLIENTI ---\n`;
+            const byClient = new Map<string, typeof clientMsgs>();
+            for (const msg of clientMsgs) {
+              const addr = msg.from_address?.toLowerCase() || "";
+              if (!byClient.has(addr)) byClient.set(addr, []);
+              byClient.get(addr)!.push(msg);
+            }
+            for (const [addr, msgs] of byClient) {
+              contextBlock += `\n${addr} (ultime ${Math.min(msgs.length, 3)}):\n`;
+              for (const msg of msgs.slice(0, 3)) {
+                const date = new Date(msg.created_at).toLocaleDateString("it-IT");
+                contextBlock += `  [${date}] ${msg.subject || "(nessun subject)"}\n`;
+                if (msg.body_text) {
+                  contextBlock += `  ${msg.body_text.slice(0, 150)}...\n`;
+                }
+              }
+            }
+          }
+
+          const { data: clientClassifications } = await supabase
+            .from("email_classifications")
+            .select("email_address, category, sentiment, confidence, ai_summary, classified_at")
+            .eq("user_id", userId)
+            .in("email_address", clientEmails)
+            .order("classified_at", { ascending: false })
+            .limit(20);
+
+          if (clientClassifications?.length) {
+            contextBlock += `\n\n--- CLASSIFICAZIONI AI DEI TUOI CLIENTI ---\n`;
+            const bySender = new Map<string, typeof clientClassifications>();
+            for (const c of clientClassifications) {
+              const addr = c.email_address?.toLowerCase() || "";
+              if (!bySender.has(addr)) bySender.set(addr, []);
+              bySender.get(addr)!.push(c);
+            }
+            for (const [addr, classes] of bySender) {
+              const latest = classes[0];
+              contextBlock += `${addr}: ${latest.category} (${Math.round((latest.confidence || 0) * 100)}%) — sentiment: ${latest.sentiment} — ${latest.ai_summary || ""}\n`;
+            }
+          }
+        }
       }
 
       // 7. Task attivi di TUTTI i colleghi (visibilità cross-team)
