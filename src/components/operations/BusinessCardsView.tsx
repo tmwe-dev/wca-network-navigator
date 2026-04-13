@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Clock,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
+import { BCAQualityDashboard } from "./bca/BCAQualityDashboard";
+import { BCAEventTimeline } from "./bca/BCAEventTimeline";
 import { cn } from "@/lib/utils";
 import { useBusinessCards } from "@/hooks/useBusinessCards";
 import { useSendToCockpit } from "@/hooks/useCockpitContacts";
@@ -33,6 +35,7 @@ export function BusinessCardsView() {
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [syncing, setSyncing] = useState(false);
+  const [timelineMode, setTimelineMode] = useState(false);
 
   const g = useBcaGrouping(cards);
 
@@ -156,9 +159,21 @@ export function BusinessCardsView() {
 
         <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
 
-        {/* Card list */}
+        {/* Quality Dashboard */}
+        <BCAQualityDashboard cards={cards} />
+
+        {/* Timeline toggle */}
+        <div className="flex items-center gap-2">
+          <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => setTimelineMode(!timelineMode)}>
+            <Clock className="w-3 h-3" /> Timeline Evento
+          </Button>
+        </div>
+
+        {/* Card list or timeline */}
         <div className="flex-1 min-h-0 overflow-auto">
-          {g.groups.length === 0 ? (
+          {timelineMode ? (
+            <BCAEventTimeline cards={g.filtered} />
+          ) : g.groups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
               <CreditCard className="w-12 h-12 text-muted-foreground/20" />
               <p className="text-sm text-muted-foreground/60">Nessun biglietto da visita</p>

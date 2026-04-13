@@ -8,6 +8,9 @@ import {
   Globe, Loader2, Search, ArrowRight, Briefcase, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BCAOcrConfidence } from "./BCAOcrConfidence";
+import { BCACreateContact } from "./BCACreateContact";
+import { BCASmartActions } from "./BCASmartActions";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,6 +125,7 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
         </div>
       )}
 
+      {/* Quick actions */}
       <div className="space-y-1.5">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Send className="w-3 h-3" /> Azioni rapide</p>
         <div className="grid grid-cols-2 gap-1.5">
@@ -144,9 +148,6 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
               <a href={`tel:${card.phone || card.mobile}`}><Phone className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">Chiama</span></a>
             </Button>
           )}
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleCockpit}>
-            <ArrowRight className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">→ Cockpit</span>
-          </Button>
           {card.email && (
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleWorkspace}>
               <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" /><span className="truncate">Workspace</span>
@@ -154,6 +155,15 @@ export function BusinessCardDetailPanel({ card, onClose }: { card: BusinessCardW
           )}
         </div>
       </div>
+
+      {/* Smart Actions */}
+      <BCASmartActions card={card} />
+
+      {/* OCR Confidence */}
+      <BCAOcrConfidence card={card} />
+
+      {/* Create Contact */}
+      <BCACreateContact card={card} />
 
       <div className="space-y-1.5 bg-muted/20 rounded-lg p-3 border border-border/30">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Dettagli contatto</p>
