@@ -612,4 +612,19 @@ html {
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
+
+  /* Mobile touch-friendly spacing */
+  @media (max-width: 767px) {
+    .touch-target {
+      min-height: 44px;
+    }
+    .dialog-mobile {
+      max-height: 80vh;
+    }
+  }
+
+  /* Safe area for bottom nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

@@ -46,6 +46,7 @@ const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDial
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
+const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -242,34 +243,49 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </div>
 
                       {/* Mobile header */}
-                      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
+                      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => setIntelliflowOpen(true)} className="p-1"><Sparkles className="h-4 w-4 text-primary" /></button>
-                          <button onClick={() => setMobileOpen(!mobileOpen)} className="p-1">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setIntelliflowOpen(true)} className="min-h-[44px] min-w-[44px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
+                          <button onClick={() => setMobileOpen(!mobileOpen)} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                           </button>
                         </div>
                       </div>
 
-                      {mobileOpen ? (
-                        <div className="md:hidden fixed inset-0 z-40 flex">
-                          <div className="w-64 bg-card border-r flex flex-col mt-12">
-                            <LayoutSidebarNav
-                              profileName={profile?.displayName}
-                              wcaStatusColor={wcaStatusColor}
-                              wcaStatusLabel={wcaStatusLabel}
-                              wcaSessionActive={wcaSession.sessionActive}
-                              onWcaReconnect={() => wcaSession.ensureSession()}
-                              isDark={isDark}
-                              onToggleTheme={toggleTheme}
-                              onSignOut={signOut}
-                              onMobileClose={() => setMobileOpen(false)}
+                      {/* Mobile sidebar overlay with Framer Motion */}
+                      <AnimatePresence>
+                        {mobileOpen && (
+                          <div className="md:hidden fixed inset-0 z-40 flex">
+                            <motion.div
+                              initial={{ x: "-100%" }}
+                              animate={{ x: 0 }}
+                              exit={{ x: "-100%" }}
+                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                              className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
+                            >
+                              <LayoutSidebarNav
+                                profileName={profile?.displayName}
+                                wcaStatusColor={wcaStatusColor}
+                                wcaStatusLabel={wcaStatusLabel}
+                                wcaSessionActive={wcaSession.sessionActive}
+                                onWcaReconnect={() => wcaSession.ensureSession()}
+                                isDark={isDark}
+                                onToggleTheme={toggleTheme}
+                                onSignOut={signOut}
+                                onMobileClose={() => setMobileOpen(false)}
+                              />
+                            </motion.div>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="flex-1 bg-black/50"
+                              onClick={() => setMobileOpen(false)}
                             />
                           </div>
-                          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
-                        </div>
-                      ) : null}
+                        )}
+                      </AnimatePresence>
 
                       {/* Edge hover triggers */}
                       <button
@@ -310,7 +326,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           outreachQueue={outreachQueue}
                           globalSync={globalSync}
                         />
-                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
+                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={location.pathname}
@@ -324,6 +340,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             </motion.div>
                           </AnimatePresence>
                         </main>
+                        <Suspense fallback={null}><MobileBottomNav /></Suspense>
                       </div>
                     </div>
 
