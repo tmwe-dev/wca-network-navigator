@@ -71,6 +71,12 @@ serve(async (req) => {
     }
     const userId: string = claimsData.claims.sub as string;
 
+    // ── Rate limiting ──
+    const rl = checkRateLimit(`ai-assistant:${userId}`, { maxTokens: 15, refillRate: 0.25 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl, dynCors);
+    }
+
     // ── AI Provider + credit gate ──
     const provider = await resolveAiProvider(supabase, userId);
     if (!provider.isUserKey) {

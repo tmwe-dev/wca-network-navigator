@@ -80,6 +80,12 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
+    // ── Rate limiting ──
+    const rl = checkRateLimit(`generate-outreach:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl, dynCors);
+    }
+
     const {
       channel = "email",
       contact_name,

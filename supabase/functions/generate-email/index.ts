@@ -244,6 +244,12 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
+    // ── Rate limiting ──
+    const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl, dynCors);
+    }
+
     const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
