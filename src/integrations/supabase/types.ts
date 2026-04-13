@@ -14,8 +14,73 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_tests: {
+        Row: {
+          completed_at: string | null
+          confidence_level: number | null
+          created_at: string | null
+          id: string
+          open_rate_a: number | null
+          open_rate_b: number | null
+          responses_a: number | null
+          responses_b: number | null
+          started_at: string | null
+          status: string
+          test_name: string
+          test_type: string
+          total_sent_a: number | null
+          total_sent_b: number | null
+          user_id: string
+          variant_a: Json
+          variant_b: Json
+          winner: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          confidence_level?: number | null
+          created_at?: string | null
+          id?: string
+          open_rate_a?: number | null
+          open_rate_b?: number | null
+          responses_a?: number | null
+          responses_b?: number | null
+          started_at?: string | null
+          status?: string
+          test_name: string
+          test_type?: string
+          total_sent_a?: number | null
+          total_sent_b?: number | null
+          user_id: string
+          variant_a?: Json
+          variant_b?: Json
+          winner?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          confidence_level?: number | null
+          created_at?: string | null
+          id?: string
+          open_rate_a?: number | null
+          open_rate_b?: number | null
+          responses_a?: number | null
+          responses_b?: number | null
+          started_at?: string | null
+          status?: string
+          test_name?: string
+          test_type?: string
+          total_sent_a?: number | null
+          total_sent_b?: number | null
+          user_id?: string
+          variant_a?: Json
+          variant_b?: Json
+          winner?: string | null
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
+          ab_test_id: string | null
+          ab_variant: string | null
           activity_type: Database["public"]["Enums"]["activity_type"]
           assigned_to: string | null
           campaign_batch_id: string | null
@@ -47,6 +112,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          ab_test_id?: string | null
+          ab_variant?: string | null
           activity_type: Database["public"]["Enums"]["activity_type"]
           assigned_to?: string | null
           campaign_batch_id?: string | null
@@ -78,6 +145,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          ab_test_id?: string | null
+          ab_variant?: string | null
           activity_type?: Database["public"]["Enums"]["activity_type"]
           assigned_to?: string | null
           campaign_batch_id?: string | null
@@ -109,6 +178,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "activities_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activities_assigned_to_fkey"
             columns: ["assigned_to"]
