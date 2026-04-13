@@ -184,8 +184,8 @@ export function HoldingPatternCommandCenter() {
                   <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/20 border-b border-border/20">
                     {/* Logo or initial */}
                     <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
-                    {(group as Record<string, unknown>).logoUrl ? (
-                        <img src={(group as Record<string, unknown>).logoUrl as string} alt="" className="w-6 h-6 object-contain" />
+                    {(group as unknown as Record<string, unknown>).logoUrl ? (
+                        <img src={String((group as unknown as Record<string, unknown>).logoUrl)} alt="" className="w-6 h-6 object-contain" />
                       ) : (
                         group.companyName?.charAt(0)?.toUpperCase()
                       )}
@@ -195,15 +195,15 @@ export function HoldingPatternCommandCenter() {
                         <span className="text-[11px] font-bold text-foreground truncate uppercase">
                           {group.companyName}
                         </span>
-                        {(group as Record<string, unknown>).countryCode && (
-                          <span className="text-xs shrink-0">{getCountryFlag((group as Record<string, unknown>).countryCode as string)}</span>
+                        {"countryCode" in group && (group as unknown as Record<string, unknown>).countryCode && (
+                          <span className="text-xs shrink-0">{getCountryFlag(String((group as unknown as Record<string, unknown>).countryCode))}</span>
                         )}
-                        {(group as Record<string, unknown>).isImportedContact && (
+                        {"isImportedContact" in group && (group as unknown as Record<string, unknown>).isImportedContact && (
                           <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
                         )}
                       </div>
-                      {(group as Record<string, unknown>).contactName && (
-                        <p className="text-[10px] text-muted-foreground truncate">{(group as Record<string, unknown>).contactName as string}</p>
+                      {"contactName" in group && (group as unknown as Record<string, unknown>).contactName && (
+                        <p className="text-[10px] text-muted-foreground truncate">{String((group as unknown as Record<string, unknown>).contactName)}</p>
                       )}
                     </div>
                     {group.unreadCount > 0 && (
