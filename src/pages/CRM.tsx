@@ -1,10 +1,13 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles, Kanban, Copy } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useTrackPage } from "@/hooks/useTrackPage";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -19,6 +22,17 @@ export default function CRM() {
   const [tab, setTab] = useUrlState<string>("tab", "contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();
+  const qc = useQueryClient();
+
+  const scoreMutation = useMutation({
+    mutationFn: () => invokeEdge("calculate-lead-scores", { body: {}, context: "CRM.recalcScore" }),
+    onSuccess: () => {
+      toast.success("Lead scores ricalcolati");
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["imported-contacts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   useTrackPage("crm", { tab });
 
