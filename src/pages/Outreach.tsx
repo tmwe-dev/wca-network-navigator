@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2 } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Bot, TestTube2, Clock } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
@@ -11,6 +11,7 @@ import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
+const SchedulingTab = lazyRetry(() => import("@/components/outreach/SchedulingTab").then(m => ({ default: m.SchedulingTab })));
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
 const HoldingPatternTab = lazyRetry(() => import("@/components/outreach/HoldingPatternCommandCenter").then(m => ({ default: m.HoldingPatternCommandCenter })));
 const CodaAITab = lazyRetry(() => import("@/components/outreach/CodaAITab").then(m => ({ default: m.CodaAITab })));
@@ -29,6 +30,7 @@ export default function Outreach() {
   const tabs: VerticalTab[] = [
     { value: "cockpit", label: "Cockpit", icon: Rocket },
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
+    { value: "programmazione", label: "Programmazione", icon: Clock },
     { value: "attivita", label: "Attività", icon: ListTodo },
     { value: "circuito", label: "Circuito", icon: Plane },
     { value: "coda-ai", label: "Coda AI", icon: Bot },
@@ -61,6 +63,7 @@ export default function Outreach() {
           <Suspense fallback={<TabFallback />}>
             {tab === "cockpit" && <Cockpit />}
             {tab === "inuscita" && <InUscitaTab />}
+            {tab === "programmazione" && <SchedulingTab />}
             {tab === "attivita" && <AttivitaTab />}
             {tab === "circuito" && <HoldingPatternTab />}
             {tab === "coda-ai" && <CodaAITab />}
