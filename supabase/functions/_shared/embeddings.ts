@@ -190,23 +190,3 @@ export async function ragSearchMemory(
   }
   return (data || []) as MemoryMatchRow[];
 }
-  supabase: any,
-  query: string,
-  opts: KbMatchOpts = {},
-): Promise<KbMatchRow[]> {
-  if (!query?.trim()) return [];
-  const queryEmbedding = await embedOne(query, opts.embedOpts);
-  const { data, error } = await supabase.rpc("match_kb_entries", {
-    query_embedding: queryEmbedding,
-    match_count: opts.matchCount ?? 8,
-    match_threshold: opts.matchThreshold ?? 0.3,
-    filter_categories: opts.categories ?? null,
-    filter_min_priority: opts.minPriority ?? 0,
-    only_active: opts.onlyActive ?? true,
-  });
-  if (error) {
-    console.error("ragSearchKb RPC error:", error);
-    return [];
-  }
-  return (data || []) as KbMatchRow[];
-}
