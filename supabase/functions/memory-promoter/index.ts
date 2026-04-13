@@ -291,7 +291,54 @@ serve(async (req) => {
       stats.consolidated = consolidatedIds.size;
     }
 
-    console.log("[memory-promoter] Stats:", JSON.stringify(stats));
+    // ── 6. Adaptive Confidence Threshold ──
+    let thresholdUpdates = 0;
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+      const { data: recentDecisions } = await supabase
+        .from("ai_decision_log")
+        .select("email_address, was_auto_executed, user_review, user_correction, confidence")
+        .gte("created_at", thirtyDaysAgo)
+        .not("email_address", "is", null);
+
+      if (recentDecisions && recentDecisions.length > 0) {
+        const addressStats = new Map<string, { approvals: number; rejections: number; totalConf: number; count: number }>();
+
+        for (const d of recentDecisions as Record<string, unknown>[]) {
+          const addr = String(d.email_address || "").toLowerCase();
+          if (!addr) continue;
+          const s = addressStats.get(addr) || { approvals: 0, rejections: 0, totalConf: 0, count: 0 };
+          if (d.user_review === "approved" || d.was_auto_executed) s.approvals++;
+          if (d.user_review === "rejected") s.rejections++;
+          s.totalConf += Number(d.confidence || 0.5);
+          s.count++;
+          addressStats.set(addr, s);
+        }
+
+        for (const [addr, s] of addressStats) {
+          const total = s.approvals + s.rejections;
+          if (total < 5) continue;
+          const approvalRate = s.approvals / total;
+          const avgConf = s.totalConf / s.count;
+          let newThreshold: number;
+
+          if (approvalRate > 0.9) newThreshold = Math.max(0.50, avgConf - 0.10);
+          else if (approvalRate > 0.7) newThreshold = Math.max(0.65, avgConf - 0.05);
+          else if (approvalRate > 0.5) newThreshold = Math.min(0.90, avgConf + 0.05);
+          else newThreshold = Math.min(0.95, avgConf + 0.15);
+
+          const { error: updateErr } = await supabase
+            .from("email_address_rules")
+            .update({ ai_confidence_threshold: parseFloat(newThreshold.toFixed(2)) })
+            .eq("email_address", addr);
+          if (!updateErr) thresholdUpdates++;
+        }
+      }
+    } catch (threshErr: unknown) {
+      console.warn("[memory-promoter] Adaptive threshold failed:", threshErr instanceof Error ? threshErr.message : String(threshErr));
+    }
+
+    console.log("[memory-promoter] Stats:", JSON.stringify({ ...stats, threshold_updates: thresholdUpdates }));
 
     return new Response(JSON.stringify({ success: true, stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -1,5 +1,6 @@
 /**
  * PendingActionsPanel — Displays and manages ai_pending_actions
+ * Including prompt refinement suggestions from agent-prompt-refiner.
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, CheckCircle, XCircle, Mail, Reply, Archive,
   ListTodo, Forward, Clock, ChevronDown, ChevronUp, Zap, Bot, User, Workflow,
+  Sparkles, ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
