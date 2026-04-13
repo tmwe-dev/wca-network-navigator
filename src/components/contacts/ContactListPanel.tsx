@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
+import { ContactSegments, type SegmentKey } from "@/components/contacts/ContactSegments";
 
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 
@@ -32,6 +33,7 @@ const SORT_COLUMNS = [
 ];
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
+  const [activeSegment, setActiveSegment] = useState<SegmentKey>(null);
   const h = useContactListPanel();
   const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
     contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
