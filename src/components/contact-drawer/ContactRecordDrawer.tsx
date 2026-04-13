@@ -11,9 +11,9 @@ import { Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, forwardRef, type ReactNode } from "react";
 
-export function ContactRecordDrawer() {
+export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRecordDrawer(_props, _ref) {
   const { isOpen, target, list, currentIndex, close, goNext, goPrev } = useContactDrawer();
   const { data: record, isLoading } = useContactRecord(target?.sourceType ?? null, target?.sourceId ?? null);
   const updateMutation = useUpdateContactRecord();
