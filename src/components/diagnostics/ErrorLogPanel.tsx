@@ -35,11 +35,11 @@ export function ErrorLogPanel() {
   });
 
   const count24h = errors?.filter(e =>
-    new Date(e.created_at).getTime() > Date.now() - 86400000
+    e.created_at && new Date(e.created_at).getTime() > Date.now() - 86400000
   ).length ?? 0;
 
   const count7d = errors?.filter(e =>
-    new Date(e.created_at).getTime() > Date.now() - 7 * 86400000
+    e.created_at && new Date(e.created_at).getTime() > Date.now() - 7 * 86400000
   ).length ?? 0;
 
   const handleCleanup = async () => {
@@ -91,7 +91,7 @@ export function ErrorLogPanel() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-foreground">{err.error_message || "—"}</p>
                 <p className="text-muted-foreground mt-0.5">
-                  {err.page_url} · {formatDistanceToNow(new Date(err.created_at), { addSuffix: true, locale: it })}
+                  {err.page_url} · {err.created_at ? formatDistanceToNow(new Date(err.created_at), { addSuffix: true, locale: it }) : "—"}
                 </p>
               </div>
             </div>
