@@ -10,7 +10,7 @@ interface CardProps {
   onToggle: (id: string) => void;
   groupCompanyName: string;
   onSendEmail: (params: { email: string; name?: string; company: string }) => void;
-  onSendWhatsApp: (params: { phone: string; contactName?: string; companyName: string; sourceType: string; sourceId: string }) => void;
+  onSendWhatsApp: (params: { phone: string; contactName?: string; companyName?: string; sourceType?: "contact" | "partner" | "prospect"; sourceId?: string }) => void;
 }
 
 export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp }: CardProps) {
