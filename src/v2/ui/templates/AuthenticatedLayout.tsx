@@ -65,6 +65,7 @@ interface NavItem {
   readonly label: string;
   readonly path: string;
   readonly icon: React.ReactNode;
+  readonly minRole?: "admin" | "operator"; // undefined = visible to all
 }
 
 interface NavGroup {
@@ -105,8 +106,8 @@ const navGroups: readonly NavGroup[] = [
       { label: "Agenti", path: "/v2/agents", icon: <Bot className="h-4 w-4" /> },
       { label: "Cockpit", path: "/v2/cockpit", icon: <Gauge className="h-4 w-4" /> },
       { label: "Missioni", path: "/v2/missions", icon: <Crosshair className="h-4 w-4" /> },
-      { label: "Staff", path: "/v2/staff", icon: <UserCog className="h-4 w-4" /> },
-      { label: "AI Lab", path: "/v2/ai-lab", icon: <FlaskConical className="h-4 w-4" /> },
+      { label: "Staff", path: "/v2/staff", icon: <UserCog className="h-4 w-4" />, minRole: "admin" },
+      { label: "AI Lab", path: "/v2/ai-lab", icon: <FlaskConical className="h-4 w-4" />, minRole: "operator" },
       { label: "Knowledge", path: "/v2/knowledge-base", icon: <Book className="h-4 w-4" /> },
       { label: "AI Arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
       { label: "Email Intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
@@ -124,18 +125,29 @@ const navGroups: readonly NavGroup[] = [
   {
     title: "Sistema",
     items: [
-      { label: "Operazioni", path: "/v2/operations", icon: <Cog className="h-4 w-4" /> },
+      { label: "Operazioni", path: "/v2/operations", icon: <Cog className="h-4 w-4" />, minRole: "operator" },
       { label: "Import", path: "/v2/import", icon: <Upload className="h-4 w-4" /> },
-      { label: "Diagnostica", path: "/v2/diagnostics", icon: <Activity className="h-4 w-4" /> },
+      { label: "Diagnostica", path: "/v2/diagnostics", icon: <Activity className="h-4 w-4" />, minRole: "admin" },
       { label: "Impostazioni", path: "/v2/settings", icon: <Settings className="h-4 w-4" /> },
+      { label: "Utenti", path: "/v2/admin-overview", icon: <Users className="h-4 w-4" />, minRole: "admin" },
     ],
   },
 ];
 
+// Role level helper for sidebar filtering
+function getUserRoleLevel(roles: readonly string[], isAdmin: boolean): number {
+  if (isAdmin || roles.includes("admin")) return 2;
+  if (roles.includes("moderator")) return 1;
+  return 0;
+}
+
+const ROLE_LEVELS: Record<string, number> = { admin: 2, operator: 1 };
+
 // ── Component ──
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
+  const { isAuthenticated, isLoading, profile, signOut, roles, isAdmin } = useAuthV2();
+  const userLevel = getUserRoleLevel(roles, isAdmin);
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -330,7 +342,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
             <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {group.title}
             </p>
-            {group.items.map((navItem) => (
+            {group.items.filter((navItem) => !navItem.minRole || userLevel >= (ROLE_LEVELS[navItem.minRole] ?? 0)).map((navItem) => (
               <button
                 key={navItem.path}
                 onClick={() => { navigate(navItem.path); setMobileOpen(false); }}
