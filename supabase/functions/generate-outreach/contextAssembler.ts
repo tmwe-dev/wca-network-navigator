@@ -1,0 +1,263 @@
+/**
+ * contextAssembler.ts — Loads all contextual data from DB for generate-outreach.
+ * Returns pre-built text blocks ready for the promptBuilder.
+ */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { isLikelyPersonName } from "../_shared/textUtils.ts";
+import type { Quality } from "../_shared/kbSlice.ts";
+import type { Channel } from "./promptBuilder.ts";
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+// ── KB fetcher ──
+
+export async function fetchKbEntriesForOutreach(
+  supabase: SupabaseClient, quality: Quality, channel: Channel, userId: string,
+): Promise<{ text: string; sections: string[] }> {
+  const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
+  const categories = ["regole_sistema", "filosofia"];
+  if (channel === "email") categories.push("struttura_email", "hook", "cold_outreach");
+  if (channel === "linkedin") categories.push("cold_outreach", "tono");
+  if (channel === "whatsapp") categories.push("tono", "frasi_modello");
+  if (quality !== "fast") categories.push("negoziazione", "chris_voss", "dati_partner");
+  if (quality === "premium") categories.push("arsenale", "persuasione", "obiezioni", "chiusura", "followup", "errori");
+
+  const { data: entries } = await supabase
+    .from("kb_entries").select("title, content, category, chapter, tags")
+    .eq("user_id", userId).eq("is_active", true).in("category", categories)
+    .order("priority", { ascending: false }).order("sort_order").limit(limit);
+
+  if (!entries?.length) return { text: "", sections: [] };
+  const sections = [...new Set(entries.map((e: { category: string }) => e.category))];
+  const text = entries.map((e: { title: string; content: string; chapter: string }) => `### ${e.title} [${e.chapter}]\n${e.content}`).join("\n\n---\n\n");
+  return { text, sections };
+}
+
+// ── Intelligence assembly ──
+
+export interface RecipientIntelligence {
+  sources_checked: string[];
+  data_found: Record<string, boolean>;
+  enrichment_snippet: string;
+  warning: string | null;
+}
+
+export interface OutreachContextBlocks {
+  intelligence: RecipientIntelligence;
+  interlocutorBlock: string;
+  relationshipBlock: string;
+  branchBlock: string;
+  metInPersonContext: string;
+  historyText: string;
+  interactionHistoryCount: number;
+  salesKBSlice: string;
+  salesKBSections: string[];
+  settings: Record<string, string>;
+  partnerId: string | null;
+  websiteSource: "cached" | "not_available";
+  linkedinSource: "cached" | "live_scraped" | "not_available";
+}
+
+export async function assembleOutreachContext(
+  supabase: SupabaseClient, userId: string, channel: Channel, quality: Quality,
+  params: {
+    company_name?: string; contact_name?: string; contact_email?: string;
+    country_code?: string; linkedin_profile?: Record<string, string>;
+    email_type_id?: string;
+  },
+): Promise<OutreachContextBlocks> {
+  const intelligence: RecipientIntelligence = {
+    sources_checked: [], data_found: {}, enrichment_snippet: "", warning: null,
+  };
+  const contextParts: string[] = [];
+
+  // 1) Partners table
+  intelligence.sources_checked.push("partners");
+  let partnerId: string | null = null;
+  if (params.company_name) {
+    const safeName = params.company_name.replace(/[\\%_]/g, (c: string) => `\\${c}`);
+    const { data: partnerRows } = await supabase
+      .from("partners").select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
+      .ilike("company_name", `%${safeName}%`).limit(1);
+    const partner = partnerRows?.[0];
+    if (partner) {
+      intelligence.data_found.partner = true;
+      partnerId = partner.id;
+      const parts: string[] = [];
+      if (partner.profile_description) parts.push(`Profilo: ${partner.profile_description.slice(0, 500)}`);
+      if (partner.city) parts.push(`Sede: ${partner.city}, ${partner.country_code}`);
+      if (partner.website) parts.push(`Website: ${partner.website}`);
+      if (partner.lead_status) parts.push(`Status CRM: ${partner.lead_status}`);
+      if (partner.enrichment_data) {
+        const ed = partner.enrichment_data as Record<string, unknown>;
+        if (ed.trade_lanes) parts.push(`Trade Lanes: ${JSON.stringify(ed.trade_lanes).slice(0, 300)}`);
+        if (ed.specializations) parts.push(`Specializzazioni: ${JSON.stringify(ed.specializations).slice(0, 200)}`);
+        if (ed.deep_search_summary) parts.push(`Deep Search: ${String(ed.deep_search_summary).slice(0, 400)}`);
+      }
+      if (parts.length) contextParts.push(`[PARTNER DB]\n${parts.join("\n")}`);
+    } else {
+      intelligence.data_found.partner = false;
+    }
+  }
+
+  // 2-4) Partner contacts, networks, services
+  if (partnerId) {
+    const [contactsRes, netsRes, svcsRes] = await Promise.all([
+      supabase.from("partner_contacts").select("name, title, email, contact_alias").eq("partner_id", partnerId).limit(5),
+      supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId).limit(10),
+      supabase.from("partner_services").select("service_category").eq("partner_id", partnerId).limit(20),
+    ]);
+    intelligence.sources_checked.push("partner_contacts", "partner_networks", "partner_services");
+
+    if (contactsRes.data?.length) {
+      intelligence.data_found.contacts = true;
+      contextParts.push(`[CONTATTI AZIENDA]\n${contactsRes.data.map((c: any) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ")}`);
+    } else { intelligence.data_found.contacts = false; }
+
+    if (netsRes.data?.length) {
+      intelligence.data_found.networks = true;
+      contextParts.push(`[NETWORK CONDIVISI]\n${netsRes.data.map((n: any) => n.network_name).join(", ")}`);
+    } else { intelligence.data_found.networks = false; }
+
+    if (svcsRes.data?.length) {
+      intelligence.data_found.services = true;
+      contextParts.push(`[SERVIZI]\n${svcsRes.data.map((s: any) => s.service_category).join(", ")}`);
+    } else { intelligence.data_found.services = false; }
+  }
+
+  // 5) Imported contacts
+  intelligence.sources_checked.push("imported_contacts");
+  if (params.contact_email || params.company_name) {
+    const q = supabase.from("imported_contacts").select("name, company_name, note, enrichment_data, deep_search_at").limit(1);
+    if (params.contact_email) q.ilike("email", params.contact_email);
+    else if (params.company_name) q.ilike("company_name", `%${params.company_name}%`);
+    const { data: icRows } = await q;
+    const ic = icRows?.[0];
+    if (ic) {
+      intelligence.data_found.imported_contacts = true;
+      const parts: string[] = [];
+      if (ic.note) parts.push(`Note: ${String(ic.note).slice(0, 300)}`);
+      if (ic.enrichment_data) { const ed = ic.enrichment_data as Record<string, unknown>; if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`); }
+      if (parts.length) contextParts.push(`[CRM CONTATTO]\n${parts.join("\n")}`);
+    } else { intelligence.data_found.imported_contacts = false; }
+  }
+
+  // 6) Interaction history + Relationship
+  intelligence.sources_checked.push("interactions");
+  let interactionHistoryCount = 0;
+  let relationshipBlock = "";
+  let interlocutorBlock = "";
+  let branchBlock = "";
+  let historyText = "";
+
+  const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
+
+  if (partnerId) {
+    const guardResult = await checkSameLocationContacts(supabase, partnerId, params.contact_email || null, userId);
+    if (!guardResult.allowed) {
+      throw Object.assign(new Error(guardResult.reason), { code: "duplicate_branch", recentContact: guardResult.recentContact });
+    }
+    const { metrics, historyText: ht } = await analyzeRelationshipHistory(supabase, partnerId, userId);
+    historyText = ht;
+    interactionHistoryCount = metrics.total_interactions;
+    relationshipBlock = buildRelationshipAnalysisBlock(metrics);
+    if (historyText) { intelligence.data_found.interactions = true; contextParts.push(`[STORIA INTERAZIONI]\n${historyText}`); }
+    else { intelligence.data_found.interactions = false; }
+    const branches = await getSameCompanyBranches(supabase, partnerId);
+    branchBlock = buildBranchCoordinationBlock(branches, "");
+  } else { intelligence.data_found.interactions = false; }
+
+  const sourceType = partnerId ? "partner" : "contact";
+  interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
+
+  // 7) Met in Person
+  let metInPersonContext = "";
+  if (partnerId) {
+    const { data: bcaRows } = await supabase.from("business_cards")
+      .select("contact_name, event_name, met_at, location").eq("matched_partner_id", partnerId).limit(3);
+    if (bcaRows?.length) {
+      const encounters = bcaRows.map((bc: any) => {
+        const parts: string[] = [];
+        if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
+        if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
+        if (bc.met_at) parts.push(`Data: ${bc.met_at}`);
+        if (bc.location) parts.push(`Luogo: ${bc.location}`);
+        return parts.join(", ");
+      }).join("\n");
+      metInPersonContext = `\nINCONTRO DI PERSONA — IMPORTANTE:\nHai incontrato questa azienda di persona. Questo cambia il tono della comunicazione.\n${encounters}\nISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di persona. NON trattare come un contatto freddo.\n`;
+    }
+  }
+
+  // 8) Activities
+  intelligence.sources_checked.push("activities");
+  if (partnerId) {
+    const { data: actRows } = await supabase.from("activities")
+      .select("email_subject, sent_at, activity_type, status")
+      .eq("source_id", partnerId).in("status", ["completed"])
+      .order("created_at", { ascending: false }).limit(10);
+    if (actRows?.length) {
+      intelligence.data_found.activities = true;
+      const acts = actRows.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
+      contextParts.push(`[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`);
+    } else { intelligence.data_found.activities = false; }
+  }
+
+  // 8b) LinkedIn profile from client
+  let linkedinSource: "cached" | "live_scraped" | "not_available" = "not_available";
+  if (params.linkedin_profile && typeof params.linkedin_profile === "object") {
+    const lp = params.linkedin_profile;
+    const lpParts: string[] = [];
+    if (lp.name) lpParts.push(`Nome: ${lp.name}`);
+    if (lp.headline) lpParts.push(`Headline: ${lp.headline}`);
+    if (lp.location) lpParts.push(`Località: ${lp.location}`);
+    if (lp.about) lpParts.push(`About: ${String(lp.about).slice(0, 800)}`);
+    if (lp.profileUrl) lpParts.push(`URL: ${lp.profileUrl}`);
+    if (lpParts.length) {
+      contextParts.push(`[LINKEDIN PROFILO (scraping live dal browser)]\n${lpParts.join("\n")}`);
+      intelligence.data_found.linkedin_live = true;
+      intelligence.sources_checked.push("linkedin_live_scrape");
+      linkedinSource = "live_scraped";
+    }
+  }
+
+  // Website/LinkedIn cache
+  let websiteSource: "cached" | "not_available" = "not_available";
+  if (partnerId && quality !== "fast") {
+    const { data: partnerFull } = await supabase.from("partners").select("website, enrichment_data").eq("id", partnerId).single();
+    if (partnerFull?.website) {
+      const ed = (partnerFull.enrichment_data || {}) as Record<string, unknown>;
+      if (ed.website_summary) { websiteSource = "cached"; contextParts.push(`[SITO AZIENDALE (cached)]\n${String(ed.website_summary).slice(0, 600)}`); intelligence.data_found.website = true; }
+    }
+  }
+  if (partnerId && quality === "premium") {
+    const { data: liLinks } = await supabase.from("partner_social_links").select("url").eq("partner_id", partnerId).eq("platform", "linkedin").limit(1);
+    if (liLinks?.[0]?.url) {
+      const { data: partnerEd } = await supabase.from("partners").select("enrichment_data").eq("id", partnerId).single();
+      const ed = (partnerEd?.enrichment_data || {}) as Record<string, unknown>;
+      if (ed.linkedin_summary) { linkedinSource = "cached"; contextParts.push(`[LINKEDIN (cached)]\n${String(ed.linkedin_summary).slice(0, 500)}`); intelligence.data_found.linkedin = true; }
+    }
+  }
+
+  // Build enrichment snippet
+  const rawSnippet = contextParts.join("\n\n");
+  intelligence.enrichment_snippet = rawSnippet.slice(0, 2000);
+  if (!rawSnippet) intelligence.warning = "Nessun dato trovato nel DB. L'AI lavora solo con dati base.";
+
+  // Settings
+  const { data: settingsRows } = await supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%");
+  const settings: Record<string, string> = {};
+  (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
+
+  // Sales KB
+  const kbResult = await fetchKbEntriesForOutreach(supabase, quality, channel, userId);
+  if (!kbResult.text && settings.ai_sales_knowledge_base) {
+    console.warn("[generate-outreach] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
+  }
+
+  return {
+    intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
+    historyText, interactionHistoryCount,
+    salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
+    settings, partnerId, websiteSource, linkedinSource,
+  };
+}
