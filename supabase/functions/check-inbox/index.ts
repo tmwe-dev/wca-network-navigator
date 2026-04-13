@@ -485,6 +485,16 @@ Deno.serve(async (req) => {
           messages.push(result.msgData);
           maxUid = uid;
 
+          // ── Bounce detection (best-effort) ──
+          try {
+            const bounceInfo = detectBounce({ fromAddr, subject, bodyText });
+            if (bounceInfo) {
+              await handleBounce(supabase, userId, result.msgData.id as string, bounceInfo);
+            }
+          } catch (bounceErr) {
+            console.warn(`[check-inbox] Bounce detection error UID ${uid}:`, bounceErr);
+          }
+
           // ── Response matching (best-effort) ──
           try {
             if (inReplyTo || threadId) {
