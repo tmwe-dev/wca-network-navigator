@@ -49,7 +49,7 @@ export function OraclePanelV2({
             activeTab === "oracle" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          🔮 Oracolo
+          <img src={albertTalkGif} alt="Oracolo" className="w-4 h-4 inline-block" /> Oracolo
         </button>
         <button
           onClick={() => setActiveTab("templates")}
