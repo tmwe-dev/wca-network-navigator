@@ -198,14 +198,14 @@ export function validateAndTransform(
  * Takes a raw row object + column_mapping dict and returns transformed values.
  */
 export function transformRow(
-  row: Record<string, any>,
+  row: Record<string, string | undefined>,
   columnMapping: Record<string, string>,
   heuristicMappings?: ColumnMapping[]
 ): Record<string, string | null> {
   const result: Record<string, string | null> = {};
 
   for (const [srcKey, dstCol] of Object.entries(columnMapping)) {
-    if (!TARGET_COLUMNS.includes(dstCol as any)) continue;
+    if (!(TARGET_COLUMNS as readonly string[]).includes(dstCol)) continue;
 
     // Find actual key in row (fuzzy)
     const actualKey = findRowKey(row, srcKey);

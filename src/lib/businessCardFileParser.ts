@@ -142,7 +142,7 @@ export async function parseBusinessCardFile(file: File): Promise<ParsedBusinessC
 
     for (const { idx, field } of mappings) {
       const val = row[idx]?.trim();
-      if (val) (card as any)[field] = val;
+      if (val) card[field] = val;
     }
 
     if (card.contact_name || card.company_name || card.email) {
