@@ -66,6 +66,7 @@ export interface EmailPromptContext {
   stylePreferencesContext: string;
   editPatternsContext: string;
   responseInsightsContext: string;
+  conversationIntelligenceContext: string;
   salesKBSlice: string;
   salesKBSections: string[];
   signatureBlock: string;
@@ -118,6 +119,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: stri
     historyContext, relationshipBlock, branchBlock, interlocutorBlock,
     metInPersonContext, cachedEnrichmentContext, documentsContext,
     stylePreferencesContext, editPatternsContext, responseInsightsContext,
+    conversationIntelligenceContext,
     salesKBSlice, salesKBSections, signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
   } = ctx;
@@ -234,6 +236,7 @@ ${documentsContext}
 ${stylePreferencesContext}
 ${editPatternsContext}
 ${responseInsightsContext}
+${conversationIntelligenceContext}
 GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
