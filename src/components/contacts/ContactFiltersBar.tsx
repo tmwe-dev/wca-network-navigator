@@ -42,6 +42,7 @@ const SORT_OPTIONS = [
   { value: "name", label: "Nome A→Z" },
   { value: "city", label: "Città A→Z" },
   { value: "date", label: "Data ↓" },
+  { value: "score", label: "Score ↓" },
 ];
 
 interface Props {
