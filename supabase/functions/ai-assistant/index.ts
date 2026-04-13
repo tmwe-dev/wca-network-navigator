@@ -468,7 +468,9 @@ Non eseguire tool di scrittura o modifica`;
       totalUsage.completion_tokens += finalResult.usage.completion_tokens || 0;
     }
 
-    const finalText = appendStructured(finalResult.choices?.[0]?.message?.content || "Nessuna risposta");
+    const finalText = isConversational
+      ? (finalResult.choices?.[0]?.message?.content || "Nessuna risposta")
+      : appendStructured(finalResult.choices?.[0]?.message?.content || "Nessuna risposta");
     if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
     return new Response(JSON.stringify({ content: finalText }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
