@@ -224,17 +224,22 @@ Non eseguire tool di scrittura o modifica`;
 
     // ── AI call with model fallback ──
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    const activeTools = isConversational ? undefined : TOOL_DEFINITIONS;
     const fallbackModels = provider.isUserKey
       ? [provider.model]
-      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+      : isConversational
+        ? ["google/gemini-2.5-flash", "openai/gpt-5-mini"]
+        : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {
-      console.log(`[AI] Trying model: ${tryModel}`);
+      console.log(`[AI] Trying model: ${tryModel}${isConversational ? " (conversational)" : ""}`);
+      const fetchBody: Record<string, unknown> = { model: tryModel, messages: allMessages };
+      if (activeTools) fetchBody.tools = activeTools;
       response = await fetch(provider.url, {
         method: "POST",
         headers: aiHeaders,
-        body: JSON.stringify({ model: tryModel, messages: allMessages, tools: TOOL_DEFINITIONS }),
+        body: JSON.stringify(fetchBody),
       });
       if (response.ok) {
         if (tryModel !== provider.model) console.log(`[AI] Fallback model ${tryModel} succeeded`);
