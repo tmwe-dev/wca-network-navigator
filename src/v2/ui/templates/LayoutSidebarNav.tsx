@@ -132,15 +132,18 @@ export function LayoutSidebarNav({
           </div>
         </div>
       </div>
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 p-2 overflow-y-auto" data-testid="main-sidebar">
         {navGroupsDef.map((group) => (
           <div key={group.titleKey} className="mb-3">
             <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {t(group.titleKey)}
             </p>
-            {group.items.map((navItem) => (
+            {group.items.map((navItem) => {
+              const navId = navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
+              return (
               <button
                 key={navItem.path}
+                data-testid={`nav-${navId}`}
                 onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
@@ -152,7 +155,8 @@ export function LayoutSidebarNav({
                 {navItem.icon}
                 {t(navItem.labelKey)}
               </button>
-            ))}
+              );
+            })}
           </div>
         ))}
       </nav>
