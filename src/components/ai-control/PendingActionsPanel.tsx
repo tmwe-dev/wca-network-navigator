@@ -194,6 +194,32 @@ export function PendingActionsPanel() {
                     </div>
                   )}
 
+                  {/* Prompt refinement suggestions */}
+                  {action.action_type === "prompt_refinement" && action.suggested_content && (() => {
+                    try {
+                      const suggestions = JSON.parse(action.suggested_content);
+                      return (
+                        <div className="space-y-2 border border-border/30 rounded-lg p-3 bg-muted/10">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Sparkles className="h-3 w-3" /> Suggerimenti miglioramento prompt:
+                          </p>
+                          {Array.isArray(suggestions) && suggestions.map((s: Record<string, string>, idx: number) => (
+                            <div key={idx} className="text-xs space-y-1 border-l-2 border-primary/30 pl-2">
+                              <p className="font-medium text-foreground">{s.section}</p>
+                              {s.current_text && (
+                                <p className="text-muted-foreground line-through">{s.current_text}</p>
+                              )}
+                              <p className="flex items-center gap-1 text-emerald-400">
+                                <ArrowRight className="h-2.5 w-2.5" /> {s.suggested_text}
+                              </p>
+                              <p className="text-muted-foreground/70 italic">{s.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    } catch { return null; }
+                  })()}
+
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-1">
                     {rejectId === action.id ? (
