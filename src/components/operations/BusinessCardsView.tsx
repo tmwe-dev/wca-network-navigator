@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Clock,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
+import { BCAQualityDashboard } from "./bca/BCAQualityDashboard";
+import { BCAEventTimeline } from "./bca/BCAEventTimeline";
 import { cn } from "@/lib/utils";
 import { useBusinessCards } from "@/hooks/useBusinessCards";
 import { useSendToCockpit } from "@/hooks/useCockpitContacts";
