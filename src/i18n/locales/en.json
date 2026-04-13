@@ -53,14 +53,34 @@
     "export": "Export",
     "import": "Import",
     "no_data": "No data available",
+    "noResults": "No results",
     "retry": "Retry",
     "logout": "Sign Out",
     "light_mode": "Light Mode",
     "dark_mode": "Dark Mode",
     "add_contact": "Add contact",
+    "add": "Add",
+    "upload": "Upload",
+    "download": "Download",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "pending": "Pending",
+    "active": "Active",
     "enrichment": "Enrichment",
     "agent_operations": "Agent Operations",
-    "test_extensions": "Test Extensions"
+    "test_extensions": "Test Extensions",
+    "offlineMessage": "You are offline. Some features may not be available."
+  },
+  "errors": {
+    "saveFailed": "Save failed",
+    "loadFailed": "Load failed",
+    "deleteFailed": "Delete failed",
+    "uploadFailed": "Upload failed",
+    "connectionError": "Connection error",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "generic": "An error occurred",
+    "aiError": "AI error"
   },
   "auth": {
     "login": "Sign In",
@@ -144,7 +164,10 @@
     "language": "Language",
     "preferences": "Preferences",
     "save_success": "Settings saved",
-    "save_error": "Error saving settings"
+    "save_error": "Error saving settings",
+    "loadDefault": "Load default",
+    "editRule": "Edit Rule",
+    "saveRule": "Save Rule"
   },
   "diagnostics": {
     "title": "Diagnostics",
