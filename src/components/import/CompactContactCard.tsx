@@ -125,7 +125,7 @@ export function CompactContactCard({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={(e) = aria-label="Email"> { e.stopPropagation(); onQuickEmail(); }}
+              onClick={(e) => { e.stopPropagation(); onQuickEmail(); }}
               title="Crea attività email"
               aria-label="Invia"
             >
@@ -137,7 +137,7 @@ export function CompactContactCard({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={(e) = aria-label="Email"> { e.stopPropagation(); onQuickCall(); }}
+              onClick={(e) => { e.stopPropagation(); onQuickCall(); }}
               title="Crea attività chiamata"
               aria-label="Chiama"
             >
@@ -149,7 +149,7 @@ export function CompactContactCard({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={(e) = aria-label="Email"> { e.stopPropagation(); onViewDetail(); }}
+              onClick={(e) => { e.stopPropagation(); onViewDetail(); }}
               title="Dettaglio"
               aria-label="Visualizza"
             >
