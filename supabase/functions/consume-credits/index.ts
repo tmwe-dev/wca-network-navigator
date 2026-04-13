@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const SUPPORTED_PROVIDERS = ["openai", "google", "anthropic"] as const;
 type Provider = typeof SUPPORTED_PROVIDERS[number];
@@ -17,9 +17,10 @@ function isValidProvider(p: string): p is Provider {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -63,7 +64,7 @@ serve(async (req) => {
         credits_consumed: 0,
         message: "Using your own API key - no credits consumed",
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
         status: 200,
       });
     }
@@ -94,7 +95,7 @@ serve(async (req) => {
         required: totalCredits,
         message: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.",
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
         status: 200,
       });
     }
@@ -106,7 +107,7 @@ serve(async (req) => {
       balance: row.new_balance,
       message: `${totalCredits} crediti consumati`,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (e: unknown) {

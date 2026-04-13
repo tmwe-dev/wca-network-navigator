@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { edgeError, extractErrorMessage } from '../_shared/handleEdgeError.ts'
-import { corsHeaders } from '../_shared/cors.ts'
+import { getCorsHeaders, corsPreflight } from '../_shared/cors.ts'
 
 interface AppSettingRow {
   key: string;
@@ -8,9 +8,10 @@ interface AppSettingRow {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       username: settings['ra_username'] || '',
       password: settings['ra_password'] || '',
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...dynCors, 'Content-Type': 'application/json' },
     })
   } catch (e: unknown) {
     console.error('get-ra-credentials error:', e)
