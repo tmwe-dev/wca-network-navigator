@@ -31,7 +31,7 @@ export interface TimingTemplate {
 
 export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
   const { data, error } = await supabase
-    .from("outreach_timing_templates" as "activities")
+    .from("outreach_timing_templates" as never)
     .select("*")
     .order("is_system", { ascending: false })
     .order("template_name");
@@ -46,8 +46,8 @@ export async function createTimingTemplate(
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase
-    .from("outreach_timing_templates" as "activities")
-    .insert({ ...tpl, user_id: user.id, is_system: false } as Record<string, unknown>)
+    .from("outreach_timing_templates" as never)
+    .insert({ ...tpl, user_id: user.id, is_system: false } as never)
     .select()
     .single();
   if (error) throw error;
@@ -76,7 +76,7 @@ export async function duplicateTimingTemplate(id: string): Promise<TimingTemplat
 
 export async function deleteTimingTemplate(id: string) {
   const { error } = await supabase
-    .from("outreach_timing_templates" as "activities")
+    .from("outreach_timing_templates" as never)
     .delete()
     .eq("id", id);
   if (error) throw error;
@@ -87,8 +87,8 @@ export async function updateTimingTemplate(
   updates: Partial<Omit<TimingTemplate, "id" | "created_at" | "updated_at">>
 ) {
   const { error } = await supabase
-    .from("outreach_timing_templates" as "activities")
-    .update(updates as Record<string, unknown>)
+    .from("outreach_timing_templates" as never)
+    .update(updates as never)
     .eq("id", id);
   if (error) throw error;
 }
