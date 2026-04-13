@@ -303,6 +303,7 @@ export default function Campaigns() {
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
+  const [viewMode, setViewMode] = useState<"globe" | "analytics">("globe");
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [source, setSource] = useState<CampaignSource>("partners");
   const [showGoalDialog, setShowGoalDialog] = useState(false);
@@ -446,7 +447,33 @@ export default function Campaigns() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6">
+    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6 flex flex-col">
+      {/* View toggle */}
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20">
+        <Button
+          variant={viewMode === "globe" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setViewMode("globe")}
+        >
+          <Target className="w-3.5 h-3.5" />Mappa
+        </Button>
+        <Button
+          variant={viewMode === "analytics" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setViewMode("analytics")}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />Analytics
+        </Button>
+      </div>
+
+      {viewMode === "analytics" ? (
+        <div className="flex-1 min-h-0">
+          <CampaignAnalyticsTab />
+        </div>
+      ) : (
+      <div className="flex-1 relative overflow-hidden">
       {/* Portal header controls */}
       {headerContainer && createPortal(
         <CampaignHeaderControls
@@ -544,6 +571,8 @@ export default function Campaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
+      )}
     </div>
   );
 }
