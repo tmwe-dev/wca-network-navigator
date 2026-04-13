@@ -186,7 +186,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             <p className="text-sm text-muted-foreground max-w-xs mb-4">
               Importa contatti da CSV, scaricali dalla directory WCA, o aggiungili manualmente.
             </p>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddDialog(true)}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.dispatchEvent(new CustomEvent("open-add-contact"))}>
               <UserPlus className="w-3.5 h-3.5" /> Aggiungi contatto
             </Button>
           </div>
