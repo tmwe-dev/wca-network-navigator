@@ -21,7 +21,7 @@ function TabFallback() {
 }
 
 export default function Outreach() {
-  const [tab, setTab] = useState("cockpit");
+  const [tab, setTab] = useState("piano-lavori");
   const { setOutreachTab } = useGlobalFilters();
   const { mockEnabled, toggleMock } = useOutreachMock();
 
