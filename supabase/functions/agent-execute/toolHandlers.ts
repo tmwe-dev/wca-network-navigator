@@ -1,7 +1,7 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
 
 // ── Local interfaces for typed row shapes ──
-interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; }
+interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
 interface DirectoryCountRow { country_code: string; member_count: number; }
 interface ServiceRow { service_category: string; }
 interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; contacts_missing_count: number; last_processed_company: string | null; error_message: string | null; created_at: string; }
@@ -15,6 +15,9 @@ interface KbEntry { title: string; content: string; added_at: string; }
 interface HoldingItem { id: string; source: string; name: string; country: string; city?: string; email: string | null; status: string; days_waiting: number; interactions?: number; }
 interface AbTestVariant { agent_name: string; tone: string; percentage: number; }
 interface AbTestConfig { enabled?: boolean; variants?: AbTestVariant[]; }
+interface PartnerRow { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown?: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; [key: string]: unknown; }
+interface ContactRow { id: string; name: string | null; company_name: string | null; email: string | null; phone: string | null; country: string | null; lead_status: string | null; created_at: string; [key: string]: unknown; }
+interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: string]: unknown; }
 
 export async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
   switch (name) {
