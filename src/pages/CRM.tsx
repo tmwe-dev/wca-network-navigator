@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -8,13 +8,13 @@ import { useTrackPage } from "@/hooks/useTrackPage";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
+const ContactPipelineView = lazy(() => import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
 }
 
 export default function CRM() {
-  // URL-synced tab: /crm?tab=contatti|biglietti (shareable + refresh-safe)
   const [tab, setTab] = useUrlState<string>("tab", "contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();
@@ -27,12 +27,12 @@ export default function CRM() {
 
   const tabs = [
     { value: "contatti", label: "Contatti", icon: UserCheck },
+    { value: "pipeline", label: "Pipeline", icon: Kanban },
     { value: "biglietti", label: "Biglietti", icon: ContactRound },
   ];
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Horizontal tab bar */}
       <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
         {tabs.map((t) => {
           const Icon = t.icon;
@@ -63,11 +63,15 @@ export default function CRM() {
         </button>
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab === "contatti" && (
           <Suspense fallback={<TabFallback />}>
             <Contacts />
+          </Suspense>
+        )}
+        {tab === "pipeline" && (
+          <Suspense fallback={<TabFallback />}>
+            <ContactPipelineView />
           </Suspense>
         )}
         {tab === "biglietti" && (

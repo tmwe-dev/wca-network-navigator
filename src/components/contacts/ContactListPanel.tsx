@@ -68,11 +68,14 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               ))}
             </div>
           </div>
-          <Tooltip><TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
-              <UserPlus className="w-3.5 h-3.5" /> Nuovo
-            </Button>
-          </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
+          <div className="flex items-center gap-1">
+            <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
+            <Tooltip><TooltipTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
+                <UserPlus className="w-3.5 h-3.5" /> Nuovo
+              </Button>
+            </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
+          </div>
         </div>
       </div>
 
