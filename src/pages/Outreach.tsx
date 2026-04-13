@@ -61,6 +61,7 @@ export default function Outreach() {
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">
           <Suspense fallback={<TabFallback />}>
+            {tab === "piano-lavori" && <WorkPlanDashboard />}
             {tab === "cockpit" && <Cockpit />}
             {tab === "inuscita" && <InUscitaTab />}
             {tab === "attivita" && <AttivitaTab />}
