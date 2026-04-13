@@ -1038,12 +1038,14 @@ export type Database = {
         Row: {
           company_name: string | null
           contact_name: string | null
+          correction_notes: string | null
           created_at: string
           email: string | null
           event_name: string | null
           id: string
           lead_status: string
           location: string | null
+          manually_corrected: boolean | null
           match_confidence: number | null
           match_status: string
           matched_contact_id: string | null
@@ -1051,6 +1053,7 @@ export type Database = {
           met_at: string | null
           mobile: string | null
           notes: string | null
+          ocr_confidence: Json | null
           phone: string | null
           photo_url: string | null
           position: string | null
@@ -1061,12 +1064,14 @@ export type Database = {
         Insert: {
           company_name?: string | null
           contact_name?: string | null
+          correction_notes?: string | null
           created_at?: string
           email?: string | null
           event_name?: string | null
           id?: string
           lead_status?: string
           location?: string | null
+          manually_corrected?: boolean | null
           match_confidence?: number | null
           match_status?: string
           matched_contact_id?: string | null
@@ -1074,6 +1079,7 @@ export type Database = {
           met_at?: string | null
           mobile?: string | null
           notes?: string | null
+          ocr_confidence?: Json | null
           phone?: string | null
           photo_url?: string | null
           position?: string | null
@@ -1084,12 +1090,14 @@ export type Database = {
         Update: {
           company_name?: string | null
           contact_name?: string | null
+          correction_notes?: string | null
           created_at?: string
           email?: string | null
           event_name?: string | null
           id?: string
           lead_status?: string
           location?: string | null
+          manually_corrected?: boolean | null
           match_confidence?: number | null
           match_status?: string
           matched_contact_id?: string | null
@@ -1097,6 +1105,7 @@ export type Database = {
           met_at?: string | null
           mobile?: string | null
           notes?: string | null
+          ocr_confidence?: Json | null
           phone?: string | null
           photo_url?: string | null
           position?: string | null
