@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -9,6 +9,7 @@ import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
 import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
 import { RASettings } from "@/components/settings/RASettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
+import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
@@ -40,6 +41,7 @@ export default function Settings() {
     { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+    { value: "provider-ai", label: "Provider AI", icon: Cpu },
     { value: "import-export", label: "Importa", icon: Download },
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
@@ -72,6 +74,11 @@ export default function Settings() {
             {tab === "voce-ai" && (
               <div className="float-panel p-5">
                 <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "provider-ai" && (
+              <div className="float-panel p-5">
+                <AIProviderSettings settings={settings} updateSetting={updateSetting} />
               </div>
             )}
             {tab === "import-export" && (
