@@ -28,6 +28,7 @@ export default function AgentChatHub() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [voiceCallOpen, setVoiceCallOpen] = useState(false);
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const chatMapRef = useRef<Map<string, Message[]>>(new Map());
   const [, forceRender] = useState(0);
