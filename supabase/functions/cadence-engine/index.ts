@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       .order("scheduled_at", { ascending: true })
       .limit(50);
 
-    if (fetchErr) throw fetchErr;
+    if (fetchErr) throw new Error(fetchErr.message || JSON.stringify(fetchErr));
     if (!actions?.length) {
       return new Response(JSON.stringify({ processed: 0, executed: 0, pending_review: 0, cancelled: 0 }), {
         headers: { ...headers, "Content-Type": "application/json" },
@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
     }), { headers: { ...headers, "Content-Type": "application/json" } });
 
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[cadence-engine] Fatal:", msg, e);
+    const msg = e instanceof Error ? e.message : JSON.stringify(e);
+    console.error("[cadence-engine] Fatal:", msg);
     return edgeError("INTERNAL_ERROR", msg, undefined, headers);
   }
 });
