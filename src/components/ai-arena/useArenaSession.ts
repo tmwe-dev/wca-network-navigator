@@ -188,12 +188,12 @@ export function useArenaSession() {
     setExcludedIds((prev) => [...prev, current.partner_id]);
     setEditing(false);
 
-    const { error } = await supabase.from("blacklist_entries").insert({
+    const { error } = await supabase.from("blacklist_entries").insert([{
       company_name: current.company_name,
       country: current.country_name || current.country_code,
       source: "ai_arena",
       status: "active",
-    } as Record<string, string>);
+    }]);
     if (error) {
       toast.error(`Errore blacklist: ${error.message}`);
     } else {

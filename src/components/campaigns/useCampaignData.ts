@@ -72,7 +72,7 @@ export function useCampaignData() {
   const countryPartners = useMemo((): CountryPartnerRaw[] => {
     if (source === "bca") {
       const seen = new Set<string>();
-      return (bcaCountryData as CountryPartnerRaw[]).filter((p) => {
+      return (bcaCountryData as unknown as CountryPartnerRaw[]).filter((p) => {
         if (seen.has(p.id)) return false;
         seen.add(p.id);
         return true;
@@ -86,8 +86,8 @@ export function useCampaignData() {
       country_name: p.country_name,
       email: p.email,
       partner_type: p.partner_type || "freight_forwarder",
-      partner_certifications: (p as Record<string, unknown>).partner_certifications as string[] | undefined ?? [],
-      partner_services: (p as Record<string, unknown>).partner_services as string[] | undefined ?? [],
+      partner_certifications: [] as string[],
+      partner_services: [] as string[],
       is_bca: false,
     }));
   }, [countryPartnersData, bcaCountryData, source]);

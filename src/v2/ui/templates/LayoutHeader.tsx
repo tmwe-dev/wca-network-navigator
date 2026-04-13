@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 
 interface OutreachQueue {
-  pending: number;
-  processing: number;
-  status: string;
+  pendingCount: number;
+  processing: boolean;
+  paused: boolean;
+  setPaused: (v: boolean) => void;
 }
 
 interface GlobalSyncState {
