@@ -250,7 +250,7 @@ export default function OperativeGuideSettings() {
             <div key={rule.id} className="flex gap-2 items-start">
               <Input value={rule.label} onChange={e => updateCustomRule(rule.id, "label", e.target.value)} placeholder="Nome regola" className="w-1/3" />
               <Input value={rule.value} onChange={e => updateCustomRule(rule.id, "value", e.target.value)} placeholder="Valore / descrizione" className="flex-1" />
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeCustomRule(rule.id)}>
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() = aria-label="Elimina"> removeCustomRule(rule.id)}>
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </Button>
             </div>

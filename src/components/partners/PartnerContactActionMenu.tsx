@@ -134,7 +134,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md opacity-60 hover:opacity-100 hover:bg-accent shrink-0">
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md opacity-60 hover:opacity-100 hover:bg-accent shrink-0" aria-label="Altre azioni">
             <MoreVertical className="w-3.5 h-3.5" />
           </Button>
         </DropdownMenuTrigger>

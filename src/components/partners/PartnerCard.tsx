@@ -92,7 +92,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                 {partner.company_name}
               </Link>
               {partner.company_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">{partner.company_alias}</span>}
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => onToggleFavorite(partner.id, !partner.is_favorite)}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() = aria-label="Preferito"> onToggleFavorite(partner.id, !partner.is_favorite)}>
                 {partner.is_favorite ? (
                   <Star className="w-3.5 h-3.5 fill-primary text-primary" />
                 ) : (
@@ -259,7 +259,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {partner.phone && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`tel:${partner.phone}`}><Phone className="w-4 h-4 text-muted-foreground" /></a>
                 </Button>
               </TooltipTrigger>
@@ -269,7 +269,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {partner.email && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`mailto:${partner.email}`}><Mail className="w-4 h-4 text-primary" /></a>
                 </Button>
               </TooltipTrigger>
@@ -279,7 +279,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {whatsappNumber && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`https://wa.me/${cleanPhoneForWhatsApp(whatsappNumber)}`} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-4 h-4 text-emerald-500" />
                   </a>
@@ -291,7 +291,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {hasWebsite && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer">
                     <Globe className="w-4 h-4 text-primary" />
                   </a>
