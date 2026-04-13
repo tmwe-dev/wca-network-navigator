@@ -351,6 +351,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           </AnimatePresence>
                         </main>
                         <Suspense fallback={null}><MobileBottomNav /></Suspense>
+                        <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                       </div>
                     </div>
 
