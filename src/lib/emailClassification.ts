@@ -3,6 +3,7 @@
  * No Deno/Supabase dependencies. Fully testable with Vitest.
  */
 
+/** Shape of a parsed AI classification result */
 export interface ClassificationResult {
   category: string;
   confidence: number;
@@ -22,6 +23,23 @@ const VALID_CATEGORIES = [
 const VALID_URGENCY = ["critical", "high", "normal", "low"];
 const VALID_SENTIMENT = ["positive", "negative", "neutral", "mixed"];
 
+/**
+ * Parses and validates raw AI classification JSON into a structured ClassificationResult.
+ * Strips markdown fences, validates categories/urgency/sentiment against allow-lists,
+ * clamps confidence to [0,1], and truncates string fields for safety.
+ *
+ * @param raw - The raw string response from the AI model (may include markdown fences)
+ * @returns A validated ClassificationResult with all fields sanitized
+ * @throws Error if raw is null/empty or contains invalid JSON
+ *
+ * @example
+ * parseClassificationResponse('{"category":"interested","confidence":0.9,...}')
+ * // => { category: "interested", confidence: 0.9, ... }
+ *
+ * @example
+ * parseClassificationResponse('```json\n{"category":"spam"}\n```')
+ * // => { category: "spam", confidence: 0, ... }
+ */
 export function parseClassificationResponse(raw: string | null): ClassificationResult {
   if (!raw) throw new Error("Empty AI response");
 

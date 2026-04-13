@@ -223,12 +223,21 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <Toaster />
 
                     <div className="flex h-screen bg-background">
-                      {/* Desktop sidebar */}
-                      <div
-                        className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-                        onMouseLeave={() => setSidebarOpen(false)}
+                      {/* Skip navigation link for accessibility */}
+                      <a
+                        href="#main-content"
+                        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
                       >
-                        <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
+                        Vai al contenuto principale
+                      </a>
+                      {/* Desktop sidebar */}
+                       <div
+                         className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+                         onMouseLeave={() => setSidebarOpen(false)}
+                         role="navigation"
+                         aria-label="Menu principale"
+                       >
+                         <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
                           <LayoutSidebarNav
                             profileName={profile?.displayName}
                             wcaStatusColor={wcaStatusColor}
@@ -242,8 +251,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         </div>
                       </div>
 
-                      {/* Mobile header */}
-                      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between">
+                       {/* Mobile header */}
+                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-2">
                           <button onClick={() => setIntelliflowOpen(true)} className="min-h-[44px] min-w-[44px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
@@ -326,7 +335,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           outreachQueue={outreachQueue}
                           globalSync={globalSync}
                         />
-                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={location.pathname}

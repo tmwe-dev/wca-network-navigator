@@ -121,6 +121,12 @@ export function AppLayout() {
       <MissionProvider>
         <GlobalFiltersProvider>
           <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)} onWheel={(e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }}>
+            <a
+              href="#main-content-v1"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+            >
+              Vai al contenuto principale
+            </a>
             <button
               onClick={() => setFiltersOpen(true)}
               onMouseEnter={() => handleEdgeEnter("left")}
@@ -153,12 +159,12 @@ export function AppLayout() {
             >
               <Target className="w-4 h-4 text-primary" />
             </button>
-            <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
+            <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)} role="navigation" aria-label="Menu principale">
               <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
             </div>
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
+              <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md" role="banner">
                 <TooltipProvider>
                   <div className="flex h-full items-center justify-between px-2 sm:px-4">
                     <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -192,7 +198,7 @@ export function AppLayout() {
                 </TooltipProvider>
               </header>
 
-              <main className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
+              <main id="main-content-v1" tabIndex={-1} role="main" className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
                 <Outlet />
               </main>
             </div>
