@@ -21,6 +21,8 @@ interface SendEmailBody {
   agent_id?: string;
   reply_to?: string;
   operator_id?: string;
+  in_reply_to?: string;
+  references?: string;
 }
 
 interface SmtpSendOptions {
@@ -197,6 +199,10 @@ Deno.serve(async (req) => {
     await client.send(sendOptions);
     await client.close();
 
+    // Generate synthetic Message-ID (denomailer doesn't expose server-assigned ID)
+    const messageIdExternal = `<${Date.now()}.${crypto.randomUUID().slice(0, 8)}@wca-crm.app>`;
+    const threadId = body.in_reply_to || body.references || messageIdExternal;
+
     // Log side effects consistently
     if (partner_id) {
       const userId = claimsData.claims.sub as string;
@@ -208,6 +214,8 @@ Deno.serve(async (req) => {
         to,
         html,
         agent_id,
+        message_id_external: messageIdExternal,
+        thread_id: threadId,
       });
     }
 
