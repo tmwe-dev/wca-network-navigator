@@ -48,7 +48,7 @@ export async function logEmailSideEffects({
     source_type: "partner",
     source_id: partner_id,
     partner_id,
-    activity_type: "email",
+    activity_type: "send_email",
     title: `Email inviata: ${subject || "Senza oggetto"}`,
     description: `Email inviata a ${to}`,
     email_subject: subject,
