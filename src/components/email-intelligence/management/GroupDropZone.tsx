@@ -119,7 +119,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
             <div className="flex gap-1">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7"><ZoomIn className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ingrandisci"><ZoomIn className="h-4 w-4" /></Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
@@ -138,8 +138,8 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
                             <div className="text-sm text-muted-foreground">{rule.email_address}</div>
                           </div>
                           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
-                            onClick={() => handleRemoveRule(rule.id, rule.email_address)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            onClick={() => handleRemoveRule(rule.id, rule.email_address)} aria-label="Elimina">
+                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       ))
@@ -149,7 +149,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
               </Dialog>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" aria-label="Elimina"><Trash2 className="h-4 w-4" /></Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>

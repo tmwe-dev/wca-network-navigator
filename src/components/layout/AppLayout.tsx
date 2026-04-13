@@ -168,7 +168,7 @@ export function AppLayout() {
                 <TooltipProvider>
                   <div className="flex h-full items-center justify-between px-2 sm:px-4">
                     <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Menu"><Menu className="h-4 w-4" /></Button>
 
                       {currentPath.startsWith("/v1/network") && (
                         <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/crm")}>

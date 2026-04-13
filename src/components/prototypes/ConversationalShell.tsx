@@ -143,7 +143,7 @@ export function ConversationalShell() {
               size="icon"
               className="absolute right-1 top-1 h-8 w-8"
               disabled={isProcessing || !prompt.trim()}
-            >
+             aria-label="Caricamento">
               {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 text-primary" />}
             </Button>
           </form>

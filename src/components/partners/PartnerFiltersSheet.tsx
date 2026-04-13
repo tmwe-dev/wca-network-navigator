@@ -129,7 +129,7 @@ export default function PartnerFiltersSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button variant="outline" size="icon" className="relative" aria-label="Filtra">
           <Filter className="w-4 h-4" />
           {activeFilterCount > 0 && (
             <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-primary text-primary-foreground">

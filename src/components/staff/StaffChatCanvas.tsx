@@ -194,11 +194,11 @@ export function StaffChatCanvas({ agent }: Props) {
             variant={speech.listening ? "destructive" : "outline"}
             onClick={speech.toggle}
             className={cn("rounded-xl relative shrink-0", speech.listening && "animate-pulse")}
-          >
+           aria-label="Stop dettatura">
             {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             {speech.listening && <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />}
           </Button>
-          <Button size="icon" onClick={send} disabled={(!input.trim() && pendingFiles.length === 0) || loading} className="rounded-xl shrink-0">
+          <Button size="icon" onClick={send} disabled={(!input.trim() && pendingFiles.length === 0) || loading} className="rounded-xl shrink-0" aria-label="Invia">
             <Send className="w-4 h-4" />
           </Button>
         </div>

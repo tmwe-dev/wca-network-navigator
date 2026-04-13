@@ -72,7 +72,7 @@ export function AgentVoiceConfig({ agent }: Props) {
         <Label className="text-xs">Voice ID (TTS)</Label>
         <div className="flex gap-2 mt-1">
           <Input value={voiceId} onChange={(e) => setVoiceId(e.target.value)} placeholder="ID voce ElevenLabs" className="text-sm" />
-          <Button size="icon" variant="outline" onClick={testVoice} disabled={!voiceId} title="Test voce">
+          <Button size="icon" variant="outline" onClick={testVoice} disabled={!voiceId} title="Test voce" aria-label="Test voce">
             <Volume2 className="w-4 h-4" />
           </Button>
         </div>

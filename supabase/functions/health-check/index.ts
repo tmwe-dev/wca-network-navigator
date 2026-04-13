@@ -53,10 +53,50 @@ Deno.serve(async (req) => {
   } catch { /* */ }
 
   const allOk = Object.values(checks).every((v) => v === "ok");
+  const overallStatus = allOk ? "healthy" : "degraded";
+
+  // Webhook alerting on degraded status
+  if (overallStatus === "degraded") {
+    try {
+      const { data: alertConfigs } = await supabase
+        .from("alert_config")
+        .select("*")
+        .eq("enabled", true)
+        .eq("alert_on_degraded", true);
+
+      for (const config of alertConfigs || []) {
+        // Check cooldown
+        if (config.last_alert_at) {
+          const cooldown = (config.cooldown_minutes || 15) * 60 * 1000;
+          if (Date.now() - new Date(config.last_alert_at).getTime() < cooldown) continue;
+        }
+
+        // Send webhook alert
+        if (config.webhook_url) {
+          await fetch(config.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: `⚠️ WCA Navigator Health Alert: Status ${overallStatus}`,
+              checks,
+              timestamp: new Date().toISOString(),
+            }),
+            signal: AbortSignal.timeout(5000),
+          }).catch(() => {});
+        }
+
+        // Update last alert timestamp
+        await supabase
+          .from("alert_config")
+          .update({ last_alert_at: new Date().toISOString() })
+          .eq("id", config.id);
+      }
+    } catch { /* fire and forget */ }
+  }
 
   return new Response(
     JSON.stringify({
-      status: allOk ? "healthy" : "degraded",
+      status: overallStatus,
       checks,
       timestamp: new Date().toISOString(),
     }),

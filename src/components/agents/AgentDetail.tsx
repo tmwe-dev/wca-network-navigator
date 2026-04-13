@@ -57,7 +57,7 @@ export function AgentDetail({ agent, onDeleted }: Props) {
             <span className="text-xs text-muted-foreground">{agent.is_active ? "Attivo" : "Inattivo"}</span>
             <Switch checked={agent.is_active} onCheckedChange={toggleActive} />
           </div>
-          <Button size="icon" variant="ghost" onClick={handleDelete}>
+          <Button size="icon" variant="ghost" onClick={handleDelete} aria-label="Elimina">
             <Trash2 className="w-4 h-4 text-destructive" />
           </Button>
         </div>

@@ -89,7 +89,7 @@ export function PartnerAIBar({ viewContext }: Props) {
             className="absolute right-0.5 top-1/2 -translate-y-1/2 h-5 w-5"
             onClick={send}
             disabled={loading || !input.trim()}
-          >
+           aria-label="Invia">
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
           </Button>
         </div>

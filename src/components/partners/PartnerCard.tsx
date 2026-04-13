@@ -259,7 +259,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {partner.phone && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`tel:${partner.phone}`}><Phone className="w-4 h-4 text-muted-foreground" /></a>
                 </Button>
               </TooltipTrigger>
@@ -269,7 +269,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {partner.email && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`mailto:${partner.email}`}><Mail className="w-4 h-4 text-primary" /></a>
                 </Button>
               </TooltipTrigger>
@@ -279,7 +279,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {whatsappNumber && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`https://wa.me/${cleanPhoneForWhatsApp(whatsappNumber)}`} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-4 h-4 text-emerald-500" />
                   </a>
@@ -291,7 +291,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           {hasWebsite && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
                   <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer">
                     <Globe className="w-4 h-4 text-primary" />
                   </a>

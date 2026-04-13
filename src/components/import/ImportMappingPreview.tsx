@@ -111,6 +111,7 @@ export function ImportMappingPreview({
                           size="icon"
                           className="h-6 w-6 text-muted-foreground hover:text-destructive"
                           onClick={() => onMappingTargetChange(src, "__unmapped__")}
+                          aria-label="Elimina"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>

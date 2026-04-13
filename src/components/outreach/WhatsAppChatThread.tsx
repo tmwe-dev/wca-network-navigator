@@ -260,14 +260,14 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground/40 cursor-not-allowed" disabled>
+                <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground/40 cursor-not-allowed" disabled aria-label="Dettatura vocale">
                   <Mic className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent><p className="text-xs">Messaggi vocali non ancora supportati</p></TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Button size="icon" onClick={handleSendReply} disabled={!replyText.trim() || isSending} className="bg-green-600 hover:bg-green-700 text-white h-9 w-9">
+          <Button size="icon" onClick={handleSendReply} disabled={!replyText.trim() || isSending} className="bg-green-600 hover:bg-green-700 text-white h-9 w-9" aria-label="Invia">
             {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>

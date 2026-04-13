@@ -4,6 +4,7 @@ import { useSystemHealth, type HealthCheck } from "@/hooks/useSystemHealth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Database, Shield, HardDrive, BrainCircuit, RefreshCw } from "lucide-react";
+import { AlertConfigPanel } from "./AlertConfigPanel";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   database: <Database className="h-4 w-4" />,
@@ -87,22 +88,26 @@ export function SystemHealthDashboard() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">24h History ({history.length} checks)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-0.5 flex-wrap">
-            {history.slice(-100).map((h, i) => (
-              <div
-                key={i}
-                className={`w-2 h-6 rounded-sm ${h.status === "healthy" ? "bg-green-500" : "bg-destructive"}`}
-                title={`${h.timestamp}: ${h.status}`}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">24h History ({history.length} checks)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-0.5 flex-wrap">
+              {history.slice(-100).map((h, i) => (
+                <div
+                  key={i}
+                  className={`w-2 h-6 rounded-sm ${h.status === "healthy" ? "bg-green-500" : "bg-destructive"}`}
+                  title={`${h.timestamp}: ${h.status}`}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <AlertConfigPanel />
+      </div>
     </div>
   );
 }

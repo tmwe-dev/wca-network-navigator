@@ -101,6 +101,10 @@
     "country": "Paese",
     "noInteractions": "Nessuna interazione registrata"
   },
+  "contacts": {
+    "noContactsToExport": "Nessun contatto da esportare",
+    "noDuplicates": "Nessun duplicato trovato"
+  },
   "email": {
     "inbox": "Posta in arrivo",
     "sent": "Inviata",

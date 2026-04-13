@@ -96,7 +96,7 @@ export function FocusFlowShell() {
         </Button>
         <span className="text-sm font-semibold text-foreground">WCA Partners</span>
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Impostazioni">
           <Sparkles className="h-4 w-4 text-primary" />
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")}>
