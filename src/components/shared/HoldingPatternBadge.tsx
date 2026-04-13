@@ -4,6 +4,7 @@
  */
 import { cn } from "@/lib/utils";
 import { Plane } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface HoldingPatternBadgeProps {
   interactionCount: number;
@@ -18,21 +19,25 @@ function getDaysSince(dateStr: string | null | undefined): number | null {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
-function getStatus(days: number | null): { color: string; pulse: boolean; label: string } {
-  if (days === null) return { color: "bg-muted-foreground/40", pulse: false, label: "In circuito" };
-  if (days < 7) return { color: "bg-emerald-500", pulse: true, label: "Attivo" };
-  if (days < 30) return { color: "bg-yellow-500", pulse: false, label: "Warming" };
-  if (days < 90) return { color: "bg-orange-500", pulse: false, label: "Cooling" };
-  return { color: "bg-red-500", pulse: false, label: "Stale" };
+type StatusKey = "in_circuit" | "active" | "warming" | "cooling" | "stale";
+
+function getStatus(days: number | null): { color: string; pulse: boolean; labelKey: StatusKey } {
+  if (days === null) return { color: "bg-muted-foreground/40", pulse: false, labelKey: "in_circuit" };
+  if (days < 7) return { color: "bg-emerald-500", pulse: true, labelKey: "active" };
+  if (days < 30) return { color: "bg-yellow-500", pulse: false, labelKey: "warming" };
+  if (days < 90) return { color: "bg-orange-500", pulse: false, labelKey: "cooling" };
+  return { color: "bg-red-500", pulse: false, labelKey: "stale" };
 }
 
 export function HoldingPatternBadge({ interactionCount, lastInteractionAt, size = "sm" }: HoldingPatternBadgeProps) {
+  const { t } = useTranslation();
+
   if (interactionCount <= 0) {
     if (size === "md") {
       return (
         <span className="inline-flex items-center gap-1 text-[9px] text-muted-foreground">
           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
-          Mai contattato
+          {t("holding.never_contacted")}
         </span>
       );
     }
@@ -40,7 +45,8 @@ export function HoldingPatternBadge({ interactionCount, lastInteractionAt, size 
   }
 
   const days = getDaysSince(lastInteractionAt);
-  const { color, pulse, label } = getStatus(days);
+  const { color, pulse, labelKey } = getStatus(days);
+  const label = t(`holding.${labelKey}`);
 
   if (size === "sm") {
     return (

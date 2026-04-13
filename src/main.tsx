@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { installRemoteSink } from "@/lib/log/remoteSink";
 import { installGlobalErrorCatchers } from "@/lib/errorCatchers";
+import "./i18n";
 
 document.documentElement.classList.add('dark');
 
