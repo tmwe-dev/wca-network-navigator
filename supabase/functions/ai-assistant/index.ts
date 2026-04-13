@@ -161,7 +161,7 @@ Non eseguire tool di scrittura o modifica`;
     if (isConversational) {
       // Lightweight context for voice mode
       [memoryContext, userProfile, kbContext] = await Promise.all([
-        loadMemoryContext(supabase, userId),
+        loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId),
       ]);
@@ -169,7 +169,7 @@ Non eseguire tool di scrittura o modifica`;
       missionHistory = "";
     } else {
       [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
-        loadMemoryContext(supabase, userId),
+        loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
         loadKBContext(supabase, lastUserMsg, userId),
         loadOperativePrompts(supabase, userId),

@@ -178,9 +178,82 @@ export async function loadOperativePrompts(supabase: SupabaseClient, userId: str
   return `\n\nPROMPT OPERATIVI ATTIVI:\n${prompts}`;
 }
 
-// ━━━ Load Memory Context (Tiered L1/L2/L3) ━━━
+// ━━━ Load Memory Context (Tiered L1/L2/L3 + Semantic RAG) ━━━
 
-export async function loadMemoryContext(supabase: SupabaseClient, userId: string): Promise<string> {
+export async function loadMemoryContext(supabase: SupabaseClient, userId: string, query?: string): Promise<string> {
+  const typeEmoji: Record<string, string> = { preference: "⭐", decision: "🎯", fact: "📌", conversation: "💬" };
+
+  // ── Try semantic search first if query is provided ──
+  if (query && query.trim().length >= 5) {
+    try {
+      const { ragSearchMemory } = await import("../_shared/embeddings.ts");
+      const matches = await ragSearchMemory(supabase, query, {
+        matchCount: 15,
+        matchThreshold: 0.2,
+        filterUserId: userId,
+      });
+
+      if (matches.length > 0) {
+        // Group by level
+        const byLevel: Record<number, Array<Record<string, unknown>>> = { 3: [], 2: [], 1: [] };
+        const allIds: string[] = [];
+
+        for (const m of matches) {
+          const lvl = m.level as number;
+          if (!byLevel[lvl]) byLevel[lvl] = [];
+          byLevel[lvl].push(m as unknown as Record<string, unknown>);
+          allIds.push(m.id);
+        }
+
+        // Increment access counts
+        if (allIds.length > 0) {
+          supabase.rpc("increment_memory_access", { memory_ids: allIds })
+            .then(() => {})
+            .catch((e: unknown) => console.warn("increment_memory_access failed:", extractErrorMessage(e)));
+        }
+
+        let context = "\n\nMEMORIA OPERATIVA (RAG semantic, L3=permanente, L2=operativa, L1=sessione):";
+        const levelNames: Record<number, string> = { 3: "L3 PERMANENTE", 2: "L2 OPERATIVA", 1: "L1 SESSIONE" };
+
+        for (const lvl of [3, 2, 1]) {
+          const memories = byLevel[lvl];
+          if (!memories?.length) continue;
+          context += `\n[${levelNames[lvl]}]\n`;
+          for (const m of memories) {
+            const emoji = typeEmoji[m.memory_type as string] || "📝";
+            const conf = Math.round((m.confidence as number) * 100);
+            const sim = Math.round((m.similarity as number) * 100);
+            const tags = Array.isArray(m.tags) ? m.tags.join(", ") : "";
+            context += `${emoji} ${m.content} (conf: ${conf}%, sim: ${sim}%, tags: ${tags})\n`;
+          }
+        }
+
+        // Always load work plans in parallel
+        const { data: plans } = await supabase
+          .from("ai_work_plans")
+          .select("id, title, status, current_step, steps, tags")
+          .eq("user_id", userId)
+          .in("status", ["running", "paused"])
+          .limit(5);
+
+        if (plans && plans.length > 0) {
+          context += "\n\nPIANI DI LAVORO ATTIVI:\n";
+          for (const p of plans as Record<string, unknown>[]) {
+            const steps = p.steps as Record<string, unknown>[];
+            context += `🔄 "${p.title}" — stato: ${p.status}, progresso: ${p.current_step}/${steps.length}\n`;
+            const nextStep = steps[p.current_step as number];
+            if (nextStep) context += `   → Prossimo step: ${nextStep.description}\n`;
+          }
+        }
+
+        return context;
+      }
+    } catch (e: unknown) {
+      console.warn("Memory RAG search failed, falling back to tiered queries:", extractErrorMessage(e));
+    }
+  }
+
+  // ── Fallback: tiered L3/L2/L1 queries ──
   const [l3Res, l2Res, l1Res, plansRes] = await Promise.all([
     supabase.from("ai_memory").select("id, content, memory_type, tags, importance, level, confidence").eq("user_id", userId).eq("level", 3).or("expires_at.is.null,expires_at.gt.now()").order("importance", { ascending: false }).limit(10),
     supabase.from("ai_memory").select("id, content, memory_type, tags, importance, level, confidence").eq("user_id", userId).eq("level", 2).or("expires_at.is.null,expires_at.gt.now()").order("confidence", { ascending: false }).limit(10),
@@ -203,7 +276,6 @@ export async function loadMemoryContext(supabase: SupabaseClient, userId: string
   const formatMemories = (memories: Record<string, unknown>[] | null, levelName: string) => {
     if (!memories?.length) return "";
     let s = `\n[${levelName}]\n`;
-    const typeEmoji: Record<string, string> = { preference: "⭐", decision: "🎯", fact: "📌", conversation: "💬" };
     for (const m of memories) {
       s += `${typeEmoji[m.memory_type as string] || "📝"} ${m.content} (conf: ${Math.round((m.confidence as number) * 100)}%, tags: ${(Array.isArray(m.tags) ? m.tags.join(", ") : "")})\n`;
     }
