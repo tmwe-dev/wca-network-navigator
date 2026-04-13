@@ -50,6 +50,7 @@ const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ defau
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
 const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
+const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -114,6 +115,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
+          <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>

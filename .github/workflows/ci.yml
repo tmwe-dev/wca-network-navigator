@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-type:
     runs-on: ubuntu-latest
@@ -18,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Security audit
+        run: npm audit --production --audit-level=high || true
 
   test:
     runs-on: ubuntu-latest
@@ -29,7 +35,19 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test -- --reporter=verbose
+      - run: npm run test:ci
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+      - name: Coverage summary
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+          cat coverage/text-summary.txt >> $GITHUB_STEP_SUMMARY || true
 
   build:
     runs-on: ubuntu-latest
@@ -46,3 +64,12 @@ jobs:
         run: |
           DIST_SIZE=$(du -sh dist | cut -f1)
           echo "Bundle size: $DIST_SIZE"
+
+  deploy:
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy notification
+        run: echo "::notice::Build passed all checks. Ready for deployment via Lovable."

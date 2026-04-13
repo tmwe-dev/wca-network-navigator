@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -7,7 +8,7 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
-  const headers = { ...dynCors, "Content-Type": "application/json" };
+  const headers = getSecurityHeaders(dynCors);
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
