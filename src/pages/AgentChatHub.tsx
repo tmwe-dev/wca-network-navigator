@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen } from "lucide-react";
+import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAgents, type Agent } from "@/hooks/useAgents";
@@ -9,6 +9,8 @@ import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
