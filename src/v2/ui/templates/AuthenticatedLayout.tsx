@@ -192,6 +192,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   if (!isAuthenticated) return null;
 
+  // Show onboarding wizard if not completed
+  if (!onboardingLoading && onboardingDone === false) {
+    return (
+      <GlobalErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={null}>
+            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: ["onboarding-completed"] })} />
+          </Suspense>
+        </QueryClientProvider>
+      </GlobalErrorBoundary>
+    );
+  }
+
   const wcaStatusColor = wcaSession.sessionActive === true ? "text-emerald-400" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
   const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
 
