@@ -20,7 +20,7 @@ export function InUscitaTab() {
     queryFn: async () => {
       const [pending, sent, scheduled, failed] = await Promise.all([
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").in("activity_type", ["send_email", "email"]),
+        supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").eq("activity_type", "send_email"),
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
       ]);

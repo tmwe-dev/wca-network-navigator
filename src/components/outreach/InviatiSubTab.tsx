@@ -123,16 +123,16 @@ export function InviatiSubTab() {
   const buildTimeline = (item: SentItem) => {
     const rs = getResponseStatus(item);
     const daysSince = (Date.now() - new Date(item.sent_at).getTime()) / 86400000;
-    const steps = [
-      { label: "Creato", status: "done" as const },
-      { label: "Inviato", status: "done" as const, date: item.sent_at },
+    const steps: Array<{ label: string; status: "done" | "active" | "pending" | "failed"; date?: string }> = [
+      { label: "Creato", status: "done" },
+      { label: "Inviato", status: "done", date: item.sent_at },
     ];
     if (rs.replySnippet) {
-      steps.push({ label: "Risposta", status: "done" as const, date: rs.replyDate });
+      steps.push({ label: "Risposta", status: "done", date: rs.replyDate });
     } else if (daysSince > 14) {
-      steps.push({ label: "Risposta", status: "failed" as const });
+      steps.push({ label: "Risposta", status: "failed" });
     } else {
-      steps.push({ label: "In attesa", status: "active" as const });
+      steps.push({ label: "In attesa", status: "active" });
     }
     return steps;
   };
