@@ -80,7 +80,13 @@ serve(async (req) => {
     }
 
     // ── Parse request ──
-    const { messages, context } = await req.json();
+    const { messages, context, mode, scope } = await req.json();
+
+    // ── Detect conversational mode ──
+    const isConversational: boolean =
+      mode === "conversational" ||
+      context?.conversational === true ||
+      context?.mode === "conversational";
 
     const lastUserMsg: string | undefined = Array.isArray(messages)
       ? [...messages].reverse().find((m: Record<string, unknown>) => m?.role === "user" && typeof m.content === "string")?.content as string | undefined
@@ -90,7 +96,7 @@ serve(async (req) => {
     const operatorBriefing: string | undefined =
       typeof context?.operatorBriefing === "string" ? context.operatorBriefing : undefined;
     let activeWorkflowBlock = "";
-    if (context?.partnerId && typeof context.partnerId === "string") {
+    if (!isConversational && context?.partnerId && typeof context.partnerId === "string") {
       try {
         const { data: ws } = await supabase
           .from("partner_workflow_state")
@@ -112,16 +118,64 @@ serve(async (req) => {
     }
 
     // ── Build system prompt ──
-    let systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
+    let systemPrompt: string;
+    if (isConversational) {
+      systemPrompt = `Sei LUCA, il Super Consulente Strategico del sistema WCA Network Navigator.
+
+MODALITÀ CONVERSAZIONALE — Stai parlando a voce con l'utente.
+
+IL TUO RUOLO:
+Sei un partner strategico che ragiona, pianifica e consiglia
+Discuti di strategie commerciali, priorità operative, opportunità di mercato
+Proponi soluzioni concrete basate sui dati che conosci
+NON leggere testi di email o messaggi — discutine il contenuto e la strategia
+NON eseguire azioni operative (download, bulk update, invio email) — suggeriscile soltanto
+
+STILE VOCALE:
+Rispondi in italiano, tono professionale ma amichevole
+Risposte BREVI: massimo 3-4 frasi per turno (verranno lette ad alta voce dal TTS)
+Vai dritto al punto, niente formattazione markdown, niente tabelle, niente emoji
+Se serve approfondire, chiedi se l'utente vuole i dettagli
+Usa frasi naturali come in una conversazione dal vivo
+
+COSA PUOI FARE:
+Analizzare la situazione di un mercato/paese/partner
+Proporre strategie di approccio commerciale
+Consigliare priorità per la giornata
+Discutere il tono e l'approccio di comunicazioni
+Suggerire quale agente o funzione attivare per un task
+Ragionare su pattern nei dati (paesi caldi, partner dormienti, opportunità)
+
+COSA NON FARE:
+Non leggere ad alta voce il corpo di email o messaggi
+Non mostrare tabelle o liste lunghe
+Non usare formattazione markdown (grassetto, intestazioni, elenchi puntati)
+Non emettere blocchi STRUCTURED_DATA, OPERATIONS, UI_ACTIONS
+Non eseguire tool di scrittura o modifica`;
+    } else {
+      systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
+    }
 
     // ── Load all context in parallel ──
-    const [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
-      loadMemoryContext(supabase, userId),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId),
-      loadOperativePrompts(supabase, userId),
-      loadMissionHistory(supabase, userId),
-    ]);
+    let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string;
+    if (isConversational) {
+      // Lightweight context for voice mode
+      [memoryContext, userProfile, kbContext] = await Promise.all([
+        loadMemoryContext(supabase, userId),
+        loadUserProfile(supabase, userId),
+        loadKBContext(supabase, lastUserMsg, userId),
+      ]);
+      opPrompts = "";
+      missionHistory = "";
+    } else {
+      [memoryContext, userProfile, kbContext, opPrompts, missionHistory] = await Promise.all([
+        loadMemoryContext(supabase, userId),
+        loadUserProfile(supabase, userId),
+        loadKBContext(supabase, lastUserMsg, userId),
+        loadOperativePrompts(supabase, userId),
+        loadMissionHistory(supabase, userId),
+      ]);
+    }
 
     if (userProfile) systemPrompt += userProfile;
     if (memoryContext) systemPrompt += memoryContext;
