@@ -155,7 +155,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
           <Linkedin className="w-3 h-3" /> LinkedIn
         </Button>
 
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClear}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClear} aria-label="Chiudi">
           <X className="w-3 h-3" />
         </Button>
       </motion.div>

@@ -66,13 +66,13 @@ export default function AgendaCalendarPage({
           {format(currentMonth, "MMMM yyyy", { locale: it })}
         </h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} aria-label="Precedente">
             <ChevronLeft className="w-3.5 h-3.5" />
           </Button>
           <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => { setCurrentMonth(new Date()); onSelectDay(new Date()); }}>
             Oggi
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} aria-label="Successivo">
             <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>

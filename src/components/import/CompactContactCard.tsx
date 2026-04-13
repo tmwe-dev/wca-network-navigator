@@ -127,6 +127,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onQuickEmail(); }}
               title="Crea attività email"
+              aria-label="Invia"
             >
               <Mail className="w-3 h-3" />
             </Button>
@@ -138,6 +139,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onQuickCall(); }}
               title="Crea attività chiamata"
+              aria-label="Chiama"
             >
               <Phone className="w-3 h-3" />
             </Button>
@@ -149,6 +151,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onViewDetail(); }}
               title="Dettaglio"
+              aria-label="Visualizza"
             >
               <Eye className="w-3 h-3" />
             </Button>

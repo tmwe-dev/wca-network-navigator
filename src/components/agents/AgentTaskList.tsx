@@ -84,7 +84,7 @@ export function AgentTaskList({ agent }: Props) {
                 </div>
               </div>
               {task.status === "pending" && (
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => runTask(task.id)} disabled={executeTask.isPending}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => runTask(task.id)} disabled={executeTask.isPending} aria-label="Esegui">
                   <Play className="w-3.5 h-3.5" />
                 </Button>
               )}

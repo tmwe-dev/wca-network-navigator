@@ -295,7 +295,7 @@ function ActivityList({
               {/* 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label="Altre azioni">
                     <MoreVertical className="w-3 h-3" />
                   </Button>
                 </DropdownMenuTrigger>

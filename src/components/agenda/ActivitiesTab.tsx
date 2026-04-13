@@ -285,11 +285,11 @@ function ActivityRow({
         {a.status}
       </Badge>
       {a.status !== "completed" && (
-        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 hover:bg-emerald-500/10 hover:text-emerald-500" onClick={onComplete}>
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 hover:bg-emerald-500/10 hover:text-emerald-500" onClick={onComplete} aria-label="Conferma">
           <Check className="w-3 h-3" />
         </Button>
       )}
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10" onClick={onDelete}>
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10" onClick={onDelete} aria-label="Elimina">
         <Trash2 className="w-3 h-3" />
       </Button>
     </motion.div>
