@@ -8,6 +8,7 @@ import { countBusinessCards } from "@/data/businessCards";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import type { AiOperation } from "@/components/ai/AiOperationCard";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import type { StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA } from "@/constants/routes";
@@ -68,12 +69,12 @@ export function useIntelliFlowOverlay({ open, onClose, cockpitContacts, onCockpi
 
   const panelData = useMemo(() => {
     const allPartners: StructuredPartner[] = [];
-    const allOperations: Record<string, unknown>[] = [];
+    const allOperations: AiOperation[] = [];
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
       const parsed = parseAiAgentResponse<StructuredPartner>(msg.content);
       if (parsed.partners.length) allPartners.push(...parsed.partners);
-      if (parsed.operations.length) allOperations.push(...parsed.operations);
+      if (parsed.operations.length) allOperations.push(...(parsed.operations as unknown as AiOperation[]));
     }
     return { partners: allPartners, operations: allOperations };
   }, [messages]);
