@@ -57,6 +57,8 @@ export default defineConfig(({ mode }) => ({
         name: "WCA Network Navigator",
         short_name: "WCA Nav",
         theme_color: "#0f172a",
+        description: "AI-powered CRM & Business Development Platform",
+        orientation: "portrait-primary",
         background_color: "#0f172a",
         display: "standalone",
         scope: "/",
