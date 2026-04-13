@@ -159,6 +159,19 @@ Non eseguire tool di scrittura o modifica`;
       systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
     }
 
+    // ── Extract context tags for KB loading ──
+    const conversationContext: ConversationContext = {
+      scope: scope || undefined,
+      page: context?.currentPage || context?.page || undefined,
+      partner_country: context?.partner_country || context?.country || context?.selectedCountry || undefined,
+      channel: context?.channel || undefined,
+      email_type: context?.email_type || undefined,
+      partner_id: context?.partnerId || context?.partner_id || undefined,
+      relationship_stage: context?.relationship_stage || undefined,
+      last_user_message: lastUserMsg,
+    };
+    const ctxTags = extractContextTags(conversationContext);
+
     // ── Load all context in parallel ──
     let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string, doctrineContext: string;
     if (isConversational) {
@@ -166,7 +179,7 @@ Non eseguire tool di scrittura o modifica`;
       [memoryContext, userProfile, kbContext, doctrineContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
-        loadKBContext(supabase, lastUserMsg, userId),
+        loadKBContext(supabase, lastUserMsg, userId, ctxTags),
         loadSystemDoctrine(supabase),
       ]);
       opPrompts = "";
@@ -175,7 +188,7 @@ Non eseguire tool di scrittura o modifica`;
       [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext] = await Promise.all([
         loadMemoryContext(supabase, userId, lastUserMsg),
         loadUserProfile(supabase, userId),
-        loadKBContext(supabase, lastUserMsg, userId),
+        loadKBContext(supabase, lastUserMsg, userId, ctxTags),
         loadOperativePrompts(supabase, userId),
         loadMissionHistory(supabase, userId),
         loadSystemDoctrine(supabase),
