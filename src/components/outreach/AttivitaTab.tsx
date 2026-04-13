@@ -35,6 +35,7 @@ export function AttivitaTab() {
   const searchTerm = gf.search || "";
   const { mockEnabled } = useOutreachMock();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [channelFilter, setChannelFilter] = useState("all");
   const [noteText, setNoteText] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
 
