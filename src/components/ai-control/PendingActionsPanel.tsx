@@ -1,5 +1,6 @@
 /**
  * PendingActionsPanel — Displays and manages ai_pending_actions
+ * Including prompt refinement suggestions from agent-prompt-refiner.
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, CheckCircle, XCircle, Mail, Reply, Archive,
   ListTodo, Forward, Clock, ChevronDown, ChevronUp, Zap, Bot, User, Workflow,
+  Sparkles, ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +30,7 @@ const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: str
   advance_gate: { icon: Workflow, color: "text-pink-400 bg-pink-400/10", label: "Avanza Gate" },
   change_channel: { icon: Zap, color: "text-amber-400 bg-amber-400/10", label: "Cambia Canale" },
   schedule_followup: { icon: Clock, color: "text-sky-400 bg-sky-400/10", label: "Follow-up" },
+  prompt_refinement: { icon: Sparkles, color: "text-violet-400 bg-violet-400/10", label: "Refinement Prompt" },
 };
 
 const SOURCE_META: Record<string, { icon: typeof Bot; label: string }> = {
@@ -70,6 +73,26 @@ export function PendingActionsPanel() {
       if (error) throw error;
       if (action?.decision_log_id) {
         await supabase.from("ai_decision_log").update({ user_review: "approved" }).eq("id", action.decision_log_id);
+      }
+      // Handle prompt_refinement: apply suggestions to agent system_prompt
+      if (action?.action_type === "prompt_refinement" && action.suggested_content) {
+        try {
+          const suggestions = JSON.parse(action.suggested_content);
+          // Find agent from reasoning or via pending action context
+          const { data: agents } = await supabase.from("agents").select("id, system_prompt").eq("user_id", (await supabase.auth.getUser()).data.user?.id || "").eq("is_active", true);
+          if (agents?.length) {
+            const agent = agents[0];
+            let updatedPrompt = agent.system_prompt || "";
+            for (const s of suggestions) {
+              if (s.current_text && updatedPrompt.includes(s.current_text)) {
+                updatedPrompt = updatedPrompt.replace(s.current_text, s.suggested_text);
+              } else if (s.suggested_text) {
+                updatedPrompt += `\n\n${s.suggested_text}`;
+              }
+            }
+            await supabase.from("agents").update({ system_prompt: updatedPrompt }).eq("id", agent.id);
+          }
+        } catch (e) { console.warn("prompt refinement apply failed:", e); }
       }
     },
     onSuccess: () => { toast.success("Azione approvata"); qc.invalidateQueries({ queryKey: ["ai-pending-actions"] }); },
@@ -170,6 +193,32 @@ export function PendingActionsPanel() {
                       {action.suggested_content}
                     </div>
                   )}
+
+                  {/* Prompt refinement suggestions */}
+                  {action.action_type === "prompt_refinement" && action.suggested_content && (() => {
+                    try {
+                      const suggestions = JSON.parse(action.suggested_content);
+                      return (
+                        <div className="space-y-2 border border-border/30 rounded-lg p-3 bg-muted/10">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Sparkles className="h-3 w-3" /> Suggerimenti miglioramento prompt:
+                          </p>
+                          {Array.isArray(suggestions) && suggestions.map((s: Record<string, string>, idx: number) => (
+                            <div key={idx} className="text-xs space-y-1 border-l-2 border-primary/30 pl-2">
+                              <p className="font-medium text-foreground">{s.section}</p>
+                              {s.current_text && (
+                                <p className="text-muted-foreground line-through">{s.current_text}</p>
+                              )}
+                              <p className="flex items-center gap-1 text-emerald-400">
+                                <ArrowRight className="h-2.5 w-2.5" /> {s.suggested_text}
+                              </p>
+                              <p className="text-muted-foreground/70 italic">{s.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    } catch { return null; }
+                  })()}
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-1">
