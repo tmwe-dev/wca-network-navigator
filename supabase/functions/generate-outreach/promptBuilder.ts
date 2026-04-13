@@ -104,6 +104,12 @@ CONTESTO:
 - Lingua suggerita: ${effectiveLanguage} (${country_code} → ${detected.languageLabel})
 - ${ch === "email" ? "FORMATO OBBLIGATORIO: la prima riga DEVE essere 'Subject: <oggetto email>' seguita da una riga vuota e poi il corpo HTML. La firma viene aggiunta automaticamente dal sistema." : ""}
 
+LANGUAGE RULES:
+- Target language: ${effectiveLanguage}
+- Write the ENTIRE email (subject + body) in ${effectiveLanguage}
+- Deutsch: formal Sie form. Français: formal vous form. Español: formal usted form.
+- NEVER mix languages. Greeting must be culturally appropriate for target country.
+
 GUARDRAIL:
 - Scrivi nella lingua del paese destinatario
 - Zero allucinazioni: usa SOLO dati forniti, mai inventare fatti

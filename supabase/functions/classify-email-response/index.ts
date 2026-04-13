@@ -102,13 +102,14 @@ function buildClassificationPrompt(
 {
   "category": "interested|not_interested|request_info|meeting_request|complaint|follow_up|auto_reply|spam|uncategorized",
   "confidence": 0.0-1.0,
-  "ai_summary": "one-sentence summary of the email content and intent",
+  "ai_summary": "one-sentence summary of the email content and intent. If the email is NOT in Italian, provide an Italian translation summary here.",
   "keywords": ["keyword1", "keyword2"],
   "urgency": "critical|high|normal|low",
   "sentiment": "positive|negative|neutral|mixed",
   "detected_patterns": ["pattern1"],
   "action_suggested": "brief description of recommended next action",
-  "reasoning": "brief explanation of classification reasoning"
+  "reasoning": "brief explanation of classification reasoning",
+  "detected_language": "detected language of the email (e.g. English, Deutsch, Français, Italiano)"
 }`);
 
   return parts.join("\n");

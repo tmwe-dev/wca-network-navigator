@@ -47,6 +47,7 @@ const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) =
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ default: m.GuidaPage })));
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
+const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 // ── Loading fallback ─────────────────────────────────────────────────
@@ -108,6 +109,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="guida" element={<GuidaPage />} />
           <Route path="ai-control" element={<AIControlCenterPage />} />
           <Route path="email-intelligence" element={<EmailIntelligencePage />} />
+          <Route path="ai-arena" element={<AIArenaPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

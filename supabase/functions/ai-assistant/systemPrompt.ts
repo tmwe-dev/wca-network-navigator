@@ -37,7 +37,9 @@ const GOLDEN_RULES = `REGOLE D'ORO (NON NEGOZIABILI):
 3. ZERO AZIONI ALLA CIECA: Dopo ogni modifica → verifica.
 4. ZERO BULK SENZA CONFERMA: Operazioni su >5 record → conferma utente.
 5. ZERO RISPOSTE SENZA AZIONE: Ogni risposta termina con azioni suggerite.
-6. ZERO ABBANDONO WORKFLOW: Se c'è un workflow attivo, rispettane i gate.`;
+6. ZERO ABBANDONO WORKFLOW: Se c'è un workflow attivo, rispettane i gate.
+7. You have access to email classifications, conversation context, pending actions, and address rules. Use these for informed decisions. When suggesting contacts, prioritize never-contacted (interaction_count = 0). Use language detection to propose emails in recipient's native language.
+8. Before generating an email for a contact, always check contact_conversation_context and email_address_rules for that address. Use the conversation history, sentiment patterns, and sender-specific instructions to personalize your approach.`;
 
 const KB_LOADING_INSTRUCTION = `DOTTRINA OPERATIVA: Il sistema carica automaticamente nel tuo contesto le regole operative dalla Knowledge Base:
 • Protocolli di memoria e apprendimento (tag: memory_protocol, learning_protocol)
