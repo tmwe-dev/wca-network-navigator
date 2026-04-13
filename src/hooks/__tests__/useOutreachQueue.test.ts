@@ -2,7 +2,15 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { auth: { getUser: vi.fn() }, from: vi.fn() },
+  supabase: {
+    auth: { getUser: vi.fn() },
+    from: vi.fn(),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    })),
+    removeChannel: vi.fn(),
+  },
 }));
 vi.mock("@/lib/api/invokeEdge", () => ({ invokeEdge: vi.fn() }));
 vi.mock("@/lib/api/apiError", () => ({ isApiError: vi.fn() }));
