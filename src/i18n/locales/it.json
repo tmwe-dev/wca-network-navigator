@@ -53,14 +53,34 @@
     "export": "Esporta",
     "import": "Importa",
     "no_data": "Nessun dato disponibile",
+    "noResults": "Nessun risultato",
     "retry": "Riprova",
     "logout": "Esci",
     "light_mode": "Light Mode",
     "dark_mode": "Dark Mode",
     "add_contact": "Aggiungi contatto",
+    "add": "Aggiungi",
+    "upload": "Carica",
+    "download": "Scarica",
+    "cancelled": "Annullato",
+    "completed": "Completato",
+    "pending": "In attesa",
+    "active": "Attivo",
     "enrichment": "Arricchimento",
     "agent_operations": "Agent Operations",
-    "test_extensions": "Test Estensioni"
+    "test_extensions": "Test Estensioni",
+    "offlineMessage": "Sei offline. Alcune funzionalità potrebbero non essere disponibili."
+  },
+  "errors": {
+    "saveFailed": "Errore nel salvataggio",
+    "loadFailed": "Errore nel caricamento",
+    "deleteFailed": "Errore nell'eliminazione",
+    "uploadFailed": "Errore nell'upload",
+    "connectionError": "Errore di connessione",
+    "unauthorized": "Non autorizzato",
+    "notFound": "Non trovato",
+    "generic": "Si è verificato un errore",
+    "aiError": "Errore AI"
   },
   "auth": {
     "login": "Accedi",
@@ -144,7 +164,10 @@
     "language": "Lingua",
     "preferences": "Preferenze",
     "save_success": "Impostazioni salvate",
-    "save_error": "Errore nel salvataggio"
+    "save_error": "Errore nel salvataggio",
+    "loadDefault": "Carica default",
+    "editRule": "Modifica Regola",
+    "saveRule": "Salva Regola"
   },
   "diagnostics": {
     "title": "Diagnostica",
