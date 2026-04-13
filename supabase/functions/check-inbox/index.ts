@@ -21,6 +21,7 @@ import {
   MAX_ATTACHMENT_BYTES, MAX_RAW_FETCH_BYTES, INLINE_DATA_URI_THRESHOLD,
 } from "./imapParser.ts";
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
+import { detectBounce, handleBounce } from "./bounceDetector.ts";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -483,6 +484,16 @@ Deno.serve(async (req) => {
         } else if (result.msgData) {
           messages.push(result.msgData);
           maxUid = uid;
+
+          // ── Bounce detection (best-effort) ──
+          try {
+            const bounceInfo = detectBounce({ fromAddr, subject, bodyText });
+            if (bounceInfo) {
+              await handleBounce(supabase, userId, result.msgData.id as string, bounceInfo);
+            }
+          } catch (bounceErr) {
+            console.warn(`[check-inbox] Bounce detection error UID ${uid}:`, bounceErr);
+          }
 
           // ── Response matching (best-effort) ──
           try {
