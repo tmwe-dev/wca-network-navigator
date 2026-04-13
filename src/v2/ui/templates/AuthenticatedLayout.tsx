@@ -340,6 +340,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             </motion.div>
                           </AnimatePresence>
                         </main>
+                        <Suspense fallback={null}><MobileBottomNav /></Suspense>
                       </div>
                     </div>
 
