@@ -107,14 +107,53 @@ serve(async (req) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data: l2ToPromote } = await supabase
       .from("ai_memory")
-      .select("id, content, memory_type, feedback, embedding, promoted_at")
+      .select("id, content, memory_type, feedback, embedding, promoted_at, user_id")
       .eq("level", 2)
       .eq("pending_promotion", true)
       .or(`promoted_at.is.null,promoted_at.lt.${sevenDaysAgo}`);
 
     if (l2ToPromote?.length) {
-      const eligible = (l2ToPromote as MemoryRow[]).filter((m) => m.feedback !== "negative");
+      const eligible = (l2ToPromote as (MemoryRow & { user_id: string })[]).filter((m) => m.feedback !== "negative");
       if (eligible.length > 0) {
+        // ── Conflict detection before promotion ──
+        for (const mem of eligible) {
+          if (!mem.embedding) continue;
+          try {
+            const { data: conflicts } = await supabase.rpc("match_ai_memory_enhanced", {
+              query_embedding: mem.embedding,
+              match_count: 3,
+              match_threshold: 0.85,
+              filter_user_id: mem.user_id || null,
+              filter_levels: [3],
+              filter_types: null,
+            });
+            if (conflicts && conflicts.length > 0) {
+              stats.conflicts_detected += conflicts.length;
+              console.warn("[memory-promoter] L3 conflict detected:", {
+                newMemoryId: mem.id,
+                conflictingL3: (conflicts as Array<{ id: string; similarity: number; content: string }>).map((r) => ({
+                  id: r.id,
+                  similarity: r.similarity,
+                  content: r.content.slice(0, 100),
+                })),
+              });
+              // Create conflict alert as L1 memory
+              await supabase.from("ai_memory").insert({
+                user_id: mem.user_id,
+                content: `CONFLITTO RILEVATO: La memoria '${mem.content.slice(0, 80)}' (sim: ${Math.round((conflicts as Array<{ similarity: number }>)[0].similarity * 100)}%) è simile a L3 esistente '${(conflicts as Array<{ content: string }>)[0].content.slice(0, 80)}'. Verificare quale è corretta.`,
+                memory_type: "decision",
+                tags: ["conflict_detected", "l3_review"],
+                importance: 8,
+                source: "conflict_detector",
+                level: 1,
+                confidence: 1,
+              });
+            }
+          } catch (conflictErr: unknown) {
+            console.warn("[memory-promoter] Conflict check failed for", mem.id, ":", conflictErr instanceof Error ? conflictErr.message : String(conflictErr));
+          }
+        }
+
         const ids = eligible.map((m) => m.id);
         await supabase
           .from("ai_memory")
