@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ThumbsUp, ThumbsDown, MessageCircle, CalendarCheck, AlertTriangle,
   RotateCcw, Bot, Ban, HelpCircle, Inbox, CheckCircle,
+  Archive, ShieldBan, FolderInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 const CATEGORIES: Record<string, { icon: typeof ThumbsUp; color: string; label: string }> = {
   interested: { icon: ThumbsUp, color: "bg-emerald-400/10 text-emerald-400", label: "Interessato" },
@@ -100,9 +102,41 @@ export function SmartInboxView() {
   };
 
   const handleCorrectCategory = async (id: string, newCategory: string) => {
+    const item = classifications.find(c => c.id === id);
     const { error } = await supabase.from("email_classifications").update({ category: newCategory }).eq("id", id);
-    if (!error) { toast.success(`Categoria corretta: ${CATEGORIES[newCategory]?.label ?? newCategory}`); qc.invalidateQueries({ queryKey: ["email-classifications"] }); }
-    else toast.error("Errore aggiornamento");
+    if (!error) {
+      toast.success(`Categoria corretta: ${CATEGORIES[newCategory]?.label ?? newCategory}`);
+      qc.invalidateQueries({ queryKey: ["email-classifications"] });
+      // Save correction to memory for learning
+      if (item) {
+        try {
+          await invokeEdge("save-correction-memory", {
+            body: {
+              correction_type: "email_classification",
+              original_value: item.category,
+              corrected_value: newCategory,
+              context: { email_address: item.email_address, subject: item.subject },
+            },
+            context: "SmartInboxView.correctCategory",
+          });
+        } catch { /* best-effort */ }
+      }
+    } else toast.error("Errore aggiornamento");
+  };
+
+  const handleFolderAction = async (action: "archive" | "spam", emailId: string) => {
+    const item = classifications.find(c => c.id === emailId);
+    if (!item) return;
+    try {
+      await invokeEdge("manage-email-folders", {
+        body: { action, uids: [String(item.imap_uid ?? emailId)] },
+        context: `SmartInboxView.${action}`,
+      });
+      toast.success(action === "archive" ? "Archiviata" : "Spostata in spam");
+      qc.invalidateQueries({ queryKey: ["email-classifications"] });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Errore operazione cartella");
+    }
   };
 
   return (
@@ -240,7 +274,7 @@ export function SmartInboxView() {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+            <div className="flex items-center gap-2 pt-2 border-t border-border/30 flex-wrap">
               <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400" onClick={() => handleApprove(selected.id)}>
                 <CheckCircle className="h-3.5 w-3.5" />Approva
               </Button>
@@ -250,6 +284,12 @@ export function SmartInboxView() {
                   {Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => handleFolderAction("archive", selected.id)}>
+                <Archive className="h-3.5 w-3.5" />Archivia
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive" onClick={() => handleFolderAction("spam", selected.id)}>
+                <ShieldBan className="h-3.5 w-3.5" />Spam
+              </Button>
             </div>
           </div>
         )}
