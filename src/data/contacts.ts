@@ -63,7 +63,8 @@ const DEFAULT_PAGE_SIZE = 200;
 // ─── Query Builder type ─────────────────────────────────
 // The Supabase query builder is complex with generics; we use a lightweight alias
 // to avoid `any` while preserving chainability.
-type ContactQueryBuilder = ReturnType<typeof supabase.from<"imported_contacts">>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ContactQueryBuilder = any;
 
 // ─── Query Helpers ──────────────────────────────────────
 
@@ -254,7 +255,9 @@ export async function getContactById(id: string) {
 }
 
 export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
-  const results: Record<string, unknown>[] = [];
+  // Dynamic select requires flexible return type for diverse consumers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results: any[] = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
     const { data, error } = await supabase
@@ -311,7 +314,7 @@ export async function updateContactEnrichment(id: string, enrichmentPatch: Recor
   const merged = structuredClone({ ...existing, ...enrichmentPatch });
   const { error } = await supabase
     .from("imported_contacts")
-    .update({ enrichment_data: merged as Database["public"]["Tables"]["imported_contacts"]["Update"]["enrichment_data"] })
+    .update({ enrichment_data: merged } satisfies Pick<ImportedContactRow, "enrichment_data">)
     .eq("id", id);
   if (error) throw error;
 }
