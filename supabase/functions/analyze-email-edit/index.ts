@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 function stripHtml(html: string): string {
   return html
@@ -21,13 +17,17 @@ function stripHtml(html: string): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -40,14 +40,14 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const { original_html, edited_html, recipient_country, email_type } = await req.json();
     if (!original_html || !edited_html) {
       return new Response(JSON.stringify({ error: "original_html and edited_html required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -71,12 +71,9 @@ serve(async (req) => {
           tone_shift: null,
           structural_changes: [],
           suggested_memory: null,
-        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }), { headers: { ...dynCors, "Content-Type": "application/json" } });
       }
     }
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const prompt = `Analizza le modifiche che l'utente ha apportato a un'email generata dall'AI.
 
@@ -100,36 +97,16 @@ Analizza e rispondi SOLO con JSON valido:
   "suggested_memory": "frase sintetica che descrive la preferenza dell'utente da memorizzare, es: 'Preferisce email brevi e dirette con tono informale per contatti italiani'. Null se non significativo."
 }`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-      }),
+    const result = await aiChat({
+      models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      max_tokens: 300,
+      timeoutMs: 15000,
+      maxRetries: 1,
+      context: "analyze-email-edit",
     });
-
-    if (!resp.ok) {
-      const status = resp.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI gateway error: ${status}`);
-    }
-
-    const aiResult = await resp.json();
-    const content = aiResult.choices?.[0]?.message?.content || "";
+    const content = result.content || "";
 
     // Parse JSON from AI response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -140,7 +117,7 @@ Analizza e rispondi SOLO con JSON valido:
         tone_shift: null,
         structural_changes: [],
         suggested_memory: null,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -151,13 +128,10 @@ Analizza e rispondi SOLO con JSON valido:
       tone_shift: parsed.tone_shift || null,
       structural_changes: Array.isArray(parsed.structural_changes) ? parsed.structural_changes : [],
       suggested_memory: parsed.suggested_memory || null,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
-  } catch (e) {
+  } catch (e: unknown) {
     console.error("analyze-email-edit error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return mapErrorToResponse(e, dynCors);
   }
 });
