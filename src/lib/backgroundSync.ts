@@ -123,14 +123,15 @@ export async function bgSyncStart() {
 
     while (!abortSync) {
       batchNum += 1;
-      let result: any;
+      let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>> };
 
       try {
         result = await callCheckInbox();
         consecutiveErrors = 0;
-      } catch (batchErr: any) {
+      } catch (batchErr: unknown) {
         consecutiveErrors += 1;
-        log.warn("batch error", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, message: batchErr.message });
+        const errMsg = batchErr instanceof Error ? batchErr.message : String(batchErr);
+        log.warn("batch error", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, message: errMsg });
 
         if (consecutiveErrors >= MAX_RETRIES) {
           throw batchErr;
@@ -205,8 +206,8 @@ export async function bgSyncStart() {
       batch: batchNum,
     };
     notifyProgress();
-  } catch (err: any) {
-    progress = { ...progress, status: "error", errorMessage: err.message };
+  } catch (err: unknown) {
+    progress = { ...progress, status: "error", errorMessage: err instanceof Error ? err.message : String(err) };
     notifyProgress();
   } finally {
     if (timer) clearInterval(timer);

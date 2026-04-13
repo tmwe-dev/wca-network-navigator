@@ -118,7 +118,7 @@ export function dispatchAiUiActions(actions: AiUiAction[]) {
   }
 }
 
-export function dispatchAiAgentEffects(parsed: ParsedAiAgentResponse<any>) {
+export function dispatchAiAgentEffects(parsed: ParsedAiAgentResponse<unknown>) {
   const actions = [...parsed.uiActions];
 
   if (parsed.jobCreated?.job_id && !actions.some((action) => action.action_type === "start_download_job" && action.job_id === parsed.jobCreated?.job_id)) {

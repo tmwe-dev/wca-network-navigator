@@ -13,7 +13,7 @@ import { lazy, type ComponentType } from "react";
  * const MyPage = lazyRetry(() => import("./pages/MyPage"));
  * // Use in routes: <Route element={<MyPage />} />
  */
-export function lazyRetry<T extends ComponentType<any>>(
+export function lazyRetry<T extends ComponentType<Record<string, unknown>>>(
   factory: () => Promise<{ default: T }>,
   retryDelay = 1500
 ) {
