@@ -37,6 +37,11 @@ Deno.serve(async (req: Request) => {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
+
+    // Rate limit
+    const rl = checkRateLimit(`lead-scores:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
