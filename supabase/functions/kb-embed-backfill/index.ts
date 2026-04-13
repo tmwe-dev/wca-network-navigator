@@ -16,12 +16,15 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     // ── Auth ──
@@ -29,7 +32,7 @@ serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -42,7 +45,7 @@ serve(async (req) => {
     if (claimsErr || !claims?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -68,7 +71,7 @@ serve(async (req) => {
     if (!rows || rows.length === 0) {
       return new Response(JSON.stringify({
         processed: 0, skipped: 0, failed: 0, batchSize, hasMore: false,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // ── Compose testi per embedding (titolo + contenuto, troncato) ──
@@ -123,11 +126,11 @@ serve(async (req) => {
       batchSize,
       hasMore: (count ?? 0) > 0,
       remaining: count ?? 0,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("kb-embed-backfill error:", err);
     return new Response(JSON.stringify({
       error: err instanceof Error ? err.message : "Unknown error",
-    }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
   }
 });

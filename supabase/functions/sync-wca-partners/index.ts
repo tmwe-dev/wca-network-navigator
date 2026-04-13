@@ -1,15 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -20,7 +18,7 @@ Deno.serve(async (req) => {
     if (!extKey) {
       return new Response(
         JSON.stringify({ error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
@@ -32,7 +30,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
     const anonSb = createClient(localUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
@@ -40,7 +38,7 @@ Deno.serve(async (req) => {
     if (!user) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
@@ -249,7 +247,7 @@ Deno.serve(async (req) => {
 
     return new Response(stream, {
       headers: {
-        ...corsHeaders,
+        ...dynCors,
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
@@ -259,7 +257,7 @@ Deno.serve(async (req) => {
     console.error("Sync error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

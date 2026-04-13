@@ -1,16 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const BATCH_SIZE = 25;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -27,7 +27,7 @@ serve(async (req) => {
 
     // Fix errors mode
     if (mode === "fix_errors") {
-      return await handleFixErrors(supabase, import_log_id, lovableApiKey, corsHeaders, custom_prompt, batch_offset || 0);
+      return await handleFixErrors(supabase, import_log_id, lovableApiKey, dynCors, custom_prompt, batch_offset || 0);
     }
 
     // Get import log
@@ -146,13 +146,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, imported: importedCount, errors: errorCount }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("process-ai-import error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
@@ -268,10 +268,10 @@ async function logImportError(
   });
 }
 
-async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, corsHeaders: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
+async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, dynCors: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
   if (!lovableApiKey) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -289,7 +289,7 @@ async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey
   if (fetchErr) throw new Error(fetchErr.message);
   if (!errors || errors.length === 0) {
     return new Response(JSON.stringify({ corrected: 0, dismissed: 0, has_more: false, next_offset: batchOffset }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -439,6 +439,6 @@ Rispondi con un array dove ogni elemento ha:
     next_offset: 0, // Always 0 since we process "pending" status and they change after processing
     total_pending_before: totalPending || 0,
   }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...dynCors, "Content-Type": "application/json" },
   });
 }

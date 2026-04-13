@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const TARGET_SCHEMA = {
   company_name: "Nome dell'azienda (es. 'Global Logistics Srl', 'DHL Express')",
@@ -181,7 +177,11 @@ function deriveMappingFromParsedRows(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -278,12 +278,12 @@ serve(async (req) => {
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit superato, riprova tra poco." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       const text = await response.text();
@@ -321,13 +321,13 @@ serve(async (req) => {
     console.log("[analyze-import-structure] confidence:", finalResult.confidence);
 
     return new Response(JSON.stringify(finalResult), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("analyze-import-structure error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

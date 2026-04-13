@@ -1,22 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader)
       return new Response(JSON.stringify({ error: "Missing auth" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
 
     const supabase = createClient(
@@ -30,7 +29,7 @@ serve(async (req) => {
     if (!user)
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
 
     const { html, mode } = await req.json();
@@ -42,7 +41,7 @@ serve(async (req) => {
         JSON.stringify({ error: "html field required" }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...dynCors, "Content-Type": "application/json" },
         }
       );
     }
@@ -200,19 +199,19 @@ If no unread chats found, return an empty array [].`;
       if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded, retry later" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
       if (aiResponse.status === 402) {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
       
       return new Response(
         JSON.stringify({ error: "AI extraction failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
@@ -260,7 +259,7 @@ If no unread chats found, return an empty array [].`;
         htmlLength: html.length,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       }
     );
   } catch (e) {
@@ -269,7 +268,7 @@ If no unread chats found, return an empty array [].`;
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       }
     );
   }

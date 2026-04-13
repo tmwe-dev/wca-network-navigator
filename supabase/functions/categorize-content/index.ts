@@ -1,25 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { name, text, type } = await req.json();
     if (!name && !text) {
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -69,7 +70,7 @@ serve(async (req) => {
     if (!response.ok) {
       console.error("AI gateway error:", response.status);
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -84,12 +85,12 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ category }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("categorize error:", e);
     return new Response(JSON.stringify({ category: "altro" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

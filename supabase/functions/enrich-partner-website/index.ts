@@ -1,10 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 // ── Credit helpers ──
 async function getUserId(req: Request, supabase: any): Promise<string | null> {
@@ -50,16 +46,18 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();
     if (!partnerId) {
       return new Response(JSON.stringify({ error: "partnerId is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -69,7 +67,7 @@ Deno.serve(async (req) => {
 
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -83,7 +81,7 @@ Deno.serve(async (req) => {
       const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
       if (!credits || credits.balance < 5) {
         return new Response(JSON.stringify({ error: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
     }
@@ -97,13 +95,13 @@ Deno.serve(async (req) => {
 
     if (partnerError || !partner) {
       return new Response(JSON.stringify({ error: "Partner not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     if (!partner.website) {
       return new Response(JSON.stringify({ error: "Partner has no website" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -150,7 +148,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, enrichment: null, message: "No content extracted" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
@@ -237,7 +235,7 @@ Estrai queste informazioni (metti null se non trovate):
       console.error("AI error:", aiResponse.status, errText);
       const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -273,7 +271,7 @@ Estrai queste informazioni (metti null se non trovate):
 
     if (!enrichment) {
       return new Response(JSON.stringify({ error: "Failed to extract data" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -287,7 +285,7 @@ Estrai queste informazioni (metti null se non trovate):
     if (updateError) {
       console.error("DB update error:", updateError);
       return new Response(JSON.stringify({ error: "Failed to save enrichment" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -295,13 +293,13 @@ Estrai queste informazioni (metti null se non trovate):
 
     return new Response(
       JSON.stringify({ success: true, enrichment }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

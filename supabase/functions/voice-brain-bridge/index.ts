@@ -8,7 +8,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -214,13 +214,16 @@ async function logAiRequest(supabase: ReturnType<typeof createClient>, payload: 
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
   const t0 = Date.now();
   const traceId = crypto.randomUUID();
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -230,7 +233,7 @@ serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid_json" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -244,7 +247,7 @@ serve(async (req) => {
     if (!tokenUserId) {
       return new Response(JSON.stringify({ error: "invalid_or_expired_bridge_token" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     resolvedUserId = tokenUserId;
@@ -254,7 +257,7 @@ serve(async (req) => {
     if (!BRIDGE_SECRET || presented !== BRIDGE_SECRET) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     // Use service user fallback for legacy auth
@@ -417,7 +420,7 @@ serve(async (req) => {
     {
       status: 200,
       headers: {
-        ...corsHeaders,
+        ...dynCors,
         "Content-Type": "application/json",
         "x-trace-id": traceId,
       },

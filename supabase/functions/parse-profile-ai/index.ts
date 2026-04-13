@@ -1,21 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -28,7 +27,7 @@ Deno.serve(async (req) => {
     if (!partnerId) {
       return new Response(
         JSON.stringify({ success: false, error: 'partnerId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -42,21 +41,21 @@ Deno.serve(async (req) => {
     if (fetchErr || !partner) {
       return new Response(
         JSON.stringify({ success: false, error: 'Partner not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!partner.raw_profile_html && !partner.raw_profile_markdown) {
       return new Response(
         JSON.stringify({ success: false, error: 'No raw profile data saved. Re-download the partner first.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     if (partner.ai_parsed_at && !forceReparse) {
       return new Response(
         JSON.stringify({ success: true, skipped: true, message: 'Already AI-parsed. Use forceReparse=true to re-run.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -178,12 +177,12 @@ ${truncated}`
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
       return new Response(
         JSON.stringify({ success: false, error: `AI error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -194,7 +193,7 @@ ${truncated}`
       console.error('No tool call in AI response:', JSON.stringify(aiData))
       return new Response(
         JSON.stringify({ success: false, error: 'AI returned no data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -316,13 +315,13 @@ ${truncated}`
         extracted,
         contactsFound: extracted.contacts?.length || 0,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   }
 })

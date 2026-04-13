@@ -3,12 +3,15 @@
  * Routes by body.action: email | outreach | improve | analyze_edit
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { forwardToFunction } from "../_shared/proxyUtils.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const body = await req.json();
@@ -26,13 +29,13 @@ serve(async (req) => {
         return forwardToFunction("analyze-email-edit", body, req.headers);
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
         });
     }
   } catch (e: any) {
     console.error("generate-content error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });
