@@ -192,7 +192,7 @@ export function AppLayout() {
                 </TooltipProvider>
               </header>
 
-              <main className={cn("flex-1 min-h-0 overflow-hidden mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
+              <main className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
                 <Outlet />
               </main>
             </div>
