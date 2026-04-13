@@ -1,11 +1,13 @@
 /**
- * Routes v2 — Complete routing with all 37 pages
+ * Routes v2 — Complete routing with all 37 pages, wrapped in FeatureErrorBoundary
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
+import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -50,67 +52,69 @@ const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePag
 const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
-// ── Loading fallback ─────────────────────────────────────────────────
-function LoadingFallback(): React.ReactElement {
+/** Wraps a lazy page with error boundary and suspense skeleton */
+function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name: string): React.ReactElement {
   return (
-    <div className="flex items-center justify-center h-full min-h-[200px]">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
+    <FeatureErrorBoundary featureName={name}>
+      <Suspense fallback={<PageSkeleton />}>
+        <Page />
+      </Suspense>
+    </FeatureErrorBoundary>
   );
 }
 
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Routes>
         {/* Public routes */}
         <Route element={<PublicLayout />}>
-          <Route path="login" element={<LoginPage />} />
-          <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="login" element={guardedPage(LoginPage, "Login")} />
+          <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
         </Route>
 
         {/* Authenticated routes */}
         <Route element={<AuthenticatedLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="network" element={<NetworkPage />} />
-          <Route path="crm" element={<CRMPage />} />
-          <Route path="outreach" element={<OutreachPage />} />
-          <Route path="inreach" element={<InreachPage />} />
-          <Route path="agenda" element={<AgendaPage />} />
-          <Route path="email-composer" element={<EmailComposerPage />} />
-          <Route path="agents" element={<AgentsPage />} />
-          <Route path="cockpit" element={<CockpitPage />} />
-          <Route path="missions" element={<MissionBuilderPage />} />
-          <Route path="campaigns" element={<CampaignsPage />} />
-          <Route path="prospects" element={<ProspectPage />} />
-          <Route path="staff" element={<StaffPage />} />
-          <Route path="ai-lab" element={<AILabPage />} />
-          <Route path="knowledge-base" element={<KnowledgeBasePage />} />
-          <Route path="research" element={<RADashboardPage />} />
-          <Route path="globe" element={<GlobePage />} />
-          <Route path="deep-search" element={<DeepSearchPage />} />
-          <Route path="sorting" element={<SortingPage />} />
-          <Route path="telemetry" element={<TelemetryPage />} />
-          <Route path="operations" element={<OperationsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="diagnostics" element={<DiagnosticsPage />} />
-          <Route path="import" element={<ImportPage />} />
-          <Route path="acquisition" element={<AcquisizionePartnerPage />} />
-          <Route path="agent-chat" element={<AgentChatHubPage />} />
-          <Route path="contacts" element={<ContactsPage />} />
-          <Route path="email-download" element={<EmailDownloadPage />} />
-          <Route path="ra-explorer" element={<RAExplorerPage />} />
-          <Route path="ra-scraping" element={<RAScrapingEnginePage />} />
-          <Route path="ra-company/:id" element={<RACompanyDetailPage />} />
-          <Route path="campaign-jobs" element={<CampaignJobsPage />} />
-          <Route path="admin-users" element={<AdminUsersPage />} />
-          <Route path="onboarding" element={<OnboardingPage />} />
-          <Route path="guida" element={<GuidaPage />} />
-          <Route path="ai-control" element={<AIControlCenterPage />} />
-          <Route path="email-intelligence" element={<EmailIntelligencePage />} />
-          <Route path="ai-arena" element={<AIArenaPage />} />
-          <Route path="*" element={<NotFoundPage />} />
+          <Route index element={guardedPage(DashboardPage, "Dashboard")} />
+          <Route path="network" element={guardedPage(NetworkPage, "Network")} />
+          <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
+          <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
+          <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />
+          <Route path="agenda" element={guardedPage(AgendaPage, "Agenda")} />
+          <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
+          <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
+          <Route path="cockpit" element={guardedPage(CockpitPage, "Cockpit")} />
+          <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
+          <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
+          <Route path="prospects" element={guardedPage(ProspectPage, "Prospects")} />
+          <Route path="staff" element={guardedPage(StaffPage, "Staff")} />
+          <Route path="ai-lab" element={guardedPage(AILabPage, "AILab")} />
+          <Route path="knowledge-base" element={guardedPage(KnowledgeBasePage, "KnowledgeBase")} />
+          <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
+          <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
+          <Route path="deep-search" element={guardedPage(DeepSearchPage, "DeepSearch")} />
+          <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
+          <Route path="telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
+          <Route path="operations" element={guardedPage(OperationsPage, "Operations")} />
+          <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
+          <Route path="diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
+          <Route path="import" element={guardedPage(ImportPage, "Import")} />
+          <Route path="acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
+          <Route path="agent-chat" element={guardedPage(AgentChatHubPage, "AgentChat")} />
+          <Route path="contacts" element={guardedPage(ContactsPage, "Contacts")} />
+          <Route path="email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
+          <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
+          <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
+          <Route path="ra-company/:id" element={guardedPage(RACompanyDetailPage, "RACompanyDetail")} />
+          <Route path="campaign-jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
+          <Route path="admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
+          <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
+          <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
+          <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
+          <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
+          <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
+          <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
     </Suspense>
