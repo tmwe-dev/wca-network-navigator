@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { getContextBudget, assembleContext, estimateTokens } from "../_shared/tokenBudget.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
 import { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
@@ -202,13 +203,26 @@ Non eseguire tool di scrittura o modifica`;
       ]);
     }
 
-    // System doctrine goes first (before user KB)
-    if (doctrineContext) systemPrompt += doctrineContext;
-    if (userProfile) systemPrompt += userProfile;
-    if (memoryContext) systemPrompt += memoryContext;
-    if (kbContext) systemPrompt += kbContext;
-    if (opPrompts) systemPrompt += opPrompts;
-    if (missionHistory) systemPrompt += missionHistory;
+    // ── Dynamic token budget: assemble context by priority ──
+    const contextBudget = getContextBudget(provider.model);
+    const basePromptTokens = estimateTokens(systemPrompt);
+    const availableBudget = Math.max(2000, contextBudget - basePromptTokens);
+
+    const contextBlocks = [
+      { key: "doctrine", content: doctrineContext, priority: 100, minTokens: 0 },
+      { key: "profile", content: userProfile, priority: 90, minTokens: 100 },
+      { key: "memory", content: memoryContext, priority: 80, minTokens: 200 },
+      { key: "kb", content: kbContext, priority: 70, minTokens: 200 },
+      { key: "operative_prompts", content: opPrompts, priority: 60, minTokens: 100 },
+      { key: "mission_history", content: missionHistory, priority: 50, minTokens: 0 },
+    ].filter(b => b.content?.trim());
+
+    const { text: assembledContext, stats: budgetStats } = assembleContext(contextBlocks, availableBudget);
+    if (assembledContext) systemPrompt += assembledContext;
+
+    if (budgetStats.dropped.length > 0 || budgetStats.truncated.length > 0) {
+      console.log(`[TOKEN-BUDGET] model=${provider.model} budget=${contextBudget} base=${basePromptTokens} available=${availableBudget} used=${budgetStats.totalTokens} included=${budgetStats.included.join(",")} truncated=${budgetStats.truncated.join(",")} dropped=${budgetStats.dropped.join(",")}`);
+    }
 
     // ── Page/selection context injection ──
     if (context) {
