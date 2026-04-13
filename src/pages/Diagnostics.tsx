@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useDiagnosticsRunner } from "@/hooks/useDiagnosticsRunner";
 import { DiagnosticsSummaryBar } from "@/components/diagnostics/DiagnosticsSummaryBar";
 import { DiagnosticsCategoryCard } from "@/components/diagnostics/DiagnosticsCategoryCard";
+import { ErrorLogPanel } from "@/components/diagnostics/ErrorLogPanel";
 
 export default function Diagnostics() {
   const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } = useDiagnosticsRunner();
@@ -48,6 +49,9 @@ export default function Diagnostics() {
           <p className="text-lg">Premi "Avvia tutti i test" per iniziare la diagnostica completa</p>
         </div>
       )}
+
+      {/* Error Log Section */}
+      <ErrorLogPanel />
     </div>
   );
 }
