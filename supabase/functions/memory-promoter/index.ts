@@ -16,6 +16,7 @@ interface MemoryRow {
   pending_promotion: boolean;
   promoted_at: string | null;
   feedback: string | null;
+  user_id: string | null;
   embedding: unknown;
 }
 
