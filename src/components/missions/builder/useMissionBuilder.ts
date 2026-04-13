@@ -216,10 +216,10 @@ export function useMissionBuilder() {
       const mission = await insertOutreachMission({
         user_id: session.user.id, title, status: "active", target_filters: stepData.targets || {}, channel: stepData.channel || "email",
         total_contacts: totalContacts, agent_assignments: stepData.agents || [], schedule_config: { type: stepData.schedule, date: stepData.scheduleDate },
-        idempotency_key: pendingPlan.idempotencyKey, plan_json: pendingPlan as Record<string, unknown>, danger_level: pendingPlan.dangerLevel, plan_status: "approved",
+        idempotency_key: pendingPlan.idempotencyKey, plan_json: pendingPlan as unknown as Record<string, unknown>, danger_level: pendingPlan.dangerLevel, plan_status: "approved",
         metadata: { deepSearch: stepData.deepSearch || {}, communication: stepData.communication || {}, attachments: stepData.attachments || {}, toneConfig: stepData.toneConfig || {} },
       });
-      const missionId = (mission as Record<string, unknown>).id as string;
+      const missionId = (mission as unknown as Record<string, unknown>).id as string;
       setCurrentMissionId(missionId);
       await createActions.mutateAsync({ missionId, plan: pendingPlan });
       await approveAll.mutateAsync(missionId);

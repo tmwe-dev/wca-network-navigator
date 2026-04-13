@@ -1,8 +1,8 @@
 import { Rocket, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BuilderChatInterface } from "./builder/BuilderChatInterface";
-import { BuilderVoiceControls } from "./builder/BuilderVoiceControls";
-import { useMissionBuilder } from "./builder/useMissionBuilder";
+import { BuilderChatInterface } from "@/components/missions/builder/BuilderChatInterface";
+import { BuilderVoiceControls } from "@/components/missions/builder/BuilderVoiceControls";
+import { useMissionBuilder } from "@/components/missions/builder/useMissionBuilder";
 
 export default function MissionBuilder() {
   const mb = useMissionBuilder();
@@ -19,7 +19,7 @@ export default function MissionBuilder() {
           placeholder="Nome missione..."
           className="bg-transparent text-lg font-semibold text-foreground outline-none flex-1 placeholder:text-muted-foreground/50" />
         <Button variant="ghost" size="icon" className="h-7 w-7"
-          onClick={() => { mb.setVoiceEnabled(v => !v); if (mb.audioRef.current) { mb.audioRef.current.pause(); mb.audioRef.current = null; } }}
+          onClick={() => { mb.setVoiceEnabled((v: boolean) => !v); if (mb.audioRef.current) { mb.audioRef.current.pause(); mb.audioRef.current = null; } }}
           title={mb.voiceEnabled ? "Disattiva voce" : "Attiva voce"}>
           {mb.voiceEnabled ? <Volume2 className="w-3.5 h-3.5 text-primary" /> : <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />}
         </Button>
