@@ -33,7 +33,7 @@ interface SpeechRecognitionInstance extends EventTarget {
 }
 
 function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
-  const w = window as Record<string, unknown>;
+  const w = window as unknown as Record<string, unknown>;
   return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as
     | (new () => SpeechRecognitionInstance)
     | null;
