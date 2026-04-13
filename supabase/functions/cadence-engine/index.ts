@@ -76,9 +76,10 @@ Deno.serve(async (req) => {
       cancelled,
     }), { headers: { ...headers, "Content-Type": "application/json" } });
 
-  } catch (e) {
-    console.error("[cadence-engine] Fatal:", extractErrorMessage(e));
-    return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, headers);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[cadence-engine] Fatal:", msg, e);
+    return edgeError("INTERNAL_ERROR", msg, undefined, headers);
   }
 });
 
