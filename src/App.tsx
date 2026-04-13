@@ -66,6 +66,9 @@ const AILab = lazyRetry(() => import("./pages/AILab"));
 const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
 const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
 const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
+const AIArena = lazyRetry(() => import("./pages/AIArena").then(m => ({ default: m.AIArenaPage })));
+const AIControlCenterPage = lazyRetry(() => import("./v2/ui/pages/AIControlCenterPage").then(m => ({ default: m.AIControlCenterPage })));
+const EmailIntelligencePage = lazyRetry(() => import("./v2/ui/pages/EmailIntelligencePage").then(m => ({ default: m.EmailIntelligencePage })));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 // queryClient is now shared from src/lib/queryClient.ts
