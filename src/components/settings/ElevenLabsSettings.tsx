@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createLogger } from "@/lib/log";
+import VoiceLanguageSelector, { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
 
 const log = createLogger("ElevenLabsSettings");
 
@@ -74,6 +75,23 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [customVoiceId, setCustomVoiceId] = useState(settings?.elevenlabs_custom_voice_id || "");
+  const [voiceLang, setVoiceLang] = useState<string>(settings?.elevenlabs_language || "it");
+
+  useEffect(() => {
+    if (settings?.elevenlabs_language) setVoiceLang(settings.elevenlabs_language);
+  }, [settings?.elevenlabs_language]);
+
+  const handleLangChange = (lang: string) => {
+    setVoiceLang(lang);
+    updateSetting.mutate({ key: "elevenlabs_language", value: lang });
+    const langEntry = VOICE_LANGUAGE_MAP[lang];
+    if (langEntry && !settings?.elevenlabs_custom_voice_id) {
+      updateSetting.mutate({ key: "elevenlabs_default_voice_id", value: langEntry.voiceId });
+      toast({ title: `Lingua vocale cambiata a ${langEntry.label}. Voce predefinita: ${langEntry.voiceName}` });
+    } else {
+      toast({ title: `Lingua vocale cambiata a ${langEntry?.label || lang}` });
+    }
+  };
 
   const selectedVoiceId = settings?.elevenlabs_default_voice_id || "";
   const ttsEnabled = settings?.elevenlabs_tts_enabled === "true";
@@ -168,6 +186,17 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
       </TabsList>
 
       <TabsContent value="voce" className="m-0 space-y-4">
+        {/* Language Select */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Lingua vocale</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">La lingua determina la voce predefinita per TTS e il riconoscimento vocale (STT)</p>
+            <VoiceLanguageSelector value={voiceLang} onChange={handleLangChange} />
+          </CardContent>
+        </Card>
+
         {/* TTS Toggle */}
         <Card>
           <CardContent className="pt-4">
