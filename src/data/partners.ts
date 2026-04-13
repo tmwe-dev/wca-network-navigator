@@ -177,7 +177,6 @@ export async function getPartnerStats() {
       supabase
         .from("partners")
         .select("id, country_code, country_name, partner_type, member_since")
-        .eq("is_active", true)
         .range(from, to)
   );
 
