@@ -1,5 +1,7 @@
-import { initSentry } from "@/lib/sentry";
-initSentry();
+// Lazy init Sentry in production only
+if (import.meta.env.PROD) {
+  import("./lib/sentry").then((m) => m.initSentry());
+}
 
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";

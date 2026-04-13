@@ -15,7 +15,8 @@ import { Button } from "../atoms/Button";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OfflineBanner } from "@/components/shared/OfflineBanner";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -328,6 +329,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <div className="flex-1 flex flex-col overflow-hidden">
+                        <OfflineBanner />
                         <LayoutHeader
                           onToggleSidebar={() => setSidebarOpen(o => !o)}
                           onAiClick={() => setIntelliflowOpen(true)}
@@ -367,6 +369,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
                         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                           <DialogHeader><DialogTitle>🧪 Test Estensioni</DialogTitle></DialogHeader>
+                          <DialogDescription className="sr-only">Pannello per testare le estensioni browser</DialogDescription>
                           <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
                             <TestExtensionsContent />
                           </Suspense>
