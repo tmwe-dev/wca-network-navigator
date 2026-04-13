@@ -41,6 +41,7 @@ export default function Settings() {
     { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+    { value: "provider-ai", label: "Provider AI", icon: Cpu },
     { value: "import-export", label: "Importa", icon: Download },
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
