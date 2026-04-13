@@ -14,6 +14,8 @@ import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
+import { DashboardCharts } from "@/components/analytics/DashboardCharts";
+import { ResponseRateCard } from "@/components/analytics/ResponseRateCard";
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
@@ -122,6 +124,12 @@ export default function SuperHome3D() {
 
         {/* Active downloads */}
         <ActiveJobsWidget jobs={jobs} />
+
+        {/* Charts */}
+        <DashboardCharts />
+
+        {/* Response Rate */}
+        <ResponseRateCard />
 
         {/* Navigation cards */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
