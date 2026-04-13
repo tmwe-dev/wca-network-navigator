@@ -1909,10 +1909,18 @@ export type Database = {
           auto_action_params: Json | null
           auto_execute: boolean | null
           category: string | null
+          company_name: string | null
           created_at: string
+          custom_prompt: string | null
           display_name: string | null
+          domain: string | null
           email_address: string
+          email_count: number | null
           exclusive_agent_id: string | null
+          group_color: string | null
+          group_description: string | null
+          group_icon: string | null
+          group_name: string | null
           id: string
           interaction_count: number | null
           is_active: boolean | null
@@ -1933,10 +1941,18 @@ export type Database = {
           auto_action_params?: Json | null
           auto_execute?: boolean | null
           category?: string | null
+          company_name?: string | null
           created_at?: string
+          custom_prompt?: string | null
           display_name?: string | null
+          domain?: string | null
           email_address: string
+          email_count?: number | null
           exclusive_agent_id?: string | null
+          group_color?: string | null
+          group_description?: string | null
+          group_icon?: string | null
+          group_name?: string | null
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
@@ -1957,10 +1973,18 @@ export type Database = {
           auto_action_params?: Json | null
           auto_execute?: boolean | null
           category?: string | null
+          company_name?: string | null
           created_at?: string
+          custom_prompt?: string | null
           display_name?: string | null
+          domain?: string | null
           email_address?: string
+          email_count?: number | null
           exclusive_agent_id?: string | null
+          group_color?: string | null
+          group_description?: string | null
+          group_icon?: string | null
+          group_name?: string | null
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
@@ -2284,6 +2308,39 @@ export type Database = {
           scope?: string
           scope_value?: string | null
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_sender_groups: {
+        Row: {
+          colore: string
+          created_at: string
+          descrizione: string | null
+          icon: string | null
+          id: string
+          nome_gruppo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          colore?: string
+          created_at?: string
+          descrizione?: string | null
+          icon?: string | null
+          id?: string
+          nome_gruppo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          colore?: string
+          created_at?: string
+          descrizione?: string | null
+          icon?: string | null
+          id?: string
+          nome_gruppo?: string
           updated_at?: string
           user_id?: string
         }
