@@ -5,6 +5,7 @@
 import * as React from "react";
 import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
