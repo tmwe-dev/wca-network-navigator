@@ -322,12 +322,12 @@ async function scheduleNextStep(
 
   const nextChannel = rule.sequence[nextStep];
   const delayDays = rule.delay_days ?? 3;
+  const meta = action.metadata as Record<string, unknown> | null;
+  const actionPartnerId = (meta?.partner_id as string) || null;
 
   await supabase.from("mission_actions").insert({
     mission_id: action.mission_id,
     user_id: action.user_id,
-    partner_id: partnerId,
-    contact_id: null,
     action_type: nextChannel,
     status: "pending",
     position: action.position + 1,
@@ -335,6 +335,7 @@ async function scheduleNextStep(
     trigger_condition: "no_response",
     parent_action_id: action.id,
     cadence_rule: { ...rule, current_step: nextStep },
+    metadata: { ...meta, partner_id: actionPartnerId },
   });
 }
 
