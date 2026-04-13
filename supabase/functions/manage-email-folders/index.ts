@@ -1,10 +1,20 @@
+/**
+ * manage-email-folders — IMAP folder operations (move, archive, spam, list, create).
+ *
+ * Performs IMAP operations on email folders AFTER emails have been downloaded and categorized.
+ * Does NOT touch email download (check-inbox).
+ *
+ * @endpoint POST /functions/v1/manage-email-folders
+ * @auth Required (Bearer token)
+ * @rateLimit 30 requests/minute per user
+ *
+ * @input { action: "move"|"archive"|"spam"|"list_folders"|"create_folder", uids?: string[], target_folder?: string }
+ * @output { success, message, folders? }
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)
@@ -14,12 +24,15 @@ const corsHeaders = {
  * after emails have been downloaded and categorized.
  */
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -27,18 +40,28 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(token);
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
+
+    // Rate limit
+    const rl = checkRateLimit(`manage-folders:${user.id}`, { maxTokens: 30, refillRate: 0.5 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const body = await req.json();
     const { action, uids, target_folder } = body;
+
+    // Validate action
+    const VALID_ACTIONS = ["move", "archive", "spam", "list_folders", "create_folder"];
+    if (!action || !VALID_ACTIONS.includes(action)) {
+      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "Invalid action. Must be one of: " + VALID_ACTIONS.join(", ") }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
+    }
 
     const IMAP_HOST = Deno.env.get("IMAP_HOST");
     const IMAP_USER = Deno.env.get("IMAP_USER");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
 
     if (!IMAP_HOST || !IMAP_USER || !IMAP_PASSWORD) {
-      return new Response(JSON.stringify({ error: "IMAP not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // Connect to IMAP
@@ -71,7 +94,7 @@ serve(async (req) => {
     const loginResp = await sendCommand(`LOGIN "${IMAP_USER}" "${IMAP_PASSWORD}"`);
     if (!loginResp.includes("OK")) {
       conn.close();
-      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     let result: any = {};
@@ -177,12 +200,12 @@ serve(async (req) => {
     await sendCommand("LOGOUT");
     conn.close();
 
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(result), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("manage-email-folders error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

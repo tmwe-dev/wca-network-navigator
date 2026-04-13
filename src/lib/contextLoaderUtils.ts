@@ -3,14 +3,26 @@
  * Used to extract email addresses and names from user messages.
  */
 
+/** Result of extracting mentions from a message */
 export interface ExtractedMentions {
   mentionedEmails: string[];
   mentionedNames: string[];
 }
 
 /**
- * Extract email addresses and proper names from a text message.
- * Emails are sliced to max 3, names to max 2.
+ * Extracts email addresses and proper names (Capitalized First Last) from a text message.
+ * Emails are limited to max 3, names to max 2.
+ *
+ * @param messageText - The raw text message to scan for mentions
+ * @returns An object containing arrays of matched emails and names
+ *
+ * @example
+ * extractMentions("Contact john@acme.com or Jane Doe for details")
+ * // { mentionedEmails: ["john@acme.com"], mentionedNames: ["Jane Doe"] }
+ *
+ * @example
+ * extractMentions("no mentions here")
+ * // { mentionedEmails: [], mentionedNames: [] }
  */
 export function extractMentions(messageText: string): ExtractedMentions {
   const mentionedEmails = (messageText.match(/[\w.-]+@[\w.-]+\.\w+/g) || []).slice(0, 3);
@@ -19,7 +31,16 @@ export function extractMentions(messageText: string): ExtractedMentions {
 }
 
 /**
- * Determines which context loading strategy to use.
+ * Determines the context loading strategy based on extracted mentions.
+ * Prioritizes email matches over name matches, falling back to generic context.
+ *
+ * @param mentions - The result of extractMentions()
+ * @returns "email" if emails found, "name" if names found, "fallback" otherwise
+ *
+ * @example
+ * getContextStrategy({ mentionedEmails: ["a@b.com"], mentionedNames: [] }) // "email"
+ * getContextStrategy({ mentionedEmails: [], mentionedNames: ["John Doe"] }) // "name"
+ * getContextStrategy({ mentionedEmails: [], mentionedNames: [] }) // "fallback"
  */
 export function getContextStrategy(mentions: ExtractedMentions): "email" | "name" | "fallback" {
   if (mentions.mentionedEmails.length > 0) return "email";
