@@ -660,4 +660,54 @@ export const ALL_TOOLS: Record<string, any> = {
       },
     },
   },
+  // ━━━ AI Governance Tools ━━━
+  review_pending_actions: {
+    type: "function",
+    function: {
+      name: "review_pending_actions",
+      description: "Mostra le azioni AI in attesa di approvazione.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_type: { type: "string" }, source: { type: "string" },
+          email_address: { type: "string" }, limit: { type: "number" },
+        },
+      },
+    },
+  },
+  approve_pending_action: {
+    type: "function",
+    function: {
+      name: "approve_pending_action",
+      description: "Approva un'azione AI pendente ed eseguila.",
+      parameters: {
+        type: "object",
+        properties: { action_id: { type: "string" }, modified_content: { type: "string" } },
+        required: ["action_id"],
+      },
+    },
+  },
+  reject_pending_action: {
+    type: "function",
+    function: {
+      name: "reject_pending_action",
+      description: "Rifiuta un'azione AI pendente con motivazione opzionale.",
+      parameters: {
+        type: "object",
+        properties: { action_id: { type: "string" }, reason: { type: "string" } },
+        required: ["action_id"],
+      },
+    },
+  },
+  get_ai_performance: {
+    type: "function",
+    function: {
+      name: "get_ai_performance",
+      description: "Mostra le statistiche di performance dell'AI.",
+      parameters: {
+        type: "object",
+        properties: { days: { type: "number" }, email_address: { type: "string" } },
+      },
+    },
+  },
 };
