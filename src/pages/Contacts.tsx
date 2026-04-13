@@ -13,6 +13,9 @@ const log = createLogger("Contacts");
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [sortField, setSortField] = useState("name");
+  const [groupBy, setGroupBy] = useState("none");
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
 
