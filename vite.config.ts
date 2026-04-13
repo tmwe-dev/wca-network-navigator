@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => ({
         enabled: false,
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/zrbditqddhjkutzjycgi\.supabase\.co\/functions\/v1\//,
