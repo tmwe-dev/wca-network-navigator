@@ -866,6 +866,8 @@ ${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
 ${stylePreferencesContext}
+${editPatternsContext}
+${responseInsightsContext}
 GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
