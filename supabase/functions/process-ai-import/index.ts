@@ -184,7 +184,7 @@ serve(async (req) => {
   }
 });
 
-async function normalizeWithAI(batch: any[], apiKey: string): Promise<any[]> {
+async function normalizeWithAI(batch: Array<Record<string, unknown>>, apiKey: string): Promise<any[]> {
   const prompt = `Sei un assistente specializzato nella normalizzazione di dati aziendali per un CRM di spedizionieri e freight forwarder.
 
 Per ogni record nel seguente array JSON, normalizza i campi:
@@ -279,12 +279,12 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
 }
 
 async function logImportError(
-  supabase: any,
+  supabase: SupabaseClient,
   importLogId: string,
   rowNumber: number,
   errorType: string,
   errorMessage: string,
-  rawData: any
+  rawData: unknown
 ) {
   await supabase.from("import_errors").insert({
     import_log_id: importLogId,
@@ -295,7 +295,7 @@ async function logImportError(
   });
 }
 
-async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, dynCors: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
+async function handleFixErrors(supabase: SupabaseClient, importLogId: string, lovableApiKey: string | undefined, dynCors: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
   if (!lovableApiKey) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
@@ -341,7 +341,7 @@ Rispondi con un array dove ogni elemento ha:
     ? `${customPrompt}\n\nRispondi con un array dove ogni elemento ha:\n- corrected: true/false\n- data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code). Se non riesci, data = null.`
     : defaultPrompt;
 
-  const records = errors.map((e: any) => ({
+  const records = errors.map((e: Record<string, unknown>) => ({
     row_number: e.row_number,
     raw_data: e.raw_data,
     error_message: e.error_message,

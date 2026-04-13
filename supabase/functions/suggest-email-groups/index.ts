@@ -79,13 +79,13 @@ serve(async (req) => {
         email: addr.email_address,
         display_name: addr.display_name,
         email_count: addr.email_count ?? 0,
-        subjects: (msgs || []).map((m: any) => m.subject || "").filter(Boolean),
+        subjects: (msgs || []).map((m: Record<string, unknown>) => m.subject || "").filter(Boolean),
         ruleId: addr.id,
       });
     }
 
     // 4. Call AI
-    const groupsList = groups.map((g: any) => `- ${g.nome_gruppo}: ${g.descrizione || "nessuna descrizione"}`).join("\n");
+    const groupsList = groups.map((g: Record<string, unknown>) => `- ${g.nome_gruppo}: ${g.descrizione || "nessuna descrizione"}`).join("\n");
     const addressList = addressData.map((a) =>
       `Email: ${a.email}, Nome: ${a.display_name || "N/A"}, Volume: ${a.email_count}, Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`
     ).join("\n");

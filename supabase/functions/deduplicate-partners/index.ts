@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if (fetchErr) throw fetchErr;
 
     // Group by company_name + country_code
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, Array<Record<string, unknown>>> = {};
     for (const p of allPartners || []) {
       const key = `${p.company_name.toLowerCase().trim()}|${p.country_code}`;
       if (!groups[key]) groups[key] = [];
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

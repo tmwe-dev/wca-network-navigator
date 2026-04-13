@@ -94,7 +94,7 @@ async function processAction(
   const partnerId: string | null = (meta?.partner_id as string) || null;
 
   // Load conversation context
-  let convCtx: any = null;
+  let convCtx: Record<string, unknown> | null = null;
   if (targetEmail && action.user_id) {
     const { data } = await supabase
       .from("contact_conversation_context")

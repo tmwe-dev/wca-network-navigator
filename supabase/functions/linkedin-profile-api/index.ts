@@ -79,13 +79,13 @@ Deno.serve(async (req) => {
       // Extra data from API
       industry: data.industry || null,
       connections: data.connections || null,
-      experiences: (data.experiences || []).slice(0, 5).map((exp: any) => ({
+      experiences: (data.experiences || []).slice(0, 5).map((exp: Record<string, unknown>) => ({
         company: exp.company,
         title: exp.title,
         starts_at: exp.starts_at,
         ends_at: exp.ends_at,
       })),
-      education: (data.education || []).slice(0, 3).map((edu: any) => ({
+      education: (data.education || []).slice(0, 3).map((edu: Record<string, unknown>) => ({
         school: edu.school,
         degree: edu.degree_name,
         field: edu.field_of_study,

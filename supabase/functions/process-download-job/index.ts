@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
   }
 })
 
-function respond(data: any, status = 200) {
+function respond(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
@@ -103,7 +103,7 @@ function respond(data: any, status = 200) {
  * Verify that all WCA IDs in the directory_cache for a country+network
  * have been downloaded to the partners table.
  */
-async function verifyDownloadCompleteness(supabase: any, countryCode: string, networkName: string) {
+async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode: string, networkName: string) {
   try {
     const { data: cacheRows } = await supabase
       .from('directory_cache')
@@ -117,7 +117,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
       const members = cache.members as Array<{ id: number }> | number[]
       if (!members || !Array.isArray(members) || members.length === 0) continue
 
-      const wcaIds: number[] = members.map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean)
+      const wcaIds: number[] = members.map((m: Record<string, unknown>) => typeof m === 'object' ? m.id : m).filter(Boolean)
       if (wcaIds.length === 0) continue
 
       const { data: partners } = await supabase
@@ -125,7 +125,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
         .select('wca_id')
         .in('wca_id', wcaIds)
 
-      const foundIds = new Set((partners || []).map((p: any) => p.wca_id))
+      const foundIds = new Set((partners || []).map((p: Record<string, unknown>) => p.wca_id))
       const allPresent = wcaIds.every(id => foundIds.has(id))
 
       await supabase
@@ -146,7 +146,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
 /**
  * Auto-update network_configs flags based on actual data in the database.
  */
-async function updateNetworkConfigsFromData(supabase: any, networkName: string) {
+async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkName: string) {
   try {
     if (!networkName || networkName === 'Tutti' || networkName === '') return
 
@@ -161,16 +161,16 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
 
       if (!networkPartners || networkPartners.length === 0) continue
 
-      const partnerIds = networkPartners.map((p: any) => p.partner_id)
+      const partnerIds = networkPartners.map((p: Record<string, unknown>) => p.partner_id)
 
       const { data: contacts } = await supabase
         .from('partner_contacts')
         .select('email, direct_phone, mobile, name')
         .in('partner_id', partnerIds)
 
-      const hasEmails = (contacts || []).some((c: any) => c.email)
-      const hasPhones = (contacts || []).some((c: any) => c.direct_phone || c.mobile)
-      const hasNames = (contacts || []).some((c: any) => c.name && !/Members\s*only/i.test(c.name))
+      const hasEmails = (contacts || []).some((c: Record<string, unknown>) => c.email)
+      const hasPhones = (contacts || []).some((c: Record<string, unknown>) => c.direct_phone || c.mobile)
+      const hasNames = (contacts || []).some((c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name))
 
       await supabase
         .from('network_configs')

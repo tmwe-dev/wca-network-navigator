@@ -97,7 +97,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    let result: any = {};
+    let result: Record<string, unknown> = {};
 
     switch (action) {
       case "list_folders": {
@@ -176,7 +176,7 @@ serve(async (req) => {
         // Update metadata in channel_messages
         const supabaseService = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         for (const uid of uids) {
-          const metaUpdate: Record<string, any> = {};
+          const metaUpdate: Record<string, unknown> = {};
           if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }
           if (action === "spam") { metaUpdate.spam = true; }
           if (action === "move") { metaUpdate.moved_to = folder; }

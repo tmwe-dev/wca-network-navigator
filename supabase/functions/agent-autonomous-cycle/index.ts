@@ -33,7 +33,7 @@ const DEFAULT_HIGH_STAKES: HighStakesCriteria = {
   min_rating: 4,
 };
 
-function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
+function isHighStakes(item: Record<string, unknown>, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
   if (criteria.statuses.includes(item.lead_status)) return true;
   if (criteria.sources.includes(item.source)) return true;
   if (item.rating && item.rating >= criteria.min_rating) return true;
@@ -42,7 +42,7 @@ function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STA
 
 const DELAY_BETWEEN_AGENTS_MS = 3000;
 
-async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
+async function findAgentForPartner(userId: string, partnerId: string, agents: Array<Record<string, unknown>>): Promise<any | null> {
   // Check client_assignments first
   const { data: assignment } = await supabase
     .from("client_assignments")
@@ -73,7 +73,7 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: Array<Record<string, unknown>>, budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
   let actionsCreated = 0;
   const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
@@ -100,7 +100,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
 
   const alreadyProcessedIds = new Set(
     (existingTasks || [])
-      .map(t => (t.target_filters as any)?.message_id)
+      .map(t => (t.target_filters as Record<string, unknown>)?.message_id)
       .filter(Boolean)
   );
 
@@ -145,7 +145,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
         partner_id: msg.partner_id,
         channel: msg.channel,
         auto_approved: !stakes && !forceApproval,
-      } as any,
+      } as Record<string, unknown>,
       status: (stakes || forceApproval) ? "proposed" : "pending",
     });
     actionsCreated++;
@@ -175,7 +175,7 @@ serve(async (req) => {
       userAgents[a.user_id].push(a);
     }
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ── Per-user work-hours check ──
@@ -198,7 +198,7 @@ serve(async (req) => {
           "high_stakes_min_rating",
         ]);
       const cfg: Record<string, string> = {};
-      userSettingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+      userSettingsRows?.forEach((row: { key: string; value: string | null }) => { if (row.value) cfg[row.key] = row.value; });
 
       const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
       const forceApproval = cfg["agent_require_approval"] === "true";
@@ -236,7 +236,7 @@ serve(async (req) => {
           const { data: existingTask } = await supabase.from("agent_tasks")
             .select("id")
             .eq("agent_id", agent.id)
-            .contains("target_filters", { activity_id: fup.id } as any)
+            .contains("target_filters", { activity_id: fup.id } as Record<string, unknown>)
             .maybeSingle();
 
           if (existingTask) continue;
@@ -251,8 +251,8 @@ serve(async (req) => {
           await supabase.from("agent_tasks").insert({
             agent_id: agent.id, user_id: userId, task_type: "follow_up",
             description: `Follow-up scaduto: "${fup.title}". ${needsApproval ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
-            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as any,
-            status: needsApproval ? "proposed" : "pending",
+            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as Record<string, unknown>,
+      status: needsApproval ? "proposed" : "pending",
           });
           actionsCreated++;
         }

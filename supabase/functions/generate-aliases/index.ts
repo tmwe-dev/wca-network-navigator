@@ -36,7 +36,7 @@ serve(async (req) => {
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
     return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes);
 
-  } catch (e: any) {
+  } catch (e: Record<string, unknown>) {
     console.error("generate-aliases error:", e);
     return new Response(
       JSON.stringify({ error: e.message || "Unknown error" }),
@@ -88,7 +88,7 @@ const TOOL_DEF = {
   },
 };
 
-async function callAI(apiKey: string, items: any[]) {
+async function callAI(apiKey: string, items: Array<Record<string, unknown>>) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -120,14 +120,14 @@ async function callAI(apiKey: string, items: any[]) {
   return aliases || [];
 }
 
-function ok(data: any) {
+function ok(data: Record<string, unknown>) {
   return new Response(JSON.stringify(data), {
     headers: { ...dynCors, "Content-Type": "application/json" },
   });
 }
 
 // ── Process imported_contacts ──
-async function processImportedContacts(supabase: any, apiKey: string, contactIds: string[]) {
+async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[]) {
   const { data: contacts, error } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name, company_alias, contact_alias")
@@ -136,7 +136,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
   if (error) throw error;
 
   const eligible = (contacts || []).filter(
-    (c: any) => !c.company_alias || !c.contact_alias
+    (c: Record<string, unknown>) => !c.company_alias || !c.contact_alias
   );
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun contatto da elaborare" });
@@ -145,7 +145,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
 
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
-    const items = batch.map((c: any) => ({
+    const items = batch.map((c: Record<string, unknown>) => ({
       id: c.id,
       company_name: c.company_name || "",
       full_name: c.name || "",
@@ -161,9 +161,9 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
     }
 
     for (const alias of aliases) {
-      const original = batch.find((c: any) => c.id === alias.id);
+      const original = batch.find((c: Record<string, unknown>) => c.id === alias.id);
       if (!original) continue;
-      const update: any = {};
+      const update: Record<string, unknown> = {};
       if (alias.company_alias && !original.company_alias) update.company_alias = alias.company_alias;
       if (alias.contact_alias && !original.contact_alias) update.contact_alias = alias.contact_alias;
       if (Object.keys(update).length) {
@@ -177,7 +177,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
 }
 
 // ── Process partners by specific IDs ──
-async function processPartnersByIds(supabase: any, apiKey: string, partnerIds: string[]) {
+async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[]) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, partner_contacts(id, name, title, contact_alias)")
@@ -188,7 +188,7 @@ async function processPartnersByIds(supabase: any, apiKey: string, partnerIds: s
 }
 
 // ── Process partners by country (original logic) ──
-async function processPartnersByCountry(supabase: any, apiKey: string, countryCodes: string[]) {
+async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[]) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, contact_alias)")
@@ -198,10 +198,10 @@ async function processPartnersByCountry(supabase: any, apiKey: string, countryCo
   return processPartners(supabase, apiKey, partners || []);
 }
 
-async function processPartners(supabase: any, apiKey: string, partners: any[]) {
-  const eligible = partners.filter((p: any) => {
+async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>) {
+  const eligible = partners.filter((p: Record<string, unknown>) => {
     const contacts = p.partner_contacts || [];
-    return !p.company_alias || contacts.some((c: any) => !c.contact_alias);
+    return !p.company_alias || contacts.some((c: Record<string, unknown>) => !c.contact_alias);
   });
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun partner da elaborare" });
@@ -252,17 +252,17 @@ async function processPartners(supabase: any, apiKey: string, partners: any[]) {
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
 
-    const partnerList = batch.map((p: any) => {
+    const partnerList = batch.map((p: Record<string, unknown>) => {
       const contacts = (p.partner_contacts || [])
-        .filter((c: any) => !c.contact_alias)
-        .map((c: any) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
+        .filter((c: Record<string, unknown>) => !c.contact_alias)
+        .map((c: Record<string, unknown>) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
       return {
         partner_id: p.id,
         company_name: p.company_name,
         needs_company_alias: !p.company_alias,
         contacts,
       };
-    }).filter((p: any) => p.needs_company_alias || p.contacts.length > 0);
+    }).filter((p: Record<string, unknown>) => p.needs_company_alias || p.contacts.length > 0);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -299,7 +299,7 @@ async function processPartners(supabase: any, apiKey: string, partners: any[]) {
     const { aliases } = JSON.parse(toolCall.function.arguments);
 
     for (const alias of aliases) {
-      const original = batch.find((p: any) => p.id === alias.partner_id);
+      const original = batch.find((p: Record<string, unknown>) => p.id === alias.partner_id);
       if (alias.company_alias && (!original || !original.company_alias)) {
         await supabase.from("partners").update({ company_alias: alias.company_alias }).eq("id", alias.partner_id);
         totalProcessed++;

@@ -40,11 +40,11 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { data, error, count } = await query;
       if (error) return { error: error.message };
       if (isCount) return { count };
-      return { count: data?.length, partners: (data || []).map((p: any) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.raw_profile_html, lead_status: p.lead_status })) };
+      return { count: data?.length, partners: (data || []).map((p: Record<string, unknown>) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.raw_profile_html, lead_status: p.lead_status })) };
     }
 
     case "get_partner_detail": {
-      let partner: any = null;
+      let partner: Record<string, unknown> | null = null;
       if (args.partner_id) { const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single(); partner = data; }
       else if (args.company_name) { const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name as string)}%`).limit(1).single(); partner = data; }
       if (!partner) return { error: "Partner non trovato" };
@@ -59,7 +59,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         lead_status: partner.lead_status, has_profile: !!partner.raw_profile_html,
         profile_summary: partner.raw_profile_markdown?.substring(0, 1500) || null,
         contacts: contactsRes.data || [], networks: networksRes.data || [],
-        services: (servicesRes.data || []).map((s: any) => s.service_category),
+        services: (servicesRes.data || []).map((s: { service_category: string }) => s.service_category),
       };
     }
 
@@ -67,18 +67,18 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { data, error } = await supabase.rpc("get_country_stats");
       if (error) return { error: error.message };
       let stats = data || [];
-      if (args.country_code) stats = stats.filter((s: any) => s.country_code === String(args.country_code).toUpperCase());
-      stats.sort((a: any, b: any) => (b.total_partners || 0) - (a.total_partners || 0));
-      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s: any) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
+      if (args.country_code) stats = stats.filter((s: CountryStatRow) => s.country_code === String(args.country_code).toUpperCase());
+      stats.sort((a: CountryStatRow, b: CountryStatRow) => (b.total_partners || 0) - (a.total_partners || 0));
+      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s: CountryStatRow) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
     }
 
     case "get_directory_status": {
       const { data: dirData } = await supabase.rpc("get_directory_counts");
       const { data: statsData } = await supabase.rpc("get_country_stats");
       const dirMap: Record<string, number> = {};
-      for (const r of (dirData || []) as any[]) dirMap[r.country_code] = Number(r.member_count);
-      const statsMap: Record<string, any> = {};
-      for (const r of (statsData || []) as any[]) statsMap[r.country_code] = r;
+      for (const r of (dirData || []) as Array<{ country_code: string; member_count: number }>) dirMap[r.country_code] = Number(r.member_count);
+      const statsMap: Record<string, CountryStatRow> = {};
+      for (const r of (statsData || []) as CountryStatRow[]) statsMap[r.country_code] = r;
       if (args.country_code) {
         const code = String(args.country_code).toUpperCase();
         return { country_code: code, directory_members: dirMap[code] || 0, db_partners: statsMap[code]?.total_partners || 0, gap: (dirMap[code] || 0) - (statsMap[code]?.total_partners || 0) };
@@ -94,7 +94,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length, jobs: (data || []).map((j: any) => ({ id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count, missing: j.contacts_missing_count, last: j.last_processed_company, error: j.error_message })) };
+      return { count: data?.length, jobs: (data || []).map((j: DownloadJobRow) => ({ id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count, missing: j.contacts_missing_count, last: j.last_processed_company, error: j.error_message })) };
     }
 
     case "get_global_summary": {
@@ -103,8 +103,8 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         supabase.from("download_jobs").select("id, status").in("status", ["running", "pending"]),
       ]);
       const rows = statsRes.data || [];
-      const totals = rows.reduce((acc: any, r: any) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
-      const dirTotal = (dirRes.data || []).reduce((s: number, r: any) => s + (Number(r.member_count) || 0), 0);
+      const totals = rows.reduce((acc: { partners: number; with_profile: number; with_email: number }, r: CountryStatRow) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
+      const dirTotal = (dirRes.data || []).reduce((s: number, r: { member_count: number }) => s + (Number(r.member_count) || 0), 0);
       return { total_countries: rows.length, total_partners: totals.partners, with_profile: totals.with_profile, with_email: totals.with_email, directory_members: dirTotal, active_jobs: jobsRes.data?.length || 0 };
     }
 
@@ -145,13 +145,13 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       let wcaIds: number[] = [];
       if (mode === "no_profile") {
         const { data } = await supabase.from("partners").select("wca_id").eq("country_code", cc).not("wca_id", "is", null).is("raw_profile_html", null);
-        wcaIds = (data || []).map((p: any) => p.wca_id).filter(Boolean);
+        wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
       } else {
         const { data } = await supabase.from("partners").select("wca_id").eq("country_code", cc).not("wca_id", "is", null);
-        wcaIds = (data || []).map((p: any) => p.wca_id).filter(Boolean);
+        wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
       }
       if (wcaIds.length === 0) return { error: `Nessun partner da scaricare per ${cn}.` };
-      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: cc, country_name: cn, wca_ids: wcaIds as any, total_count: wcaIds.length, delay_seconds: delay, status: "pending" }).select("id").single();
+      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: cc, country_name: cn, wca_ids: wcaIds as unknown as Record<string, unknown>, total_count: wcaIds.length, delay_seconds: delay, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
       const jobItems = wcaIds.map((id: number, i: number) => ({ job_id: job.id, wca_id: id, position: i, status: "pending" }));
       for (let i = 0; i < jobItems.length; i += 500) { await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500)); }
@@ -168,7 +168,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (!p.wca_id) return { error: `"${p.company_name}" non ha wca_id.` };
       const { data: active } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
       if (active && active.length > 0) return { error: "C'è già un job attivo." };
-      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: p.country_code, country_name: p.country_name, wca_ids: [p.wca_id] as any, total_count: 1, delay_seconds: 15, status: "pending" }).select("id").single();
+      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: p.country_code, country_name: p.country_name, wca_ids: [p.wca_id] as unknown as Record<string, unknown>, total_count: 1, delay_seconds: 15, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
       await supabase.from("download_job_items").insert({ job_id: job.id, wca_id: p.wca_id, position: 0, status: "pending" });
       return { success: true, job_id: job.id, message: `Download avviato per "${p.company_name}".` };
@@ -271,7 +271,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "get_contact_detail": {
-      let contact: any = null;
+      let contact: Record<string, unknown> | null = null;
       if (args.contact_id) { const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single(); contact = data; }
       else if (args.contact_name) { const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single(); contact = data; }
       if (!contact) return { error: "Contatto non trovato" };
@@ -297,7 +297,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.activity_type) query = query.eq("activity_type", args.activity_type);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length || 0, activities: (data || []).map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+      return { count: data?.length || 0, activities: (data || []).map((a: ActivityRow) => ({ ...a, company_name: (a.source_meta as SourceMetaRecord | null)?.company_name || null })) };
     }
 
     case "create_activity": {
@@ -308,7 +308,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         title: String(args.title), description: args.description ? String(args.description) : null,
         activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
         partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
-        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as any,
+        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
@@ -440,7 +440,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const ids = args.ids as string[];
       const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      const { error } = await supabase.from(table as any).delete().in("id", ids);
+      const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 
@@ -476,7 +476,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         scheduled_at: scheduledAt,
         status: "pending",
         user_id: userId,
-      } as any).select("id").single();
+      } as Record<string, unknown>).select("id").single();
       if (error) return { error: error.message };
       await supabase.from("activities").insert({
         title: `Email programmata: ${args.subject}`,
@@ -489,7 +489,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         user_id: userId,
         email_subject: String(args.subject),
         email_body: String(args.html_body),
-        source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as any,
+        source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as Record<string, unknown>,
       });
       return { success: true, queue_id: data.id, scheduled_at: scheduledAt, message: `Email programmata per ${scheduledAt} a ${args.to_email}.` };
     }
@@ -507,25 +507,25 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const activities = acts.data || [];
       return {
         downloads: {
-          active: downloads.filter((j: any) => ["running", "pending"].includes(j.status)).length,
-          completed: downloads.filter((j: any) => j.status === "completed").length,
-          failed: downloads.filter((j: any) => j.status === "failed").length,
-          jobs: downloads.map((j: any) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
+          active: downloads.filter((j: { status: string }) => ["running", "pending"].includes(j.status)).length,
+          completed: downloads.filter((j: { status: string }) => j.status === "completed").length,
+          failed: downloads.filter((j: { status: string }) => j.status === "failed").length,
+          jobs: downloads.map((j: DownloadJobRow) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
         },
         emails: {
-          pending: emails.filter((e: any) => e.status === "pending").length,
-          sent: emails.filter((e: any) => e.status === "sent").length,
-          scheduled: emails.filter((e: any) => e.scheduled_at && e.status === "pending").length,
-          recent: emails.slice(0, 10).map((e: any) => ({ status: e.status, to: e.recipient_email, subject: e.subject, scheduled: e.scheduled_at })),
+          pending: emails.filter((e: { status: string; scheduled_at?: string | null }) => e.status === "pending").length,
+          sent: emails.filter((e: { status: string }) => e.status === "sent").length,
+          scheduled: emails.filter((e: { status: string; scheduled_at?: string | null }) => e.scheduled_at && e.status === "pending").length,
+          recent: emails.slice(0, 10).map((e: EmailQueueRow) => ({ status: e.status, to: e.recipient_email, subject: e.subject, scheduled: e.scheduled_at })),
         },
         agent_tasks: {
-          running: tasks.filter((t: any) => ["pending", "running"].includes(t.status)).length,
-          completed: tasks.filter((t: any) => t.status === "completed").length,
+          running: tasks.filter((t: { status: string }) => ["pending", "running"].includes(t.status)).length,
+          completed: tasks.filter((t: { status: string }) => t.status === "completed").length,
           recent: tasks.slice(0, 8),
         },
         activities: {
-          pending: activities.filter((a: any) => a.status === "pending").length,
-          scheduled: activities.filter((a: any) => a.scheduled_at).length,
+          pending: activities.filter((a: { status: string; scheduled_at?: string | null }) => a.status === "pending").length,
+          scheduled: activities.filter((a: { scheduled_at?: string | null }) => a.scheduled_at).length,
           recent: activities.slice(0, 8),
         },
       };
@@ -542,7 +542,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         agent_id: targetAgent.id, user_id: userId,
         task_type: String(args.task_type || "research"),
         description: String(args.description),
-        target_filters: (args.target_filters || {}) as any,
+        target_filters: (args.target_filters || {}) as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, task_id: data.id, agent_name: targetAgent.name, message: `Task creato per ${targetAgent.name}: "${args.description}"` };
@@ -553,29 +553,29 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.status) query = query.eq("status", args.status);
       const { data: tasks, error } = await query;
       if (error) return { error: error.message };
-      const agentIds = [...new Set((tasks || []).map((t: any) => t.agent_id))];
+      const agentIds = [...new Set((tasks || []).map((t: AgentTaskRow) => t.agent_id))];
       const { data: agentsData } = await supabase.from("agents").select("id, name").in("id", agentIds);
       const nameMap: Record<string, string> = {};
-      for (const a of (agentsData || []) as any[]) nameMap[a.id] = a.name;
-      let results = (tasks || []).map((t: any) => ({ ...t, agent_name: nameMap[t.agent_id] || "?" }));
-      if (args.agent_name) results = results.filter((t: any) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
+      for (const a of (agentsData || []) as Array<{ id: string; name: string }>) nameMap[a.id] = a.name;
+      let results = (tasks || []).map((t: AgentTaskRow) => ({ ...t, agent_name: nameMap[t.agent_id] || "?" }));
+      if (args.agent_name) results = results.filter((t: Record<string, unknown>) => (t.agent_name as string).toLowerCase().includes(String(args.agent_name).toLowerCase()));
       return { count: results.length, tasks: results };
     }
 
     case "get_team_status": {
       const { data: agents } = await supabase.from("agents").select("id, name, role, is_active, stats, avatar_emoji, updated_at").eq("user_id", userId).order("name");
       if (!agents) return { error: "Nessun agente trovato" };
-      const agentIds = agents.map((a: any) => a.id);
+      const agentIds = agents.map((a: { id: string }) => a.id);
       const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
       const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
-      for (const t of (tasks || []) as any[]) {
+      for (const t of (tasks || []) as Array<{ agent_id: string; status: string }>) {
         if (!taskStats[t.agent_id]) taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
         if (taskStats[t.agent_id][t.status as keyof typeof taskStats[string]] !== undefined) taskStats[t.agent_id][t.status as keyof typeof taskStats[string]]++;
       }
       return {
         team_size: agents.length,
-        active_agents: agents.filter((a: any) => a.is_active).length,
-        agents: agents.map((a: any) => ({
+        active_agents: agents.filter((a: { is_active: boolean }) => a.is_active).length,
+        agents: agents.map((a: AgentRow) => ({
           name: a.name, role: a.role, emoji: a.avatar_emoji, is_active: a.is_active,
           stats: a.stats, tasks: taskStats[a.id] || { pending: 0, running: 0, completed: 0, failed: 0 },
           last_activity: a.updated_at,
@@ -599,23 +599,23 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { data: agents } = await supabase.from("agents").select("id, name, knowledge_base").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name as string)}%`).limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
       const agent = agents[0];
-      const kb = (agent.knowledge_base as any[]) || [];
+      const kb = (agent.knowledge_base as KbEntry[]) || [];
       kb.push({ title: String(args.title), content: String(args.content), added_at: new Date().toISOString() });
-      const { error } = await supabase.from("agents").update({ knowledge_base: kb as any, updated_at: new Date().toISOString() }).eq("id", agent.id);
+      const { error } = await supabase.from("agents").update({ knowledge_base: kb as unknown as Record<string, unknown>, updated_at: new Date().toISOString() }).eq("id", agent.id);
       if (error) return { error: error.message };
       return { success: true, agent_name: agent.name, kb_entries: kb.length, message: `KB entry "${args.title}" aggiunta a ${agent.name}.` };
     }
 
     case "create_work_plan": {
-      const steps = (args.steps as any[] || []).map((s: any, i: number) => ({
+      const steps = (args.steps as WorkPlanStep[] || []).map((s: WorkPlanStep, i: number) => ({
         index: i, title: s.title || `Step ${i + 1}`, description: s.description || "", status: "pending",
       }));
       const { data, error } = await supabase.from("ai_work_plans").insert({
         user_id: userId, title: String(args.title),
         description: String(args.description || ""),
-        steps: steps as any, status: "active",
-        tags: (args.tags || []) as any,
-        metadata: { created_by: "luca_director", created_at: new Date().toISOString() } as any,
+        steps: steps as unknown as Record<string, unknown>, status: "active",
+        tags: (args.tags || []) as string[],
+        metadata: { created_by: "luca_director", created_at: new Date().toISOString() } as Record<string, unknown>,
       }).select("id, title").single();
       if (error) return { error: error.message };
       return { success: true, plan_id: data.id, title: data.title, total_steps: steps.length, message: `Piano "${data.title}" creato con ${steps.length} step.` };
@@ -626,11 +626,11 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.status) query = query.eq("status", args.status);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      const plans = (data || []).map((p: any) => ({
+      const plans = (data || []).map((p: Record<string, unknown>) => ({
         ...p, total_steps: Array.isArray(p.steps) ? p.steps.length : 0,
-        completed_steps: Array.isArray(p.steps) ? p.steps.filter((s: any) => s.status === "completed").length : 0,
+        completed_steps: Array.isArray(p.steps) ? p.steps.filter((s: WorkPlanStep) => s.status === "completed").length : 0,
       }));
-      if (args.tag) return { count: plans.filter((p: any) => p.tags?.includes(args.tag)).length, plans: plans.filter((p: any) => p.tags?.includes(args.tag)) };
+      if (args.tag) return { count: plans.filter((p: Record<string, unknown>) => (p.tags as string[])?.includes(args.tag)).length, plans: plans.filter((p: Record<string, unknown>) => (p.tags as string[])?.includes(args.tag)) };
       return { count: plans.length, plans };
     }
 
@@ -640,7 +640,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const updates: Record<string, unknown> = {};
       if (args.status) updates.status = args.status;
       if (args.advance_step) {
-        const steps = (plan.steps as any[]) || [];
+        const steps = (plan.steps as WorkPlanStep[]) || [];
         if (plan.current_step < steps.length) {
           steps[plan.current_step].status = "completed";
           updates.steps = steps;
@@ -706,7 +706,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       results.email_campaigns = { pending: emailsPending, sent: emailsSent };
       const { data: taskData } = await supabase.from("agent_tasks").select("status").eq("user_id", userId);
       const taskCounts: Record<string, number> = {};
-      for (const t of (taskData || []) as any[]) { taskCounts[t.status] = (taskCounts[t.status] || 0) + 1; }
+      for (const t of (taskData || []) as Array<{ status: string }>) { taskCounts[t.status] = (taskCounts[t.status] || 0) + 1; }
       results.agent_tasks = taskCounts;
       const { count: activitiesPending } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending");
       const { count: activitiesOverdue } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").lt("due_date", new Date().toISOString().split("T")[0]);
@@ -745,37 +745,37 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.to_date) query = query.lte("email_date", args.to_date);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length || 0, messages: (data || []).map((m: any) => ({ id: m.id, channel: m.channel, from: m.from_address, subject: m.subject, preview: m.body_text?.substring(0, 300) || "", date: m.email_date, read: !!m.read_at, partner_id: m.partner_id, category: m.category })) };
+      return { count: data?.length || 0, messages: (data || []).map((m: ChannelMessageRow) => ({ id: m.id, channel: m.channel, from: m.from_address, subject: m.subject, preview: m.body_text?.substring(0, 300) || "", date: m.email_date, read: !!m.read_at, partner_id: m.partner_id, category: m.category })) };
     }
 
     case "get_conversation_history": {
       let pid = args.partner_id as string;
       if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
-      const timeline: any[] = [];
+      const timeline: Record<string, unknown>[] = [];
       if (pid) {
         const { data: emails } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
           .eq("user_id", userId).or(`partner_id.eq.${pid},from_address.ilike.%${pid}%`).order("email_date", { ascending: false }).limit(30);
-        (emails || []).forEach((e: any) => timeline.push({ type: "email", direction: e.direction, subject: e.subject, from: e.from_address, date: e.email_date, channel: e.channel, preview: e.body_text?.substring(0, 200) }));
+        (emails || []).forEach((e: Record<string, unknown>) => timeline.push({ type: "email", direction: e.direction, subject: e.subject, from: e.from_address, date: e.email_date, channel: e.channel, preview: e.body_text?.substring(0, 200) }));
         const { data: acts } = await supabase.from("activities").select("id, title, activity_type, status, created_at, description")
           .or(`partner_id.eq.${pid},source_id.eq.${pid}`).order("created_at", { ascending: false }).limit(30);
-        (acts || []).forEach((a: any) => timeline.push({ type: "activity", subtype: a.activity_type, title: a.title, status: a.status, date: a.created_at, description: a.description?.substring(0, 200) }));
+        (acts || []).forEach((a: Record<string, unknown>) => timeline.push({ type: "activity", subtype: a.activity_type, title: a.title, status: a.status, date: a.created_at, description: a.description?.substring(0, 200) }));
         const { data: ints } = await supabase.from("interactions").select("id, interaction_type, subject, notes, created_at")
           .eq("partner_id", pid).order("created_at", { ascending: false }).limit(30);
-        (ints || []).forEach((i: any) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.subject, notes: i.notes?.substring(0, 200), date: i.created_at }));
+        (ints || []).forEach((i: Record<string, unknown>) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.subject, notes: i.notes?.substring(0, 200), date: i.created_at }));
         const { data: sent } = await supabase.from("email_campaign_queue").select("id, subject, recipient_email, status, sent_at")
           .eq("partner_id", pid).eq("status", "sent").order("sent_at", { ascending: false }).limit(20);
-        (sent || []).forEach((s: any) => timeline.push({ type: "email_sent", subject: s.subject, to: s.recipient_email, date: s.sent_at }));
+        (sent || []).forEach((s: Record<string, unknown>) => timeline.push({ type: "email_sent", subject: s.subject, to: s.recipient_email, date: s.sent_at }));
       } else if (args.contact_id) {
         const { data: cInts } = await supabase.from("contact_interactions").select("id, interaction_type, title, description, outcome, created_at")
           .eq("contact_id", args.contact_id).order("created_at", { ascending: false }).limit(30);
-        (cInts || []).forEach((i: any) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.title, description: i.description?.substring(0, 200), outcome: i.outcome, date: i.created_at }));
+        (cInts || []).forEach((i: Record<string, unknown>) => timeline.push({ type: "interaction", subtype: i.interaction_type, title: i.title, description: i.description?.substring(0, 200), outcome: i.outcome, date: i.created_at }));
       }
       timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       return { count: timeline.length, timeline: timeline.slice(0, Number(args.limit) || 50) };
     }
 
     case "get_holding_pattern": {
-      const items: any[] = [];
+      const items: HoldingItem[] = [];
       const activeStatuses = ["contacted", "in_progress"];
       const now = new Date();
       if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
@@ -783,7 +783,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
         const { data: partners } = await pq.limit(Number(args.limit) || 50);
-        (partners || []).forEach((p: any) => {
+        (partners || []).forEach((p: Record<string, unknown>) => {
           const days = p.last_interaction_at ? Math.floor((now.getTime() - new Date(p.last_interaction_at).getTime()) / 86400000) : 999;
           if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
           if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
@@ -794,7 +794,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         let cq = supabase.from("imported_contacts").select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
           .in("lead_status", activeStatuses).order("last_interaction_at", { ascending: true, nullsFirst: true });
         const { data: contacts } = await cq.limit(Number(args.limit) || 50);
-        (contacts || []).forEach((c: any) => {
+        (contacts || []).forEach((c: Record<string, unknown>) => {
           const days = c.last_interaction_at ? Math.floor((now.getTime() - new Date(c.last_interaction_at).getTime()) / 86400000) : 999;
           if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
           if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
@@ -811,7 +811,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "get_email_thread": {
-      let messages: any[] = [];
+      let messages: ChannelMessageRow[] = [];
       if (args.thread_id) {
         const { data } = await supabase.from("channel_messages").select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
           .eq("user_id", userId).eq("thread_id", args.thread_id).order("email_date", { ascending: true });
@@ -828,7 +828,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
           .order("email_date", { ascending: true }).limit(Number(args.limit) || 50);
         messages = data || [];
       }
-      return { count: messages.length, thread: messages.map((m: any) => ({ id: m.id, direction: m.direction, from: m.from_address, to: m.to_address, subject: m.subject, preview: m.body_text?.substring(0, 500), date: m.email_date })) };
+      return { count: messages.length, thread: (messages as ChannelMessageRow[]).map((m) => ({ id: m.id, direction: m.direction, from: m.from_address, to: m.to_address, subject: m.subject, preview: m.body_text?.substring(0, 500), date: m.email_date })) };
     }
 
     case "analyze_incoming_email": {
@@ -894,12 +894,12 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
         if (args.lead_status) pq = pq.eq("lead_status", args.lead_status);
         const { data } = await pq;
-        contactIds = (data || []).map((p: any) => ({ id: p.id, name: p.company_name }));
+        contactIds = (data || []).map((p: Record<string, unknown>) => ({ id: p.id, name: p.company_name }));
       } else {
         let cq = supabase.from("imported_contacts").select("id, name, company_name").limit(Number(args.limit) || 20);
         if (args.lead_status) cq = cq.eq("lead_status", args.lead_status);
         const { data } = await cq;
-        contactIds = (data || []).map((c: any) => ({ id: c.id, name: c.company_name || c.name || "—" }));
+        contactIds = (data || []).map((c: { id: string; company_name: string | null; name: string | null }) => ({ id: c.id, name: c.company_name || c.name || "—" }));
       }
       if (contactIds.length === 0) return { error: "Nessun contatto trovato con i filtri specificati." };
       const assignments = contactIds.map(c => ({ agent_id: targetAgent.id, source_type: sourceType, source_id: c.id, user_id: userId }));
@@ -909,23 +909,23 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "create_campaign": {
-      const steps: any[] = [];
+      const steps: WorkPlanStep[] = [];
       const contactType = String(args.contact_type || "all");
       const countryCodes = (args.country_codes as string[]) || [];
       steps.push({ index: 0, title: "Selezione contatti", description: `Tipo: ${contactType}, Paesi: ${countryCodes.join(", ") || "tutti"}`, status: "pending" });
       const agentNames = (args.agent_names as string[]) || [];
       if (agentNames.length > 0) steps.push({ index: 1, title: "Assegnazione agenti", description: `Agenti: ${agentNames.join(", ")}`, status: "pending" });
-      const abTest = args.ab_test as any;
+      const abTest = args.ab_test as AbTestConfig | undefined;
       if (abTest?.enabled && abTest?.variants?.length > 0) {
-        steps.push({ index: steps.length, title: "Configurazione A/B Test", description: `Varianti: ${abTest.variants.map((v: any) => `${v.agent_name}(${v.tone}/${v.percentage}%)`).join(" vs ")}`, status: "pending" });
+        steps.push({ index: steps.length, title: "Configurazione A/B Test", description: `Varianti: ${abTest.variants.map((v: AbTestVariant) => `${v.agent_name}(${v.tone}/${v.percentage}%)`).join(" vs ")}`, status: "pending" });
       }
       steps.push({ index: steps.length, title: "Invio outreach", description: "Esecuzione invii tramite agenti assegnati", status: "pending" });
       steps.push({ index: steps.length, title: "Monitoraggio circuito", description: "Verifica risposte e follow-up secondo workflow", status: "pending" });
       const { data, error } = await supabase.from("ai_work_plans").insert({
         user_id: userId, title: `Campagna: ${args.name}`, description: String(args.objective || ""),
-        steps: steps as any, status: "active",
+        steps: steps as unknown as Record<string, unknown>, status: "active",
         tags: ["campaign", contactType, ...(countryCodes.map(c => `country:${c}`))],
-        metadata: { campaign: true, contact_type: contactType, country_codes: countryCodes, agent_names: agentNames, ab_test: abTest || null, max_contacts: Number(args.max_contacts) || 100 } as any,
+        metadata: { campaign: true, contact_type: contactType, country_codes: countryCodes, agent_names: agentNames, ab_test: abTest || null, max_contacts: Number(args.max_contacts) || 100 } as Record<string, unknown>,
       }).select("id, title").single();
       if (error) return { error: error.message };
       return { success: true, campaign_id: data.id, name: data.title, steps: steps.length, message: `Campagna "${args.name}" creata con ${steps.length} step.` };

@@ -9,8 +9,8 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 export interface AssistantConfig {
   systemPrompt: string;
-  tools: any[];
-  messages: any[];
+  tools: Array<Record<string, unknown>>;
+  messages: Array<Record<string, unknown>>;
   userId: string;
   authHeader: string;
   /** Handle scope-specific tools. Return null if not handled. */
@@ -33,7 +33,7 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
 
   const model = config.model || "google/gemini-3-flash-preview";
   const maxIter = config.maxIterations ?? 5;
-  const allMessages: any[] = [
+  const allMessages: Array<Record<string, unknown>> = [
     { role: "system", content: config.systemPrompt },
     ...config.messages,
   ];

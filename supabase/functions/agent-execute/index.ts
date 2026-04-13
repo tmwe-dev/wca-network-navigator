@@ -136,7 +136,7 @@ serve(async (req) => {
 
         contextBlock += "\n--- TEAM AGENTI ---\n";
         for (const a of allAgents) {
-          const s = a.stats as any || {};
+          const s = (a.stats || {}) as Record<string, unknown>;
           const clients = assignMap.get(a.id) || 0;
           const tasks = taskMap.get(a.id) || 0;
           const self = a.id === agent_id ? " ← TU" : "";
@@ -238,14 +238,14 @@ serve(async (req) => {
           .eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
         if (missions?.length) {
           contextBlock += "\n--- STORICO MISSIONI ---\n";
-          for (const m of missions) { const f = m.target_filters as any; contextBlock += `- "${m.title}" [${m.status}] ${m.channel} — ${m.processed_contacts}/${m.total_contacts} — Paesi: ${f?.countries?.join(", ") || "N/D"}\n`; }
+          for (const m of missions) { const f = m.target_filters as Record<string, unknown>; contextBlock += `- "${m.title}" [${m.status}] ${m.channel} — ${m.processed_contacts}/${m.total_contacts} — Paesi: ${f?.countries?.join(", ") || "N/D"}\n`; }
         }
       } catch (_) { /* outreach_missions may not exist */ }
 
       // 9. Director-only: system_prompt di tutti gli agenti + prompt operativi completi
       if (agent.role === "account" || agent.role === "director") {
         if (allAgents?.length) {
-          const otherAgentIds = allAgents.filter((a: any) => a.id !== agent_id).map((a: any) => a.id);
+          const otherAgentIds = allAgents.filter((a: Record<string, unknown>) => a.id !== agent_id).map((a: { id: string }) => a.id);
           if (otherAgentIds.length > 0) {
             const { data: agentDetails } = await supabase.from("agents").select("id, name, role, system_prompt").in("id", otherAgentIds);
             if (agentDetails?.length) {
@@ -300,7 +300,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
     if (chat_messages && Array.isArray(chat_messages)) {
       const allMessages = [
         { role: "system", content: systemPrompt },
-        ...chat_messages.map((m: any) => ({ role: m.role, content: m.content })),
+        ...chat_messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
       ];
 
       let response: Response | null = null;
@@ -311,8 +311,8 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
           response = await fetch(aiUrl, { method: "POST", headers: aiHeaders, body: JSON.stringify({ model, messages: allMessages, ...(agentTools.length > 0 ? { tools: agentTools } : {}), max_tokens: 4000 }), signal: controller.signal });
           if (response.ok) { clearTimeout(timeoutId); break; }
           await response.text();
-        } catch (e: any) {
-          if (e.name === "AbortError") console.warn(`[agent-execute] Timeout on model ${model}`);
+        } catch (e: unknown) {
+          if ((e as { name?: string }).name === "AbortError") console.warn(`[agent-execute] Timeout on model ${model}`);
           else throw e;
         } finally { clearTimeout(timeoutId); }
       }
@@ -409,10 +409,10 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
         resultSummary = "Errore durante l'esecuzione del task.";
       }
 
-      const currentLog = (task.execution_log as any[]) || [];
+      const currentLog = (task.execution_log as Array<Record<string, unknown>>) || [];
       await supabase.from("agent_tasks").update({
         status: taskStatus, result_summary: resultSummary.slice(0, 5000),
-        execution_log: [...currentLog, { ts: new Date().toISOString(), result: resultSummary.slice(0, 2000) }] as any,
+        execution_log: [...currentLog, { ts: new Date().toISOString(), result: resultSummary.slice(0, 2000) }] as unknown as Record<string, unknown>,
         completed_at: new Date().toISOString(),
       }).eq("id", task_id);
 

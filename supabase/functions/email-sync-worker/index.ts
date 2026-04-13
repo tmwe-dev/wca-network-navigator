@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const results: any[] = [];
+    const results: Array<Record<string, unknown>> = [];
     const MAX_WALL_CLOCK_MS = 50_000; // 50 seconds budget
     const startTime = Date.now();
 
@@ -159,7 +159,7 @@ Deno.serve(async (req: Request) => {
 
           // Small delay between batches
           await new Promise((r) => setTimeout(r, 200));
-        } catch (err: any) {
+        } catch (err: Record<string, unknown>) {
           consecutiveErrors++;
           errorCount++;
           lastError = err.message;
@@ -207,7 +207,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ processed: results }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     console.error("[sync-worker] Fatal error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

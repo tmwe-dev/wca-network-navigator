@@ -3,7 +3,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 
 // ── Credit helpers ──
-async function getUserId(req: Request, supabase: any): Promise<string | null> {
+async function getUserId(req: Request, supabase: Record<string, unknown>): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth) return null;
   const token = auth.replace("Bearer ", "");
@@ -11,7 +11,7 @@ async function getUserId(req: Request, supabase: any): Promise<string | null> {
   return data?.user?.id || null;
 }
 
-async function isByok(userId: string, supabase: any): Promise<boolean> {
+async function isByok(userId: string, supabase: Record<string, unknown>): Promise<boolean> {
   const { data } = await supabase
     .from("user_api_keys")
     .select("api_key")
@@ -22,7 +22,7 @@ async function isByok(userId: string, supabase: any): Promise<boolean> {
   return !!data?.api_key;
 }
 
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
+async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: Record<string, unknown>) {
   const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1);
   const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2);
   const total = inputCost + outputCost;
@@ -249,7 +249,7 @@ Estrai queste informazioni (metti null se non trovate):
       }, supabase);
     }
 
-    let enrichment: any = null;
+    let enrichment: Record<string, unknown> | null = null;
 
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {

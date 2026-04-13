@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, uid: msg.imap_uid }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     console.error(`[mark-imap-seen] Error: ${err.message}`);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
