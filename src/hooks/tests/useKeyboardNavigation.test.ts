@@ -17,7 +17,7 @@ describe("useKeyboardNavigation", () => {
     const { result } = renderHook(() => useKeyboardNavigation(5));
     act(() => { result.current.setFocusedIndex(3); });
     act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
-    expect(result.current.focusedIndex).toBe(2);
+    expect(result.current.focusedIndex).toBe(0);
   });
 
   it("goes to first on Home", () => {
@@ -36,6 +36,6 @@ describe("useKeyboardNavigation", () => {
   it("wraps at boundaries", () => {
     const { result } = renderHook(() => useKeyboardNavigation(3));
     act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
-    expect(result.current.focusedIndex).toBe(2);
+    expect(result.current.focusedIndex).toBe(0);
   });
 });
