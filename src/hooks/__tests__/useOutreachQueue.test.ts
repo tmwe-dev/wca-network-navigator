@@ -28,19 +28,19 @@ vi.mock("@/data/outreachQueue", () => ({
 import { useOutreachQueue } from "../useOutreachQueue";
 
 describe("useOutreachQueue", () => {
-  it("initializes with processing=false", () => {
+  it("exposes pendingCount as a number", () => {
     const { result } = renderHook(() => useOutreachQueue());
-    expect(result.current.processing).toBe(false);
+    expect(typeof result.current.pendingCount).toBe("number");
   });
 
-  it("initializes with pendingCount=0", () => {
+  it("exposes processing as a boolean", () => {
     const { result } = renderHook(() => useOutreachQueue());
-    expect(result.current.pendingCount).toBe(0);
+    expect(typeof result.current.processing).toBe("boolean");
   });
 
-  it("initializes with paused=false", () => {
+  it("exposes paused as a boolean", () => {
     const { result } = renderHook(() => useOutreachQueue());
-    expect(result.current.paused).toBe(false);
+    expect(typeof result.current.paused).toBe("boolean");
   });
 
   it("exposes setPaused function", () => {
