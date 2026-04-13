@@ -98,16 +98,16 @@ export function CompanyListRow({
           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-muted-foreground" />{partner.city}</span>
             {partner.partner_type && !isBcaSource && (
-              <Badge variant="outline" className="text-xs">{formatPartnerType(partner.partner_type)}</Badge>
+              <Badge variant="outline" className="text-xs hidden md:inline-flex">{formatPartnerType(partner.partner_type)}</Badge>
             )}
           </div>
           {partner.email && (
-            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+            <div className="items-center gap-1 mt-1 text-xs text-muted-foreground hidden md:flex">
               <Mail className="w-3 h-3" />{partner.email}
             </div>
           )}
           {partner.partner_certifications && partner.partner_certifications.length > 0 && (
-            <div className="flex gap-1 mt-2 flex-wrap">
+            <div className="gap-1 mt-2 flex-wrap hidden md:flex">
               {partner.partner_certifications.map((cert, i) => (
                 <Badge key={i} className="text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
                   {cert.certification}

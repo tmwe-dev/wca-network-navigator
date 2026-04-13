@@ -243,11 +243,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </div>
 
                       {/* Mobile header */}
-                      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b px-4 py-2 flex items-center justify-between">
+                      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => setIntelliflowOpen(true)} className="p-1"><Sparkles className="h-4 w-4 text-primary" /></button>
-                          <button onClick={() => setMobileOpen(!mobileOpen)} className="p-1">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setIntelliflowOpen(true)} className="min-h-[44px] min-w-[44px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
+                          <button onClick={() => setMobileOpen(!mobileOpen)} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                           </button>
                         </div>
