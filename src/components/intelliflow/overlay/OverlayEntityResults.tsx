@@ -5,7 +5,7 @@ import type { AiOperation } from "@/components/ai/AiOperationCard";
 
 interface OverlayEntityResultsProps {
   partners: StructuredPartner[];
-  operations: Array<Record<string, unknown>>;
+  operations: AiOperation[];
 }
 
 export function OverlayEntityResults({ partners, operations }: OverlayEntityResultsProps) {
