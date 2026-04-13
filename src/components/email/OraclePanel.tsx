@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink, Info, Mic, MicOff, Search, SlidersHorizontal, FileText, ImageIcon, Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
+import albertTalkGif from "@/assets/albert-talk.gif";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target,
@@ -125,7 +126,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
+        <img src={albertTalkGif} alt="Oracolo" className="w-5 h-5" />
         <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
       </div>
 

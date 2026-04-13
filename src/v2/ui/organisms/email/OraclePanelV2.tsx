@@ -5,6 +5,7 @@ import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, RefreshCw, BookOpen, Search as SearchIcon, Handshake, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target } from "lucide-react";
+import albertTalkGif from "@/assets/albert-talk.gif";
 import type { LucideProps } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
@@ -48,7 +49,7 @@ export function OraclePanelV2({
             activeTab === "oracle" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          🔮 Oracolo
+          <img src={albertTalkGif} alt="Oracolo" className="w-4 h-4 inline-block" /> Oracolo
         </button>
         <button
           onClick={() => setActiveTab("templates")}
