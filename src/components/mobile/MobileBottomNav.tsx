@@ -20,7 +20,7 @@ export function MobileBottomNav() {
   const location = useLocation();
   const { t } = useTranslation();
 
-  const isActive = (path: string, exact?: boolean) => {
+  const isActive = (path: string, exact: boolean) => {
     if (exact) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
