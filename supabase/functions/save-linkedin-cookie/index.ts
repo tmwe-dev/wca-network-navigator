@@ -50,6 +50,6 @@ Deno.serve(async (req) => {
 function respond(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...dynCors, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
   })
 }
