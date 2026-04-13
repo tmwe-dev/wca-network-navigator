@@ -126,7 +126,7 @@ export function AppLayout() {
               onMouseEnter={() => handleEdgeEnter("left")}
               onMouseLeave={() => handleEdgeLeave("left")}
               className={cn(
-                "fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 filtersOpen && "opacity-0 pointer-events-none"
               )}
               style={{
@@ -142,7 +142,7 @@ export function AppLayout() {
               onMouseEnter={() => handleEdgeEnter("right")}
               onMouseLeave={() => handleEdgeLeave("right")}
               className={cn(
-                "fixed right-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                 missionOpen && "opacity-0 pointer-events-none"
               )}
               style={{
