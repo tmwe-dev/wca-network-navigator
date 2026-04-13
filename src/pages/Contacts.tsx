@@ -126,6 +126,7 @@ export default function Contacts() {
           </>
         )}
       </ResizablePanelGroup>
+      </div>
     </div>
   );
 }
