@@ -439,21 +439,42 @@ export function AIArenaPage(): React.ReactElement {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className="bg-primary/10 text-primary border-0 text-xs">
-                    {LANG_FLAGS[current.target_language] || "🌍"} Email in {current.language_label}
+                    {LANG_FLAGS[current.target_language] || "🌍"} {channel === "linkedin" ? "LinkedIn" : "Email"} in {current.language_label}
                   </Badge>
+                  {channel === "linkedin" && (
+                    <Badge variant="outline" className="text-[10px] border-[#0A66C2]/30 text-[#0A66C2]">Max 300 char</Badge>
+                  )}
                 </div>
 
                 {!editing ? (
                   <div className="bg-background/50 rounded-lg p-3 space-y-2">
-                    <div className="text-xs text-muted-foreground font-mono">Subject: {current.draft_subject}</div>
+                    {channel !== "linkedin" && (
+                      <div className="text-xs text-muted-foreground font-mono">Subject: {current.draft_subject}</div>
+                    )}
                     <div className="text-sm text-foreground/90 leading-relaxed max-h-32 overflow-y-auto">
                       <TypewriterText text={current.draft_body.replace(/<[^>]*>/g, "")} speed={15} />
                     </div>
+                    {channel === "linkedin" && (
+                      <div className="text-[10px] text-muted-foreground text-right">
+                        {current.draft_body.replace(/<[^>]*>/g, "").length}/300
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} placeholder="Subject" className="text-sm" />
-                    <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={4} className="text-sm" />
+                    {channel !== "linkedin" && (
+                      <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} placeholder="Subject" className="text-sm" />
+                    )}
+                    <Textarea
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      rows={channel === "linkedin" ? 3 : 4}
+                      className="text-sm"
+                      maxLength={channel === "linkedin" ? 300 : undefined}
+                    />
+                    {channel === "linkedin" && (
+                      <div className="text-[10px] text-muted-foreground text-right">{editBody.length}/300</div>
+                    )}
                   </div>
                 )}
               </motion.div>

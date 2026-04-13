@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe,
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe, Linkedin,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
@@ -58,6 +58,8 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = c.mobile || c.phone;
+  const ed = c.enrichment_data as Record<string, any> | null;
+  const linkedinUrl: string | undefined = ed?.linkedin_url || ed?.linkedin_profile_url;
   return (
     <div className="flex flex-wrap gap-1.5">
       {c.email && (
@@ -72,6 +74,13 @@ function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
           disabled={waSending === c.id || !waAvailable}
           onClick={() => handleSendWhatsApp({ phone: waPhone, contactName: c.contact_alias || c.name || undefined, companyName: c.company_name || undefined, sourceType: "contact", sourceId: c.id })}>
           {waSending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />} WhatsApp
+        </Button>
+      )}
+      {linkedinUrl && (
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-[#0A66C2]/20 hover:bg-[#0A66C2]/10" asChild>
+          <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
+            <Linkedin className="w-3.5 h-3.5 text-[#0A66C2]" /> LinkedIn
+          </a>
         </Button>
       )}
       {(c.phone || c.mobile) && (
