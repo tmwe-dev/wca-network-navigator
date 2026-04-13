@@ -27,7 +27,7 @@ export function getContactQuality(c: any): "good" | "partial" | "poor" {
   return "poor";
 }
 
-export type SortKey = "name" | "company" | "city" | "date";
+export type SortKey = "name" | "company" | "city" | "date" | "score";
 
 export function sortContacts(contacts: any[], sortKey: SortKey): any[] {
   const sorted = [...contacts];
@@ -41,6 +41,8 @@ export function sortContacts(contacts: any[], sortKey: SortKey): any[] {
         return (a.city || "").localeCompare(b.city || "");
       case "date":
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "score":
+        return (b.lead_score ?? 0) - (a.lead_score ?? 0);
     }
   });
   return sorted;

@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import { LeadScoreBadge } from "./LeadScoreBadge";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -237,8 +238,9 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 6: Interaction count */}
-        <div className="flex items-center">
+        {/* Col 6: Score + Interaction count */}
+        <div className="flex items-center gap-1.5">
+          <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} />
           <span className={cn(
             "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
             c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
