@@ -9,6 +9,7 @@ const V1Component = lazy(() => import("@/pages/Operations"));
 
 export function OperationsPage(): React.ReactElement {
   return (
+    <div data-testid="page-operations" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -18,5 +19,6 @@ export function OperationsPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

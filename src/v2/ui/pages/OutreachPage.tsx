@@ -9,6 +9,7 @@ const OutreachV1 = lazy(() => import("@/pages/Outreach"));
 
 export function OutreachPage(): React.ReactElement {
   return (
+    <div data-testid="page-outreach" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -18,5 +19,6 @@ export function OutreachPage(): React.ReactElement {
     >
       <OutreachV1 />
     </Suspense>
+    </div>
   );
 }

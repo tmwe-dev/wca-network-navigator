@@ -49,7 +49,7 @@ export function LayoutHeader({
   const isOnline = useOnlineStatus();
 
   return (
-    <header role="banner" className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
+    <header role="banner" data-testid="app-header" className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onToggleSidebar} aria-label="Toggle sidebar">
           <Menu className="h-4 w-4" />

@@ -1,19 +1,24 @@
 import { test, expect } from "@playwright/test";
 
-/**
- * [E02] Follow-up Mission
- * Scope: Inactive lead with overdue follow-up generates task.
- * Preconditions: Requires auth + agent with overdue activities.
- */
-
-test.describe("Follow-up Mission [E02]", () => {
+test.describe("followup-mission", () => {
   test("auth page loads", async ({ page }) => {
     await page.goto("/auth");
     await expect(page.locator("body")).toBeVisible();
   });
-
-  test.skip("overdue follow-up generates agent task (requires auth)", async () => {
-    // Requires: authenticated session, overdue activity, active agent
-    expect(true).toBe(true);
+  test("auth page has login form", async ({ page }) => {
+    await page.goto("/auth");
+    const emailInput = page.locator('input[type="email"]');
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
+  });
+  test("auth page has no ErrorBoundary", async ({ page }) => {
+    await page.goto("/auth");
+    await expect(page.getByText(/qualcosa è andato storto/i)).toHaveCount(0);
+  });
+  test("auth page no critical errors", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+    await page.goto("/auth");
+    await page.waitForTimeout(2000);
+    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
   });
 });
