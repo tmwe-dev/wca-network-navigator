@@ -31,6 +31,8 @@ export interface ContactDetail {
   contact_alias: string | null;
   note: string | null;
   enrichment_data?: Record<string, unknown> | null;
+  lead_score?: number | null;
+  lead_score_breakdown?: Record<string, number> | null;
 }
 
 interface DetailState {
