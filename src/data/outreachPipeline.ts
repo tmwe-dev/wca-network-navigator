@@ -14,7 +14,7 @@ export async function findPendingOutreach() {
       .select("*, partners(company_name, country_code, logo_url)")
       .eq("user_id", user.id)
       .eq("status", "pending")
-      .in("activity_type", ["send_email", "outreach"])
+      .in("activity_type", ["send_email", "follow_up"])
       .order("scheduled_at", { ascending: true, nullsFirst: false })
       .limit(100),
     supabase.from("mission_actions")
@@ -49,7 +49,7 @@ export async function findSentOutreach() {
       .select("*, partners(company_name, country_code, logo_url)")
       .eq("user_id", user.id)
       .eq("status", "completed")
-      .in("activity_type", ["send_email", "outreach"])
+      .in("activity_type", ["send_email", "follow_up"])
       .order("completed_at", { ascending: false })
       .limit(100),
     supabase.from("mission_actions")
@@ -139,9 +139,9 @@ export async function fetchOutreachStats() {
 
   const [pendingRes, sentRes, scheduledRes, failedRes] = await Promise.all([
     supabase.from("activities").select("id", { count: "exact", head: true })
-      .eq("user_id", user.id).eq("status", "pending").in("activity_type", ["send_email", "outreach"]),
+      .eq("user_id", user.id).eq("status", "pending").in("activity_type", ["send_email", "follow_up"]),
     supabase.from("activities").select("id", { count: "exact", head: true })
-      .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email", "outreach"])
+      .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email", "follow_up"])
       .gte("completed_at", todayStart.toISOString()),
     supabase.from("mission_actions").select("id", { count: "exact", head: true })
       .eq("user_id", user.id).in("status", ["planned", "approved"]).gt("scheduled_at", now),
@@ -152,7 +152,7 @@ export async function fetchOutreachStats() {
   // Awaiting response: completed recently but no classification
   const { count: sentRecent } = await supabase.from("activities")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email", "outreach"])
+    .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email", "follow_up"])
     .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString());
 
   return {
