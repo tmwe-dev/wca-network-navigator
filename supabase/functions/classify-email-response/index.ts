@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
