@@ -76,6 +76,11 @@ export default function Settings() {
                 <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
               </div>
             )}
+            {tab === "provider-ai" && (
+              <div className="float-panel p-5">
+                <AIProviderSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
             {tab === "import-export" && (
               <div className="float-panel p-5">
                 <ImportExportSettings />
