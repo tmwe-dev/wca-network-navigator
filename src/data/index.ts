@@ -7,8 +7,6 @@
 export * from "./partners";
 export {
   LeadStatus,
-  type ContactFilters,
-  type ContactInteraction,
   contactKeys,
   findContacts,
   findHoldingPatternContacts,
@@ -30,6 +28,7 @@ export {
   fetchGroupContactIds,
   invalidateContactCache,
 } from "./contacts";
+export type { ContactFilters, ContactInteraction } from "./contacts";
 export * from "./contactInteractions";
 export * from "./partnerRelations";
 export * from "./businessCards";
