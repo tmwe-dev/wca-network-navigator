@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "auth_email_drafts_all" ON public.email_drafts;
