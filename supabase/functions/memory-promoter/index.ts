@@ -183,13 +183,13 @@ serve(async (req) => {
     console.log("[memory-promoter] Stats:", JSON.stringify(stats));
 
     return new Response(JSON.stringify({ success: true, stats }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
     console.error("memory-promoter error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
