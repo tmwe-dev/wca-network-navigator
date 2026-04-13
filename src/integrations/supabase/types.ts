@@ -27,8 +27,13 @@ export type Database = {
           email_subject: string | null
           executed_by_agent_id: string | null
           id: string
+          message_id_external: string | null
           partner_id: string | null
           priority: string
+          response_channel_message_id: string | null
+          response_received: boolean | null
+          response_received_at: string | null
+          response_time_hours: number | null
           reviewed: boolean
           scheduled_at: string | null
           selected_contact_id: string | null
@@ -37,6 +42,7 @@ export type Database = {
           source_meta: Json | null
           source_type: string
           status: Database["public"]["Enums"]["activity_status"]
+          thread_id: string | null
           title: string
           user_id: string | null
         }
@@ -52,8 +58,13 @@ export type Database = {
           email_subject?: string | null
           executed_by_agent_id?: string | null
           id?: string
+          message_id_external?: string | null
           partner_id?: string | null
           priority?: string
+          response_channel_message_id?: string | null
+          response_received?: boolean | null
+          response_received_at?: string | null
+          response_time_hours?: number | null
           reviewed?: boolean
           scheduled_at?: string | null
           selected_contact_id?: string | null
@@ -62,6 +73,7 @@ export type Database = {
           source_meta?: Json | null
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
+          thread_id?: string | null
           title: string
           user_id?: string | null
         }
@@ -77,8 +89,13 @@ export type Database = {
           email_subject?: string | null
           executed_by_agent_id?: string | null
           id?: string
+          message_id_external?: string | null
           partner_id?: string | null
           priority?: string
+          response_channel_message_id?: string | null
+          response_received?: boolean | null
+          response_received_at?: string | null
+          response_time_hours?: number | null
           reviewed?: boolean
           scheduled_at?: string | null
           selected_contact_id?: string | null
@@ -87,6 +104,7 @@ export type Database = {
           source_meta?: Json | null
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
+          thread_id?: string | null
           title?: string
           user_id?: string | null
         }
@@ -103,6 +121,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_response_channel_message_id_fkey"
+            columns: ["response_channel_message_id"]
+            isOneToOne: false
+            referencedRelation: "channel_messages"
             referencedColumns: ["id"]
           },
           {
@@ -3619,6 +3644,78 @@ export type Database = {
         }
         Relationships: []
       }
+      response_patterns: {
+        Row: {
+          avg_response_time_hours: number | null
+          channel: string | null
+          company_size: string | null
+          country_code: string | null
+          created_at: string | null
+          cta_type: string | null
+          email_type: string | null
+          formality_level: string | null
+          hook_strategy: string | null
+          id: string
+          language: string | null
+          last_success_at: string | null
+          pattern_confidence: number | null
+          response_rate: number | null
+          sector: string | null
+          tags: string[] | null
+          tone: string | null
+          total_responses: number | null
+          total_sent: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_response_time_hours?: number | null
+          channel?: string | null
+          company_size?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          cta_type?: string | null
+          email_type?: string | null
+          formality_level?: string | null
+          hook_strategy?: string | null
+          id?: string
+          language?: string | null
+          last_success_at?: string | null
+          pattern_confidence?: number | null
+          response_rate?: number | null
+          sector?: string | null
+          tags?: string[] | null
+          tone?: string | null
+          total_responses?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_response_time_hours?: number | null
+          channel?: string | null
+          company_size?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          cta_type?: string | null
+          email_type?: string | null
+          formality_level?: string | null
+          hook_strategy?: string | null
+          id?: string
+          language?: string | null
+          last_success_at?: string | null
+          pattern_confidence?: number | null
+          response_rate?: number | null
+          sector?: string | null
+          tags?: string[] | null
+          tone?: string | null
+          total_responses?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           created_at: string
@@ -3977,6 +4074,14 @@ export type Database = {
       }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
+      link_response_to_activity: {
+        Args: {
+          p_activity_id: string
+          p_channel_message_id: string
+          p_response_time_hours?: number
+        }
+        Returns: boolean
+      }
       match_ai_memory_enhanced: {
         Args: {
           filter_levels?: number[]
