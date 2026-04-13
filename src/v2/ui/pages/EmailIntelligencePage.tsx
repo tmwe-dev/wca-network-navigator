@@ -1,21 +1,76 @@
 /**
- * EmailIntelligencePage V2 — Email Intelligence with 4 tabs
+ * EmailIntelligencePage V2 — 4-tab flow: Manual → AI Suggestions → Auto-Classify → Rules
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BrainCircuit, Inbox, BookOpen, UserCircle, Users2 } from "lucide-react";
+import { BrainCircuit, HandMetal, Sparkles, Settings2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
+const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
+const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
 const SmartInboxView = lazy(() => import("@/components/email-intelligence/SmartInboxView").then(m => ({ default: m.SmartInboxView })));
-const AddressRulesManager = lazy(() => import("@/components/email-intelligence/AddressRulesManager").then(m => ({ default: m.AddressRulesManager })));
-const SenderProfilesView = lazy(() => import("@/components/email-intelligence/SenderProfilesView").then(m => ({ default: m.SenderProfilesView })));
-const SenderManagementTab = lazy(() => import("@/components/email-intelligence/SenderManagementTab").then(m => ({ default: m.SenderManagementTab })));
+const RulesAndActionsTab = lazy(() => import("@/components/email-intelligence/RulesAndActionsTab"));
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 }
 
 export function EmailIntelligencePage(): React.ReactElement {
+  // Badge counts
+  const { data: uncategorizedCount = 0 } = useQuery({
+    queryKey: ["email-intel-uncategorized-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("email_address_rules")
+        .select("id", { count: "exact", head: true })
+        .is("group_id", null);
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: aiSuggestionsCount = 0 } = useQuery({
+    queryKey: ["email-intel-ai-suggestions-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("email_address_rules")
+        .select("id", { count: "exact", head: true })
+        .is("group_id", null)
+        .not("ai_suggested_group", "is", null)
+        .is("ai_suggestion_accepted", null);
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: classifyTodayCount = 0 } = useQuery({
+    queryKey: ["email-intel-classify-today"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const { count } = await supabase
+        .from("email_classifications")
+        .select("id", { count: "exact", head: true })
+        .gte("classified_at", today);
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: activeRulesCount = 0 } = useQuery({
+    queryKey: ["email-intel-active-rules"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("email_address_rules")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true);
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+
   return (
     <div className="flex flex-col h-full p-4 md:p-6 space-y-4">
       <div className="flex items-center gap-3">
@@ -24,28 +79,45 @@ export function EmailIntelligencePage(): React.ReactElement {
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Email Intelligence</h1>
-          <p className="text-xs text-muted-foreground">Classificazione AI, regole, profili e gestione sender</p>
+          <p className="text-xs text-muted-foreground">Flusso completo: categorizza → suggerimenti AI → classificazione → regole</p>
         </div>
       </div>
 
-      <Tabs defaultValue="inbox" className="flex-1 flex flex-col">
+      <Tabs defaultValue="manual" className="flex-1 flex flex-col">
         <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50">
-          <TabsTrigger value="inbox" className="gap-1.5 text-xs"><Inbox className="h-3.5 w-3.5" />Smart Inbox</TabsTrigger>
-          <TabsTrigger value="rules" className="gap-1.5 text-xs"><BookOpen className="h-3.5 w-3.5" />Regole Indirizzi</TabsTrigger>
-          <TabsTrigger value="profiles" className="gap-1.5 text-xs"><UserCircle className="h-3.5 w-3.5" />Profili Sender</TabsTrigger>
-          <TabsTrigger value="management" className="gap-1.5 text-xs"><Users2 className="h-3.5 w-3.5" />Gestione Sender</TabsTrigger>
+          <TabsTrigger value="manual" className="gap-1.5 text-xs">
+            <HandMetal className="h-3.5 w-3.5" />
+            Gestione Manuale
+            {uncategorizedCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{uncategorizedCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="ai-suggestions" className="gap-1.5 text-xs">
+            <Sparkles className="h-3.5 w-3.5" />
+            Suggerimenti AI
+            {aiSuggestionsCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{aiSuggestionsCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="auto-classify" className="gap-1.5 text-xs">
+            <BrainCircuit className="h-3.5 w-3.5" />
+            Auto-Classificazione
+            {classifyTodayCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{classifyTodayCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="rules" className="gap-1.5 text-xs">
+            <Settings2 className="h-3.5 w-3.5" />
+            Regole & Azioni
+            {activeRulesCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{activeRulesCount}</Badge>}
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="inbox" className="flex-1 mt-4">
+
+        <TabsContent value="manual" className="flex-1 mt-4 overflow-hidden">
+          <Suspense fallback={<TabFallback />}><ManualGroupingTab /></Suspense>
+        </TabsContent>
+        <TabsContent value="ai-suggestions" className="flex-1 mt-4">
+          <Suspense fallback={<TabFallback />}><AISuggestionsTab /></Suspense>
+        </TabsContent>
+        <TabsContent value="auto-classify" className="flex-1 mt-4">
           <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
         </TabsContent>
         <TabsContent value="rules" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><AddressRulesManager /></Suspense>
-        </TabsContent>
-        <TabsContent value="profiles" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><SenderProfilesView /></Suspense>
-        </TabsContent>
-        <TabsContent value="management" className="flex-1 mt-4 overflow-hidden">
-          <Suspense fallback={<TabFallback />}><SenderManagementTab /></Suspense>
+          <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
