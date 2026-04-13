@@ -100,11 +100,11 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
       )}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 pt-1 text-[10px] text-muted-foreground">
-          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={page === 0} onClick={() => setPage(page - 1)}>
+          <Button variant="ghost" size="icon" aria-label="Precedente" className="h-5 w-5" disabled={page === 0} onClick={() => setPage(page - 1)}>
             <ChevronLeft className="w-3 h-3" />
           </Button>
           <span>{page + 1}/{totalPages}</span>
-          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
+          <Button variant="ghost" size="icon" aria-label="Successivo" className="h-5 w-5" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
             <ChevronRight className="w-3 h-3" />
           </Button>
         </div>
