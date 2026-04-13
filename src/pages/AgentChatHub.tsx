@@ -301,6 +301,8 @@ export default function AgentChatHub() {
           {/* STT mic */}
           <Button
             size="icon"
+            aria-label="Chiama"
+            aria-label="Dettatura vocale"
             variant={speech.listening ? "destructive" : "outline"}
             onClick={speech.toggle}
             disabled={!activeAgent}
@@ -326,7 +328,7 @@ export default function AgentChatHub() {
           </Button>
 
           {/* Send */}
-          <Button size="icon" onClick={send} disabled={!input.trim() || sending || !activeAgent} className="rounded-xl">
+          <Button size="icon" aria-label="Invia" onClick={send} disabled={!input.trim() || sending || !activeAgent} className="rounded-xl">
             <Send className="w-4 h-4" />
           </Button>
         </div>

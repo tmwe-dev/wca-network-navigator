@@ -174,6 +174,7 @@ export function StaffChatCanvas({ agent }: Props) {
           />
           <Button
             size="icon"
+            aria-label="Carica"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             className="rounded-xl shrink-0"

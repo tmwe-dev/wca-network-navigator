@@ -384,7 +384,7 @@ export default function Onboarding() {
                   placeholder="Chiedi all'AI..."
                   className="h-7 text-xs flex-1"
                 />
-                <Button type="submit" size="icon" variant="ghost" className="h-7 w-7 shrink-0" disabled={chatLoading || !chatInput.trim()}>
+                <Button type="submit" size="icon" variant="ghost" className="h-7 w-7 shrink-0" disabled={chatLoading || !chatInput.trim()} aria-label="Invia">
                   <Send className="w-3 h-3" />
                 </Button>
               </form>

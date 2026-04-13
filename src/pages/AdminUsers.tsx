@@ -193,6 +193,7 @@ export default function AdminUsers() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label="Elimina"
                           onClick={() => {
                             if (confirm(`Rimuovere ${u.email} dalla whitelist?`)) {
                               deleteUser.mutate(u.id);

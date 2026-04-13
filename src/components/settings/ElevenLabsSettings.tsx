@@ -263,6 +263,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Esegui"
                 className="shrink-0 h-10 w-10"
                 disabled={!selectedVoiceId}
                 onClick={() => selectedVoiceId && playPreview(selectedVoiceId)}

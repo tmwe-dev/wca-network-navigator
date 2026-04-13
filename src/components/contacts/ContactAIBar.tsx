@@ -121,6 +121,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Invia"
             className="absolute right-0.5 top-1/2 -translate-y-1/2 h-5 w-5"
             onClick={send}
             disabled={loading || !input.trim()}

@@ -100,7 +100,7 @@ export function CommandCenterShell() {
     <div className="h-screen flex bg-background text-foreground">
       {/* Icon sidebar */}
       <aside className="w-14 border-r border-border/60 flex flex-col items-center py-3 gap-1 shrink-0 bg-muted/20">
-        <Button variant="ghost" size="icon" className="h-9 w-9 mb-2" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" className="h-9 w-9 mb-2" aria-label="Indietro" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         {NAV_ITEMS.map(item => (

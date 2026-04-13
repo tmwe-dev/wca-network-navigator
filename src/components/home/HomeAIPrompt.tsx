@@ -192,6 +192,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Invia"
             className={cn(
               "h-10 w-10 shrink-0 rounded-full transition-all",
               speech.listening
