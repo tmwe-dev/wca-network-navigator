@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Pencil, BookOpen, Search } from "lucide-react";
+import { Plus, Pencil, BookOpen, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const AUTO_ACTIONS = [
@@ -148,6 +148,9 @@ export function AddressRulesManager() {
                 />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(rule)}>
                   <Pencil className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { if (confirm("Eliminare questa regola?")) deleteMutation.mutate(rule.id); }}>
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             ))}
