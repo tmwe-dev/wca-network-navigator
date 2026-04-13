@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { cn } from "@/lib/utils";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
+import { OutreachMiniCharts } from "@/components/analytics/OutreachMiniCharts";
 
 const Cockpit = lazyRetry(() => import("./Cockpit"));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
@@ -56,6 +57,8 @@ export default function Outreach() {
           <TooltipContent side="bottom"><p className="text-xs">Mostra/nascondi dati demo temporanei</p></TooltipContent>
         </Tooltip>
       </div>
+
+      <OutreachMiniCharts />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />

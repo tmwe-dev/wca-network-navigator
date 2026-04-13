@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
+import { CampaignAnalyticsTab } from "@/components/analytics/CampaignAnalyticsTab";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").then(m => ({ default: m.CampaignGlobe })));
 import { CompanyList } from "@/components/campaigns/CompanyList";
-import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target } from "lucide-react";
+import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase, CreditCard, Target, BarChart3 } from "lucide-react";
 import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
 import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
@@ -302,6 +303,7 @@ export default function Campaigns() {
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
+  const [viewMode, setViewMode] = useState<"globe" | "analytics">("globe");
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [source, setSource] = useState<CampaignSource>("partners");
   const [showGoalDialog, setShowGoalDialog] = useState(false);
@@ -445,7 +447,33 @@ export default function Campaigns() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6">
+    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6 flex flex-col">
+      {/* View toggle */}
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20">
+        <Button
+          variant={viewMode === "globe" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setViewMode("globe")}
+        >
+          <Target className="w-3.5 h-3.5" />Mappa
+        </Button>
+        <Button
+          variant={viewMode === "analytics" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setViewMode("analytics")}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />Analytics
+        </Button>
+      </div>
+
+      {viewMode === "analytics" ? (
+        <div className="flex-1 min-h-0">
+          <CampaignAnalyticsTab />
+        </div>
+      ) : (
+      <div className="flex-1 relative overflow-hidden">
       {/* Portal header controls */}
       {headerContainer && createPortal(
         <CampaignHeaderControls
@@ -543,6 +571,8 @@ export default function Campaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
+      )}
     </div>
   );
 }
