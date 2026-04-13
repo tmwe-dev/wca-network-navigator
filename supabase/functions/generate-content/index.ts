@@ -13,6 +13,14 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  // Auth check before forwarding
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const body = await req.json();
     const action = body.action || "email";
