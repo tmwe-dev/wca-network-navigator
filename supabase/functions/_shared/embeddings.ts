@@ -123,6 +123,73 @@ export interface KbMatchRow {
 }
 
 export async function ragSearchKb(
+  supabase: ReturnType<typeof Object>,
+  query: string,
+  opts: KbMatchOpts = {},
+): Promise<KbMatchRow[]> {
+  if (!query?.trim()) return [];
+  const queryEmbedding = await embedOne(query, opts.embedOpts);
+  const { data, error } = await supabase.rpc("match_kb_entries", {
+    query_embedding: queryEmbedding,
+    match_count: opts.matchCount ?? 8,
+    match_threshold: opts.matchThreshold ?? 0.3,
+    filter_categories: opts.categories ?? null,
+    filter_min_priority: opts.minPriority ?? 0,
+    only_active: opts.onlyActive ?? true,
+  });
+  if (error) {
+    console.error("ragSearchKb RPC error:", error);
+    return [];
+  }
+  return (data || []) as KbMatchRow[];
+}
+
+// ━━━ RAG Memory Search ━━━
+
+export interface MemoryMatchOpts {
+  matchCount?: number;
+  matchThreshold?: number;
+  filterUserId?: string;
+  filterLevels?: number[];
+  filterTypes?: string[];
+  embedOpts?: EmbedOptions;
+}
+
+export interface MemoryMatchRow {
+  id: string;
+  content: string;
+  memory_type: string;
+  level: number;
+  importance: number;
+  confidence: number;
+  tags: string[] | null;
+  similarity: number;
+}
+
+/**
+ * RAG retrieval: cerca memorie più rilevanti via match_ai_memory_enhanced RPC.
+ */
+export async function ragSearchMemory(
+  supabase: ReturnType<typeof Object>,
+  query: string,
+  opts: MemoryMatchOpts = {},
+): Promise<MemoryMatchRow[]> {
+  if (!query?.trim() || query.trim().length < 5) return [];
+  const queryEmbedding = await embedOne(query, opts.embedOpts);
+  const { data, error } = await supabase.rpc("match_ai_memory_enhanced", {
+    query_embedding: queryEmbedding,
+    match_count: opts.matchCount ?? 15,
+    match_threshold: opts.matchThreshold ?? 0.2,
+    filter_user_id: opts.filterUserId ?? null,
+    filter_levels: opts.filterLevels ?? null,
+    filter_types: opts.filterTypes ?? null,
+  });
+  if (error) {
+    console.error("ragSearchMemory RPC error:", error);
+    return [];
+  }
+  return (data || []) as MemoryMatchRow[];
+}
   supabase: any,
   query: string,
   opts: KbMatchOpts = {},
