@@ -277,7 +277,7 @@ export default function GlobalVoiceFAB() {
     listening: {
       icon: MicOff,
       bg: "bg-red-500 hover:bg-red-600",
-      ring: "ring-2 ring-red-400 ring-offset-2 ring-offset-background animate-pulse",
+      ring: "ring-2 ring-red-400 ring-offset-2 ring-offset-background",
     },
     speaking: {
       icon: Volume2,
@@ -313,7 +313,7 @@ export default function GlobalVoiceFAB() {
           "relative rounded-full w-14 h-14 shadow-2xl flex items-center justify-center text-white transition-all duration-300",
           config.bg,
           config.ring,
-          state === "idle" && "animate-pulse",
+          state === "idle" && "opacity-80",
         )}
         aria-label={
           state === "idle"
