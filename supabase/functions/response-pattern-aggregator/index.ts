@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const { data: activities, error: actErr } = await supabase
       .from("activities")
       .select("user_id, partner_id, activity_type, response_received, response_time_hours, sent_at, email_subject, source_meta")
-      .eq("activity_type", "email")
+      .eq("activity_type", "send_email")
       .gte("sent_at", ninetyDaysAgo)
       .not("user_id", "is", null)
       .limit(1000);
