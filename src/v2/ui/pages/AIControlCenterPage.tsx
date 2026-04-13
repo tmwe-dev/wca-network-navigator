@@ -1,21 +1,26 @@
 /**
- * AIControlCenterPage V2 — AI Control Center with 4 tabs
+ * AIControlCenterPage V2 — AI Control Center with sub-navigation buttons (tmwengine pattern).
  */
 import * as React from "react";
-import { Suspense, lazy } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, ClipboardList, Brain, TrendingUp, Eye } from "lucide-react";
+import { useState, Suspense, lazy } from "react";
+import { Button } from "@/components/ui/button";
+import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo } from "lucide-react";
 
+const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
-const DecisionLogPanel = lazy(() => import("@/components/ai-control/DecisionLogPanel").then(m => ({ default: m.DecisionLogPanel })));
-const AIPerformancePanel = lazy(() => import("@/components/ai-control/AIPerformancePanel").then(m => ({ default: m.AIPerformancePanel })));
+const LearningDashboard = lazy(() => import("@/components/ai-control/LearningDashboard").then(m => ({ default: m.LearningDashboard })));
+const AIGeneratedActivitiesPanel = lazy(() => import("@/components/ai-control/AIGeneratedActivitiesPanel").then(m => ({ default: m.AIGeneratedActivitiesPanel })));
 const SupervisorFeedPanel = lazy(() => import("@/components/ai-control/SupervisorFeedPanel").then(m => ({ default: m.SupervisorFeedPanel })));
+
+type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor";
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 }
 
 export function AIControlCenterPage(): React.ReactElement {
+  const [subView, setSubView] = useState<SubView>("dashboard");
+
   return (
     <div className="flex flex-col h-full p-4 md:p-6 space-y-4">
       <div className="flex items-center gap-3">
@@ -28,26 +33,35 @@ export function AIControlCenterPage(): React.ReactElement {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="flex-1 flex flex-col">
-        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50">
-          <TabsTrigger value="pending" className="gap-1.5 text-xs"><ClipboardList className="h-3.5 w-3.5" />Azioni Pending</TabsTrigger>
-          <TabsTrigger value="decisions" className="gap-1.5 text-xs"><Brain className="h-3.5 w-3.5" />Decisioni AI</TabsTrigger>
-          <TabsTrigger value="performance" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" />Performance</TabsTrigger>
-          <TabsTrigger value="supervisor" className="gap-1.5 text-xs"><Eye className="h-3.5 w-3.5" />Supervisore</TabsTrigger>
-        </TabsList>
-        <TabsContent value="pending" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><PendingActionsPanel /></Suspense>
-        </TabsContent>
-        <TabsContent value="decisions" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><DecisionLogPanel /></Suspense>
-        </TabsContent>
-        <TabsContent value="performance" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><AIPerformancePanel /></Suspense>
-        </TabsContent>
-        <TabsContent value="supervisor" className="flex-1 mt-4">
-          <Suspense fallback={<TabFallback />}><SupervisorFeedPanel /></Suspense>
-        </TabsContent>
-      </Tabs>
+      {/* Sub-navigation buttons (tmwengine pattern) */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button variant={subView === "dashboard" ? "default" : "outline"} size="sm" onClick={() => setSubView("dashboard")}>
+          <Sparkles className="mr-2 h-4 w-4" /> Dashboard
+        </Button>
+        <Button variant={subView === "pending" ? "default" : "outline"} size="sm" onClick={() => setSubView("pending")}>
+          <Clock className="mr-2 h-4 w-4" /> Pending Actions
+        </Button>
+        <Button variant={subView === "learning" ? "default" : "outline"} size="sm" onClick={() => setSubView("learning")}>
+          <BarChart3 className="mr-2 h-4 w-4" /> Learning Insights
+        </Button>
+        <Button variant={subView === "ai-activities" ? "default" : "outline"} size="sm" onClick={() => setSubView("ai-activities")}>
+          <ListTodo className="mr-2 h-4 w-4" /> AI Activities
+        </Button>
+        <Button variant={subView === "supervisor" ? "default" : "outline"} size="sm" onClick={() => setSubView("supervisor")}>
+          <Eye className="mr-2 h-4 w-4" /> Supervisore
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1">
+        <Suspense fallback={<TabFallback />}>
+          {subView === "dashboard" && <AIAutomationDashboard />}
+          {subView === "pending" && <PendingActionsPanel />}
+          {subView === "learning" && <LearningDashboard />}
+          {subView === "ai-activities" && <AIGeneratedActivitiesPanel />}
+          {subView === "supervisor" && <SupervisorFeedPanel />}
+        </Suspense>
+      </div>
     </div>
   );
 }
