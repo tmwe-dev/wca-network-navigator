@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, CheckCheck, Clock, AlertTriangle, Loader2, CornerDownRight, Reply } from "lucide-react";
+import { Mail, CheckCheck, Clock, AlertTriangle, Loader2, CornerDownRight, Reply, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
