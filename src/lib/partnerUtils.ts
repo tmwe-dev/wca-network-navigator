@@ -42,13 +42,13 @@ export function getRealLogoUrl(logoUrl: string | null | undefined): string | nul
 }
 
 /** Shape of a partner row for partnerUtils functions */
-interface PartnerLike {
+export interface PartnerLike {
   logo_url?: string | null;
   enrichment_data?: unknown;
   mobile?: string | null;
-  partner_contacts?: Array<{ mobile?: string | null; platform?: string; [key: string]: unknown }>;
-  partner_social_links?: Array<{ platform?: string; url?: string; [key: string]: unknown }>;
-  branch_cities?: Array<{ country_code?: string; country?: string; country_name?: string; [key: string]: unknown }>;
+  partner_contacts?: Array<Record<string, unknown>>;
+  partner_social_links?: Array<Record<string, unknown>>;
+  branch_cities?: unknown[];
   country_code?: string;
   company_name?: string;
   country_name?: string;
