@@ -74,7 +74,7 @@ serve(async (req) => {
       if (credits && credits.balance <= 0) {
         return new Response(
           JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
     }
@@ -250,16 +250,16 @@ Non eseguire tool di scrittura o modifica`;
       console.error(`AI gateway error (${tryModel}):`, errStatus, errText);
       if (errStatus === 429 || errStatus === 402) {
         const errorMsg = errStatus === 429 ? "Troppe richieste, riprova tra poco." : "Crediti AI esauriti.";
-        return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
       if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
-        return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
     }
 
     if (!response || !response.ok) {
       console.error("[AI] All models failed");
-      return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     let result = await response.json();
@@ -407,17 +407,17 @@ Non eseguire tool di scrittura o modifica`;
         if (errStatus === 429 || errStatus === 402) {
           if (provider.isUserKey) {
             const errorMsg = errStatus === 429 ? "Troppe richieste al provider AI, riprova tra poco." : "Crediti AI esauriti.";
-            return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
           }
           continue;
         }
         if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
-          return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...dynCors, "Content-Type": "application/json" } });
         }
       }
       if (!toolLoopOk) {
         console.error("[AI] All models failed in tool loop");
-        return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
 
       result = await response.json();
@@ -447,7 +447,7 @@ Non eseguire tool di scrittura o modifica`;
     if (finalContent) {
       finalContent = appendStructured(finalContent);
       if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
-      return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ content: finalContent }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // Fallback: one more call without tools
@@ -458,7 +458,7 @@ Non eseguire tool di scrittura o modifica`;
       body: JSON.stringify({ model: provider.model, messages: allMessages }),
     });
     if (!finalResponse.ok) {
-      return new Response(JSON.stringify({ error: "Errore finale" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Errore finale" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
     const finalResult = await finalResponse.json();
     if (finalResult.usage) {
@@ -468,7 +468,7 @@ Non eseguire tool di scrittura o modifica`;
 
     const finalText = appendStructured(finalResult.choices?.[0]?.message?.content || "Nessuna risposta");
     if (userId) await consumeCredits(supabase, userId, totalUsage, provider.isUserKey);
-    return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ content: finalText }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (e: unknown) {
     console.error("ai-assistant error:", extractErrorMessage(e));
