@@ -9,6 +9,7 @@ import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
 import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
 import { RASettings } from "@/components/settings/RASettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
+import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
