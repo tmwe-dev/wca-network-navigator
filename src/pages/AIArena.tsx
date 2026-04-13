@@ -157,7 +157,7 @@ export function AIArenaPage(): React.ReactElement {
   }, [currentIndex, suggestions.length, refetch]);
 
   // Actions
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     if (!current) return;
     setAnimState("confirm");
     setEffectTrigger("confirm");
@@ -166,21 +166,23 @@ export function AIArenaPage(): React.ReactElement {
     setUsedLanguages((prev) => new Set(prev).add(current.target_language));
     setExcludedIds((prev) => [...prev, current.partner_id]);
 
-    // Create activity via supabase
-    supabase.from("activities").insert({
+    const { error } = await supabase.from("activities").insert({
       activity_type: "send_email" as const,
-      title: `AI Arena: ${current.draft_subject}`,
-      description: current.draft_body,
+      title: `AI Arena: ${editing ? editSubject : current.draft_subject}`,
+      description: editing ? editBody : current.draft_body,
       email_subject: editing ? editSubject : current.draft_subject,
       email_body: editing ? editBody : current.draft_body,
       partner_id: current.partner_id,
       source_id: current.partner_id,
-      source_type: "partner",
+      source_type: "ai_arena",
       status: "pending" as const,
       priority: "medium",
-    }).then(() => {
-      toast.success(`✅ Email programmata per ${current.company_name}`);
     });
+    if (error) {
+      toast.error(`Errore creazione attività: ${error.message}`);
+    } else {
+      toast.success(`✅ Email programmata per ${current.company_name}`);
+    }
 
     setEditing(false);
     setTimeout(() => {
@@ -203,7 +205,7 @@ export function AIArenaPage(): React.ReactElement {
     }, 600);
   }, [current, advanceToNext]);
 
-  const handleBlacklist = useCallback(() => {
+  const handleBlacklist = useCallback(async () => {
     if (!current) return;
     setAnimState("blacklist");
     setEffectTrigger("blacklist");
@@ -211,7 +213,20 @@ export function AIArenaPage(): React.ReactElement {
     setProposed((p) => p + 1);
     setExcludedIds((prev) => [...prev, current.partner_id]);
     setEditing(false);
-    toast.error(`🚫 ${current.company_name} bloccato`);
+
+    // Insert into blacklist_entries
+    const { error } = await supabase.from("blacklist_entries").insert({
+      company_name: current.company_name,
+      country: current.country_name || current.country_code,
+      source: "ai_arena",
+      status: "active",
+    } as any);
+    if (error) {
+      toast.error(`Errore blacklist: ${error.message}`);
+    } else {
+      toast.error(`🚫 ${current.company_name} aggiunto alla blacklist`);
+    }
+
     setTimeout(() => {
       setEffectTrigger(null);
       advanceToNext();

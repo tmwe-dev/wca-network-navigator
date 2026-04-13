@@ -55,6 +55,21 @@ export function SmartInboxView() {
     },
   });
 
+  // Category counts
+  const { data: allCats = [] } = useQuery({
+    queryKey: ["email-classifications-cat-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("email_classifications").select("category");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const catCounts = allCats.reduce<Record<string, number>>((acc, row) => {
+    acc[row.category] = (acc[row.category] || 0) + 1;
+    return acc;
+  }, {});
+
   const selected = classifications.find(c => c.id === selectedId);
 
   const { data: convContext } = useQuery({
@@ -70,18 +85,54 @@ export function SmartInboxView() {
     },
   });
 
+  const handleApprove = async (id: string) => {
+    const item = classifications.find(c => c.id === id);
+    if (!item) return;
+    const { error } = await supabase.from("ai_decision_log").insert({
+      decision_type: "classify_email",
+      email_address: item.email_address,
+      user_review: "approved",
+      confidence: item.confidence,
+      user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
+    } as any);
+    if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: ["email-classifications"] }); }
+    else toast.error("Errore");
+  };
+
+  const handleCorrectCategory = async (id: string, newCategory: string) => {
+    const { error } = await supabase.from("email_classifications").update({ category: newCategory }).eq("id", id);
+    if (!error) { toast.success(`Categoria corretta: ${CATEGORIES[newCategory]?.label ?? newCategory}`); qc.invalidateQueries({ queryKey: ["email-classifications"] }); }
+    else toast.error("Errore aggiornamento");
+  };
+
   return (
     <div className="flex gap-4 h-[calc(100vh-280px)]">
-      {/* Left: list */}
-      <div className="w-2/5 flex flex-col space-y-3">
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Categoria" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutte le categorie</SelectItem>
-            {Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      {/* Sidebar: categories */}
+      <div className="w-44 shrink-0 space-y-1">
+        <button
+          onClick={() => { setCategoryFilter("all"); setSelectedId(null); }}
+          className={`w-full text-left text-xs px-3 py-2 rounded-lg transition-colors ${categoryFilter === "all" ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted/30"}`}
+        >
+          Tutte <span className="float-right font-mono">{allCats.length}</span>
+        </button>
+        {Object.entries(CATEGORIES).map(([key, meta]) => {
+          const CatIcon = meta.icon;
+          const count = catCounts[key] ?? 0;
+          if (count === 0 && key !== "uncategorized") return null;
+          return (
+            <button
+              key={key}
+              onClick={() => { setCategoryFilter(key); setSelectedId(null); }}
+              className={`w-full text-left text-xs px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors ${categoryFilter === key ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted/30"}`}
+            >
+              <CatIcon className="h-3 w-3 flex-shrink-0" />{meta.label} <span className="ml-auto font-mono">{count}</span>
+            </button>
+          );
+        })}
+      </div>
 
+      {/* Center: list */}
+      <div className="w-2/5 flex flex-col space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center flex-1"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : classifications.length === 0 ? (
@@ -129,7 +180,7 @@ export function SmartInboxView() {
       </div>
 
       {/* Right: detail */}
-      <div className="w-3/5 bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 overflow-y-auto">
+      <div className="flex-1 bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 overflow-y-auto">
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <MessageCircle className="h-10 w-10 mb-2 text-primary/20" />
@@ -142,7 +193,6 @@ export function SmartInboxView() {
               <p className="text-xs text-muted-foreground">{selected.email_address}</p>
             </div>
 
-            {/* AI Summary */}
             {selected.ai_summary && (
               <div>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Riassunto AI</p>
@@ -150,14 +200,12 @@ export function SmartInboxView() {
               </div>
             )}
 
-            {/* Keywords */}
             {selected.keywords && (selected.keywords as string[]).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {(selected.keywords as string[]).map((k) => <Badge key={k} variant="outline" className="text-[10px]">{k}</Badge>)}
               </div>
             )}
 
-            {/* Patterns */}
             {selected.detected_patterns && (selected.detected_patterns as string[]).length > 0 && (
               <div>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Pattern rilevati</p>
@@ -167,7 +215,6 @@ export function SmartInboxView() {
               </div>
             )}
 
-            {/* Reasoning */}
             {selected.reasoning && (
               <div>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Ragionamento AI</p>
@@ -175,7 +222,6 @@ export function SmartInboxView() {
               </div>
             )}
 
-            {/* Conversation context */}
             {convContext?.last_exchanges && Array.isArray(convContext.last_exchanges) && (convContext.last_exchanges as any[]).length > 0 && (
               <div>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Cronologia conversazione</p>
@@ -195,10 +241,10 @@ export function SmartInboxView() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400">
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400" onClick={() => handleApprove(selected.id)}>
                 <CheckCircle className="h-3.5 w-3.5" />Approva
               </Button>
-              <Select>
+              <Select onValueChange={(v) => handleCorrectCategory(selected.id, v)}>
                 <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Correggi categoria" /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
