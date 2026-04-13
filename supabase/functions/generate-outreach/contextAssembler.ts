@@ -303,9 +303,14 @@ export async function assembleOutreachContext(
     console.warn("[generate-outreach] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
   }
 
+  // ── Conversation Intelligence ──
+  const conversationIntelligenceContext = await loadConversationContextOutreach(
+    supabase, userId, params.contact_email || null,
+  );
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
-    historyText, interactionHistoryCount,
+    historyText, interactionHistoryCount, conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
     settings, partnerId, websiteSource, linkedinSource,
   };
