@@ -201,7 +201,7 @@ ${truncated}`
     console.log(`AI extracted for ${partner.company_name}: ${extracted.contacts?.length || 0} contacts`)
 
     // Update partner with AI-extracted data (only fill gaps, don't overwrite existing good data)
-    const updates: Record<string, any> = { ai_parsed_at: new Date().toISOString() }
+    const updates: Record<string, unknown> = { ai_parsed_at: new Date().toISOString() }
 
     // Fill missing fields from AI extraction
     const { data: current } = await supabase
@@ -233,7 +233,7 @@ ${truncated}`
         .select('id, title, name, email, direct_phone, mobile')
         .eq('partner_id', partnerId)
 
-      const existingByName = new Map<string, any>()
+      const existingByName = new Map<string, Record<string, unknown>>()
       for (const c of (existingContacts || [])) {
         existingByName.set((c.name || '').toLowerCase(), c)
         existingByName.set((c.title || '').toLowerCase(), c)
@@ -246,7 +246,7 @@ ${truncated}`
 
         if (existing) {
           // Update missing fields
-          const contactUpdates: Record<string, any> = {}
+          const contactUpdates: Record<string, unknown> = {}
           if (aiContact.email && !existing.email) contactUpdates.email = aiContact.email
           if (aiContact.phone && !existing.direct_phone) contactUpdates.direct_phone = aiContact.phone
           if (aiContact.mobile && !existing.mobile) contactUpdates.mobile = aiContact.mobile

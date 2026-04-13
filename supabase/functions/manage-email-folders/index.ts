@@ -176,7 +176,7 @@ serve(async (req) => {
         // Update metadata in channel_messages
         const supabaseService = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         for (const uid of uids) {
-          const metaUpdate: Record<string, any> = {};
+          const metaUpdate: Record<string, unknown> = {};
           if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }
           if (action === "spam") { metaUpdate.spam = true; }
           if (action === "move") { metaUpdate.moved_to = folder; }

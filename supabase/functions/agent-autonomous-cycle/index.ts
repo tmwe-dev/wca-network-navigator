@@ -33,7 +33,7 @@ const DEFAULT_HIGH_STAKES: HighStakesCriteria = {
   min_rating: 4,
 };
 
-function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
+function isHighStakes(item: Record<string, unknown>, criteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): boolean {
   if (criteria.statuses.includes(item.lead_status)) return true;
   if (criteria.sources.includes(item.source)) return true;
   if (item.rating && item.rating >= criteria.min_rating) return true;

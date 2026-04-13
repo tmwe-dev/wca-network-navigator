@@ -2,7 +2,7 @@
 // TOOL DEFINITIONS (same as ai-assistant)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export const ALL_TOOLS: Record<string, any> = {
+export const ALL_TOOLS: Record<string, unknown> = {
   search_partners: {
     type: "function",
     function: {

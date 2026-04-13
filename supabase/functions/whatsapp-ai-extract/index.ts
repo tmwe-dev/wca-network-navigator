@@ -57,7 +57,7 @@ serve(async (req) => {
     let userPrompt: string;
     let toolName: string;
     let toolDescription: string;
-    let itemSchema: any;
+    let itemSchema: unknown;
 
     if (mode === "learnDom") {
       // DOM Learning mode: analyze page structure and return CSS selectors

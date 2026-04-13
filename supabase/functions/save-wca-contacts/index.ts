@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       // PART 1: Save PROFILE data to partners table
       // ══════════════════════════════════════════════════
       if (profile) {
-        const partnerUpdate: Record<string, any> = {}
+        const partnerUpdate: Record<string, unknown> = {}
         if (profile.address) partnerUpdate.address = profile.address
         if (profile.phone) partnerUpdate.phone = profile.phone
         if (profile.fax) partnerUpdate.fax = profile.fax
@@ -301,9 +301,9 @@ Deno.serve(async (req) => {
         .select('id, title, name, email, direct_phone, mobile')
         .eq('partner_id', partnerId)
 
-      const existingByName = new Map<string, any>()
-      const existingByEmail = new Map<string, any>()
-      const existingByTitle = new Map<string, any>()
+      const existingByName = new Map<string, Record<string, unknown>>()
+      const existingByEmail = new Map<string, Record<string, unknown>>()
+      const existingByTitle = new Map<string, Record<string, unknown>>()
       for (const e of (existing || [])) {
         if (e.name) existingByName.set(e.name.trim().toLowerCase(), e)
         if (e.email) existingByEmail.set(e.email.trim().toLowerCase(), e)

@@ -126,9 +126,9 @@ export interface ScopeConfig {
   model?: string;
   creditLabel: string;
   /** Post-process the content before returning */
-  postProcess?: (content: string) => any;
+  postProcess?: (content: string) => unknown;
   /** Build the system prompt dynamically from body context */
-  buildPrompt?: (body: any, basePrompt: string) => string;
+  buildPrompt?: (body: Record<string, unknown>, basePrompt: string) => string;
 }
 
 function buildContactQuery(supabase: SupabaseClient, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {

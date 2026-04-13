@@ -284,7 +284,7 @@ async function logImportError(
   rowNumber: number,
   errorType: string,
   errorMessage: string,
-  rawData: any
+  rawData: unknown
 ) {
   await supabase.from("import_errors").insert({
     import_log_id: importLogId,

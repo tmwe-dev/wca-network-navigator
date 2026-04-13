@@ -249,7 +249,7 @@ Estrai queste informazioni (metti null se non trovate):
       }, supabase);
     }
 
-    let enrichment: any = null;
+    let enrichment: Record<string, unknown> | null = null;
 
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
