@@ -950,6 +950,39 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const lang = map[String(args.country_code).toUpperCase()] || "English";
       return { country_code: args.country_code, language: lang };
     }
+    case "get_pending_actions": {
+      const status = String(args.status || "pending");
+      let q = supabase.from("ai_pending_actions").select("id, action_type, confidence, reasoning, suggested_content, partner_id, contact_id, email_address, status, created_at, source")
+        .eq("user_id", userId)
+        .eq("status", status)
+        .order("confidence", { ascending: false })
+        .limit(Number(args.limit) || 20);
+      if (args.action_type) q = q.eq("action_type", String(args.action_type));
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return { count: data?.length || 0, actions: data || [] };
+    }
+    case "approve_ai_action": {
+      const actionId = String(args.action_id);
+      const { error } = await supabase.from("ai_pending_actions")
+        .update({ status: "approved", executed_at: new Date().toISOString() })
+        .eq("id", actionId)
+        .eq("user_id", userId);
+      if (error) return { error: error.message };
+      return { success: true, message: `Azione ${actionId} approvata.` };
+    }
+    case "reject_ai_action": {
+      const actionId = String(args.action_id);
+      const reason = args.reason ? String(args.reason) : null;
+      const updatePayload: Record<string, unknown> = { status: "rejected" };
+      if (reason) updatePayload.reasoning = reason;
+      const { error } = await supabase.from("ai_pending_actions")
+        .update(updatePayload)
+        .eq("id", actionId)
+        .eq("user_id", userId);
+      if (error) return { error: error.message };
+      return { success: true, message: `Azione ${actionId} rifiutata.` };
+    }
 
     default:
       return { error: `Tool sconosciuto: ${name}` };
