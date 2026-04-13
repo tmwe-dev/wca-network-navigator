@@ -134,7 +134,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
       priority: String(args.priority || "medium"),
       email_subject: args.email_subject ? String(args.email_subject) : null,
       email_body: args.email_body ? String(args.email_body) : null,
-      source_meta: { company_name: companyName } as any,
+      source_meta: { company_name: companyName } as Record<string, unknown>,
     }).select("id").single();
     if (error) return { error: error.message };
     return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
@@ -212,7 +212,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
     const validTables = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
     if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
-    const { error } = await supabase.from(table as any).delete().in("id", ids);
+    const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
     if (error) return { error: error.message };
     return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
   }

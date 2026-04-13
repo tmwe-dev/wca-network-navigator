@@ -58,9 +58,9 @@ export async function loadConversationContextOutreach(
 
   if (ctx) {
     if (ctx.conversation_summary) parts.push(`CONVERSATION HISTORY: ${ctx.conversation_summary}`);
-    const exchanges = Array.isArray(ctx.last_exchanges) ? (ctx.last_exchanges as any[]).slice(-5) : [];
+    const exchanges = Array.isArray(ctx.last_exchanges) ? (ctx.last_exchanges as Array<Record<string, unknown>>).slice(-5) : [];
     if (exchanges.length) {
-      parts.push(`Last exchanges:\n${exchanges.map((ex: any) => `  ${ex.date || "?"} - ${ex.subject || "N/A"} - ${ex.sentiment || "neutral"}`).join("\n")}`);
+      parts.push(`Last exchanges:\n${exchanges.map((ex: Record<string, unknown>) => `  ${ex.date || "?"} - ${ex.subject || "N/A"} - ${ex.sentiment || "neutral"}`).join("\n")}`);
     }
     parts.push(`RESPONSE PATTERN: Rate ${Math.round(ctx.response_rate ?? 0)}%, avg ${ctx.avg_response_time_hours != null ? `${Math.round(ctx.avg_response_time_hours)}h` : "N/A"}, sentiment: ${ctx.dominant_sentiment || "neutral"}`);
   }
@@ -71,11 +71,11 @@ export async function loadConversationContextOutreach(
     if (rules.topics_to_emphasize?.length) rp.push(`Emphasize=${rules.topics_to_emphasize.join(", ")}`);
     if (rules.topics_to_avoid?.length) rp.push(`Avoid=${rules.topics_to_avoid.join(", ")}`);
     if (rp.length) parts.push(`SENDER RULES: ${rp.join(", ")}`);
-    if ((rules as any).email_prompts?.instructions) parts.push(`SENDER PROMPT: ${(rules as any).email_prompts.instructions}`);
+    if ((rules as Record<string, unknown>)?.email_prompts && ((rules as Record<string, unknown>).email_prompts as Record<string, unknown>)?.instructions) parts.push(`SENDER PROMPT: ${((rules as Record<string, unknown>).email_prompts as Record<string, unknown>).instructions}`);
   }
 
   if (classes.length) {
-    parts.push(`RECENT CLASSIFICATIONS:\n${classes.map((c: any) => `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || ""}`).join("\n")}`);
+    parts.push(`RECENT CLASSIFICATIONS:\n${classes.map((c: Record<string, unknown>) => `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || ""}`).join("\n")}`);
   }
 
   return parts.length ? `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n` : "";
@@ -160,7 +160,7 @@ export async function assembleOutreachContext(
 
     if (contactsRes.data?.length) {
       intelligence.data_found.contacts = true;
-      contextParts.push(`[CONTATTI AZIENDA]\n${contactsRes.data.map((c: any) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ")}`);
+      contextParts.push(`[CONTATTI AZIENDA]\n${contactsRes.data.map((c: Record<string, unknown>) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ")}`);
     } else { intelligence.data_found.contacts = false; }
 
     if (netsRes.data?.length) {

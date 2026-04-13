@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     const existingByExtId = new Map<string, string>();
     if (existingCards) {
       for (const c of existingCards) {
-        const extId = (c.raw_data as any)?.external_id;
+        const extId = (c.raw_data as Record<string, unknown> | null)?.external_id;
         if (extId) {
           existingExtIds.add(String(extId));
           existingByExtId.set(String(extId), c.id);
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const batchSize = 50;
 
     for (let i = 0; i < allCards.length; i += batchSize) {
-      const batch = allCards.slice(i, i + batchSize).map((card: any) => {
+      const batch = allCards.slice(i, i + batchSize).map((card: Record<string, unknown>) => {
         const extId = String(card.id);
         const existingId = existingByExtId.get(extId);
         return {
@@ -121,14 +121,14 @@ Deno.serve(async (req) => {
           notes: card.notes || null,
           photo_url: card.photo_url || null,
           tags: card.tags || [],
-          raw_data: { ...((card.raw_data as any) || {}), external_id: card.id },
+          raw_data: { ...((card.raw_data as Record<string, unknown>) || {}), external_id: card.id },
           created_at: card.created_at,
         };
       });
 
       // Split into updates (existing) and inserts (new)
-      const toUpdate = batch.filter((b: any) => b.id);
-      const toInsert = batch.filter((b: any) => !b.id);
+      const toUpdate = batch.filter((b: Record<string, unknown>) => b.id);
+      const toInsert = batch.filter((b: Record<string, unknown>) => !b.id);
 
       if (toUpdate.length > 0) {
         const { error: updateErr } = await localSb
@@ -143,8 +143,8 @@ Deno.serve(async (req) => {
 
       if (toInsert.length > 0) {
         // Check which ones are truly new
-        const newInserts = toInsert.filter((b: any) => {
-          const extId = String((b.raw_data as any)?.external_id);
+        const newInserts = toInsert.filter((b: Record<string, unknown>) => {
+          const extId = String((b.raw_data as Record<string, unknown> | null)?.external_id);
           return !existingExtIds.has(extId);
         });
 
@@ -156,8 +156,8 @@ Deno.serve(async (req) => {
             console.error(`Batch ${i} insert error:`, insertErr);
           } else {
             upserted += newInserts.length;
-            newInserts.forEach((b: any) => {
-              existingExtIds.add(String((b.raw_data as any)?.external_id));
+            newInserts.forEach((b: Record<string, unknown>) => {
+              existingExtIds.add(String((b.raw_data as Record<string, unknown> | null)?.external_id));
             });
           }
         } else {

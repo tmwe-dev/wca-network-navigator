@@ -83,7 +83,7 @@ export async function loadEntityFromActivity(
     .eq("id", activityId).single();
 
   if (actErr || !actData) throw new Error("Activity not found");
-  const activity = actData as any;
+  const activity = actData as Record<string, unknown>;
   let partner: PartnerData | null = activity.partners;
   let contact: ContactData | null = activity.selected_contact;
   let contactEmail: string | null = null;
@@ -158,7 +158,7 @@ export async function loadStandalonePartner(
 
   if (contacts?.length) {
     const matched = recipientName
-      ? contacts.find((c: any) => c.name?.toLowerCase().includes(recipientName.toLowerCase()) || c.contact_alias?.toLowerCase().includes(recipientName.toLowerCase())) || contacts[0]
+      ? contacts.find((c: Record<string, unknown>) => c.name?.toLowerCase().includes(recipientName.toLowerCase()) || c.contact_alias?.toLowerCase().includes(recipientName.toLowerCase())) || contacts[0]
       : contacts[0];
     contact = matched as ContactData;
     contactEmail = contact.email || partner.email;
@@ -170,9 +170,9 @@ export async function loadStandalonePartner(
 // ── Conversation Intelligence loader ──
 
 interface ConversationIntelligence {
-  convCtx: any | null;
-  rules: any | null;
-  classifications: any[];
+  convCtx: Record<string, unknown> | null;
+  rules: Record<string, unknown> | null;
+  classifications: Array<Record<string, unknown>>;
 }
 
 export async function loadConversationContext(
@@ -203,12 +203,12 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
   const { convCtx, rules, classifications } = intel;
 
   if (convCtx) {
-    const exchanges = Array.isArray(convCtx.last_exchanges) ? convCtx.last_exchanges as any[] : [];
+    const exchanges = Array.isArray(convCtx.last_exchanges) ? convCtx.last_exchanges as Array<Record<string, unknown>> : [];
     if (convCtx.conversation_summary) {
       parts.push(`CONVERSATION HISTORY: ${convCtx.conversation_summary}`);
     }
     if (exchanges.length) {
-      const last5 = exchanges.slice(-5).map((ex: any) =>
+      const last5 = exchanges.slice(-5).map((ex: Record<string, unknown>) =>
         `  ${ex.date || "?"} - ${ex.subject || "N/A"} - sentiment: ${ex.sentiment || "neutral"} - ${ex.summary || ""}`
       );
       parts.push(`Last ${last5.length} exchanges:\n${last5.join("\n")}`);

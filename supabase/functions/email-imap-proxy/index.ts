@@ -362,13 +362,13 @@ async function sendCommand(imap: ImapConn, command: string): Promise<string> {
   const tag = `A${imap.tag}`;
   const encoder = new TextEncoder();
   
-  const writer = (imap.conn as any).writable?.getWriter?.();
+  const writer = (imap.conn as unknown as { writable?: { getWriter?: () => WritableStreamDefaultWriter } }).writable?.getWriter?.();
   if (writer) {
     await writer.write(encoder.encode(`${tag} ${command}\r\n`));
     writer.releaseLock();
   } else {
     // Fallback for older Deno versions
-    await (imap.conn as any).write(encoder.encode(`${tag} ${command}\r\n`));
+    await (imap.conn as unknown as { write: (data: Uint8Array) => Promise<void> }).write(encoder.encode(`${tag} ${command}\r\n`));
   }
 
   // Read until we get our tagged response

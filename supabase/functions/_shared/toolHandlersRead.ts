@@ -16,24 +16,24 @@ export function createReadHandlers(supabase: SupabaseClient) {
 
     if (args.service) {
       const { data } = await supabase.from("partner_services").select("partner_id").eq("service_category", args.service);
-      partnerIdFilter = (data || []).map((r: any) => r.partner_id);
+      partnerIdFilter = (data || []).map((r: { partner_id: string }) => r.partner_id);
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.certification) {
       const { data } = await supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
-      const certIds = (data || []).map((r: any) => r.partner_id);
+      const certIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => certIds.includes(id)) : certIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.network_name) {
       const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
-      const netIds = (data || []).map((r: any) => r.partner_id);
+      const netIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.has_phone !== undefined && args.has_phone) {
       const { data } = await supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
-      const phoneIds = [...new Set((data || []).map((r: any) => r.partner_id))];
+      const phoneIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => phoneIds.includes(id)) : phoneIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
@@ -71,7 +71,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
 
     return {
       count: data?.length,
-      partners: (data || []).map((p: any) => ({
+      partners: (data || []).map((p: Record<string, unknown>) => ({
         id: p.id, company_name: p.company_name, city: p.city,
         country: `${p.country_name} (${p.country_code})`,
         email: p.email || null, phone: p.phone || null, rating: p.rating ?? null,
@@ -106,9 +106,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const { data: dirData } = await supabase.rpc("get_directory_counts");
     const { data: statsData } = await supabase.rpc("get_country_stats");
     const dirMap: Record<string, { members: number; verified: boolean }> = {};
-    for (const r of (dirData || []) as any[]) dirMap[r.country_code] = { members: Number(r.member_count), verified: r.is_verified };
-    const statsMap: Record<string, any> = {};
-    for (const r of (statsData || []) as any[]) statsMap[r.country_code] = r;
+    for (const r of (dirData || []) as Array<{ country_code: string; member_count: number; is_verified: boolean }>) dirMap[r.country_code] = { members: Number(r.member_count), verified: r.is_verified };
+    const statsMap: Record<string, Record<string, unknown>> = {};
+    for (const r of (statsData || []) as Array<Record<string, unknown>>) statsMap[r.country_code] = r;
     const allCodes = [...new Set([...Object.keys(dirMap), ...Object.keys(statsMap)])];
     if (args.country_code) {
       const code = String(args.country_code).toUpperCase();
@@ -137,7 +137,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (error) return { error: error.message };
     return {
       count: data?.length,
-      jobs: (data || []).map((j: any) => ({
+      jobs: (data || []).map((j: Record<string, unknown>) => ({
         id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status, type: j.job_type,
         progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count, missing: j.contacts_missing_count,
         last_company: j.last_processed_company || null, network: j.network_name, error: j.error_message || null, created: j.created_at,
@@ -146,7 +146,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
   }
 
   async function executePartnerDetail(args: Record<string, unknown>) {
-    let partner: any = null;
+    let partner: Record<string, unknown> | null = null;
     if (args.partner_id) {
       const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
       partner = data;
@@ -173,12 +173,12 @@ export function createReadHandlers(supabase: SupabaseClient) {
       member_since: partner.member_since, membership_expires: partner.membership_expires,
       has_profile: !!partner.raw_profile_html,
       profile_summary: partner.raw_profile_markdown ? String(partner.raw_profile_markdown).substring(0, 2000) : null,
-      contacts: (contactsRes.data || []).map((c: any) => ({ name: c.name, title: c.title, email: c.email, phone: c.direct_phone || c.mobile, is_primary: c.is_primary })),
-      networks: (networksRes.data || []).map((n: any) => ({ name: n.network_name, expires: n.expires })),
-      services: (servicesRes.data || []).map((s: any) => s.service_category),
-      certifications: (certsRes.data || []).map((c: any) => c.certification),
-      social_links: (socialsRes.data || []).map((s: any) => ({ platform: s.platform, url: s.url })),
-      blacklist_matches: (blacklistRes.data || []).map((b: any) => ({ company: b.company_name, owed: b.total_owed_amount, claims: b.claims, status: b.status })),
+      contacts: (contactsRes.data || []).map((c: Record<string, unknown>) => ({ name: c.name, title: c.title, email: c.email, phone: c.direct_phone || c.mobile, is_primary: c.is_primary })),
+      networks: (networksRes.data || []).map((n: Record<string, unknown>) => ({ name: n.network_name, expires: n.expires })),
+      services: (servicesRes.data || []).map((s: { service_category: string }) => s.service_category),
+      certifications: (certsRes.data || []).map((c: { certification: string }) => c.certification),
+      social_links: (socialsRes.data || []).map((s: { platform: string; url: string }) => ({ platform: s.platform, url: s.url })),
+      blacklist_matches: (blacklistRes.data || []).map((b: Record<string, unknown>) => ({ company: b.company_name, owed: b.total_owed_amount, claims: b.claims, status: b.status })),
     };
   }
 
@@ -188,7 +188,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       supabase.from("download_jobs").select("id, status").in("status", ["running", "pending"]),
     ]);
     const rows = statsRes.data || [];
-    const totals = rows.reduce((acc: any, r: any) => ({
+    const totals = rows.reduce((acc: Record<string, number>, r: Record<string, unknown>) => ({
       partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0),
       without_profile: acc.without_profile + (Number(r.without_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0),
       with_phone: acc.with_phone + (Number(r.with_phone) || 0),
@@ -229,11 +229,11 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (args.priority) query = query.eq("priority", args.priority);
     const { data, error } = await query;
     if (error) return { error: error.message };
-    const partnerIds = [...new Set((data || []).map((r: any) => r.partner_id))];
+    const partnerIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
     const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
     const nameMap: Record<string, string> = {};
-    for (const p of (partners || []) as any[]) nameMap[p.id] = p.company_name;
-    let results = (data || []).map((r: any) => ({
+    for (const p of (partners || []) as Array<{ id: string; company_name: string }>) nameMap[p.id] = p.company_name;
+    let results = (data || []).map((r: Record<string, unknown>) => ({
       id: r.id, title: r.title, description: r.description, due_date: r.due_date,
       priority: r.priority, status: r.status, partner: nameMap[r.partner_id] || "Sconosciuto",
     }));
@@ -252,7 +252,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (error) return { error: error.message };
     return {
       count: data?.length || 0,
-      partners: (data || []).map((p: any) => ({
+      partners: (data || []).map((p: Record<string, unknown>) => ({
         wca_id: p.wca_id, company_name: p.company_name, city: p.city, country_code: p.country_code,
         retry_count: p.retry_count, last_scraped: p.scraped_at,
       })),
@@ -283,7 +283,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
   }
 
   async function executeGetContactDetail(args: Record<string, unknown>) {
-    let contact: any = null;
+    let contact: Record<string, unknown> | null = null;
     if (args.contact_id) {
       const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
       contact = data;
@@ -331,12 +331,12 @@ export function createReadHandlers(supabase: SupabaseClient) {
     let results = data || [];
     if (args.partner_name) {
       const search = String(args.partner_name).toLowerCase();
-      results = results.filter((a: any) => {
-        const meta = a.source_meta as any;
+      results = results.filter((a: Record<string, unknown>) => {
+        const meta = a.source_meta as Record<string, unknown> | null;
         return meta?.company_name?.toLowerCase().includes(search) || false;
       });
     }
-    return { count: results.length, activities: results.map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+    return { count: results.length, activities: results.map((a: Record<string, unknown>) => ({ ...a, company_name: (a.source_meta as Record<string, unknown> | null)?.company_name || null })) };
   }
 
   async function executeSearchBusinessCards(args: Record<string, unknown>) {
@@ -350,15 +350,15 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (args.match_status) query = query.eq("match_status", args.match_status);
     const { data, error } = await query;
     if (error) return { error: error.message };
-    const partnerIds = [...new Set((data || []).filter((c: any) => c.matched_partner_id).map((c: any) => c.matched_partner_id))];
+    const partnerIds = [...new Set((data || []).filter((c: Record<string, unknown>) => c.matched_partner_id).map((c: Record<string, unknown>) => c.matched_partner_id))];
     let partnerNames: Record<string, string> = {};
     if (partnerIds.length > 0) {
       const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
-      for (const p of (partners || []) as any[]) partnerNames[p.id] = p.company_name;
+      for (const p of (partners || []) as Array<{ id: string; company_name: string }>) partnerNames[p.id] = p.company_name;
     }
     return {
       count: data?.length || 0,
-      cards: (data || []).map((c: any) => ({
+      cards: (data || []).map((c: Record<string, unknown>) => ({
         id: c.id, company_name: c.company_name, contact_name: c.contact_name, email: c.email,
         event_name: c.event_name, met_at: c.met_at, location: c.location,
         match_status: c.match_status, match_confidence: c.match_confidence,
@@ -397,7 +397,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       .in("status", ["running", "pending", "paused"]).order("created_at", { ascending: false }).limit(10);
     result.active_downloads = {
       count: activeJobs?.length || 0,
-      jobs: (activeJobs || []).map((j: any) => ({
+      jobs: (activeJobs || []).map((j: Record<string, unknown>) => ({
         id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status,
         progress: j.total_count > 0 ? `${Math.round((j.current_index / j.total_count) * 100)}%` : "0%",
         detail: `${j.current_index}/${j.total_count}`, last_company: j.last_processed_company, error: j.error_message,
@@ -408,7 +408,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       .in("status", ["completed", "cancelled", "failed"]).order("completed_at", { ascending: false }).limit(5);
     result.recently_completed = {
       count: recentJobs?.length || 0,
-      jobs: (recentJobs || []).map((j: any) => ({
+      jobs: (recentJobs || []).map((j: Record<string, unknown>) => ({
         id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status,
         processed: `${j.current_index}/${j.total_count}`, contacts_found: j.contacts_found_count,
         contacts_missing: j.contacts_missing_count, completed_at: j.completed_at, error: j.error_message,

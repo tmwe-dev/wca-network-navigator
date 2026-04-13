@@ -575,12 +575,12 @@ serve(async (req) => {
             .limit(5);
 
           const summaries = recentClassifications
-            ?.map((c: any) => c.ai_summary)
+            ?.map((c: { ai_summary?: string }) => c.ai_summary)
             .filter(Boolean)
             .join("; ") || "";
 
           const keywords = [...new Set(
-            recentClassifications?.flatMap((c: any) => c.keywords || []) || []
+            recentClassifications?.flatMap((c: { keywords?: string[] }) => c.keywords || []) || []
           )].slice(0, 10);
 
           const dominantSentiment = (recentClassifications as any)?.[0]?.sentiment || "neutral";

@@ -88,7 +88,7 @@ export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Prom
   } catch (err) {
     clearTimeout(timer);
     if (err instanceof EmbeddingError) throw err;
-    if ((err as any)?.name === "AbortError") {
+    if ((err as { name?: string })?.name === "AbortError") {
       throw new EmbeddingError("timeout", `Embedding timeout after ${timeoutMs}ms`);
     }
     throw new EmbeddingError("network", err instanceof Error ? err.message : String(err));

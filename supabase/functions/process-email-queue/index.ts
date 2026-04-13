@@ -205,9 +205,9 @@ Deno.serve(async (req) => {
             to: item.recipient_email,
             html: item.html_body,
             source_meta: {
-              company_name: item.recipient_name || (item as any).company_name || "",
+              company_name: item.recipient_name || (item as Record<string, unknown>).company_name || "",
               email: item.recipient_email,
-              country: (item as any).country_name || "",
+              country: (item as Record<string, unknown>).country_name || "",
             },
           });
         }
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
         // Increment draft sent_count (sequential processing — no race condition risk)
         await supabase.from("email_drafts").update({
           sent_count: sentCount,
-        } as any).eq("id", draft_id);
+        } as Record<string, unknown>).eq("id", draft_id);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         await supabase.from("email_campaign_queue").update({

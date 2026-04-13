@@ -227,8 +227,8 @@ async function importToolHandler(name: string, args: Record<string, unknown>, su
       if (args.import_log_id) {
         const { data, error } = await supabase.from("imported_contacts").select("country, email, phone, is_transferred, is_selected").eq("import_log_id", args.import_log_id);
         if (error) return { error: error.message };
-        const stats: any = { total: data?.length || 0, transferred: 0, selected: 0, with_email: 0, with_phone: 0, by_country: {} };
-        for (const c of (data || []) as any[]) {
+        const stats: Record<string, unknown> = { total: data?.length || 0, transferred: 0, selected: 0, with_email: 0, with_phone: 0, by_country: {} };
+        for (const c of (data || []) as Array<Record<string, unknown>>) {
           if (c.is_transferred) stats.transferred++;
           if (c.is_selected) stats.selected++;
           if (c.email) stats.with_email++;

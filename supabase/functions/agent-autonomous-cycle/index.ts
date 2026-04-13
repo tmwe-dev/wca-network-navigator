@@ -100,7 +100,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
 
   const alreadyProcessedIds = new Set(
     (existingTasks || [])
-      .map(t => (t.target_filters as any)?.message_id)
+      .map(t => (t.target_filters as Record<string, unknown>)?.message_id)
       .filter(Boolean)
   );
 
@@ -145,7 +145,7 @@ async function screenIncomingMessages(userId: string, agents: any[], budgetPerAg
         partner_id: msg.partner_id,
         channel: msg.channel,
         auto_approved: !stakes && !forceApproval,
-      } as any,
+      } as Record<string, unknown>,
       status: (stakes || forceApproval) ? "proposed" : "pending",
     });
     actionsCreated++;
@@ -175,7 +175,7 @@ serve(async (req) => {
       userAgents[a.user_id].push(a);
     }
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const [userId, agents] of Object.entries(userAgents)) {
       // ── Per-user work-hours check ──
@@ -198,7 +198,7 @@ serve(async (req) => {
           "high_stakes_min_rating",
         ]);
       const cfg: Record<string, string> = {};
-      userSettingsRows?.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+      userSettingsRows?.forEach((row: { key: string; value: string | null }) => { if (row.value) cfg[row.key] = row.value; });
 
       const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
       const forceApproval = cfg["agent_require_approval"] === "true";
@@ -236,7 +236,7 @@ serve(async (req) => {
           const { data: existingTask } = await supabase.from("agent_tasks")
             .select("id")
             .eq("agent_id", agent.id)
-            .contains("target_filters", { activity_id: fup.id } as any)
+            .contains("target_filters", { activity_id: fup.id } as Record<string, unknown>)
             .maybeSingle();
 
           if (existingTask) continue;
@@ -251,8 +251,8 @@ serve(async (req) => {
           await supabase.from("agent_tasks").insert({
             agent_id: agent.id, user_id: userId, task_type: "follow_up",
             description: `Follow-up scaduto: "${fup.title}". ${needsApproval ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
-            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as any,
-            status: needsApproval ? "proposed" : "pending",
+            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as Record<string, unknown>,
+      status: needsApproval ? "proposed" : "pending",
           });
           actionsCreated++;
         }
