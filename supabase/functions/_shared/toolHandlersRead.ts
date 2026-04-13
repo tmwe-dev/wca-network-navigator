@@ -88,9 +88,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
     let stats = data || [];
     if (args.country_code) stats = stats.filter((s: Record<string, unknown>) => s.country_code === String(args.country_code).toUpperCase());
     const sortBy = String(args.sort_by || "total");
-    if (sortBy === "missing_profiles") stats.sort((a: any, b: Record<string, unknown>) => (b.without_profile || 0) - (a.without_profile || 0));
-    else if (sortBy === "missing_emails") stats.sort((a: any, b: Record<string, unknown>) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
-    else stats.sort((a: any, b: Record<string, unknown>) => (b.total_partners || 0) - (a.total_partners || 0));
+    if (sortBy === "missing_profiles") stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.without_profile || 0) - (a.without_profile || 0));
+    else if (sortBy === "missing_emails") stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
+    else stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.total_partners || 0) - (a.total_partners || 0));
     const limit = Number(args.limit) || 30;
     return {
       total_countries: stats.length,

@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const items: Array<{ wcaId: number; contacts: Array<Record<string, unknown>>; profile?: any; profileHtml?: string }> = body.batch || [body]
+    const items: Array<{ wcaId: number; contacts: Array<Record<string, unknown>>; profile?: Record<string, unknown>; profileHtml?: string }> = body.batch || [body]
     const results: Array<Record<string, unknown>> = []
 
     for (const item of items) {

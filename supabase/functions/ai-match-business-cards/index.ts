@@ -207,10 +207,10 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
             partner_country_code: partner?.country_code || "",
             partner_city: partner?.city || "",
           };
-        }).sort((a: any, b: Record<string, unknown>) => b.confidence - a.confidence),
+        }).sort((a: Record<string, unknown>, b: Record<string, unknown>) => b.confidence - a.confidence),
       };
     }).filter((r: Record<string, unknown>) => r.candidates.length > 0)
-      .sort((a: any, b: Record<string, unknown>) => (b.candidates[0]?.confidence || 0) - (a.candidates[0]?.confidence || 0));
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.candidates[0]?.confidence || 0) - (a.candidates[0]?.confidence || 0));
 
     return new Response(JSON.stringify({ 
       matches: enrichedMatches,
