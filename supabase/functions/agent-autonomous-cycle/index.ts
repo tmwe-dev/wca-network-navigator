@@ -42,7 +42,7 @@ function isHighStakes(item: any, criteria: HighStakesCriteria = DEFAULT_HIGH_STA
 
 const DELAY_BETWEEN_AGENTS_MS = 3000;
 
-async function findAgentForPartner(userId: string, partnerId: string, agents: any[]): Promise<any | null> {
+async function findAgentForPartner(userId: string, partnerId: string, agents: Array<Record<string, unknown>>): Promise<any | null> {
   // Check client_assignments first
   const { data: assignment } = await supabase
     .from("client_assignments")
@@ -73,7 +73,7 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: an
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: any[], budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
+async function screenIncomingMessages(userId: string, agents: Array<Record<string, unknown>>, budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
   let actionsCreated = 0;
   const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 

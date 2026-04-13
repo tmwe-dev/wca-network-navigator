@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       .in("key", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "default_sender_email", "default_sender_name"]);
 
     const s: Record<string, string> = {};
-    settingsRows?.forEach((row: any) => { s[row.key] = row.value; });
+    settingsRows?.forEach((row: Record<string, unknown>) => { s[row.key] = row.value; });
 
     const smtpHost = s["smtp_host"];
     const smtpPort = parseInt(s["smtp_port"] || "465", 10);

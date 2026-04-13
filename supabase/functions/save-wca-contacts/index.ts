@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const items: Array<{ wcaId: number; contacts: any[]; profile?: any; profileHtml?: string }> = body.batch || [body]
-    const results: any[] = []
+    const items: Array<{ wcaId: number; contacts: Array<Record<string, unknown>>; profile?: any; profileHtml?: string }> = body.batch || [body]
+    const results: Array<Record<string, unknown>> = []
 
     for (const item of items) {
       const { wcaId, contacts, profile, profileHtml } = item
@@ -175,12 +175,12 @@ Deno.serve(async (req) => {
             .from('partner_networks')
             .select('network_name')
             .eq('partner_id', partnerId)
-          const existingNetNames = new Set((existingNets || []).map((n: any) => n.network_name.toLowerCase()))
+          const existingNetNames = new Set((existingNets || []).map((n: Record<string, unknown>) => n.network_name.toLowerCase()))
 
           for (const net of profile.networks) {
             if (!net.name) continue
             if (existingNetNames.has(net.name.toLowerCase())) continue
-            const netInsert: any = { partner_id: partnerId, network_name: net.name }
+            const netInsert: Record<string, unknown> = { partner_id: partnerId, network_name: net.name }
             if (net.expires) {
               const exp = parseDate(net.expires)
               if (exp) netInsert.expires = exp
@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
             .from('partner_services')
             .select('service_category')
             .eq('partner_id', partnerId)
-          const existingSvcSet = new Set((existingSvc || []).map((s: any) => s.service_category))
+          const existingSvcSet = new Set((existingSvc || []).map((s: Record<string, unknown>) => s.service_category))
 
           for (const svc of profile.services) {
             const mapped = matchService(svc)
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
             .from('partner_certifications')
             .select('certification')
             .eq('partner_id', partnerId)
-          const existingCertSet = new Set((existingCert || []).map((c: any) => c.certification))
+          const existingCertSet = new Set((existingCert || []).map((c: Record<string, unknown>) => c.certification))
 
           for (const cert of profile.certifications) {
             const mapped = matchCert(cert)
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
       }
 
       // Deduplicate incoming contacts by email
-      const dedupByEmail: any[] = []
+      const dedupByEmail: Array<Record<string, unknown>> = []
       const seenEmails = new Map<string, number>()
       for (const c of contacts) {
         if (!c.title && !c.name) continue
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
       }
 
       // Deduplicate by NAME
-      const deduped: any[] = []
+      const deduped: Array<Record<string, unknown>> = []
       const seenNames = new Map<string, number>()
       for (const c of dedupByEmail) {
         const nameKey = (c.name || c.title || '').trim().toLowerCase()

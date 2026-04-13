@@ -37,7 +37,7 @@ serve(async (req) => {
           status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
         });
     }
-  } catch (e: any) {
+  } catch (e: Record<string, unknown>) {
     console.error("ai-utility error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },

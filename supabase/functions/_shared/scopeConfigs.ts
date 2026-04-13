@@ -120,8 +120,8 @@ export const STRATEGIC_OPERATIVE_PROMPT = `Sei il Super Consulente Strategico de
 
 export interface ScopeConfig {
   systemPrompt: string;
-  tools: any[];
-  localToolHandler?: (name: string, args: Record<string, unknown>, supabase: any) => Promise<unknown | null>;
+  tools: Array<Record<string, unknown>>;
+  localToolHandler?: (name: string, args: Record<string, unknown>, supabase: Record<string, unknown>) => Promise<unknown | null>;
   temperature?: number;
   model?: string;
   creditLabel: string;
@@ -131,7 +131,7 @@ export interface ScopeConfig {
   buildPrompt?: (body: any, basePrompt: string) => string;
 }
 
-function buildContactQuery(supabase: any, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
+function buildContactQuery(supabase: SupabaseClient, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
   let q = opts?.count
     ? supabase.from("imported_contacts").select(selectCols, { count: "exact", head: true })
     : supabase.from("imported_contacts").select(selectCols);
@@ -157,7 +157,7 @@ function buildContactQuery(supabase: any, args: Record<string, unknown>, selectC
   return q;
 }
 
-async function contactsToolHandler(name: string, args: Record<string, unknown>, supabase: any): Promise<unknown | null> {
+async function contactsToolHandler(name: string, args: Record<string, unknown>, supabase: Record<string, unknown>): Promise<unknown | null> {
   switch (name) {
     case "search_contacts_advanced": {
       const idsOnly = !!args.ids_only;
@@ -166,8 +166,8 @@ async function contactsToolHandler(name: string, args: Record<string, unknown>, 
       const q = buildContactQuery(supabase, args, cols).order("created_at", { ascending: false }).limit(limit);
       const { data, error } = await q;
       if (error) return { error: error.message };
-      if (idsOnly) return { count: data?.length, ids: (data || []).map((r: any) => r.id) };
-      return { count: data?.length, contacts: (data || []).map((c: any) => ({ id: c.id, company: c.company_name, name: c.name, email: c.email, country: c.country, city: c.city, status: c.lead_status })) };
+      if (idsOnly) return { count: data?.length, ids: (data || []).map((r: Record<string, unknown>) => r.id) };
+      return { count: data?.length, contacts: (data || []).map((c: Record<string, unknown>) => ({ id: c.id, company: c.company_name, name: c.name, email: c.email, country: c.country, city: c.city, status: c.lead_status })) };
     }
     case "count_contacts_advanced": {
       const q = buildContactQuery(supabase, args, "id", { count: true });
@@ -179,14 +179,14 @@ async function contactsToolHandler(name: string, args: Record<string, unknown>, 
       if (error) return { error: error.message };
       const groupBy = String(args.group_by || "country");
       const limit = Number(args.limit) || 20;
-      const filtered = (data || []).filter((r: any) => r.group_type === groupBy).slice(0, limit);
+      const filtered = (data || []).filter((r: Record<string, unknown>) => r.group_type === groupBy).slice(0, limit);
       return { group_by: groupBy, total_groups: filtered.length, groups: filtered };
     }
     default: return null;
   }
 }
 
-async function importToolHandler(name: string, args: Record<string, unknown>, supabase: any): Promise<unknown | null> {
+async function importToolHandler(name: string, args: Record<string, unknown>, supabase: Record<string, unknown>): Promise<unknown | null> {
   switch (name) {
     case "list_imports": {
       let q = supabase.from("import_logs").select("*").order("created_at", { ascending: false }).limit(Number(args.limit) || 10);
@@ -258,7 +258,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         creditLabel: "Cockpit Assistant",
         buildPrompt: (body, basePrompt) => {
           const contacts = body.contacts || [];
-          const contactSummary = contacts.map((c: any) =>
+          const contactSummary = contacts.map((c: Record<string, unknown>) =>
             `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${(c.channels||[]).join(",")}`
           ).join("\n");
           return basePrompt; // System prompt stays the same, user message includes contacts

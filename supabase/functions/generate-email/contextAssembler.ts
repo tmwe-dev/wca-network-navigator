@@ -228,7 +228,7 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
   }
 
   if (classifications.length) {
-    const classLines = classifications.map((c: any) =>
+    const classLines = classifications.map((c: Record<string, unknown>) =>
       `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || "no summary"}`
     );
     parts.push(`RECENT CLASSIFICATIONS:\n${classLines.join("\n")}`);
@@ -327,7 +327,7 @@ export async function assembleContextBlocks(
       editPatterns = fallback;
     }
     if (editPatterns?.length) {
-      const lines = editPatterns.map((ep: any) =>
+      const lines = editPatterns.map((ep: Record<string, unknown>) =>
         `- ${ep.email_type || "generico"} verso ${ep.country_code || "??"}: Hook cambiato da '${(ep.hook_original || "").slice(0, 60)}' a '${(ep.hook_final || "").slice(0, 60)}', CTA da '${(ep.cta_original || "").slice(0, 60)}' a '${(ep.cta_final || "").slice(0, 60)}', tono: ${ep.tone_delta || "invariato"}, formalità: ${ep.formality_shift || "invariata"}, lunghezza: ${ep.length_delta_percent || 0}%`
       );
       editPatternsContext = `\nPATTERN DI EDITING DELL'UTENTE (modifiche precedenti alle email generate):\n${lines.join("\n")}\nADATTA lo stile in base a questi pattern.\n`;
@@ -344,7 +344,7 @@ export async function assembleContextBlocks(
     if (partner.country_code) rpQuery = rpQuery.eq("country_code", partner.country_code);
     const { data: responsePatterns } = await rpQuery;
     if (responsePatterns?.length) {
-      const lines = responsePatterns.map((rp: any) =>
+      const lines = responsePatterns.map((rp: Record<string, unknown>) =>
         `- ${rp.country_code || "Global"} ${rp.channel} ${rp.email_type || "generico"}: ${rp.total_responses}/${rp.total_sent} risposte (${Math.round(Number(rp.response_rate))}%), tempo medio: ${rp.avg_response_time_hours != null ? `${rp.avg_response_time_hours}h` : "N/A"}`
       );
       responseInsightsContext = `\nINSIGHT DALLE RISPOSTE RICEVUTE (dati reali):\n${lines.join("\n")}\n`;

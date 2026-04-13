@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
           console.error(`[email-cron-sync] check-inbox failed for ${user_id}: ${checkRes.status} ${errText}`);
           results.push({ userId: user_id, status: `error: ${checkRes.status}` });
         }
-      } catch (err: any) {
+      } catch (err: Record<string, unknown>) {
         console.error(`[email-cron-sync] Error for user ${user_id}:`, err.message);
         results.push({ userId: user_id, status: `error: ${err.message}` });
       }
@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     console.error("[email-cron-sync] Fatal error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

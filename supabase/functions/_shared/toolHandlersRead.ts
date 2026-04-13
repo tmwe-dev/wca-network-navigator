@@ -86,15 +86,15 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const { data, error } = await supabase.rpc("get_country_stats");
     if (error) return { error: error.message };
     let stats = data || [];
-    if (args.country_code) stats = stats.filter((s: any) => s.country_code === String(args.country_code).toUpperCase());
+    if (args.country_code) stats = stats.filter((s: Record<string, unknown>) => s.country_code === String(args.country_code).toUpperCase());
     const sortBy = String(args.sort_by || "total");
-    if (sortBy === "missing_profiles") stats.sort((a: any, b: any) => (b.without_profile || 0) - (a.without_profile || 0));
-    else if (sortBy === "missing_emails") stats.sort((a: any, b: any) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
-    else stats.sort((a: any, b: any) => (b.total_partners || 0) - (a.total_partners || 0));
+    if (sortBy === "missing_profiles") stats.sort((a: any, b: Record<string, unknown>) => (b.without_profile || 0) - (a.without_profile || 0));
+    else if (sortBy === "missing_emails") stats.sort((a: any, b: Record<string, unknown>) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
+    else stats.sort((a: any, b: Record<string, unknown>) => (b.total_partners || 0) - (a.total_partners || 0));
     const limit = Number(args.limit) || 30;
     return {
       total_countries: stats.length,
-      countries: stats.slice(0, limit).map((s: any) => ({
+      countries: stats.slice(0, limit).map((s: Record<string, unknown>) => ({
         country_code: s.country_code, total_partners: s.total_partners, hq: s.hq_count, branches: s.branch_count,
         with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone,
         profile_coverage: s.total_partners ? `${Math.round((s.with_profile / s.total_partners) * 100)}%` : "0%",
@@ -194,7 +194,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       with_phone: acc.with_phone + (Number(r.with_phone) || 0),
     }), { partners: 0, with_profile: 0, without_profile: 0, with_email: 0, with_phone: 0 });
     const dirRows = dirRes.data || [];
-    const dirTotal = dirRows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0);
+    const dirTotal = dirRows.reduce((sum: number, r: Record<string, unknown>) => sum + (Number(r.member_count) || 0), 0);
     return {
       total_countries_with_data: rows.length, total_partners: totals.partners,
       with_profile: totals.with_profile, without_profile: totals.without_profile,
@@ -215,7 +215,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (error) return { error: error.message };
     return {
       count: data?.length || 0,
-      entries: (data || []).map((b: any) => ({
+      entries: (data || []).map((b: Record<string, unknown>) => ({
         company: b.company_name, country: b.country, city: b.city, owed: b.total_owed_amount,
         claims: b.claims, status: b.status, has_matched_partner: !!b.matched_partner_id,
       })),
@@ -416,8 +416,8 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
     if (args.include_email_queue !== false) {
       const { data: emailQueue } = await supabase.from("email_campaign_queue").select("status").in("status", ["pending", "sending"]);
-      const pending = (emailQueue || []).filter((r: any) => r.status === "pending").length;
-      const sending = (emailQueue || []).filter((r: any) => r.status === "sending").length;
+      const pending = (emailQueue || []).filter((r: Record<string, unknown>) => r.status === "pending").length;
+      const sending = (emailQueue || []).filter((r: Record<string, unknown>) => r.status === "sending").length;
       result.email_queue = { pending, sending, total: pending + sending };
     }
     return result;

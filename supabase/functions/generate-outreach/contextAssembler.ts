@@ -165,12 +165,12 @@ export async function assembleOutreachContext(
 
     if (netsRes.data?.length) {
       intelligence.data_found.networks = true;
-      contextParts.push(`[NETWORK CONDIVISI]\n${netsRes.data.map((n: any) => n.network_name).join(", ")}`);
+      contextParts.push(`[NETWORK CONDIVISI]\n${netsRes.data.map((n: Record<string, unknown>) => n.network_name).join(", ")}`);
     } else { intelligence.data_found.networks = false; }
 
     if (svcsRes.data?.length) {
       intelligence.data_found.services = true;
-      contextParts.push(`[SERVIZI]\n${svcsRes.data.map((s: any) => s.service_category).join(", ")}`);
+      contextParts.push(`[SERVIZI]\n${svcsRes.data.map((s: Record<string, unknown>) => s.service_category).join(", ")}`);
     } else { intelligence.data_found.services = false; }
   }
 
@@ -225,7 +225,7 @@ export async function assembleOutreachContext(
     const { data: bcaRows } = await supabase.from("business_cards")
       .select("contact_name, event_name, met_at, location").eq("matched_partner_id", partnerId).limit(3);
     if (bcaRows?.length) {
-      const encounters = bcaRows.map((bc: any) => {
+      const encounters = bcaRows.map((bc: Record<string, unknown>) => {
         const parts: string[] = [];
         if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
         if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
@@ -246,7 +246,7 @@ export async function assembleOutreachContext(
       .order("created_at", { ascending: false }).limit(10);
     if (actRows?.length) {
       intelligence.data_found.activities = true;
-      const acts = actRows.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
+      const acts = actRows.map((a: Record<string, unknown>) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
       contextParts.push(`[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`);
     } else { intelligence.data_found.activities = false; }
   }

@@ -218,7 +218,7 @@ If no unread chats found, return an empty array [].`;
     const aiData = await aiResponse.json();
     
     // Extract from tool call response
-    let items: any[] = [];
+    let items: Array<Record<string, unknown>> = [];
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {

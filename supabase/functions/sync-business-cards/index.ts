@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch all from external DB with pagination
-    let allCards: any[] = [];
+    let allCards: Array<Record<string, unknown>> = [];
     let page = 0;
     const pageSize = 1000;
 

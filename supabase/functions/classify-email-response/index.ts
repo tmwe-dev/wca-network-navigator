@@ -583,7 +583,7 @@ serve(async (req) => {
             recentClassifications?.flatMap((c: { keywords?: string[] }) => c.keywords || []) || []
           )].slice(0, 10);
 
-          const dominantSentiment = (recentClassifications as any)?.[0]?.sentiment || "neutral";
+          const dominantSentiment = (recentClassifications as Record<string, unknown>)?.[0]?.sentiment || "neutral";
 
           await supabase.from("kb_entries").insert({
             user_id: input.user_id,
@@ -616,7 +616,7 @@ serve(async (req) => {
           .eq("category", classification.category)
           .gte("confidence", 0.70);
 
-        const uniqueAddresses = new Set(domainStats?.map((d: any) => d.email_address) || []);
+        const uniqueAddresses = new Set(domainStats?.map((d: Record<string, unknown>) => d.email_address) || []);
 
         if (uniqueAddresses.size >= 3) {
           const domainPatternTag = `domain_pattern_${domainForKB}_${classification.category}`;

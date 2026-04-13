@@ -275,11 +275,11 @@ ${truncated}`
         .from('partner_networks')
         .select('network_name')
         .eq('partner_id', partnerId)
-      const existingNetSet = new Set((existingNets || []).map((n: any) => n.network_name))
+      const existingNetSet = new Set((existingNets || []).map((n: Record<string, unknown>) => n.network_name))
 
       const newNets = extracted.networks
-        .filter((n: any) => n.name && !existingNetSet.has(n.name))
-        .map((n: any) => ({
+        .filter((n: Record<string, unknown>) => n.name && !existingNetSet.has(n.name))
+        .map((n: Record<string, unknown>) => ({
           partner_id: partnerId,
           network_name: n.name,
           expires: n.expires ? parseDateString(n.expires) : null,
@@ -297,7 +297,7 @@ ${truncated}`
         .from('partner_certifications')
         .select('certification')
         .eq('partner_id', partnerId)
-      const existingCertSet = new Set((existingCerts || []).map((c: any) => c.certification))
+      const existingCertSet = new Set((existingCerts || []).map((c: Record<string, unknown>) => c.certification))
 
       const newCerts = extracted.certifications
         .filter((c: string) => validCerts.includes(c) && !existingCertSet.has(c))

@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

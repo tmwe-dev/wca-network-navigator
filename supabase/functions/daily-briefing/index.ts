@@ -226,7 +226,7 @@ Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci 
       }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    let parsed: { completed?: string; todo?: string; suspended?: string; summary?: string; actions: any[] };
+    let parsed: { completed?: string; todo?: string; suspended?: string; summary?: string; actions: Array<Record<string, unknown>> };
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);

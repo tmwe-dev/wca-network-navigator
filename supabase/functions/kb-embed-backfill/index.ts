@@ -75,7 +75,7 @@ serve(async (req) => {
     }
 
     // ── Compose testi per embedding (titolo + contenuto, troncato) ──
-    const texts = rows.map((r: any) => {
+    const texts = rows.map((r: Record<string, unknown>) => {
       const title = r.title || "";
       const chap = r.chapter ? `[${r.chapter}] ` : "";
       const content = (r.content || "").slice(0, 6000);

@@ -62,7 +62,7 @@ serve(async (req) => {
       ctx = await assembleOutreachContext(supabase, userId, ch, quality, {
         company_name, contact_name, contact_email, country_code, linkedin_profile, email_type_id,
       });
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       if (e.code === "duplicate_branch") {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }

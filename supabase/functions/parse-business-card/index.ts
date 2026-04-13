@@ -142,7 +142,7 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
     }
 
     const aiData = await aiResp.json();
-    let extracted: any = {};
+    let extracted: Record<string, unknown> = {};
 
     // Parse tool call response
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) break;
 
-      data.forEach((r: any) => {
+      data.forEach((r: Record<string, unknown>) => {
         counts[r.country_code] = (counts[r.country_code] || 0) + 1;
       });
 

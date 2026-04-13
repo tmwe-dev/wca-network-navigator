@@ -59,7 +59,7 @@ serve(async (req) => {
       return words.slice(0, 2);
     }))].slice(0, 30);
 
-    let partners: any[] = [];
+    let partners: Array<Record<string, unknown>> = [];
     if (searchTerms.length > 0) {
       // Search in batches to get relevant partners
       const orFilter = searchTerms.map(t => `company_name.ilike.%${t}%`).join(",");
@@ -174,7 +174,7 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
     }
 
     const aiData = await aiResponse.json();
-    let results: any[] = [];
+    let results: Array<Record<string, unknown>> = [];
     
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
@@ -186,7 +186,7 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
     const cardMap = new Map(unmatchedCards.map(c => [c.id, c]));
     const partnerMap = new Map(partners.map(p => [p.id, p]));
 
-    const enrichedMatches = results.map((r: any) => {
+    const enrichedMatches = results.map((r: Record<string, unknown>) => {
       const card = cardMap.get(r.card_id);
       return {
         card_id: r.card_id,
@@ -195,7 +195,7 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
         card_email: card?.email || "",
         card_phone: card?.phone || card?.mobile || "",
         card_location: card?.location || "",
-        candidates: (r.candidates || []).map((c: any) => {
+        candidates: (r.candidates || []).map((c: Record<string, unknown>) => {
           const partner = partnerMap.get(c.partner_id);
           return {
             partner_id: c.partner_id,
@@ -207,10 +207,10 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
             partner_country_code: partner?.country_code || "",
             partner_city: partner?.city || "",
           };
-        }).sort((a: any, b: any) => b.confidence - a.confidence),
+        }).sort((a: any, b: Record<string, unknown>) => b.confidence - a.confidence),
       };
-    }).filter((r: any) => r.candidates.length > 0)
-      .sort((a: any, b: any) => (b.candidates[0]?.confidence || 0) - (a.candidates[0]?.confidence || 0));
+    }).filter((r: Record<string, unknown>) => r.candidates.length > 0)
+      .sort((a: any, b: Record<string, unknown>) => (b.candidates[0]?.confidence || 0) - (a.candidates[0]?.confidence || 0));
 
     return new Response(JSON.stringify({ 
       matches: enrichedMatches,

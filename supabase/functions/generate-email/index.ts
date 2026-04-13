@@ -90,7 +90,7 @@ serve(async (req) => {
     let ctx;
     try {
       ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id });
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       if (e.code === "duplicate_branch") {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }

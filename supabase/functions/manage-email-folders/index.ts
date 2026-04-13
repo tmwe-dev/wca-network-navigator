@@ -97,7 +97,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    let result: any = {};
+    let result: Record<string, unknown> = {};
 
     switch (action) {
       case "list_folders": {

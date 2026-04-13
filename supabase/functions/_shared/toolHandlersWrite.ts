@@ -79,7 +79,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     const { data: matches, count } = await query.limit(200);
     if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
     if (matches.length > 5) return { needs_confirmation: true, count: count || matches.length, status, message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?` };
-    const ids = matches.map((c: any) => c.id);
+    const ids = matches.map((c: Record<string, unknown>) => c.id);
     const updates: Record<string, unknown> = { lead_status: status };
     if (status === "converted") updates.converted_at = new Date().toISOString();
     const { error } = await supabase.from("imported_contacts").update(updates).in("id", ids);

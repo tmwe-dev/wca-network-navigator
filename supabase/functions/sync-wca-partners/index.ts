@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
             if (!extPartners || extPartners.length === 0) break;
 
             // Map to local partners schema
-            const partnerRows = extPartners.map((p: any) => ({
+            const partnerRows = extPartners.map((p: Record<string, unknown>) => ({
               wca_id: p.wca_id,
               company_name: p.company_name,
               country_code: p.country_code,
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
             synced += extPartners.length;
 
             // Get local partner IDs
-            const wcaIds = extPartners.map((p: any) => p.wca_id).filter(Boolean);
+            const wcaIds = extPartners.map((p: Record<string, unknown>) => p.wca_id).filter(Boolean);
             const { data: localPartners } = await localSb
               .from("partners")
               .select("id, wca_id")
@@ -156,8 +156,8 @@ Deno.serve(async (req) => {
             }
 
             // Batch collect all contacts and networks for this page
-            const allContacts: any[] = [];
-            const allNetworks: any[] = [];
+            const allContacts: Array<Record<string, unknown>> = [];
+            const allNetworks: Array<Record<string, unknown>> = [];
             const partnerIdsWithContacts: string[] = [];
             const partnerIdsWithNetworks: string[] = [];
 
