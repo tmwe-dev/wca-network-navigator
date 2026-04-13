@@ -1,22 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   if (!ELEVENLABS_API_KEY) {
     return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -42,7 +39,7 @@ serve(async (req) => {
     if (!agent_id) {
       return new Response(JSON.stringify({ error: "agent_id is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -61,7 +58,7 @@ serve(async (req) => {
       console.error("ElevenLabs token error:", response.status, errText);
       return new Response(JSON.stringify({ error: `Token error: ${response.status}` }), {
         status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -94,14 +91,14 @@ serve(async (req) => {
         bridge_token: bridgeToken,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
     console.error("Conversation token error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });
