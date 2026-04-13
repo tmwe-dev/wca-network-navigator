@@ -483,6 +483,61 @@ Deno.serve(async (req) => {
         } else if (result.msgData) {
           messages.push(result.msgData);
           maxUid = uid;
+
+          // ── Response matching (best-effort) ──
+          try {
+            if (inReplyTo || threadId) {
+              const savedMsgId = result.msgData.id as string;
+              const partnerId = match?.partnerId || (result.msgData.partner_id as string | null);
+
+              // Pass 1: match by thread_id
+              let activityMatch: { id: string; sent_at: string } | null = null;
+              if (threadId) {
+                const { data } = await supabase
+                  .from("activities")
+                  .select("id, sent_at")
+                  .eq("thread_id", threadId)
+                   .eq("activity_type", "send_email")
+                  .eq("response_received", false)
+                  .order("sent_at", { ascending: false })
+                  .limit(1);
+                if (data?.length) activityMatch = data[0];
+              }
+
+              // Pass 2: match by partner_id + recency
+              if (!activityMatch && partnerId) {
+                const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+                const { data } = await supabase
+                  .from("activities")
+                  .select("id, sent_at")
+                  .eq("partner_id", partnerId)
+                  .eq("activity_type", "send_email")
+                  .eq("response_received", false)
+                  .gte("sent_at", thirtyDaysAgo)
+                  .order("sent_at", { ascending: false })
+                  .limit(1);
+                if (data?.length) activityMatch = data[0];
+              }
+
+              if (activityMatch) {
+                const responseTimeHours = Math.round(
+                  ((Date.now() - new Date(activityMatch.sent_at).getTime()) / (1000 * 60 * 60)) * 10
+                ) / 10;
+                await supabase.rpc("link_response_to_activity", {
+                  p_channel_message_id: savedMsgId,
+                  p_activity_id: activityMatch.id,
+                  p_response_time_hours: responseTimeHours,
+                });
+                console.log("[check-inbox] Response matched:", {
+                  messageId: savedMsgId,
+                  activityId: activityMatch.id,
+                  responseTimeHours,
+                });
+              }
+            }
+          } catch (matchErr: unknown) {
+            console.warn("[check-inbox] Response matching failed (non-blocking):", matchErr instanceof Error ? matchErr.message : String(matchErr));
+          }
         }
 
       } catch (e: unknown) {

@@ -97,7 +97,7 @@ const PARTNER_DETAIL_SELECT = `
 
 // ─── Helpers ────────────────────────────────────────────
 /** Fetch all rows by iterating with .range() in blocks of 1000 */
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => ReturnType<typeof supabase.from>): Promise<T[]> {
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => unknown): Promise<T[]> {
   const all: T[] = [];
   let offset = 0;
   while (true) {

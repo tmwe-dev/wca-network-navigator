@@ -10,8 +10,8 @@ type TableName = keyof Database["public"]["Tables"];
 type RowOf<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
 /** Apply additional filters to the query builder (eq, in, order, limit, etc.) */
-type FilterFn = (query: ReturnType<ReturnType<typeof supabase.from>["select"]>) =>
-  ReturnType<ReturnType<typeof supabase.from>["select"]>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FilterFn = (query: any) => any;
 
 interface SupabaseQueryOptions {
   readonly filters?: FilterFn;
