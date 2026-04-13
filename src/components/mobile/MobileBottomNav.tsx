@@ -30,7 +30,8 @@ export function MobileBottomNav() {
       <div className="flex items-center justify-around h-14">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.path, item.exact);
+          const hasExact = "exact" in item && item.exact;
+          const active = isActive(item.path, !!hasExact);
           return (
             <button
               key={item.path}
