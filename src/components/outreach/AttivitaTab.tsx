@@ -92,16 +92,55 @@ export function AttivitaTab() {
     setRescheduleDate(undefined);
   };
 
+  const { setFilter } = useGlobalFilters();
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Compact stats header */}
-      <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2">
-        <ListTodo className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-semibold">Attività</span>
+      {/* Filter bar */}
+      <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2 flex-wrap">
+        <ListTodo className="w-3.5 h-3.5 text-primary shrink-0" />
+        <span className="text-xs font-semibold shrink-0">Attività</span>
+
+        <Select value={filter} onValueChange={(v) => setFilter("attivitaStatus", v)}>
+          <SelectTrigger className="h-6 text-[10px] w-[110px] px-2">
+            <SelectValue placeholder="Stato" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="pending">In attesa</SelectItem>
+            <SelectItem value="in_progress">In corso</SelectItem>
+            <SelectItem value="completed">Completate</SelectItem>
+            <SelectItem value="cancelled">Annullate</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={priorityFilter as string} onValueChange={(v) => setFilter("attivitaPriority", v)}>
+          <SelectTrigger className="h-6 text-[10px] w-[100px] px-2">
+            <SelectValue placeholder="Priorità" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="high">Alta</SelectItem>
+            <SelectItem value="medium">Media</SelectItem>
+            <SelectItem value="low">Bassa</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={channelFilter} onValueChange={setChannelFilter}>
+          <SelectTrigger className="h-6 text-[10px] w-[100px] px-2">
+            <SelectValue placeholder="Canale" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti</SelectItem>
+            <SelectItem value="send_email">Email</SelectItem>
+            <SelectItem value="phone_call">Telefono</SelectItem>
+            <SelectItem value="meeting">Meeting</SelectItem>
+          </SelectContent>
+        </Select>
+
         <div className="flex items-center gap-1.5 ml-auto">
           <Badge variant="outline" className="text-[9px] px-1.5 h-4">{stats.total} totali</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.pending} attesa</Badge>
-          <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-primary border-primary/30">{stats.in_progress} corso</Badge>
           <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-emerald-500 border-emerald-500/30">{stats.completed} fatte</Badge>
         </div>
       </div>
