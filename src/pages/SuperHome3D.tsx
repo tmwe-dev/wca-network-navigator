@@ -95,6 +95,12 @@ export default function SuperHome3D() {
     setActionPrompt(action.prompt);
   }, []);
 
+  // Redirect to onboarding if not set up
+  if (!setupLoading && hasSetup === false) {
+    navigate("/onboarding", { replace: true });
+    return null;
+  }
+
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
       <ScrollArea className="h-full">
