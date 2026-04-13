@@ -2023,6 +2023,42 @@ export type Database = {
         }
         Relationships: []
       }
+      edge_function_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          function_name: string
+          id: string
+          metadata: Json | null
+          status_code: number
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          metadata?: Json | null
+          status_code: number
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          metadata?: Json | null
+          status_code?: number
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_address_rules: {
         Row: {
           ai_confidence_threshold: number | null
