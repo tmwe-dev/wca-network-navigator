@@ -416,6 +416,10 @@ export async function assembleContextBlocks(
     }
   }
 
+  // ── Conversation Intelligence ──
+  const convIntel = await loadConversationContext(supabase, userId, contactEmail, effectivePartnerId ?? null);
+  const conversationIntelligenceContext = buildConversationBlock(convIntel);
+
   // ── Sales KB ──
   const emailCategory = opts.oracle_type || "primo_contatto";
   const kbResult = await fetchKbEntriesStrategic(supabase, quality, userId, {
@@ -444,6 +448,7 @@ export async function assembleContextBlocks(
     historyContext, relationshipBlock, branchBlock, interlocutorBlock,
     metInPersonContext, cachedEnrichmentContext, documentsContext,
     stylePreferencesContext, editPatternsContext, responseInsightsContext,
+    conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections_used,
     signatureBlock, networks, services, socialLinks, settings,
   };
