@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { getContextBudget, assembleContext, estimateTokens } from "../_shared/tokenBudget.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
@@ -85,6 +86,7 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  const metrics = startMetrics("ai-assistant");
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -573,6 +575,8 @@ Non eseguire tool di scrittura o modifica`;
     return new Response(JSON.stringify({ content: finalText }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (e: unknown) {
+    logEdgeError("ai-assistant", e);
+    endMetrics(metrics, false, 500);
     console.error("ai-assistant error:", extractErrorMessage(e));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }

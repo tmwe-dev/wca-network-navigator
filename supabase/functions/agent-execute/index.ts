@@ -4,12 +4,14 @@ import { getCorsHeaders, corsPreflight, supabase } from "./shared.ts";
 import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  const metrics = startMetrics("agent-execute");
 
   try {
     const authHeader = req.headers.get("Authorization") || "";
@@ -430,6 +432,8 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
     });
 
   } catch (err) {
+    logEdgeError("agent-execute", err);
+    endMetrics(metrics, false, 500);
     console.error("agent-execute error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore interno" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
