@@ -198,8 +198,13 @@ export type Database = {
       agents: {
         Row: {
           assigned_tools: Json
+          assigned_tutor_id: string | null
           avatar_emoji: string
+          can_access_inbox: boolean | null
+          can_send_email: boolean | null
+          can_send_whatsapp: boolean | null
           created_at: string
+          daily_send_limit: number | null
           elevenlabs_agent_id: string | null
           elevenlabs_voice_id: string | null
           id: string
@@ -219,8 +224,13 @@ export type Database = {
         }
         Insert: {
           assigned_tools?: Json
+          assigned_tutor_id?: string | null
           avatar_emoji?: string
+          can_access_inbox?: boolean | null
+          can_send_email?: boolean | null
+          can_send_whatsapp?: boolean | null
           created_at?: string
+          daily_send_limit?: number | null
           elevenlabs_agent_id?: string | null
           elevenlabs_voice_id?: string | null
           id?: string
@@ -240,8 +250,13 @@ export type Database = {
         }
         Update: {
           assigned_tools?: Json
+          assigned_tutor_id?: string | null
           avatar_emoji?: string
+          can_access_inbox?: boolean | null
+          can_send_email?: boolean | null
+          can_send_whatsapp?: boolean | null
           created_at?: string
+          daily_send_limit?: number | null
           elevenlabs_agent_id?: string | null
           elevenlabs_voice_id?: string | null
           id?: string
@@ -2191,7 +2206,7 @@ export type Database = {
           status: string
           subject: string | null
           total_count: number
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           attachment_ids?: Json | null
@@ -2211,7 +2226,7 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           attachment_ids?: Json | null
@@ -2231,7 +2246,7 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -4027,7 +4042,7 @@ export type Database = {
           status: Database["public"]["Enums"]["reminder_status"] | null
           title: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -4039,7 +4054,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["reminder_status"] | null
           title: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -4051,7 +4066,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["reminder_status"] | null
           title?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {

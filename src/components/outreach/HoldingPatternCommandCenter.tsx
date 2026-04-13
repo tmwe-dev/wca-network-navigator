@@ -3,7 +3,7 @@
  * Left: incoming messages with rich company cards
  * Right: Quick action icons + 2 tabs (Risposta / Strategia)
  */
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -31,6 +31,7 @@ import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { useOutreachMock } from "@/hooks/useOutreachMock";
 import { MOCK_HOLDING_GROUPS, getCountryFlag } from "@/lib/outreachMockData";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const CHANNEL_TABS: { key: HoldingChannel; label: string; icon: typeof Mail }[] = [
   { key: "email", label: "Email", icon: Mail },
@@ -54,6 +55,59 @@ export function HoldingPatternCommandCenter() {
   const { analyze, isAnalyzing, strategy, setStrategy, error: strategyError, reset: resetStrategy } = useHoldingStrategy();
   const markAsRead = useMarkAsRead();
   const { mockEnabled } = useOutreachMock();
+
+  const handleApproveResponse = useCallback(async () => {
+    if (!selectedMessage || !selectedGroup) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      const { error } = await supabase.from("activities").insert({
+        activity_type: "send_email" as any,
+        title: `Risposta approvata: ${selectedMessage.subject || "Senza oggetto"}`,
+        description: `Risposta al messaggio da ${selectedMessage.from_address}`,
+        source_id: selectedMessage.id,
+        source_type: "holding_pattern_approval",
+        status: "pending" as any,
+        priority: "medium",
+        user_id: session.user.id,
+        partner_id: selectedGroup.partnerId || null,
+      });
+      if (error) throw error;
+      toast.success("Risposta approvata e accodata per l'invio");
+    } catch (e) { toast.error("Errore nell'approvazione della risposta"); }
+  }, [selectedMessage, selectedGroup]);
+
+  const handleIgnore = useCallback(async () => {
+    if (!selectedMessage) return;
+    try {
+      const { error } = await supabase.from("channel_messages")
+        .update({ category: "ignored" })
+        .eq("id", selectedMessage.id);
+      if (error) throw error;
+      toast.info("Messaggio contrassegnato come ignorato");
+    } catch (e) { toast.error("Errore nell'aggiornamento"); }
+  }, [selectedMessage]);
+
+  const handlePhoneEscalation = useCallback(async () => {
+    if (!selectedMessage || !selectedGroup) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      const { error } = await supabase.from("activities").insert({
+        activity_type: "phone_call" as any,
+        title: `Escalation telefonica: ${selectedGroup.companyName}`,
+        description: `Escalation da email ${selectedMessage.from_address} — ${selectedMessage.subject || "Senza oggetto"}`,
+        source_id: selectedMessage.id,
+        source_type: "holding_pattern_escalation",
+        status: "pending" as any,
+        priority: "high",
+        user_id: session.user.id,
+        partner_id: selectedGroup.partnerId || null,
+      });
+      if (error) throw error;
+      toast.success("Attività di chiamata creata");
+    } catch (e) { toast.error("Errore nella creazione dell'escalation"); }
+  }, [selectedMessage, selectedGroup]);
 
   // Use mock data when enabled
   const displayGroups = mockEnabled ? MOCK_HOLDING_GROUPS as any as HoldingMessageGroup[] : groups;
@@ -243,7 +297,7 @@ export function HoldingPatternCommandCenter() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10"
-                    onClick={() => toast.success("Risposta approvata e accodata")}>
+                    onClick={handleApproveResponse}>
                     <CheckCircle2 className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
@@ -252,7 +306,7 @@ export function HoldingPatternCommandCenter() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
-                    onClick={() => toast.info("Messaggio ignorato")}>
+                    onClick={handleIgnore}>
                     <XCircle className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
@@ -261,7 +315,7 @@ export function HoldingPatternCommandCenter() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10"
-                    onClick={() => toast.info("Escalation telefonica avviata")}>
+                    onClick={handlePhoneEscalation}>
                     <PhoneForwarded className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>

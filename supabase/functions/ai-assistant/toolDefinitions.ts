@@ -1037,4 +1037,52 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  // ━━━ Pending Actions Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "get_pending_actions",
+      description: "Get AI pending actions for the current user. Shows actions the AI has suggested but that need human approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["pending", "approved", "rejected", "executed"], description: "Filter by status (default: pending)" },
+          action_type: { type: "string", description: "Filter by action type" },
+          limit: { type: "number", description: "Max results (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "approve_ai_action",
+      description: "Approve a pending AI action, marking it ready for execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_id: { type: "string", description: "UUID of the pending action to approve" },
+        },
+        required: ["action_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reject_ai_action",
+      description: "Reject a pending AI action with an optional reason.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_id: { type: "string", description: "UUID of the pending action to reject" },
+          reason: { type: "string", description: "Reason for rejection" },
+        },
+        required: ["action_id"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];

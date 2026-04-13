@@ -700,4 +700,28 @@ export const ALL_TOOLS: Record<string, any> = {
       parameters: { type: "object", properties: { country_code: { type: "string" } }, required: ["country_code"] },
     },
   },
+  get_pending_actions: {
+    type: "function",
+    function: {
+      name: "get_pending_actions",
+      description: "Get AI pending actions for review.",
+      parameters: { type: "object", properties: { status: { type: "string" }, action_type: { type: "string" }, limit: { type: "number" } } },
+    },
+  },
+  approve_ai_action: {
+    type: "function",
+    function: {
+      name: "approve_ai_action",
+      description: "Approve a pending AI action.",
+      parameters: { type: "object", properties: { action_id: { type: "string" } }, required: ["action_id"] },
+    },
+  },
+  reject_ai_action: {
+    type: "function",
+    function: {
+      name: "reject_ai_action",
+      description: "Reject a pending AI action.",
+      parameters: { type: "object", properties: { action_id: { type: "string" }, reason: { type: "string" } }, required: ["action_id"] },
+    },
+  },
 };

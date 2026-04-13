@@ -210,7 +210,7 @@ export function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearc
         <Icon className="w-3.5 h-3.5" />
         {cfg.label} ({count})
       </button>
-      <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={() => {}}>
+      <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={cfg.action} title="Chiudi">
         ✕
       </Button>
     </div>
