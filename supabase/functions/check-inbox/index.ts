@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient, decodeAttachment } from "jsr:@workingdevshero/deno-imap";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 
 import { getCaCertsForHost } from "./caCerts.ts";
 import {
@@ -29,6 +30,7 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: dynCors });
 
+  const metrics = startMetrics("check-inbox");
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -563,6 +565,7 @@ Deno.serve(async (req) => {
     try { client.disconnect(); } catch (e: unknown) { console.debug("disconnect skipped:", extractErrorMessage(e)); }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
+    endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true, total: messages.length, matched, unmatched: messages.length - matched,
       last_uid: maxUid, remaining: remainingCount, has_more: hasMore,
@@ -582,6 +585,8 @@ Deno.serve(async (req) => {
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (err: unknown) {
+    logEdgeError("check-inbox", err);
+    endMetrics(metrics, false, 500);
     console.error("[check-inbox] Error:", extractErrorMessage(err));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, dynCors);
   }

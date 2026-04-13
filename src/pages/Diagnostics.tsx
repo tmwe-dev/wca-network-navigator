@@ -7,6 +7,7 @@ import { useDiagnosticsRunner } from "@/hooks/useDiagnosticsRunner";
 import { DiagnosticsSummaryBar } from "@/components/diagnostics/DiagnosticsSummaryBar";
 import { DiagnosticsCategoryCard } from "@/components/diagnostics/DiagnosticsCategoryCard";
 import { ErrorLogPanel } from "@/components/diagnostics/ErrorLogPanel";
+import { SystemHealthPanel } from "@/components/diagnostics/SystemHealthPanel";
 
 export default function Diagnostics() {
   const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } = useDiagnosticsRunner();
@@ -31,6 +32,9 @@ export default function Diagnostics() {
           </Button>
         </div>
       </div>
+
+      {/* System Health — auto-refreshing */}
+      <SystemHealthPanel />
 
       <DiagnosticsSummaryBar summary={summary} visible={results.length > 0} />
 

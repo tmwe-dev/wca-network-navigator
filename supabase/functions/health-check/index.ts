@@ -14,38 +14,51 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const checks: Record<string, boolean> = {
-    database: false,
-    auth: false,
-    storage: false,
+  const checks: Record<string, string> = {
+    database: "fail",
+    auth: "fail",
+    storage: "fail",
+    ai_gateway: "fail",
   };
 
   // DB
   try {
-    const { error } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-    checks.database = !error;
+    const { error } = await supabase.from("app_settings").select("id", { count: "exact", head: true });
+    checks.database = error ? "fail" : "ok";
   } catch { /* */ }
 
   // Auth
   try {
     const { error } = await supabase.auth.admin.listUsers({ perPage: 1 });
-    checks.auth = !error;
+    checks.auth = error ? "fail" : "ok";
   } catch { /* */ }
 
   // Storage
   try {
     const { error } = await supabase.storage.listBuckets();
-    checks.storage = !error;
+    checks.storage = error ? "fail" : "ok";
   } catch { /* */ }
 
-  const allHealthy = Object.values(checks).every(Boolean);
+  // AI Gateway
+  try {
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (lovableKey) {
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/models", {
+        headers: { Authorization: `Bearer ${lovableKey}` },
+        signal: AbortSignal.timeout(5000),
+      });
+      checks.ai_gateway = resp.ok ? "ok" : "fail";
+    }
+  } catch { /* */ }
+
+  const allOk = Object.values(checks).every((v) => v === "ok");
 
   return new Response(
     JSON.stringify({
-      status: allHealthy ? "healthy" : "degraded",
+      status: allOk ? "healthy" : "degraded",
       checks,
       timestamp: new Date().toISOString(),
     }),
-    { status: allHealthy ? 200 : 503, headers },
+    { status: allOk ? 200 : 503, headers },
   );
 });

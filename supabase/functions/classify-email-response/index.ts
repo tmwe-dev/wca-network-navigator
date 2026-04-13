@@ -5,6 +5,7 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
   const headers = { ...dynCors, "Content-Type": "application/json" };
 
+  const metrics = startMetrics("classify-email-response");
   try {
     // 0. Auth check
     const authHeader = req.headers.get("Authorization");
@@ -662,6 +664,8 @@ serve(async (req) => {
 
     console.log(`[classify-email-response] Done: category=${classification.category} confidence=${classification.confidence} action=${actionTaken}`);
 
+    metrics.userId = input.user_id;
+    endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
       classification_id: classificationId,
@@ -671,6 +675,8 @@ serve(async (req) => {
     }), { headers });
 
   } catch (e: unknown) {
+    logEdgeError("classify-email-response", e);
+    endMetrics(metrics, false, 500);
     console.error("[classify-email-response] Error:", extractErrorMessage(e));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, dynCors);
   }

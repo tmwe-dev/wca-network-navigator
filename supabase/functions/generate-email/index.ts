@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 
@@ -21,6 +22,7 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  const metrics = startMetrics("generate-email");
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -130,6 +132,8 @@ serve(async (req) => {
       metadata: { model, quality, tokens: result.usage?.promptTokens },
     });
 
+    metrics.userId = userId;
+    endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       subject, body, full_content: result.content || "",
       partner_name: partner!.company_name,
@@ -138,6 +142,8 @@ serve(async (req) => {
       used_partner_email: !contact?.email && !!partner!.email, quality, model,
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e: unknown) {
+    logEdgeError("generate-email", e);
+    endMetrics(metrics, false, 500);
     console.error("generate-email error:", e);
     return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));
   }
