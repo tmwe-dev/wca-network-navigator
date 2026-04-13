@@ -131,6 +131,9 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             {isWcaMatched && (
               <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
             )}
+            {(c.interaction_count ?? 0) > 0 && (
+              <HoldingPatternBadge interactionCount={c.interaction_count ?? 0} lastInteractionAt={c.last_interaction_at} size="sm" />
+            )}
             {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
             {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
           </div>
