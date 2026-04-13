@@ -67,18 +67,18 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { data, error } = await supabase.rpc("get_country_stats");
       if (error) return { error: error.message };
       let stats = data || [];
-      if (args.country_code) stats = stats.filter((s: any) => s.country_code === String(args.country_code).toUpperCase());
-      stats.sort((a: any, b: any) => (b.total_partners || 0) - (a.total_partners || 0));
-      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s: any) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
+      if (args.country_code) stats = stats.filter((s: CountryStatRow) => s.country_code === String(args.country_code).toUpperCase());
+      stats.sort((a: CountryStatRow, b: CountryStatRow) => (b.total_partners || 0) - (a.total_partners || 0));
+      return { total_countries: stats.length, countries: stats.slice(0, Number(args.limit) || 30).map((s: CountryStatRow) => ({ country_code: s.country_code, total_partners: s.total_partners, with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone })) };
     }
 
     case "get_directory_status": {
       const { data: dirData } = await supabase.rpc("get_directory_counts");
       const { data: statsData } = await supabase.rpc("get_country_stats");
       const dirMap: Record<string, number> = {};
-      for (const r of (dirData || []) as any[]) dirMap[r.country_code] = Number(r.member_count);
-      const statsMap: Record<string, any> = {};
-      for (const r of (statsData || []) as any[]) statsMap[r.country_code] = r;
+      for (const r of (dirData || []) as Array<{ country_code: string; member_count: number }>) dirMap[r.country_code] = Number(r.member_count);
+      const statsMap: Record<string, CountryStatRow> = {};
+      for (const r of (statsData || []) as CountryStatRow[]) statsMap[r.country_code] = r;
       if (args.country_code) {
         const code = String(args.country_code).toUpperCase();
         return { country_code: code, directory_members: dirMap[code] || 0, db_partners: statsMap[code]?.total_partners || 0, gap: (dirMap[code] || 0) - (statsMap[code]?.total_partners || 0) };
@@ -94,7 +94,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length, jobs: (data || []).map((j: any) => ({ id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count, missing: j.contacts_missing_count, last: j.last_processed_company, error: j.error_message })) };
+      return { count: data?.length, jobs: (data || []).map((j: DownloadJobRow) => ({ id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count, missing: j.contacts_missing_count, last: j.last_processed_company, error: j.error_message })) };
     }
 
     case "get_global_summary": {
@@ -103,8 +103,8 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         supabase.from("download_jobs").select("id, status").in("status", ["running", "pending"]),
       ]);
       const rows = statsRes.data || [];
-      const totals = rows.reduce((acc: any, r: any) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
-      const dirTotal = (dirRes.data || []).reduce((s: number, r: any) => s + (Number(r.member_count) || 0), 0);
+      const totals = rows.reduce((acc: { partners: number; with_profile: number; with_email: number }, r: CountryStatRow) => ({ partners: acc.partners + (Number(r.total_partners) || 0), with_profile: acc.with_profile + (Number(r.with_profile) || 0), with_email: acc.with_email + (Number(r.with_email) || 0) }), { partners: 0, with_profile: 0, with_email: 0 });
+      const dirTotal = (dirRes.data || []).reduce((s: number, r: { member_count: number }) => s + (Number(r.member_count) || 0), 0);
       return { total_countries: rows.length, total_partners: totals.partners, with_profile: totals.with_profile, with_email: totals.with_email, directory_members: dirTotal, active_jobs: jobsRes.data?.length || 0 };
     }
 
@@ -510,7 +510,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
           active: downloads.filter((j: any) => ["running", "pending"].includes(j.status)).length,
           completed: downloads.filter((j: any) => j.status === "completed").length,
           failed: downloads.filter((j: any) => j.status === "failed").length,
-          jobs: downloads.map((j: any) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
+          jobs: downloads.map((j: DownloadJobRow) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
         },
         emails: {
           pending: emails.filter((e: any) => e.status === "pending").length,
