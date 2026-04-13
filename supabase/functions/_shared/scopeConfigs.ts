@@ -299,7 +299,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
 
     case "strategic":
       return {
-        systemPrompt: STRATEGIC_PROMPT,
+        systemPrompt: STRATEGIC_OPERATIVE_PROMPT,
         tools: [], // Strategic advisor has no tools
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
