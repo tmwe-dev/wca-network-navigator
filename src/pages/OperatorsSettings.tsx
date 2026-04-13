@@ -44,6 +44,10 @@ export default function OperatorsSettings() {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
 
+  if (currentOp && !currentOp.is_admin && operators.length > 0) {
+    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
