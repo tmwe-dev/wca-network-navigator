@@ -1,24 +1,99 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import type { Quality } from "../_shared/kbSlice.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// ── Type definitions for DB entities ──
+interface PartnerData {
+  id: string | null;
+  company_name: string;
+  company_alias: string | null;
+  country_code: string;
+  country_name: string;
+  city: string;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  profile_description: string | null;
+  rating: number | null;
+  raw_profile_markdown: string | null;
+  enrichment_data?: Record<string, unknown>;
+  office_type?: string;
+  lead_status?: string;
+}
 
+interface ContactData {
+  id: string;
+  name: string;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  title: string | null;
+  contact_alias: string | null;
+}
 
+interface ActivityData {
+  id: string;
+  partner_id: string | null;
+  source_type: string;
+  source_id: string;
+  partners: PartnerData | null;
+  selected_contact: ContactData | null;
+}
+
+interface KbEntry {
+  title: string;
+  content: string;
+  category: string;
+  chapter: string;
+  tags: string[];
+}
+
+interface SettingRow {
+  key: string;
+  value: string | null;
+}
+
+interface NetworkRow {
+  network_name: string;
+}
+
+interface ServiceRow {
+  service_category: string;
+}
+
+interface SocialLinkRow {
+  platform: string;
+  url: string;
+  contact_id: string | null;
+}
+
+interface BusinessCardRow {
+  contact_name: string | null;
+  event_name: string | null;
+  met_at: string | null;
+  location: string | null;
+}
+
+interface StyleMemoryRow {
+  content: string;
+  confidence: number;
+  access_count: number;
+}
+
+interface DocRow {
+  file_name: string;
+  extracted_text: string | null;
+}
+
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * STRATEGIC ADVISOR — Intelligent KB Selection
- * 
- * Instead of dumping all KB entries, this selects entries contextually based on:
- * 1. The email type/category (primo_contatto → identita + vendita cards)
- * 2. Quality tier (fast=essentials only, premium=full arsenal)
- * 3. Interaction history (follow-up with no response → ghosting recovery techniques)
  */
 async function fetchKbEntriesStrategic(
-  supabase: any, 
+  supabase: SupabaseClient,
   quality: Quality,
   userId: string,
   context: {
@@ -29,25 +104,22 @@ async function fetchKbEntriesStrategic(
   }
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
-  
-  // Always include core categories + let the AI use what's relevant
+
   const categories: string[] = ["regole_sistema", "filosofia"];
-  
-  // Add user-specified categories if provided
+
   if (context.kb_categories?.length) {
     categories.push(...context.kb_categories);
   }
-  
-  // Add broad categories — let the AI select what's relevant from the results
+
   categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
   if (context.isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
   if (quality !== "fast") categories.push("negoziazione", "tono", "frasi_modello");
   if (quality === "premium") {
     categories.push("arsenale", "persuasione", "chiusura", "errori");
   }
-  
+
   const uniqueCategories = [...new Set(categories)];
-  
+
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
@@ -60,10 +132,10 @@ async function fetchKbEntriesStrategic(
 
   if (!entries || entries.length === 0) return { text: "", sections_used: [] };
 
-  const sectionsUsed = [...new Set(entries.map((e: any) => e.category))];
-  
-  const text = entries
-    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
+  const sectionsUsed = [...new Set((entries as KbEntry[]).map((e) => e.category))];
+
+  const text = (entries as KbEntry[])
+    .map((e) => `### ${e.title} [${e.chapter}]\n${e.content}`)
     .join("\n\n---\n\n");
 
   return { text, sections_used: sectionsUsed };
@@ -76,7 +148,6 @@ function buildStrategicAdvisor(context: {
   followUpCount?: number;
   hasEnrichmentData?: boolean;
 }): string {
-  // Provide context + data, let AI decide strategy
   return `
 # STRATEGIC ADVISOR — Contesto per Decisione Autonoma
 
@@ -96,22 +167,6 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 `;
 }
 
-import { getKBSlice, type Quality } from "../_shared/kbSlice.ts";
-
-function getModel(quality: Quality): string {
-  return quality === "fast" 
-    ? "google/gemini-2.5-flash-lite" 
-    : "google/gemini-3-flash-preview";
-}
-
-function getProfileTruncation(quality: Quality): { description: number; rawProfile: number } {
-  switch (quality) {
-    case "fast": return { description: 0, rawProfile: 0 };
-    case "standard": return { description: 800, rawProfile: 0 };
-    case "premium": return { description: 800, rawProfile: 1500 };
-  }
-}
-
 // ── Shared utilities (single source of truth) ──
 import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 
@@ -121,7 +176,6 @@ function isValidPublicUrl(url: string): boolean {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
     const host = parsed.hostname;
-    // Block private/internal IPs
     if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|169\.254\.|localhost|::1|fc|fd)/i.test(host)) return false;
     return true;
   } catch {
@@ -131,7 +185,6 @@ function isValidPublicUrl(url: string): boolean {
 
 /** Generate aliases inline via AI if missing — lightweight single-item call */
 async function generateAliasesInline(
-  apiKey: string,
   companyName: string,
   contactName: string | null,
   contactTitle: string | null,
@@ -143,18 +196,15 @@ async function generateAliasesInline(
 Rispondi SOLO con JSON: {"company_alias":"...","contact_alias":"..."}`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0,
-      }),
+    const result = await aiChat({
+      models: ["google/gemini-2.5-flash-lite"],
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+      max_tokens: 100,
+      timeoutMs: 8000,
+      context: "generate-email:alias",
     });
-    if (!resp.ok) return { company_alias: "", contact_alias: "" };
-    const result = await resp.json();
-    const text = result.choices?.[0]?.message?.content || "";
+    const text = result.content || "";
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
   } catch (e) {
@@ -164,14 +214,18 @@ Rispondi SOLO con JSON: {"company_alias":"...","contact_alias":"..."}`;
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     // ── Auth check (REQUIRED) ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -184,7 +238,7 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub as string;
@@ -193,20 +247,17 @@ serve(async (req) => {
 
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
     // Use service role for data queries (user is already authenticated above)
     const supabase = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let partner: any = null;
-    let contact: any = null;
+    let partner: PartnerData | null = null;
+    let contact: ContactData | null = null;
     let contactEmail: string | null = null;
     let sourceType = "partner";
-    let activity: any = null;
+    let activity: ActivityData | null = null;
 
     if (standalone && partner_id) {
       // ── STANDALONE + PARTNER_ID MODE: load real partner data from DB ──
@@ -218,7 +269,7 @@ serve(async (req) => {
         .single();
 
       if (realPartner) {
-        partner = realPartner;
+        partner = realPartner as PartnerData;
         sourceType = "partner";
 
         // Load contacts for this partner
@@ -229,14 +280,13 @@ serve(async (req) => {
           .limit(5);
 
         if (contacts?.length) {
-          // Find contact matching recipient_name if possible
           const matchedContact = recipient_name
-            ? contacts.find((c: any) => 
+            ? contacts.find((c: ContactData) =>
                 c.name?.toLowerCase().includes(recipient_name.toLowerCase()) ||
                 c.contact_alias?.toLowerCase().includes(recipient_name.toLowerCase())
               ) || contacts[0]
             : contacts[0];
-          contact = matchedContact;
+          contact = matchedContact as ContactData;
           contactEmail = contact.email || partner.email;
         } else {
           contactEmail = partner.email;
@@ -274,6 +324,7 @@ serve(async (req) => {
       };
       if (recipient_name) {
         contact = {
+          id: "",
           name: recipient_name,
           contact_alias: recipient_name,
           title: null, email: null, direct_phone: null, mobile: null,
@@ -305,7 +356,7 @@ serve(async (req) => {
       .single();
 
     if (actErr || !actData) throw new Error("Activity not found");
-    activity = actData;
+    activity = actData as unknown as ActivityData;
 
     sourceType = activity.source_type || "partner";
     partner = activity.partners;
@@ -411,9 +462,9 @@ serve(async (req) => {
         JSON.stringify({
           error: "no_contact",
           message: "Nessun contatto selezionato. Seleziona un contatto prima di generare l'email.",
-          partner_name: partner.company_name,
+          partner_name: partner!.company_name,
         }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
@@ -423,32 +474,31 @@ serve(async (req) => {
         JSON.stringify({
           error: "no_email",
           message: "Nessun indirizzo email disponibile per questo contatto/partner",
-          partner_name: partner.company_name,
+          partner_name: partner!.company_name,
           contact_name: contact?.name || null,
         }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
     // ── AUTO-GENERATE ALIASES IF MISSING ──
-    const needsCompanyAlias = !standalone && !partner.company_alias;
+    const needsCompanyAlias = !standalone && !partner!.company_alias;
     const needsContactAlias = contact && !contact.contact_alias;
 
     if (needsCompanyAlias || needsContactAlias) {
-      console.log(`Auto-generating aliases for ${partner.company_name} (company: ${needsCompanyAlias}, contact: ${needsContactAlias})`);
+      console.log(`Auto-generating aliases for ${partner!.company_name} (company: ${needsCompanyAlias}, contact: ${needsContactAlias})`);
       const generated = await generateAliasesInline(
-        LOVABLE_API_KEY,
-        partner.company_name,
+        partner!.company_name,
         contact?.name || null,
         contact?.title || null,
       );
 
       if (generated.company_alias && needsCompanyAlias) {
-        partner.company_alias = generated.company_alias;
+        partner!.company_alias = generated.company_alias;
         if (sourceType === "partner") {
-          await supabase.from("partners").update({ company_alias: generated.company_alias }).eq("id", partner.id);
+          await supabase.from("partners").update({ company_alias: generated.company_alias }).eq("id", partner!.id!);
         } else if (sourceType === "contact") {
-          await supabase.from("imported_contacts").update({ company_alias: generated.company_alias }).eq("id", partner.id);
+          await supabase.from("imported_contacts").update({ company_alias: generated.company_alias }).eq("id", partner!.id!);
         }
       }
       if (generated.contact_alias && needsContactAlias && contact) {
@@ -466,23 +516,23 @@ serve(async (req) => {
     const isPartnerSource = (sourceType === "partner" && partner?.id) && (!standalone || partner_id);
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       isPartnerSource
-        ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id)
-        : Promise.resolve({ data: [] }),
+        ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner!.id!)
+        : Promise.resolve({ data: [] as NetworkRow[] }),
       isPartnerSource && quality !== "fast"
-        ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id)
-        : Promise.resolve({ data: [] }),
+        ? supabase.from("partner_services").select("service_category").eq("partner_id", partner!.id!)
+        : Promise.resolve({ data: [] as ServiceRow[] }),
       supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%"),
       isPartnerSource && quality === "premium"
-        ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id)
-        : Promise.resolve({ data: [] }),
+        ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner!.id!)
+        : Promise.resolve({ data: [] as SocialLinkRow[] }),
     ]);
 
-    const networks = networksRes.data || [];
-    const services = servicesRes.data || [];
-    const socialLinks = socialRes.data || [];
+    const networks = (networksRes.data || []) as NetworkRow[];
+    const services = (servicesRes.data || []) as ServiceRow[];
+    const socialLinks = (socialRes.data || []) as SocialLinkRow[];
 
     const settings: Record<string, string> = {};
-    (settingsRes.data || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
+    ((settingsRes.data || []) as SettingRow[]).forEach((r) => { settings[r.key] = r.value || ""; });
 
     // ─── Style Preferences from AI Memory (learned from user edits) ───
     let stylePreferencesContext = "";
@@ -495,7 +545,7 @@ serve(async (req) => {
       .order("access_count", { ascending: false })
       .limit(5);
     if (styleMemories && styleMemories.length > 0) {
-      stylePreferencesContext = `\nPREFERENZE DI STILE APPRESE (dall'editing dell'utente):\n${styleMemories.map((m: any) => `- ${m.content}`).join("\n")}\nAPPLICA queste preferenze nella generazione.\n`;
+      stylePreferencesContext = `\nPREFERENZE DI STILE APPRESE (dall'editing dell'utente):\n${(styleMemories as StyleMemoryRow[]).map((m) => `- ${m.content}`).join("\n")}\nAPPLICA queste preferenze nella generazione.\n`;
     }
 
     // ─── Import commercial intelligence modules ───
@@ -503,7 +553,7 @@ serve(async (req) => {
 
     // ─── Same-Location Guard: prevent duplicate comms to same branch ───
     const effectivePartnerId = isPartnerSource ? (activity?.partner_id || partner?.id) : partner?.id;
-    
+
     if (!standalone && effectivePartnerId) {
       const guardResult = await checkSameLocationContacts(
         supabase, effectivePartnerId, contactEmail, userId
@@ -515,7 +565,7 @@ serve(async (req) => {
             message: guardResult.reason,
             recent_contact: guardResult.recentContact,
           }),
-          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -525,17 +575,17 @@ serve(async (req) => {
     let relationshipBlock = "";
     let branchBlock = "";
     let interlocutorBlock = "";
-    
+
     if (effectivePartnerId) {
       const { metrics, historyText } = await analyzeRelationshipHistory(supabase, effectivePartnerId, userId);
       if (historyText) historyContext = `\n${historyText}\n`;
       relationshipBlock = buildRelationshipAnalysisBlock(metrics);
-      
+
       // Branch coordination
       const branches = await getSameCompanyBranches(supabase, effectivePartnerId);
       branchBlock = buildBranchCoordinationBlock(branches, partner?.city);
     }
-    
+
     // ─── Interlocutor Type (Partner vs End Client) ───
     interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
 
@@ -548,7 +598,7 @@ serve(async (req) => {
         .eq("matched_partner_id", effectivePartnerId)
         .limit(3);
       if (bcaRows && bcaRows.length > 0) {
-        const encounters = bcaRows.map((bc: any) => {
+        const encounters = (bcaRows as BusinessCardRow[]).map((bc) => {
           const parts: string[] = [];
           if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
           if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
@@ -572,7 +622,7 @@ ${encounters}
         .eq("id", effectivePartnerId)
         .single();
       if (partnerEd?.enrichment_data) {
-        const ed = partnerEd.enrichment_data as Record<string, any>;
+        const ed = partnerEd.enrichment_data as Record<string, unknown>;
         if (ed.website_summary) {
           cachedEnrichmentContext += `\nINFORMAZIONI DAL SITO AZIENDALE:\n${String(ed.website_summary).slice(0, 600)}\n`;
         }
@@ -593,9 +643,9 @@ ${encounters}
         .select("file_name, extracted_text")
         .in("id", document_ids);
       if (docs && docs.length > 0) {
-        const docTexts = docs
-          .filter((d: any) => d.extracted_text)
-          .map((d: any) => `--- ${d.file_name} ---\n${d.extracted_text.substring(0, 3000)}`)
+        const docTexts = (docs as DocRow[])
+          .filter((d) => d.extracted_text)
+          .map((d) => `--- ${d.file_name} ---\n${d.extracted_text!.substring(0, 3000)}`)
           .join("\n\n");
         if (docTexts) {
           documentsContext = `\nDOCUMENTI DI RIFERIMENTO:\n${docTexts}\n`;
@@ -610,9 +660,9 @@ ${encounters}
     // LinkedIn context — only for premium
     let linkedinContext = "";
     if (quality === "premium") {
-      const companyLinkedIn = socialLinks.find((l: any) => l.platform === "linkedin" && !l.contact_id);
+      const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
       const contactLinkedIn = contact
-        ? socialLinks.find((l: any) => l.platform === "linkedin" && l.contact_id === contact.id)
+        ? socialLinks.find((l) => l.platform === "linkedin" && l.contact_id === contact!.id)
         : null;
       if (companyLinkedIn || contactLinkedIn) {
         linkedinContext = "\nLINKEDIN:\n";
@@ -631,13 +681,12 @@ ${encounters}
       } else if (name && isLikelyPersonName(name)) {
         recipientName = name;
       } else {
-        // Neither alias nor name is a person name — use generic greeting
         recipientName = "";
       }
     } else {
       recipientName = "";
     }
-    const recipientCompany = partner.company_alias || partner.company_name;
+    const recipientCompany = partner!.company_alias || partner!.company_name;
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
@@ -646,15 +695,15 @@ ${encounters}
 
     const partnerContext = `
 AZIENDA DESTINATARIA:
-- Nome: ${recipientCompany}${partner.company_name !== recipientCompany ? ` (ragione sociale: ${partner.company_name})` : ""}
-- Città: ${partner.city}, ${partner.country_name} (${partner.country_code})
-${quality !== "fast" ? `- Sito web: ${partner.website || "N/A"}` : ""}
+- Nome: ${recipientCompany}${partner!.company_name !== recipientCompany ? ` (ragione sociale: ${partner!.company_name})` : ""}
+- Città: ${partner!.city}, ${partner!.country_name} (${partner!.country_code})
+${quality !== "fast" ? `- Sito web: ${partner!.website || "N/A"}` : ""}
 - Email: ${contactEmail}
-${quality !== "fast" ? `- Rating: ${partner.rating ? `${partner.rating}/5` : "N/A"}` : ""}
-- Network: ${networks.map((n: any) => n.network_name).join(", ") || "N/A"}
-${quality !== "fast" ? `- Servizi: ${services.map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}` : ""}
-${trunc.description > 0 && partner.profile_description ? `- Descrizione: ${partner.profile_description.substring(0, trunc.description)}` : ""}
-${trunc.rawProfile > 0 && partner.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner.raw_profile_markdown.substring(0, trunc.rawProfile)}` : ""}
+${quality !== "fast" ? `- Rating: ${partner!.rating ? `${partner!.rating}/5` : "N/A"}` : ""}
+- Network: ${networks.map((n) => n.network_name).join(", ") || "N/A"}
+${quality !== "fast" ? `- Servizi: ${services.map((s) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}` : ""}
+${trunc.description > 0 && partner!.profile_description ? `- Descrizione: ${partner!.profile_description.substring(0, trunc.description)}` : ""}
+${trunc.rawProfile > 0 && partner!.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner!.raw_profile_markdown.substring(0, trunc.rawProfile)}` : ""}
 ${linkedinContext}`;
 
     const contactContext = contact ? `
@@ -689,7 +738,10 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
       kb_categories: undefined,
     });
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
+    const salesKBSlice = kbResult.text || "";
+    if (!kbResult.text && fullSalesKB) {
+      console.warn("[generate-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
+    }
 
     // Build Strategic Advisor instructions
     const strategicAdvisor = buildStrategicAdvisor({
@@ -720,7 +772,7 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
 `;
 
     // Language hint (AI can override based on context)
-    const detected = getLanguageHint(partner.country_code);
+    const detected = getLanguageHint(partner!.country_code);
     const effectiveLanguage = language || detected.language;
 
     const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
@@ -734,7 +786,7 @@ ${strategicAdvisor}
 - La firma viene aggiunta automaticamente — non includerla.
 
 ## Guardrail:
-- Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})
+- Lingua: ${effectiveLanguage} (${partner!.country_code} → ${detected.languageLabel})
 - Usa alias/nome breve nel saluto, mai nome completo
 - Zero allucinazioni: usa SOLO dati forniti`;
 
@@ -762,63 +814,23 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
 
     const model = getModel(quality);
 
-    // Fallback model cascade with timeout
-    const fallbackModels = [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
-    let response: Response | null = null;
-    for (const m of fallbackModels) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45_000);
-      try {
-        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: m,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-          }),
-          signal: controller.signal,
-        });
-        if (response.ok) { clearTimeout(timeoutId); break; }
-        // Handle non-retryable errors
-        const status = response.status;
-        clearTimeout(timeoutId);
-        if (status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        const errText = await response.text();
-        console.warn(`[generate-email] Model ${m} failed (${status}): ${errText.substring(0, 200)}`);
-        response = null; // try next model
-      } catch (e: any) {
-        clearTimeout(timeoutId);
-        if (e.name === "AbortError") { console.warn(`[generate-email] Timeout on model ${m}`); response = null; continue; }
-        throw e;
-      }
-    }
-
-    if (!response || !response.ok) {
-      throw new Error("All AI models failed");
-    }
-
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || "";
+    // AI generation via centralized gateway
+    const result = await aiChat({
+      models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      timeoutMs: 45000,
+      maxRetries: 1,
+      context: "generate-email:" + userId.substring(0, 8),
+    });
+    const content = result.content || "";
 
     // Consume credits atomically
     if (result.usage) {
-      const inputTokens = result.usage.prompt_tokens || 0;
-      const outputTokens = result.usage.completion_tokens || 0;
+      const inputTokens = result.usage.promptTokens;
+      const outputTokens = result.usage.completionTokens;
       const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 2) / 1000));
       await supabase.rpc("deduct_credits", {
         p_user_id: userId,
@@ -846,14 +858,10 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
 
     // Clean up excessive whitespace/formatting from AI output
     body = body
-      // Remove empty paragraphs (with optional whitespace/nbsp/br inside)
       .replace(/<p>\s*(<br\s*\/?>|\s|&nbsp;)*\s*<\/p>/gi, "")
-      // Collapse 3+ consecutive <br> into 2
       .replace(/(<br\s*\/?\s*>[\s\n]*){3,}/gi, "<br><br>")
-      // Remove leading/trailing <br> inside <p> tags
       .replace(/<p>\s*(<br\s*\/?\s*>)+/gi, "<p>")
       .replace(/(<br\s*\/?\s*>)+\s*<\/p>/gi, "</p>")
-      // Remove whitespace-only text nodes between tags
       .replace(/>\s{2,}</g, "> <")
       .trim();
 
@@ -868,21 +876,18 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
         subject,
         body,
         full_content: content,
-        partner_name: partner.company_name,
+        partner_name: partner!.company_name,
         contact_name: contact?.contact_alias || contact?.name || null,
         contact_email: contactEmail,
         has_contact: !!contact,
-        used_partner_email: !contact?.email && !!partner.email,
+        used_partner_email: !contact?.email && !!partner!.email,
         quality,
         model,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
-  } catch (e) {
+  } catch (e: unknown) {
     console.error("generate-email error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));
   }
 });
