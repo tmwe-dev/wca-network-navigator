@@ -130,6 +130,7 @@ export function AgentChat({ agent }: Props) {
         />
         <Button
           size="icon"
+          aria-label={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
           variant={speech.listening ? "destructive" : "outline"}
           onClick={speech.toggle}
           className={cn("relative", speech.listening && "animate-pulse")}
@@ -140,7 +141,7 @@ export function AgentChat({ agent }: Props) {
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />
           )}
         </Button>
-        <Button size="icon" onClick={send} disabled={!input.trim() || loading}>
+        <Button size="icon" onClick={send} disabled={!input.trim() || loading} aria-label="Invia">
           <Send className="w-4 h-4" />
         </Button>
       </div>

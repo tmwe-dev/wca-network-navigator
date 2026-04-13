@@ -37,17 +37,16 @@
   },
   "common": {
     "save": "Save",
-    "cancel": "Cancel",
     "delete": "Delete",
+    "deleteSelected": "Delete selected",
     "edit": "Edit",
-    "search": "Search",
-    "filter": "Filter",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "confirm": "Confirm",
-    "back": "Back",
-    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
     "close": "Close",
     "refresh": "Refresh",
     "export": "Export",
@@ -99,7 +98,8 @@
     "lead_status": "Lead Status",
     "last_interaction": "Last Interaction",
     "company": "Company",
-    "country": "Country"
+    "country": "Country",
+    "noInteractions": "No interactions recorded"
   },
   "email": {
     "inbox": "Inbox",
@@ -113,7 +113,12 @@
     "date": "Date",
     "unread": "Unread",
     "classification": "Classification",
-    "sentiment": "Sentiment"
+    "sentiment": "Sentiment",
+    "noAIRules": "No AI rules configured for this address",
+    "saveAsTemplate": "Save as template",
+    "noTemplate": "No template",
+    "saveAsNewType": "Save as new type",
+    "saveAndSend": "Save and send"
   },
   "holding": {
     "title": "Holding Pattern",
@@ -129,7 +134,8 @@
     "title": "Agent Team",
     "assigned_clients": "Assigned Clients",
     "active_tasks": "Active Tasks",
-    "completed_tasks": "Completed Tasks"
+    "completed_tasks": "Completed Tasks",
+    "noAgentAssigned": "No agent assigned"
   },
   "settings": {
     "language": "Language",

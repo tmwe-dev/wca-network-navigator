@@ -272,7 +272,7 @@ export function ContactsGridTab({ contacts, activeLogId }: ContactsGridTabProps)
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="icon" aria-label="Azione"
                   className="h-7 w-7"
                   disabled={safePage === 0}
                   onClick={() => setCurrentPage(safePage - 1)}
@@ -281,7 +281,7 @@ export function ContactsGridTab({ contacts, activeLogId }: ContactsGridTabProps)
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="icon" aria-label="Successivo"
                   className="h-7 w-7"
                   disabled={safePage >= totalPages - 1}
                   onClick={() => setCurrentPage(safePage + 1)}

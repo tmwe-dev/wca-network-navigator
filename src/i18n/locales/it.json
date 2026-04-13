@@ -37,17 +37,16 @@
   },
   "common": {
     "save": "Salva",
-    "cancel": "Annulla",
     "delete": "Elimina",
+    "deleteSelected": "Elimina selezionati",
     "edit": "Modifica",
-    "search": "Cerca",
-    "filter": "Filtra",
+    "confirm": "Conferma",
+    "cancel": "Annulla",
     "loading": "Caricamento...",
     "error": "Errore",
     "success": "Successo",
-    "confirm": "Conferma",
-    "back": "Indietro",
-    "next": "Avanti",
+    "search": "Cerca",
+    "filter": "Filtra",
     "close": "Chiudi",
     "refresh": "Aggiorna",
     "export": "Esporta",
@@ -99,7 +98,8 @@
     "lead_status": "Stato Lead",
     "last_interaction": "Ultima Interazione",
     "company": "Azienda",
-    "country": "Paese"
+    "country": "Paese",
+    "noInteractions": "Nessuna interazione registrata"
   },
   "email": {
     "inbox": "Posta in arrivo",
@@ -113,7 +113,12 @@
     "date": "Data",
     "unread": "Non letti",
     "classification": "Classificazione",
-    "sentiment": "Sentiment"
+    "sentiment": "Sentiment",
+    "noAIRules": "Nessuna regola AI configurata per questo indirizzo",
+    "saveAsTemplate": "Salva come template",
+    "noTemplate": "Nessun template",
+    "saveAsNewType": "Salva come nuovo tipo",
+    "saveAndSend": "Salva e invia"
   },
   "holding": {
     "title": "Circuito di Attesa",
@@ -129,7 +134,8 @@
     "title": "Team Agenti",
     "assigned_clients": "Clienti Assegnati",
     "active_tasks": "Task Attivi",
-    "completed_tasks": "Task Completati"
+    "completed_tasks": "Task Completati",
+    "noAgentAssigned": "Nessun agente assegnato"
   },
   "settings": {
     "language": "Lingua",

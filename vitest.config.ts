@@ -23,6 +23,12 @@ export default defineConfig({
         "src/main.tsx",
         "src/i18n/**",
       ],
+      thresholds: {
+        statements: 45,
+        branches: 35,
+        functions: 40,
+        lines: 45,
+      },
     },
   },
   resolve: {

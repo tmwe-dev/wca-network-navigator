@@ -55,18 +55,18 @@ export function ContactRecordHeader({ sourceType, companyName, contactName, curr
       <div className="flex items-center gap-1 flex-shrink-0">
         {hasList && (
           <>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={currentIndex <= 0}>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={currentIndex <= 0} aria-label="Precedente">
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="text-[10px] text-muted-foreground tabular-nums min-w-[40px] text-center">
               {currentIndex + 1}/{totalCount}
             </span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext} disabled={currentIndex >= totalCount - 1}>
+            <Button variant="ghost" size="icon" aria-label="Successivo" className="h-7 w-7" onClick={onNext} disabled={currentIndex >= totalCount - 1}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </>
         )}
-        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={onClose} aria-label="Chiudi">
           <X className="w-4 h-4" />
         </Button>
       </div>
