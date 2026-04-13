@@ -78,12 +78,12 @@ export function InviatiSubTab() {
 
       const { data: msgs } = await supabase
         .from("channel_messages")
-        .select("id, from_address, created_at, subject, body_text")
+        .select("id, from_address, created_at, subject, body_text, category")
         .eq("direction", "inbound")
         .in("from_address", emails)
         .order("created_at", { ascending: false });
 
-      const map: Record<string, { date: string; subject: string; snippet: string }> = {};
+      const map: Record<string, { date: string; subject: string; snippet: string; category?: string }> = {};
       for (const msg of msgs || []) {
         const addr = msg.from_address?.toLowerCase();
         if (addr && !map[addr]) {
@@ -91,6 +91,7 @@ export function InviatiSubTab() {
             date: msg.created_at,
             subject: msg.subject || "",
             snippet: (msg.body_text || "").slice(0, 120),
+            category: msg.category || undefined,
           };
         }
       }
@@ -99,8 +100,43 @@ export function InviatiSubTab() {
     enabled: items.length > 0,
   });
 
+  // Query bounces for sent emails
+  const { data: bounces } = useQuery({
+    queryKey: ["outreach-bounces", items.map((i) => i.email)],
+    queryFn: async () => {
+      if (items.length === 0) return {};
+      const emails = [...new Set(items.map((i) => i.email).filter(Boolean))];
+      if (emails.length === 0) return {};
+
+      const { data: bounceRules } = await supabase
+        .from("email_address_rules")
+        .select("email_address, notes")
+        .in("email_address", emails)
+        .eq("auto_action", "archive");
+
+      const map: Record<string, string> = {};
+      for (const r of bounceRules || []) {
+        map[r.email_address.toLowerCase()] = r.notes || "Hard bounce";
+      }
+      return map;
+    },
+    enabled: items.length > 0,
+  });
+
   const getResponseStatus = (item: SentItem) => {
-    const senderReply = replies?.[item.email?.toLowerCase()];
+    const emailLower = item.email?.toLowerCase();
+
+    // Check bounce first
+    if (emailLower && bounces?.[emailLower]) {
+      return { label: "Bounce", color: "text-destructive", dot: "bg-destructive", icon: XCircle };
+    }
+
+    const senderReply = replies?.[emailLower];
+
+    // Check if reply is actually a bounce notification
+    if (senderReply?.category === "bounce") {
+      return { label: "Soft Bounce", color: "text-orange-500", dot: "bg-orange-500", icon: AlertTriangle };
+    }
 
     if (senderReply && new Date(senderReply.date) > new Date(item.sent_at)) {
       return {
