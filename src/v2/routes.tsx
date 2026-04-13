@@ -1,11 +1,12 @@
 /**
- * Routes v2 — Complete routing with all 37 pages
+ * Routes v2 — Complete routing with all 37 pages + role-guarded admin routes
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -48,6 +49,7 @@ const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ defau
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
 const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
+const AdminOverviewPage = lazy(() => import("@/components/admin/UserActivityOverview").then((m) => ({ default: m.UserActivityOverview })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 // ── Loading fallback ─────────────────────────────────────────────────
@@ -84,17 +86,17 @@ export function V2Routes(): React.ReactElement {
           <Route path="missions" element={<MissionBuilderPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="prospects" element={<ProspectPage />} />
-          <Route path="staff" element={<StaffPage />} />
-          <Route path="ai-lab" element={<AILabPage />} />
+          <Route path="staff" element={<RoleGuard requiredRole="admin"><StaffPage /></RoleGuard>} />
+          <Route path="ai-lab" element={<RoleGuard requiredRole="operator"><AILabPage /></RoleGuard>} />
           <Route path="knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="research" element={<RADashboardPage />} />
           <Route path="globe" element={<GlobePage />} />
           <Route path="deep-search" element={<DeepSearchPage />} />
           <Route path="sorting" element={<SortingPage />} />
           <Route path="telemetry" element={<TelemetryPage />} />
-          <Route path="operations" element={<OperationsPage />} />
+          <Route path="operations" element={<RoleGuard requiredRole="operator"><OperationsPage /></RoleGuard>} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="diagnostics" element={<DiagnosticsPage />} />
+          <Route path="diagnostics" element={<RoleGuard requiredRole="admin"><DiagnosticsPage /></RoleGuard>} />
           <Route path="import" element={<ImportPage />} />
           <Route path="acquisition" element={<AcquisizionePartnerPage />} />
           <Route path="agent-chat" element={<AgentChatHubPage />} />
@@ -104,7 +106,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="ra-scraping" element={<RAScrapingEnginePage />} />
           <Route path="ra-company/:id" element={<RACompanyDetailPage />} />
           <Route path="campaign-jobs" element={<CampaignJobsPage />} />
-          <Route path="admin-users" element={<AdminUsersPage />} />
+          <Route path="admin-users" element={<RoleGuard requiredRole="admin"><AdminUsersPage /></RoleGuard>} />
+          <Route path="admin-overview" element={<RoleGuard requiredRole="admin"><AdminOverviewPage /></RoleGuard>} />
           <Route path="onboarding" element={<OnboardingPage />} />
           <Route path="guida" element={<GuidaPage />} />
           <Route path="ai-control" element={<AIControlCenterPage />} />
