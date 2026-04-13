@@ -195,16 +195,16 @@ export function HoldingPatternCommandCenter() {
                         <span className="text-[11px] font-bold text-foreground truncate uppercase">
                           {group.companyName}
                         </span>
-                        {"countryCode" in group && (group as unknown as Record<string, unknown>).countryCode && (
+                        {"countryCode" in group && (group as unknown as Record<string, unknown>).countryCode ? (
                           <span className="text-xs shrink-0">{getCountryFlag(String((group as unknown as Record<string, unknown>).countryCode))}</span>
-                        )}
-                        {"isImportedContact" in group && (group as unknown as Record<string, unknown>).isImportedContact && (
+                        ) : null}
+                        {"isImportedContact" in group && (group as unknown as Record<string, unknown>).isImportedContact ? (
                           <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
-                        )}
+                        ) : null}
                       </div>
-                      {"contactName" in group && (group as unknown as Record<string, unknown>).contactName && (
+                      {"contactName" in group && (group as unknown as Record<string, unknown>).contactName ? (
                         <p className="text-[10px] text-muted-foreground truncate">{String((group as unknown as Record<string, unknown>).contactName)}</p>
-                      )}
+                      ) : null}
                     </div>
                     {group.unreadCount > 0 && (
                       <Badge variant="destructive" className="text-[8px] px-1.5 h-4 shrink-0">{group.unreadCount}</Badge>
