@@ -302,7 +302,6 @@ export default function AgentChatHub() {
           <Button
             size="icon"
             aria-label="Chiama"
-            aria-label="Dettatura vocale"
             variant={speech.listening ? "destructive" : "outline"}
             onClick={speech.toggle}
             disabled={!activeAgent}

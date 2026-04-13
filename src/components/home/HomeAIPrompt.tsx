@@ -230,7 +230,6 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             )}
             onClick={() => send()}
             disabled={loading || !input.trim()}
-            aria-label="Invia"
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
