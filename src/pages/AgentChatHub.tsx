@@ -322,6 +322,7 @@ export default function AgentChatHub() {
             disabled={!activeAgent?.elevenlabs_agent_id}
             className="rounded-xl"
             title="Chiamata vocale"
+            aria-label="Chiamata vocale"
           >
             <Phone className="w-4 h-4" />
           </Button>
