@@ -145,13 +145,13 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       let wcaIds: number[] = [];
       if (mode === "no_profile") {
         const { data } = await supabase.from("partners").select("wca_id").eq("country_code", cc).not("wca_id", "is", null).is("raw_profile_html", null);
-        wcaIds = (data || []).map((p: any) => p.wca_id).filter(Boolean);
+        wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
       } else {
         const { data } = await supabase.from("partners").select("wca_id").eq("country_code", cc).not("wca_id", "is", null);
-        wcaIds = (data || []).map((p: any) => p.wca_id).filter(Boolean);
+        wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
       }
       if (wcaIds.length === 0) return { error: `Nessun partner da scaricare per ${cn}.` };
-      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: cc, country_name: cn, wca_ids: wcaIds as any, total_count: wcaIds.length, delay_seconds: delay, status: "pending" }).select("id").single();
+      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: cc, country_name: cn, wca_ids: wcaIds as unknown as Record<string, unknown>, total_count: wcaIds.length, delay_seconds: delay, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
       const jobItems = wcaIds.map((id: number, i: number) => ({ job_id: job.id, wca_id: id, position: i, status: "pending" }));
       for (let i = 0; i < jobItems.length; i += 500) { await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500)); }
@@ -168,7 +168,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (!p.wca_id) return { error: `"${p.company_name}" non ha wca_id.` };
       const { data: active } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
       if (active && active.length > 0) return { error: "C'è già un job attivo." };
-      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: p.country_code, country_name: p.country_name, wca_ids: [p.wca_id] as any, total_count: 1, delay_seconds: 15, status: "pending" }).select("id").single();
+      const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: p.country_code, country_name: p.country_name, wca_ids: [p.wca_id] as unknown as Record<string, unknown>, total_count: 1, delay_seconds: 15, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
       await supabase.from("download_job_items").insert({ job_id: job.id, wca_id: p.wca_id, position: 0, status: "pending" });
       return { success: true, job_id: job.id, message: `Download avviato per "${p.company_name}".` };
@@ -297,7 +297,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (args.activity_type) query = query.eq("activity_type", args.activity_type);
       const { data, error } = await query;
       if (error) return { error: error.message };
-      return { count: data?.length || 0, activities: (data || []).map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+      return { count: data?.length || 0, activities: (data || []).map((a: ActivityRow) => ({ ...a, company_name: (a.source_meta as SourceMetaRecord | null)?.company_name || null })) };
     }
 
     case "create_activity": {
@@ -308,7 +308,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         title: String(args.title), description: args.description ? String(args.description) : null,
         activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
         partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
-        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as any,
+        priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
@@ -440,7 +440,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const ids = args.ids as string[];
       const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      const { error } = await supabase.from(table as any).delete().in("id", ids);
+      const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 
@@ -476,7 +476,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         scheduled_at: scheduledAt,
         status: "pending",
         user_id: userId,
-      } as any).select("id").single();
+      } as Record<string, unknown>).select("id").single();
       if (error) return { error: error.message };
       await supabase.from("activities").insert({
         title: `Email programmata: ${args.subject}`,
@@ -489,7 +489,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         user_id: userId,
         email_subject: String(args.subject),
         email_body: String(args.html_body),
-        source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as any,
+        source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as Record<string, unknown>,
       });
       return { success: true, queue_id: data.id, scheduled_at: scheduledAt, message: `Email programmata per ${scheduledAt} a ${args.to_email}.` };
     }
@@ -542,7 +542,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         agent_id: targetAgent.id, user_id: userId,
         task_type: String(args.task_type || "research"),
         description: String(args.description),
-        target_filters: (args.target_filters || {}) as any,
+        target_filters: (args.target_filters || {}) as Record<string, unknown>,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, task_id: data.id, agent_name: targetAgent.name, message: `Task creato per ${targetAgent.name}: "${args.description}"` };
@@ -556,7 +556,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const agentIds = [...new Set((tasks || []).map((t: any) => t.agent_id))];
       const { data: agentsData } = await supabase.from("agents").select("id, name").in("id", agentIds);
       const nameMap: Record<string, string> = {};
-      for (const a of (agentsData || []) as any[]) nameMap[a.id] = a.name;
+      for (const a of (agentsData || []) as Array<{ id: string; name: string }>) nameMap[a.id] = a.name;
       let results = (tasks || []).map((t: any) => ({ ...t, agent_name: nameMap[t.agent_id] || "?" }));
       if (args.agent_name) results = results.filter((t: any) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
       return { count: results.length, tasks: results };
@@ -568,7 +568,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const agentIds = agents.map((a: any) => a.id);
       const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
       const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
-      for (const t of (tasks || []) as any[]) {
+      for (const t of (tasks || []) as Array<{ agent_id: string; status: string }>) {
         if (!taskStats[t.agent_id]) taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
         if (taskStats[t.agent_id][t.status as keyof typeof taskStats[string]] !== undefined) taskStats[t.agent_id][t.status as keyof typeof taskStats[string]]++;
       }
@@ -599,23 +599,23 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { data: agents } = await supabase.from("agents").select("id, name, knowledge_base").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name as string)}%`).limit(1);
       if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
       const agent = agents[0];
-      const kb = (agent.knowledge_base as any[]) || [];
+      const kb = (agent.knowledge_base as KbEntry[]) || [];
       kb.push({ title: String(args.title), content: String(args.content), added_at: new Date().toISOString() });
-      const { error } = await supabase.from("agents").update({ knowledge_base: kb as any, updated_at: new Date().toISOString() }).eq("id", agent.id);
+      const { error } = await supabase.from("agents").update({ knowledge_base: kb as unknown as Record<string, unknown>, updated_at: new Date().toISOString() }).eq("id", agent.id);
       if (error) return { error: error.message };
       return { success: true, agent_name: agent.name, kb_entries: kb.length, message: `KB entry "${args.title}" aggiunta a ${agent.name}.` };
     }
 
     case "create_work_plan": {
-      const steps = (args.steps as any[] || []).map((s: any, i: number) => ({
+      const steps = (args.steps as WorkPlanStep[] || []).map((s: WorkPlanStep, i: number) => ({
         index: i, title: s.title || `Step ${i + 1}`, description: s.description || "", status: "pending",
       }));
       const { data, error } = await supabase.from("ai_work_plans").insert({
         user_id: userId, title: String(args.title),
         description: String(args.description || ""),
-        steps: steps as any, status: "active",
-        tags: (args.tags || []) as any,
-        metadata: { created_by: "luca_director", created_at: new Date().toISOString() } as any,
+        steps: steps as unknown as Record<string, unknown>, status: "active",
+        tags: (args.tags || []) as string[],
+        metadata: { created_by: "luca_director", created_at: new Date().toISOString() } as Record<string, unknown>,
       }).select("id, title").single();
       if (error) return { error: error.message };
       return { success: true, plan_id: data.id, title: data.title, total_steps: steps.length, message: `Piano "${data.title}" creato con ${steps.length} step.` };
@@ -640,7 +640,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const updates: Record<string, unknown> = {};
       if (args.status) updates.status = args.status;
       if (args.advance_step) {
-        const steps = (plan.steps as any[]) || [];
+        const steps = (plan.steps as WorkPlanStep[]) || [];
         if (plan.current_step < steps.length) {
           steps[plan.current_step].status = "completed";
           updates.steps = steps;
@@ -706,7 +706,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       results.email_campaigns = { pending: emailsPending, sent: emailsSent };
       const { data: taskData } = await supabase.from("agent_tasks").select("status").eq("user_id", userId);
       const taskCounts: Record<string, number> = {};
-      for (const t of (taskData || []) as any[]) { taskCounts[t.status] = (taskCounts[t.status] || 0) + 1; }
+      for (const t of (taskData || []) as Array<{ status: string }>) { taskCounts[t.status] = (taskCounts[t.status] || 0) + 1; }
       results.agent_tasks = taskCounts;
       const { count: activitiesPending } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending");
       const { count: activitiesOverdue } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").lt("due_date", new Date().toISOString().split("T")[0]);
@@ -909,13 +909,13 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "create_campaign": {
-      const steps: any[] = [];
+      const steps: WorkPlanStep[] = [];
       const contactType = String(args.contact_type || "all");
       const countryCodes = (args.country_codes as string[]) || [];
       steps.push({ index: 0, title: "Selezione contatti", description: `Tipo: ${contactType}, Paesi: ${countryCodes.join(", ") || "tutti"}`, status: "pending" });
       const agentNames = (args.agent_names as string[]) || [];
       if (agentNames.length > 0) steps.push({ index: 1, title: "Assegnazione agenti", description: `Agenti: ${agentNames.join(", ")}`, status: "pending" });
-      const abTest = args.ab_test as any;
+      const abTest = args.ab_test as AbTestConfig | undefined;
       if (abTest?.enabled && abTest?.variants?.length > 0) {
         steps.push({ index: steps.length, title: "Configurazione A/B Test", description: `Varianti: ${abTest.variants.map((v: any) => `${v.agent_name}(${v.tone}/${v.percentage}%)`).join(" vs ")}`, status: "pending" });
       }
@@ -923,9 +923,9 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       steps.push({ index: steps.length, title: "Monitoraggio circuito", description: "Verifica risposte e follow-up secondo workflow", status: "pending" });
       const { data, error } = await supabase.from("ai_work_plans").insert({
         user_id: userId, title: `Campagna: ${args.name}`, description: String(args.objective || ""),
-        steps: steps as any, status: "active",
+        steps: steps as unknown as Record<string, unknown>, status: "active",
         tags: ["campaign", contactType, ...(countryCodes.map(c => `country:${c}`))],
-        metadata: { campaign: true, contact_type: contactType, country_codes: countryCodes, agent_names: agentNames, ab_test: abTest || null, max_contacts: Number(args.max_contacts) || 100 } as any,
+        metadata: { campaign: true, contact_type: contactType, country_codes: countryCodes, agent_names: agentNames, ab_test: abTest || null, max_contacts: Number(args.max_contacts) || 100 } as Record<string, unknown>,
       }).select("id, title").single();
       if (error) return { error: error.message };
       return { success: true, campaign_id: data.id, name: data.title, steps: steps.length, message: `Campagna "${args.name}" creata con ${steps.length} step.` };
