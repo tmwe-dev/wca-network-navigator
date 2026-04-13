@@ -84,7 +84,7 @@ export function EmailIntelligencePage(): React.ReactElement {
       </div>
 
       <Tabs defaultValue="manual" className="flex-1 flex flex-col">
-        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50">
+        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto">
           <TabsTrigger value="manual" className="gap-1.5 text-xs">
             <HandMetal className="h-3.5 w-3.5" />
             Gestione Manuale

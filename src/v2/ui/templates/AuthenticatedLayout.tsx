@@ -5,7 +5,9 @@
 import * as React from "react";
 import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
@@ -43,6 +45,7 @@ const GlobalVoiceFAB = lazy(() => import("@/components/voice/GlobalVoiceFAB"));
 const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
+const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -97,6 +100,24 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   };
 
   const deepSearch = useDeepSearchRunner();
+
+  // Onboarding check
+  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
+    queryKey: ["onboarding-completed", profile?.displayName],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("key", "onboarding_completed")
+        .maybeSingle();
+      return data?.value === "true";
+    },
+    staleTime: Infinity,
+    enabled: isAuthenticated && sessionReady,
+  });
 
   useJobHealthMonitor();
   useWcaSync();
@@ -171,6 +192,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   }
 
   if (!isAuthenticated) return null;
+
+  // Show onboarding wizard if not completed
+  if (!onboardingLoading && onboardingDone === false) {
+    return (
+      <GlobalErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={null}>
+            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: ["onboarding-completed"] })} />
+          </Suspense>
+        </QueryClientProvider>
+      </GlobalErrorBoundary>
+    );
+  }
 
   const wcaStatusColor = wcaSession.sessionActive === true ? "text-emerald-400" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
   const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
@@ -276,7 +310,20 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           outreachQueue={outreachQueue}
                           globalSync={globalSync}
                         />
-                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12"><Outlet /></main>
+                        <main className="flex-1 overflow-y-auto md:mt-0 mt-12">
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={location.pathname}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="h-full"
+                            >
+                              <Outlet />
+                            </motion.div>
+                          </AnimatePresence>
+                        </main>
                       </div>
                     </div>
 

@@ -1,10 +1,13 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles, Kanban, Copy } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useTrackPage } from "@/hooks/useTrackPage";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -19,6 +22,17 @@ export default function CRM() {
   const [tab, setTab] = useUrlState<string>("tab", "contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();
+  const qc = useQueryClient();
+
+  const scoreMutation = useMutation({
+    mutationFn: () => invokeEdge("calculate-lead-scores", { body: {}, context: "CRM.recalcScore" }),
+    onSuccess: () => {
+      toast.success("Lead scores ricalcolati");
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["imported-contacts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   useTrackPage("crm", { tab });
 
@@ -57,8 +71,16 @@ export default function CRM() {
         })}
 
         <button
+          onClick={() => scoreMutation.mutate()}
+          disabled={scoreMutation.isPending}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent disabled:opacity-50"
+        >
+          {scoreMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+          Ricalcola Score
+        </button>
+        <button
           onClick={() => setShowAIMatch(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto bg-gradient-to-r from-violet-500/15 to-purple-500/15 text-violet-300 border border-violet-500/30 hover:from-violet-500/25 hover:to-purple-500/25 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20 shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5" />
           AI Match
