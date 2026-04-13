@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles, Kanban } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -79,6 +79,11 @@ export default function CRM() {
         {tab === "biglietti" && (
           <Suspense fallback={<TabFallback />}>
             <BusinessCardsHub />
+          </Suspense>
+        )}
+        {tab === "duplicati" && (
+          <Suspense fallback={<TabFallback />}>
+            <DuplicateDetector />
           </Suspense>
         )}
       </div>

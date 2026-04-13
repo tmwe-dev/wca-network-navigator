@@ -196,7 +196,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
             <Plus className="w-3 h-3" /> Aggiungi
           </Button>
         </div>
-        <ContactInteractionTimeline interactions={interactions} />
+        <ContactInteractionTimeline contactId={contact.id} contactEmail={contact.email} />
       </Section>
 
       <Dialog open={state.showNewInteraction} onOpenChange={(v) => dispatch({ type: "SHOW_INTERACTION", value: v })}>

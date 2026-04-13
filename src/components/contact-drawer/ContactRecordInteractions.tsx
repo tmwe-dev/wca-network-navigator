@@ -98,7 +98,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
       </div>
 
       {interactions && interactions.length > 0 ? (
-        <ContactInteractionTimeline interactions={interactions} />
+        <ContactInteractionTimeline contactId={contactId} />
       ) : (
         <p className="text-xs text-muted-foreground text-center py-3">Nessuna interazione registrata</p>
       )}
