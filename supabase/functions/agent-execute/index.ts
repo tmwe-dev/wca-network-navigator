@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders, supabase } from "./shared.ts";
+import { getCorsHeaders, corsPreflight, supabase } from "./shared.ts";
 import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization") || "";
