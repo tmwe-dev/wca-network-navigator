@@ -144,6 +144,7 @@ export function ProgrammatiSubTab() {
                           if (!d) return;
                           try {
                             if (item.type === "mission_action") await updateMissionActionSchedule(item.realId, d.toISOString());
+                            else if (item.type === "activity") await updateActivitySchedule(item.realId, d.toISOString());
                             qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
                             toast.success(`Posticipato a ${format(d, "dd MMM", { locale: it })}`);
                           } catch { toast.error("Errore"); }
