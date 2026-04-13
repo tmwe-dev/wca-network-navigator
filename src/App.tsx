@@ -66,6 +66,9 @@ const AILab = lazyRetry(() => import("./pages/AILab"));
 const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
 const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
 const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
+const AIArena = lazyRetry(() => import("./pages/AIArena").then(m => ({ default: m.AIArenaPage })));
+const AIControlCenterPage = lazyRetry(() => import("./v2/ui/pages/AIControlCenterPage").then(m => ({ default: m.AIControlCenterPage })));
+const EmailIntelligencePage = lazyRetry(() => import("./v2/ui/pages/EmailIntelligencePage").then(m => ({ default: m.EmailIntelligencePage })));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 // queryClient is now shared from src/lib/queryClient.ts
@@ -145,6 +148,9 @@ const App = () => (
                   <Route path="mission-builder" element={withFeatureBoundary(<MissionBuilder />, "Mission Builder")} />
                   <Route path="telemetry" element={withFeatureBoundary(<Telemetry />, "Telemetry")} />
                   <Route path="staff-direzionale" element={withFeatureBoundary(<StaffDirezionale />, "Staff Direzionale")} />
+                  <Route path="ai-arena" element={withFeatureBoundary(<AIArena />, "AI Arena")} />
+                  <Route path="ai-control" element={withFeatureBoundary(<AIControlCenterPage />, "AI Control")} />
+                  <Route path="email-intelligence" element={withFeatureBoundary(<EmailIntelligencePage />, "Email Intelligence")} />
                   <Route path="operations" element={<Navigate to="network" replace />} />
                   <Route path="contacts" element={<Navigate to="crm" replace />} />
                   <Route path="cockpit" element={<Navigate to="outreach" replace />} />
