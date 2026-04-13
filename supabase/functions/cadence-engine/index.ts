@@ -169,7 +169,7 @@ async function processAction(
   // Log decision
   const { data: decisionLog } = await supabase.from("ai_decision_log").insert({
     user_id: action.user_id,
-    partner_id: action.partner_id,
+    partner_id: partnerId,
     email_address: targetEmail,
     decision_type: "schedule_followup",
     input_context: {
@@ -193,7 +193,7 @@ async function processAction(
     await supabase.from("ai_pending_actions").insert({
       user_id: action.user_id,
       decision_log_id: decisionLog?.id,
-      partner_id: action.partner_id,
+      partner_id: partnerId,
       email_address: targetEmail,
       action_type: mapActionType(action.action_type),
       action_payload: {},
@@ -210,7 +210,7 @@ async function processAction(
     await supabase.from("ai_pending_actions").insert({
       user_id: action.user_id,
       decision_log_id: decisionLog?.id,
-      partner_id: action.partner_id,
+      partner_id: partnerId,
       email_address: targetEmail,
       action_type: mapActionType(action.action_type),
       action_payload: {},
@@ -303,8 +303,8 @@ async function scheduleNextStep(
   await supabase.from("mission_actions").insert({
     mission_id: action.mission_id,
     user_id: action.user_id,
-    partner_id: action.partner_id,
-    contact_id: action.contact_id,
+    partner_id: partnerId,
+    contact_id: null,
     action_type: nextChannel,
     status: "pending",
     position: action.position + 1,
