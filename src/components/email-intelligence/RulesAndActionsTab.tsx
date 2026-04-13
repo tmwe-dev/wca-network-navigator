@@ -146,7 +146,7 @@ function AddressRulesSection() {
                   <p className="text-xs font-medium text-foreground truncate">{rule.email_address}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {rule.display_name && <span className="text-[10px] text-muted-foreground">{rule.display_name}</span>}
-                    {rule.email_count > 0 && <Badge variant="outline" className="text-[10px]">{rule.email_count} email</Badge>}
+                    {(rule.email_count ?? 0) > 0 && <Badge variant="outline" className="text-[10px]">{rule.email_count} email</Badge>}
                   </div>
                 </div>
                 {rule.group_name && (

@@ -71,11 +71,10 @@ export default function AISuggestionsTab() {
   // Analyze with AI
   const analyzeMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await invokeEdge("suggest-email-groups", {
-        min_email_count: minEmailCount,
-        batch_size: 20,
+      const data = await invokeEdge<{ processed: number; suggestions: any[] }>("suggest-email-groups", {
+        body: { min_email_count: minEmailCount, batch_size: 20 },
+        context: "ai-suggestions-tab",
       });
-      if (error) throw new Error(error);
       return data;
     },
     onSuccess: (data: any) => {
