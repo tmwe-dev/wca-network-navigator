@@ -110,7 +110,8 @@ export function useImportBlacklist() {
       }
 
       // Match with partners
-      const allEntries = await findAllBlacklistEntries() as Array<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic blacklist entries
+      const allEntries = await findAllBlacklistEntries() as any[];
       const { data: partners } = await supabase
         .from("partners")
         .select("id, company_name, country_name");
@@ -118,8 +119,8 @@ export function useImportBlacklist() {
       let matchCount = 0;
       if (allEntries && partners) {
         for (const entry of allEntries) {
-          const entryName = (entry.company_name || "").toLowerCase().trim();
-          const entryCountry = (entry.country || "").toLowerCase().trim();
+          const entryName = String(entry.company_name || "").toLowerCase().trim();
+          const entryCountry = String(entry.country || "").toLowerCase().trim();
 
           const match = partners.find(p => {
             const pName = (p.company_name || "").toLowerCase().trim();
@@ -130,7 +131,7 @@ export function useImportBlacklist() {
           });
 
           if (match) {
-            await updateBlacklistEntry(entry.id, { matched_partner_id: match.id });
+            await updateBlacklistEntry(String(entry.id), { matched_partner_id: match.id });
             matchCount++;
           }
         }

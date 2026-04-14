@@ -70,7 +70,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     // Pre-check: for partners, detect missing profiles
     let noProfileIds: string[] = [];
     if (mode === "partner") {
-      const allPartnerData = await getPartnersByIds(ids, "id, raw_profile_html, enrichment_data") as PartnerFilterRow[];
+      const allPartnerData = await getPartnersByIds(ids, "id, raw_profile_html, enrichment_data") as unknown as PartnerFilterRow[];
 
       noProfileIds = allPartnerData
         .filter((p) => !p.raw_profile_html)
@@ -101,10 +101,10 @@ export function useDeepSearchRunner(): DeepSearchState {
     if (!force) {
       let alreadyDone: DeepSearchAlreadyDoneRow[] = [];
       if (mode === "contact") {
-        const allContacts = await getContactsByIds(toProcess, "id, deep_search_at") as DeepSearchAlreadyDoneRow[];
+        const allContacts = await getContactsByIds(toProcess, "id, deep_search_at") as unknown as DeepSearchAlreadyDoneRow[];
         alreadyDone = allContacts.filter((c) => c.deep_search_at);
       } else {
-        const partnerData = await getPartnersByIds(toProcess, "id, enrichment_data") as DeepSearchAlreadyDoneRow[];
+        const partnerData = await getPartnersByIds(toProcess, "id, enrichment_data") as unknown as DeepSearchAlreadyDoneRow[];
         alreadyDone = partnerData.filter((p) => p.enrichment_data?.deep_search_at);
       }
 
@@ -149,11 +149,11 @@ export function useDeepSearchRunner(): DeepSearchState {
             }
           }
           if (!cached) {
-            const partnerResults = await getPartnersByIds([id], "id, company_name, country_code, logo_url") as PartnerInfoRow[];
+            const partnerResults = await getPartnersByIds([id], "id, company_name, country_code, logo_url") as unknown as PartnerInfoRow[];
             cached = partnerResults[0] || null;
           }
         } else {
-          const contactResults = await getContactsByIds([id], "id, company_name, name, country") as ContactInfoRow[];
+          const contactResults = await getContactsByIds([id], "id, company_name, name, country") as unknown as ContactInfoRow[];
           const data = contactResults[0] || null;
           cached = data ? { id: data.id, company_name: data.name || data.company_name || undefined, country_code: data.country || undefined } as PartnerInfoRow : null;
         }

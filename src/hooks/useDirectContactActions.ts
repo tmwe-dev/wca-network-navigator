@@ -82,7 +82,7 @@ export function useDirectContactActions() {
           return false;
         }
       } catch (e: unknown) {
-        toast.error(e?.message || "Errore invio WhatsApp");
+        toast.error(e instanceof Error ? e.message : "Errore invio WhatsApp");
         return false;
       } finally {
         setWaSending(null);

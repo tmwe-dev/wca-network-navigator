@@ -148,7 +148,8 @@ export function useDeepSearchLocal() {
 
   const searchPartner = useCallback(async (partnerId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    const partner = await getPartner(partnerId) as Record<string, unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from getPartner
+    const partner = await getPartner(partnerId) as any;
     if (!partner) return { ...failResult, error: "Partner not found" };
 
     const contactsData = await findPartnerContacts(partnerId, "id, name, title, email, mobile, direct_phone");
@@ -157,9 +158,9 @@ export function useDeepSearchLocal() {
     const existingSet = new Set((existingLinksData ?? []).map((l) => `${l.contact_id || "company"}_${l.platform}`));
     const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
 
-    const { socialLinksFound: contactLinks, contactProfiles } = await searchLinkedInForContacts(contacts, partner.company_name, location, partnerId, existingSet);
-    const companyLinks = await searchCompanyLinkedIn(partner.company_name, partnerId, existingSet);
-    const { logoFound, websiteQualityScore } = await scrapeWebsite(partner.website, partnerId, contacts);
+    const { socialLinksFound: contactLinks, contactProfiles } = await searchLinkedInForContacts(contacts, partner.company_name as string, location, partnerId, existingSet);
+    const companyLinks = await searchCompanyLinkedIn(partner.company_name as string, partnerId, existingSet);
+    const { logoFound, websiteQualityScore } = await scrapeWebsite(partner.website as string | null, partnerId, contacts);
 
     const existing = (partner.enrichment_data as Record<string, unknown>) || {};
     const updated = {
@@ -171,33 +172,34 @@ export function useDeepSearchLocal() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
     await updatePartner(partnerId, { enrichment_data: updated as any as Record<string, string> });
 
-    const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);
+    const rating = await calculateRating(partnerId, websiteQualityScore, partner.website as string | null, partner.member_since as string | null, partner.branch_cities as string | null);
     await updatePartner(partnerId, { rating });
 
-    return { success: true, socialLinksFound: contactLinks + companyLinks, logoFound, contactProfilesFound: Object.keys(contactProfiles).length, companyProfileFound: companyLinks > 0, rating, rateLimited: false, companyName: partner.company_name };
+    return { success: true, socialLinksFound: contactLinks + companyLinks, logoFound, contactProfilesFound: Object.keys(contactProfiles).length, companyProfileFound: companyLinks > 0, rating, rateLimited: false, companyName: partner.company_name as string };
   }, [fs, googleSearch, scrapeUrl, searchLinkedInForContacts, searchCompanyLinkedIn, scrapeWebsite]);
 
   const searchContact = useCallback(async (contactId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
     const { getContactsByIds } = await import("@/data/contacts");
-    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic contact shape
+    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data") as any[];
     const contact = contacts[0] || null;
     const cErr = !contact ? "not found" : null;
     if (cErr || !contact) return { ...failResult, error: "Contact not found" };
 
-    const companyName = contact.company_name || "Unknown";
+    const companyName = (contact.company_name || "Unknown") as string;
     const location = `${contact.city || ""} ${contact.country || ""}`.trim();
     let partnerId: string | null = null;
     if (contact.company_name) {
-      const partner = await findPartnerByName(contact.company_name);
+      const partner = await findPartnerByName(contact.company_name as string);
       partnerId = partner?.id || null;
     }
     let socialLinksFound = 0;
     const contactProfiles: Record<string, Record<string, string>> = {};
 
-    if (contact.name && contact.name.length >= 3) {
-      const domainKw = extractDomainKeyword(contact.email);
-      const lastName = getLastName(contact.name);
+    if (contact.name && (contact.name as string).length >= 3) {
+      const domainKw = extractDomainKeyword(contact.email as string | null | undefined);
+      const lastName = getLastName(contact.name as string);
       const cascadeQueries = [
         `"${contact.name}" "${companyName}" site:linkedin.com/in`,
         ...(domainKw ? [`"${contact.name}" "${domainKw}" site:linkedin.com/in`] : []),
@@ -221,7 +223,7 @@ export function useDeepSearchLocal() {
           if (m) {
             socialLinksFound++;
             const sr = extractSeniority(results[0]?.title);
-            if (sr) contactProfiles[contactId] = { name: contact.name, title: contact.position || "", ...sr };
+            if (sr) contactProfiles[contactId] = { name: contact.name as string, title: (contact.position || "") as string, ...sr };
             if (partnerId) {
               await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
             }
@@ -231,7 +233,7 @@ export function useDeepSearchLocal() {
       await delay(800);
     }
 
-    const waNumber = contact.mobile || contact.phone;
+    const waNumber = (contact.mobile || contact.phone) as string | null;
     if (waNumber) {
       const cleaned = toWhatsAppNumber(waNumber);
       if (cleaned.length >= 8) {
@@ -253,8 +255,8 @@ export function useDeepSearchLocal() {
     }
 
     let websiteUrl: string | null = null;
-    if (contact.email && !/(gmail|yahoo|hotmail|outlook|libero|alice|tin\.it)/i.test(contact.email)) {
-      const domain = contact.email.split("@")[1];
+    if (contact.email && !/(gmail|yahoo|hotmail|outlook|libero|alice|tin\.it)/i.test(contact.email as string)) {
+      const domain = (contact.email as string).split("@")[1];
       if (domain) websiteUrl = `https://${domain}`;
     }
     let logoFound = false;
