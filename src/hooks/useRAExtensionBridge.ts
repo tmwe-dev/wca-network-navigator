@@ -100,7 +100,7 @@ export function useRAExtensionBridge() {
 
   /** Phase 1: Search only — returns list of companies without scraping profiles */
   const searchOnly = useCallback(
-    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: any; delaySeconds?: number }) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- Dynamic filter object shape
+    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: Record<string, unknown>; delaySeconds?: number }) => {
       return sendMessage("searchOnly", { params }, 600000); // 10min timeout
     },
     [sendMessage]

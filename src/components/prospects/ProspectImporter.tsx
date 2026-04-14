@@ -131,7 +131,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       atecoCodes: ac,
       regions: rg.length > 0 ? rg : undefined,
       provinces: pr.length > 0 ? pr : undefined,
-      filters: fl,
+      filters: fl as never,
       delaySeconds: settings.baseDelay,
     });
 

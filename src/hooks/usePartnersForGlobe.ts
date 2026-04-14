@@ -67,14 +67,15 @@ export function usePartnersForGlobe() {
       const countryCounts: Record<string, number> = {};
       
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (allPartners as unknown[]).map((p: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
-        countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
-        const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
+      const globePartners: GlobePartner[] = (allPartners as unknown as Record<string, unknown>[]).map((p) => {
+        const cc = String(p.country_code || "");
+        countryCounts[cc] = (countryCounts[cc] || 0) + 1;
+        const country = PRECOMPUTED_COUNTRIES_MAP[cc];
         return {
           ...p,
           lat: country?.lat || 0,
           lng: country?.lng || 0,
-        };
+        } as GlobePartner;
       });
 
       // Update counts in pre-computed countries (single pass)

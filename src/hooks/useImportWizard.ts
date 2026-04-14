@@ -41,7 +41,7 @@ export function isReimportCorrection(headers: string[]): boolean {
 }
 
 function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
-  return transformRow(row as any, mapping); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+  return transformRow(row as never, mapping);
 }
 
 export interface AiMappingResult {

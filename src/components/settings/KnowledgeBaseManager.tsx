@@ -85,7 +85,7 @@ export function KnowledgeBaseManager() {
       toast.error("Titolo e contenuto sono obbligatori");
       return;
     }
-    upsert.mutate(editEntry as any, { onSuccess: () => setEditEntry(null) }); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+    upsert.mutate(editEntry as never, { onSuccess: () => setEditEntry(null) });
   };
 
   const handleImproveWithAI = async () => {
