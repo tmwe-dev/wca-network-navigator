@@ -12,10 +12,12 @@ type PartnerCertInsert = Database["public"]["Tables"]["partner_certifications"][
 type PartnerSocialLinkInsert = Database["public"]["Tables"]["partner_social_links"]["Insert"];
 
 // ── partner_contacts ──
-export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<Array<Record<string, unknown>>> {
+export interface PartnerContactResult { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias: string | null; [k: string]: unknown }
+
+export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<PartnerContactResult[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as PartnerContactResult[];
 }
 
 export async function findPartnerContactByEmail(email: string) {
@@ -112,15 +114,17 @@ export async function insertPartnerSocialLink(link: { partner_id: string; contac
 }
 
 // ── partner_contacts by IDs ──
-export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<Array<Record<string, unknown>>> {
+export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<PartnerContactResult[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as PartnerContactResult[];
 }
 
 // ── prospect_contacts by IDs ──
-export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<Array<Record<string, unknown>>> {
+export interface ProspectContactResult { id: string; name: string; role: string | null; email: string | null; phone: string | null; prospect_id: string; linkedin_url: string | null; [k: string]: unknown }
+
+export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<ProspectContactResult[]> {
   const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as ProspectContactResult[];
 }
