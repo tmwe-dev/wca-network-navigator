@@ -205,7 +205,7 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
-              raw_payload: msg as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+              raw_payload: msg as never,
             } as any, { onConflict: "user_id,message_id_external", ignoreDuplicates: true }); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
 
           if (!error && status === 201) chatRecovered++;

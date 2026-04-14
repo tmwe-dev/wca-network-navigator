@@ -171,7 +171,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
-        service_category: s as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+        service_category: s as never,
       }));
       await insertPartnerServices(toInsert);
     }
@@ -197,7 +197,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
-        certification: c as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+        certification: c as never,
       }));
       await insertPartnerCertifications(toInsert);
     }

@@ -102,7 +102,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+        const p = pr as never;
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,

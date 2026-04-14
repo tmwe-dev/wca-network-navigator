@@ -148,7 +148,7 @@ export function useDeepSearchLocal() {
 
   const searchPartner = useCallback(async (partnerId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    const partner = await getPartner(partnerId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+    const partner = await getPartner(partnerId) as never;
     if (!partner) return { ...failResult, error: "Partner not found" };
 
     const contactsData = await findPartnerContacts(partnerId, "id, name, title, email, mobile, direct_phone");

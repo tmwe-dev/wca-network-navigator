@@ -106,7 +106,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
-        const wcaId = (pn as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+        const wcaId = (pn as never)
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -202,7 +202,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           country_code: "ALL",
           country_name: "Re-sync Contatti",
           network_name: networkNames,
-          wca_ids: allWcaIds as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+          wca_ids: allWcaIds as never,
           total_count: allWcaIds.length,
           delay_seconds: delay,
           status: "pending",

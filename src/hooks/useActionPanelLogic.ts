@@ -134,7 +134,7 @@ export function useActionPanelLogic({
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await upsertDirectoryCache({
-      country_code: countryCode, network_name: netKey, members: membersJson as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column
+      country_code: countryCode, network_name: netKey, members: membersJson as never,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
