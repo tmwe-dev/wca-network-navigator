@@ -107,7 +107,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
-        const wcaId = (pn as any).partners?.wca_id;
+        const wcaId = (pn as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase join).partners?.wca_id;
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
