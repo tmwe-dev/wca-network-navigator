@@ -1,6 +1,6 @@
 /**
  * LoginPage — V2 Auth page
- * Login email/password, registrazione, Google OAuth, password dimenticata.
+ * Login email/password, registrazione, password dimenticata.
  */
 
 import * as React from "react";
