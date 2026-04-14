@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * Schema validation tests — ensuring scraped data is validated before DB save.
  * Tests the validation logic that should run on partner profile data.
  */
 
 // Replicate the validation schema inline (since Zod runs in browser)
-function validatePartnerData(data: any): { valid: boolean; errors: string[] } { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   if (!data.company_name || typeof data.company_name !== "string" || data.company_name.length < 2) {

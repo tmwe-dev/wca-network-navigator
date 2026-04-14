@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * RESILIENCE CHAOS TESTS — Scorecard Area F
  * Validates system behavior under failure conditions.
@@ -166,7 +167,7 @@ describe("AI malformed response handling", () => {
     ];
 
     for (const response of malformedResponses) {
-      let parsed: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      let parsed: any = null;
       let error = false;
       try {
         parsed = response ? JSON.parse(response) : null;
@@ -182,9 +183,9 @@ describe("AI malformed response handling", () => {
 // ── Test 6: Broken settings resilience ──
 describe("Broken settings resilience", () => {
   it("should use defaults when app_settings returns empty", () => {
-    const settingsRows: any[] = []; // empty // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    const settingsRows: any[] = []; // empty
     const cfg: Record<string, string> = {};
-    settingsRows.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; }); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    settingsRows.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
 
     const DEFAULT_BUDGET = 10;
     const DEFAULT_WORK_START = 6;

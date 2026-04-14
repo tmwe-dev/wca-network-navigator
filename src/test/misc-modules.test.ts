@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { cn } from "@/lib/utils";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   ACTIVITY_TYPE_ICONS,
   ACTIVITY_TYPE_LABELS,
   STATUS_LABELS,
@@ -49,7 +50,7 @@ describe("activityConstants", () => {
 
   it("STATUS_LABELS / STATUS_ICONS in coppia per ogni status", () => {
     for (const k of Object.keys(STATUS_LABELS)) {
-      expect((STATUS_ICONS as any)[k]).toBeDefined(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((STATUS_ICONS as any)[k]).toBeDefined();
     }
   });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   setGreenZoneDelay,
   getGreenZoneDelay,
   getElapsedSinceLastRequest,
@@ -17,7 +18,7 @@ describe("wcaCheckpoint — global rate-limit gate", () => {
   beforeEach(() => {
     // Reset state on window
     if (typeof window !== "undefined") {
-      delete (window as any).__wcaCheckpoint__; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      delete (window as any).__wcaCheckpoint__;
     }
     setGreenZoneDelay(20); // reset to default
   });

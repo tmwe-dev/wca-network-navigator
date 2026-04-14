@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   getCountryFlag,
   getYearsMember,
   formatPartnerType,
@@ -23,7 +24,7 @@ describe("countries helpers", () => {
       expect(getCountryFlag("")).toBe("🌍");
       expect(getCountryFlag("X")).toBe("🌍");
       expect(getCountryFlag("ITA")).toBe("🌍");
-      expect(getCountryFlag(null as any)).toBe("🌍"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect(getCountryFlag(null as any)).toBe("🌍");
     });
   });
 

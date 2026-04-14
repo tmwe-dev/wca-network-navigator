@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * WORKFLOW COHERENCE TESTS — Scorecard Area E
  * Validates UI/DB consistency, cross-module continuity, and auditability.
@@ -180,7 +181,7 @@ describe("Auditability", () => {
   it("agent tasks include execution_log for traceability", () => {
     // agent_tasks table has execution_log JSONB column
     const taskSchema = {
-      execution_log: [] as any[], // defaults to empty array // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      execution_log: [] as any[], // defaults to empty array
       result_summary: null as string | null,
       completed_at: null as string | null,
     };

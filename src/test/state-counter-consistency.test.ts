@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { supabase } from "@/integrations/supabase/client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * [A05] State Counter Consistency
  * Scope: Verify counters match real record counts in DB.
@@ -54,7 +55,7 @@ describe("State Counter Consistency [A05]", () => {
     if (!agents || agents.length === 0) return;
 
     for (const agent of agents) {
-      const stats = agent.stats as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      const stats = agent.stats as any;
       const claimedCompleted = stats?.tasks_completed || 0;
       if (claimedCompleted === 0) continue;
 

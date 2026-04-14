@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DiscoverResultSchema, CheckIdsResultSchema, JobStartResultSchema, WcaMemberSchema, ScrapeProfileSchema, safeParseDiscover, safeParseScrape, safeParseCheckIds, safeParseJobStart } from "@/lib/api/wcaAppApi.schemas";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   describe("WcaMemberSchema", () => {
     it("accetta member minimo (id + name)", () => {
@@ -25,7 +26,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
         custom_extra_field_2030: "futuro",
       });
       expect(r.success).toBe(true);
-      expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" }); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" });
     });
 
     it("logo_url può essere null", () => {
@@ -120,7 +121,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   });
 
   describe("safeParse* — best-effort, no throw", () => {
-    let warnSpy: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    let warnSpy: any;
 
     beforeEach(() => {
       warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

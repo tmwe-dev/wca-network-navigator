@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // senza toccare la rete reale (mock di wcaAppApi).
 
 vi.mock("@/lib/api/wcaAppApi", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   wcaScrape: vi.fn(),
   wcaDiscover: vi.fn(),
   wcaLogin: vi.fn(),
@@ -34,7 +35,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
             state: "ok",
             company_name: "Acme Logistics",
             country_code: "IT",
-          } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+          } as any,
         ],
       });
       const result = await scrapeWcaPartnerById(12345);
@@ -57,7 +58,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
     it("ritorna found=false quando state != ok", async () => {
       mockedScrape.mockResolvedValueOnce({
         success: true,
-        results: [{ wca_id: 42, state: "not_found", company_name: "" } as any], // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+        results: [{ wca_id: 42, state: "not_found", company_name: "" } as any],
       });
       const result = await scrapeWcaPartnerById(42);
       expect(result.success).toBe(true);
@@ -96,7 +97,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
             website: "https://globex.de",
             networks: ["WCA First", { name: "WCA Projects" }],
             contacts: [{ name: "Hans", email: "hans@globex.de" }],
-          } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+          } as any,
         ],
       });
 
@@ -115,7 +116,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
     it("ritorna found=false ma authStatus=authenticated se profilo vuoto", async () => {
       mockedScrape.mockResolvedValueOnce({
         success: true,
-        results: [{ wca_id: 99, state: "ok", company_name: "" } as any], // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+        results: [{ wca_id: 99, state: "ok", company_name: "" } as any],
       });
       const result = await previewWcaProfile(99);
       expect(result.success).toBe(true);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * State Consistency: Agent Task Stats
  *
@@ -39,7 +40,7 @@ describe("Agent Task Stats Consistency (logic)", () => {
   });
 
   it("should handle missing stats gracefully", () => {
-    const stats: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    const stats: any = {};
     const taskStatus = "completed";
 
     const updated = { ...stats };

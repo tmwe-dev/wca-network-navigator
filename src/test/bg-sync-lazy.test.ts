@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   bgSyncSubscribe,
   bgSyncSubscribeEmails,
   bgSyncGetEmailHistory,
@@ -82,7 +83,7 @@ describe("lazyRetry", () => {
     const Lazy = lazyRetry(factory);
     expect(Lazy).toBeDefined();
     // React.lazy restituisce un object con $$typeof
-    expect((Lazy as any).$$typeof).toBeDefined(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    expect((Lazy as any).$$typeof).toBeDefined();
   });
 
   it("invoca la factory al primo accesso", async () => {
@@ -90,7 +91,7 @@ describe("lazyRetry", () => {
     const factory = vi.fn().mockResolvedValue({ default: Comp });
     const Lazy = lazyRetry(factory);
     // Force resolve via internal _payload
-    const payload = (Lazy as any)._payload; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    const payload = (Lazy as any)._payload;
     if (payload && typeof payload._result === "function") {
       try { await payload._result(); } catch { /* ignore */ }
     }
@@ -108,10 +109,10 @@ describe("lazyRetry", () => {
     });
     const Lazy = lazyRetry(factory, 10);
     // Trigger underlying load via React.lazy payload
-    const payload = (Lazy as any)._payload; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    const payload = (Lazy as any)._payload;
     // payload._result is the original promise factory wrapper
     try {
-      await (payload._result as any)(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      await (payload._result as any)();
     } catch { /* ignore */ }
     // Wait a tick + retry delay
     await new Promise((r) => setTimeout(r, 50));

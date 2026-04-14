@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { groupByCountry } from "@/lib/groupByCountry";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   addCockpitPreselection,
   consumeCockpitPreselection,
   getCockpitPreselection,
@@ -48,7 +49,7 @@ describe("groupByCountry", () => {
   });
 
   it("ritorna array vuoto su input vuoto", () => {
-    expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]);
   });
 });
 

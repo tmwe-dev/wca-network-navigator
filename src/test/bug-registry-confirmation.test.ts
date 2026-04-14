@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * BUG REGISTRY CONFIRMATION TESTS
  * 
@@ -318,7 +319,7 @@ describe("BF-008: DB failure after successful send leaves inconsistent state", (
 describe("BF-011: High-stakes tasks must always require approval", () => {
   it("D05: isHighStakes correctly identifies high-stakes scenarios", () => {
     // Replicates isHighStakes function from lines 41-46
-    function isHighStakes(item: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    function isHighStakes(item: any): boolean {
       if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
       if (item.source === "ex_client") return true;
       if (item.rating && item.rating >= 4) return true;
@@ -367,7 +368,7 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
     // Since isHighStakes checks source === "ex_client", this means
     // ex_client partners are NEVER detected as high-stakes in Phase 2
     
-    function isHighStakes(item: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    function isHighStakes(item: any): boolean {
       if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
       if (item.source === "ex_client") return true;
       if (item.rating && item.rating >= 4) return true;
@@ -400,7 +401,7 @@ describe("BF-020: Email deduplication", () => {
     ];
     
     const alreadyProcessedIds = new Set(
-      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean) // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean)
     );
     
     expect(alreadyProcessedIds.has("msg-1")).toBe(true);
@@ -469,7 +470,7 @@ describe("BF-009: No duplicate tasks from concurrent cycles", () => {
     
     const existingTasks = [{ target_filters: { message_id: "msg-1" } }];
     const alreadyProcessedIds = new Set(
-      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean) // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean)
     );
 
     const newTasks: string[] = [];

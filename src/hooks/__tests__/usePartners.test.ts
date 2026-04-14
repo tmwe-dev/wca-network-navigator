@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("@/data/partners", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   findPartners: vi.fn(),
   findPartnersByCountry: vi.fn(),
   getPartner: vi.fn(),
@@ -30,7 +31,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("usePartners", () => {
   it("fetches partners list", async () => {
-    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as any);
     const { result } = renderHook(() => usePartners(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toHaveLength(1);
@@ -44,7 +45,7 @@ describe("usePartners", () => {
 
   it("passes filters through", async () => {
     vi.mocked(findPartners).mockResolvedValue([]);
-    renderHook(() => usePartners({ country: "IT" } as any), { wrapper }); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    renderHook(() => usePartners({ country: "IT" } as any), { wrapper });
     await waitFor(() => expect(findPartners).toHaveBeenCalledWith({ country: "IT" }));
   });
 
@@ -57,7 +58,7 @@ describe("usePartners", () => {
 
 describe("usePartner", () => {
   it("fetches single partner by id", async () => {
-    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as any);
     const { result } = renderHook(() => usePartner("p1"), { wrapper });
     await waitFor(() => expect(result.current.data?.company_name).toBe("Acme"));
   });

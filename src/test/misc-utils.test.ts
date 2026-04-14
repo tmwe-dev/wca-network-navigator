@@ -3,6 +3,7 @@ import { buildDeterministicId } from "@/lib/messageDedup";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { queryKeys } from "@/lib/queryKeys";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("messageDedup — buildDeterministicId", () => {
   it("produce stesso ID per stesso input", () => {
     const a = buildDeterministicId("wa", "Mario", "Ciao", "2026-04-08");
@@ -61,7 +62,7 @@ describe("capitalizeFirst", () => {
 
   it("ritorna input invariato su empty/null", () => {
     expect(capitalizeFirst("")).toBe("");
-    expect(capitalizeFirst(null as any)).toBeNull(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    expect(capitalizeFirst(null as any)).toBeNull();
   });
 
   it("preserva il resto della stringa", () => {

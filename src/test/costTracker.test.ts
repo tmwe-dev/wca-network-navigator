@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { checkBudget, trackCost, getSessionStats, resetSession, configureCostTracker } from "@/lib/api/costTracker";
 import { isApiError } from "@/lib/api/apiError";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("costTracker", () => {
   beforeEach(() => {
     resetSession();
@@ -30,7 +31,7 @@ describe("costTracker", () => {
     expect(() => checkBudget()).toThrow();
     try { checkBudget(); } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as any).code).toBe("RATE_LIMITED"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((e as any).code).toBe("RATE_LIMITED");
     }
   });
 

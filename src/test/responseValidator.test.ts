@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateResponse, outreachSchema } from "@/lib/api/responseValidator";
 import { isApiError } from "@/lib/api/apiError";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("responseValidator", () => {
   const schema = {
     required: { name: "string" as const, age: "number" as const },
@@ -25,8 +26,8 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as any).code).toBe("SCHEMA_MISMATCH"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
-      expect((e as any).message).toContain("age"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((e as any).code).toBe("SCHEMA_MISMATCH");
+      expect((e as any).message).toContain("age");
     }
   });
 
@@ -36,7 +37,7 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as any).message).toContain("age"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((e as any).message).toContain("age");
     }
   });
 
@@ -45,7 +46,7 @@ describe("responseValidator", () => {
       validateResponse({ name: "Bob", age: 30, tags: "not-array" }, schema);
       throw new Error("should have thrown");
     } catch (e) {
-      expect((e as any).message).toContain("tags"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((e as any).message).toContain("tags");
     }
   });
 

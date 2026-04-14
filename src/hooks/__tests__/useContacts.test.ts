@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("@/data/contacts", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   findContacts: vi.fn(),
   findHoldingPatternContacts: vi.fn(),
   getHoldingPatternStats: vi.fn(),
@@ -32,20 +33,20 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("useContacts", () => {
   it("fetches contacts with default filters", async () => {
-    vi.mocked(findContacts).mockResolvedValue({ items: [{ id: "c1" }], totalCount: 1, page: 1, pageSize: 50 } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findContacts).mockResolvedValue({ items: [{ id: "c1" }], totalCount: 1, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.items).toHaveLength(1);
   });
 
   it("passes filters to findContacts", async () => {
-    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     renderHook(() => useContacts({ country: "IT" }), { wrapper });
     await waitFor(() => expect(findContacts).toHaveBeenCalledWith({ country: "IT" }));
   });
 
   it("returns empty array when no contacts match", async () => {
-    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts({ search: "xyz" }), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.items).toEqual([]);
@@ -58,13 +59,13 @@ describe("useContacts", () => {
   });
 
   it("exposes loading state", () => {
-    vi.mocked(findContacts).mockReturnValue(new Promise(() => {}) as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findContacts).mockReturnValue(new Promise(() => {}) as any);
     const { result } = renderHook(() => useContacts(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("re-fetches when filters change", async () => {
-    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result, rerender } = renderHook(
       ({ f }) => useContacts(f),
       { wrapper, initialProps: { f: {} } }
@@ -77,7 +78,7 @@ describe("useContacts", () => {
 
 describe("useContactFilterOptions", () => {
   it("fetches filter options", async () => {
-    vi.mocked(getContactFilterOptions).mockResolvedValue({ countries: ["IT", "DE"] } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(getContactFilterOptions).mockResolvedValue({ countries: ["IT", "DE"] } as any);
     const { result } = renderHook(() => useContactFilterOptions(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({ countries: ["IT", "DE"] });
