@@ -30,7 +30,7 @@ export function useSupabaseQuery<T extends TableName, TResult>(
     queryFn: async () => {
       const base = supabase.from(table).select(select);
       const query = options?.filters ? options.filters(base) : base;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string, must await as Promise
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string
       const { data, error } = await (query as any);
       if (error) throw error;
       return ((data ?? []) as RowOf<T>[]).map(mapFn);
