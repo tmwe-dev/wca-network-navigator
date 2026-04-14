@@ -236,5 +236,5 @@ export async function findDeadPartnerIds(wcaIds: number[]) {
 // ── Cache ──
 
 export function invalidateDownloadJobs(qc: QueryClient) {
-  qc.invalidateQueries({ queryKey: queryKeys.downloadJobs });
+  qc.invalidateQueries({ queryKey: queryKeys.downloads.jobs });
 }

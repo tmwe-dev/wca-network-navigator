@@ -25,7 +25,7 @@ describe("queryKeys", () => {
     expect(queryKeys.countryStats).toEqual(["country-stats"]);
   });
 
-  it("userCredits is constant", () => {
-    expect(queryKeys.userCredits).toEqual(["user-credits"]);
+  it("credits.all is constant", () => {
+    expect(queryKeys.credits.all).toEqual(["user-credits"]);
   });
 });

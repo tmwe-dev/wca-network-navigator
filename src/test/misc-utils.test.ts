@@ -100,7 +100,7 @@ describe("queryKeys factory", () => {
   });
 
   it("downloadJobs e userCredits sono tuple costanti", () => {
-    expect(queryKeys.downloadJobs).toEqual(["download-jobs"]);
-    expect(queryKeys.userCredits).toEqual(["user-credits"]);
+    expect(queryKeys.downloads.jobs).toEqual(["download-jobs"]);
+    expect(queryKeys.credits.all).toEqual(["user-credits"]);
   });
 });
