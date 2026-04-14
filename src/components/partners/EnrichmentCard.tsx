@@ -107,18 +107,18 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                   )}
                 </div>
               )}
-              {companyProfile.specialties?.length > 0 && (
+              {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {companyProfile.specialties.map((s: string, i: number) => (
+                  {companyProfile.specialties!.map((s: string, i: number) => (
                     <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
                       {s}
                     </span>
                   ))}
                 </div>
               )}
-              {companyProfile.awards?.length > 0 && (
+              {(companyProfile.awards?.length ?? 0) > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
+                  {companyProfile.awards!.map((a: Record<string, unknown>, i: number) => {
                     const label = typeof a === "string" ? a : String(a?.name || a?.recipient || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
