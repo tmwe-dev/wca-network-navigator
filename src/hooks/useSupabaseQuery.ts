@@ -9,9 +9,11 @@ import type { Database } from "@/integrations/supabase/types";
 type TableName = keyof Database["public"]["Tables"];
 type RowOf<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
+/** Apply additional filters to the query builder (eq, in, order, limit, etc.) */
+type FilterFn = (query: unknown) => unknown;
+
 interface SupabaseQueryOptions {
-  /** Apply additional filters/ordering to the query builder */
-  readonly filters?: (query: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>;
+  readonly filters?: FilterFn;
   readonly staleTime?: number;
   readonly enabled?: boolean;
 }
@@ -27,8 +29,8 @@ export function useSupabaseQuery<T extends TableName, TResult>(
     queryKey: key,
     queryFn: async () => {
       const base = supabase.from(table).select(select);
-      const query = options?.filters ? options.filters(base as ReturnType<typeof supabase.from>) : base;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string, must cast to Row
+      const query = options?.filters ? options.filters(base) : base;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string, must await as Promise
       const { data, error } = await (query as any);
       if (error) throw error;
       return ((data ?? []) as RowOf<T>[]).map(mapFn);
