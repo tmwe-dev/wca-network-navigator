@@ -65,6 +65,7 @@ export default function TimingSettings() {
       const allFields = [
         ...TIMING_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
         ...SCHEDULE_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
+        ...WA_STEALTH_KEYS.map(k => ({ key: k.key, value: getValue(k.key, k.defaultValue) })),
       ];
       for (const f of allFields) {
         await updateSetting.mutateAsync({ key: f.key, value: f.value });
