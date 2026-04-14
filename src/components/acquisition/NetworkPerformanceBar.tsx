@@ -2,6 +2,7 @@ import { Ban, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 export interface NetworkStats {
   success: number;
@@ -82,7 +83,7 @@ function NetworkIcon({ name, s, isExcluded, isFailed }: {
           )}
         >
           {logo ? (
-            <img src={logo} alt={name} className="w-5 h-5 object-contain" />
+            <OptimizedImage src={logo} alt={name} className="w-5 h-5 object-contain" />
           ) : (
             <span className="text-[8px] font-bold text-muted-foreground leading-none text-center">
               {name.slice(0, 3).toUpperCase()}

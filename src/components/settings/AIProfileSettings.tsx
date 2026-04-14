@@ -17,6 +17,7 @@ import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const log = createLogger("AIProfileSettings");
 
@@ -70,7 +71,7 @@ function ImageUploadField({ label, value, onChange, hint }: {
       <Label className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> {label}</Label>
       {value ? (
         <div className="space-y-2">
-          <img src={value} alt={label} className="max-h-24 rounded border border-border object-contain bg-muted p-1" />
+          <OptimizedImage src={value} alt={label} className="max-h-24 rounded border border-border object-contain bg-muted p-1" />
           <Button variant="outline" size="sm" onClick={() => onChange("")}>
             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Rimuovi
           </Button>

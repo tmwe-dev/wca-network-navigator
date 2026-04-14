@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Image, Linkedin, Radar, Globe, Loader2 } from "lucide-react";
 import { extractDomain } from "@/hooks/useAddContactForm";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface ContactEnrichmentPanelProps {
   readonly logoUrl: string;
@@ -43,7 +44,7 @@ export function ContactEnrichmentPanel({
           </div>
           {logoUrl && (
             <div className="flex items-center gap-2">
-              <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded border" onError={onLogoError} />
+              <OptimizedImage src={logoUrl} alt="Logo" className="w-8 h-8 rounded border" onError={onLogoError} />
               <span className="text-[10px] text-muted-foreground truncate">{extractDomain(website || logoUrl)}</span>
             </div>
           )}

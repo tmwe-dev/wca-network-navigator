@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { HoldingChannel, HoldingMessageGroup } from "@/hooks/useHoldingMessages";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { getCountryFlag } from "@/lib/outreachMockData";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const CHANNEL_TABS: { key: HoldingChannel; label: string; icon: typeof Mail }[] = [
   { key: "email", label: "Email", icon: Mail },
@@ -78,7 +79,7 @@ export function HoldingContactList({
                 <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/20 border-b border-border/20">
                   <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
                     {(group as unknown as Record<string, unknown>).logoUrl ? (
-                      <img src={String((group as unknown as Record<string, unknown>).logoUrl)} alt="" className="w-6 h-6 object-contain" />
+                      <OptimizedImage src={String((group as unknown as Record<string, unknown>).logoUrl)} alt="" className="w-6 h-6 object-contain" />
                     ) : (
                       group.companyName?.charAt(0)?.toUpperCase()
                     )}

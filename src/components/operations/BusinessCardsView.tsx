@@ -23,6 +23,7 @@ import { useBcaGrouping } from "./bca/useBcaGrouping";
 import { BcaCountrySidebar } from "./bca/BcaCountrySidebar";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "./bca/BcaCardRenderers";
 import { countryCodeToFlag } from "./bca/bcaUtils";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const log = createLogger("BusinessCardsView");
 
@@ -185,7 +186,7 @@ export function BusinessCardsView() {
                   {/* Group header */}
                   <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
                     <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border", group.isMatched ? "border-primary/30 bg-primary/10" : "border-border/40 bg-muted/30")}>
-                      {group.logoUrl ? <img src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary/60" : "text-muted-foreground/40")} />}
+                      {group.logoUrl ? <OptimizedImage src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary/60" : "text-muted-foreground/40")} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

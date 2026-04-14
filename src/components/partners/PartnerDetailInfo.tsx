@@ -15,6 +15,7 @@ import { EnrichmentCard } from "@/components/partners/EnrichmentCard";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const PartnerMiniGlobe = lazy(() =>
   import("@/components/partners/PartnerMiniGlobe").then((m) => ({ default: m.PartnerMiniGlobe }))
@@ -156,7 +157,7 @@ export function PartnerDetailInfo({
                   <TooltipTrigger>
                     <div className="shrink-0 flex flex-col items-center gap-1 bg-card/60 border border-primary/10 rounded-xl px-3 py-2 hover:bg-primary/5 transition-colors min-w-[70px]">
                       {logo ? (
-                        <img src={logo} alt={n.network_name} className="h-8 w-auto object-contain" />
+                        <OptimizedImage src={logo} alt={n.network_name} className="h-8 w-auto object-contain" />
                       ) : (
                         <span className="text-xs font-medium text-foreground">{n.network_name}</span>
                       )}

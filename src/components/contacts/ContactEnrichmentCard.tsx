@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface ContactEnrichmentCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column with dynamic shape
@@ -96,7 +97,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
       {(e?.logo_url || websiteQuality) && (
         <div className="flex items-center gap-3">
           {e?.logo_url && (
-            <img src={e.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-background border border-border/50" />
+            <OptimizedImage src={e.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-background border border-border/50" />
           )}
           {websiteQuality && (
             <div className="flex items-center gap-1">

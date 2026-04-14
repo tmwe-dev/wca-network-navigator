@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface Props {
   sourceId: string;
@@ -85,7 +86,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
       </div>
       <div className="flex items-center gap-3 bg-primary/5 border border-primary/15 rounded-xl p-3">
         {avatarSrc ? (
-          <img src={avatarSrc} alt={agent.name} className="w-8 h-8 rounded-full ring-2 ring-primary/20" />
+          <OptimizedImage src={avatarSrc} alt={agent.name} className="w-8 h-8 rounded-full ring-2 ring-primary/20" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold text-primary ring-2 ring-primary/20">
             {agent.avatar_emoji || agent.name.charAt(0)}

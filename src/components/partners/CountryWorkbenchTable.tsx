@@ -9,6 +9,7 @@ import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/compon
 import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, getBranchCountries } from "@/lib/partnerUtils";
 import type { PartnerRowData } from "./CountryWorkbenchTypes";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface CountryWorkbenchTableProps {
   filteredPartners: PartnerRowData[];
@@ -58,7 +59,7 @@ export function CountryWorkbenchTable({
               {/* Logo */}
               <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center shrink-0 self-center">
                 {getRealLogoUrl(partner.logo_url) ? (
-                  <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
+                  <OptimizedImage src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
                 ) : (
                   <span className="text-2xl opacity-50">{flag}</span>
                 )}

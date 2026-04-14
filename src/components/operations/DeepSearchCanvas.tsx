@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
 import { t } from "@/components/download/theme";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 /* ── Types ── */
 export interface DeepSearchResult {
@@ -160,7 +161,7 @@ function CurrentPartnerCard({ current, isDark }: { current: DeepSearchCurrent; i
     )} style={{ animationDuration: "2s" }}>
       <div className="flex items-center gap-2.5">
         {current.logoUrl ? (
-          <img src={current.logoUrl} className="w-8 h-8 rounded-lg object-contain bg-white/80" alt="" />
+          <OptimizedImage src={current.logoUrl} className="w-8 h-8 rounded-lg object-contain bg-white/80" alt="" />
         ) : (
           <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-muted/30")}>
             <Building2 className={cn("w-4 h-4 text-muted-foreground")} />

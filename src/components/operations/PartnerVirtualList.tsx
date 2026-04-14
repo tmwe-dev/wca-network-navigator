@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getEffectiveLogoUrl, getEnrichmentSnippet, hasLinkedIn, hasWhatsApp } from "@/lib/partnerUtils";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { EnrichedStatusIcons } from "./partner-list/SubComponents";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface Props {
   partners: Array<Record<string, unknown>>;
@@ -96,7 +97,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 )}
                 {/* Logo / Flag fallback */}
                 {logoUrl ? (
-                  <img src={logoUrl} alt="" className="w-9 h-9 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                  <OptimizedImage src={logoUrl} alt="" className="w-9 h-9 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                 ) : (
                   <div className={cn("w-9 h-9 rounded-md shrink-0 flex items-center justify-center text-base leading-none", isDark ? "bg-white/[0.06]" : "bg-slate-100")}>
                     {flag !== "🌍" ? flag : <span className={cn("text-[11px] font-bold", isDark ? "text-slate-500" : "text-slate-400")}>{partner.company_name?.charAt(0)}</span>}

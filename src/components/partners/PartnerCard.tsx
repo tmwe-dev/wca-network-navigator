@@ -18,6 +18,7 @@ import {
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 function cleanPhoneForWhatsApp(phone: string): string {
   return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
 }
@@ -65,7 +66,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-11 h-11 rounded-lg bg-muted/50 border flex items-center justify-center overflow-hidden">
             {partner.logo_url && !logoError ? (
-              <img src={partner.logo_url} alt="" className="w-8 h-8 object-contain" onError={() => setLogoError(true)} />
+              <OptimizedImage src={partner.logo_url} alt="" className="w-8 h-8 object-contain" onError={() => setLogoError(true)} />
             ) : hasWebsite && !faviconError ? (
               <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="" className="w-8 h-8 object-contain" onError={() => setFaviconError(true)} />
             ) : (

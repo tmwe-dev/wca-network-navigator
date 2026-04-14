@@ -19,6 +19,7 @@ import { ImageGalleryTab } from "./ImageGalleryTab";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const log = createLogger("OraclePanel");
 
@@ -126,7 +127,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <img src={albertTalkGif} alt="Oracolo" className="w-5 h-5" />
+        <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-5 h-5" />
         <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
       </div>
 

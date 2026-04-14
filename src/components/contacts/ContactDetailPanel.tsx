@@ -20,6 +20,7 @@ import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useContactDetail, type ContactDetail } from "@/hooks/useContactDetail";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface Props {
   contact: ContactDetail;
@@ -169,7 +170,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
             {matchedCard.photo_url && (
               <div className="w-24 shrink-0 rounded-lg overflow-hidden border border-border/50">
                 <AspectRatio ratio={16 / 9}>
-                  <img src={matchedCard.photo_url} alt="Biglietto" className="w-full h-full object-cover" loading="lazy" />
+                  <OptimizedImage src={matchedCard.photo_url} alt="Biglietto" className="w-full h-full object-cover" />
                 </AspectRatio>
               </div>
             )}
