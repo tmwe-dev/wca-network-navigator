@@ -8,7 +8,8 @@ export function PageEventsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["telemetry-page-events", sinceIso],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("page_events")
         .select("*")
         .gte("created_at", sinceIso)

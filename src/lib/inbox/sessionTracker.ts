@@ -70,7 +70,7 @@ async function writeSession(session: ChannelSession): Promise<void> {
   if (error) {
     log.error("session.write_failed", {
       channel: session.channel,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }

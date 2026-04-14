@@ -45,7 +45,7 @@ export function useOperativeJobs() {
       }) as Promise<unknown> as Promise<OperativeJob>;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
-    onError: (e: unknown) => toast.error(e.message || "Errore creazione job"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore creazione job"),
   });
 
   const updateStatus = useMutation({
@@ -55,13 +55,13 @@ export function useOperativeJobs() {
       await updateWorkPlan(id, upd);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
-    onError: (e: unknown) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
   });
 
   const deleteJobMut = useMutation({
     mutationFn: (id: string) => deleteWorkPlan(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job eliminato"); },
-    onError: (e: unknown) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
   });
 
   const generatePrompt = useMutation({
@@ -97,7 +97,7 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
       return prompt;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt AI generato"); },
-    onError: (e: unknown) => toast.error(e.message || "Errore generazione prompt"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore generazione prompt"),
   });
 
   const savePrompt = useMutation({
@@ -107,7 +107,7 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
       });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },
-    onError: (e: unknown) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
   });
 
   return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob: deleteJobMut, generatePrompt, savePrompt };

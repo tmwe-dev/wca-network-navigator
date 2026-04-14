@@ -32,8 +32,9 @@ export function useLinkedInFlowState() {
         schema: "public",
         table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
-      }, (payload: Record<string, unknown>) => {
-        const row = payload.new;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- realtime payload
+      }, (payload: any) => {
+        const row = payload.new as any;
         setProgress({
           total: row.total_count,
           processed: row.processed_count,

@@ -80,7 +80,7 @@ export function useWcaSync() {
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
     } catch (e: unknown) {
-      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
+      toast.error(e instanceof Error ? e.message : "Errore sincronizzazione", { id: toastId });
     }
   }, [queryClient]);
 

@@ -67,7 +67,7 @@ export function adaptImportedContact(c: ImportedContactRecord): CockpitContact {
     linkedinUrl: ((ed as Record<string, unknown>)?.linkedin_url as string) || "",
     deepSearchAt: c.deep_search_at || undefined,
     enrichmentData: ed,
-    leadStatus: c.lead_status,
+    leadStatus: c.lead_status ?? undefined,
   };
 }
 

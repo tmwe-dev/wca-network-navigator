@@ -210,7 +210,7 @@ export function useLinkedInLookup() {
       }
 
       const c = toProcess[i];
-      const searchName = c.name || c.company_name || "";
+      const searchName = String(c.name || c.company_name || "");
       if (!searchName.trim()) { notFound++; continue; }
 
       setProgress(p => ({ ...p, current: i + 1, currentName: searchName, currentMethod: "Google Search" }));
@@ -220,7 +220,7 @@ export function useLinkedInLookup() {
       let resolvedMethod: string | null = null;
 
       // Google-only via Partner Connect
-      const queries = buildLinkedInGoogleQueries(searchName, c.company_name, c.email);
+      const queries = buildLinkedInGoogleQueries(searchName, String(c.company_name ?? ""), String(c.email ?? ""));
 
       for (const query of queries) {
         if (abortRef.current || foundUrl) break;
@@ -229,7 +229,7 @@ export function useLinkedInLookup() {
           const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
           const { candidate, confidence } = pickBestLinkedInCandidate(rawResults, {
             name: searchName,
-            company: c.company_name,
+            company: String(c.company_name ?? ""),
           });
 
           if (candidate && confidence >= 0.5) {
@@ -243,7 +243,8 @@ export function useLinkedInLookup() {
       }
 
       // Save result
-      const existing = (c.enrichment_data as Record<string, any>) || {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic enrichment data
+      const existing = (c.enrichment_data as any) || {};
       const updated = {
         ...existing,
         linkedin_lookup_at: new Date().toISOString(),
@@ -252,10 +253,10 @@ export function useLinkedInLookup() {
       };
 
       const { updateContactEnrichment: updateEnrich } = await import("@/data/contacts");
-      await updateEnrich(c.id, updated);
+      await updateEnrich(c.id as string, updated);
 
       if (foundUrl) found++; else notFound++;
-      setProgress(p => ({ ...p, found, notFound, currentMethod: undefined }));
+      setProgress(p => ({ ...p, found, notFound, currentMethod: undefined as string | undefined }));
 
       await ensureMinDuration(opStart);
       if (i < toProcess.length - 1 && !abortRef.current) {

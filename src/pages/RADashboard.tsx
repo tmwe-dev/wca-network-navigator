@@ -21,7 +21,8 @@ function formatRelativeTime(date: string | Date): string {
   return `${diffDays}d fa`;
 }
 
-function calculateJobProgress(job: unknown): number {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function calculateJobProgress(job: any): number {
   if (job.total_items === 0) return 0;
   return Math.round((job.processed_items / job.total_items) * 100);
 }

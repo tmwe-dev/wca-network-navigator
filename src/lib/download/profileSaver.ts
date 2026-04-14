@@ -104,8 +104,8 @@ export async function saveExtractionResult(
       await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
+    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
@@ -113,8 +113,8 @@ export async function saveExtractionResult(
     const existingNets = await findPartnerNetworks(partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
     const toInsert = result.profile.networks
-      .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
+      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n: any) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
     await insertPartnerNetworks(toInsert);
   }
 

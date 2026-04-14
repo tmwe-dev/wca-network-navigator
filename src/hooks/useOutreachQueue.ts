@@ -64,8 +64,9 @@ export function useOutreachQueue() {
 
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (data) {
-      await updateOutreachItem(id, { attempts: (data).attempts + 1 });
+      await updateOutreachItem(id, { attempts: ((data as any).attempts || 0) + 1 });
     }
   };
 

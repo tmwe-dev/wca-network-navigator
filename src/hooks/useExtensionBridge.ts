@@ -32,25 +32,28 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: string) => void; fn: () => Promise<unknown> }> } {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- global singleton lock
   const w = window as any;
   if (!w[LOCK_KEY]) w[LOCK_KEY] = { busy: false, queue: [] };
   return w[LOCK_KEY];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- bridge generic
 async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
   const lock = getLock();
   return new Promise<T>((resolve) => {
     const run = async () => {
       lock.busy = true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null }); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Function signature variance in lock queue
-    else lock.queue.push({ resolve, fn: run as any });
+    else lock.queue.push({ resolve: resolve as any, fn: run as any });
   });
 }
 

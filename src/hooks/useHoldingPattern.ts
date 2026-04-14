@@ -43,9 +43,10 @@ export function useHoldingPatternList() {
       const items: HoldingItem[] = [];
 
       // Partners
-      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as Array<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase select
+      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as any[];
 
-      (partners || []).forEach((p) =>
+      (partners || []).forEach((p: any) =>
         items.push({
           id: p.id,
           source: "partner",

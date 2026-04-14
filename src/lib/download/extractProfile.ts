@@ -19,17 +19,19 @@ export interface ExtractionResult {
 
 export function normalizeExtensionResult(raw: unknown): ExtractionResult {
   if (!raw) return { success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", companyName: null, contacts: [], profile: {}, profileHtml: null, htmlLength: 0, error: "No response" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = raw as any;
   return {
-    success: raw.success ?? false,
-    wcaId: raw.wcaId,
-    state: raw.state || (raw.success ? "ok" : "not_loaded"),
-    errorCode: raw.errorCode || null,
-    companyName: raw.companyName || null,
-    contacts: raw.contacts || [],
-    profile: raw.profile || {},
-    profileHtml: raw.profileHtml || null,
-    htmlLength: raw.htmlLength || raw.profileHtml?.length || 0,
-    error: raw.error || null,
-    debug: raw.debug || {},
+    success: r.success ?? false,
+    wcaId: r.wcaId,
+    state: r.state || (r.success ? "ok" : "not_loaded"),
+    errorCode: r.errorCode || null,
+    companyName: r.companyName || null,
+    contacts: r.contacts || [],
+    profile: r.profile || {},
+    profileHtml: r.profileHtml || null,
+    htmlLength: r.htmlLength || r.profileHtml?.length || 0,
+    error: r.error || null,
+    debug: r.debug || {},
   };
 }
