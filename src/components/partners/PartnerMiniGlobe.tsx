@@ -19,7 +19,7 @@ export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity
     const branches = Array.isArray(branchCities) ? branchCities : [];
     branches.forEach((b) => {
       const code = b?.country_code || b?.country;
-      if (code) codes.add(code);
+      if (code) codes.add(String(code));
     });
 
     return Array.from(codes).map((code) => {

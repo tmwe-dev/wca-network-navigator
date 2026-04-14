@@ -49,19 +49,19 @@ export function PartnerAIBar({ viewContext }: Props) {
           } : undefined,
         }, context: "PartnerAIBar.ai_assistant" });
       if (data?.error) {
-        toast.error(data.error);
+        toast.error(String(data.error));
         setLoading(false);
         return;
       }
 
-      const raw = data?.content || "";
+      const raw = String(data?.content || "");
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setLastResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
       setExpanded(true);
     } catch (e: unknown) {
       log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
-      toast.error(e.message || "Errore di comunicazione");
+      toast.error(e instanceof Error ? e.message : "Errore di comunicazione");
     } finally {
       setLoading(false);
       inputRef.current?.focus();

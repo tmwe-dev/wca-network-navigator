@@ -381,7 +381,7 @@ export default function PartnerFiltersSheet({
                 value={filters.expiresWithinMonths?.toString() || ""}
                 onValueChange={(v) => setFilters((p) => ({
                   ...p,
-                  expiresWithinMonths: v ? (v === "active" ? v as string : parseInt(v)) : undefined,
+                  expiresWithinMonths: v ? (v === "active" ? "active" as const : parseInt(v)) : undefined,
                 }))}
               >
                 <SelectTrigger className="w-full text-sm">

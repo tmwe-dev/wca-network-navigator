@@ -65,7 +65,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
       } else { toast.error(data?.error || "Errore"); }
-    } catch (e: unknown) { toast.error(e?.message || "Errore"); }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Errore"); }
     finally { setDeepSearching(false); }
   }, [partner.id, queryClient]);
 
@@ -74,7 +74,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const networks = partner.partner_networks || [];
 
   // ── Email: navigate to composer with contact pre-filled ──
-  const handleSendEmail = useCallback((contact: Record<string, any>) => {
+  const handleSendEmail = useCallback((contact: { email?: string; name?: string }) => {
     navigate("/email-composer", {
       state: {
         partnerIds: [partner.id],
@@ -122,13 +122,13 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
       }
     } catch (e: unknown) {
-      toast.error(e?.message || "Errore invio WhatsApp");
+      toast.error(e instanceof Error ? e.message : "Errore invio WhatsApp");
     } finally {
       setWaSending(null);
     }
   }, [partner, waAvailable, sendWhatsApp]);
-  const _transportServices = services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category));
-  const _specialtyServices = services.filter((s) => !TRANSPORT_SERVICES.includes(s.service_category));
+   const _transportServices = services.filter((s: { service_category: string }) => TRANSPORT_SERVICES.includes(s.service_category));
+   const _specialtyServices = services.filter((s: { service_category: string }) => !TRANSPORT_SERVICES.includes(s.service_category));
 
   return (
     <div className="p-4 space-y-4">
@@ -172,7 +172,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Record<string, unknown>} />}
+          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
@@ -188,13 +188,13 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       </div>
 
       {/* Enrichment — top priority */}
-      <EnrichmentCard partner={partner} />
+      <EnrichmentCard partner={partner as any} />
 
       {/* Contacts */}
       {contacts.length > 0 && (
         <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
-          {contacts.map((c) => (
+          {contacts.map((c: any) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
@@ -296,7 +296,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
           <div className="flex flex-wrap gap-1.5">
-            {networks.map((n) => (
+            {networks.map((n: any) => (
               <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
                 {n.network_name}
                 {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}

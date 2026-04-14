@@ -106,8 +106,8 @@ export function SenderProfilesView() {
                   {lastSentiments.length > 0 && (
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-muted-foreground mr-1">Sentiment:</span>
-                      {lastSentiments.map((s: string, i: number) => (
-                        <div key={i} className={`h-2.5 w-2.5 rounded-full ${SENTIMENTS[s] ?? SENTIMENTS.neutral}`} />
+                      {lastSentiments.map((s: unknown, i: number) => (
+                        <div key={i} className={`h-2.5 w-2.5 rounded-full ${SENTIMENTS[String(s)] ?? SENTIMENTS.neutral}`} />
                       ))}
                     </div>
                   )}
