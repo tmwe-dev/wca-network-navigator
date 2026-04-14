@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { findEmailTemplatesShort } from "@/data/emailTemplates";
 import type { MissionStepProps, AttachmentConfig } from "./types";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface TemplateEntry { id: string; name: string; file_url: string }
 interface ImageEntry { name: string; url: string }

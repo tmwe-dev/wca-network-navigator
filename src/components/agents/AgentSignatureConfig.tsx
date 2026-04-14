@@ -11,6 +11,7 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const log = createLogger("AgentSignatureConfig");
 
