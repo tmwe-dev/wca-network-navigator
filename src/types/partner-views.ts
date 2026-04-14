@@ -2,7 +2,6 @@
  * Shared Partner view-model types for UI components.
  * These replace `Record<string, any>` across partner components.
  */
-import type { Json } from "@/integrations/supabase/types";
 
 /** Service relation from Supabase join */
 export interface PartnerServiceView { service_category: string }
@@ -28,23 +27,6 @@ export interface PartnerContactView {
   is_primary?: boolean | null;
   contact_alias?: string | null;
   [key: string]: unknown;
-}
-
-/** Interaction from Supabase join */
-export interface PartnerInteractionView {
-  id: string;
-  interaction_type: string;
-  title: string;
-  notes?: string | null;
-  created_at: string;
-}
-
-/** Reminder from Supabase join */
-export interface PartnerReminderView {
-  id: string;
-  title: string;
-  remind_at: string;
-  completed: boolean;
 }
 
 /** Enrichment data shape stored as JSON in partners.enrichment_data */
@@ -84,8 +66,7 @@ export interface EnrichmentData {
 
 /**
  * Partner view-model used in UI components.
- * Covers all fields accessed across PartnerCard, PartnerListItem,
- * PartnerDetailCompact, PartnerDetailFull, PartnerDetailHeader, PartnerDetailInfo.
+ * Index-signatured so it's compatible with PartnerLike and Supabase Row.
  */
 export interface PartnerViewModel {
   id: string;
@@ -114,8 +95,8 @@ export interface PartnerViewModel {
   lead_status?: string;
   logo_url?: string | null;
   rating?: number | null;
-  rating_details?: Json | null;
-  enrichment_data?: EnrichmentData | null;
+  rating_details?: unknown;
+  enrichment_data?: unknown;
   enriched_at?: string | null;
   raw_profile_html?: string | null;
   raw_profile_markdown?: string | null;
@@ -131,6 +112,15 @@ export interface PartnerViewModel {
   partner_certifications?: PartnerCertificationView[];
   partner_networks?: PartnerNetworkView[];
   partner_contacts?: PartnerContactView[];
-  interactions?: PartnerInteractionView[];
-  reminders?: PartnerReminderView[];
+  interactions?: unknown[];
+  reminders?: unknown[];
+  partner_social_links?: Array<Record<string, unknown>>;
+  // Index signature for PartnerLike compatibility
+  [key: string]: unknown;
+}
+
+/** Helper to safely cast enrichment_data to EnrichmentData */
+export function asEnrichmentData(data: unknown): EnrichmentData | null {
+  if (!data || typeof data !== "object") return null;
+  return data as EnrichmentData;
 }
