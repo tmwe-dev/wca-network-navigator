@@ -208,7 +208,6 @@ export function useAuthV2(): UseAuthV2Return {
     }
   }, []);
 
-  }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     setError(null);
