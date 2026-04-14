@@ -38,7 +38,7 @@ import { LayoutHeader } from "./LayoutHeader";
 
 const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
-const FiltersDrawer = lazy(() => import("@/components/global/FiltersDrawer").then(m => ({ default: m.FiltersDrawer })));
+const FiltersDrawer = lazy(() => import("@/components/global/filters-drawer").then(m => ({ default: m.FiltersDrawer })));
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const CommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
 const GlobalVoiceFAB = lazy(() => import("@/components/voice/GlobalVoiceFAB"));
