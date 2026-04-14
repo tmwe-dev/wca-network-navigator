@@ -3,21 +3,25 @@ import type { ContactOrigin } from "@/pages/Cockpit";
 
 export interface ImportedContactRecord {
   id: string;
-  contact_alias?: string;
-  name?: string;
-  company_alias?: string;
-  company_name?: string;
-  position?: string;
-  country?: string;
-  last_interaction_at?: string;
-  email?: string;
-  phone?: string;
-  mobile?: string;
-  origin?: string;
+  contact_alias?: string | null;
+  name?: string | null;
+  company_alias?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  country?: string | null;
+  city?: string | null;
+  last_interaction_at?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  origin?: string | null;
   wca_partner_id?: string | null;
-  deep_search_at?: string;
-  enrichment_data?: Record<string, unknown>;
-  lead_status?: string;
+  deep_search_at?: string | null;
+  enrichment_data?: Record<string, unknown> | null;
+  lead_status?: string | null;
+  lead_score?: number | null;
+  lead_score_breakdown?: Record<string, unknown> | null;
+  interaction_count?: number | null;
 }
 
 interface BusinessCardRecord {

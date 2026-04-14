@@ -50,17 +50,18 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const partner = partners[virtualRow.index] as Record<string, unknown>;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
+          const partner = partners[virtualRow.index] as any;
           const contacts = partner.partner_contacts || [];
-          const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
+          const primaryContact = contacts.find((c: Record<string, unknown>) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;
-          const hasEmail = !!partner.email || contacts.some((c) => c.email);
-          const hasPhone = !!partner.phone || contacts.some((c) => c.direct_phone || c.mobile);
-          const hasDeep = !!(partner.enrichment_data as Record<string, unknown>)?.deep_search_at;
+          const hasEmail = !!partner.email || contacts.some((c: Record<string, unknown>) => c.email);
+          const hasPhone = !!partner.phone || contacts.some((c: Record<string, unknown>) => c.direct_phone || c.mobile);
+          const hasDeep = !!partner.enrichment_data?.deep_search_at;
           const inHolding = partner.lead_status && partner.lead_status !== "new";
-          const years = getYearsMember(partner.member_since);
+          const years = getYearsMember(partner.member_since as string | null);
           const logoUrl = getEffectiveLogoUrl(partner);
-          const flag = getCountryFlag(partner.country_code);
+          const flag = getCountryFlag(partner.country_code as string);
           const snippet = getEnrichmentSnippet(partner);
           const hasLi = hasLinkedIn(partner);
           const hasWa = hasWhatsApp(partner);
