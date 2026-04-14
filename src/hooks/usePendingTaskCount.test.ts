@@ -46,9 +46,9 @@ describe("usePendingTaskCount", () => {
     expect(mockEq).toHaveBeenCalledWith("user_id", "test-user");
     expect(mockIn).toHaveBeenCalledWith("status", ["pending", "proposed"]);
   });
-  it("sets up realtime subscription on mount", () => {
-    const { supabase } = require("@/integrations/supabase/client");
-    const channelSpy = vi.spyOn(supabase, "channel");
+  it("sets up realtime subscription on mount", async () => {
+    const mod = await import("@/integrations/supabase/client");
+    const channelSpy = vi.spyOn(mod.supabase, "channel");
     renderHookWithProviders(() => usePendingTaskCount());
     expect(channelSpy).toHaveBeenCalledWith("pending-tasks-badge");
     channelSpy.mockRestore();
