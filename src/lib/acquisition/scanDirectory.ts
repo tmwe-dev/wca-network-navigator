@@ -193,7 +193,7 @@ export async function loadPartnerPreview(wcaId: number) {
     contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
     services: (svcs || []).map(s => s.service_category),
     key_markets: (ed as Record<string, unknown>)?.key_markets as string[] || [],
-    key_routes: (ed as Record<string, unknown>)?.key_routes as string[] || [],
+    key_routes: ((ed as Record<string, unknown>)?.key_routes as Array<{ from: string; to: string }> | string[] || []).map(r => typeof r === "string" ? { from: r, to: "" } : r),
     networks: (nets || []).map(n => n.network_name),
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
