@@ -262,7 +262,7 @@ export function useCockpitContacts() {
           email: pc.email || "", phone: pc.mobile || pc.direct_phone || "",
           origin: "wca" as ContactOrigin, originDetail: partner?.company_name || "Partner",
           sourceType: st, sourceId: sid, partnerId: pc.partner_id || item.partner_id,
-          linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
+          linkedinUrl: contactSocialMap[pc.id] || (pc.partner_id ? socialLinksMap[pc.partner_id] : "") || "",
           contactAlias: pc.contact_alias || undefined,
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,

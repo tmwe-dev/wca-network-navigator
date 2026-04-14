@@ -399,13 +399,15 @@ export async function deletePartnersWithRelations(ids: string[]) {
   }
 }
 
-export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<Array<Record<string, unknown>>> {
+export interface PartnerLeadResult { id: string; company_name?: string; email?: string | null; lead_status?: string; [k: string]: unknown }
+
+export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<PartnerLeadResult[]> {
   const { data, error } = await supabase
     .from("partners")
     .select(select)
     .in("lead_status", statuses);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as PartnerLeadResult[];
 }
 
 export async function findPartnerByEmail(email: string) {
