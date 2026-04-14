@@ -52,7 +52,7 @@ export function PartnerDetailHeader({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
-            {enrichment && typeof enrichment === "object" && "deep_search_at" in enrichment && enrichment.deep_search_at && (
+            {enrichment && typeof enrichment === "object" && "deep_search_at" in enrichment && (enrichment as Record<string, unknown>).deep_search_at && (
               <Tooltip>
                 <TooltipTrigger>
                   <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
