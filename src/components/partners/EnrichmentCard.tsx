@@ -5,6 +5,26 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+interface EnrichmentData {
+  company_profile?: {
+    awards?: Array<Record<string, unknown>>;
+    specialties?: string[];
+    recent_news?: string;
+    founded_year?: number;
+    employee_count_estimate?: number;
+  };
+  contact_profiles?: Record<string, {
+    name?: string;
+    linkedin_title?: string;
+    seniority?: string;
+    background?: string;
+    languages?: string[];
+    interests?: string[];
+  }>;
+  deep_search_at?: string;
+  tokens_used?: { credits_consumed?: number; prompt?: number; completion?: number };
+}
+
 interface EnrichmentCardProps {
   partner: {
     id: string;
@@ -21,7 +41,7 @@ const seniorityColors: Record<string, string> = {
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
-  const enrichment = partner.enrichment_data as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- deeply nested enrichment JSON shape
+  const enrichment = partner.enrichment_data as EnrichmentData | undefined;
   if (!enrichment && !partner.enriched_at && !partner.ai_parsed_at) return null;
 
   const companyProfile = enrichment?.company_profile;
@@ -29,8 +49,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   const deepSearchAt = enrichment?.deep_search_at;
   const tokensUsed = enrichment?.tokens_used;
   const hasCompanyData = companyProfile && (
-    companyProfile.awards?.length > 0 ||
-    companyProfile.specialties?.length > 0 ||
+    (companyProfile.awards?.length ?? 0) > 0 ||
+    (companyProfile.specialties?.length ?? 0) > 0 ||
     companyProfile.recent_news ||
     companyProfile.founded_year ||
     companyProfile.employee_count_estimate
@@ -87,19 +107,19 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                   )}
                 </div>
               )}
-              {companyProfile.specialties?.length > 0 && (
+              {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {companyProfile.specialties.map((s: string, i: number) => (
+                  {companyProfile.specialties!.map((s: string, i: number) => (
                     <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
                       {s}
                     </span>
                   ))}
                 </div>
               )}
-              {companyProfile.awards?.length > 0 && (
+              {(companyProfile.awards?.length ?? 0) > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
-                    const label = typeof a === "string" ? a : String((a as any)?.name || (a as any)?.recipient || JSON.stringify(a)); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column
+                  {companyProfile.awards!.map((a: Record<string, unknown>, i: number) => {
+                    const label = typeof a === "string" ? a : String(a?.name || a?.recipient || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
@@ -131,7 +151,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="space-y-2 mt-1.5">
-              {Object.entries(contactProfiles).map(([id, profile]: [string, any]) => (
+              {Object.entries(contactProfiles).map(([id, profile]) => (
                 <div key={id} className="bg-card/60 border border-primary/10 rounded-lg p-2.5 space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium text-foreground">{profile.name}</span>
@@ -170,11 +190,11 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       )}
 
       {/* Token consumption */}
-      {tokensUsed && tokensUsed.credits_consumed > 0 && (
+      {tokensUsed && (tokensUsed.credits_consumed ?? 0) > 0 && (
         <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
           <Coins className={cn("w-3.5 h-3.5", 
-            tokensUsed.credits_consumed > 50 ? "text-destructive" : 
-            tokensUsed.credits_consumed > 20 ? "text-primary" : "text-emerald-500"
+            (tokensUsed.credits_consumed ?? 0) > 50 ? "text-destructive" : 
+            (tokensUsed.credits_consumed ?? 0) > 20 ? "text-primary" : "text-emerald-500"
           )} />
           <span className="text-[10px] text-muted-foreground">
             {tokensUsed.credits_consumed} crediti AI

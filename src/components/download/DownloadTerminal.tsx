@@ -41,7 +41,7 @@ function useTerminalData() {
   const targetJob = activeJob || fallbackJob;
   const entries: LogEntry[] = targetJob
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
-    ? ((targetJob as any).terminal_log as LogEntry[] || [])
+    ? ((targetJob as any).terminal_log as LogEntry[] || []) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON
     : [];
   return { activeJob, entries };
 }

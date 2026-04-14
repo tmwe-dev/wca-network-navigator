@@ -44,7 +44,7 @@ export async function getEmailDraftField(id: string, field: string) {
 }
 
 export async function createEmailDraft(draft: Record<string, unknown>) {
-  const { data, error } = await supabase.from("email_drafts").insert(draft as any).select().single();
+  const { data, error } = await supabase.from("email_drafts").insert(draft as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema.select().single();
   if (error) throw error;
   return data;
 }

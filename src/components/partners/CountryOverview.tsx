@@ -29,9 +29,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface PartnerWithContacts {
+  id: string;
+  country_code: string;
+  country_name: string;
+  company_name: string;
+  city?: string;
+  rating?: number;
+  partner_contacts?: Array<{ email?: string | null; mobile?: string | null; direct_phone?: string | null; is_primary?: boolean; name?: string }>;
+  [key: string]: unknown;
+}
+
 interface CountryOverviewProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape
-  partners: Array<Record<string, any>>;
+  partners: PartnerWithContacts[];
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -48,8 +58,7 @@ interface CountryGroup {
   withContacts: number;
   withWhatsApp: number;
   withEmail: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  partners: Array<Record<string, any>>;
+  partners: PartnerWithContacts[];
 }
 
 type ContactFilter = "all" | "whatsapp" | "email";
@@ -69,14 +78,14 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  const hasWhatsApp = (p: any) => // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape
-    (p.partner_contacts || []).some((c: any) => c.mobile); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-  const hasEmail = (p: any) => // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-    (p.partner_contacts || []).some((c: any) => c.email); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+  const hasWhatsApp = (p: PartnerWithContacts) =>
+    (p.partner_contacts || []).some((c) => c.mobile);
+  const hasEmail = (p: PartnerWithContacts) =>
+    (p.partner_contacts || []).some((c) => c.email);
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
-    (partners || []).forEach((p: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
+    (partners || []).forEach((p) => {
       if (!map.has(p.country_code)) {
         map.set(p.country_code, {
           code: p.country_code,
@@ -372,10 +381,10 @@ export function CountryOverview({
                                   <MapPin className="w-3 h-3" />
                                   {partner.city}
                                 </span>
-                                {partner.rating > 0 && (
+                                {(partner.rating ?? 0) > 0 && (
                                   <span className="flex items-center gap-0.5">
                                     <Star className="w-3 h-3 fill-primary text-primary" />
-                                    {partner.rating.toFixed(1)}
+                                    {partner.rating!.toFixed(1)}
                                   </span>
                                 )}
                               </div>

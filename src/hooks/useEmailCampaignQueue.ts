@@ -92,7 +92,7 @@ export function useProcessQueue() {
         if (data?.completed) { completed = true; toast.success(`Campagna completata: ${data.sent} inviate, ${data.failed} fallite`); }
         const draft = await getEmailDraftField(draftId, "queue_status");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extended column not in generated types
-        if ((draft as any)?.queue_status === "paused" || (draft as any)?.queue_status === "cancelled") break;
+        if ((draft as Record<string, unknown>)?.queue_status === "paused" || (draft as Record<string, unknown>)?.queue_status === "cancelled") break;
         if (!completed) await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
         log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });

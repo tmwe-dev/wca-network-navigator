@@ -51,9 +51,10 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const partner = partners[virtualRow.index] as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
+          type PartnerContact = { email?: string; name?: string; is_primary?: boolean; direct_phone?: string; mobile?: string; [k: string]: unknown };
+          const partner = partners[virtualRow.index] as Record<string, unknown> & { id: string; partner_contacts?: PartnerContact[]; company_name?: string; company_alias?: string; city?: string; rating?: number; email?: string; phone?: string; lead_status?: string; member_since?: string | null; country_code?: string; raw_profile_html?: string; enrichment_data?: Record<string, unknown> };
           const contacts = partner.partner_contacts || [];
-          const primaryContact = contacts.find((c: Record<string, unknown>) => c.is_primary) || contacts[0];
+          const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;
           const hasEmail = !!partner.email || contacts.some((c: Record<string, unknown>) => c.email);
           const hasPhone = !!partner.phone || contacts.some((c: Record<string, unknown>) => c.direct_phone || c.mobile);
@@ -123,9 +124,9 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-sm leading-none shrink-0">{flag}</span>
                     <span className={cn("text-[11px] truncate", isDark ? "text-slate-400" : "text-slate-500")}>{partner.city}</span>
-                    {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
+                    {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
                     {primaryContact && (
-                      <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {primaryContact.name}</span>
+                      <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {String(primaryContact.name ?? "")}</span>
                     )}
                   </div>
                   {snippet && (
@@ -143,7 +144,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 />
                 <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {primaryContact?.email && (
-                    <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
+                    <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: String(primaryContact.email), name: String(primaryContact.name ?? ""), company: partner.company_name ?? "", partnerId: partner.id }); }}
                       className={cn("p-1 rounded-md transition-all", isDark ? "text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10")}>
                       <Send className="w-3 h-3" />
                     </button>

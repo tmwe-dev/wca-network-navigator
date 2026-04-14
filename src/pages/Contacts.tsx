@@ -7,11 +7,12 @@ import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
+import type { ContactDetail } from "@/hooks/useContactDetail";
 
 const log = createLogger("Contacts");
 
 export default function Contacts() {
-  const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactDetail | null>(null);
   // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
 
@@ -19,7 +20,7 @@ export default function Contacts() {
     try {
       const data = await getContactById(id);
       if (data) {
-        setSelectedContact(data);
+        setSelectedContact(data as unknown as ContactDetail);
         trackEntityOpen("contact", id);
       }
     } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); }
@@ -36,13 +37,13 @@ export default function Contacts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlContactId]);
 
-  const handleSelect = useCallback((contact: Record<string, any>) => {
-    setSelectedContact(contact);
-    if (contact?.id) setUrlContactId(contact.id);
+  const handleSelect = useCallback((contact: Record<string, unknown>) => {
+    setSelectedContact(contact as unknown as ContactDetail);
+    if (contact?.id) setUrlContactId(String(contact.id));
   }, [setUrlContactId]);
 
   const handleContactUpdated = useCallback((updated: Record<string, unknown>) => {
-    setSelectedContact(updated);
+    setSelectedContact(updated as unknown as ContactDetail);
   }, []);
 
   const handleCloseDetail = useCallback(() => {

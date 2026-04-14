@@ -13,7 +13,7 @@ interface ExpandedGroupContentProps {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
-  onSelect: (contact: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic contact shape
+  onSelect: (contact: Record<string, unknown>) => void;
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;

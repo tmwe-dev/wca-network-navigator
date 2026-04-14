@@ -152,7 +152,7 @@ export function PendingActionsPanel() {
               const srcMeta = SOURCE_META[action.source ?? "ai_classifier"] ?? SOURCE_META.ai_classifier;
               const SrcIcon = srcMeta.icon;
               const expanded = expandedId === action.id;
-              const partnerName = (action as any).partners?.company_name; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
+              const partnerName = (action as Record<string, unknown> & { partners?: { company_name?: string } }).partners?.company_name;
 
               return (
                 <div key={action.id} className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 space-y-3">

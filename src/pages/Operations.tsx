@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Globe, Users, Eye, CreditCard } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
-import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
 
 import { ThemeCtx } from "@/components/download/theme";
 import { type FilterKey } from "@/components/download/CountryGrid";
@@ -41,8 +41,8 @@ function useDirectoryTotal() {
 function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
   networkView: "partners" | "bca";
   setNetworkView: (v: "partners" | "bca") => void;
-  globalStats: unknown;
-  deepSearch: unknown;
+  globalStats: { totalPartners: number } & Record<string, unknown> | null;
+  deepSearch: DeepSearchState;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {
@@ -79,13 +79,12 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
       {globalStats && (
         <span className="hidden md:flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
           <Users className="w-3 h-3" />
-          <span className="font-mono">{(globalStats as any).totalPartners}</span> partner // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          <span className="font-mono">{globalStats.totalPartners}</span> partner
         </span>
       )}
 
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {((deepSearch as any).running || (deepSearch as any).results?.length > 0) && !(deepSearch as any).canvasOpen && (
-        <button onClick={() => (deepSearch as any).setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search"> // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      {(deepSearch.running || deepSearch.results?.length > 0) && !deepSearch.canvasOpen && (
+        <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
           <Eye className="w-3.5 h-3.5" />
         </button>
       )}
