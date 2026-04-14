@@ -11,7 +11,7 @@ const path = require('path');
 // ============================================================
 // Chrome invia/riceve messaggi con un header di 4 byte (lunghezza) + JSON
 
-let pendingRequests = new Map(); // requestId → { resolve, reject, timeout }
+const pendingRequests = new Map(); // requestId → { resolve, reject, timeout }
 let requestCounter = 0;
 
 function sendToExtension(message) {

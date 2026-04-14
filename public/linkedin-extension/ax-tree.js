@@ -4,7 +4,7 @@
 // instead of fragile CSS selectors
 // ══════════════════════════════════════════════════
 
-var AXTree = (function () {
+const AXTree = (function () {
   // Attach debugger to tab, run query, detach
   async function withDebugger(tabId, fn) {
     try {
@@ -17,7 +17,7 @@ var AXTree = (function () {
       }
     }
     try {
-      var result = await fn(tabId);
+      const result = await fn(tabId);
       return result;
     } finally {
       try { await chrome.debugger.detach({ tabId: tabId }); } catch (_) {}
@@ -31,19 +31,19 @@ var AXTree = (function () {
 
   // Get the full accessibility tree
   async function getFullTree(tabId) {
-    var result = await cdp(tabId, "Accessibility.getFullAXTree");
+    const result = await cdp(tabId, "Accessibility.getFullAXTree");
     return result.nodes || [];
   }
 
   // Find nodes by role and optional name pattern
   function findByRole(nodes, role, namePattern) {
-    var matches = [];
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      var nodeRole = n.role && n.role.value;
+    const matches = [];
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const nodeRole = n.role && n.role.value;
       if (nodeRole !== role) continue;
       if (namePattern) {
-        var nodeName = n.name && n.name.value ? n.name.value : "";
+        const nodeName = n.name && n.name.value ? n.name.value : "";
         if (namePattern instanceof RegExp) {
           if (!namePattern.test(nodeName)) continue;
         } else {
@@ -57,7 +57,7 @@ var AXTree = (function () {
 
   // Find a single node by role + name
   function findOne(nodes, role, namePattern) {
-    var results = findByRole(nodes, role, namePattern);
+    const results = findByRole(nodes, role, namePattern);
     return results.length > 0 ? results[0] : null;
   }
 
@@ -76,7 +76,7 @@ var AXTree = (function () {
   async function clickNode(tabId, backendNodeId) {
     try {
       // Resolve to a Runtime object to call click()
-      var resolveResult = await cdp(tabId, "DOM.resolveNode", { backendNodeId: backendNodeId });
+      const resolveResult = await cdp(tabId, "DOM.resolveNode", { backendNodeId: backendNodeId });
       if (resolveResult && resolveResult.object && resolveResult.object.objectId) {
         await cdp(tabId, "Runtime.callFunctionOn", {
           objectId: resolveResult.object.objectId,
@@ -88,11 +88,11 @@ var AXTree = (function () {
     } catch (e) {
       // Fallback: try box model click
       try {
-        var box = await cdp(tabId, "DOM.getBoxModel", { backendNodeId: backendNodeId });
+        const box = await cdp(tabId, "DOM.getBoxModel", { backendNodeId: backendNodeId });
         if (box && box.model && box.model.content) {
-          var quad = box.model.content;
-          var x = (quad[0] + quad[2] + quad[4] + quad[6]) / 4;
-          var y = (quad[1] + quad[3] + quad[5] + quad[7]) / 4;
+          const quad = box.model.content;
+          const x = (quad[0] + quad[2] + quad[4] + quad[6]) / 4;
+          const y = (quad[1] + quad[3] + quad[5] + quad[7]) / 4;
           await cdp(tabId, "Input.dispatchMouseEvent", { type: "mousePressed", x: x, y: y, button: "left", clickCount: 1 });
           await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseReleased", x: x, y: y, button: "left", clickCount: 1 });
           return true;
@@ -104,7 +104,7 @@ var AXTree = (function () {
 
   // Type text into a focused element
   async function typeText(tabId, text) {
-    for (var i = 0; i < text.length; i++) {
+    for (let i = 0; i < text.length; i++) {
       await cdp(tabId, "Input.dispatchKeyEvent", {
         type: "keyDown",
         text: text[i],
@@ -135,21 +135,21 @@ var AXTree = (function () {
   // Extract profile data using AX Tree (headings, text nodes)
   async function extractProfile(tabId) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
+      const nodes = await getFullTree(tid);
 
-      var result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
+      const result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
 
       // Name: first heading level 1
-      var h1 = findOne(nodes, "heading");
+      const h1 = findOne(nodes, "heading");
       if (h1 && h1.name) result.name = h1.name.value;
 
       // Also search for more specific data using all StaticText nodes
-      var textNodes = findByRole(nodes, "StaticText");
+      const textNodes = findByRole(nodes, "StaticText");
 
       // Try to find connection status buttons
-      var connectBtn = findOne(nodes, "button", /connect|collegati|connetti/i);
-      var messageBtn = findOne(nodes, "button", /messag|scrivi/i);
-      var pendingBtn = findOne(nodes, "button", /pending|in attesa/i);
+      const connectBtn = findOne(nodes, "button", /connect|collegati|connetti/i);
+      const messageBtn = findOne(nodes, "button", /messag|scrivi/i);
+      const pendingBtn = findOne(nodes, "button", /pending|in attesa/i);
 
       if (pendingBtn) result.connectionStatus = "pending";
       else if (messageBtn && !connectBtn) result.connectionStatus = "connected";
@@ -162,15 +162,15 @@ var AXTree = (function () {
   // Find and click the Message button on a profile
   async function clickMessageButton(tabId) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
+      const nodes = await getFullTree(tid);
       // Look for button with "Message" or "Messaggio" in name
-      var btn = findOne(nodes, "button", /^messag|^scrivi/i);
+      let btn = findOne(nodes, "button", /^messag|^scrivi/i);
       if (!btn) {
         // Try link role
         btn = findOne(nodes, "link", /^messag|^scrivi/i);
       }
       if (!btn || !btn.backendDOMNodeId) return { success: false, error: "AX: Message button not found" };
-      var clicked = await clickNode(tid, btn.backendDOMNodeId);
+      const clicked = await clickNode(tid, btn.backendDOMNodeId);
       return { success: clicked, method: "ax_tree" };
     });
   }
@@ -178,9 +178,9 @@ var AXTree = (function () {
   // Find the message textbox and type into it
   async function typeMessage(tabId, text) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
+      let nodes = await getFullTree(tid);
       // Find textbox (contenteditable message input)
-      var textbox = findOne(nodes, "textbox", /write a message|scrivi un messaggio/i);
+      let textbox = findOne(nodes, "textbox", /write a message|scrivi un messaggio/i);
       if (!textbox) textbox = findOne(nodes, "textbox");
       if (!textbox || !textbox.backendDOMNodeId) return { success: false, error: "AX: Message textbox not found" };
 
@@ -189,7 +189,7 @@ var AXTree = (function () {
       await insertText(tid, text);
 
       // Find Send button
-      var sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
+      let sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
       if (!sendBtn) {
         // Re-fetch tree after typing (DOM may have changed)
         nodes = await getFullTree(tid);
@@ -206,12 +206,12 @@ var AXTree = (function () {
   // Click Connect button
   async function clickConnect(tabId) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
-      var btn = findOne(nodes, "button", /^connect$|^collegati$|^connetti$/i);
+      let nodes = await getFullTree(tid);
+      let btn = findOne(nodes, "button", /^connect$|^collegati$|^connetti$/i);
 
       if (!btn) {
         // Try "More" / "Altro" dropdown first
-        var moreBtn = findOne(nodes, "button", /^more$|^altro$|^più$/i);
+        const moreBtn = findOne(nodes, "button", /^more$|^altro$|^più$/i);
         if (moreBtn && moreBtn.backendDOMNodeId) {
           await clickNode(tid, moreBtn.backendDOMNodeId);
           await new Promise(function (r) { setTimeout(r, 1200); });
@@ -232,16 +232,16 @@ var AXTree = (function () {
   // Add connection note in modal
   async function addNote(tabId, noteText) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
+      let nodes = await getFullTree(tid);
       // Click "Add a note"
-      var addNoteBtn = findOne(nodes, "button", /add a note|aggiungi nota|aggiungi un messaggio/i);
+      const addNoteBtn = findOne(nodes, "button", /add a note|aggiungi nota|aggiungi un messaggio/i);
       if (!addNoteBtn || !addNoteBtn.backendDOMNodeId) return { success: false, error: "AX: Add Note button not found" };
       await clickNode(tid, addNoteBtn.backendDOMNodeId);
       await new Promise(function (r) { setTimeout(r, 1000); });
 
       // Find textarea
       nodes = await getFullTree(tid);
-      var textarea = findOne(nodes, "textbox");
+      const textarea = findOne(nodes, "textbox");
       if (!textarea || !textarea.backendDOMNodeId) return { success: false, error: "AX: Note textarea not found" };
 
       await focusNode(tid, textarea.backendDOMNodeId);
@@ -251,7 +251,7 @@ var AXTree = (function () {
       // Click Send
       await new Promise(function (r) { setTimeout(r, 500); });
       nodes = await getFullTree(tid);
-      var sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
+      const sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
       if (sendBtn && sendBtn.backendDOMNodeId) {
         await clickNode(tid, sendBtn.backendDOMNodeId);
         return { success: true, method: "ax_tree" };
@@ -263,31 +263,31 @@ var AXTree = (function () {
   // Read inbox conversations using AX Tree
   async function readInbox(tabId) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
-      var threads = [];
-      var seen = {};
+      const nodes = await getFullTree(tid);
+      const threads = [];
+      const seen = {};
 
       // Strategy A: Find links containing /messaging/thread/
-      var links = findByRole(nodes, "link");
-      for (var i = 0; i < links.length; i++) {
-        var link = links[i];
-        var rawName = link.name && link.name.value ? link.name.value : "";
+      const links = findByRole(nodes, "link");
+      for (let i = 0; i < links.length; i++) {
+        const link = links[i];
+        const rawName = link.name && link.name.value ? link.name.value : "";
         if (!rawName || rawName.length < 2) continue;
         if (link.backendDOMNodeId) {
           try {
-            var resolved = await cdp(tid, "DOM.resolveNode", { backendNodeId: link.backendDOMNodeId });
+            const resolved = await cdp(tid, "DOM.resolveNode", { backendNodeId: link.backendDOMNodeId });
             if (resolved && resolved.object) {
-              var hrefResult = await cdp(tid, "Runtime.callFunctionOn", {
+              const hrefResult = await cdp(tid, "Runtime.callFunctionOn", {
                 objectId: resolved.object.objectId,
                 functionDeclaration: "function() { var h = this.href || ''; var name = ''; var h3 = this.querySelector('h3'); if (h3) name = h3.textContent.replace(/\\s+/g,' ').trim(); if (!name) { var spans = this.querySelectorAll('span'); for (var s=0;s<spans.length;s++) { var t = (spans[s].textContent||'').trim(); if (t.length>1 && t.length<60 && !/^\\d/.test(t) && !/^(passa|go to|details)/i.test(t)) { name = t; break; } } } if (!name) { var img = this.querySelector('img[alt]'); if (img) { var alt = (img.getAttribute('alt')||'').trim(); if (alt.length>1 && alt.length<60 && !/photo|foto|avatar/i.test(alt)) name = alt; } } return JSON.stringify({href:h, name:name}); }",
                 returnByValue: true,
               });
-              var parsed = null;
+              let parsed = null;
               try { parsed = JSON.parse(hrefResult && hrefResult.result && hrefResult.result.value); } catch (_) {}
               if (parsed && parsed.href && /\/messaging\/thread\//.test(parsed.href)) {
                 if (seen[parsed.href]) continue;
                 seen[parsed.href] = true;
-                var contactName = parsed.name || rawName;
+                let contactName = parsed.name || rawName;
                 if (/^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(contactName)) contactName = "";
                 if (contactName) threads.push({ name: contactName, threadUrl: parsed.href, unread: false, lastMessage: "" });
               }
@@ -298,22 +298,22 @@ var AXTree = (function () {
 
       // Strategy B: Find listitem nodes that may represent conversations
       if (threads.length === 0) {
-        var listItems = findByRole(nodes, "listitem");
-        for (var li = 0; li < listItems.length; li++) {
-          var item = listItems[li];
+        const listItems = findByRole(nodes, "listitem");
+        for (let li = 0; li < listItems.length; li++) {
+          const item = listItems[li];
           if (!item.childIds || item.childIds.length === 0) continue;
           // Look for a link child with messaging href
-          var threadUrl = "";
-          var name = "";
-          for (var c = 0; c < item.childIds.length; c++) {
-            var childId = item.childIds[c];
-            var child = nodes.find(function (n) { return n.nodeId === childId; });
+          let threadUrl = "";
+          let name = "";
+          for (let c = 0; c < item.childIds.length; c++) {
+            const childId = item.childIds[c];
+            const child = nodes.find(function (n) { return n.nodeId === childId; });
             if (!child) continue;
             if (child.role && child.role.value === "link" && child.backendDOMNodeId) {
               try {
-                var res2 = await cdp(tid, "DOM.resolveNode", { backendNodeId: child.backendDOMNodeId });
+                const res2 = await cdp(tid, "DOM.resolveNode", { backendNodeId: child.backendDOMNodeId });
                 if (res2 && res2.object) {
-                  var hr = await cdp(tid, "Runtime.callFunctionOn", {
+                  const hr = await cdp(tid, "Runtime.callFunctionOn", {
                     objectId: res2.object.objectId,
                     functionDeclaration: "function() { return this.href || ''; }",
                     returnByValue: true,
@@ -324,12 +324,12 @@ var AXTree = (function () {
                 }
               } catch (_) {}
               if (!name && child.name && child.name.value) {
-                var cn = child.name.value.trim();
+                const cn = child.name.value.trim();
                 if (cn.length > 1 && cn.length < 60 && !/^(passa|go to|details)/i.test(cn)) name = cn;
               }
             }
             if (!name && child.role && child.role.value === "StaticText" && child.name && child.name.value) {
-              var sv = child.name.value.trim();
+              const sv = child.name.value.trim();
               if (sv.length > 1 && sv.length < 60 && !/^\d/.test(sv)) name = sv;
             }
           }
@@ -347,22 +347,22 @@ var AXTree = (function () {
   // Read thread messages using AX Tree
   async function readThread(tabId) {
     return await withDebugger(tabId, async function (tid) {
-      var nodes = await getFullTree(tid);
-      var messages = [];
+      const nodes = await getFullTree(tid);
+      const messages = [];
 
       // Find all listitem or group nodes that contain message text
-      var listItems = findByRole(nodes, "listitem");
-      for (var i = 0; i < listItems.length; i++) {
-        var item = listItems[i];
+      const listItems = findByRole(nodes, "listitem");
+      for (let i = 0; i < listItems.length; i++) {
+        const item = listItems[i];
         if (!item.childIds || item.childIds.length === 0) continue;
         // Look for text children
-        var text = "";
-        var sender = "";
-        for (var c = 0; c < item.childIds.length; c++) {
-          var childId = item.childIds[c];
-          var child = nodes.find(function (n) { return n.nodeId === childId; });
+        let text = "";
+        let sender = "";
+        for (let c = 0; c < item.childIds.length; c++) {
+          const childId = item.childIds[c];
+          const child = nodes.find(function (n) { return n.nodeId === childId; });
           if (child && child.role && child.role.value === "StaticText" && child.name && child.name.value) {
-            var val = child.name.value.trim();
+            const val = child.name.value.trim();
             if (val.length > 1 && val.length < 40 && !text) sender = val;
             else if (val.length > 0) text += val + " ";
           }

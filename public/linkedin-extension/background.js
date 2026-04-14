@@ -21,7 +21,7 @@ try {
 }
 
 // ── Action registry: maps action names to handler functions ──
-var ACTION_HANDLERS = {
+const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({ success: true, version: "3.0" });
     return false; // sync
@@ -37,7 +37,7 @@ var ACTION_HANDLERS = {
   verifySession: function (msg, sendResponse) {
     TabManager.enqueueSession(async function () {
       try {
-        var r = await Auth.verifySession();
+        const r = await Auth.verifySession();
         sendResponse({ success: true, authenticated: r.authenticated, reason: r.reason });
       } catch (err) {
         sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
@@ -129,10 +129,10 @@ var ACTION_HANDLERS = {
 
 // ── Single message listener ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  var source = message && message.source;
+  const source = message && message.source;
   if (source !== "li-content-bridge" && source !== "li-popup") return false;
 
-  var handler = ACTION_HANDLERS[message.action];
+  const handler = ACTION_HANDLERS[message.action];
   if (handler) {
     return handler(message, sendResponse);
   }

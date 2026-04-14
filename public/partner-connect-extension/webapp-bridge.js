@@ -7,8 +7,8 @@
 // ══════════════════════════════════════════════════════════
 
 (function () {
-  var HEARTBEAT_MS = 4000;
-  var alive = true;
+  const HEARTBEAT_MS = 4000;
+  let alive = true;
 
   function isExtensionAlive() {
     try {
@@ -57,7 +57,7 @@
     }
 
     try {
-      var msg = { action: data.action };
+      const msg = { action: data.action };
       if (data.url) msg.url = data.url;
       if (data.query) msg.query = data.query;
       if (data.schema) msg.schema = data.schema;
@@ -81,7 +81,7 @@
           return;
         }
         alive = true;
-        var resp = response || {};
+        const resp = response || {};
         if (resp.error) resp.success = false;
         else if (resp.success === undefined) resp.success = true;
         post({
@@ -205,7 +205,7 @@
 
   // ── Heartbeat ──
   setInterval(function () {
-    var nowAlive = isExtensionAlive();
+    const nowAlive = isExtensionAlive();
     if (nowAlive && !alive) {
       alive = true;
       post({ direction: "from-extension-fs", action: "contentScriptReady" });
@@ -222,7 +222,7 @@
   // ── Message Router ──
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
-    var data = event.data;
+    const data = event.data;
     if (!data || !data.direction) return;
 
     if (data.direction === "from-webapp-fs") relayFireScrape(data);

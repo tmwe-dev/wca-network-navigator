@@ -4,16 +4,16 @@
 // element discovery without hardcoded selectors
 // ══════════════════════════════════════════════
 
-var Discovery = (function () {
+const Discovery = (function () {
 
   // ── Injected discovery script (runs inside WA tab) ──
   function buildDiscoveryScript() {
     return function () {
       function scanShadowRoots(root, roots, seen) {
         try {
-          var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
           while (walker.nextNode()) {
-            var el = walker.currentNode;
+            const el = walker.currentNode;
             if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
               seen.add(el.shadowRoot);
               roots.push(el.shadowRoot);
@@ -23,19 +23,19 @@ var Discovery = (function () {
         } catch (_) {}
       }
 
-      var searchRootsCache = null;
+      let searchRootsCache = null;
       function getSearchRoots() {
         if (searchRootsCache) return searchRootsCache;
-        var roots = [document];
-        var seen = new Set([document]);
+        const roots = [document];
+        const seen = new Set([document]);
         scanShadowRoots(document, roots, seen);
         searchRootsCache = roots;
         return roots;
       }
 
       function qsaDeep(sel) {
-        var out = [], seen = new Set();
-        for (var root of getSearchRoots()) {
+        const out = [], seen = new Set();
+        for (const root of getSearchRoots()) {
           try {
             root.querySelectorAll(sel).forEach(function (el) {
               if (!seen.has(el)) { seen.add(el); out.push(el); }
@@ -50,7 +50,7 @@ var Discovery = (function () {
       function filterVisible(els) {
         return Array.from(els || []).filter(function (el) {
           try {
-            var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+            const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
             return !rect || rect.width > 0 || rect.height > 0;
           } catch (_) { return true; }
         });
@@ -58,7 +58,7 @@ var Discovery = (function () {
 
       function byTestId(id) { return qsDeep('[data-testid="' + id + '"]'); }
 
-      var result = {
+      const result = {
         url: location.href,
         title: document.title,
         isWhatsApp: location.hostname === "web.whatsapp.com",
@@ -78,7 +78,7 @@ var Discovery = (function () {
       // ── Sidebar discovery ──
       result.sidebar = null;
       result.sidebarSelector = null;
-      var sidebarCandidates = [
+      const sidebarCandidates = [
         { sel: '#pane-side', name: 'pane-side' },
         { sel: '#side', name: 'side' },
         { sel: '[data-testid="chatlist"]', name: 'chatlist-testid' },
@@ -88,8 +88,8 @@ var Discovery = (function () {
         { sel: 'nav [role="list"]', name: 'nav-list' },
         { sel: '[role="navigation"]', name: 'role-nav' },
       ];
-      for (var c of sidebarCandidates) {
-        var el = qsDeep(c.sel);
+      for (const c of sidebarCandidates) {
+        const el = qsDeep(c.sel);
         if (el && ((el.children && el.children.length > 0) || (el.textContent || "").trim().length > 0)) {
           result.sidebar = true;
           result.sidebarSelector = c.name;
@@ -103,7 +103,7 @@ var Discovery = (function () {
       result.chatItemsMethod = null;
 
       // S1: data-testid patterns
-      var chatItemStrategies = [
+      const chatItemStrategies = [
         { sel: '[data-testid="cell-frame-container"]', name: 'cell-frame' },
         { sel: '[data-testid="chat-cell-wrapper"]', name: 'cell-wrapper' },
         { sel: '[data-testid="list-item"]', name: 'list-item' },
@@ -111,8 +111,8 @@ var Discovery = (function () {
         { sel: '[role="row"]', name: 'role-row' },
         { sel: '[tabindex="-1"][role="row"]', name: 'tabindex-row' },
       ];
-      for (var s of chatItemStrategies) {
-        var items = filterVisible(qsaDeep(s.sel));
+      for (const s of chatItemStrategies) {
+        const items = filterVisible(qsaDeep(s.sel));
         if (items.length > 0) {
           result.chatItems = items.length;
           result.chatItemsMethod = s.name;
@@ -122,9 +122,9 @@ var Discovery = (function () {
 
       // S2: role container children
       if (result.chatItems === 0) {
-        var containers = filterVisible(qsaDeep('[role="list"], [role="listbox"], [role="grid"]'));
-        for (var cont of containers) {
-          var visibleChildren = filterVisible(Array.from(cont.children || []));
+        const containers = filterVisible(qsaDeep('[role="list"], [role="listbox"], [role="grid"]'));
+        for (const cont of containers) {
+          const visibleChildren = filterVisible(Array.from(cont.children || []));
           if (visibleChildren.length >= 3) {
             result.chatItems = visibleChildren.length;
             result.chatItemsMethod = 'role-container-children';
@@ -136,17 +136,17 @@ var Discovery = (function () {
 
       // S3: span[title] heuristic
       if (result.chatItems === 0 && !result.hasQR) {
-        var allSpansWithTitle = filterVisible(qsaDeep('span[title]'));
-        var parentCounts = new Map();
-        for (var sp of allSpansWithTitle) {
-          var p = sp.parentElement && sp.parentElement.parentElement && sp.parentElement.parentElement.parentElement;
+        const allSpansWithTitle = filterVisible(qsaDeep('span[title]'));
+        const parentCounts = new Map();
+        for (const sp of allSpansWithTitle) {
+          const p = sp.parentElement && sp.parentElement.parentElement && sp.parentElement.parentElement.parentElement;
           if (p) {
-            var key = p.tagName + '.' + (p.className || '').split(' ')[0];
+            const key = p.tagName + '.' + (p.className || '').split(' ')[0];
             parentCounts.set(key, (parentCounts.get(key) || 0) + 1);
           }
         }
-        var bestKey = null, bestCount = 0;
-        for (var entry of parentCounts) {
+        let bestKey = null, bestCount = 0;
+        for (const entry of parentCounts) {
           if (entry[1] > bestCount) { bestCount = entry[1]; bestKey = entry[0]; }
         }
         if (bestCount >= 3) {
@@ -174,10 +174,10 @@ var Discovery = (function () {
       result.hasServiceWorker = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
       result.storageMarkers = [];
       try {
-        var storageKeys = Object.keys(window.localStorage || {});
-        var authMarkerPatterns = ['last-wid', 'last-wid-md', 'remember-me', 'rememberme', 'md-opted-in'];
+        const storageKeys = Object.keys(window.localStorage || {});
+        const authMarkerPatterns = ['last-wid', 'last-wid-md', 'remember-me', 'rememberme', 'md-opted-in'];
         result.storageMarkers = storageKeys.filter(function (key) {
-          var lower = String(key || '').toLowerCase();
+          const lower = String(key || '').toLowerCase();
           return authMarkerPatterns.some(function (m) { return lower.indexOf(m) !== -1; });
         }).slice(0, 12);
       } catch (_) {}
@@ -189,15 +189,15 @@ var Discovery = (function () {
       // ── Sample first chat HTML for AI learning ──
       if (result.chatItems > 0 && result.chatItemsMethod) {
         try {
-          var firstItem;
+          let firstItem;
           if (result.chatItemsMethod === 'role-container-children') {
-            var cont2 = qsDeep('[role="list"], [role="listbox"], [role="grid"]');
+            const cont2 = qsDeep('[role="list"], [role="listbox"], [role="grid"]');
             firstItem = cont2 && cont2.children[0];
           } else if (result.chatItemsMethod === 'span-title-heuristic') {
             firstItem = (qsDeep('span[title]') || {}).closest && qsDeep('span[title]').closest('[tabindex]') ||
               (qsDeep('span[title]') || {}).parentElement && qsDeep('span[title]').parentElement.parentElement;
           } else {
-            var selectorMap = {
+            const selectorMap = {
               'cell-frame': '[data-testid="cell-frame-container"]',
               'cell-wrapper': '[data-testid="chat-cell-wrapper"]',
               'list-item': '[data-testid="list-item"]',
@@ -209,14 +209,14 @@ var Discovery = (function () {
           }
           if (firstItem) {
             result.firstChatHTML = firstItem.outerHTML.slice(0, 2000);
-            var titleEl = firstItem.querySelector('span[title]');
+            const titleEl = firstItem.querySelector('span[title]');
             result.firstTitle = titleEl ? titleEl.getAttribute("title") : null;
           }
         } catch (_) {}
       }
 
       // ── data-testid inventory ──
-      var testIds = new Set();
+      const testIds = new Set();
       qsaDeep('[data-testid]').forEach(function (e) { testIds.add(e.getAttribute('data-testid')); });
       result.dataTestIds = Array.from(testIds).slice(0, 80);
 
@@ -226,7 +226,7 @@ var Discovery = (function () {
 
   // ── Run discovery on a tab ──
   async function runDiscoveryScript(tabId) {
-    var results = await chrome.scripting.executeScript({
+    const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       func: buildDiscoveryScript(),
     });
@@ -253,10 +253,10 @@ var Discovery = (function () {
   }
 
   async function waitForRenderableWaUi(tabId, maxAttempts, delayPlan) {
-    var lastResult = null;
-    for (var attempt = 0; attempt < (maxAttempts || 1); attempt++) {
+    let lastResult = null;
+    for (let attempt = 0; attempt < (maxAttempts || 1); attempt++) {
       if (attempt > 0) {
-        var delay = Array.isArray(delayPlan)
+        const delay = Array.isArray(delayPlan)
           ? (delayPlan[Math.min(attempt - 1, delayPlan.length - 1)] || 1200)
           : (delayPlan || 1200);
         await TabManager.sleep(delay);

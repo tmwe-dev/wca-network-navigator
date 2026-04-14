@@ -8,11 +8,11 @@
 (function () {
   if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) return;
 
-  var appOrigin = window.location.origin;
+  const appOrigin = window.location.origin;
 
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
-    var data = event.data;
+    const data = event.data;
     if (!data || data.direction !== "from-webapp") return;
 
     // Handle ping locally for fastest response
@@ -24,9 +24,9 @@
       return;
     }
 
-    var msg = { source: "wca-content-bridge" };
-    var keys = Object.keys(data);
-    for (var i = 0; i < keys.length; i++) {
+    const msg = { source: "wca-content-bridge" };
+    const keys = Object.keys(data);
+    for (let i = 0; i < keys.length; i++) {
       if (keys[i] !== "direction") msg[keys[i]] = data[keys[i]];
     }
 

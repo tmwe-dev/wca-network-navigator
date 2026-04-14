@@ -492,12 +492,12 @@ async function handleGoogleSearch(msg) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: function (maxResults) {
-        var items = [];
-        var unwrapGoogleUrl = function (href) {
+        const items = [];
+        const unwrapGoogleUrl = function (href) {
           try {
-            var parsed = new URL(href);
-            var host = parsed.hostname.toLowerCase();
-            var isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
+            const parsed = new URL(href);
+            const host = parsed.hostname.toLowerCase();
+            const isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
             if (isGoogleHost && (parsed.pathname === '/url' || parsed.pathname === '/imgres')) {
               return parsed.searchParams.get('url') || parsed.searchParams.get('q') || parsed.searchParams.get('imgurl') || href;
             }
@@ -507,17 +507,17 @@ async function handleGoogleSearch(msg) {
           }
         };
 
-        var els = document.querySelectorAll('div.g, div[data-sokoban-container]');
-        for (var i = 0; i < els.length && items.length < maxResults; i++) {
-          var linkEl = els[i].querySelector('a[href]');
+        const els = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        for (let i = 0; i < els.length && items.length < maxResults; i++) {
+          const linkEl = els[i].querySelector('a[href]');
           if (!linkEl) continue;
-          var url = unwrapGoogleUrl(linkEl.href);
+          const url = unwrapGoogleUrl(linkEl.href);
           if (!url) continue;
           if (/google\.com\/(search|maps|imgres|sorry)/.test(url)) continue;
-          var titleEl = els[i].querySelector('h3');
-          var title = titleEl ? titleEl.textContent.trim() : '';
-          var snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
-          var description = snippetEl ? snippetEl.textContent.trim() : '';
+          const titleEl = els[i].querySelector('h3');
+          const title = titleEl ? titleEl.textContent.trim() : '';
+          const snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
+          const description = snippetEl ? snippetEl.textContent.trim() : '';
           items.push({ url: url, title: title, description: description });
         }
         return items;
@@ -525,9 +525,9 @@ async function handleGoogleSearch(msg) {
       args: [limit]
     });
 
-    var data = (results[0] && results[0].result) || [];
+    const data = (results[0] && results[0].result) || [];
     RateLimiter.recordRequest(searchUrl);
-    var response = { success: true, data: data, query: msg.query, count: data.length };
+    const response = { success: true, data: data, query: msg.query, count: data.length };
     await Cache.set('search', cacheKey, response);
     return response;
   } catch (err) {

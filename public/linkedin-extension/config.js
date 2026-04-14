@@ -3,12 +3,12 @@
 // Dynamic config via chrome.storage (no hardcoded keys)
 // ══════════════════════════════════════════════════
 
-var Config = (function () {
-  var _cache = { supabaseUrl: "", supabaseAnonKey: "" };
-  var _loaded = false;
+const Config = (function () {
+  const _cache = { supabaseUrl: "", supabaseAnonKey: "" };
+  let _loaded = false;
 
   // Error codes standardizzati
-  var ERROR = {
+  const ERROR = {
     NO_CONFIG: "ERR_NO_CONFIG",
     NO_COOKIE: "ERR_NO_COOKIE",
     TAB_CLOSED: "ERR_TAB_CLOSED",
@@ -26,7 +26,7 @@ var Config = (function () {
 
   async function load() {
     try {
-      var data = await chrome.storage.local.get(["li_supabase_url", "li_supabase_anon_key"]);
+      const data = await chrome.storage.local.get(["li_supabase_url", "li_supabase_anon_key"]);
       if (data.li_supabase_url) _cache.supabaseUrl = data.li_supabase_url;
       if (data.li_supabase_anon_key) _cache.supabaseAnonKey = data.li_supabase_anon_key;
       _loaded = true;
@@ -56,9 +56,9 @@ var Config = (function () {
   }
 
   function successResponse(data) {
-    var resp = { success: true };
+    const resp = { success: true };
     if (data && typeof data === "object") {
-      for (var k in data) {
+      for (const k in data) {
         if (data.hasOwnProperty(k)) resp[k] = data[k];
       }
     }

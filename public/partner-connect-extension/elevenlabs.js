@@ -4,7 +4,7 @@
 
 const ElevenLabs = (() => {
   const API_BASE = 'https://api.elevenlabs.io/v1';
-  let _config = {
+  const _config = {
     apiKey: '',
     defaultVoiceId: '',
     defaultModel: 'eleven_multilingual_v2',

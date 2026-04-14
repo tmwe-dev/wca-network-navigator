@@ -4,13 +4,13 @@
 // Queue system with priority lanes
 // ══════════════════════════════════════════════════
 
-var TabManager = (function () {
-  var _liTabId = null;
+const TabManager = (function () {
+  let _liTabId = null;
 
   // ── Retry-safe tab creation ──
   async function safeCreate(options, maxRetries) {
     maxRetries = maxRetries || 3;
-    for (var attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await chrome.tabs.create(options);
       } catch (err) {
@@ -35,7 +35,7 @@ var TabManager = (function () {
   function waitForLoad(tabId, ms) {
     ms = ms || 20000;
     return new Promise(function (resolve) {
-      var timeout = setTimeout(function () {
+      const timeout = setTimeout(function () {
         chrome.tabs.onUpdated.removeListener(listener);
         resolve();
       }, ms);
@@ -57,11 +57,11 @@ var TabManager = (function () {
   function urlMatchesTarget(tabUrl, targetUrl) {
     if (!tabUrl || !targetUrl) return false;
     try {
-      var current = new URL(tabUrl);
-      var target = new URL(targetUrl);
+      const current = new URL(tabUrl);
+      const target = new URL(targetUrl);
       // Exact pathname match (e.g. /messaging/ vs /messaging/thread/xxx)
-      var currentPath = current.pathname.replace(/\/$/, "");
-      var targetPath = target.pathname.replace(/\/$/, "");
+      const currentPath = current.pathname.replace(/\/$/, "");
+      const targetPath = target.pathname.replace(/\/$/, "");
       return current.hostname === target.hostname && currentPath === targetPath;
     } catch (_) { return false; }
   }
@@ -70,7 +70,7 @@ var TabManager = (function () {
     // Try reusing cached tab
     if (_liTabId !== null) {
       try {
-        var existing = await chrome.tabs.get(_liTabId);
+        const existing = await chrome.tabs.get(_liTabId);
         if (existing) {
           if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url) && urlMatchesTarget(existing.url, url)) {
             if (existing.status !== "complete") await waitForLoad(_liTabId, 15000);
@@ -87,7 +87,7 @@ var TabManager = (function () {
 
     // Try finding any existing LinkedIn tab
     try {
-      var existingTabs = await chrome.tabs.query({ url: "https://*.linkedin.com/*" });
+      const existingTabs = await chrome.tabs.query({ url: "https://*.linkedin.com/*" });
       if (existingTabs && existingTabs.length > 0) {
         _liTabId = existingTabs[0].id;
         if (skipNavigateIfSameDomain && urlMatchesTarget(existingTabs[0].url, url)) {
@@ -101,7 +101,7 @@ var TabManager = (function () {
     } catch (_) {}
 
     // Create new tab
-    var tab = await safeCreate({ url: url, active: false });
+    const tab = await safeCreate({ url: url, active: false });
     _liTabId = tab.id;
     await waitForLoad(tab.id, 20000);
     return tab;
@@ -112,8 +112,8 @@ var TabManager = (function () {
   }
 
   // ── Operation Queue with dual lanes ──
-  var _sessionQueue = Promise.resolve();
-  var _actionQueue = Promise.resolve();
+  let _sessionQueue = Promise.resolve();
+  let _actionQueue = Promise.resolve();
 
   function enqueueSession(fn) {
     _sessionQueue = _sessionQueue.then(fn, fn);

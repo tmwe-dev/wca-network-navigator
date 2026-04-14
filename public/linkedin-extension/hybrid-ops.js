@@ -4,20 +4,20 @@
 // Uses InputNative instead of execCommand
 // ══════════════════════════════════════════════════
 
-var HybridOps = (function () {
+const HybridOps = (function () {
 
   // ── InputNative: replaces execCommand for contenteditable ──
   function nativeInsertText(text) {
     // Use InputEvent API where available (modern Chrome)
-    var el = document.activeElement;
+    const el = document.activeElement;
     if (!el) return false;
     // Try insertText via InputEvent (standard API)
-    var inserted = el.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
+    const inserted = el.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
     if (inserted) {
       // For contenteditable, use Selection API
-      var sel = window.getSelection();
+      const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
-        var range = sel.getRangeAt(0);
+        const range = sel.getRangeAt(0);
         range.deleteContents();
         range.insertNode(document.createTextNode(text));
         range.collapse(false);
@@ -37,14 +37,14 @@ var HybridOps = (function () {
 
     // Level 1: AX Tree
     try {
-      var axResult = await AXTree.extractProfile(tabId);
+      const axResult = await AXTree.extractProfile(tabId);
       if (axResult && axResult.name) {
         console.log("[LI-Hybrid] ✅ AX Tree succeeded:", axResult.name);
         try {
-          var photoRes = await chrome.scripting.executeScript({
+          const photoRes = await chrome.scripting.executeScript({
             target: { tabId: tabId },
             func: function () {
-              var img = document.querySelector("img[alt*='photo'], img[alt*='foto'], img[class*='profile-photo'], img[class*='pv-top-card']");
+              const img = document.querySelector("img[alt*='photo'], img[alt*='foto'], img[class*='profile-photo'], img[class*='pv-top-card']");
               return img ? img.src : null;
             },
           });
@@ -58,17 +58,17 @@ var HybridOps = (function () {
     // Level 2: AI Self-Healing
     console.log("[LI-Hybrid] extractProfile — trying AI Learn...");
     try {
-      var schema = await AILearn.getCached();
+      let schema = await AILearn.getCached();
       if (!schema && Config.isReady()) {
         schema = await AILearn.learnFromAI(tabId, "profile", Config.getUrl(), Config.getKey());
       }
       if (schema) {
-        var learnRes = await chrome.scripting.executeScript({
+        const learnRes = await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: AILearn.extractWithSchema,
           args: [schema],
         });
-        var learnResult = learnRes[0] && learnRes[0].result;
+        const learnResult = learnRes[0] && learnRes[0].result;
         if (learnResult && learnResult.name) {
           console.log("[LI-Hybrid] ✅ AI Learn succeeded:", learnResult.name);
           return Config.successResponse({ profile: learnResult, method: "ai_learn" });
@@ -79,12 +79,12 @@ var HybridOps = (function () {
           await AILearn.clearCache();
           schema = await AILearn.learnFromAI(tabId, "profile", Config.getUrl(), Config.getKey());
           if (schema) {
-            var retryRes = await chrome.scripting.executeScript({
+            const retryRes = await chrome.scripting.executeScript({
               target: { tabId: tabId },
               func: AILearn.extractWithSchema,
               args: [schema],
             });
-            var retryResult = retryRes[0] && retryRes[0].result;
+            const retryResult = retryRes[0] && retryRes[0].result;
             if (retryResult && retryResult.name) {
               return Config.successResponse({ profile: retryResult, method: "ai_learn_retry" });
             }
@@ -96,21 +96,21 @@ var HybridOps = (function () {
     // Level 3: Structural fallback
     console.log("[LI-Hybrid] extractProfile — structural fallback...");
     try {
-      var fallbackRes = await chrome.scripting.executeScript({
+      const fallbackRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
-          var result = { name: null, headline: null, location: null, about: null, photoUrl: null, profileUrl: window.location.href, connectionStatus: "unknown" };
-          var h1 = document.querySelector("h1");
+          const result = { name: null, headline: null, location: null, about: null, photoUrl: null, profileUrl: window.location.href, connectionStatus: "unknown" };
+          const h1 = document.querySelector("h1");
           if (h1) result.name = h1.textContent.trim();
           if (h1 && h1.nextElementSibling) {
-            var next = h1.nextElementSibling;
+            const next = h1.nextElementSibling;
             if (next.textContent.trim().length > 3 && next.textContent.trim().length < 200) {
               result.headline = next.textContent.trim();
             }
           }
-          var allBtns = Array.from(document.querySelectorAll("button")).filter(function (b) { return b.offsetParent !== null; });
-          for (var i = 0; i < allBtns.length; i++) {
-            var t = allBtns[i].textContent.trim().toLowerCase();
+          const allBtns = Array.from(document.querySelectorAll("button")).filter(function (b) { return b.offsetParent !== null; });
+          for (let i = 0; i < allBtns.length; i++) {
+            const t = allBtns[i].textContent.trim().toLowerCase();
             if (/^(connect|collegati|connetti)$/.test(t)) { result.connectionStatus = "not_connected"; break; }
             if (/^(messag|scrivi)/.test(t)) { result.connectionStatus = "connected"; break; }
             if (/^(pending|in attesa)/.test(t)) { result.connectionStatus = "pending"; break; }
@@ -118,7 +118,7 @@ var HybridOps = (function () {
           return result;
         },
       });
-      var fallbackResult = fallbackRes[0] && fallbackRes[0].result;
+      const fallbackResult = fallbackRes[0] && fallbackRes[0].result;
       if (fallbackResult && fallbackResult.name) {
         return Config.successResponse({ profile: fallbackResult, method: "structural_fallback" });
       }
@@ -131,43 +131,43 @@ var HybridOps = (function () {
   async function sendMessage(tabId, message) {
     // Level 1: AX Tree
     try {
-      var axResult = await AXTree.typeMessage(tabId, message);
+      const axResult = await AXTree.typeMessage(tabId, message);
       if (axResult && axResult.success) return axResult;
     } catch (e) { console.warn("[LI-Hybrid] AX Tree message failed:", e.message); }
 
     // Level 2: AI Learn
     try {
-      var schema = await AILearn.getCached();
+      let schema = await AILearn.getCached();
       if (!schema && Config.isReady()) schema = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
       if (schema) {
-        var learnRes = await chrome.scripting.executeScript({
+        const learnRes = await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: AILearn.typeMessageWithSchema,
           args: [schema, message],
         });
-        var learnResult = learnRes[0] && learnRes[0].result;
+        const learnResult = learnRes[0] && learnRes[0].result;
         if (learnResult && learnResult.success) return learnResult;
       }
     } catch (e) { console.warn("[LI-Hybrid] AI Learn message failed:", e.message); }
 
     // Level 3: Structural fallback with native input
     try {
-      var fbRes = await chrome.scripting.executeScript({
+      const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (msg) {
-          var msgBox = document.querySelector("div[role='textbox'][contenteditable='true']")
+          const msgBox = document.querySelector("div[role='textbox'][contenteditable='true']")
             || document.querySelector("[contenteditable='true'][aria-label]");
           if (!msgBox) return { success: false, error: "Fallback: no textbox found" };
           msgBox.focus();
           // Use Selection API + InputEvent for text insertion
-          var sel = window.getSelection();
+          let sel = window.getSelection();
           if (sel) { sel.selectAllChildren(msgBox); sel.deleteFromDocument(); }
-          var textNode = document.createTextNode(msg);
+          const textNode = document.createTextNode(msg);
           msgBox.appendChild(textNode);
           sel = window.getSelection();
-          if (sel) { var r = document.createRange(); r.selectNodeContents(msgBox); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
+          if (sel) { const r = document.createRange(); r.selectNodeContents(msgBox); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
           msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
-          var sendBtn = Array.from(document.querySelectorAll("button")).find(function (b) {
+          const sendBtn = Array.from(document.querySelectorAll("button")).find(function (b) {
             return /^(send|invia)$/i.test(b.textContent.trim()) && b.offsetParent !== null;
           });
           if (sendBtn) { sendBtn.click(); return { success: true, method: "structural_fallback" }; }
@@ -175,7 +175,7 @@ var HybridOps = (function () {
         },
         args: [message],
       });
-      var fbResult = fbRes[0] && fbRes[0].result;
+      const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.success) return fbResult;
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
@@ -185,42 +185,42 @@ var HybridOps = (function () {
   async function clickConnect(tabId) {
     // Level 1: AX Tree
     try {
-      var axResult = await AXTree.clickConnect(tabId);
+      const axResult = await AXTree.clickConnect(tabId);
       if (axResult && axResult.success) return axResult;
     } catch (e) { console.warn("[LI-Hybrid] AX Tree connect failed:", e.message); }
 
     // Level 2: AI Learn
     try {
-      var schema = await AILearn.getCached();
+      let schema = await AILearn.getCached();
       if (!schema && Config.isReady()) schema = await AILearn.learnFromAI(tabId, "profile", Config.getUrl(), Config.getKey());
       if (schema) {
-        var learnRes = await chrome.scripting.executeScript({
+        const learnRes = await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: AILearn.clickConnectWithSchema,
           args: [schema],
         });
-        var learnResult = learnRes[0] && learnRes[0].result;
+        const learnResult = learnRes[0] && learnRes[0].result;
         if (learnResult && learnResult.success) return learnResult;
       }
     } catch (e) {}
 
     // Level 3: Structural fallback
     try {
-      var fbRes = await chrome.scripting.executeScript({
+      const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
-          var btn = Array.from(document.querySelectorAll("button")).find(function (el) {
+          const btn = Array.from(document.querySelectorAll("button")).find(function (el) {
             return /^(connect|collegati|connetti)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
           });
           if (btn) { btn.click(); return { success: true, method: "structural_fallback" }; }
-          var moreBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+          const moreBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
             return /^(more|altro)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
           });
           if (moreBtn) {
             moreBtn.click();
             return new Promise(function (resolve) {
               setTimeout(function () {
-                var dropItem = Array.from(document.querySelectorAll("[role='option'], [role='menuitem'], li, span")).find(function (el) {
+                const dropItem = Array.from(document.querySelectorAll("[role='option'], [role='menuitem'], li, span")).find(function (el) {
                   return /connect|collegati|connetti/i.test(el.textContent.trim()) && el.offsetParent !== null;
                 });
                 if (dropItem) { dropItem.click(); resolve({ success: true, method: "structural_more_dropdown" }); }
@@ -238,14 +238,14 @@ var HybridOps = (function () {
   // ── Click Message button ──
   async function clickMessage(tabId) {
     try {
-      var axResult = await AXTree.clickMessageButton(tabId);
+      const axResult = await AXTree.clickMessageButton(tabId);
       if (axResult && axResult.success) return axResult;
     } catch (_) {}
     try {
-      var fbRes = await chrome.scripting.executeScript({
+      const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
-          var btn = Array.from(document.querySelectorAll("button, a")).find(function (el) {
+          const btn = Array.from(document.querySelectorAll("button, a")).find(function (el) {
             return /^messag|^scrivi/i.test(el.textContent.trim()) && el.offsetParent !== null;
           });
           if (btn) { btn.click(); return { success: true, method: "structural_fallback" }; }
@@ -259,28 +259,28 @@ var HybridOps = (function () {
   // ── Add connection note ──
   async function addNote(tabId, noteText) {
     try {
-      var axResult = await AXTree.addNote(tabId, noteText);
+      const axResult = await AXTree.addNote(tabId, noteText);
       if (axResult && axResult.success) return axResult;
     } catch (_) {}
     try {
-      var fbRes = await chrome.scripting.executeScript({
+      const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (note) {
-          var addBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+          const addBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
             return /add a note|aggiungi nota/i.test(el.textContent.trim());
           });
           if (!addBtn) return { success: false, error: "Add Note button not found" };
           addBtn.click();
           return new Promise(function (resolve) {
             setTimeout(function () {
-              var textarea = document.querySelector("textarea");
+              const textarea = document.querySelector("textarea");
               if (!textarea) { resolve({ success: false, error: "Note textarea not found" }); return; }
-              var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+              const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
               textarea.focus();
               nativeSet.call(textarea, note);
               textarea.dispatchEvent(new Event("input", { bubbles: true }));
               setTimeout(function () {
-                var sendBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+                const sendBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
                   return /^(send|invia)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
                 });
                 if (sendBtn) { sendBtn.click(); resolve({ success: true, method: "structural_fallback" }); }
