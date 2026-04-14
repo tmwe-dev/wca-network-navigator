@@ -5,7 +5,7 @@ import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
 import { EmailToolbar } from "@/components/outreach/EmailToolbar";
-import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
+import { useWhatsAppSoftSync } from "@/hooks/useWhatsAppSoftSync";
 import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
@@ -34,7 +34,6 @@ export function InArrivoTab() {
   const [channel, setChannel] = useState<Channel>("email");
   const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
 
-  // Listen for sync-done events and pulse the corresponding tab
   useEffect(() => {
     const handler = (e: Event) => {
       const ch = (e as CustomEvent).detail?.channel as Channel;
@@ -50,22 +49,20 @@ export function InArrivoTab() {
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
-  // Use global operator context (admin selects from header dropdown)
   const { activeOperator, viewingAll } = useActiveOperator();
   const operatorUserId = viewingAll ? undefined : (activeOperator?.user_id || undefined);
 
-  // Lift WhatsApp hooks
-  const waSync = useWhatsAppAdaptiveSync();
+  // WhatsApp soft sync
+  const waSync = useWhatsAppSoftSync();
   const waBackfill = useWhatsAppBackfill();
 
-  // Auto-trigger deep backfill on WhatsApp reconnection
   useEffect(() => {
     waSync.onReconnect(() => {
       waBackfill.startBackfill();
     });
   }, [waSync.onReconnect, waBackfill.startBackfill]);
 
-  // Lift Email hooks
+  // Email hooks
   const checkInbox = useCheckInbox();
   const emailSync = useContinuousSync();
   const resetSync = useResetSync();
@@ -75,7 +72,6 @@ export function InArrivoTab() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Channel filter bar + channel-specific controls */}
       <div className="px-3 py-1.5 border-b border-border/30 flex items-center gap-1 flex-wrap">
         {CHANNELS.map(ch => {
           const badge = badges[ch.channel];
@@ -107,7 +103,6 @@ export function InArrivoTab() {
           );
         })}
 
-        {/* Channel-specific toolbar inline */}
         <div className="ml-auto">
           {channel === "email" && (
             <EmailToolbar
@@ -125,13 +120,14 @@ export function InArrivoTab() {
           )}
           {channel === "whatsapp" && (
             <WhatsAppToolbar
-              level={waSync.level}
               enabled={waSync.enabled}
               toggle={waSync.toggle}
               isReading={waSync.isReading}
               isAvailable={waSync.isAvailable}
               isAuthenticated={waSync.isAuthenticated}
-              readNow={waSync.readNow}
+              manualCycle={waSync.manualCycle}
+              isPausedForNight={waSync.isPausedForNight}
+              nextCycleAt={waSync.nextCycleAt}
               bfProgress={waBackfill.progress}
               startBackfill={waBackfill.startBackfill}
               stopBackfill={waBackfill.stopBackfill}
@@ -140,7 +136,6 @@ export function InArrivoTab() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<div className="h-full animate-pulse bg-muted/20 rounded-lg" />}>
           {channel === "email" && <EmailInboxView operatorUserId={operatorUserId} />}
