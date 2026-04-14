@@ -53,9 +53,9 @@ describe("useUnreadCounts", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.email).toBe(0);
   });
-  it("uses planned count for efficiency", async () => {
-    renderHookWithProviders(() => useUnreadCounts());
-    // The hook uses head: true queries for performance
-    expect(result).not.toBeNull(); // Just verifies render doesn't crash
+  it("renders without crashing", async () => {
+    const { result } = renderHookWithProviders(() => useUnreadCounts());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data).not.toBeNull();
   });
 });
