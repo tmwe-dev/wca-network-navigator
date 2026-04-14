@@ -30,18 +30,20 @@ export type SortKey = "name" | "company" | "city" | "date" | "score";
 
 export function sortContacts(contacts: Record<string, unknown>[], sortKey: SortKey): Record<string, unknown>[] {
   const sorted = [...contacts];
+  const str = (v: unknown) => String(v || "");
+  const num = (v: unknown) => Number(v) || 0;
   sorted.sort((a, b) => {
     switch (sortKey) {
       case "company":
-        return (a.company_name || "").localeCompare(b.company_name || "");
+        return str(a.company_name).localeCompare(str(b.company_name));
       case "name":
-        return (a.name || "").localeCompare(b.name || "");
+        return str(a.name).localeCompare(str(b.name));
       case "city":
-        return (a.city || "").localeCompare(b.city || "");
+        return str(a.city).localeCompare(str(b.city));
       case "date":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(str(b.created_at)).getTime() - new Date(str(a.created_at)).getTime();
       case "score":
-        return (b.lead_score ?? 0) - (a.lead_score ?? 0);
+        return num(b.lead_score) - num(a.lead_score);
     }
   });
   return sorted;

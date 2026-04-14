@@ -38,15 +38,15 @@ function usePartnerContacts() {
         .select("id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)")
         .limit(200);
       if (error) throw error;
-      return ((data || []) as unknown[]).map((pc) => ({
-        id: pc.id,
-        name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
-        company: pc.partners?.company_name || "—",
-        email: pc.email || undefined,
-        phone: pc.phone || pc.mobile || undefined,
-        country: pc.partners?.country_code || undefined,
+      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
+        id: String(pc.id),
+        name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
+        company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
+        email: pc.email as string || undefined,
+        phone: (pc.phone || pc.mobile) as string || undefined,
+        country: (pc.partners as Record<string, unknown>)?.country_code as string || undefined,
         origin: "WCA",
-        partnerId: pc.partners?.id || null,
+        partnerId: (pc.partners as Record<string, unknown>)?.id as string || null,
       })) as UnifiedContact[];
     },
     staleTime: 60_000,

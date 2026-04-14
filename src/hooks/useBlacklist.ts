@@ -104,7 +104,7 @@ export function useImportBlacklist() {
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50) as BlacklistEntryInsert[];
-        await insertBlacklistBatch(batch as unknown[]); const error = null;
+        await insertBlacklistBatch(batch as never); const error = null;
         if (error) throw error;
       }
 

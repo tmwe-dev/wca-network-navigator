@@ -45,15 +45,15 @@ function useRecentContacts() {
         .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
         .order("created_at", { ascending: false })
         .limit(100);
-      return ((data || []) as unknown[]).map((pc) => ({
-        id: pc.id,
-        name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
-        company: pc.partners?.company_name || "—",
-        email: pc.email || undefined,
-        phone: pc.phone || undefined,
-        country: pc.partners?.country_code || undefined,
+      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
+        id: String(pc.id),
+        name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
+        company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
+        email: pc.email as string || undefined,
+        phone: pc.phone as string || undefined,
+        country: (pc.partners as Record<string, unknown>)?.country_code as string || undefined,
         origin: "WCA",
-        partnerId: pc.partners?.id || null,
+        partnerId: (pc.partners as Record<string, unknown>)?.id as string || null,
       })) as UnifiedContact[];
     },
     staleTime: 60_000,

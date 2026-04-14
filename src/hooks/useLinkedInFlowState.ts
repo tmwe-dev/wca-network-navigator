@@ -33,7 +33,7 @@ export function useLinkedInFlowState() {
         table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
       }, (payload: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- realtime payload
-        const row = payload.new as never;
+        const row = payload.new as any; // eslint-disable-line @typescript-eslint/no-explicit-any
         setProgress({
           total: row.total_count,
           processed: row.processed_count,

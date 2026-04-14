@@ -145,7 +145,7 @@ export function useTransferToPartners() {
           await insertPartnerContact({
             partner_id: partner.id, name: c.name, email: c.email,
             direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias,
-            title: (c as Record<string, unknown>).position || null, is_primary: true,
+            title: (c as unknown as Record<string, unknown>).position || null, is_primary: true,
           });
         }
 

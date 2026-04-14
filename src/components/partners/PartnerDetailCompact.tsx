@@ -193,7 +193,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       </div>
 
       {/* Enrichment — top priority */}
-      <EnrichmentCard partner={partner as unknown} />
+      <EnrichmentCard partner={partner as never} />
 
       {/* Contacts */}
       {contacts.length > 0 && (

@@ -11,7 +11,7 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
       let q = untypedFrom("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50) as never;
+        .limit(50);
 
       if (status) q = q.eq("status", status);
 

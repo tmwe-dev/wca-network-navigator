@@ -61,16 +61,17 @@ export const contactKeys = {
 const DEFAULT_PAGE_SIZE = 200;
 
 // ─── Query Builder type ─────────────────────────────────
-// The Supabase query builder is complex with generics; we use a lightweight alias
-// to avoid `any` while preserving chainability.
-type ContactQueryBuilder = ReturnType<typeof supabase.from<'imported_contacts'>>;
+// The Supabase query builder is complex with generics; we use a lightweight
+// escape hatch to preserve chainability without importing the full generic type.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- query builder chain
+type ContactQuery = any;
 
 // ─── Query Helpers ──────────────────────────────────────
 
 function applyContactFilters(
-  q: ContactQueryBuilder,
+  q: ContactQuery,
   filters: ContactFilters
-): ContactQueryBuilder {
+): ContactQuery {
   // Quality filter — base
   q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 

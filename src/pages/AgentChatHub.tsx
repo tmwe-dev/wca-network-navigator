@@ -118,7 +118,7 @@ export default function AgentChatHub() {
         });
         toast.info("Feedback registrato — l'AI migliorerà");
       } else {
-        await (supabase.from("ai_memory") as never).insert({
+        await supabase.from("ai_memory").insert({
           user_id: user.id,
           memory_type: "preference",
           content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
