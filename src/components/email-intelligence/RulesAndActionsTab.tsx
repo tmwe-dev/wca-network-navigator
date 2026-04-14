@@ -83,11 +83,11 @@ function AddressRulesSection() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        const { error } = await supabase.from("email_address_rules").update(payload).eq("id", id);
+        const { error } = await supabase.from("email_address_rules").update(payload as any).eq("id", String(id));
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id });
+        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as any);
         if (error) throw error;
       }
     },

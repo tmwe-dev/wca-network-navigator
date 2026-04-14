@@ -79,7 +79,7 @@ export function SenderProfilesView() {
             {profiles.map((p) => {
               const initials = p.email_address.substring(0, 2).toUpperCase();
               const exchanges = Array.isArray(p.last_exchanges) ? p.last_exchanges as Array<Record<string, unknown>> : [];
-              const lastSentiments = exchanges.slice(-5).map((e) => e.sentiment ?? "neutral");
+              const lastSentiments = exchanges.slice(-5).map((e) => String(e.sentiment ?? "neutral"));
               const expanded = expandedEmail === p.email_address;
 
               return (
@@ -135,8 +135,8 @@ export function SenderProfilesView() {
                     <div className="space-y-1 border-t border-border/30 pt-2">
                       {exchanges.slice(-5).map((ex: Record<string, unknown>, i: number) => (
                         <div key={i} className="flex items-start gap-2 text-[10px]">
-                          <div className={`h-1.5 w-1.5 rounded-full mt-1 ${SENTIMENTS[ex.sentiment] ?? SENTIMENTS.neutral}`} />
-                          <span className="text-muted-foreground">{ex.direction === "inbound" ? "←" : "→"} {ex.summary ?? ex.subject ?? "—"}</span>
+                          <div className={`h-1.5 w-1.5 rounded-full mt-1 ${SENTIMENTS[String(ex.sentiment)] ?? SENTIMENTS.neutral}`} />
+                          <span className="text-muted-foreground">{ex.direction === "inbound" ? "←" : "→"} {String(ex.summary ?? ex.subject ?? "—")}</span>
                         </div>
                       ))}
                     </div>

@@ -150,7 +150,7 @@ export function ImportMappingPreview({
         <div>
           {(() => {
             const previewRows = pendingFile && pendingRows.length > 0
-              ? pendingRows.slice(0, 5).map(row => transformRow(row, aiMapping.column_mapping))
+              ? pendingRows.slice(0, 5).map(row => transformRow(row, aiMapping.column_mapping as Record<string, string>))
               : aiMapping.parsed_rows.slice(0, 5);
             const totalRows = pendingFile ? pendingRows.length : aiMapping.parsed_rows.length;
             const activeCols = TARGET_COLUMNS.filter(col => previewRows.some(r => r[col]));

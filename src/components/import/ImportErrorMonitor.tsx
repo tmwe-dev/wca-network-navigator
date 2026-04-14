@@ -22,7 +22,8 @@ interface ImportErrorMonitorProps {
   correctedErrors: ImportError[];
   dismissedErrors: ImportError[];
   activeLogId: string | null;
-  fixErrors: { mutateAsync: (args: { importLogId: string; customPrompt?: string }) => Promise<{ corrected: number; dismissed: number; has_more: boolean }>; isPending: boolean };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UseMutationResult type
+  fixErrors: any;
 }
 
 export function ImportErrorMonitor({

@@ -38,7 +38,7 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
                 return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: String(row.description ?? "") || a.lastTask };
               }
               if (payload.eventType === "UPDATE" && row.status === "completed") {
-                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: row.description || a.lastTask };
+                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: String(row.description ?? '') || a.lastTask };
               }
               return a;
             })

@@ -258,10 +258,10 @@ export function SmartInboxView() {
                 <div className="space-y-1.5">
                   {(convContext.last_exchanges as Array<Record<string, unknown>>).slice(-5).map((ex: Record<string, unknown>, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
-                      <div className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${SENTIMENTS[ex.sentiment] ?? SENTIMENTS.neutral}`} />
+                      <div className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${SENTIMENTS[String(ex.sentiment)] ?? SENTIMENTS.neutral}`} />
                       <div>
                         <span className="text-muted-foreground">{ex.direction === "inbound" ? "← " : "→ "}</span>
-                        <span className="text-foreground">{ex.summary ?? ex.subject ?? "—"}</span>
+                        <span className="text-foreground">{String(ex.summary ?? ex.subject ?? "—")}</span>
                       </div>
                     </div>
                   ))}
