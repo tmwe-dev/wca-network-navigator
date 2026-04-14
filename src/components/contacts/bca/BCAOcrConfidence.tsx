@@ -38,7 +38,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editValue, setEditValue] = useState("");
 
   const ocrConf = (card as any).ocr_confidence as Record<string, number> | null; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic property access
-  const manuallyCorrected = (card as any).manually_corrected as boolean | null;
+  const manuallyCorrected = (card as any).manually_corrected as boolean | null; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
 
   const startEdit = useCallback((field: OcrFieldKey) => {
     setEditing(field);

@@ -9,7 +9,7 @@ export function PageEventsView({ sinceIso }: { sinceIso: string }) {
     queryKey: ["telemetry-page-events", sinceIso],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
         .from("page_events")
         .select("*")
         .gte("created_at", sinceIso)
