@@ -80,8 +80,8 @@ export function BCACreateContact({ card }: Props) {
       qc.invalidateQueries({ queryKey: ["contacts"] });
       toast({ title: "✅ Contatto creato da biglietto" });
       setShowForm(false);
-    } catch (e: any) {
-      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally { setCreating(false); }
   }, [form, selectedPartnerId, card, qc]);
 

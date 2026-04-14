@@ -6,8 +6,21 @@ import { Loader2, Merge, Ban, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { clean } from "./contactHelpers";
 
+interface DuplicateContact {
+  id: string;
+  name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  country: string | null;
+  lead_status: string | null;
+  created_at: string;
+  interaction_count: number | null;
+}
+
 interface DuplicateGroup {
-  group: any[];
+  group: DuplicateContact[];
   reason: string;
   ignored?: boolean;
 }
@@ -35,7 +48,7 @@ export function DuplicateDetector() {
       const seen = new Set<string>();
 
       // Group by email
-      const emailMap = new Map<string, any[]>();
+      const emailMap = new Map<string, DuplicateContact[]>();
       for (const c of contacts) {
         if (c.email) {
           const key = c.email.toLowerCase().trim();
@@ -52,7 +65,7 @@ export function DuplicateDetector() {
       }
 
       // Group by phone
-      const phoneMap = new Map<string, any[]>();
+      const phoneMap = new Map<string, DuplicateContact[]>();
       for (const c of contacts) {
         const raw = (c.phone || c.mobile || "").replace(/\D/g, "");
         if (raw.length >= 8) {
@@ -69,7 +82,7 @@ export function DuplicateDetector() {
       }
 
       // Group by company name similarity
-      const byCompany = new Map<string, any[]>();
+      const byCompany = new Map<string, DuplicateContact[]>();
       for (const c of contacts) {
         if (c.company_name && !seen.has(c.id)) {
           const key = c.company_name.toLowerCase().trim();
@@ -94,7 +107,7 @@ export function DuplicateDetector() {
 
   useEffect(() => { scan(); }, []);
 
-  const handleMerge = async (group: any[]) => {
+  const handleMerge = async (group: DuplicateContact[]) => {
     if (group.length < 2) return;
     setMerging(group[0].id);
     try {

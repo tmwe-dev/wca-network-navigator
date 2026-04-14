@@ -13,7 +13,7 @@ import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptImportedContact } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
-  c: any;
+  c: Record<string, unknown>;
   isActive: boolean;
   isSelected: boolean;
   hasBusinessCard?: boolean;

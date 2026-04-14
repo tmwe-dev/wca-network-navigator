@@ -29,8 +29,8 @@ export function BCASmartActions({ card }: Props) {
         partner_id: card.matched_partner_id || null,
       }]);
       toast({ title: "✅ Inviato al Cockpit", description: card.event_name ? `Con contesto: ${card.event_name}` : undefined });
-    } catch (e: any) {
-      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   }, [card]);
 
@@ -45,8 +45,8 @@ export function BCASmartActions({ card }: Props) {
         context: "BCASmartActions.deep_search",
       });
       toast({ title: "🔍 Deep Search avviata" });
-    } catch (e: any) {
-      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   }, [card.matched_partner_id]);
 

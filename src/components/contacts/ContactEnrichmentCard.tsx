@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ContactEnrichmentCardProps {
-  enrichmentData: any;
+  enrichmentData: Record<string, unknown> | null;
   deepSearchAt: string | null;
 }
 
@@ -35,8 +35,7 @@ function SocialButton({ url, label, icon }: { url: string; label: string; icon: 
 }
 
 export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactEnrichmentCardProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const e = enrichmentData as any;
+  const e = enrichmentData as Record<string, unknown> | null;
   if (!e && !deepSearchAt) return null;
 
   const companyProfile = e?.company_profile;
@@ -201,7 +200,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               )}
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: any, i: number) => {
+                  {companyProfile.awards.map((a: unknown, i: number) => {
                     const label = typeof a === "string" ? a : (a?.name || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">

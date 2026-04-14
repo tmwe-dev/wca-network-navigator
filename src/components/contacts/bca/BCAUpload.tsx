@@ -23,7 +23,7 @@ export function useUploadAndParse() {
     if (uploadErr) throw uploadErr;
     const { data: urlData } = supabase.storage.from("import-files").getPublicUrl(path);
     const photoUrl = urlData.publicUrl;
-    const parseResult = await invokeEdge<{ error?: string; data?: any }>("parse-business-card", { body: { imageUrl: photoUrl }, context: "BusinessCardsHub.parse_business_card" });
+    const parseResult = await invokeEdge<{ error?: string; data?: Record<string, unknown> }>("parse-business-card", { body: { imageUrl: photoUrl }, context: "BusinessCardsHub.parse_business_card" });
     if (parseResult?.error) throw new Error(parseResult.error);
     const extracted = parseResult?.data || {};
     await createCard.mutateAsync({
@@ -31,7 +31,7 @@ export function useUploadAndParse() {
       email: extracted.email, phone: extracted.phone, mobile: extracted.mobile, position: extracted.position,
       photo_url: photoUrl, event_name: eventMeta.event_name || null, met_at: eventMeta.met_at || null,
       location: eventMeta.location || null, notes: extracted.notes, raw_data: extracted,
-    } as any);
+    } as Record<string, unknown>);
     return true;
   }, [createCard]);
 
@@ -48,7 +48,7 @@ export function useUploadAndParse() {
         email: card.email || null, phone: card.phone || null, mobile: card.mobile || null,
         position: card.position || null, notes: card.notes || null, event_name: eventMeta.event_name || null,
         met_at: eventMeta.met_at || null, location: eventMeta.location || null, raw_data: card.raw_data || null,
-      } as any);
+      } as Record<string, unknown>);
       created++;
     }
     return created;
@@ -70,14 +70,14 @@ export function useUploadAndParse() {
           if (isImageFile(file)) { await uploadImage(file, user.id, eventMeta); imageCount++; }
           else if (isDataFile(file)) { const count = await uploadDataFile(file, user.id, eventMeta); dataCount += count; }
           else { toast({ title: "File ignorato", description: `${file.name} — formato non supportato`, variant: "destructive" }); errors++; }
-        } catch (e: any) { toast({ title: `Errore: ${file.name}`, description: e.message, variant: "destructive" }); errors++; }
+        } catch (e: unknown) { toast({ title: `Errore: ${file.name}`, description: e instanceof Error ? e.message : String(e), variant: "destructive" }); errors++; }
       }
       const parts: string[] = [];
       if (imageCount > 0) parts.push(`${imageCount} foto analizzate con AI`);
       if (dataCount > 0) parts.push(`${dataCount} contatti importati da file`);
       if (errors > 0) parts.push(`${errors} errori`);
       toast({ title: "✨ Importazione completata", description: parts.join(" · ") || "Nessun contatto elaborato" });
-    } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
     finally { setUploading(false); setProgress({ current: 0, total: 0 }); }
   }, [uploadImage, uploadDataFile]);
 

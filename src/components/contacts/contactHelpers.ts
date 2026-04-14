@@ -18,8 +18,8 @@ export function formatPhone(phone: string): string {
   return phone.replace(/[^0-9+]/g, "");
 }
 
-export function getContactQuality(c: any): "good" | "partial" | "poor" {
-  const has = (v: any) => !!clean(v);
+export function getContactQuality(c: Record<string, unknown>): "good" | "partial" | "poor" {
+  const has = (v: unknown) => !!clean(v as string | null | undefined);
   const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
   const filled = fields.filter(Boolean).length;
   if (filled >= 4) return "good";
@@ -29,7 +29,7 @@ export function getContactQuality(c: any): "good" | "partial" | "poor" {
 
 export type SortKey = "name" | "company" | "city" | "date" | "score";
 
-export function sortContacts(contacts: any[], sortKey: SortKey): any[] {
+export function sortContacts(contacts: Record<string, unknown>[], sortKey: SortKey): Record<string, unknown>[] {
   const sorted = [...contacts];
   sorted.sort((a, b) => {
     switch (sortKey) {

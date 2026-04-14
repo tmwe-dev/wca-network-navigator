@@ -13,7 +13,7 @@ interface ExpandedGroupContentProps {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
-  onSelect: (contact: any) => void;
+  onSelect: (contact: Record<string, unknown>) => void;
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;
@@ -29,7 +29,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   const filtered = useMemo(() => {
     const search = searchFilter?.trim().toLowerCase();
     if (!search) return rawContacts;
-    return rawContacts.filter((c: any) =>
+    return rawContacts.filter((c: Record<string, unknown>) =>
       (c.company_name || "").toLowerCase().includes(search) ||
       (c.name || "").toLowerCase().includes(search) ||
       (c.email || "").toLowerCase().includes(search) ||
@@ -67,7 +67,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
       <div ref={parentRef} className="max-h-[400px] overflow-y-auto p-2">
         <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
-            const c = contacts[virtualRow.index] as any;
+            const c = contacts[virtualRow.index] as Record<string, unknown>;
             return (
               <div
                 key={c.id}

@@ -15,7 +15,7 @@ interface EmailToolbarProps {
   readonly newLinkUrl: string;
   readonly selectedAttachments: string[];
   readonly previewOpen: boolean;
-  readonly templatesByCategory: Record<string, any[]>;
+  readonly templatesByCategory: Record<string, Array<{ id: string; file_name: string }>>;
   readonly onInsertVariable: (v: string) => void;
   readonly onAddLink: () => void;
   readonly onRemoveLink: (idx: number) => void;
@@ -97,7 +97,7 @@ export function EmailToolbar({
             <p className="text-xs font-medium mb-2">Allegati</p>
             {Object.entries(templatesByCategory).map(([cat, files]) => (
               <div key={cat} className="space-y-0.5">
-                {files.map((t: any) => (
+                {files.map((t) => (
                   <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-muted/30">
                     <input type="checkbox" checked={selectedAttachments.includes(t.id)}
                       onChange={() => onToggleAttachment(t.id)}
