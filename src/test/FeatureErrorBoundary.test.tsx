@@ -34,7 +34,7 @@ describe("FeatureErrorBoundary", () => {
   });
 
   it("recovers on retry click", () => {
-    const { _rerender } = render(
+    const { rerender: _rerender } = render(
       <FeatureErrorBoundary featureName="CRM">
         <ThrowingComponent shouldThrow={true} />
       </FeatureErrorBoundary>

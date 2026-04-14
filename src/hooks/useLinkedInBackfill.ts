@@ -45,7 +45,7 @@ function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
   const abortRef = useRef(false);
-  const { _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
+  const { isAvailable: _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
 
   const startBackfill = useCallback(async () => {
     if (progress.status === "running") return;

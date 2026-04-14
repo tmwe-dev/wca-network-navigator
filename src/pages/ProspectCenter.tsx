@@ -16,7 +16,7 @@ function formatCurrency(n: number | null) {
   return `€${n.toFixed(0)}`;
 }
 
-function StatItem({ icon: Icon, label, value, color, _isDark }: { icon: any; label: string; value: string | number; color: string; isDark: boolean }) {
+function StatItem({ icon: Icon, label, value, color, isDark: _isDark }: { icon: any; label: string; value: string | number; color: string; isDark: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-4 h-4 ${color}`} />

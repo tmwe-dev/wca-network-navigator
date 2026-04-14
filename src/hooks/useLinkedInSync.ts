@@ -76,7 +76,7 @@ export function useLinkedInSync() {
           thread_id: thread.threadUrl || null,
         }).then(() => null).catch(e => e);
         if (!error) newMsgs++;
-        else if (error.code === "23505") _dupes++;
+        else if (error.code === "23505") dupes++;
         else log.warn("insert error", { message: error.message });
       }
 

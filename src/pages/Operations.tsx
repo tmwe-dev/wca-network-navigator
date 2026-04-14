@@ -295,7 +295,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 }
 
 /* ── Stat Pill — tri-state color by value ── */
-function StatPill({ icon: Icon, value, label, _isDark, onClick, active, variant = "info" }: {
+function StatPill({ icon: Icon, value, label, isDark: _isDark, onClick, active, variant = "info" }: {
   icon: any; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
   variant?: "info" | "warn" | "ok";
