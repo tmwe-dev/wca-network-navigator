@@ -71,7 +71,7 @@ export default function Campaigns() {
                 countryName={c.countryName}
                 bcaPartnerIds={c.bcaPartnerIds}
                 source={c.source}
-                selectedContacts={c.selectedContactIds}
+                selectedContacts={c.selectedContactIds as Set<string> | undefined}
                 onToggleContact={c.handleToggleContact}
               />
             </div>

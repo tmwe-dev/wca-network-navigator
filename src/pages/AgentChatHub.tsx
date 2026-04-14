@@ -61,7 +61,7 @@ export default function AgentChatHub() {
 
     try {
       const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
-      const reply: Message = { role: "assistant", content: data?.response || "Nessuna risposta" };
+      const reply: Message = { role: "assistant", content: String(data?.response || "Nessuna risposta") };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
@@ -118,7 +118,8 @@ export default function AgentChatHub() {
         });
         toast.info("Feedback registrato — l'AI migliorerà");
       } else {
-        await (supabase.from("ai_memory")).insert({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from("ai_memory") as any).insert({
           user_id: user.id,
           memory_type: "preference",
           content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
@@ -128,7 +129,7 @@ export default function AgentChatHub() {
           confidence: 0.7,
           decay_rate: 0.01,
           source: "user_positive_feedback",
-        } as Record<string, unknown>);
+        });
         toast.success("Feedback positivo registrato");
       }
     } catch (e) {

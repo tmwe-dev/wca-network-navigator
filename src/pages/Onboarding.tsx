@@ -96,7 +96,7 @@ export default function Onboarding() {
           messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
           systemPrompt: `Sei l'assistente di onboarding. ${stepContext} Sii conciso (max 3 frasi).`,
         }, context: "Onboarding.ai_assistant" });
-      const reply = data?.reply || data?.content || "Non riesco a rispondere ora.";
+      const reply = String(data?.reply || data?.content || "Non riesco a rispondere ora.");
       setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
@@ -167,7 +167,7 @@ export default function Onboarding() {
       toast.success("🚀 Piattaforma configurata! Benvenuto.");
       navigate("/", { replace: true });
     } catch (e: unknown) {
-      toast.error(e?.message || "Errore nel salvataggio");
+      toast.error(e instanceof Error ? e.message : "Errore nel salvataggio");
     } finally {
       setSaving(false);
     }

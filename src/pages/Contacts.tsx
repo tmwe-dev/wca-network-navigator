@@ -92,7 +92,7 @@ export default function Contacts() {
                 <ContactDetailPanel
                   key={selectedContact.id}
                   contact={selectedContact}
-                  onContactUpdated={handleContactUpdated}
+                  onContactUpdated={handleContactUpdated as any}
                 />
               </div>
             </ResizablePanel>
