@@ -19,5 +19,6 @@ export function ProspectPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

@@ -19,5 +19,6 @@ export function StaffPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

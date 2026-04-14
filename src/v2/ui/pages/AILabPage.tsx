@@ -19,5 +19,6 @@ export function AILabPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

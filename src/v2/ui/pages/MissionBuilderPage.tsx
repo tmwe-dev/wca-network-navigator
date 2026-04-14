@@ -19,5 +19,6 @@ export function MissionBuilderPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }
