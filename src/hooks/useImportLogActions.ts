@@ -32,7 +32,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
   contact_alias: ["contact_alias", "alias", "alias_contatto"],
 };
 
-function findField(row: Record<string, any>, aliases: string[]): string | null {
+function findField(row: Record<string, unknown>, aliases: string[]): string | null {
   for (const alias of aliases) {
     if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
       return String(row[alias]).trim();
@@ -46,7 +46,7 @@ function findField(row: Record<string, any>, aliases: string[]): string | null {
 export function useCreateImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, rows, userId }: { file: File; rows: any[]; userId: string }) => {
+    mutationFn: async ({ file, rows, userId }: { file: File; rows: unknown[]; userId: string }) => {
       const filePath = `${userId}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage.from("import-files").upload(filePath, file);
       if (uploadError) throw uploadError;
@@ -145,7 +145,7 @@ export function useTransferToPartners() {
           await insertPartnerContact({
             partner_id: partner.id, name: c.name, email: c.email,
             direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias,
-            title: (c as any).position || null, is_primary: true,
+            title: (c as unknown).position || null, is_primary: true,
           });
         }
 
@@ -215,8 +215,8 @@ export function useCreateActivitiesFromImport() {
 
 export function useAnalyzeImportStructure() {
   return useMutation({
-    mutationFn: async ({ sampleRows, inputType, rawText }: { sampleRows?: any[]; inputType: "paste" | "file"; rawText?: string }) => {
-      return invokeEdge<{ column_mapping: Record<string, string>; parsed_rows: any[]; confidence: number; warnings: string[]; unmapped_columns?: string[] }>(
+    mutationFn: async ({ sampleRows, inputType, rawText }: { sampleRows?: unknown[]; inputType: "paste" | "file"; rawText?: string }) => {
+      return invokeEdge<{ column_mapping: Record<string, string>; parsed_rows: unknown[]; confidence: number; warnings: string[]; unmapped_columns?: string[] }>(
         "analyze-import-structure",
         { body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText }, context: "useAnalyzeImportStructure" }
       );
@@ -247,7 +247,7 @@ export function useFixImportErrors() {
 export function useCreateImportFromParsedRows() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, userId, fileName, groupName, importSource }: { rows: any[]; userId: string; fileName: string; groupName?: string; importSource?: "standard" | "business_card" }) => {
+    mutationFn: async ({ rows, userId, fileName, groupName, importSource }: { rows: unknown[]; userId: string; fileName: string; groupName?: string; importSource?: "standard" | "business_card" }) => {
       const source = importSource || "standard";
       const normalizedGroupName = groupName?.trim() || null;
       const businessCardOrigin = normalizedGroupName ? `business_card:${normalizedGroupName}` : "business_card";

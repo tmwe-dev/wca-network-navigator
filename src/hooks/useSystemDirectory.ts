@@ -56,10 +56,10 @@ export function useSystemDirectory() {
         findAgentTasksByUser(user.id, ["pending", "running"]),
         findOperativePrompts(user.id),
       ]);
-      const agentsRes = { data: agentsData as any[] };
-      const assignmentsRes = { data: assignmentsData as any[] };
-      const tasksRes = { data: tasksData as any[] };
-      const promptsRes = { data: promptsData as any[] };
+      const agentsRes = { data: agentsData as unknown[] };
+      const assignmentsRes = { data: assignmentsData as unknown[] };
+      const tasksRes = { data: tasksData as unknown[] };
+      const promptsRes = { data: promptsData as unknown[] };
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();

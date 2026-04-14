@@ -39,7 +39,7 @@ export function useAlertConfig() {
           ...updates,
           user_id: user.id,
           ...(config?.id ? { id: config.id } : {}),
-        } as any)
+        } as unknown)
         .select()
         .single();
       if (error) throw error;

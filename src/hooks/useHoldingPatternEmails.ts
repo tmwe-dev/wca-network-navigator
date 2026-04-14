@@ -25,12 +25,12 @@ export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
 
       if (partnerIds.length > 0) {
         const partners = await getPartnersByIdsFiltered(partnerIds, "id", { lead_status: ACTIVE_STATUSES });
-        (partners || []).forEach((p: any) => result.add(`p:${p.id}`));
+        (partners || []).forEach((p: unknown) => result.add(`p:${p.id}`));
       }
 
       if (contactIds.length > 0) {
         const contacts = await getContactsByIds(contactIds, "id, lead_status");
-        contacts.filter((c: any) => ACTIVE_STATUSES.includes(c.lead_status)).forEach((c: any) => result.add(`c:${c.id}`));
+        contacts.filter((c: unknown) => ACTIVE_STATUSES.includes(c.lead_status)).forEach((c: unknown) => result.add(`c:${c.id}`));
       }
 
       return [...result];

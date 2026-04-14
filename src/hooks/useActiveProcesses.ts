@@ -82,8 +82,8 @@ export function useActiveProcesses() {
         .select("status", { count: "exact", head: false })
         .in("status", ["pending", "sending"]);
       if (error) return { pending: 0, sending: 0, total: 0 };
-      const pending = (data || []).filter((r: any) => r.status === "pending").length;
-      const sending = (data || []).filter((r: any) => r.status === "sending").length;
+      const pending = (data || []).filter((r: unknown) => r.status === "pending").length;
+      const sending = (data || []).filter((r: unknown) => r.status === "sending").length;
       return { pending, sending, total: pending + sending };
     },
     refetchInterval: 10000,

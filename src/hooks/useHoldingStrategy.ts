@@ -62,7 +62,7 @@ export function useHoldingStrategy() {
       };
       setStrategy(parsed);
       return parsed;
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err?.message || "Errore durante l'analisi AI";
       console.error("Strategy analysis failed:", err);
       setError(msg);

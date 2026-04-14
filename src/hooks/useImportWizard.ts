@@ -40,17 +40,17 @@ function isReimportCorrection(headers: string[]): boolean {
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
 }
 
-function applyMapping(row: Record<string, any>, mapping: Record<string, string>): Record<string, string | null> {
+function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
   return transformRow(row, mapping);
 }
 
 export interface AiMappingResult {
   column_mapping: Record<string, string>;
-  parsed_rows: any[];
+  parsed_rows: unknown[];
   confidence: number;
   warnings: string[];
   unmapped_columns?: string[];
-  data_quality?: any;
+  data_quality?: unknown;
 }
 
 export function useImportWizard() {
@@ -81,7 +81,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
+  const handleReimportCorrection = useCallback(async (rows: unknown[], headers: string[]) => {
     setUploading(true);
     try {
       const idKey = headers.find(h => {
@@ -183,7 +183,7 @@ export function useImportWizard() {
       setPendingRows(rowObjects);
       const sampleSize = Math.min(50, rowObjects.length);
       const step = rowObjects.length / sampleSize;
-      const sample: any[] = [];
+      const sample: unknown[] = [];
       for (let i = 0; i < sampleSize; i++) {
         sample.push(rowObjects[Math.floor(i * step)]);
       }
@@ -362,14 +362,14 @@ export function useImportWizard() {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
     const SEP = ";";
-    const escapeCell = (val: any) => {
+    const escapeCell = (val: unknown) => {
       if (val === null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;
       return s;
     };
     const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
-    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [
+    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>) : [
       "company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code"
     ];
     const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
@@ -378,7 +378,7 @@ export function useImportWizard() {
       const motivo = !c.company_name && !c.name
         ? "azienda e nome mancanti"
         : !c.company_name ? "azienda mancante" : "nome mancante";
-      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
+      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, unknown>;
       const row = [
         escapeCell(c.id),
         ...originalHeaders.map(h => escapeCell(raw[h])),

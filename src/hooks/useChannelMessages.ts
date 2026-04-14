@@ -24,7 +24,7 @@ export type ChannelMessage = {
   subject: string | null;
   body_text?: string | null;
   body_html?: string | null;
-  raw_payload?: any;
+  raw_payload?: unknown;
   message_id_external: string | null;
   in_reply_to: string | null;
   read_at: string | null;

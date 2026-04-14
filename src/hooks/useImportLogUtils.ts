@@ -6,7 +6,7 @@ import type { ImportError } from "./useImportLogQueries";
 
 export function exportErrorsToCSV(errors: ImportError[]) {
   const SEP = ";";
-  const escapeCell = (val: any) => {
+  const escapeCell = (val: unknown) => {
     if (val === null || val === undefined) return "";
     const s = String(val).replace(/"/g, '""');
     if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
@@ -16,13 +16,13 @@ export function exportErrorsToCSV(errors: ImportError[]) {
   };
 
   const firstWithRaw = errors.find(e => e.raw_data && typeof e.raw_data === "object");
-  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>) : [];
 
   const headers = ["riga", "tipo_errore", "messaggio", ...rawKeys];
   const csvRows = [headers.map(escapeCell).join(SEP)];
 
   for (const err of errors) {
-    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, any>;
+    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, unknown>;
     const row = [
       escapeCell(err.row_number),
       escapeCell(err.error_type),

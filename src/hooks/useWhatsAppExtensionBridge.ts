@@ -10,7 +10,7 @@ type WaExtensionResponse = {
   authenticated?: boolean;
   reason?: string;
   method?: string;
-  messages?: any[];
+  messages?: unknown[];
   scanned?: number;
 };
 
@@ -138,7 +138,7 @@ export function useWhatsAppExtensionBridge() {
   }, [isAvailable]);
 
   const sendMsg = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<WaExtensionResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<WaExtensionResponse> => {
       return new Promise((resolve) => {
         const requestId = `wa_${action}_${crypto.randomUUID()}`;
 

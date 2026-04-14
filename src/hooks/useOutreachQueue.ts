@@ -65,7 +65,7 @@ export function useOutreachQueue() {
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await updateOutreachItem(id, { attempts: (data as any).attempts + 1 });
+      await updateOutreachItem(id, { attempts: (data as unknown).attempts + 1 });
     }
   };
 

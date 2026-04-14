@@ -43,7 +43,7 @@ export function useHoldingPatternList() {
       const items: HoldingItem[] = [];
 
       // Partners
-      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as any[];
+      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as unknown[];
 
       (partners || []).forEach((p) =>
         items.push({
