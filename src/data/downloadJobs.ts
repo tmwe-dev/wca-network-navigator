@@ -70,7 +70,7 @@ export async function findJobsByStatusSelect(statuses: string[], select = "id, s
     .in("status", statuses)
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as Array<Record<string, unknown>>;
 }
 
 export async function findJobByCountryAndNetwork(countryCode: string, networkName: string, statuses: string[]) {
@@ -169,7 +169,7 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
     .select(select)
     .eq("job_id", jobId);
   if (error) throw error;
-  return (data ?? []) as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as Array<Record<string, unknown>>;
 }
 
 export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<unknown> {
@@ -179,7 +179,7 @@ export async function getJobItemById(itemId: string, select = "attempt_count"): 
     .eq("id", itemId)
     .single();
   if (error) throw error;
-  return data as Record<string, unknown>;
+  return data as unknown as Record<string, unknown>;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {

@@ -9,7 +9,7 @@ export async function deleteBlacklistBySource(source: string) {
 }
 
 export async function insertBlacklistBatch(batch: Record<string, unknown>[]) {
-  const { error } = await supabase.from("blacklist_entries").insert(batch);
+  const { error } = await supabase.from("blacklist_entries").insert(batch as any);
   if (error) throw error;
 }
 
@@ -25,6 +25,6 @@ export async function updateBlacklistEntry(id: string, updates: Record<string, u
 }
 
 export async function insertBlacklistSyncLog(log: Record<string, unknown>) {
-  const { error } = await supabase.from("blacklist_sync_log").insert(log);
+  const { error } = await supabase.from("blacklist_sync_log").insert(log as any);
   if (error) throw error;
 }
