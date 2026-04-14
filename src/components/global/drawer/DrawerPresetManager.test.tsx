@@ -20,7 +20,7 @@ describe("DrawerPresetManager", () => {
   const baseProps = {
     presets: PRESETS,
     activePresetId: null as string | null,
-    quality: "balanced" as const,
+    quality: "balanced" as any,
     onLoadPreset: vi.fn(),
     onSavePreset: vi.fn(),
     onDeletePreset: vi.fn(),
