@@ -20,7 +20,7 @@ export function useCredits() {
         .from("user_credits")
         .select("balance, total_consumed")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       return {
         balance: credits?.balance ?? 0,
