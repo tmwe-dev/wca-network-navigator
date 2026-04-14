@@ -5,7 +5,7 @@
 import { useReducer, useCallback } from "react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/providers/AuthProvider";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";

@@ -1,5 +1,4 @@
 import { useReducer, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -9,6 +8,7 @@ import {
   type LeadStatus,
 } from "@/hooks/useContacts";
 import { toast } from "@/hooks/use-toast";
+import { findBusinessCardForContact } from "@/data/contacts";
 
 export interface ContactDetail {
   id: string;
@@ -121,13 +121,7 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
   const { data: matchedCard } = useQuery({
     queryKey: ["business-card-for-contact", state.contact.id],
     queryFn: async (): Promise<MatchedBusinessCard | null> => {
-      const { data } = await supabase
-        .from("business_cards")
-        .select("photo_url, event_name, met_at, location")
-        .eq("matched_contact_id", state.contact.id)
-        .limit(1)
-        .maybeSingle();
-      return data;
+      return findBusinessCardForContact(state.contact.id);
     },
     staleTime: 120_000,
   });
