@@ -47,7 +47,7 @@ export default function AdminUsers() {
     queryKey: ["authorized-users"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("authorized_users" as any)
+        .from("authorized_users")
         .select("id, email, display_name, is_active, last_login_at, login_count, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -59,8 +59,8 @@ export default function AdminUsers() {
     mutationFn: async () => {
       if (!newEmail.trim()) throw new Error("Email obbligatoria");
       const { error } = await supabase
-        .from("authorized_users" as any)
-        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }] as any);
+        .from("authorized_users")
+        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }] );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -75,8 +75,8 @@ export default function AdminUsers() {
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
-        .from("authorized_users" as any)
-        .update({ is_active } as any)
+        .from("authorized_users")
+        .update({ is_active } )
         .eq("id", id);
       if (error) throw error;
     },
@@ -90,7 +90,7 @@ export default function AdminUsers() {
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("authorized_users" as any)
+        .from("authorized_users")
         .delete()
         .eq("id", id);
       if (error) throw error;

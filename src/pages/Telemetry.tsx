@@ -140,7 +140,7 @@ function PageEventsView({ sinceIso }: { sinceIso: string }) {
     queryKey: ["telemetry-page-events", sinceIso],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("page_events" as any)
+        .from("page_events")
         .select("*")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: false })
@@ -220,7 +220,7 @@ function RequestLogsView({ sinceIso }: { sinceIso: string }) {
     queryKey: ["telemetry-request-logs", sinceIso],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("request_logs" as any)
+        .from("request_logs")
         .select("*")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: false })
@@ -302,7 +302,7 @@ function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
     queryKey: ["telemetry-ai-requests", sinceIso],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_request_log" as any)
+        .from("ai_request_log")
         .select("*")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: false })

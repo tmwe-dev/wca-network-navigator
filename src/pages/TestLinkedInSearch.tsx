@@ -29,9 +29,9 @@ interface TestResult {
   contact: TestContact;
   status: "pending" | "running" | "done" | "error";
   url: string | null;
-  profile: any;
+  profile: Record<string, unknown>;
   log: SearchLogEntry[];
-  scrapeResult: any;
+  scrapeResult: Record<string, unknown>;
   error?: string;
 }
 

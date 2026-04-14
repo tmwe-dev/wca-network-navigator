@@ -21,7 +21,7 @@ function formatRelativeTime(date: string | Date): string {
   return `${diffDays}d fa`;
 }
 
-function calculateJobProgress(job: any): number {
+function calculateJobProgress(job: Record<string, unknown>): number {
   if (job.total_items === 0) return 0;
   return Math.round((job.processed_items / job.total_items) * 100);
 }

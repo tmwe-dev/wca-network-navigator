@@ -215,8 +215,8 @@ function JobsPanel({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {s.jobsLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento job...</div>
-        : (s.jobs as any[]).length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun job in corso</div>
-        : (s.jobs as any[]).map((job: any) => {
+        : (s.jobs as Array<Record<string, unknown>>).length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun job in corso</div>
+        : (s.jobs as Array<Record<string, unknown>>).map((job: any) => {
             const progress = job.total_items > 0 ? (job.processed_items / job.total_items) * 100 : 0;
             return (
               <div key={job.id} className="space-y-3 pb-4 last:border-0 last:pb-0 border-b border-border">

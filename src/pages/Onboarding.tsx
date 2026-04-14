@@ -92,7 +92,7 @@ export default function Onboarding() {
 
     try {
       const stepContext = `L'utente è allo step "${steps[currentStep]?.title}". Rispondi brevemente e in italiano per aiutarlo a configurare la piattaforma.`;
-      const data = await invokeEdge<any>("ai-assistant", { body: {
+      const data = await invokeEdge<Record<string, unknown>>("ai-assistant", { body: {
           messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
           systemPrompt: `Sei l'assistente di onboarding. ${stepContext} Sii conciso (max 3 frasi).`,
         }, context: "Onboarding.ai_assistant" });
@@ -166,7 +166,7 @@ export default function Onboarding() {
 
       toast.success("🚀 Piattaforma configurata! Benvenuto.");
       navigate("/", { replace: true });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nel salvataggio");
     } finally {
       setSaving(false);
