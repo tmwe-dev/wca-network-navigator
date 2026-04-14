@@ -5,6 +5,7 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Briefcase } from "lucide-react";
 import type { ContactOrigin } from "@/pages/Cockpit";
 import type { AssignmentInfo } from "./CockpitContactCard";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface Contact {
   email: string;
@@ -105,7 +106,7 @@ export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, en
                 const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
                 return avatarSrc ? (
                   <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                    <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
+                    <OptimizedImage src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
                   </InfoTooltip>
                 ) : (
                   <InfoTooltip content={`Agente: ${assignment.agentName}`}>

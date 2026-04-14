@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { findEmailTemplatesShort } from "@/data/emailTemplates";
 import type { MissionStepProps, AttachmentConfig } from "./types";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface TemplateEntry { id: string; name: string; file_url: string }
 interface ImageEntry { name: string; url: string }
@@ -66,7 +67,7 @@ export function AttachmentStep({ data, onChange }: MissionStepProps) {
                 set({ imageIds: ids });
               }} className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${
                 att.imageIds.includes(img.name) ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"
-              }`}><img src={img.url} alt={img.name} className="w-full h-full object-cover" /></button>
+              }`}><OptimizedImage src={img.url} alt={img.name} className="w-full h-full object-cover" /></button>
             ))}
           </div>
         )}

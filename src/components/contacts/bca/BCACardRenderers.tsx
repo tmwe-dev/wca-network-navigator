@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { BCAQuickActions, STATUS_COLORS, STATUS_LABELS, getCardOriginClasses, getCardCountryCode, countryFlag, getWcaYear } from "./bcaUtils";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 /* ═══ Compact List Row ═══ */
 export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo: _onGoogleLogo }: {
@@ -63,7 +64,7 @@ export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogl
     )} onClick={onShowDetail}>
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l z-10", accent.border)} />
       {hasPhoto ? (
-        <AspectRatio ratio={16 / 9}><img src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" loading="lazy" /></AspectRatio>
+        <AspectRatio ratio={16 / 9}><OptimizedImage src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" /></AspectRatio>
       ) : (
         <div className="h-8 bg-gradient-to-r from-emerald-500/10 to-primary/10 flex items-center justify-center gap-1">
           <FileText className="w-3 h-3 text-emerald-400" /><span className="text-[9px] text-emerald-400 font-medium">Da file</span>
@@ -109,7 +110,7 @@ export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onG
         <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-3.5 w-3.5 mt-1 shrink-0" onClick={(e) => e.stopPropagation()} />
         {hasPhoto && (
           <div className="w-28 shrink-0 rounded-lg overflow-hidden border border-border/30">
-            <AspectRatio ratio={16 / 9}><img src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" loading="lazy" /></AspectRatio>
+            <AspectRatio ratio={16 / 9}><OptimizedImage src={card.photo_url!} alt="BCA" className="w-full h-full object-cover" /></AspectRatio>
           </div>
         )}
         <div className="flex-1 min-w-0 space-y-1">

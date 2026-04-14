@@ -5,6 +5,7 @@ import { usePartnerCanvas } from "./partner-canvas/usePartnerCanvas";
 import { CanvasContactList } from "./partner-canvas/CanvasContactList";
 import { CanvasServiceGrid } from "./partner-canvas/CanvasServiceGrid";
 import { CanvasNetworkBadges } from "./partner-canvas/CanvasNetworkBadges";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 export interface CanvasContact {
   name: string;
@@ -100,7 +101,7 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
         <div className={cn("transition-all duration-500", show("header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
           <div className="grid grid-cols-[minmax(80px,1fr)_2fr] gap-4">
             <div className="flex items-center justify-center min-h-[64px]">
-              {data.logo_url ? <img src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" /> : <Building2 className="w-10 h-10 text-muted-foreground/30" />}
+              {data.logo_url ? <OptimizedImage src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" /> : <Building2 className="w-10 h-10 text-muted-foreground/30" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-start justify-between gap-2">

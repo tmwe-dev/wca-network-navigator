@@ -8,6 +8,7 @@ import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
 import { formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { PartnerRating } from "./PartnerRating";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface PartnerDetailModalProps {
   partner: ScrapedPartner | null;
@@ -28,7 +29,7 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
         <DialogHeader>
           <div className="flex items-start gap-3">
             {getRealLogoUrl(partner.logo_url) && (
-              <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-12 h-12 object-contain rounded border bg-white p-1" />
+              <OptimizedImage src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-12 h-12 object-contain rounded border bg-white p-1" />
             )}
             <div>
               <DialogTitle className="flex items-center gap-2">

@@ -11,6 +11,7 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const log = createLogger("AgentSignatureConfig");
 
@@ -106,11 +107,11 @@ export function AgentSignatureConfig({ agent }: Props) {
         <Label className="text-xs">Immagine Firma (avatar agente)</Label>
         <div className="flex items-center gap-3 mt-1">
           {signatureImageUrl ? (
-            <img src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
+            <OptimizedImage src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
           ) : (() => {
             const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
             return avatarSrc ? (
-              <img src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
+              <OptimizedImage src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
             ) : (
               <span className="text-3xl">{agent.avatar_emoji}</span>
             );

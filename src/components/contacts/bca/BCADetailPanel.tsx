@@ -17,6 +17,7 @@ import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "@/hooks/use-toast";
 import { STATUS_COLORS, STATUS_LABELS, countryFlag, googleLogoSearchUrl } from "./bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
@@ -107,7 +108,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
         </div>
         {card.partner && (
           <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
-            {card.partner.logo_url && <img src={card.partner.logo_url} alt="" className="w-6 h-6 rounded object-contain" />}
+            {card.partner.logo_url && <OptimizedImage src={card.partner.logo_url} alt="" className="w-6 h-6 rounded object-contain" />}
             <div className="min-w-0">
               <p className="text-[11px] font-medium text-emerald-400">Partner WCA Matchato</p>
               <p className="text-xs text-foreground truncate">{card.partner.company_name}</p>
@@ -118,7 +119,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
 
       {card.photo_url && (
         <div className="rounded-lg overflow-hidden border border-border/30">
-          <img src={card.photo_url} alt="Biglietto" className="w-full object-contain" loading="lazy" />
+          <OptimizedImage src={card.photo_url} alt="Biglietto" className="w-full object-contain" />
         </div>
       )}
 

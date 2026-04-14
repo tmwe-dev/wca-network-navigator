@@ -5,6 +5,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Save, Loader2 } from "lucide-react";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface ContactFormActionsProps {
   readonly companyName: string;
@@ -24,7 +25,7 @@ export function ContactFormActions({
   return (
     <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-        {logoUrl && <img src={logoUrl} alt="" className="w-4 h-4 rounded" />}
+        {logoUrl && <OptimizedImage src={logoUrl} alt="" className="w-4 h-4 rounded" />}
         {companyName && <Badge variant="secondary" className="text-[10px]">{companyName}</Badge>}
         {contactName && <Badge variant="outline" className="text-[10px]">{contactName}</Badge>}
         {savedId && <Badge className="text-[10px] bg-emerald-600/20 text-emerald-400 border-emerald-600/30">Salvato ✓</Badge>}

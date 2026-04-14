@@ -1,5 +1,6 @@
 import { Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const NETWORK_LOGOS: Record<string, string> = {
   "wca inter global": "/logos/wca-inter-global.png",
@@ -47,7 +48,7 @@ export function CanvasNetworkBadges({ networks, linkedinLinks, showNetworks, sho
               const logo = getNetworkLogo(net);
               return (
                 <div key={net} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border text-xs">
-                  {logo && <img src={logo} alt="" className="w-5 h-5 object-contain" />}
+                  {logo && <OptimizedImage src={logo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-muted-foreground">{net}</span>
                 </div>
               );
