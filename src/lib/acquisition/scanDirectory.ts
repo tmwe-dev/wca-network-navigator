@@ -198,7 +198,7 @@ export async function loadPartnerPreview(wcaId: number) {
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
     profile_description: partner.profile_description || undefined,
-    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin").map((l) => ({ name: "LinkedIn", url: l.url })),
+    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin" && l.url).map((l) => ({ name: "LinkedIn", url: l.url! })),
     warehouse_sqm: (ed as Record<string, unknown>)?.warehouse_sqm as number | undefined,
     employees: (ed as Record<string, unknown>)?.employee_count as number | undefined,
     founded: (ed as Record<string, unknown>)?.founding_year ? String((ed as Record<string, unknown>).founding_year) : undefined,
