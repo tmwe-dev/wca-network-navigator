@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -9,23 +9,8 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
-  // Auth guard: require authenticated user
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-    });
-  }
-  const token = authHeader.replace("Bearer ", "");
-  const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: { user }, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !user) {
-    return new Response(JSON.stringify({ success: false, message: "Invalid token" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-    });
-  }
+  const auth = await requireExtensionAuth(req, dynCors);
+  if (isExtensionAuthError(auth)) return auth;
 
   try {
     const { prospects } = await req.json()

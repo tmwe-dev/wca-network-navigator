@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 // Valid enum values for matching
 const SERVICE_MAP: Record<string, string> = {
@@ -98,23 +98,8 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
-  // Auth guard: require authenticated user
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-    });
-  }
-  const token = authHeader.replace("Bearer ", "");
-  const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: { user }, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !user) {
-    return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-    });
-  }
+  const auth = await requireExtensionAuth(req, dynCors);
+  if (isExtensionAuthError(auth)) return auth;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
