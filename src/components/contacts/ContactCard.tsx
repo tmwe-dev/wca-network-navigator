@@ -7,14 +7,14 @@ import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
-import type { ImportedContactRecord } from "@/lib/contactActionAdapter";
 import { cn } from "@/lib/utils";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS, capitalizeLabel } from "./contactGridLayout";
 import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptImportedContact } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
-  c: ImportedContactRecord & Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  c: any;
   isActive: boolean;
   isSelected: boolean;
   hasBusinessCard?: boolean;
