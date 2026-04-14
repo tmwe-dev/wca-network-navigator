@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getTierByProductId, type SubscriptionTier } from "@/config/subscriptionTiers";
 import { createLogger } from "@/lib/log";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("useSubscription");
 
@@ -18,6 +18,8 @@ interface SubscriptionState {
 }
 
 export function useSubscription() {
+  const { event } = useAuth();
+
   const [state, setState] = useState<SubscriptionState>({
     loading: true,
     subscribed: false,
@@ -48,18 +50,14 @@ export function useSubscription() {
 
   useEffect(() => {
     checkSubscription();
-
     const interval = setInterval(checkSubscription, 60_000);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") checkSubscription();
-    });
-
-    return () => {
-      clearInterval(interval);
-      subscription.unsubscribe();
-    };
+    return () => clearInterval(interval);
   }, [checkSubscription]);
+
+  // Re-check on sign-in (sourced from AuthProvider)
+  useEffect(() => {
+    if (event === "SIGNED_IN") checkSubscription();
+  }, [event, checkSubscription]);
 
   const startCheckout = async (priceId: string) => {
     const data = await invokeEdge<CheckoutResult>("create-checkout", {

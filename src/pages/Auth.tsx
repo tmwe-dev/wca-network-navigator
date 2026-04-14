@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Globe2, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("Auth");
 
@@ -33,6 +34,7 @@ async function recordLogin(email: string) {
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { session, event } = useAuth();
   const [loading, setLoading] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -41,33 +43,22 @@ export default function Auth() {
   const isBusy = loading || resettingPassword;
   const authRedirectUrl = `${window.location.origin}/auth`;
 
+  // React to auth events from centralized provider
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user?.email && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        const allowed = await checkWhitelist(session.user.email);
-        if (!allowed) {
-          toast.error("Accesso non autorizzato. Contatta l'amministratore.");
-          await supabase.auth.signOut();
-          return;
-        }
-        await recordLogin(session.user.email);
-        navigate("/v1", { replace: true });
-      }
-    });
+    if (!session?.user?.email) return;
+    if (event !== "SIGNED_IN" && event !== "INITIAL_SESSION") return;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user?.email) {
-        const allowed = await checkWhitelist(session.user.email);
-        if (!allowed) {
-          await supabase.auth.signOut();
-          return;
-        }
-        navigate("/v1", { replace: true });
+    (async () => {
+      const allowed = await checkWhitelist(session.user.email!);
+      if (!allowed) {
+        toast.error("Accesso non autorizzato. Contatta l'amministratore.");
+        await supabase.auth.signOut();
+        return;
       }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+      if (event === "SIGNED_IN") await recordLogin(session.user.email!);
+      navigate("/v1", { replace: true });
+    })();
+  }, [session, event, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +76,7 @@ export default function Auth() {
     if (error) {
       toast.error(
         error.message === "Invalid login credentials"
-          ? "Credenziali non valide. Se non ricordi la password, usa “Password dimenticata?”."
+          ? "Credenziali non valide. Se non ricordi la password, usa \u201cPassword dimenticata?\u201d."
           : error.message,
       );
     }
@@ -146,7 +137,7 @@ export default function Auth() {
     if (error) {
       toast.error(error.message);
     } else if (!data.session && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      toast.info("Account già presente. Usa Accedi o “Password dimenticata?”.");
+      toast.info("Account già presente. Usa Accedi o \u201cPassword dimenticata?\u201d.");
     } else {
       toast.success("Controlla la tua email per confermare la registrazione");
     }
@@ -166,11 +157,8 @@ export default function Auth() {
         return;
       }
       if (result.redirected) {
-        // Browser will redirect to Google — nothing else to do
         return;
       }
-      // Tokens were returned and session set — onAuthStateChange will handle navigation
-      // But reset loading after a safety timeout in case navigation doesn't fire
       setTimeout(() => setLoading(false), 5000);
     } catch (err) {
       log.error("Google login error", { message: err instanceof Error ? err.message : String(err) });

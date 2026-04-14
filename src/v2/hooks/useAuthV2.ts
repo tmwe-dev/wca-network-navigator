@@ -2,7 +2,7 @@
  * useAuthV2 — STEP 3: Auth hook completo
  *
  * Login email/password, Google OAuth, profilo, ruoli, whitelist.
- * Nessun throw — tutto Result-based internamente, stato React per UI.
+ * Session state sourced from centralized AuthProvider.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
+import { useAuth } from "@/providers/AuthProvider";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -95,8 +96,9 @@ async function recordLogin(email: string): Promise<void> {
 // ── Hook ─────────────────────────────────────────────────────────────
 
 export function useAuthV2(): UseAuthV2Return {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  // Source session/user from centralized AuthProvider
+  const { session, user, status } = useAuth();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<readonly AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,60 +141,28 @@ export function useAuthV2(): UseAuthV2Return {
     }
   }, []);
 
-  // ── Session listener ─────────────────────────────────────────────
+  // ── React to session changes from AuthProvider ───────────────────
 
   useEffect(() => {
-    let mounted = true;
+    if (status === "loading") return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        if (!mounted) return;
+    if (user) {
+      setIsLoading(true);
+      loadUserData(user).finally(() => setIsLoading(false));
+    } else {
+      setProfile(null);
+      setRoles([]);
+      setIsLoading(false);
+    }
+  }, [user, status, loadUserData]);
 
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          setTimeout(() => {
-            if (mounted) {
-              loadUserData(currentSession.user).finally(() => {
-                if (mounted) setIsLoading(false);
-              });
-            }
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      if (!mounted) return;
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-
-      if (initialSession?.user) {
-        loadUserData(initialSession.user).finally(() => {
-          if (mounted) setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    // Fallback timer (5s max loading)
+  // Fallback timer (5s max loading)
+  useEffect(() => {
     const fallbackTimer = setTimeout(() => {
-      if (mounted && isLoading) setIsLoading(false);
+      if (isLoading) setIsLoading(false);
     }, 5000);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      clearTimeout(fallbackTimer);
-    };
-  }, [loadUserData]);
+    return () => clearTimeout(fallbackTimer);
+  }, [isLoading]);
 
   // ── Actions ──────────────────────────────────────────────────────
 
@@ -230,7 +200,6 @@ export function useAuthV2(): UseAuthV2Return {
       if (result.redirected) {
         return;
       }
-      // Session set by lovable auth — onAuthStateChange will handle the rest
       setTimeout(() => setIsLoading(false), 5000);
     } catch (err) {
       setIsLoading(false);
@@ -270,8 +239,6 @@ export function useAuthV2(): UseAuthV2Return {
   const signOut = useCallback(async () => {
     setError(null);
     await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
     setProfile(null);
     setRoles([]);
   }, []);
