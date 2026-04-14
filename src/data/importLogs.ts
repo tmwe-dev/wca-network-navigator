@@ -13,7 +13,7 @@ export async function createImportLog(log: ImportLogInsert) {
 }
 
 export async function updateImportLog(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("import_logs").update(updates).eq("id", id);
+  const { error } = await supabase.from("import_logs").update(updates as never).eq("id", id);
   if (error) throw error;
 }
 

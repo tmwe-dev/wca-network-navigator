@@ -45,8 +45,8 @@ export const queryKeys = {
     all: ["contacts"] as const,
     imported: (filters?: unknown) => ["imported-contacts", filters] as const,
     paginated: (filters?: unknown) => ["contacts-paginated", filters] as const,
-    byGroup: (groupType?: string, groupKey?: string, page?: number, pageSize?: number, holding?: string) =>
-      ["contacts-by-group", groupType, groupKey, page, pageSize, holding] as const,
+    byGroup: (...args: unknown[]) =>
+      ["contacts-by-group", ...args] as const,
     groupCounts: ["contact-group-counts"] as const,
     contactsGroupCounts: ["contacts-group-counts"] as const,
     segments: (filters?: unknown) => ["contact-segment-counts", filters] as const,
@@ -58,8 +58,8 @@ export const queryKeys = {
     holdingUnreadCounts: ["holding-unread-counts"] as const,
     holdingTimeline: (contactId?: string) => ["holding-timeline", contactId] as const,
     record: (contactId: string) => ["contact-record", contactId] as const,
-    recordInteractions: (contactId: string) => ["record-interactions", contactId] as const,
-    recordActivities: (contactId: string) => ["record-activities", contactId] as const,
+    recordInteractions: (...args: unknown[]) => ["record-interactions", ...args] as const,
+    recordActivities: (...args: unknown[]) => ["record-activities", ...args] as const,
     groupItems: (groupType?: string, groupKey?: string) => ["contact-group-items", groupType, groupKey] as const,
     picker: (filters?: unknown) => ["picker-contacts", filters] as const,
     pickerOrigins: ["picker-origin-options"] as const,
@@ -177,8 +177,8 @@ export const queryKeys = {
   downloads: {
     jobs: ["download-jobs"] as const,
     terminalLog: (jobId: string) => ["job-terminal-log", jobId] as const,
-    dataViewer: (jobId: string) => ["job-data-viewer", jobId] as const,
-    failedIdsNames: (jobId: string) => ["failed-ids-names", jobId] as const,
+    dataViewer: (ids: unknown) => ["job-data-viewer", ids] as const,
+    failedIdsNames: (ids: unknown) => ["failed-ids-names", ids] as const,
     liveProfiles: (filters?: unknown) => ["live-profiles", filters] as const,
     maxWcaId: ["max-wca-id"] as const,
     staffJobs: (filters?: unknown) => ["staff-jobs", filters] as const,
@@ -250,7 +250,7 @@ export const queryKeys = {
     memories: ["ai-memories"] as const,
     pendingActions: ["ai-pending-actions"] as const,
     agentPendingActions: ["agent-pending-actions"] as const,
-    decisionLog: (filters?: unknown) => ["ai-decision-log", filters] as const,
+    decisionLog: (...args: unknown[]) => ["ai-decision-log", ...args] as const,
     performance: {
       kpi: ["ai-performance-kpi"] as const,
       types: ["ai-performance-types"] as const,
@@ -263,7 +263,7 @@ export const queryKeys = {
     all: ["agents"] as const,
     tasks: (filters?: unknown) => ["agent-tasks", filters] as const,
     clients: (agentId: string) => ["agent-clients", agentId] as const,
-    forRecord: (sourceId: string) => ["agent-for-record", sourceId] as const,
+    forRecord: (sourceId?: string) => ["agent-for-record", sourceId] as const,
     dashboard: {
       tasks: (filters?: unknown) => ["agent-dashboard-tasks", filters] as const,
       agents: ["agent-dashboard-agents"] as const,
@@ -383,7 +383,7 @@ export const queryKeys = {
   // ── Supervisor ────────────────────────────────────────
   supervisor: {
     kpis: ["supervisor-kpis"] as const,
-    feed: (filters?: unknown) => ["supervisor-feed", filters] as const,
+    feed: (...args: unknown[]) => ["supervisor-feed", ...args] as const,
   },
 
   // ── IntelliFlow ───────────────────────────────────────
@@ -393,7 +393,7 @@ export const queryKeys = {
 
   // ── Arena ─────────────────────────────────────────────
   arena: {
-    suggestions: (filters?: unknown) => ["arena-suggestions", filters] as const,
+    suggestions: (...args: unknown[]) => ["arena-suggestions", ...args] as const,
   },
 
   // ── Super Home ────────────────────────────────────────
@@ -403,7 +403,7 @@ export const queryKeys = {
 
   // ── Conversation Context ──────────────────────────────
   convContext: {
-    byEmail: (email: string) => ["conv-context", email] as const,
+    byEmail: (email?: string) => ["conv-context", email] as const,
   },
 
   // ── AB Tests ──────────────────────────────────────────

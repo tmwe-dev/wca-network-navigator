@@ -64,13 +64,13 @@ export default function MemoryDashboard() {
             pending_promotion: false,
             decay_rate: 0,
             promoted_at: new Date().toISOString(),
-          } as Record<string, unknown>)
+          } as never)
           .eq("id", id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("ai_memory")
-          .update({ pending_promotion: false } as Record<string, unknown>)
+          .update({ pending_promotion: false } as never)
           .eq("id", id);
         if (error) throw error;
       }
