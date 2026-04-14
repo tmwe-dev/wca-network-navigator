@@ -37,7 +37,10 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
 import { insertActivity } from "@/data/activities";
 
-interface PartnerDetailCompactProps {
+interface ServiceItem { service_category: string }
+interface NetworkItem { id: string; network_name: string; expires: string | null }
+interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+
   partner: Record<string, any>;
   onBack: () => void;
   onToggleFavorite: () => void;

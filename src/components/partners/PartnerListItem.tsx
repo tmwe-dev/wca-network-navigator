@@ -12,8 +12,45 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
+interface PartnerContact {
+  id: string;
+  name: string;
+  title: string | null;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  is_primary: boolean | null;
+  contact_alias: string | null;
+}
+
+interface PartnerService {
+  service_category: string;
+}
+
+interface PartnerNetwork {
+  id: string;
+  network_name: string;
+  expires: string | null;
+}
+
+interface PartnerData {
+  id: string;
+  company_name: string;
+  country_code: string;
+  country_name: string;
+  city: string;
+  member_since: string | null;
+  rating: number | null;
+  is_favorite: boolean | null;
+  enrichment_data: unknown;
+  partner_services?: PartnerService[];
+  partner_contacts?: PartnerContact[];
+  partner_networks?: PartnerNetwork[];
+  [key: string]: unknown;
+}
+
 interface PartnerListItemProps {
-  partner: Record<string, any>;
+  partner: PartnerData;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -36,14 +73,14 @@ export function PartnerListItem({
   const years = getYearsMember(partner.member_since);
   const services = partner.partner_services || [];
   const allServices = [
-    ...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)),
-    ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
   const enrichment = asEnrichment(partner.enrichment_data);
   const hasDeepSearch = !!enrichment?.deep_search_at;
   const contacts = partner.partner_contacts || [];
-  const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+  const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
   const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
   const networks = partner.partner_networks || [];
@@ -77,7 +114,7 @@ export function PartnerListItem({
           {/* Row 1: Company name + rating */}
           <div className="flex items-center gap-1.5 min-w-0">
             <p className="font-semibold text-sm truncate">{partner.company_name}</p>
-            {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
+            {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} />}
           </div>
 
           {/* Row 2: City + years */}
@@ -118,7 +155,7 @@ export function PartnerListItem({
           {/* Row 4: Service icons */}
           {allServices.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5">
-              {allServices.slice(0, 6).map((s: Record<string, any>, i: number) => {
+              {allServices.slice(0, 6).map((s, i: number) => {
                 const Icon = getServiceIcon(s.service_category);
                 return (
                   <Tooltip key={i}>
@@ -135,7 +172,7 @@ export function PartnerListItem({
           {/* Row 5: Networks */}
           {networks.length > 0 && (
             <div className="flex items-center gap-1 mt-1">
-              {networks.slice(0, 3).map((n: any) => (
+              {networks.slice(0, 3).map((n) => (
                 <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
                   {n.network_name.replace("WCA ", "").substring(0, 10)}
                 </span>
