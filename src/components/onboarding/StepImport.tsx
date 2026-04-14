@@ -92,6 +92,7 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
       const BATCH = 50;
       for (let i = 0; i < contacts.length; i += BATCH) {
         const batch = contacts.slice(i, i + BATCH);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial insert shape
         const { error } = await supabase.from("imported_contacts").insert(batch as any);
         if (error) throw error;
       }

@@ -35,7 +35,7 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
                 if (payload.eventType === "INSERT") {
                   toast.info(`🤖 ${a.name}: nuovo task`, { description: String(row.description ?? "Task assegnato").slice(0, 80), duration: 5000 });
                 }
-                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: String(row.description ?? "") || a.lastTask };
+                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: (String(row.description ?? "") || a.lastTask) as string | null };
               }
               if (payload.eventType === "UPDATE" && row.status === "completed") {
                 return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: String(row.description ?? '') || a.lastTask };

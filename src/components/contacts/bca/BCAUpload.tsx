@@ -47,7 +47,7 @@ export function useUploadAndParse() {
         user_id: userId, company_name: card.company_name || null, contact_name: card.contact_name || null,
         email: card.email || null, phone: card.phone || null, mobile: card.mobile || null,
         position: card.position || null, notes: card.notes || null, event_name: eventMeta.event_name || null,
-        met_at: eventMeta.met_at || null, location: eventMeta.location || null, raw_data: card.raw_data || undefined,
+        met_at: eventMeta.met_at || null, location: eventMeta.location || null, raw_data: (card.raw_data as Record<string, unknown>) || undefined,
       });
       created++;
     }

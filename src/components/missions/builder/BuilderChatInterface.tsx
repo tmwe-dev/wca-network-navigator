@@ -42,7 +42,8 @@ export function BuilderChatInterface({
                   {m.widgets && m.widgets.length > 0 && (
                     <MissionWidgetRenderer widgets={m.widgets} stepData={stepData} onChange={onSetStepData}
                       countryStats={countryStats} onLaunch={onLaunch} onPlanApprove={onPlanApprove} onPlanCancel={onPlanCancel}
-                      planReviewProps={pendingPlan ? { plan: pendingPlan, isApproving } : undefined} />
+                      planReviewProps={pendingPlan ? { plan: pendingPlan, isApproving } : undefined}
+                    />
                   )}
                 </>
               ) : m.content}

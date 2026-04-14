@@ -40,8 +40,8 @@ export function SenderProfilesView() {
       ]);
       if (ctxRes.error) throw ctxRes.error;
 
-      const rulesMap = new Map<string, any>();
-      for (const r of rulesRes.data ?? []) rulesMap.set(r.email_address, r);
+      const rulesMap = new Map<string, Record<string, unknown>>();
+      for (const r of rulesRes.data ?? []) rulesMap.set(r.email_address, r as unknown as Record<string, unknown>);
 
       return (ctxRes.data ?? []).map(ctx => ({
         ...ctx,
@@ -89,7 +89,7 @@ export function SenderProfilesView() {
                       {initials}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">{p.rules?.display_name || p.email_address}</p>
+                      <p className="text-xs font-medium text-foreground truncate">{String(p.rules?.display_name || p.email_address)}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{p.email_address}</p>
                     </div>
                   </div>
@@ -99,7 +99,7 @@ export function SenderProfilesView() {
                     <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{p.interaction_count ?? 0}</span>
                     <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{Math.round(p.response_rate ?? 0)}%</span>
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{p.avg_response_time_hours != null ? `${Math.round(p.avg_response_time_hours)}h` : "—"}</span>
-                    {p.rules?.success_rate != null && <span>✓ {Math.round(p.rules.success_rate)}%</span>}
+                    {p.rules?.success_rate != null && <span>✓ {Math.round(Number(p.rules.success_rate))}%</span>}
                   </div>
 
                   {/* Sentiment trend */}
@@ -113,12 +113,12 @@ export function SenderProfilesView() {
                   )}
 
                   {/* Rules summary */}
-                  {p.rules && (
+                   {p.rules && (
                     <div className="flex flex-wrap gap-1">
                       {p.rules.auto_action && p.rules.auto_action !== "none" && (
-                        <Badge className="text-[10px] bg-primary/10 text-primary">{p.rules.auto_action}</Badge>
+                        <Badge className="text-[10px] bg-primary/10 text-primary">{String(p.rules.auto_action)}</Badge>
                       )}
-                      <Badge variant="outline" className="text-[10px]">{p.rules.preferred_channel ?? "email"}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{String(p.rules.preferred_channel ?? "email")}</Badge>
                     </div>
                   )}
 
