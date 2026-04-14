@@ -7,10 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Crown } from "lucide-react";
 import { format } from "date-fns";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function SubscriptionSettingsTab(): React.ReactElement {
   const { data, isLoading } = useQuery({
-    queryKey: ["v2-credit-transactions"],
+    queryKey: queryKeys.v2.creditTransactions,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { balance: 0, transactions: [] };

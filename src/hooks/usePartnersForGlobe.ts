@@ -105,7 +105,7 @@ export function usePartnersForGlobe() {
 // Fetch partners for a specific country
 export function usePartnersByCountryForGlobe(countryCode: string | null) {
   return useQuery({
-    queryKey: ["partners-globe-country", countryCode],
+    queryKey: queryKeys.partners.globeCountry(countryCode),
     queryFn: async () => {
       if (!countryCode) return [];
 

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ export const contactKeys = {
   filtered: (f: ContactFilters) => ["contacts", f] as const,
   interactions: (id: string) => ["contact-interactions", id] as const,
   filterOptions: ["contacts-filter-options"] as const,
-  holdingPattern: ["holding-pattern"] as const,
+  holdingPattern: queryKeys.contacts.holdingPattern as const,
   holdingPatternStats: ["holding-pattern-stats"] as const,
 };
 

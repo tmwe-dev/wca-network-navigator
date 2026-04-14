@@ -7,9 +7,10 @@ import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors
 import { type KbEntry } from "../../../core/domain/entities";
 import { mapKbEntryRow } from "../../../core/mappers/kb-entry-mapper";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
-type KbEntryInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
-type KbEntryUpdate = Database["public"]["Tables"]["kb_entries"]["Update"];
+type KbEntryInsert = Database["public"]["Tables"]queryKeys.v2.kbEntries()["Insert"];
+type KbEntryUpdate = Database["public"]["Tables"]queryKeys.v2.kbEntries()["Update"];
 
 export async function createKbEntry(input: KbEntryInsert): Promise<Result<KbEntry, AppError>> {
   try {

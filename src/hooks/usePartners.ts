@@ -26,7 +26,7 @@ export function usePartners(filters?: PartnerFilters) {
 
 export function usePartnersByCountry(countryCode: string | null) {
   return useQuery({
-    queryKey: ["partners-by-country", countryCode],
+    queryKey: queryKeys.partners.byCountry(countryCode),
     queryFn: () => findPartnersByCountry(countryCode!),
     enabled: !!countryCode,
     staleTime: 30_000,

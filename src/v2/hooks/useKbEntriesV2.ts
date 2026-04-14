@@ -23,12 +23,12 @@ export function useKbEntriesV2(searchQuery?: string) {
   });
 
   const createMut = useMutation({
-    mutationFn: (input: Database["public"]["Tables"]["kb_entries"]["Insert"]) => createKbEntry(input),
+    mutationFn: (input: Database["public"]["Tables"]queryKeys.v2.kbEntries()["Insert"]) => createKbEntry(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.kbEntries() }),
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Database["public"]["Tables"]["kb_entries"]["Update"] }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: Database["public"]["Tables"]queryKeys.v2.kbEntries()["Update"] }) =>
       updateKbEntry(id, updates),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.kbEntries() }),
   });

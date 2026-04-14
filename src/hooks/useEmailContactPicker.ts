@@ -76,7 +76,7 @@ export function useEmailContactPicker() {
 
   // ── Partners ──
   const { data: partners = [] } = useQuery<PartnerRow[]>({
-    queryKey: ["picker-partners", state.search, state.selectedCountry],
+    queryKey: queryKeys.partners.picker(state.search, state.selectedCountry),
     enabled: state.tab === "partners",
     queryFn: async () => {
       let q = supabase
@@ -92,7 +92,7 @@ export function useEmailContactPicker() {
 
   // Partner contacts
   const { data: partnerContacts = [] } = useQuery<PartnerContactRow[]>({
-    queryKey: ["picker-partner-contacts", state.expandedPartner],
+    queryKey: queryKeys.partnerContacts.pickerPartner(state.expandedPartner),
     enabled: !!state.expandedPartner,
     queryFn: async () => {
       const { data } = await supabase

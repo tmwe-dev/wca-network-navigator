@@ -120,7 +120,7 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
   const queryClient = useQueryClient();
 
   const { data: matchedCard } = useQuery({
-    queryKey: ["business-card-for-contact", state.contact.id],
+    queryKey: queryKeys.businessCards.forContact(state.contact.id),
     queryFn: async (): Promise<MatchedBusinessCard | null> => {
       return findBusinessCardForContact(state.contact.id);
     },

@@ -17,6 +17,7 @@ import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useGlobalFilters, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
+import { queryKeys } from "@/lib/queryKeys";
 
 /* ── Helpers ── */
 
@@ -52,7 +53,7 @@ function matchesFilter(a: AllActivity, f: WorkspaceFilterKey): boolean {
 
 function useLinkedInLinks(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["linkedin-links-workspace", partnerIds],
+    queryKey: queryKeys.socialLinks.linkedin(partnerIds),
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, string>;
       const { data, error } = await supabase
