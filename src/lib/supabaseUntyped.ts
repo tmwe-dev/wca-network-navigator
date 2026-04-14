@@ -15,5 +15,5 @@ import { supabase } from "@/integrations/supabase/client";
  * Returns a PostgREST query builder with loose typing.
  */
 export function untypedFrom(table: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
-  return (supabase as Record<string, unknown>).from(table);
+  return (supabase as unknown as Record<string, (...args: unknown[]) => unknown>).from(table);
 }

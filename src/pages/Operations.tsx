@@ -163,7 +163,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
-    const _WCA = (window as Record<string, unknown>).__WCA_COUNTRIES;
+    const _WCA = (window as unknown as Record<string, unknown>).__WCA_COUNTRIES;
     return activeCountryCodes.map(code => {
       const found = WCA_COUNTRIES.find((c) => c.code === code);
       return found?.name || code;

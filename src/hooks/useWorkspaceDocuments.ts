@@ -33,7 +33,7 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        }) as never;
+        }) as Record<string, unknown>;
 
       const doc: WorkspaceDoc = {
         id: data?.id ?? "",
