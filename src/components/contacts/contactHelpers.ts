@@ -18,8 +18,9 @@ export function formatPhone(phone: string): string {
   return phone.replace(/[^0-9+]/g, "");
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getContactQuality(c: any): "good" | "partial" | "poor" {
-  const has = (v: any) => !!clean(v);
+  const has = (v: unknown) => !!clean(v as string | null | undefined);
   const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
   const filled = fields.filter(Boolean).length;
   if (filled >= 4) return "good";
@@ -29,6 +30,7 @@ export function getContactQuality(c: any): "good" | "partial" | "poor" {
 
 export type SortKey = "name" | "company" | "city" | "date" | "score";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function sortContacts(contacts: any[], sortKey: SortKey): any[] {
   const sorted = [...contacts];
   sorted.sort((a, b) => {

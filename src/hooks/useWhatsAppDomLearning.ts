@@ -67,8 +67,8 @@ export function useWhatsAppDomLearning() {
 
     try {
       const result = await learnDom();
-      if (result.success && (result as unknown).schema) {
-        const schema = (result as unknown).schema as WaDomSchema;
+      if (result.success && (result as any).schema) {
+        const schema = (result as any).schema as WaDomSchema;
         await saveSchema(schema);
         log.info("schema learned", { keys: Object.keys(schema).length });
         return schema;

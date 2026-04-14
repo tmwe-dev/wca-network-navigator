@@ -232,11 +232,11 @@ export function ContactFiltersBar({
                 const { data } = await q;
                 if (!data?.length) { toast.info("Nessun contatto da esportare"); return; }
                 const headers = ["Nome","Azienda","Email","Telefono","Paese","Stato","Score","Origine","Data"];
-                const rows = data.map((c: any) => [
+                const rows = data.map((c) => [
                   c.name, c.company_name, c.email, c.phone, c.country, c.lead_status, c.lead_score, c.origin,
                   c.created_at ? new Date(c.created_at).toLocaleDateString("it-IT") : ""
                 ]);
-                const csv = [headers.join(","), ...rows.map(r => r.map((v: any) => `"${(v || "").toString().replace(/"/g, '""')}"`).join(","))].join("\n");
+                const csv = [headers.join(","), ...rows.map(r => r.map((v) => `"${(v || "").toString().replace(/"/g, '""')}"`).join(","))].join("\n");
                 const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");

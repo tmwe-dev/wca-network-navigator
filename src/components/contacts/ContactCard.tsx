@@ -13,6 +13,7 @@ import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptImportedContact } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   c: any;
   isActive: boolean;
   isSelected: boolean;

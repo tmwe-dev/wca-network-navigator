@@ -97,7 +97,7 @@ export default function BusinessCardsHub() {
       await insertCockpitQueueItems(inserts);
       toast({ title: `✅ ${selected.length} aggiunti al Cockpit` });
       setSelectedIds(new Set());
-    } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [cards, selectedIds]);
 
   const handleBulkWorkspace = useCallback(() => {

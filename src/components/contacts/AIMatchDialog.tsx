@@ -71,13 +71,13 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     setSelected(new Map());
     setHasRun(true);
     try {
-      const data = await invokeEdge<any>("ai-match-business-cards", { body: { batch_offset: 0, batch_size: 20 }, context: "AIMatchDialog.ai_match_business_cards" });
-      if (data.error) throw new Error(data.error);
-      setResults(data.matches || []);
-      setTotalUnmatched(data.total_unmatched || 0);
-      setProcessed(data.processed || 0);
-    } catch (e: any) {
-      toast({ title: "Errore AI Match", description: e.message, variant: "destructive" });
+      const data = await invokeEdge<{ error?: string; matches?: MatchResult[]; total_unmatched?: number; processed?: number }>("ai-match-business-cards", { body: { batch_offset: 0, batch_size: 20 }, context: "AIMatchDialog.ai_match_business_cards" });
+      if (data?.error) throw new Error(data.error);
+      setResults(data?.matches || []);
+      setTotalUnmatched(data?.total_unmatched || 0);
+      setProcessed(data?.processed || 0);
+    } catch (e: unknown) {
+      toast({ title: "Errore AI Match", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     let ok = 0, fail = 0;
     for (const [cardId, partnerId] of selected) {
       try {
-        await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as any);
+        await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 });
         ok++;
       } catch (e) {
         log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

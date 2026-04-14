@@ -17,7 +17,7 @@ export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleL
   const cardCountry = getCardCountryCode(card);
   const flag = cardCountry ? countryFlag(cardCountry) : "";
   const wcaYear = getWcaYear(card);
-  const city = card.partner?.enrichment_data?.city || card.location || "";
+  const city = (card.partner?.enrichment_data as Record<string, unknown> | null)?.city as string || card.location || "";
 
   return (
     <div className={cn(

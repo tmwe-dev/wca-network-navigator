@@ -148,7 +148,7 @@ export function useDeepSearchLocal() {
 
   const searchPartner = useCallback(async (partnerId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    const partner = await getPartner(partnerId) as unknown;
+    const partner = await getPartner(partnerId) as any;
     if (!partner) return { ...failResult, error: "Partner not found" };
 
     const contactsData = await findPartnerContacts(partnerId, "id, name, title, email, mobile, direct_phone");
@@ -168,7 +168,7 @@ export function useDeepSearchLocal() {
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    await updatePartner(partnerId, { enrichment_data: updated as unknown as Record<string, string> });
+    await updatePartner(partnerId, { enrichment_data: updated as any as Record<string, string> });
 
     const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);
     await updatePartner(partnerId, { rating });

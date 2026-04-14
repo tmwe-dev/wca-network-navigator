@@ -63,7 +63,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const data = await invokeEdge<any>("unified-assistant", { body: {
+      const data = await invokeEdge<{ error?: string; content?: string }>("unified-assistant", { body: {
           scope: "contacts",
           messages: newMessages,
           context: {
@@ -94,9 +94,9 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           onAICommand(command);
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
-      toast({ title: "Errore", description: e.message || "Errore di comunicazione", variant: "destructive" });
+      toast({ title: "Errore", description: e instanceof Error ? e.message : "Errore di comunicazione", variant: "destructive" });
     } finally {
       setLoading(false);
       inputRef.current?.focus();

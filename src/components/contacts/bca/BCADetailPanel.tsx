@@ -32,15 +32,15 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
     try {
       const data = await searchPartnersByNameAlias(searchTerm.trim(), "id, company_name, company_alias, country_code, country_name, city");
       setResults(data ?? []);
-    } catch (e: any) { toast({ title: "Errore ricerca", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore ricerca", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
     finally { setSearching(false); }
   }, [searchTerm]);
 
   const confirmMatch = useCallback(async (partnerId: string) => {
     try {
-      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as any);
+      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 });
       toast({ title: "✅ Match confermato" });
-    } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [card.id, updateCard]);
 
   return (
@@ -85,7 +85,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
       if (!user) return;
       await insertCockpitQueueItems([{ source_id: card.id, source_type: "business_card", user_id: user.id, partner_id: card.matched_partner_id || null }]);
       toast({ title: "✅ Aggiunto al Cockpit" });
-    } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [card]);
 
   const handleWorkspace = useCallback(() => {

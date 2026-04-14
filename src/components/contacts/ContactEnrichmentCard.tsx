@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ContactEnrichmentCardProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   enrichmentData: any;
   deepSearchAt: string | null;
 }

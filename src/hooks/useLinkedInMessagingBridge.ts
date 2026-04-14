@@ -14,7 +14,7 @@ type BridgeResponse = {
   error?: string;
   threads?: Array<{ name: string; lastMessage: string; unread: boolean; threadUrl: string }>;
   messages?: Array<{ text: string; sender: string; timestamp: string; direction: string }>;
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 // ── Ensure LinkedIn extension has Supabase config ──
@@ -60,7 +60,7 @@ function sendToLinkedInExt(action: string, data: Record<string, unknown> = {}, t
 }
 
 // ── FireScrape bridge (for reading pages) ──
-function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<unknown> {
+function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any> {
   return new Promise((resolve) => {
     const requestId = `fs_li_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {

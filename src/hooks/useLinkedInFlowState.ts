@@ -32,7 +32,7 @@ export function useLinkedInFlowState() {
         schema: "public",
         table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
-      }, (payload: unknown) => {
+      }, (payload: any) => {
         const row = payload.new;
         setProgress({
           total: row.total_count,

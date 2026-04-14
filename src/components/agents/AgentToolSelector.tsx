@@ -22,7 +22,7 @@ export function AgentToolSelector({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      { id: agent.id, assigned_tools: selected } as Record<string, unknown>,
+      { id: agent.id, assigned_tools: selected } as Parameters<typeof updateAgent.mutate>[0],
       { onSuccess: () => toast.success("Tool aggiornati") }
     );
   };

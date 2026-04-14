@@ -37,7 +37,7 @@ export function countryFlag(code: string | null | undefined): string {
 /* ═══ Resolve country from card data ═══ */
 export function getCardCountryCode(card: BusinessCardWithPartner): string | null {
   if (card.partner?.country_code) return card.partner.country_code;
-  const rd = card.raw_data as any;
+  const rd = card.raw_data as Record<string, string | undefined> | null;
   if (rd?.country_code) return rd.country_code;
   if (rd?.country) {
     const resolved = resolveCountryCode(rd.country);
@@ -58,7 +58,7 @@ export function getCardCountryCode(card: BusinessCardWithPartner): string | null
 /* ═══ Get WCA membership year ═══ */
 export function getWcaYear(card: BusinessCardWithPartner): string | null {
   if (!card.partner) return null;
-  const ed = card.partner.enrichment_data;
+  const ed = card.partner.enrichment_data as Record<string, unknown> | null;
   if (!ed) return null;
   const year = ed?.membership_year || ed?.member_since || ed?.wca_year;
   return year ? String(year) : null;

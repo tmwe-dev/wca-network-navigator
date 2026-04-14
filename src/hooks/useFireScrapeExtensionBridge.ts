@@ -31,7 +31,7 @@ export interface FsExtractResult {
 
 export function useFireScrapeExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
-  const pendingRef = useRef<Map<string, (r: unknown) => void>>(new Map());
+  const pendingRef = useRef<Map<string, (r: any) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Listen for responses from the webapp-bridge.js content script
@@ -100,7 +100,7 @@ export function useFireScrapeExtensionBridge() {
       const navResult = await sendMessage("agent-action", {
         step: { action: "navigate", url }
       }, 20000);
-      if (!navResult.success) return navResult as unknown;
+      if (!navResult.success) return navResult as any;
       // Wait for page load then scrape
       await new Promise(r => setTimeout(r, 2000));
       return scrape(true);

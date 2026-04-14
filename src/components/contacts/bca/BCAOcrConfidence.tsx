@@ -42,12 +42,12 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
 
   const startEdit = useCallback((field: OcrFieldKey) => {
     setEditing(field);
-    setEditValue((card as any)[field] ?? "");
+    setEditValue((card[field as keyof typeof card] as string) ?? "");
   }, [card]);
 
   const saveEdit = useCallback(async () => {
     if (!editing) return;
-    const oldValue = (card as any)[editing] ?? "";
+    const oldValue = (card[editing as keyof typeof card] as string) ?? "";
     if (editValue === oldValue) { setEditing(null); return; }
 
     const existingNotes = (card as any).correction_notes;
@@ -64,8 +64,8 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
       } as any);
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
-    } catch (e: any) {
-      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   }, [editing, editValue, card, updateCard]);
 
@@ -82,7 +82,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
 
       <div className="space-y-1">
         {OCR_FIELDS.map(({ key, label }) => {
-          const value = (card as any)[key] as string | null;
+          const value = card[key as keyof typeof card] as string | null;
           const confidence = ocrConf?.[key];
           const isLow = confidence != null && confidence < 70;
           const isEditing = editing === key;

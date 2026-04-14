@@ -32,9 +32,9 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }> } {
-  if (!(window as unknown)[LOCK_KEY]) (window as unknown)[LOCK_KEY] = { busy: false, queue: [] };
-  return (window as unknown)[LOCK_KEY];
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
+  if (!(window as any)[LOCK_KEY]) (window as any)[LOCK_KEY] = { busy: false, queue: [] };
+  return (window as any)[LOCK_KEY];
 }
 
 async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
@@ -43,11 +43,11 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
     const run = async () => {
       lock.busy = true;
       try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
-    else lock.queue.push({ resolve, fn: run as unknown });
+    else lock.queue.push({ resolve, fn: run as any });
   });
 }
 

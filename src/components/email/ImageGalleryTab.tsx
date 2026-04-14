@@ -60,8 +60,8 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
       }
       toast.success("Immagini caricate");
       queryClient.invalidateQueries({ queryKey: ["email-images"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Errore upload");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Errore upload");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

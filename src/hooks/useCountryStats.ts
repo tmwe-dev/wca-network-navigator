@@ -31,7 +31,7 @@ export function useCountryStats() {
       let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;
       let gDeep = 0, gAliasCo = 0, gAliasCt = 0;
 
-      (data || []).forEach((r: unknown) => {
+      (data || []).forEach((r: any) => {
         const s: CountryStats = {
           country_code: r.country_code,
           total_partners: Number(r.total_partners) || 0,

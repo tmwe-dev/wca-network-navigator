@@ -382,7 +382,7 @@ export function useEmailComposerState() {
         dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
       }
       toast.success("Email generata con Oracolo 🔮");
-    } catch (err: unknown) {
+    } catch (err: any) {
       const message = err instanceof Error ? err.message : "Sconosciuto";
       toast.error("Errore generazione AI: " + message);
     } finally { dispatch({ type: "SET_AI_GENERATING", payload: false }); }
@@ -403,7 +403,7 @@ export function useEmailComposerState() {
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
       toast.success("Email migliorata con AI 🪄");
-    } catch (err: unknown) {
+    } catch (err: any) {
       const message = err instanceof Error ? err.message : "Sconosciuto";
       toast.error("Errore miglioramento: " + message);
     } finally { dispatch({ type: "SET_AI_IMPROVING", payload: false }); }
@@ -419,7 +419,7 @@ export function useEmailComposerState() {
         const html = await res.text();
         dispatch({ type: "SET_HTML_BODY", payload: html });
         toast.success("Template caricato: " + name);
-      } catch (err: unknown) {
+      } catch (err: any) {
         log.warn("template body fetch failed", { error: err instanceof Error ? err.message : String(err) });
         toast.error("Impossibile caricare il body del template");
       }
@@ -466,7 +466,7 @@ export function useEmailComposerState() {
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "queued", total_count: recipientsWithEmail.length,
       });
-      const draftId = (savedDraft as unknown as { id: string }).id;
+      const draftId = (savedDraft as any as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
         subject: email.subject.replace(/\{\{company_name\}\}/g, r.companyAlias || r.companyName).replace(/\{\{contact_name\}\}/g, r.contactAlias || r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),

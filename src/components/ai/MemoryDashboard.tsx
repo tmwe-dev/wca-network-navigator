@@ -98,7 +98,7 @@ export default function MemoryDashboard() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["ai-memories"] });
-      const s = data?.stats;
+      const s = data?.stats as Record<string, number> | undefined;
       toast.success(`Promoter: ${s?.promoted_l1_to_l2 || 0} → L2, ${s?.promoted_l2_candidate || 0} candidati L3, ${s?.pruned || 0} rimossi`);
     },
     onError: () => toast.error("Errore nel promoter"),
