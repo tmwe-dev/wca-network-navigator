@@ -6,14 +6,29 @@ import {
   findPartnerCertifications, insertPartnerCertifications,
 } from "@/data/partnerRelations";
 
+/** Shape of the scraper extraction result */
+interface ExtractionResult {
+  success?: boolean;
+  companyName?: string;
+  profileHtml?: string;
+  contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
+  profile?: {
+    address?: string; phone?: string; fax?: string; mobile?: string; emergencyPhone?: string;
+    email?: string; website?: string; description?: string; memberSince?: string;
+    membershipExpires?: string; officeType?: string; branchCities?: string[];
+    networks?: Array<{ name: string; expires?: string | null }>;
+    services?: string[];
+    certifications?: string[];
+  };
+}
+
 /**
  * V2: Saves extracted profile data with BATCHED operations.
  */
 export async function saveExtractionResult(
   partnerId: string,
   wcaId: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- External scraper result shape varies
-  result: any,
+  result: ExtractionResult,
   existingCompanyName: string,
 ) {
   let hasEmail = false;
@@ -24,7 +39,7 @@ export async function saveExtractionResult(
   let extractedPhoneCount = 0;
 
   // ── 1. Build unified partner update payload ──
-  const partnerUpdate: Record<string, any> = {};
+  const partnerUpdate: Record<string, unknown> = {};
 
   if (
     result.companyName &&
@@ -104,8 +119,8 @@ export async function saveExtractionResult(
       await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts.filter((c) => c.email).length;
+    extractedPhoneCount = result.contacts.filter((c) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
@@ -113,8 +128,8 @@ export async function saveExtractionResult(
     const existingNets = await findPartnerNetworks(partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
     const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
+      .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
     await insertPartnerNetworks(toInsert);
   }
 
