@@ -9,6 +9,7 @@ const V1Component = lazy(() => import("@/pages/ProspectCenter"));
 
 export function ProspectPage(): React.ReactElement {
   return (
+    <div data-testid="page-prospects" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -18,5 +19,6 @@ export function ProspectPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }

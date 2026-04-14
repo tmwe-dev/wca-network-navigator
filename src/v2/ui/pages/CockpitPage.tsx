@@ -8,6 +8,7 @@ const CockpitV1 = lazy(() => import("@/pages/Cockpit"));
 
 export function CockpitPage(): React.ReactElement {
   return (
+    <div data-testid="page-cockpit" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
@@ -17,5 +18,6 @@ export function CockpitPage(): React.ReactElement {
     >
       <CockpitV1 />
     </Suspense>
+    </div>
   );
 }
