@@ -55,11 +55,11 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
             activeFileName,
           },
         }, context: "ImportAssistant.import_assistant" });
-      if (data?.error) {
-        toast({ title: "Errore AI", description: data.error, variant: "destructive" });
-        setMessages([...allMessages, { role: "assistant", content: `⚠️ ${data.error}` }]);
+      if ((data as Record<string, unknown>)?.error) {
+        toast({ title: "Errore AI", description: String((data as Record<string, unknown>).error), variant: "destructive" });
+        setMessages([...allMessages, { role: "assistant", content: `⚠️ ${(data as Record<string, unknown>).error}` }]);
       } else {
-        setMessages([...allMessages, { role: "assistant", content: data.content || "Nessuna risposta" }]);
+        setMessages([...allMessages, { role: "assistant", content: String((data as Record<string, unknown>)?.content || "Nessuna risposta") }]);
 
         // Refresh data if the assistant modified something
         if (data.data_modified) {

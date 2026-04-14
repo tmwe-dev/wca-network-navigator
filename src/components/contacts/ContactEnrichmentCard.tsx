@@ -207,7 +207,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
-                        <span>{label}</span>
+                        <span>{String(label)}</span>
                       </div>
                     );
                   })}
