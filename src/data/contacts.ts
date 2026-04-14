@@ -344,6 +344,164 @@ export async function fetchGroupContactIds(groupType: string, groupKey: string, 
   return (data ?? []).map((r: { id: string }) => r.id);
 }
 
+// ─── Paginated query for CRM (infinite scroll) ────────
+
+export type ContactPaginatedSort = "company_asc" | "company_desc" | "name_asc" | "name_desc" | "city_asc" | "city_desc" | "country_asc" | "country_desc" | "origin_asc" | "origin_desc" | "recent";
+
+export interface ContactPaginatedFilters {
+  search?: string;
+  countries?: string[];
+  origins?: string[];
+  cities?: string[];
+  companies?: string[];
+  names?: string[];
+  leadStatus?: string;
+  channel?: string;
+  quality?: string;
+  wcaMatch?: "matched" | "unmatched" | "all";
+  holdingPattern?: "out" | "in" | "all";
+  importLogId?: string;
+  sort?: ContactPaginatedSort | string;
+}
+
+export async function findContactsPaginated(
+  filters: ContactPaginatedFilters,
+  pageParam: number,
+  pageSize: number = 50,
+) {
+  const from = pageParam * pageSize;
+  const to = from + pageSize - 1;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- query builder chain
+  let query: any = supabase
+    .from("imported_contacts")
+    .select("*", { count: "exact" });
+
+  query = query.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+  if (filters.search) {
+    const s = sanitizeSearchTerm(filters.search);
+    if (s) {
+      query = query.or(
+        `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`
+      );
+    }
+  }
+
+  if (filters.countries?.length) query = query.in("country", filters.countries);
+  if (filters.origins?.length) query = query.in("origin", filters.origins);
+  if (filters.cities?.length) query = query.in("city", filters.cities);
+  if (filters.companies?.length) query = query.in("company_name", filters.companies);
+  if (filters.names?.length) query = query.in("name", filters.names);
+  if (filters.leadStatus) query = query.eq("lead_status", filters.leadStatus);
+  if (filters.importLogId) query = query.eq("import_log_id", filters.importLogId);
+
+  if (filters.holdingPattern === "out") query = query.or("interaction_count.eq.0,interaction_count.is.null");
+  else if (filters.holdingPattern === "in") query = query.gt("interaction_count", 0);
+
+  if (filters.channel === "with_email") query = query.not("email", "is", null);
+  else if (filters.channel === "with_phone") query = query.not("phone", "is", null);
+
+  if (filters.quality === "enriched") query = query.not("deep_search_at", "is", null);
+  else if (filters.quality === "not_enriched") query = query.is("deep_search_at", null);
+  else if (filters.quality === "with_alias") query = query.not("company_alias", "is", null);
+  else if (filters.quality === "no_alias") query = query.is("company_alias", null);
+
+  if (filters.wcaMatch === "matched") query = query.not("wca_partner_id", "is", null);
+  else if (filters.wcaMatch === "unmatched") query = query.is("wca_partner_id", null);
+
+  const sort = filters.sort || "company_asc";
+  const sortMap: Record<string, Array<{ col: string; asc: boolean; nullsFirst?: boolean }>> = {
+    company_asc: [{ col: "company_name", asc: true, nullsFirst: false }, { col: "name", asc: true }],
+    company_desc: [{ col: "company_name", asc: false, nullsFirst: true }, { col: "name", asc: true }],
+    name_asc: [{ col: "name", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
+    name_desc: [{ col: "name", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
+    city_asc: [{ col: "city", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
+    city_desc: [{ col: "city", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
+    country_asc: [{ col: "country", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
+    country_desc: [{ col: "country", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
+    origin_asc: [{ col: "origin", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
+    origin_desc: [{ col: "origin", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
+    recent: [{ col: "created_at", asc: false }],
+  };
+  for (const s of sortMap[sort] ?? sortMap.company_asc) {
+    query = query.order(s.col, { ascending: s.asc, ...(s.nullsFirst !== undefined ? { nullsFirst: s.nullsFirst } : {}) });
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (error) throw error;
+
+  return {
+    contacts: data || [],
+    total: count ?? 0,
+    page: pageParam,
+    hasMore: (data?.length || 0) === pageSize,
+  };
+}
+
+// ─── Grouped query for contact groups ──────────────────
+
+export async function findContactsByGroup(
+  groupType: string,
+  groupKey: string,
+  page: number = 0,
+  pageSize: number = 200,
+  holdingPattern?: "out" | "in" | "all",
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- query builder chain
+  let q: any = supabase
+    .from("imported_contacts")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+  if (holdingPattern === "out") q = q.eq("interaction_count", 0);
+  else if (holdingPattern === "in") q = q.gt("interaction_count", 0);
+
+  switch (groupType) {
+    case "country":
+      if (groupKey === "??" || groupKey === "Sconosciuto") q = q.is("country", null);
+      else q = q.eq("country", groupKey);
+      break;
+    case "origin":
+      if (groupKey === "Sconosciuta") q = q.is("origin", null);
+      else q = q.eq("origin", groupKey);
+      break;
+    case "status":
+      q = q.eq("lead_status", groupKey);
+      break;
+    case "date":
+      if (groupKey === "nd") {
+        q = q.is("created_at", null);
+      } else {
+        const [y, m] = groupKey.split("-").map(Number);
+        q = q.gte("created_at", `${groupKey}-01T00:00:00Z`).lt("created_at", new Date(y, m, 1).toISOString());
+      }
+      break;
+  }
+
+  const from = page * pageSize;
+  q = q.range(from, from + pageSize - 1);
+
+  const { data, error, count } = await q;
+  if (error) throw error;
+  return { items: data ?? [], totalCount: count ?? 0, page, pageSize };
+}
+
+// ─── Business card matched to contact ──────────────────
+
+export async function findBusinessCardForContact(contactId: string) {
+  const { data, error } = await supabase
+    .from("business_cards")
+    .select("photo_url, event_name, met_at, location")
+    .eq("matched_contact_id", contactId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateContactCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: contactKeys.all });
