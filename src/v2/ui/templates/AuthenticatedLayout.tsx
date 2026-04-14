@@ -16,6 +16,8 @@ import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
+import { LiveRegion } from "@/components/shared/LiveRegion";
+import { useLiveAnnounce } from "@/hooks/useLiveAnnounce";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
