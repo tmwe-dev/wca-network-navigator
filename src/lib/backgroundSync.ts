@@ -161,12 +161,12 @@ export async function bgSyncStart() {
 
         for (const message of messages) {
           notifyEmail({
-            id: message.id || `batch-${batchNum}-${Math.random().toString(36).slice(2)}`,
-            subject: message.subject || "(senza oggetto)",
-            from: message.from_address || message.from || "",
-            date: message.email_date || message.date || new Date().toISOString(),
-            bodyHtml: message.body_html || undefined,
-            bodyText: message.body_text || undefined,
+            id: String(message.id || `batch-${batchNum}-${Math.random().toString(36).slice(2)}`),
+            subject: String(message.subject || "(senza oggetto)"),
+            from: String(message.from_address || message.from || ""),
+            date: String(message.email_date || message.date || new Date().toISOString()),
+            bodyHtml: message.body_html ? String(message.body_html) : undefined,
+            bodyText: message.body_text ? String(message.body_text) : undefined,
             timestamp: Date.now(),
           });
         }
