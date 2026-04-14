@@ -50,7 +50,7 @@ export function useOperativeJobs() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const upd: any = { status };
+      const upd: Record<string, unknown> = { status };
       if (status === "completed") upd.completed_at = new Date().toISOString();
       await updateWorkPlan(id, upd);
     },
@@ -101,7 +101,7 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
   });
 
   const savePrompt = useMutation({
-    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: any }) => {
+    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
       await updateWorkPlan(id, {
         metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as unknown,
       });

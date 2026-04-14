@@ -116,14 +116,14 @@ export function useFireScrapeExtensionBridge() {
 
   /** Run an agent action (click, type, navigate, scroll, wait) */
   const agentAction = useCallback(
-    (step: { action: string; [key: string]: any }) =>
+    (step: { action: string; [key: string]: unknown }) =>
       sendMessage("agent-action", { step }, 30000),
     [sendMessage]
   );
 
   /** Run a multi-step agent sequence */
   const agentSequence = useCallback(
-    (steps: Array<{ action: string; [key: string]: any }>) =>
+    (steps: Array<{ action: string; [key: string]: unknown }>) =>
       sendMessage("agent-sequence", { steps }, 60000),
     [sendMessage]
   );
