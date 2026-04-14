@@ -196,7 +196,7 @@ function inspectPage() {
 // ── Tab management with retry ──
 async function safeCreateTab(url, retries) {
   retries = retries || 3;
-  for (var attempt = 0; attempt < retries; attempt++) {
+  for (let attempt = 0; attempt < retries; attempt++) {
     try { return await chrome.tabs.create({ url: url, active: false }); }
     catch (e) {
       if (attempt < retries - 1 && e.message && e.message.indexOf("cannot be edited") >= 0)
@@ -207,7 +207,7 @@ async function safeCreateTab(url, retries) {
 }
 
 async function safeRemoveTab(tabId) {
-  for (var attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try { await chrome.tabs.remove(tabId); return; }
     catch (e) {
       if (attempt < 2 && e.message && e.message.indexOf("cannot be edited") >= 0)

@@ -4,7 +4,7 @@
 // Uses native input API instead of execCommand
 // ══════════════════════════════════════════════════
 
-var Auth = (function () {
+const Auth = (function () {
 
   // ── Cookie ──
   async function getLiAtCookie() {
@@ -186,7 +186,7 @@ var Auth = (function () {
 
     while (Date.now() - startedAt < timeoutMs) {
       await new Promise(function (r) { setTimeout(r, 2000); });
-      var tab;
+      let tab;
       try { tab = await chrome.tabs.get(tabId); } catch (_) {
         return Config.errorResponse(Config.ERROR.TAB_CLOSED, "Tab chiuso durante il login");
       }

@@ -731,7 +731,7 @@ const Actions = (function () {
         const res = scrollResult && scrollResult[0] ? scrollResult[0].result : null;
         if (!res || !res.success) break;
         if (res.messages && res.messages.length) {
-          for (var m of res.messages) {
+          for (const m of res.messages) {
             const isDup = allMessages.some(function (existing) { return existing.text === m.text && existing.timestamp === m.timestamp; });
             if (!isDup) allMessages.push(m);
           }

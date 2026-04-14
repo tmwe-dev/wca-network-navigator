@@ -306,7 +306,7 @@ const AXTree = (function () {
           let threadUrl = "";
           let name = "";
           for (let c = 0; c < item.childIds.length; c++) {
-            var childId = item.childIds[c];
+            const childId = item.childIds[c];
             const child = nodes.find(function (n) { return n.nodeId === childId; });
             if (!child) continue;
             if (child.role && child.role.value === "link" && child.backendDOMNodeId) {
@@ -359,7 +359,7 @@ const AXTree = (function () {
         let text = "";
         let sender = "";
         for (let c = 0; c < item.childIds.length; c++) {
-          var childId = item.childIds[c];
+          const childId = item.childIds[c];
           const child = nodes.find(function (n) { return n.nodeId === childId; });
           if (child && child.role && child.role.value === "StaticText" && child.name && child.name.value) {
             const val = child.name.value.trim();
