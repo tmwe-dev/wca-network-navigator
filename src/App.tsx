@@ -20,6 +20,7 @@ import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
+import { AuthProvider } from "@/providers/AuthProvider";
 const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
 const Auth = lazyRetry(() => import("./pages/Auth"));
 const LauncherHome = lazyRetry(() => import("./pages/LauncherHome"));
@@ -98,6 +99,7 @@ const SentryFallback = ({ error }: { error: Error }) => (
 const App = () => (
   <Sentry.ErrorBoundary fallback={({ error }) => <SentryFallback error={error as Error} />}>
   <GlobalErrorBoundary>
+    <AuthProvider>
     <QueryClientProvider client={queryClient}>
       <ContactDrawerProvider>
       <ActiveOperatorProvider>
@@ -169,6 +171,7 @@ const App = () => (
       </ActiveOperatorProvider>
       </ContactDrawerProvider>
     </QueryClientProvider>
+    </AuthProvider>
   </GlobalErrorBoundary>
   </Sentry.ErrorBoundary>
 );
