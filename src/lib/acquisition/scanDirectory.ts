@@ -10,6 +10,7 @@ import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
 import { upsertDirectoryCache } from "@/data/directoryCache";
 import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
+import { asEnrichment } from "@/lib/partnerUtils";
 
 const log = createLogger("scanDirectory");
 
