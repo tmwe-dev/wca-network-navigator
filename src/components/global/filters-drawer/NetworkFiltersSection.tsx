@@ -18,7 +18,7 @@ export function NetworkFiltersSection() {
   const g = useGlobalFilters();
   const { data: statsData } = useCountryStats();
   const [countrySearch, setCountrySearch] = useState("");
-  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
   const countries = useMemo(() => {

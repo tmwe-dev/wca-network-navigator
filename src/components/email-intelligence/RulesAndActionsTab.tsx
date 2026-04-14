@@ -57,7 +57,7 @@ export default function RulesAndActionsTab() {
 function AddressRulesSection() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [editingRule, setEditingRule] = useState<Record<string, unknown> | null>(null);
+  const [editingRule, setEditingRule] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: groups = [] } = useQuery({
@@ -266,7 +266,7 @@ function GroupRulesSection() {
 /* ── Section C: Prompt Manager ── */
 function PromptManagerSection() {
   const qc = useQueryClient();
-  const [editingPrompt, setEditingPrompt] = useState<Record<string, unknown> | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: prompts = [], isLoading } = useQuery({

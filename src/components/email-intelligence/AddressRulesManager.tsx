@@ -38,7 +38,7 @@ const TONES = [
 export function AddressRulesManager() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [editingRule, setEditingRule] = useState<Record<string, unknown> | null>(null);
+  const [editingRule, setEditingRule] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: rules = [], isLoading } = useQuery({

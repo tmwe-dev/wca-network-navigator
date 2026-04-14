@@ -16,7 +16,7 @@ const log = createLogger("CRMFiltersSection");
 export function CRMFiltersSection() {
   const g = useGlobalFilters();
   const [countrySearch, setCountrySearch] = useState("");
-  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
   const [crmCountries, setCrmCountries] = useState<{ value: string; name: string; flag: string; total: number }[]>([]);
