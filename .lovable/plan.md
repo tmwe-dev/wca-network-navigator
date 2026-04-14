@@ -1,83 +1,61 @@
 
+Obiettivo: spiegare perché i target `any = 0` e `disabled = 0` non sono stati raggiunti e cosa va corretto davvero per arrivarci.
 
-# Piano: Type Safety + Fix /v2/globe
+Diagnosi reale emersa dall’audit statico:
+- Non restano “pochi residui”: esistono ancora generatori strutturali di `any`.
+- Il build/tsc oggi può essere verde, ma la type safety non è ancora chiusa ai confini del sistema: DAL dinamici, JSON liberi, API browser non tipizzate, test mocks.
 
-Tre problemi da risolvere in ordine di priorità.
+Perché non arrivo a `any non-disabled = 0`:
+1. `src/lib/supabaseUntyped.ts` usa ancora `(supabase as any).from(table)`. Finché esiste, tutto il layer RA (`useRADashboard`, `useRAJobs`, `useRAProspects`) continua a rigenerare cast e `any`.
+2. `src/hooks/useSupabaseQuery.ts` ha ancora `FilterFn`, `query as any`, `data as any as Row[]`. È un moltiplicatore centrale: non basta ripulire i consumer.
+3. In `src/data/partners.ts` e `src/data/partnerRelations.ts` esistono API pubbliche con `Promise<any[]>` e `select` dinamico. Se il contratto del DAL è `any[]`, i componenti a valle continueranno a castare.
+4. Alcune props UI entrano già come `Record<string, any>`: `PartnerDetailCompact`, `PartnerCard`, `UnifiedActionBar`, `ContactEnrichmentCard`, `ContactRecordFields`. Quindi il problema nasce prima del render.
+5. Alcuni residui sono boundary esterni non ancora incapsulati: Web Speech (`useContinuousSpeech`, `useAiVoice`), extension bridge (`useLinkedInExtensionBridge`, `TestDownload`), globals su `window` (`Operations`).
 
----
+Perché non arrivo a `disabled = 0`:
+1. Ho trovato 27 file con `/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */`. Questo da solo rende impossibile target zero.
+2. Molti disable sono stati usati come tampone locale invece di chiudere la causa a monte: JSON Supabase, `select` dinamici, `window as any`, bridge payloads.
+3. La config lint spinge in quella direzione: `@typescript-eslint/no-explicit-any` è `warn`, ma `npm run lint` usa `--max-warnings 0`. Quindi ogni `any` rimasto o viene tipizzato davvero, o viene silenziato.
+4. Alcuni disable sono evitabili, ma solo dopo refactor di contratto; toglierli subito senza rifondare i tipi farebbe riesplodere lint o TypeScript.
 
-## Problema 1: /v2/globe reindirizza a /onboarding (V1)
+Conclusione onesta:
+- Non è che il target 0/0 sia “impossibile”.
+- È che il lavoro fatto finora ha corretto soprattutto build, tsc e struttura file, ma non ha ancora eliminato i 4 generatori che ricreano `any` in cascata:
+  - `src/lib/supabaseUntyped.ts`
+  - `src/hooks/useSupabaseQuery.ts`
+  - DAL con `select` dinamico / `Promise<any[]>`
+  - props UI `Record<string, any>`
+- Finché questi restano, i fix file-per-file abbassano il numero ma non lo azzerano.
 
-**Causa**: `GlobePage` (V2) wrappa `SuperHome3D` (V1), che a riga 102 fa `navigate("/onboarding")` — rotta V1. Quando l'utente è su V2, il redirect va fuori dal contesto V2 e atterra sulla pagina di onboarding V1.
+Piano corretto per arrivare davvero a 0/0 o molto vicino:
+1. Chiudere i generatori centrali:
+   - sostituire `supabaseUntyped.ts` con wrapper generici o tipi RA locali;
+   - riscrivere `useSupabaseQuery.ts` senza `any`.
+2. Cambiare il contratto del DAL:
+   - rimuovere `Promise<any[]>`;
+   - usare funzioni generiche tipo `getPartnersByCountries<T>()` / `findPartnerContacts<T>()`.
+3. Tipizzare i boundary esterni:
+   - creare `src/types/web-speech.d.ts`;
+   - definire schema dei messaggi per extension bridge;
+   - eliminare `window as any`.
+4. Portare nella UI view-model veri:
+   - `PartnerWithRelations`
+   - `PartnerCardModel`
+   - `ContactEnrichmentData`
+   - `ContactRecordUpdates`
+5. Ripulire i test correttamente:
+   - togliere i 27 file-level disable;
+   - usare `unknown`, `Partial<T>`, `MockedFunction`, helper mock tipizzati;
+   - lasciare solo disable locali e motivati se davvero inevitabili.
+6. Solo alla fine rifare il conteggio e l’ultima passata sui residui.
 
-**Fix**: `GlobePage` non dovrebbe wrappare SuperHome3D (che è la Dashboard V1, non un globo 3D). Il nome è fuorviante. Va sostituito con un componente dedicato che mostri il contenuto corretto per la pagina Globe, oppure — se il Globe è effettivamente la dashboard V2 — va rimosso il redirect interno o reso context-aware (`/v2/onboarding`).
+Priorità tecnica immediata:
+- Root blockers: `src/lib/supabaseUntyped.ts`, `src/hooks/useSupabaseQuery.ts`, `src/data/partners.ts`, `src/data/partnerRelations.ts`
+- Boundary blockers: `src/hooks/useContinuousSpeech.ts`, `src/hooks/useAiVoice.ts`, `src/hooks/useLinkedInExtensionBridge.ts`, `src/pages/Operations.tsx`
+- UI blockers: `src/components/partners/PartnerDetailCompact.tsx`, `src/components/partners/PartnerCard.tsx`, `src/components/partners/UnifiedActionBar.tsx`, `src/components/contacts/ContactEnrichmentCard.tsx`, `src/components/contact-drawer/ContactRecordFields.tsx`
+- Test blockers: `src/test/wca-app-api.test.ts` e gli altri file con disable di intero file
 
-**Azione**: Modificare `GlobePage.tsx` per montare direttamente il componente globo (`SuperHome3D` contiene la dashboard, NON il globo). Serve verificare quale componente 3D era originariamente inteso (probabilmente il globo WCA con i partner). Se il componente globe non esiste come standalone, creare un wrapper leggero che usi `usePartnersForGlobe` senza il redirect a onboarding.
-
----
-
-## Problema 2: 149 `any` non-disabled (esclusi download/email)
-
-**Categorie principali**:
-
-| Categoria | Count | Fix |
-|---|---|---|
-| Supabase `.insert()`/`.update()` con `Record<string,unknown>` | ~24 | Creare tipi `Insert`/`Update` dai Zod schema esistenti |
-| Web Speech API (`window as any`) | ~8 | Usare `eslint-disable` + commento (API non in lib TS) |
-| Supabase join/select dinamico | ~20 | Aggiungere interfacce tipizzate per i risultati join |
-| Partner/Contact shape casting | ~30 | Usare i tipi da `types.ts` generato |
-| Extension bridge payload | ~10 | Creare interfacce per i messaggi bridge |
-| Restante | ~57 | Mix di quick casts risolvibili con interfacce specifiche |
-
-**Strategia**: Lavorare sui 25 file con più `any`, concentrandosi su:
-1. **DAL** (`src/data/*.ts`): Creare tipi Insert specifici per ogni tabella
-2. **Hooks** (`usePartnerListStats`, `useSystemDirectory`, etc.): Aggiungere interfacce per i risultati Supabase
-3. **Componenti** (`PartnerListItem`, `PartnerDetailCompact`, `CountryOverview`): Usare i tipi Partner/Contact esistenti
-4. **Web Speech**: Aggiungere `eslint-disable` con motivazione (legittimo, API non tipizzata)
-
-**Target**: Da 149 a < 30 non-disabled, da 106 disabled a < 50 (consolidando quelli con motivazione valida).
-
----
-
-## Problema 3: 106 `any` disabled (esclusi download/email) — target < 50
-
-**Azione**: Rivedere i 106 `eslint-disable` e per ognuno:
-- Se il tipo è derivabile → rimuovere il disable e tipizzare
-- Se è legittimo (Web Speech, Supabase Json, extension bridge) → mantenere
-- Se è duplicato di un pattern già tipizzato → aggiornare
-
-Stima: ~60 sono convertibili in tipi propri, ~46 restano come disable legittimi.
-
----
-
-## Passi di implementazione
-
-1. **Fix GlobePage** — Sostituire il wrapping di SuperHome3D con il componente corretto o creare un Globe standalone senza redirect
-2. **Creare tipi Insert/Update** per le tabelle Supabase più usate nei DAL (`partners`, `activities`, `contacts`, `interactions`, ecc.)
-3. **Tipizzare i top-25 file** con più `any` non-disabled, partendo dai DAL poi hooks poi componenti
-4. **Consolidare eslint-disable** — rimuovere quelli ora risolvibili con i nuovi tipi
-5. **Verificare**: `npm run build` + `grep` count finale
-
----
-
-## Dettaglio tecnico
-
-File prioritari da fixare (top ROI — coprono ~60% degli `any`):
-
-```text
-src/data/partners.ts                         6 any
-src/hooks/useWhatsAppBackfill.ts             5 any
-src/pages/Operations.tsx                     4 any
-src/hooks/useSystemDirectory.ts              4 any
-src/hooks/usePartnerListStats.ts             4 any (+ 2 disabled)
-src/hooks/useExtensionBridge.ts              4 any
-src/hooks/useContinuousSpeech.ts             4 any
-src/components/partners/PartnerListItem.tsx   4 any
-src/components/partners/PartnerDetailCompact  4 any
-src/components/contacts/bca/BCAOcrConfidence  4 any
-src/components/partners/CountryOverview.tsx   3 any
-src/hooks/useHoldingMessages.ts              3 any
-src/hooks/useAiVoice.ts                      3 any
-src/components/agents/AgentKnowledgeBase.tsx  3 any
-```
-
+Risposta breve alla tua domanda:
+- Non ho mancato il target per un ultimo dettaglio.
+- L’ho mancato perché la bonifica è stata fatta troppo dal bordo e non abbastanza dal nucleo.
+- Se vuoi davvero 0/0, il prossimo blocco deve partire dai generatori centrali sopra, non da altri cast sparsi.
