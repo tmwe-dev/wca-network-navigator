@@ -52,12 +52,12 @@ const COUNTRY_LANGUAGE: Record<string, string> = {
   BR: "português", PT: "português", JP: "日本語", CN: "中文",
 };
 
-function inferLanguage(countryCode: string | null): string {
+export function inferLanguage(countryCode: string | null): string {
   if (!countryCode) return "english";
   return COUNTRY_LANGUAGE[countryCode.toUpperCase().trim()] || "english";
 }
 
-function inferChannels(email?: string | null, phone?: string | null, mobile?: string | null): string[] {
+export function inferChannels(email?: string | null, phone?: string | null, mobile?: string | null): string[] {
   const ch: string[] = [];
   if (email) ch.push("email");
   if (phone || mobile) ch.push("whatsapp", "sms");
@@ -65,7 +65,7 @@ function inferChannels(email?: string | null, phone?: string | null, mobile?: st
   return ch;
 }
 
-function computePriority(email?: string | null, phone?: string | null, mobile?: string | null): number {
+export function computePriority(email?: string | null, phone?: string | null, mobile?: string | null): number {
   let p = 1;
   if (email) p += 3;
   if (phone || mobile) p += 2;
