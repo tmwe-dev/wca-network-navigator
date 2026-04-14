@@ -180,7 +180,7 @@ export function useUpdateContactRecord() {
       if (sourceType === "partner") {
         // Split updates into partner-table fields vs contact-table fields
         const partnerUpdates: Record<string, unknown> = {};
-        const contactUpdates: Record<string, unknown> = {};
+        const contactUpdates: Record<string, string | null> = {};
 
         for (const [key, value] of Object.entries(updates)) {
           if (PARTNER_ONLY_FIELDS.has(key)) {
