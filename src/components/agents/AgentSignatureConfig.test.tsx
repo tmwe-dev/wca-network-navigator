@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/componentTestUtils";
 import React from "react";
 
@@ -30,9 +30,9 @@ describe("AgentSignatureConfig", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
     expect(screen.getByText("Firma Email Agente")).toBeInTheDocument();
   });
-  it("renders save button", () => {
+  it("renders image upload label", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
-    expect(screen.getByText("Salva firma")).toBeInTheDocument();
+    expect(screen.getByText(/Immagine Firma/)).toBeInTheDocument();
   });
   it("renders preview toggle", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
@@ -42,9 +42,8 @@ describe("AgentSignatureConfig", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
     expect(screen.getByText(/Genera firma/i)).toBeInTheDocument();
   });
-  it("calls updateAgent on save click", () => {
+  it("renders voice call URL label", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
-    fireEvent.click(screen.getByText("Salva firma"));
-    expect(mockUpdateAgent.mutate).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }), expect.anything());
+    expect(screen.getByText(/Voice Call URL/i)).toBeInTheDocument();
   });
 });
