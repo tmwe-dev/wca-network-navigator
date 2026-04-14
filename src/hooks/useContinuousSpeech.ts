@@ -23,8 +23,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
 
   const createRecognition = useCallback(() => {
     const SR =
-      (window as unknown).SpeechRecognition ||
-      (window as unknown).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
     if (!SR) return null;
 
     const recognition = new SR();
@@ -33,7 +33,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: unknown) => {
+    recognition.onresult = (e: any) => {
       let interim = "";
       let final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -52,7 +52,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       setInterimText(interim);
     };
 
-    recognition.onerror = (e: unknown) => {
+    recognition.onerror = (e: any) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
       log.warn("speech error", { error: e.error });
     };

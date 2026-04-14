@@ -41,7 +41,7 @@ function isReimportCorrection(headers: string[]): boolean {
 }
 
 function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
-  return transformRow(row, mapping);
+  return transformRow(row as any, mapping);
 }
 
 export interface AiMappingResult {
