@@ -4,9 +4,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function getUserCredits() {
-  const { data, error } = await supabase.from("user_credits").select("balance, total_consumed").limit(1).single();
+  const { data, error } = await supabase.from("user_credits").select("balance, total_consumed").limit(1).maybeSingle();
   if (error) throw error;
-  return data;
+  return data ?? { balance: 0, total_consumed: 0 };
 }
 
 export async function countCreditTransactions() {
