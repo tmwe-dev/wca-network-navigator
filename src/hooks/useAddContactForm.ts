@@ -406,29 +406,16 @@ export function useAddContactForm() {
 
   // ── Save ──
 
+  const { user } = useAuth();
+
   const handleSave = useCallback(async () => {
     if (!form.companyName.trim()) { toast.error("Il nome azienda è obbligatorio"); return; }
     dispatch({ type: "SET_SAVING", payload: true });
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
-      let importLogId: string;
-      const { data: existingLog } = await supabase
-        .from("import_logs").select("id").eq("user_id", user.id)
-        .eq("file_name", "__manual_entry__").limit(1).maybeSingle();
-
-      if (existingLog) {
-        importLogId = existingLog.id;
-      } else {
-        const { data: newLog, error: logErr } = await supabase
-          .from("import_logs").insert({
-            user_id: user.id, file_name: "__manual_entry__",
-            total_rows: 0, status: "completed", group_name: "Inserimento Manuale",
-          }).select("id").single();
-        if (logErr || !newLog) { toast.error("Errore creazione registro"); return; }
-        importLogId = newLog.id;
-      }
+      const { findOrCreateManualImportLog } = await import("@/data/importLogs");
+      const importLogId = await findOrCreateManualImportLog(user.id);
 
       const enrichmentData: Record<string, string> = {};
       if (form.linkedinUrl) enrichmentData.linkedin_url = form.linkedinUrl;
@@ -462,7 +449,7 @@ export function useAddContactForm() {
     } finally {
       dispatch({ type: "SET_SAVING", payload: false });
     }
-  }, [form]);
+  }, [form, user]);
 
   return {
     state,
