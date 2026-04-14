@@ -6,6 +6,16 @@
 
 **Option chosen: B** — keep files in `public/`, add separate `tsconfig` + ESLint config block.
 
+## ESLint Results
+
+| Rule | Before | After | Severity |
+|------|--------|-------|----------|
+| `no-var` | 987 | **0** | error — **fully resolved via autofix + 8 manual fixes** |
+| `no-unused-vars` | 113 | 113 | warning |
+| `prefer-const` | 5 | 1 | error |
+| `eqeqeq` | 1 | 1 | error |
+| **Total** | **1,106** | **118** | 5 errors, 113 warnings |
+
 ## TypeScript Error Reduction
 
 | Metric | Before | After | Delta |
@@ -62,6 +72,7 @@
    - `Node.shadowRoot` augmentation (TreeWalker compat) — fixed 20 errors
    - `Element` augmentation (click, focus, disabled, value, etc.) — fixed 47 errors
    - `EventTarget` augmentation (value, result, transaction) — fixed 6 errors
+3. **Autofix `no-var`** — `eslint --fix` resolved 979 occurrences, 8 manual fixes for `for` loops and IIFEs
 
 ## Configuration
 
