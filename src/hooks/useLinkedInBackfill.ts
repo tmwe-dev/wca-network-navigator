@@ -103,8 +103,8 @@ export function useLinkedInBackfill() {
       setProgress(p => ({ ...p, status: "done", currentThread: null }));
       toast.success(`Backfill LinkedIn completato`);
     } catch (err: unknown) {
-      setProgress(p => ({ ...p, status: "error", lastError: err.message }));
-      toast.error(`Errore: ${err.message}`);
+      setProgress(p => ({ ...p, status: "error", lastError: err instanceof Error ? err.message : String(err) }));
+      toast.error(`Errore: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [progress.status, readInbox, readThread]);
 

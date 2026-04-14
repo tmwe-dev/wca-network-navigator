@@ -30,7 +30,7 @@ export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
 
       if (contactIds.length > 0) {
         const contacts = await getContactsByIds(contactIds, "id, lead_status");
-        contacts.filter((c) => ACTIVE_STATUSES.includes(c.lead_status)).forEach((c) => result.add(`c:${c.id}`));
+        contacts.filter((c) => ACTIVE_STATUSES.includes(c.lead_status as string)).forEach((c) => result.add(`c:${c.id}`));
       }
 
       return [...result];

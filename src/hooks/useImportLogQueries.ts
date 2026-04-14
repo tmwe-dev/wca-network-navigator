@@ -123,7 +123,7 @@ export function useImportedContacts(importLogId: string | null) {
         hasMore = (data?.length || 0) === PAGE_SIZE;
         from += PAGE_SIZE;
       }
-      return allData as ImportedContact[];
+      return allData as unknown as ImportedContact[];
     },
     enabled: !!importLogId,
   });

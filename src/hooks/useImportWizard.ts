@@ -383,7 +383,7 @@ export function useImportWizard() {
       const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, unknown>;
       const row = [
         escapeCell(c.id),
-        ...originalHeaders.map(h => escapeCell(raw[h])),
+        ...originalHeaders.map(h => escapeCell(String(raw[h] ?? ""))),
         escapeCell(motivo),
       ];
       csvRows.push(row.join(SEP));

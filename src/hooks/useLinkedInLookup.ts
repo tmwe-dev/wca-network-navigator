@@ -220,7 +220,7 @@ export function useLinkedInLookup() {
       let resolvedMethod: string | null = null;
 
       // Google-only via Partner Connect
-      const queries = buildLinkedInGoogleQueries(searchName, c.company_name, c.email);
+      const queries = buildLinkedInGoogleQueries(searchName, String(c.company_name ?? ""), String(c.email ?? ""));
 
       for (const query of queries) {
         if (abortRef.current || foundUrl) break;
