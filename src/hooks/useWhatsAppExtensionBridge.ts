@@ -191,6 +191,7 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
+  // Reserved: not consumed by Soft Sync
   const onSidebarChanged = useCallback((cb: () => void) => {
     sidebarChangedCbRef.current = cb;
   }, []);
