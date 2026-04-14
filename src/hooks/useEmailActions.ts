@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useEmailActions");
 
@@ -27,7 +28,7 @@ type MarkAsReadInput = {
 
 export function useMessageAttachments(messageId: string | null) {
   return useQuery({
-    queryKey: ["email-attachments", messageId],
+    queryKey: queryKeys.email.attachments(messageId),
     queryFn: async () => {
       if (!messageId) return [];
       const { data, error } = await supabase
@@ -43,7 +44,7 @@ export function useMessageAttachments(messageId: string | null) {
 
 export function useUnreadCount(channel?: string) {
   return useQuery({
-    queryKey: ["channel-messages-unread", channel],
+    queryKey: queryKeys.channelMessages.unread,
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -122,8 +123,8 @@ export function useMarkAsRead() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
     },
   });
 }

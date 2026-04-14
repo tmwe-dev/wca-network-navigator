@@ -11,6 +11,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
 import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("EmailComposerContactPicker");
 
@@ -27,7 +28,7 @@ export function useEmailContactPicker() {
 
   // ── Country stats ──
   const { data: countryStats = [] } = useQuery<CountryStat[]>({
-    queryKey: ["picker-country-stats-v2"],
+    queryKey: queryKeys.contacts.pickerCountryStats(),
     queryFn: async () => {
       try {
         const rpcData = await rpcGetCountryStats();
@@ -56,7 +57,7 @@ export function useEmailContactPicker() {
 
   // Origin options
   const { data: originOptions = [] } = useQuery<string[]>({
-    queryKey: ["picker-origin-options"],
+    queryKey: queryKeys.contacts.pickerOrigins,
     queryFn: async () => {
       const data = await rpcGetContactFilterOptions();
       if (!data) return [];
@@ -75,7 +76,7 @@ export function useEmailContactPicker() {
 
   // ── Partners ──
   const { data: partners = [] } = useQuery<PartnerRow[]>({
-    queryKey: ["picker-partners", state.search, state.selectedCountry],
+    queryKey: queryKeys.partners.picker(state.search, state.selectedCountry),
     enabled: state.tab === "partners",
     queryFn: async () => {
       let q = supabase
@@ -91,7 +92,7 @@ export function useEmailContactPicker() {
 
   // Partner contacts
   const { data: partnerContacts = [] } = useQuery<PartnerContactRow[]>({
-    queryKey: ["picker-partner-contacts", state.expandedPartner],
+    queryKey: queryKeys.partnerContacts.pickerPartner(state.expandedPartner),
     enabled: !!state.expandedPartner,
     queryFn: async () => {
       const { data } = await supabase
@@ -105,7 +106,7 @@ export function useEmailContactPicker() {
 
   // ── Contacts ──
   const { data: contacts = [] } = useQuery<ImportedContactRow[]>({
-    queryKey: ["picker-contacts", state.search, state.selectedCountry, state.originFilter],
+    queryKey: queryKeys.contacts.picker(state.search, state.selectedCountry, state.originFilter),
     enabled: state.tab === "contacts",
     queryFn: async () => {
       let q = supabase
@@ -124,7 +125,7 @@ export function useEmailContactPicker() {
 
   // ── BCA ──
   const { data: bcaCards = [] } = useQuery<BcaRow[]>({
-    queryKey: ["picker-bca", state.search, state.selectedCountry],
+    queryKey: queryKeys.businessCards.campaign(state.search, state.selectedCountry),
     enabled: state.tab === "bca",
     queryFn: async () => {
       let q = supabase

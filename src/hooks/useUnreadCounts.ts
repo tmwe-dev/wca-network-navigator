@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface UnreadCounts {
   email: number;
@@ -55,7 +56,7 @@ async function fetchUnreadCounts(): Promise<UnreadCounts> {
 
 export function useUnreadCounts() {
   return useQuery({
-    queryKey: ["unread-counts"],
+    queryKey: queryKeys.channelMessages.unreadCounts,
     queryFn: fetchUnreadCounts,
     refetchInterval: 60_000,
     staleTime: 30_000,

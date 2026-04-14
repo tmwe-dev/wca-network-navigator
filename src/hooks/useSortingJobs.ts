@@ -6,6 +6,7 @@ import { createLogger } from "@/lib/log";
 import { updatePartner } from "@/data/partners";
 import { createInteraction } from "@/data/interactions";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useSortingJobs");
 
@@ -58,7 +59,7 @@ const MOCK_SORTING: SortingJob[] = [
 
 export function useSortingJobs() {
   return useQuery({
-    queryKey: ["sorting-jobs"],
+    queryKey: queryKeys.sorting.jobs,
     queryFn: async () => {
       if (isMockEnabled()) return MOCK_SORTING;
       const { data, error } = await supabase
@@ -92,7 +93,7 @@ export function useReviewJob() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sorting-jobs"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs }),
   });
 }
 
@@ -107,7 +108,7 @@ export function useBulkReview() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
+      qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
       toast.success("Job approvati");
     },
   });
@@ -124,8 +125,8 @@ export function useCancelJobs() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
       toast.success("Job scartati");
     },
   });
@@ -177,10 +178,10 @@ export function useSendJob() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
-      qc.invalidateQueries({ queryKey: ["worked-today"] });
-      qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.workedToday });
+      qc.invalidateQueries({ queryKey: queryKeys.partners.all });
       toast.success("Email inviata");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -198,7 +199,7 @@ export function useUpdateJobEmail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
+      qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
       toast.success("Email aggiornata");
     },
   });

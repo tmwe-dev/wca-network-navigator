@@ -3,6 +3,7 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ActiveProcess {
   id: string;
@@ -75,7 +76,7 @@ export function useActiveProcesses() {
 
   // Global email queue count (pending + sending)
   const { data: emailQueueCounts } = useQuery({
-    queryKey: ["email-queue-global-counts"],
+    queryKey: queryKeys.email.queueGlobalCounts,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_campaign_queue")

@@ -37,6 +37,7 @@ import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared
 import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
 import { insertActivity } from "@/data/activities";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires: string | null }
@@ -68,7 +69,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       const data = await invokeEdge<Record<string, unknown>>("ai-utility", { body: { action: "deep_search", partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
       if (data?.success) {
          toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
-        queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.partner(partner.id) });
       } else { toast.error(String(data?.error || "Errore")); }
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Errore"); }
     finally { setDeepSearching(false); }

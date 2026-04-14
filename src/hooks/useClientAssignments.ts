@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type ClientAssignmentRow = Database["public"]["Tables"]["client_assignments"]["Row"];
 type ClientAssignmentInsert = Database["public"]["Tables"]["client_assignments"]["Insert"];
@@ -83,7 +84,7 @@ export function useAssignClient() {
 /** Get all clients assigned to a specific agent */
 export function useAgentClients(agentId: string | undefined) {
   return useQuery({
-    queryKey: ["agent-clients", agentId],
+    queryKey: queryKeys.agents.clients(agentId),
     enabled: !!agentId,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();

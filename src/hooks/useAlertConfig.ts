@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface AlertConfig {
   id: string;
@@ -18,7 +19,7 @@ export function useAlertConfig() {
   const queryClient = useQueryClient();
 
   const { data: config, isLoading } = useQuery({
-    queryKey: ["alert-config"],
+    queryKey: queryKeys.alertConfig.all,
     queryFn: async () => {
       const { data } = await supabase
         .from("alert_config")
@@ -46,7 +47,7 @@ export function useAlertConfig() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alert-config"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.alertConfig.all });
     },
   });
 

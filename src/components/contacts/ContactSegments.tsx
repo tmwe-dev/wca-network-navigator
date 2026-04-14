@@ -13,6 +13,7 @@ import {
   Filter, UserX, Clock, ThumbsUp, ThumbsDown, BellRing, TrendingUp, Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type SegmentKey =
   | "mai_contattati"
@@ -48,7 +49,7 @@ const SEGMENTS: SegmentDef[] = [
 export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegmentsProps): React.ReactElement {
   // Fetch segment counts
   const { data: segmentCounts } = useQuery({
-    queryKey: ["contact-segment-counts"],
+    queryKey: queryKeys.contacts.segments(),
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;

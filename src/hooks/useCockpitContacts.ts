@@ -11,6 +11,7 @@ import { createLogger } from "@/lib/log";
 import { getContactsByIds } from "@/data/contacts";
 import { findBusinessCards } from "@/data/businessCards";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useCockpitContacts");
 
@@ -150,7 +151,7 @@ function formatRelativeDate(dateStr: string | null): string {
 
 export function useCockpitContacts() {
   const q = useQuery({
-    queryKey: ["cockpit-queue"],
+    queryKey: queryKeys.cockpit.queue,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -394,7 +395,7 @@ export function useDeleteCockpitContacts() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
     },
   });
 }
@@ -434,8 +435,8 @@ export function useSendToCockpit() {
       return inserts.length;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
-      queryClient.invalidateQueries({ queryKey: ["client-assignments"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clientAssignments.all });
     },
   });
 }

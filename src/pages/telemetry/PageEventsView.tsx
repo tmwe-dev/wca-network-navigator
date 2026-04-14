@@ -4,10 +4,11 @@ import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { PageEventRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function PageEventsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["telemetry-page-events", sinceIso],
+    queryKey: queryKeys.telemetry.pageEvents(sinceIso),
     queryFn: async () => {
       const { data, error } = await untypedFrom("page_events")
         .select("*")

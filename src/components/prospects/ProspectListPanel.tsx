@@ -20,6 +20,7 @@ import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 import { createActivities } from "@/data/activities";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ProspectListPanelProps {
   atecoCodes: string[];
@@ -55,7 +56,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const [sending, setSending] = useState(false);
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const { data: prospects, isLoading } = useQuery({
-    queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters],
+    queryKey: queryKeys.prospects.byAteco(atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters),
     queryFn: async () => {
       const data = await queryProspects((query: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
         if (quickSearch && quickSearch.length >= 2) {
@@ -300,7 +301,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
   const navigate = useAppNavigate();
 
   const { data: contacts = [] } = useQuery({
-    queryKey: ["prospect-contacts", prospect.id],
+    queryKey: queryKeys.prospects.contacts(prospect.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("prospect_contacts")

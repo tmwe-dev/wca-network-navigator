@@ -4,6 +4,7 @@ import { ContactInteractionTimeline } from "@/components/contacts/ContactInterac
 import { Loader2, History } from "lucide-react";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import type { ContactInteraction } from "@/hooks/useContacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Props {
   sourceType: RecordSourceType;
@@ -13,7 +14,7 @@ interface Props {
 
 export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: Props) {
   const { data: interactions, isLoading } = useQuery({
-    queryKey: ["record-interactions", sourceType, sourceId],
+    queryKey: queryKeys.contacts.recordInteractions(sourceType, sourceId),
     queryFn: async (): Promise<ContactInteraction[]> => {
       if (sourceType === "partner" && partnerId) {
         const { data } = await supabase
@@ -67,7 +68,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
 
   // Also load activities
   const { data: activities } = useQuery({
-    queryKey: ["record-activities", sourceType, sourceId],
+    queryKey: queryKeys.contacts.recordActivities(sourceType, sourceId),
     queryFn: async () => {
       const { data } = await supabase
         .from("activities")

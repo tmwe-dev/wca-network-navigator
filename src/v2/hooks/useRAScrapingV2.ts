@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface RAScrapingJob {
   readonly id: string;
@@ -17,7 +18,7 @@ interface RAScrapingJob {
 
 export function useRAScrapingV2() {
   return useQuery({
-    queryKey: ["v2", "ra-scraping"],
+    queryKey: queryKeys.v2.raScrapingJobs(),
     queryFn: async (): Promise<readonly RAScrapingJob[]> => {
       const { data, error } = await supabase
         .from("download_jobs")

@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboardCounts, type DashboardCounts } from "@/v2/io/supabase/queries/dashboard";
 import { isOk } from "@/v2/core/domain/result";
+import { queryKeys } from "@/lib/queryKeys";
 
 const EMPTY_COUNTS: DashboardCounts = {
   partners: 0,
@@ -16,7 +17,7 @@ const EMPTY_COUNTS: DashboardCounts = {
 
 export function useDashboardMetrics() {
   return useQuery({
-    queryKey: ["v2", "dashboard", "metrics"],
+    queryKey: queryKeys.v2.dashboardMetrics(),
     queryFn: async (): Promise<DashboardCounts> => {
       const result = await fetchDashboardCounts();
       if (isOk(result)) return result.value;

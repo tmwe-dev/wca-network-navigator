@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { queryKeys } from "@/lib/queryKeys";
 import {
   Terminal, Building2, Mail, Phone, FileText,
   CheckCircle, XCircle, AlertTriangle, SkipForward, Zap, Clock,
@@ -194,7 +195,7 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
   const isActive = jobStatus === "running" || jobStatus === "pending";
 
   const { data: logs } = useQuery({
-    queryKey: ["job-terminal-log", jobId],
+    queryKey: queryKeys.downloads.terminalLog(jobId),
     queryFn: async () => {
       const { data } = await supabase
         .from("download_jobs")

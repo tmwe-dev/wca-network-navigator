@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCircle, Clock, TrendingUp, MessageCircle } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
 
 const SENTIMENTS: Record<string, string> = {
   positive: "bg-emerald-400",
@@ -28,7 +29,7 @@ export function SenderProfilesView() {
   const [sortBy, setSortBy] = useState<string>("interaction_count");
 
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["sender-profiles", sortBy],
+    queryKey: queryKeys.email.senderProfiles,
     queryFn: async () => {
       // Combine conversation context with rules
       const [ctxRes, rulesRes] = await Promise.all([

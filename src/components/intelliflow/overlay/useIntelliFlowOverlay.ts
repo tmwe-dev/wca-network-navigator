@@ -12,10 +12,11 @@ import type { AiOperation } from "@/components/ai/AiOperationCard";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import type { StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA } from "@/constants/routes";
+import { queryKeys } from "@/lib/queryKeys";
 
 function useSystemStats() {
   return useQuery({
-    queryKey: ["intelliflow-stats"],
+    queryKey: queryKeys.intelliflow.stats,
     queryFn: async () => {
       const [partners, contacts, drafts, cards] = await Promise.all([
         countActivePartners().then(c => ({ count: c })),

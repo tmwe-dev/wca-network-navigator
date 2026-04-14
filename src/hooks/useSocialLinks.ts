@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface SocialLink {
   id: string;
@@ -12,7 +13,7 @@ export interface SocialLink {
 
 export function useSocialLinks(partnerId: string | null) {
   return useQuery({
-    queryKey: ["social-links", partnerId],
+    queryKey: queryKeys.socialLinks.byPartner(partnerId),
     queryFn: async () => {
       if (!partnerId) return [];
       const { data, error } = await supabase
@@ -32,7 +33,7 @@ export function useSocialLinks(partnerId: string | null) {
  */
 export function useBatchSocialLinks(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["social-links-batch", partnerIds],
+    queryKey: queryKeys.socialLinks.batch(partnerIds),
     queryFn: async () => {
       if (!partnerIds.length) return new Map<string, SocialLink[]>();
       // Supabase .in() has a limit; chunk if needed
@@ -78,8 +79,8 @@ export function useUpsertSocialLink() {
       return data;
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["social-links", vars.partner_id] });
-      queryClient.invalidateQueries({ queryKey: ["social-links-batch"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.socialLinks.byPartner(vars.partner_id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.socialLinks.batch() });
     },
   });
 }
@@ -96,8 +97,8 @@ export function useDeleteSocialLink() {
       return partnerId;
     },
     onSuccess: (partnerId) => {
-      queryClient.invalidateQueries({ queryKey: ["social-links", partnerId] });
-      queryClient.invalidateQueries({ queryKey: ["social-links-batch"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.socialLinks.byPartner(partnerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.socialLinks.batch() });
     },
   });
 }

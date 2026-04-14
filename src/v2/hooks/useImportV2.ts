@@ -4,6 +4,7 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ImportColumn {
   readonly csvHeader: string;
@@ -121,7 +122,7 @@ export function useImportV2() {
 
       setResult({ imported, errors });
       setStep(4);
-      qc.invalidateQueries({ queryKey: ["v2-contacts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.contacts() });
     } finally {
       setImporting(false);
     }

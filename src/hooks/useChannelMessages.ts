@@ -6,6 +6,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useChannelMessages");
 
@@ -82,7 +83,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["channel-messages", channel, searchQuery, page, operatorUserId],
+    queryKey: queryKeys.channelMessages.all,
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -144,7 +145,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
           log.debug("realtime.prepend", { channel, id: newRow.id });
           return [newRow, ...old].slice(0, PAGE_SIZE);
         });
-        queryClient.invalidateQueries({ queryKey: ["email-count"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
       })
       .subscribe();
 

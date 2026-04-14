@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface GlobePartner {
   id: string;
@@ -41,7 +42,7 @@ const PRECOMPUTED_COUNTRIES: CountryWithPartners[] = WCA_COUNTRIES.map(country =
 // Fetch all partners for globe visualization
 export function usePartnersForGlobe() {
   return useQuery({
-    queryKey: ["partners-globe"],
+    queryKey: queryKeys.partners.globe,
     queryFn: async () => {
       // Paginate to fetch ALL partners (bypass 1000-row default limit)
       const PAGE_SIZE = 2000;
@@ -104,7 +105,7 @@ export function usePartnersForGlobe() {
 // Fetch partners for a specific country
 export function usePartnersByCountryForGlobe(countryCode: string | null) {
   return useQuery({
-    queryKey: ["partners-globe-country", countryCode],
+    queryKey: queryKeys.partners.globeCountry(countryCode),
     queryFn: async () => {
       if (!countryCode) return [];
 
@@ -146,7 +147,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
 export function useBusinessCardsForCampaign(countryCode: string | null) {
   return useQuery({
-    queryKey: ["bca-campaign", countryCode],
+    queryKey: queryKeys.businessCards.campaign(countryCode),
     queryFn: async () => {
       if (!countryCode) return [];
 
@@ -186,7 +187,7 @@ export function useBusinessCardsForCampaign(countryCode: string | null) {
 
 export function useBcaCountryCounts() {
   return useQuery({
-    queryKey: ["bca-country-counts"],
+    queryKey: queryKeys.businessCards.countryCounts,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("business_cards")

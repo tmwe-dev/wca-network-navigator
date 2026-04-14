@@ -8,6 +8,7 @@ import { Building2, Mail, Phone, Globe, User, Sparkles } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ProfileData {
   id: string;
@@ -38,7 +39,7 @@ export function LiveProfileCards() {
 
   // Fetch last 20 processed partners
   const { data: profiles } = useQuery({
-    queryKey: ["live-profiles", processedIds.slice(-20).join(",")],
+    queryKey: queryKeys.downloads.liveProfiles(processedIds.slice(-20).join(",")),
     queryFn: async () => {
       const lastIds = processedIds.slice(-20);
       if (lastIds.length === 0) return [];

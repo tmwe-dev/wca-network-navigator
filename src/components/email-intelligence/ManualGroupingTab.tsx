@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { EmailSenderGroup, SenderAnalysis, SortOption } from "@/types/email-management";
 import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 const VOLUME_FILTERS = [
   { value: "all", label: "Tutti" },
@@ -183,7 +184,7 @@ export default function ManualGroupingTab() {
         toast.info("Tutti gli address sono già presenti");
       }
 
-      qc.invalidateQueries({ queryKey: ["email-intel-uncategorized-count"] });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
       await loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Errore popolamento");
@@ -287,7 +288,7 @@ export default function ManualGroupingTab() {
     }
 
     setSenders((prev) => prev.filter((s) => s.email !== sender.email));
-    qc.invalidateQueries({ queryKey: ["email-intel-uncategorized-count"] });
+    qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
     toast.success(`${sender.companyName} → ${groupName}`);
   };
 

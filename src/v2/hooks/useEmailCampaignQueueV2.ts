@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface CampaignQueueStats {
   readonly pending: number;
@@ -13,7 +14,7 @@ interface CampaignQueueStats {
 
 export function useEmailCampaignQueueV2(draftId?: string) {
   return useQuery({
-    queryKey: ["v2", "campaign-queue", draftId ?? "global"],
+    queryKey: queryKeys.v2.emailCampaignQueue(draftId ?? "global"),
     queryFn: async (): Promise<CampaignQueueStats> => {
       let q = supabase.from("email_campaign_queue").select("status");
       if (draftId) q = q.eq("draft_id", draftId);

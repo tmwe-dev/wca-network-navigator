@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 type OperatorRow = Database["public"]["Tables"]["operators"]["Row"];
 type OperatorInsert = Database["public"]["Tables"]["operators"]["Insert"];
@@ -11,7 +12,7 @@ export type Operator = OperatorRow;
 
 export function useOperators() {
   return useQuery({
-    queryKey: ["operators"],
+    queryKey: queryKeys.operators.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("operators")
@@ -25,7 +26,7 @@ export function useOperators() {
 
 export function useCurrentOperator() {
   return useQuery({
-    queryKey: ["current-operator"],
+    queryKey: queryKeys.operators.current,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -59,8 +60,8 @@ export function useUpsertOperator() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["operators"] });
-      qc.invalidateQueries({ queryKey: ["current-operator"] });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.all });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.current });
       toast.success("Operatore salvato");
     },
     onError: (e: Error) => toast.error("Errore: " + e.message),
@@ -78,7 +79,7 @@ export function useDeleteOperator() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["operators"] });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.all });
       toast.success("Operatore eliminato");
     },
     onError: (e: Error) => toast.error("Errore: " + e.message),

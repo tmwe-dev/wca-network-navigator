@@ -8,12 +8,13 @@ import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function OperatorsSettingsTab(): React.ReactElement {
   const qc = useQueryClient();
 
   const { data: operators, isLoading } = useQuery({
-    queryKey: ["v2-operators"],
+    queryKey: queryKeys.v2.operators,
     queryFn: async () => {
       const { data } = await supabase
         .from("operators")
@@ -32,7 +33,7 @@ export function OperatorsSettingsTab(): React.ReactElement {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2-operators"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.operators });
       toast.success("Operatore aggiornato");
     },
   });

@@ -4,6 +4,7 @@ import { findAgentsByUser } from "@/data/agents";
 import { findClientAssignmentsByUser } from "@/data/clientAssignments";
 import { findAgentTasksByUser } from "@/data/agentTasks";
 import { findOperativePrompts } from "@/data/operativePrompts";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface DirectoryAgent {
   id: string;
@@ -70,7 +71,7 @@ const SYSTEM_PROCESSES = [
 
 export function useSystemDirectory() {
   return useQuery({
-    queryKey: ["system-directory"],
+    queryKey: queryKeys.system.directory,
     queryFn: async (): Promise<SystemDirectory> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");

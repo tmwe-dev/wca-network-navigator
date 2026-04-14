@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Send, CheckCircle2, Calendar, Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchOutreachStats } from "@/data/outreachPipeline";
+import { queryKeys } from "@/lib/queryKeys";
 
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; label: string; value: number; color: string }) {
   return (
@@ -25,7 +26,7 @@ export function OutreachStatsHeader() {
   const [expanded, setExpanded] = useState(false);
 
   const { data: stats } = useQuery({
-    queryKey: ["outreach-stats"],
+    queryKey: queryKeys.outreach.stats,
     queryFn: fetchOutreachStats,
     refetchInterval: 60000,
   });

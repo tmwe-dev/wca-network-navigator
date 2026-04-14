@@ -12,6 +12,7 @@ import type { ImportLog, ImportedContact } from "./useImportLogQueries";
 import { insertPartnerContact } from "@/data/partnerRelations";
 import { insertActivity } from "@/data/activities";
 import { updateImportLog } from "@/data/importLogs";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useImportLogActions");
 
@@ -84,7 +85,7 @@ export function useCreateImport() {
 
       return importLog as ImportLog;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["import-logs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs }),
   });
 }
 
@@ -95,10 +96,10 @@ export function useProcessImport() {
       return invokeEdge<Record<string, unknown>>("process-ai-import", { body: { import_log_id: importLogId }, context: "useProcessImport" });
     },
     onSuccess: (_, importLogId) => {
-      queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(importLogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(importLogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors(importLogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
       toast({ title: "Elaborazione completata" });
     },
     onError: (err) => toast({ title: "Errore elaborazione", description: String(err), variant: "destructive" }),
@@ -112,7 +113,7 @@ export function useToggleContactSelection() {
       const { toggleContactSelection } = await import("@/data/contacts");
       await toggleContactSelection(id, selected);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["imported-contacts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() }),
   });
 }
 
@@ -155,8 +156,8 @@ export function useTransferToPartners() {
       return successCount;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       toast({ title: `${count} partner trasferiti con successo` });
     },
   });
@@ -205,9 +206,9 @@ export function useCreateActivitiesFromImport() {
       return count;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       toast({ title: `${count} attività create con successo` });
     },
   });
@@ -235,9 +236,9 @@ export function useFixImportErrors() {
       );
     },
     onSuccess: (result, { importLogId }) => {
-      queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors(importLogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(importLogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(importLogId) });
       toast({ title: "Batch completato", description: `${result.corrected} corretti, ${result.dismissed} non recuperabili${result.has_more ? ` — ${result.remaining} rimanenti` : ""}` });
     },
     onError: (err) => toast({ title: "Errore correzione AI", description: String(err), variant: "destructive" }),
@@ -289,6 +290,6 @@ export function useCreateImportFromParsedRows() {
 
       return importLog as ImportLog;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["import-logs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs }),
   });
 }

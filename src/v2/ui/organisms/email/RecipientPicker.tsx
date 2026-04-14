@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, X, Plus } from "lucide-react";
 import type { EmailRecipient } from "@/v2/hooks/useEmailComposerV2";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface RecipientPickerProps {
   readonly recipients: readonly EmailRecipient[];
@@ -22,7 +23,7 @@ export function RecipientPicker({ recipients, onAdd, onRemove }: RecipientPicker
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: results } = useQuery({
-    queryKey: ["v2-recipient-search", search],
+    queryKey: queryKeys.v2.recipientSearch(search),
     enabled: search.length >= 2,
     queryFn: async () => {
       const { data } = await supabase

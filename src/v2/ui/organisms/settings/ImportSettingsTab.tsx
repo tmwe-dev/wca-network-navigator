@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function ImportSettingsTab(): React.ReactElement {
   const navigate = useNavigate();
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ["v2-import-logs-recent"],
+    queryKey: queryKeys.v2.importLogsRecent,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

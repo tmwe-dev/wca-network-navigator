@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { insertActivity } from "@/data/activities";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerContact {
   id: string;
@@ -70,7 +71,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
       source_meta: { company: partner.company_name, email: contact.email, name: contact.name },
       ...extra,
     });
-    qc.invalidateQueries({ queryKey: ["activities"] });
+    qc.invalidateQueries({ queryKey: queryKeys.activities.all });
   };
 
   const handleEmail = () => {

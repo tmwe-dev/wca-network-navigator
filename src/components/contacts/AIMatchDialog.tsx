@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("AIMatchDialog");
 
@@ -118,8 +119,8 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         fail++;
       }
     }
-    qc.invalidateQueries({ queryKey: ["business-cards"] });
-    qc.invalidateQueries({ queryKey: ["business-card-matches"] });
+    qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
+    qc.invalidateQueries({ queryKey: queryKeys.businessCards.matches });
     toast({ title: `✅ ${ok} match confermati${fail > 0 ? ` · ${fail} errori` : ""}` });
     setResults(prev => prev.filter(r => !selected.has(r.card_id)));
     setSelected(new Map());

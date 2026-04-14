@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { callCheckInbox } from "@/lib/checkInbox";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useResetSync() {
   const queryClient = useQueryClient();
@@ -25,7 +26,7 @@ export function useResetSync() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
       toast.success("🔄 Sync resettata — premi 'Scarica Tutto' per riscaricare tutta la inbox");
     },
     onError: (err: Error) => {
@@ -41,7 +42,7 @@ export function useCheckInbox() {
     mutationFn: callCheckInbox,
     onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
-      queryClient.invalidateQueries({ queryKey: ["email-count"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
 
       // callCheckInbox restituisce `unknown` (Vol. II §5.1 strangler).
       // Qui facciamo narrowing difensivo invece di assumere lo shape.

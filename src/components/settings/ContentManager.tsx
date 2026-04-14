@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { findWorkspaceDocs, createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("ContentManager");
 
@@ -305,7 +306,7 @@ export default function ContentManager() {
   };
 
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
-    queryKey: ["workspace-documents-all"],
+    queryKey: queryKeys.workspaceDocs.all,
     queryFn: async () => {
       const data = await findWorkspaceDocs(); const error = null;
       if (error) throw error;
@@ -334,14 +335,14 @@ export default function ContentManager() {
         });
       }
       toast.success(`${files.length} documento/i caricato/i`);
-      qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
+      qc.invalidateQueries({ queryKey: queryKeys.workspaceDocs.all });
     } catch (err: unknown) { toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err))); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const handleDeleteDoc = async (id: string) => {
     await deleteWorkspaceDoc(id);
-    qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
+    qc.invalidateQueries({ queryKey: queryKeys.workspaceDocs.all });
     toast.success("Documento eliminato");
   };
 

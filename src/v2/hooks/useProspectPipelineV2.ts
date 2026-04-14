@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ProspectContact {
   readonly id: string;
@@ -19,7 +20,7 @@ interface ProspectContact {
 
 export function useProspectPipelineV2(status?: string, search?: string) {
   return useQuery({
-    queryKey: ["v2", "prospect-pipeline", status ?? "all", search ?? ""],
+    queryKey: queryKeys.v2.prospectPipeline(status ?? "all", search ?? ""),
     queryFn: async (): Promise<readonly ProspectContact[]> => {
       let q = supabase
         .from("imported_contacts")

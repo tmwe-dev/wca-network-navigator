@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useActionPanelLogic");
 
@@ -44,7 +45,7 @@ export function useActionPanelLogic({
 
   // ── Queries ──
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
-    queryKey: ["directory-cache", countryCodes, networkKeys],
+    queryKey: queryKeys.directoryCache(countryCodes, networkKeys),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       try {
@@ -59,7 +60,7 @@ export function useActionPanelLogic({
   });
 
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
-    queryKey: ["db-partners-for-countries", countryCodes],
+    queryKey: queryKeys.dbPartnersForCountries(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       const data = await getPartnersByCountries(countryCodes, "wca_id, company_name, city, country_code, country_name, updated_at");
@@ -73,7 +74,7 @@ export function useActionPanelLogic({
   });
 
   const { data: noProfileIds = [] } = useQuery({
-    queryKey: ["no-profile-wca-ids", countryCodes],
+    queryKey: queryKeys.noProfileWcaIds(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       const data = await getPartnersByCountries(countryCodes, "wca_id", { noProfile: true });
@@ -140,7 +141,7 @@ export function useActionPanelLogic({
       country_code: countryCode, network_name: netKey, members: membersJson as never,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
-    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.directoryCacheAll });
   }, [queryClient]);
 
   const handleStartScan = useCallback(async () => {
@@ -206,8 +207,8 @@ export function useActionPanelLogic({
 
     setScannedMembers([...allMembers]);
     setIsScanning(false); setScanComplete(true);
-    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
-    queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.directoryCacheAll });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dbPartnersForCountriesAll });
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries, delay]);
 
   const abortScan = useCallback(() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }, []);
@@ -279,9 +280,9 @@ export function useActionPanelLogic({
         await deletePartnersWithRelations(staleIds);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
-      await queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
-      await queryClient.invalidateQueries({ queryKey: ["partners"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dbPartnersForCountriesAll });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.noProfileWcaIds([]) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       setDownloadMode("no_profile");
 
       toast({ title: "🧹 Pulizia completata", description: `Directory: ${freshWcaIds.size} partner.` });

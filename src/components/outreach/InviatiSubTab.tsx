@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { supabase } from "@/integrations/supabase/client";
 import { OutreachStatusTimeline } from "./OutreachStatusTimeline";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface SentItem {
   id: string;
@@ -30,7 +31,7 @@ export function InviatiSubTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach-sent"],
+    queryKey: queryKeys.outreach.sent(),
     queryFn: findSentOutreach,
   });
 
@@ -70,7 +71,7 @@ export function InviatiSubTab() {
 
   // Query real replies from channel_messages
   const { data: replies } = useQuery({
-    queryKey: ["outreach-replies", items.map((i) => i.email)],
+    queryKey: queryKeys.outreach.replies(items.map((i) => i.email)),
     queryFn: async () => {
       if (items.length === 0) return {};
       const emails = [...new Set(items.map((i) => i.email).filter(Boolean))];
@@ -102,7 +103,7 @@ export function InviatiSubTab() {
 
   // Query bounces for sent emails
   const { data: bounces } = useQuery({
-    queryKey: ["outreach-bounces", items.map((i) => i.email)],
+    queryKey: queryKeys.outreach.bounces(items.map((i) => i.email)),
     queryFn: async () => {
       if (items.length === 0) return {};
       const emails = [...new Set(items.map((i) => i.email).filter(Boolean))];

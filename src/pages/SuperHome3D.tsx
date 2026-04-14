@@ -15,13 +15,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
 import { Suspense, lazy } from "react";
+import { queryKeys } from "@/lib/queryKeys";
 
 const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
-    queryKey: ["super-home-count", table],
+    queryKey: queryKeys.superHome.count,
     queryFn: async () => {
       const { count, error } = await supabase
         .from(table)
@@ -49,7 +50,7 @@ export default function SuperHome3D() {
   const qc = useQueryClient();
 
   const { data: hasSetup, isLoading: setupLoading } = useQuery({
-    queryKey: ["onboarding-check"],
+    queryKey: queryKeys.onboarding.check,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return true;
@@ -133,7 +134,7 @@ export default function SuperHome3D() {
               actions={briefing?.actions ?? []}
               stats={briefing?.stats}
               isLoading={briefingLoading}
-              onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
+              onRefresh={() => qc.invalidateQueries({ queryKey: queryKeys.dailyBriefing.all })}
               onAction={handleBriefingAction}
             />
           </div>

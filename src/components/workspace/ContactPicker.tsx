@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { User, AlertTriangle, CheckCircle2, Mail, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ContactPickerProps {
   activityId: string;
@@ -31,7 +32,7 @@ export default function ContactPicker({
   const updateActivity = useUpdateActivity();
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["partner-contacts-picker", partnerId],
+    queryKey: queryKeys.partnerContacts.picker(partnerId),
     queryFn: async () => {
       if (!partnerId) return [];
       const { data, error } = await supabase

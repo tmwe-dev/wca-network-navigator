@@ -17,6 +17,7 @@ import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Activity {
   id: string;
@@ -93,7 +94,7 @@ export function ManageActivityDialog({
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
       toast({ title: "Attività aggiornata" });
       onOpenChange(false);
     } catch (err) {

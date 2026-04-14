@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface AgentTaskLive {
   id: string;
@@ -49,7 +50,7 @@ export function useOperationsCenter() {
 
   // Agent tasks (last 50)
   const { data: agentTasks = [], refetch: refetchTasks } = useQuery({
-    queryKey: ["ops-center-agent-tasks"],
+    queryKey: queryKeys.opsCenter.agentTasks(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agent_tasks")
@@ -83,7 +84,7 @@ export function useOperationsCenter() {
 
   // Email queue (last 100)
   const { data: emailQueue = [], refetch: refetchEmails } = useQuery({
-    queryKey: ["ops-center-email-queue"],
+    queryKey: queryKeys.opsCenter.emailQueue(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_campaign_queue")
@@ -99,7 +100,7 @@ export function useOperationsCenter() {
 
   // Activities (recent 50, not cancelled)
   const { data: activities = [], refetch: refetchActivities } = useQuery({
-    queryKey: ["ops-center-activities"],
+    queryKey: queryKeys.opsCenter.activities(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")

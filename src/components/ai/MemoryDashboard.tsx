@@ -10,6 +10,7 @@ import { Brain, Check, X, Trash2, Shield, Zap, Clock, Loader2 } from "lucide-rea
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { deleteMemory } from "@/data/aiMemory";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface MemoryRow {
   id: string;
@@ -37,7 +38,7 @@ export default function MemoryDashboard() {
   const [tab, setTab] = useState("pending");
 
   const { data: memories, isLoading } = useQuery({
-    queryKey: ["ai-memories"],
+    queryKey: queryKeys.ai.memories,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -75,7 +76,7 @@ export default function MemoryDashboard() {
       }
     },
     onSuccess: (_, { approve }) => {
-      queryClient.invalidateQueries({ queryKey: ["ai-memories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.memories });
       toast.success(approve ? "Memoria promossa a L3 (Permanente)" : "Promozione rifiutata");
     },
   });
@@ -86,7 +87,7 @@ export default function MemoryDashboard() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-memories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.memories });
       toast.success("Memoria eliminata");
     },
   });
@@ -97,7 +98,7 @@ export default function MemoryDashboard() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["ai-memories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.memories });
       const s = data?.stats as Record<string, number> | undefined;
       toast.success(`Promoter: ${s?.promoted_l1_to_l2 || 0} → L2, ${s?.promoted_l2_candidate || 0} candidati L3, ${s?.pruned || 0} rimossi`);
     },

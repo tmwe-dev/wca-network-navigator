@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type CJInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
 type CJUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
@@ -31,7 +32,7 @@ export { useContactsForPartners as useJobContacts } from "./useActivities";
 
 export function useCampaignJobs(batchId?: string | null) {
   return useQuery({
-    queryKey: ["campaign-jobs", batchId],
+    queryKey: queryKeys.campaigns.jobs(batchId),
     queryFn: async () => {
       if (!batchId) return [] as CampaignJob[];
       const { data, error } = await supabase
@@ -50,7 +51,7 @@ export function useCampaignJobs(batchId?: string | null) {
 
 export function useEmailTemplates() {
   return useQuery({
-    queryKey: ["email-templates"],
+    queryKey: queryKeys.email.templates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_templates")
@@ -75,8 +76,8 @@ export function useCreateCampaignJobs() {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });
 }
@@ -91,7 +92,7 @@ export function useUpdateCampaignJob() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["campaign-jobs"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() }),
   });
 }
 
@@ -106,8 +107,8 @@ export function useDeleteCampaignJobs() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });
 }

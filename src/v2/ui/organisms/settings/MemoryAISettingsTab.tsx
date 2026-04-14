@@ -8,12 +8,13 @@ import { FormSection } from "../../organisms/FormSection";
 import { Button } from "@/components/ui/button";
 import { Loader2, Database, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function MemoryAISettingsTab(): React.ReactElement {
   const qc = useQueryClient();
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["v2-ai-memory-stats"],
+    queryKey: queryKeys.v2.aiMemoryStats,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { total: 0, episodic: 0, semantic: 0 };
@@ -42,7 +43,7 @@ export function MemoryAISettingsTab(): React.ReactElement {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2-ai-memory-stats"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.aiMemoryStats });
       toast.success("Memorie episodiche cancellate");
     },
     onError: (e: Error) => toast.error(e.message),

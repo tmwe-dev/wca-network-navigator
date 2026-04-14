@@ -5,10 +5,11 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "../../atoms/StatusBadge";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function SecuritySettingsTab(): React.ReactElement {
   const { data: users, isLoading } = useQuery({
-    queryKey: ["v2-authorized-users"],
+    queryKey: queryKeys.v2.authorizedUsers,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("authorized_users")

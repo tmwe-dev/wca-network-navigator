@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Mail, Phone, Building2, Globe, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerRow {
   id: string;
@@ -36,7 +37,7 @@ export function DownloadAgendaView() {
   }, [activeJob]);
 
   const { data: partners } = useQuery({
-    queryKey: ["download-agenda-partners", activeJob?.country_code],
+    queryKey: queryKeys.partners.downloadAgenda(activeJob?.country_code),
     queryFn: async () => {
       if (!activeJob) return [];
       const { data } = await supabase

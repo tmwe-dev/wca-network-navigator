@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
 
@@ -23,7 +24,7 @@ export interface KbEntry {
   updated_at: string;
 }
 
-const QUERY_KEY = ["kb_entries"] as const;
+const QUERY_KEY = queryKeys.v2.kbEntries() as const;
 
 // ── Reads ──
 

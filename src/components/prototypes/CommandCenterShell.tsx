@@ -16,6 +16,7 @@ import { countActivePartners } from "@/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
+import { queryKeys } from "@/lib/queryKeys";
 
 const NAV_ITEMS = [
   { key: "home", icon: Home, label: "Home" },
@@ -27,7 +28,7 @@ const NAV_ITEMS = [
 
 function usePartnerCount() {
   return useQuery({
-    queryKey: ["proto-partner-count"],
+    queryKey: queryKeys.contacts.proto.partnerCount(),
     queryFn: async () => {
       const count = await countActivePartners();
       return count ?? 0;
@@ -38,7 +39,7 @@ function usePartnerCount() {
 
 function useRecentContacts() {
   return useQuery({
-    queryKey: ["proto-recent-contacts"],
+    queryKey: queryKeys.contacts.proto.recentContacts(),
     queryFn: async () => {
       const { data } = await supabase
         .from("partner_contacts")

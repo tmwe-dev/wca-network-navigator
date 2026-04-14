@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { MiniAgenda } from "./shared/MiniAgenda";
+import { queryKeys } from "@/lib/queryKeys";
 
 type PanelType = "none" | "contacts" | "outreach" | "agenda" | "email";
 
@@ -23,7 +24,7 @@ const SHORTCUTS = [
 
 function usePartnerContactsList() {
   return useQuery({
-    queryKey: ["proto-conv-contacts"],
+    queryKey: queryKeys.contacts.proto.convContacts(),
     queryFn: async () => {
       const { data } = await supabase
         .from("partner_contacts")

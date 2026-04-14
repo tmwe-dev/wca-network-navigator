@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
@@ -50,7 +51,7 @@ export function PendingActionsPanel() {
   const [rejectReason, setRejectReason] = useState("");
 
   const { data: actions = [], isLoading } = useQuery({
-    queryKey: ["ai-pending-actions", typeFilter, sourceFilter],
+    queryKey: queryKeys.ai.pendingActions,
     queryFn: async () => {
       let q = supabase
         .from("ai_pending_actions")
@@ -95,7 +96,7 @@ export function PendingActionsPanel() {
         } catch (e) { console.warn("prompt refinement apply failed:", e); }
       }
     },
-    onSuccess: () => { toast.success("Azione approvata"); qc.invalidateQueries({ queryKey: ["ai-pending-actions"] }); },
+    onSuccess: () => { toast.success("Azione approvata"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
     onError: () => toast.error("Errore nell'approvazione"),
   });
 
@@ -108,7 +109,7 @@ export function PendingActionsPanel() {
         await supabase.from("ai_decision_log").update({ user_review: "rejected", user_correction: reason || null }).eq("id", action.decision_log_id);
       }
     },
-    onSuccess: () => { toast.success("Azione rifiutata"); setRejectId(null); setRejectReason(""); qc.invalidateQueries({ queryKey: ["ai-pending-actions"] }); },
+    onSuccess: () => { toast.success("Azione rifiutata"); setRejectId(null); setRejectReason(""); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
     onError: () => toast.error("Errore nel rifiuto"),
   });
 

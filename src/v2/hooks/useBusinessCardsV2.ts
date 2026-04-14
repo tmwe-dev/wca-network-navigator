@@ -7,6 +7,7 @@ import { createBusinessCard, updateBusinessCardMatch } from "@/v2/io/supabase/mu
 import { isOk } from "@/v2/core/domain/result";
 import type { BusinessCard } from "@/v2/core/domain/entities";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useBusinessCardsV2(partnerId?: string) {
   const queryClient = useQueryClient();
@@ -25,13 +26,13 @@ export function useBusinessCardsV2(partnerId?: string) {
   const createMutation = useMutation({
     mutationFn: (input: Database["public"]["Tables"]["business_cards"]["Insert"]) =>
       createBusinessCard(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["v2", "business-cards"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.businessCards() }),
   });
 
   const updateMatchMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Database["public"]["Tables"]["business_cards"]["Update"] }) =>
       updateBusinessCardMatch(id, updates),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["v2", "business-cards"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.businessCards() }),
   });
 
   return { ...query, createCard: createMutation.mutate, updateMatch: updateMatchMutation.mutate };

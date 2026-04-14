@@ -8,6 +8,7 @@ import { extractDomainFromEmail, isPersonalEmail } from "@/components/ui/Company
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { toast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface EnrichedRow {
   id: string;
@@ -129,7 +130,7 @@ export function useEnrichmentData() {
   // ── Data queries ──
 
   const { data: partners = [] } = useQuery({
-    queryKey: ["enrichment-partners"],
+    queryKey: queryKeys.partners.enrichment(),
     queryFn: async () => {
       const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url");
       return data.map((p): EnrichedRow => ({
@@ -143,7 +144,7 @@ export function useEnrichmentData() {
   });
 
   const { data: contacts = [], refetch: refetchContacts } = useQuery({
-    queryKey: ["enrichment-contacts"],
+    queryKey: queryKeys.enrichment.contacts(),
     queryFn: async () => {
       const data = await loadAllRows<ContactRow>(
         "imported_contacts",
@@ -166,7 +167,7 @@ export function useEnrichmentData() {
   });
 
   const { data: bcaItems = [] } = useQuery({
-    queryKey: ["enrichment-bca"],
+    queryKey: queryKeys.enrichment.bca(),
     queryFn: async () => {
       const data = await loadAllRows<BcaRow>(
         "business_cards",
@@ -183,7 +184,7 @@ export function useEnrichmentData() {
   });
 
   const { data: emailSenders = [] } = useQuery({
-    queryKey: ["enrichment-email-senders"],
+    queryKey: queryKeys.enrichment.emailSenders(),
     queryFn: async () => {
       const data = await loadAllRows<EmailSenderRow>(
         "channel_messages", "from_address",
@@ -215,7 +216,7 @@ export function useEnrichmentData() {
   });
 
   const { data: cockpitItems = [] } = useQuery({
-    queryKey: ["enrichment-cockpit"],
+    queryKey: queryKeys.enrichment.cockpit(),
     queryFn: async () => {
       const queue = await loadAllRows<CockpitQueueRow>("cockpit_queue", "id, source_id, source_type, partner_id, status");
       if (!queue.length) return [];

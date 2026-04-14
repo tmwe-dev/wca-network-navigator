@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { deleteEmailTemplate, createEmailTemplate } from "@/data/emailTemplates";
+import { queryKeys } from "@/lib/queryKeys";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
   pdf: <FileText className="w-8 h-8 text-destructive" />,
@@ -47,7 +48,7 @@ export default function TemplateManager() {
   const [uploadCategory, setUploadCategory] = useState("altro");
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["email-templates"],
+    queryKey: queryKeys.email.templates,
     queryFn: async () => {
       const { data, error: _error } = await supabase
         .from("email_templates")
@@ -69,7 +70,7 @@ export default function TemplateManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["email-templates"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.templates });
       toast.success("Template eliminato");
     },
     onError: () => toast.error("Errore nell'eliminazione"),
@@ -100,7 +101,7 @@ export default function TemplateManager() {
         });
       }
       toast.success(`${files.length} file caricati`);
-      qc.invalidateQueries({ queryKey: ["email-templates"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.templates });
     } catch (err: unknown) {
       toast.error("Errore upload: " + (err instanceof Error ? err.message : "Sconosciuto"));
     } finally {

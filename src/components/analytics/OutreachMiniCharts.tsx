@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b",
@@ -17,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function OutreachMiniCharts() {
   const { data } = useQuery({
-    queryKey: ["outreach-mini-charts"],
+    queryKey: queryKeys.outreach.miniCharts,
     queryFn: async () => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
       const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();

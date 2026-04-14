@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCallback, useRef } from "react";
+import { queryKeys } from "@/lib/queryKeys";
 
 type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
 type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
@@ -177,7 +178,7 @@ export function useMissionActions(missionId?: string) {
         consecutiveNoSlot = 0;
         if (res.progress) {
           onProgress?.(res.progress);
-          qc.invalidateQueries({ queryKey: ["mission-actions", execMissionId] });
+          qc.invalidateQueries({ queryKey: queryKeys.missions.actions(execMissionId) });
         }
 
         // Check completion
@@ -213,7 +214,7 @@ export function useMissionActions(missionId?: string) {
 
 export function useActiveMissions() {
   return useQuery({
-    queryKey: ["active-mission-actions"],
+    queryKey: queryKeys.missions.activeActions(),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

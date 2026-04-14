@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useContacts";
 import { toast } from "@/hooks/use-toast";
 import { findBusinessCardForContact } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ContactDetail {
   id: string;
@@ -119,7 +120,7 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
   const queryClient = useQueryClient();
 
   const { data: matchedCard } = useQuery({
-    queryKey: ["business-card-for-contact", state.contact.id],
+    queryKey: queryKeys.businessCards.forContact(state.contact.id),
     queryFn: async (): Promise<MatchedBusinessCard | null> => {
       return findBusinessCardForContact(state.contact.id);
     },
@@ -152,8 +153,8 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
         dispatch({ type: "SET_CONTACT", contact: updated as ContactDetail });
         onContactUpdated?.(updated as ContactDetail);
       }
-      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {

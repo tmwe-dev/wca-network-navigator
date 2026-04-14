@@ -5,6 +5,7 @@ import { updateContact } from "@/data/contacts";
 import { updateProspect } from "@/data/prospects";
 import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface UnifiedRecord {
   sourceType: RecordSourceType;
@@ -35,7 +36,7 @@ export interface UnifiedRecord {
 
 export function useContactRecord(sourceType: RecordSourceType | null, sourceId: string | null) {
   return useQuery({
-    queryKey: ["contact-record", sourceType, sourceId],
+    queryKey: queryKeys.contacts.record(sourceType, sourceId),
     queryFn: async (): Promise<UnifiedRecord | null> => {
       if (!sourceType || !sourceId) return null;
 
@@ -169,7 +170,7 @@ export function useUpdateContactRecord() {
       }
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["contact-record", vars.sourceType, vars.sourceId] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.record(vars.sourceType, vars.sourceId) });
     },
   });
 }

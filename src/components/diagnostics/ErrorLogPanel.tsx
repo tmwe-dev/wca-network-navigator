@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ERROR_TYPES = ["all", "react_crash", "edge_function", "unhandled_rejection", "js_error"] as const;
 
@@ -21,7 +22,7 @@ export function ErrorLogPanel() {
   const [filterType, setFilterType] = useState<string>("all");
 
   const { data: errors, refetch } = useQuery({
-    queryKey: ["error-logs", filterType],
+    queryKey: queryKeys.system.errorLogs,
     queryFn: async () => {
       let q = supabase
         .from("app_error_logs")

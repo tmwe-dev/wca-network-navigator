@@ -7,10 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
-    queryKey: ["v2-business-cards"],
+    queryKey: queryKeys.v2.businessCards(),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

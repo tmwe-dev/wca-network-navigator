@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Shield, UserCheck, UserX, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { queryKeys } from "@/lib/queryKeys";
 
 type AuthorizedUser = {
   id: string;
@@ -27,7 +28,7 @@ export default function AdminUsers() {
   const [newName, setNewName] = useState("");
 
   const { data: myProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ["my-operator-admin-check"],
+    queryKey: queryKeys.operators.adminCheck,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -44,7 +45,7 @@ export default function AdminUsers() {
   }
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ["authorized-users"],
+    queryKey: queryKeys.authorizedUsers.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("authorized_users")
@@ -64,7 +65,7 @@ export default function AdminUsers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["authorized-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
       setNewEmail("");
       setNewName("");
       toast.success("Utente autorizzato aggiunto");
@@ -81,7 +82,7 @@ export default function AdminUsers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["authorized-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
       toast.success("Stato aggiornato");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -96,7 +97,7 @@ export default function AdminUsers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["authorized-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
       toast.success("Utente rimosso");
     },
     onError: (e: Error) => toast.error(e.message),

@@ -10,6 +10,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BriefingAction, BriefingStats } from "@/hooks/useDailyBriefing";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Props {
   completed: string | undefined;
@@ -67,7 +68,7 @@ export function OperativeBriefing({
         await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as Record<string, string>).id }, context: "OperativeBriefing.agent_execute" });
 
         toast.success(`Task assegnato a ${action.agentName}`);
-        qc.invalidateQueries({ queryKey: ["agent-tasks"] });
+        qc.invalidateQueries({ queryKey: queryKeys.agents.tasks() });
       } else {
         onAction(action);
       }

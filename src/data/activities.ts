@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
@@ -184,5 +185,5 @@ export async function approveActivity(id: string) {
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });
-  qc.invalidateQueries({ queryKey: ["activities"] });
+  qc.invalidateQueries({ queryKey: queryKeys.activities.all });
 }

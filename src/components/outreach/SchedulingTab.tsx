@@ -15,6 +15,7 @@ import { SequenceVisualizer } from "./scheduling/SequenceVisualizer";
 import { TemplateBuilderDialog } from "./scheduling/TemplateBuilderDialog";
 import { SchedulingWizard } from "./scheduling/SchedulingWizard";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 const GOAL_COLORS: Record<string, string> = {
   primo_contatto: "bg-primary/15 text-primary",
@@ -50,7 +51,7 @@ export function SchedulingTab() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["timing-templates"],
+    queryKey: queryKeys.timingTemplates.all,
     queryFn: fetchTimingTemplates,
   });
 
@@ -75,7 +76,7 @@ export function SchedulingTab() {
   const handleDuplicate = async (id: string) => {
     try {
       await duplicateTimingTemplate(id);
-      qc.invalidateQueries({ queryKey: ["timing-templates"] });
+      qc.invalidateQueries({ queryKey: queryKeys.timingTemplates.all });
       toast.success("Template duplicato");
     } catch { toast.error("Errore duplicazione"); }
   };
@@ -84,7 +85,7 @@ export function SchedulingTab() {
     if (!confirm("Eliminare questo template?")) return;
     try {
       await deleteTimingTemplate(id);
-      qc.invalidateQueries({ queryKey: ["timing-templates"] });
+      qc.invalidateQueries({ queryKey: queryKeys.timingTemplates.all });
       toast.success("Template eliminato");
     } catch { toast.error("Errore eliminazione"); }
   };

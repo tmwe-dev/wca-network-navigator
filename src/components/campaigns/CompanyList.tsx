@@ -10,6 +10,7 @@ import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
 import { CompanyListFilters } from "./CompanyListFilters";
 import { CompanyListRow } from "./CompanyListRow";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Partner {
   id: string;
@@ -42,7 +43,7 @@ interface CompanyListProps {
 
 function useBcaDetails(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["bca-details-for-list", partnerIds.sort().join(",")],
+    queryKey: queryKeys.businessCards.details(partnerIds.sort().join(",")),
     queryFn: async () => {
       if (!partnerIds.length) return {};
       const { data } = await supabase

@@ -7,6 +7,7 @@ import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { markSessionExpired } from "@/lib/inbox/sessionTracker";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
@@ -216,8 +217,8 @@ export function useWhatsAppAdaptiveSync() {
 
       if (newCount > 0) {
         lastNewMsgAt.current = Date.now();
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
 
         if (levelRef.current === 0) {
           escalate(3);
@@ -277,7 +278,7 @@ export function useWhatsAppAdaptiveSync() {
 
       if (newCount > 0) {
         lastReplyAt.current = Date.now();
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
         scheduleDeescalation();
       }
     } catch (err: unknown) {

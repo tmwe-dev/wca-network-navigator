@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import type { AllActivity } from "./useActivities";
 import type { Reminder } from "./useReminders";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useAgendaDayActivities");
 
@@ -126,7 +127,7 @@ export function useAgendaDayActivities(day: Date | null) {
   const mockEnabled = isMockEnabled();
 
   return useQuery({
-    queryKey: ["agenda-day", dayStr, mockEnabled],
+    queryKey: queryKeys.activities.agendaDay(dayStr, mockEnabled),
     queryFn: async (): Promise<AgendaDayData> => {
       if (!dayStr) return { activities: [], reminders: [], respondedPartnerIds: new Set() };
 

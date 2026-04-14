@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface Reminder {
   id: string;
@@ -19,7 +20,7 @@ export interface Reminder {
 
 export function useReminders() {
   return useQuery({
-    queryKey: ["reminders"],
+    queryKey: queryKeys.reminders.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reminders")
@@ -37,7 +38,7 @@ export function useReminders() {
 
 export function usePendingReminders() {
   return useQuery({
-    queryKey: ["reminders", "pending"],
+    queryKey: queryKeys.reminders.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reminders")
@@ -68,7 +69,7 @@ export function useCompleteReminder() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reminders"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reminders.all });
     },
   });
 }

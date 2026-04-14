@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPartnersByIdsFiltered } from "@/data/partners";
 import { getContactsByIds } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
 
@@ -19,7 +20,7 @@ export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
   const contactIds = [...new Set(sources.map(s => s.contactId).filter(Boolean))] as string[];
 
   const { data } = useQuery({
-    queryKey: ["holding-pattern-emails", partnerIds.sort().join(","), contactIds.sort().join(",")],
+    queryKey: queryKeys.contacts.holdingPatternEmails(partnerIds.sort().join(","), contactIds.sort().join(",")),
     queryFn: async () => {
       const result = new Set<string>();
 

@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function usePendingTaskCount() {
   const [realtimeCount, _setRealtimeCount] = useState<number | null>(null);
 
   const query = useQuery({
-    queryKey: ["pending-task-count"],
+    queryKey: queryKeys.pendingTaskCount,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return 0;

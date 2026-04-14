@@ -22,6 +22,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import DOMPurify from "dompurify";
+import { queryKeys } from "@/lib/queryKeys";
 
 const CHANNEL_ICONS: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4 text-blue-400" />,
@@ -71,7 +72,7 @@ export function SendConfirmationGate({
 
   // Fetch contact context
   const { data: context } = useQuery({
-    queryKey: ["send-gate-context", payload?.recipientEmail],
+    queryKey: queryKeys.sendGate.context(payload?.recipientEmail),
     queryFn: async () => {
       if (!payload?.recipientEmail) return null;
       const { data } = await supabase
@@ -86,7 +87,7 @@ export function SendConfirmationGate({
 
   // Fetch address rules
   const { data: rules } = useQuery({
-    queryKey: ["send-gate-rules", payload?.recipientEmail],
+    queryKey: queryKeys.sendGate.rules,
     queryFn: async () => {
       if (!payload?.recipientEmail) return null;
       const { data } = await supabase

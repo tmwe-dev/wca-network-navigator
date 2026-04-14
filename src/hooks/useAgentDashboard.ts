@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface AgentWithTasks {
   id: string;
@@ -28,7 +29,7 @@ export interface AgentTaskRow {
 
 export function useAgentDashboard() {
   const agentsQuery = useQuery({
-    queryKey: ["agent-dashboard-agents"],
+    queryKey: queryKeys.agents.dashboard.agents,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -44,7 +45,7 @@ export function useAgentDashboard() {
   });
 
   const tasksQuery = useQuery({
-    queryKey: ["agent-dashboard-tasks"],
+    queryKey: queryKeys.agents.dashboard.tasks(),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

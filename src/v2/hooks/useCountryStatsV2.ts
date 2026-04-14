@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryStat {
   readonly country_code: string;
@@ -12,7 +13,7 @@ export interface CountryStat {
 
 export function useCountryStatsV2() {
   return useQuery({
-    queryKey: ["v2-country-stats"],
+    queryKey: queryKeys.v2.countryStats,
     staleTime: 60_000,
     queryFn: async (): Promise<CountryStat[]> => {
       const { data, error } = await supabase

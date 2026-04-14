@@ -6,6 +6,7 @@ import { fetchPartnersPaginated, fetchPartnerById, type PartnerQueryFilters } fr
 import { updatePartner } from "@/v2/io/supabase/mutations/partners";
 import { isOk } from "@/v2/core/domain/result";
 import type { PartnerV2 } from "@/v2/core/domain/partner-entity";
+import { queryKeys } from "@/lib/queryKeys";
 
 const PAGE_SIZE = 50;
 
@@ -34,7 +35,7 @@ function filtersToQuery(f: PartnerFilters): PartnerQueryFilters {
 
 export function usePartnersInfinite(filters: PartnerFilters = {}) {
   return useInfiniteQuery({
-    queryKey: ["v2", "partners-infinite", filters],
+    queryKey: queryKeys.v2.partners(filters),
     queryFn: async ({ pageParam = 0 }) => {
       const result = await fetchPartnersPaginated({
         ...filtersToQuery(filters),
@@ -54,7 +55,7 @@ export function usePartnersInfinite(filters: PartnerFilters = {}) {
 /** Simple non-paginated (for backward compat) */
 export function usePartnersV2(filters: PartnerFilters = {}) {
   return useQuery({
-    queryKey: ["v2", "partners", filters],
+    queryKey: queryKeys.v2.partners(filters),
     queryFn: async (): Promise<readonly PartnerV2[]> => {
       const result = await fetchPartnersPaginated({
         ...filtersToQuery(filters),
@@ -68,7 +69,7 @@ export function usePartnersV2(filters: PartnerFilters = {}) {
 
 export function usePartnerDetail(partnerId: string | null) {
   return useQuery({
-    queryKey: ["v2", "partner", partnerId],
+    queryKey: queryKeys.v2.partners(partnerId),
     queryFn: async (): Promise<PartnerV2 | null> => {
       if (!partnerId) return null;
       const partnerResult = await fetchPartnerById(partnerId);
@@ -88,9 +89,9 @@ export function useToggleFavoriteV2() {
       return result.value;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2", "partners"] });
-      qc.invalidateQueries({ queryKey: ["v2", "partners-infinite"] });
-      qc.invalidateQueries({ queryKey: ["v2", "partner"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.partners() });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.partners() });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.partners() });
     },
   });
 }

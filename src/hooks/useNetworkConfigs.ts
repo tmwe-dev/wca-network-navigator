@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface NetworkConfig {
   id: string;
@@ -19,7 +20,7 @@ export function useNetworkConfigs() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["network-configs"],
+    queryKey: queryKeys.networkConfigs.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("network_configs")
@@ -39,7 +40,7 @@ export function useNetworkConfigs() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["network-configs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.networkConfigs.all });
     },
     onError: (err) => {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
@@ -54,7 +55,7 @@ export function useNetworkConfigs() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["network-configs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.networkConfigs.all });
       toast({ title: "Network aggiunto" });
     },
     onError: (err) => {

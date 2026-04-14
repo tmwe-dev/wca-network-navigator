@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface BriefingAction {
   label: string;
@@ -37,7 +38,7 @@ export interface DailyBriefing {
 
 export function useDailyBriefing() {
   return useQuery<DailyBriefing>({
-    queryKey: ["daily-briefing"],
+    queryKey: queryKeys.dailyBriefing.all,
     staleTime: 15 * 60 * 1000,
     queryFn: async () => {
       return invokeEdge<DailyBriefing>("daily-briefing", { context: "useDailyBriefing" });

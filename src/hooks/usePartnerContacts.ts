@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { findPartnerContactsByPartnerIds, type PartnerContactResult } from "@/data/partnerRelations";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface PartnerContact {
   id: string;
@@ -18,7 +19,7 @@ export interface PartnerContact {
  */
 export function usePartnerContacts(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["partner-contacts-for-campaign", partnerIds.sort().join(",")],
+    queryKey: queryKeys.partnerContacts.forCampaign(partnerIds.sort().join(",")),
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, PartnerContact[]>;
 

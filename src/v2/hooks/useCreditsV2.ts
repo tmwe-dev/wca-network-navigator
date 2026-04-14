@@ -6,10 +6,11 @@ import { fetchCreditTransactions, fetchCreditBalance } from "@/v2/io/supabase/qu
 import { isOk } from "@/v2/core/domain/result";
 import type { CreditTransaction } from "@/v2/core/domain/entities";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useCreditsV2() {
   const balanceQuery = useQuery({
-    queryKey: ["v2", "credit-balance"],
+    queryKey: queryKeys.v2.creditBalance,
     queryFn: async (): Promise<number> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return 0;
@@ -19,7 +20,7 @@ export function useCreditsV2() {
   });
 
   const transactionsQuery = useQuery({
-    queryKey: ["v2", "credit-transactions"],
+    queryKey: queryKeys.v2.creditTransactions,
     queryFn: async (): Promise<readonly CreditTransaction[]> => {
       const result = await fetchCreditTransactions();
       return isOk(result) ? result.value : [];

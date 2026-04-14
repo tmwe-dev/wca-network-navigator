@@ -6,12 +6,13 @@ import { fetchChannelMessages } from "@/v2/io/supabase/queries/channel-messages"
 import { markMessageRead } from "@/v2/io/supabase/mutations/channel-messages";
 import { isOk } from "@/v2/core/domain/result";
 import type { ChannelMessage } from "@/v2/core/domain/entities";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useChannelMessagesV2(direction?: string, limit = 100) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["v2", "channel-messages", direction ?? "all", limit],
+    queryKey: queryKeys.v2.channelMessages(direction ?? "all", limit),
     queryFn: async (): Promise<readonly ChannelMessage[]> => {
       const result = await fetchChannelMessages(limit, direction);
       return isOk(result) ? result.value : [];
@@ -20,7 +21,7 @@ export function useChannelMessagesV2(direction?: string, limit = 100) {
 
   const markReadMut = useMutation({
     mutationFn: (messageId: string) => markMessageRead(messageId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["v2", "channel-messages"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.channelMessages() }),
   });
 
   return { ...query, markRead: markReadMut.mutate };

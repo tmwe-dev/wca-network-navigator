@@ -12,6 +12,7 @@ import {
 } from "@/data/kbEntries";
 import { getDefaultKbEntries } from "@/data/kbSeedData";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
 
@@ -19,7 +20,7 @@ export type { KbEntry };
 
 export function useKbEntries() {
   return useQuery({
-    queryKey: ["kb_entries"],
+    queryKey: queryKeys.v2.kbEntries(),
     queryFn: findKbEntries,
   });
 }

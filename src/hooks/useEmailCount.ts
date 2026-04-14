@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Always returns the total email count from database.
@@ -7,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export function useEmailCount(isSyncing = false) {
   return useQuery({
-    queryKey: ["email-count"],
+    queryKey: queryKeys.email.count,
     queryFn: async () => {
       const { count, error } = await supabase
         .from("channel_messages")

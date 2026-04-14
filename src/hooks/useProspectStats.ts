@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface AtecoGroup {
   codice_ateco: string;
@@ -24,7 +25,7 @@ export interface ProspectGlobalStats {
 
 export function useProspectStats() {
   return useQuery({
-    queryKey: ["prospect-global-stats"],
+    queryKey: queryKeys.prospects.globalStats,
     queryFn: async () => {
       // Use count-only query instead of fetching all rows
       const { count: total, error } = await supabase

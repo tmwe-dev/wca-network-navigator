@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface Suggestion {
   partner_id: string;
@@ -83,7 +84,7 @@ export function useArenaSession() {
 
   // Fetch suggestions
   const { isLoading: loadingSuggestions, refetch } = useQuery({
-    queryKey: ["arena-suggestions", focus, channel, sendLanguage, batchSize, excludedIds.length],
+    queryKey: queryKeys.arena.suggestions(focus, channel, sendLanguage, batchSize, excludedIds.length),
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;

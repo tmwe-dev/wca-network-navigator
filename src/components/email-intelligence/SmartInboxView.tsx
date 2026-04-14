@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { queryKeys } from "@/lib/queryKeys";
 
 const CATEGORIES: Record<string, { icon: typeof ThumbsUp; color: string; label: string }> = {
   interested: { icon: ThumbsUp, color: "bg-emerald-400/10 text-emerald-400", label: "Interessato" },
@@ -39,7 +40,7 @@ export function SmartInboxView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: classifications = [], isLoading } = useQuery({
-    queryKey: ["email-classifications", categoryFilter],
+    queryKey: queryKeys.email.classifications,
     queryFn: async () => {
       let q = supabase
         .from("email_classifications")
@@ -55,7 +56,7 @@ export function SmartInboxView() {
 
   // Category counts
   const { data: allCats = [] } = useQuery({
-    queryKey: ["email-classifications-cat-counts"],
+    queryKey: queryKeys.email.classificationsCatCounts,
     queryFn: async () => {
       const { data, error } = await supabase.from("email_classifications").select("category");
       if (error) throw error;
@@ -71,7 +72,7 @@ export function SmartInboxView() {
   const selected = classifications.find(c => c.id === selectedId);
 
   const { data: convContext } = useQuery({
-    queryKey: ["conv-context", selected?.email_address],
+    queryKey: queryKeys.convContext.byEmail(selected?.email_address),
     enabled: !!selected?.email_address,
     queryFn: async () => {
       const { data } = await supabase
@@ -93,7 +94,7 @@ export function SmartInboxView() {
       confidence: item.confidence,
       user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
     });
-    if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: ["email-classifications"] }); }
+    if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: queryKeys.email.classifications }); }
     else toast.error("Errore");
   };
 
@@ -102,7 +103,7 @@ export function SmartInboxView() {
     const { error } = await supabase.from("email_classifications").update({ category: newCategory }).eq("id", id);
     if (!error) {
       toast.success(`Categoria corretta: ${CATEGORIES[newCategory]?.label ?? newCategory}`);
-      qc.invalidateQueries({ queryKey: ["email-classifications"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.classifications });
       // Save correction to memory for learning
       if (item) {
         try {
@@ -129,7 +130,7 @@ export function SmartInboxView() {
         context: `SmartInboxView.${action}`,
       });
       toast.success(action === "archive" ? "Archiviata" : "Spostata in spam");
-      qc.invalidateQueries({ queryKey: ["email-classifications"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.classifications });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Errore operazione cartella");
     }

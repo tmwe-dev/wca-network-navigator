@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AIRequestLogRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, StatusPill, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["telemetry-ai-requests", sinceIso],
+    queryKey: queryKeys.telemetry.aiRequests(sinceIso),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_request_log")

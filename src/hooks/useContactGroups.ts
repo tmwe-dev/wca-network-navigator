@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { rpcGetContactGroupCounts } from "@/data/rpc";
 import { findContactsByGroup } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ContactGroupCount {
   group_type: string;
@@ -37,7 +38,7 @@ export function useContactsByGroup(
   holdingPattern?: "out" | "in" | "all"
 ) {
   return useQuery({
-    queryKey: ["contacts-by-group", groupType, groupKey, page, pageSize, holdingPattern],
+    queryKey: queryKeys.contacts.byGroup(groupType, groupKey, page, pageSize, holdingPattern),
     enabled: enabled && !!groupType && !!groupKey,
     queryFn: async () => {
       return findContactsByGroup(groupType!, groupKey!, page, pageSize, holdingPattern);

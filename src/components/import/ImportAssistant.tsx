@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("ImportAssistant");
 
@@ -63,16 +64,16 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
 
         // Refresh data if the assistant modified something
         if ((data as Record<string, unknown>)?.data_modified) {
-          queryClient.invalidateQueries({ queryKey: ["import-logs"] });
-          queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-          queryClient.invalidateQueries({ queryKey: ["import-errors"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors("") });
           if (activeLogId) {
-            queryClient.invalidateQueries({ queryKey: ["import-log", activeLogId] });
-            queryClient.invalidateQueries({ queryKey: ["imported-contacts", activeLogId] });
-            queryClient.invalidateQueries({ queryKey: ["import-errors", activeLogId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(activeLogId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(activeLogId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors(activeLogId) });
           }
-          queryClient.invalidateQueries({ queryKey: ["partners"] });
-          queryClient.invalidateQueries({ queryKey: ["activities"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
         }
       }
     } catch (err) {
