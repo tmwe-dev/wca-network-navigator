@@ -76,9 +76,9 @@ export function AttivitaTab() {
 
   const stats = {
     total: all.length,
-    pending: all.filter((a: any) => a.status === "pending").length,
-    in_progress: all.filter((a: any) => a.status === "in_progress").length,
-    completed: all.filter((a: any) => a.status === "completed").length,
+    pending: all.filter((a) => a.status === "pending").length,
+    in_progress: all.filter((a) => a.status === "in_progress").length,
+    completed: all.filter((a) => a.status === "completed").length,
   };
 
   const priorityColor = (p: string) => {
@@ -87,7 +87,7 @@ export function AttivitaTab() {
     return "text-muted-foreground";
   };
 
-  const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
     pending: { label: "In attesa", color: "text-primary", bg: "bg-primary/15", icon: Clock },
     in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
     completed: { label: "Completata", color: "text-emerald-500", bg: "bg-emerald-500/15", icon: CheckCircle2 },
@@ -189,7 +189,7 @@ export function AttivitaTab() {
           />
         ) : (
           <div className="p-2 space-y-1">
-            {filtered.map((item: any) => {
+            {filtered.map((item) => {
               const sc = statusConfig[item.status] || statusConfig.pending;
               const TypeIcon = ACTIVITY_ICONS[item.activity_type] || ListTodo;
               const isOverdue = item.due_date && new Date(item.due_date) < new Date() && item.status !== "completed";

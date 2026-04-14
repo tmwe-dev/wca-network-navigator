@@ -84,7 +84,7 @@ export default function OperativeGuideSettings() {
         .upsert({ key: "operative_strategy", value: JSON.stringify(strategy), updated_at: new Date().toISOString(), user_id: user.id }, { onConflict: "user_id,key" });
       if (error) throw error;
       toast.success("Guida Operativa salvata");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Errore nel salvataggio");
     } finally {
       setSaving(false);

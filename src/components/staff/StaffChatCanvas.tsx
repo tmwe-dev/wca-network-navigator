@@ -70,7 +70,7 @@ export function StaffChatCanvas({ agent }: Props) {
     setLoading(true);
 
     try {
-      const data = await invokeEdge<any>("agent-execute", {
+      const data = await invokeEdge<Record<string, unknown>>("agent-execute", {
         body: { agent_id: agent.id, chat_messages: newMsgs.map((m) => ({ role: m.role, content: m.content })) },
         context: "StaffChatCanvas.agent_execute",
       });

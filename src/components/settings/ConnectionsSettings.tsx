@@ -60,11 +60,11 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     if (!cookie) return;
     setSavingCookie(true);
     try {
-      const data = await invokeEdge<any>("save-wca-cookie", { body: { cookie }, context: "ConnectionsSettings.save_wca_cookie" });
+      const data = await invokeEdge<Record<string, unknown>>("save-wca-cookie", { body: { cookie }, context: "ConnectionsSettings.save_wca_cookie" });
       if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
       else toast.warning("Cookie salvato ma la verifica è fallita.");
       ensureSession();
-    } catch (err: any) { toast.error("Errore: " + (err.message || "Sconosciuto")); }
+    } catch (err: unknown) { toast.error("Errore: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto")); }
     finally { setSavingCookie(false); }
   };
 

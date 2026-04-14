@@ -3,7 +3,7 @@ import { Sparkles, Search, Globe, Brain, User, CheckCircle2, Linkedin } from "lu
 import { cn } from "@/lib/utils";
 import type { ScrapingPhase, DraftState } from "@/pages/Cockpit";
 
-const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; color: string }> = {
+const scrapingPhaseConfig: Record<ScrapingPhase, { icon: React.ElementType; label: string; color: string }> = {
   idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },
   searching: { icon: Search, label: "🔍 Ricerca profilo LinkedIn...", color: "text-chart-3" },
   visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },

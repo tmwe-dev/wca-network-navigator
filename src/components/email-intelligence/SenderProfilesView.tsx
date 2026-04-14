@@ -79,7 +79,7 @@ export function SenderProfilesView() {
             {profiles.map((p) => {
               const initials = p.email_address.substring(0, 2).toUpperCase();
               const exchanges = Array.isArray(p.last_exchanges) ? p.last_exchanges as any[] : [];
-              const lastSentiments = exchanges.slice(-5).map((e: any) => e.sentiment ?? "neutral");
+              const lastSentiments = exchanges.slice(-5).map((e) => e.sentiment ?? "neutral");
               const expanded = expandedEmail === p.email_address;
 
               return (

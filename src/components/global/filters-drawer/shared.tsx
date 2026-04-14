@@ -9,7 +9,7 @@ export function FilterSection({
   label,
   children,
 }: {
-  icon: any;
+  icon: React.ElementType;
   label: string;
   children: React.ReactNode;
 }) {

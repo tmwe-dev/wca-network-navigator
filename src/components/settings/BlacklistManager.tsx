@@ -98,7 +98,7 @@ export default function BlacklistManager() {
       setPreview(null);
       setAllParsed([]);
       if (fileRef.current) fileRef.current.value = "";
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore importazione: " + (err.message || "Sconosciuto"));
     }
   };
@@ -106,13 +106,13 @@ export default function BlacklistManager() {
   const handleScrape = async () => {
     setScraping(true);
     try {
-      const data = await invokeEdge<any>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
+      const data = await invokeEdge<Record<string, unknown>>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
       if (data?.success) {
         toast.success(`Scraping completato: ${data.entries_count || 0} record, ${data.matched_count || 0} match`);
       } else {
         toast.error(data?.error || "Scraping fallito");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore: " + (err.message || "Sconosciuto"));
     } finally {
       setScraping(false);

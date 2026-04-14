@@ -78,7 +78,7 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
           from: fromField,
         }, context: "GeneralSettings.send_email" });
       toast.success("Email di test inviata con successo!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore invio: " + (err.message || "Sconosciuto"));
     } finally {
       setSendingTest(false);

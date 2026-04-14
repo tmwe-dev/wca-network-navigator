@@ -167,8 +167,8 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       .select("partita_iva, company_name")
       .not("partita_iva", "is", null);
 
-    const dbPivas = new Set((existing || []).map((e: any) => e.partita_iva?.trim()).filter(Boolean));
-    const dbNames = new Set((existing || []).map((e: any) => e.company_name?.toLowerCase().trim()).filter(Boolean));
+    const dbPivas = new Set((existing || []).map((e) => e.partita_iva?.trim()).filter(Boolean));
+    const dbNames = new Set((existing || []).map((e) => e.company_name?.toLowerCase().trim()).filter(Boolean));
 
     return results.map(r => ({
       ...r,

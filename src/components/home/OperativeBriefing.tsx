@@ -73,7 +73,7 @@ export function OperativeBriefing({
       }
 
       setCompletedIdx(prev => new Set(prev).add(idx));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Errore nell'esecuzione");
       onAction(action);
     } finally {

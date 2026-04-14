@@ -23,7 +23,7 @@ export function BCAFiltersSection() {
         if (!data) return;
         const evCounts: Record<string, number> = {};
         const stCounts: Record<string, number> = {};
-        data.forEach((r: any) => {
+        data.forEach((r) => {
           if (r.event_name) evCounts[r.event_name] = (evCounts[r.event_name] || 0) + 1;
           const st = r.match_status || "pending";
           stCounts[st] = (stCounts[st] || 0) + 1;

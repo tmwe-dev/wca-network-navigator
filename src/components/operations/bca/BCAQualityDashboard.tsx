@@ -10,7 +10,7 @@ interface Props {
   cards: BusinessCardWithPartner[];
 }
 
-function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card/50 border border-border/30">
       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", color)}>
