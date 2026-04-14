@@ -34,7 +34,7 @@ interface TestResult {
   status: "pass" | "fail" | "warn" | "running" | "pending";
   output?: string;
   subject?: string;
-  debug?: unknown;
+  debug?: Record<string, unknown>;
   issues: string[];
   score: number;
   durationMs?: number;

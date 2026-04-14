@@ -31,7 +31,7 @@ interface TestResult {
   url: string | null;
   profile: unknown;
   log: SearchLogEntry[];
-  scrapeResult: unknown;
+  scrapeResult: Record<string, any> | null;
   error?: string;
 }
 
