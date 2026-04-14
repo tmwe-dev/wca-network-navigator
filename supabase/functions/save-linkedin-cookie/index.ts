@@ -7,7 +7,25 @@ Deno.serve(async (req) => {
   if (pre) return pre;
 
   const origin = req.headers.get("origin");
-  const _dynCors = getCorsHeaders(origin);
+  const dynCors = getCorsHeaders(origin);
+
+  // Auth guard: require authenticated user
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error: authError } = await authClient.auth.getUser(token);
+  if (authError || !user) {
+    return new Response(JSON.stringify({ success: false, message: "Invalid token" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { cookie } = await req.json()
@@ -47,9 +65,9 @@ Deno.serve(async (req) => {
   }
 })
 
-function respond(data: unknown, status = 200) {
+function respond(data: unknown, status = 200, headers?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
+    headers: { ...(headers || getCorsHeaders(null)), 'Content-Type': 'application/json' },
   })
 }

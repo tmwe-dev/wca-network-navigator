@@ -9,6 +9,24 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  // Auth guard: require authenticated user
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error: authError } = await authClient.auth.getUser(token);
+  if (authError || !user) {
+    return new Response(JSON.stringify({ success: false, message: "Invalid token" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { prospects } = await req.json()
     if (!Array.isArray(prospects) || prospects.length === 0) {
