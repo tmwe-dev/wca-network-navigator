@@ -176,7 +176,7 @@ export function AISettingsTab(): React.ReactElement {
                   <CollapsibleTrigger className="w-full flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors text-left">
                     <div className="flex items-center gap-2">
                       {hasKey ? (
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
                       ) : (
                         <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                       )}
