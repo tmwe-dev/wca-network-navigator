@@ -38,7 +38,7 @@ function usePartnerContacts() {
         .select("id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)")
         .limit(200);
       if (error) throw error;
-      return (data || []).map((pc) => ({
+      return ((data || []) as any[]).map((pc) => ({
         id: pc.id,
         name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
         company: pc.partners?.company_name || "—",

@@ -184,7 +184,7 @@ export function PromptManager() {
     setImproving(true);
     try {
       const data = await invokeEdge<Record<string, unknown>>("improve-email", { body: { html: editPrompt, tone: editTone, improveType: "prompt" }, context: "PromptManager.improve_email" });
-      if (data?.html) setEditPrompt(data.html);
+      if (data?.html) setEditPrompt(String(data.html));
       toast.success("Prompt migliorato con AI");
     } catch (e: unknown) {
       toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
@@ -290,7 +290,7 @@ export function PromptManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={editSource} onValueChange={(v: string) => setEditSource(v)}>
+              <Select value={editSource} onValueChange={(v) => setEditSource(v as "email_type" | "goal" | "proposal")}>
                 <SelectTrigger className="h-9 text-xs flex-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email_type" className="text-xs">Tipo Email</SelectItem>

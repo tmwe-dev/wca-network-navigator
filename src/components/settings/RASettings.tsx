@@ -13,7 +13,7 @@ const log = createLogger("RASettings");
 
 interface RASettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: unknown;
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
 }
 
 export function RASettings({ settings, updateSetting }: RASettingsProps) {

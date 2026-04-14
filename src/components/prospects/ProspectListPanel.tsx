@@ -159,7 +159,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
             <Input placeholder="Cerca prospect..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-10 h-9 rounded-xl text-sm ${th.input}`} />
           </div>
-          <Select value={sortBy} onValueChange={v => setSortBy(v as string)}>
+          <Select value={sortBy} onValueChange={v => setSortBy(v as "name" | "fatturato" | "dipendenti")}>
             <SelectTrigger className={`w-[140px] h-9 rounded-xl text-xs ${th.selTrigger}`}>
               <SelectValue />
             </SelectTrigger>
