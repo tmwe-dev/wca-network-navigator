@@ -177,7 +177,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {(partner.rating ?? 0) > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Record<string, unknown>} />}
+          {(partner.rating ?? 0) > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as RatingDetails | null} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
