@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -8,6 +8,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+
+  const auth = await requireExtensionAuth(req, dynCors);
+  if (isExtensionAuthError(auth)) return auth;
 
   try {
     const { prospects } = await req.json()

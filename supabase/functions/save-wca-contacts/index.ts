@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 // Valid enum values for matching
 const SERVICE_MAP: Record<string, string> = {
@@ -97,6 +97,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+
+  const auth = await requireExtensionAuth(req, dynCors);
+  if (isExtensionAuthError(auth)) return auth;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
