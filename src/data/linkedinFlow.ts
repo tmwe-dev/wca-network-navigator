@@ -37,6 +37,6 @@ export async function updateLinkedInFlowItem(id: string, updates: Record<string,
 }
 
 export async function insertLinkedInFlowItems(items: Record<string, unknown>[]) {
-  const { error } = await supabase.from("linkedin_flow_items").insert(items);
+  const { error } = await supabase.from("linkedin_flow_items").insert(items as any);
   if (error) throw error;
 }

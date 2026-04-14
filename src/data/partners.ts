@@ -296,7 +296,7 @@ export async function getPartnersByIds(ids: string[], select = "id, company_name
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...data);
+    if (data) results.push(...(data as any));
   }
   return results;
 }
@@ -326,7 +326,7 @@ export async function deletePartnersByIds(ids: string[]) {
 export async function createPartner(partner: unknown) {
   const { data, error } = await supabase
     .from("partners")
-    .insert(partner)
+    .insert(partner as any)
     .select()
     .single();
   if (error) throw error;
@@ -347,7 +347,7 @@ export async function getPartnersByIdsFiltered(ids: string[], select: string, fi
     }
     const { data, error } = await q;
     if (error) throw error;
-    if (data) results.push(...data);
+    if (data) results.push(...(data as any));
   }
   return results;
 }
