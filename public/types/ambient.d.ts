@@ -7,19 +7,19 @@
 declare function importScripts(...urls: string[]): void;
 
 // ── Window augmentations (WhatsApp/Partner-Connect extensions) ──
-interface WaHelpers {
-  deepQueryAll(root: Document | Element, selector: string): Element[];
-  deepQueryOne(root: Document | Element, selector: string): Element | null;
-  click(el: Element): void;
-  type(el: Element, text: string): void;
-  scrollIntoView(el: Element): void;
-  sleep(ms: number): Promise<void>;
-  waitFor(selector: string, timeout?: number): Promise<Element | null>;
-  [key: string]: unknown;
-}
-
 interface Window {
-  __waH: WaHelpers | undefined;
+  /** WhatsApp helper object injected by content script */
+  __waH: {
+    qsDeep(selector: string): Element | null;
+    qsaDeep(selector: string): Element[];
+    qsWithin(root: Element | Document, selector: string): Element | null;
+    qsaWithin(root: Element | Document, selector: string): Element[];
+    filterVisible(elements: Element[]): Element[];
+    modernClearAndType(el: Element, text: string): void;
+    modernInsertText(el: Element, text: string): void;
+    invalidateCache(): void;
+    [key: string]: ((...args: unknown[]) => unknown) | unknown;
+  } | undefined;
   loadTemplate: ((name: string) => Promise<void>) | undefined;
   pauseTask: (() => void) | undefined;
   resumeTask: (() => void) | undefined;
@@ -31,7 +31,7 @@ interface Window {
 // TreeWalker returns Node; extensions access .shadowRoot which
 // exists on Element but not Node in strict DOM typings.
 interface Node {
-  shadowRoot: ShadowRoot | null;
+  readonly shadowRoot: ShadowRoot | null;
 }
 
 // ── EventTarget augmentation ────────────────────────────────────
