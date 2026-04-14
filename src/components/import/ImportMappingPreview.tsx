@@ -173,7 +173,7 @@ export function ImportMappingPreview({
                         <TableRow key={i}>
                           {activeCols.map(col => (
                             <TableCell key={col} className="text-[10px] truncate max-w-[120px]">
-                              {row[col] || "—"}
+                              {String(row[col] || "—")}
                             </TableCell>
                           ))}
                         </TableRow>

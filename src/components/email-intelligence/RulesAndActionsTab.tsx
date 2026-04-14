@@ -282,10 +282,10 @@ function PromptManagerSection() {
     mutationFn: async (prompt: Record<string, unknown>) => {
       const { id, ...payload } = prompt;
       if (id) {
-        await supabase.from("email_prompts").update(payload).eq("id", id);
+        await supabase.from("email_prompts").update(payload as any).eq("id", String(id));
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id });
+        await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as any);
       }
     },
     onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); setSheetOpen(false); },

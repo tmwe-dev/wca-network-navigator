@@ -62,7 +62,7 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
         setMessages([...allMessages, { role: "assistant", content: String((data as Record<string, unknown>)?.content || "Nessuna risposta") }]);
 
         // Refresh data if the assistant modified something
-        if (data.data_modified) {
+        if ((data as Record<string, unknown>)?.data_modified) {
           queryClient.invalidateQueries({ queryKey: ["import-logs"] });
           queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
           queryClient.invalidateQueries({ queryKey: ["import-errors"] });
