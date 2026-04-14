@@ -203,4 +203,3 @@ export function scoreBg(score: number, isDark: boolean): string {
   if (score >= 4) return isDark ? "bg-orange-500/15 border-orange-500/25" : "bg-orange-50 border-orange-200";
   return isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200";
 }
-};
