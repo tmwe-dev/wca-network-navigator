@@ -67,7 +67,7 @@ export function usePartnersForGlobe() {
       const countryCounts: Record<string, number> = {};
       
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (allPartners as any[]).map((p: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic Supabase join result
+      const globePartners: GlobePartner[] = (allPartners as unknown[]).map((p: any) => {
         countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
         const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
         return {

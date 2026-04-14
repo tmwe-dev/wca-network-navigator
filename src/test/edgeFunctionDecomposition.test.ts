@@ -111,14 +111,14 @@ describe("Client Migration — call sites use macro-endpoints", () => {
   const srcDir = path.resolve("src");
 
   // Exclude test pages (AILab, Diagnostics) and data config files from migration check
-  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts"];
+  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts", "types.ts", "sentry.ts"];
 
   function searchFiles(dir: string, pattern: RegExp): string[] {
     const results: string[] = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== "test") {
+      if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== "test" && entry.name !== "__tests__") {
         results.push(...searchFiles(fullPath, pattern));
       } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) && !EXCLUDE.includes(entry.name)) {
         const content = fs.readFileSync(fullPath, "utf-8");

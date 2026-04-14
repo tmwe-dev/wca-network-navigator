@@ -193,7 +193,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       </div>
 
       {/* Enrichment — top priority */}
-      <EnrichmentCard partner={partner as any} /> // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      <EnrichmentCard partner={partner as unknown} />
 
       {/* Contacts */}
       {contacts.length > 0 && (

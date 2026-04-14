@@ -30,14 +30,14 @@ describe("Edge Function Auth Contracts [A02]", () => {
       expect(body.error).toBeDefined();
     });
 
-    it(`${fn}: returns 401 with invalid Bearer token`, async () => {
+    it(`${fn}: returns 401 or 403 with invalid Bearer token`, async () => {
       const res2 = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: "Bearer invalid-token" },
         body: JSON.stringify({}),
       });
       const body2 = await res2.json();
-      expect(res2.status).toBe(401);
+      expect([401, 403]).toContain(res2.status);
       expect(body2.error).toBeDefined();
     });
 

@@ -66,7 +66,7 @@ export function useOutreachQueue() {
     const data = await getOutreachItemField(id, "attempts");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (data) {
-      await updateOutreachItem(id, { attempts: ((data as any).attempts || 0) + 1 }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      await updateOutreachItem(id, { attempts: ((data as unknown).attempts || 0) + 1 });
     }
   };
 

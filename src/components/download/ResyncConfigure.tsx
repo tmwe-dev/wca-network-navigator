@@ -107,7 +107,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
-        const wcaId = (pn as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase join).partners?.wca_id;
+        const wcaId = (pn as unknown)
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -204,7 +204,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           country_name: "Re-sync Contatti",
           network_name: networkNames,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-          wca_ids: allWcaIds as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase enum cast
+          wca_ids: allWcaIds as unknown,
           total_count: allWcaIds.length,
           delay_seconds: delay,
           status: "pending",

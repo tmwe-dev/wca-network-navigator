@@ -49,7 +49,7 @@ export function ABTestCreator() {
         test_type: testType,
         variant_a: { [fieldKey]: variantA },
         variant_b: { [fieldKey]: variantB },
-      } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      } as unknown);
       if (error) throw error;
     },
     onSuccess: () => {

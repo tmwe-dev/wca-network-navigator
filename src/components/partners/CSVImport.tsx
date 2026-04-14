@@ -230,7 +230,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             partner_type: p.partner_type as string,
             wca_id: p.wca_id,
             is_active: true,
-          })) as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          })) as unknown)
           .select();
 
         if (error) {
