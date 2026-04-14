@@ -21,7 +21,7 @@ export function BCACreateContact({ card }: Props) {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [partnerResults, setPartnerResults] = useState<any[]>([]);
+  const [partnerResults, setPartnerResults] = useState<Array<{ id: string; company_name: string; country_code?: string; city?: string }>>([]);
   const [_searching, setSearching] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(card.matched_partner_id);
 
@@ -46,7 +46,7 @@ export function BCACreateContact({ card }: Props) {
     setSearching(true);
     try {
       const data = await searchPartnersByNameAlias(form.company_name.trim(), "id, company_name, country_code, city");
-      setPartnerResults(data ?? []);
+      setPartnerResults((data ?? []) as Array<{ id: string; company_name: string; country_code?: string; city?: string }>);
     } catch { /* ignore */ }
     finally { setSearching(false); }
   }, [form.company_name]);

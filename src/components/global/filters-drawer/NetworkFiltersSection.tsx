@@ -18,7 +18,7 @@ export function NetworkFiltersSection() {
   const g = useGlobalFilters();
   const { data: statsData } = useCountryStats();
   const [countrySearch, setCountrySearch] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; company_name: string; company_alias?: string | null; country_code: string; city?: string | null; email?: string | null; partner_contacts?: Array<{ id: string; name?: string | null; email?: string | null; contact_alias?: string | null; title?: string | null }> }>>([]);
   const [searching, setSearching] = useState(false);
 
   const countries = useMemo(() => {
