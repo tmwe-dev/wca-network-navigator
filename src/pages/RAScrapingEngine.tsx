@@ -216,7 +216,7 @@ function JobsPanel({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
       <CardContent className="space-y-4">
         {s.jobsLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento job...</div>
         : (s.jobs as unknown[]).length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun job in corso</div>
-        : (s.jobs as unknown[]).map((job: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+        : (s.jobs as unknown[]).map((raw) => { const job = raw as Record<string, unknown>;
             const progress = job.total_items > 0 ? (job.processed_items / job.total_items) * 100 : 0;
             return (
               <div key={job.id as string} className="space-y-3 pb-4 last:border-0 last:pb-0 border-b border-border">

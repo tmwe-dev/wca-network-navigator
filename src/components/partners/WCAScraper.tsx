@@ -121,7 +121,7 @@ export function WCAScraper() {
           log.aiClassification = result.aiClassification;
           // Check if contacts have email or phone
           const contacts = result.partner?.contacts || [];
-          log.hasContactDetails = contacts.some((c: any) => c.email || c.phone || c.direct_phone || c.mobile); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          log.hasContactDetails = contacts.some((c: Record<string, unknown>) => c.email || c.phone || c.direct_phone || c.mobile);
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;

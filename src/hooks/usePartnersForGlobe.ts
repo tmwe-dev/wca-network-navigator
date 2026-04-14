@@ -67,7 +67,7 @@ export function usePartnersForGlobe() {
       const countryCounts: Record<string, number> = {};
       
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (allPartners as unknown[]).map((p: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+      const globePartners: GlobePartner[] = (allPartners as unknown as Record<string, unknown>[]).map((p) => {
         countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
         const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
         return {
