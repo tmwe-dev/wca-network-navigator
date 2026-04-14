@@ -28,6 +28,8 @@ jobs:
         run: npm run lint:public || true
       - name: Typecheck public/ extensions (informational)
         run: npm run typecheck:public || true
+      - name: Debt budget check
+        run: npm run debt:check
       - name: Security audit
         run: npm audit --production --audit-level=high || true
 
