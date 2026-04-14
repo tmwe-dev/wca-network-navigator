@@ -31,6 +31,32 @@ export interface SystemDirectory {
   processes: Array<{ name: string; description: string; section: string }>;
 }
 
+interface AgentRecord {
+  id: string;
+  name: string;
+  role: string;
+  avatar_emoji: string;
+  is_active: boolean;
+  stats: unknown;
+}
+
+interface AssignmentRecord {
+  agent_id: string;
+}
+
+interface TaskRecord {
+  agent_id: string;
+}
+
+interface PromptRecord {
+  id: string;
+  name: string;
+  objective?: string;
+  priority: number;
+  tags?: string[];
+  is_active: boolean;
+}
+
 const SYSTEM_PROCESSES = [
   { name: "Outreach Cockpit", description: "Genera e invia messaggi multicanale (email/WA/LI)", section: "Cockpit" },
   { name: "Circuito di Attesa", description: "Follow-up automatico post-invio con regole per tipo contatto", section: "Cockpit" },
@@ -49,47 +75,38 @@ export function useSystemDirectory() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Parallel queries
       const [agentsData, assignmentsData, tasksData, promptsData] = await Promise.all([
         findAgentsByUser(user.id, "id, name, role, avatar_emoji, is_active, stats"),
         findClientAssignmentsByUser(user.id),
         findAgentTasksByUser(user.id, ["pending", "running"]),
         findOperativePrompts(user.id),
       ]);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-      const agentsRes = { data: agentsData as any[] };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-      const assignmentsRes = { data: assignmentsData as any[] };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-      const tasksRes = { data: tasksData as any[] };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-      const promptsRes = { data: promptsData as any[] };
+
+      const agentsList = (agentsData || []) as unknown as AgentRecord[];
+      const assignmentsList = (assignmentsData || []) as unknown as AssignmentRecord[];
+      const tasksList = (tasksData || []) as unknown as TaskRecord[];
+      const promptsList = (promptsData || []) as unknown as PromptRecord[];
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();
-      if (assignmentsRes.data) {
-        for (const a of assignmentsRes.data) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
-      }
+      for (const a of assignmentsList) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
 
       // Count active tasks per agent
       const taskMap = new Map<string, number>();
-      if (tasksRes.data) {
-        for (const t of tasksRes.data) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
-      }
+      for (const t of tasksList) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
 
-      const agents: DirectoryAgent[] = (agentsRes.data || []).map((a) => ({
+      const agents: DirectoryAgent[] = agentsList.map((a) => ({
         id: a.id,
         name: a.name,
         role: a.role,
         avatar_emoji: a.avatar_emoji,
         is_active: a.is_active,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
-        stats: (a.stats as any as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
+        stats: (a.stats as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
         clientCount: assignMap.get(a.id) || 0,
         activeTaskCount: taskMap.get(a.id) || 0,
       }));
 
-      const prompts: DirectoryPrompt[] = (promptsRes.data || []).map((p) => ({
+      const prompts: DirectoryPrompt[] = promptsList.map((p) => ({
         id: p.id,
         name: p.name,
         objective: p.objective || "",
