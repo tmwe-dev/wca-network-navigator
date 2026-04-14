@@ -40,10 +40,10 @@ describe("AgentSignatureConfig", () => {
   });
   it("renders generate button", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
-    expect(screen.getByText(/Genera firma/i)).toBeInTheDocument();
+    expect(screen.getByText(/Genera automatica/i)).toBeInTheDocument();
   });
-  it("renders voice call URL label", () => {
+  it("renders voice call URL input", () => {
     renderWithProviders(React.createElement(AgentSignatureConfig, { agent: AGENT }));
-    expect(screen.getByText(/Voice Call URL/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/https:\/\//i)).toBeInTheDocument();
   });
 });

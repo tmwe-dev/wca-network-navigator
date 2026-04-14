@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/import/fileParser", () => ({
-  parseFile: vi.fn().mockResolvedValue({ headers: ["name", "email"], rows: [{ name: "John", email: "j@test.com" }] }),
+  parseFile: vi.fn().mockResolvedValue({ parsed: { headers: ["name", "email"], rows: [["John", "j@test.com"]] } }),
 }));
 
 describe("businessCardFileParser", () => {

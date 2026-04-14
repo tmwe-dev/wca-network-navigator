@@ -5,7 +5,7 @@ describe("heuristicMapper - autoMapColumns", () => {
   it("returns a mapping array for given headers", () => {
     const result = autoMapColumns(["Nome", "Email", "Telefono"], []);
     expect(result.length).toBe(3);
-    expect(result.every((m: any) => m.source)).toBe(true);
+    expect(result.every((m) => m.sourceColumn)).toBe(true);
   });
 
   it("maps email-like headers to email target", () => {
