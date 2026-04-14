@@ -32,13 +32,13 @@ export function useLinkedInFlowState() {
         schema: "public",
         table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
-      }, (payload: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- realtime payload
-        const row = payload.new as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      }, (payload: Record<string, unknown>) => {
+        const row = (payload.new || {}) as Record<string, unknown>;
         setProgress({
-          total: row.total_count,
-          processed: row.processed_count,
-          success: row.success_count,
-          errors: row.error_count,
+          total: Number(row.total_count || 0),
+          processed: Number(row.processed_count || 0),
+          success: Number(row.success_count || 0),
+          errors: Number(row.error_count || 0),
         });
         if (row.status === "completed" || row.status === "cancelled") {
           setPhase(row.status === "completed" ? "completed" : "idle");

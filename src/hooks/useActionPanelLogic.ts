@@ -86,10 +86,13 @@ export function useActionPanelLogic({
   // ── Derived ──
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
     const members = entry.members as unknown[];
-    return (members || []).map((m) => ({
-      company_name: m.company_name, city: m.city, country: m.country,
-      country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
-    }));
+    return (members || []).map((raw) => {
+      const m = raw as Record<string, unknown>;
+      return {
+        company_name: String(m.company_name || ""), city: String(m.city || ""), country: String(m.country || ""),
+        country_code: String(m.country_code || entry.country_code), wca_id: m.wca_id as number,
+      };
+    });
   });
 
   const hasCache = cachedMembers.length > 0;

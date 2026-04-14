@@ -107,7 +107,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
 
       const { data, error } = await q;
       if (error) throw error;
-      return ((data || []) as unknown) as ChannelMessage[]; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+      return (data || []) as unknown as ChannelMessage[];
     },
     staleTime: 30_000,
   });
