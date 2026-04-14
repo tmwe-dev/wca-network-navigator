@@ -281,7 +281,7 @@ export function useEmailComposerState() {
         status: "queued", total_count: recipientsWithEmail.length,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast
-      const draftId = (savedDraft as any as { id: string }).id;
+      const draftId = (savedDraft as unknown as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
         subject: email.subject.replace(/\{\{company_name\}\}/g, r.companyAlias || r.companyName).replace(/\{\{contact_name\}\}/g, r.contactAlias || r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
