@@ -24,7 +24,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
   const lastSpokenIdxRef = useRef(-1);
 
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any -- Web Speech API instance
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
   const stopSpeaking = useCallback(() => {
@@ -67,13 +67,13 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
 
   const toggleListening = useCallback((onTranscript: (text: string) => void) => {
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any -- Web Speech API not in TS lib
+    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
     if (!SR) return;
     const recognition = new SR();
     recognition.lang = "it-IT";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (event: any) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); }; // eslint-disable-line @typescript-eslint/no-explicit-any -- SpeechRecognition event
+    recognition.onresult = (event: SpeechRecognitionEvent) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;
