@@ -49,6 +49,42 @@ export default tseslint.config(
       ],
     },
   },
+  // ── Layer enforcement: components should not import from DAL directly ──
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["@/data/*"],
+              message: "Components should not import from src/data/ directly. Use a hook instead. See docs/architecture/OVERVIEW-2026-04-14.md",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ── Layer enforcement: hooks should not import types from components ──
+  {
+    files: ["src/hooks/**/*.{ts,tsx}"],
+    ignores: ["src/hooks/use-toast.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["@/components/*", "@/components/**"],
+              allowList: ["@/components/ui/*"],
+              message: "Hooks should not import from src/components/. Move shared types to src/types/. See docs/architecture/OVERVIEW-2026-04-14.md",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // ── V2 migration guardrail: warn on v1 page imports in v2 pages ──
   {
     files: ["src/v2/ui/pages/**/*.{ts,tsx}"],
