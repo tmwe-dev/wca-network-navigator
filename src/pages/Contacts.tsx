@@ -11,7 +11,7 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("Contacts");
 
 export default function Contacts() {
-  const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Record<string, unknown> | null>(null);
   // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
 

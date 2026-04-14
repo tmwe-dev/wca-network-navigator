@@ -24,12 +24,11 @@ interface BufferState {
 }
 
 function getBuffer(): BufferState {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w = window as any;
+  const w = window as unknown as Record<string, unknown>;
   if (!w[BUFFER_KEY]) {
     w[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
   }
-  return w[BUFFER_KEY];
+  return w[BUFFER_KEY] as BufferState;
 }
 
 /**
@@ -58,8 +57,7 @@ async function flushBuffer(): Promise<void> {
     const updated = [...current, ...toFlush].slice(-150);
     await supabase
       .from("download_jobs")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
-      .update({ terminal_log: updated as any })
+      .update({ terminal_log: updated as unknown as import("@/integrations/supabase/types").Json })
       .eq("id", jobId);
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

@@ -30,8 +30,7 @@ export function useEmailDrafts() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
-      return (data || []) as any as EmailDraft[];
+      return (data || []) as unknown as EmailDraft[];
     },
   });
 }
