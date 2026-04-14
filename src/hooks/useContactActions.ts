@@ -63,8 +63,8 @@ export function useContactActions(deps: Deps) {
       const processed = data?.processed || 0;
       toast({ title: processed === 0 ? "Alias già presenti" : "✨ Alias generati", description: processed === 0 ? "Tutti i contatti hanno già un alias" : `${processed} contatti elaborati` });
       invalidateContacts();
-    } catch (e: any) {
-      toast({ title: "Errore generazione alias", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore generazione alias", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
     } finally { setAliasLoading(false); }
   }, [aliasLoading, selection, currentGroupBy, holdingPattern, queryClient]);
 
@@ -100,7 +100,7 @@ export function useContactActions(deps: Deps) {
       const contacts = await getContactsByIds(ids.slice(0, 200), "id, company_name, name, email, phone, country, city");
       if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
       const batchId = `campaign_${Date.now()}`;
-      const jobs = contacts.map((ct: any) => ({
+      const jobs = contacts.map((ct) => ({
         partner_id: ct.id, company_name: ct.company_name || ct.name || "Contatto",
         country_code: ct.country || "XX", country_name: ct.country || "Sconosciuto",
         city: ct.city || null, email: ct.email || null, phone: ct.phone || null,
@@ -110,7 +110,7 @@ export function useContactActions(deps: Deps) {
       toast({ title: "Campagna creata", description: `${jobs.length} contatti aggiunti al batch` });
       selection.clear(); setSelectedGroups(new Set());
       navigate("/campaigns");
-    } catch (e: any) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
   }, [selection, navigate]);
 
   const handleAICommand = useCallback(async (cmd: AICommand) => {
@@ -149,7 +149,7 @@ async function exportContactsCsv(contactIds: string[]) {
   if (!data?.length) return;
   const headers = ["Azienda", "Nome", "Email", "Telefono", "Cellulare", "Paese", "Città", "Indirizzo", "CAP", "Origine", "Stato", "Ruolo", "Note"];
   const esc = (v: string | null) => { if (!v) return ""; const s = v.replace(/"/g, '""'); return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s; };
-  const rows = data.map((r: any) => [r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note].map(esc).join(";"));
+  const rows = data.map((r) => [r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note].map(esc).join(";"));
   const csv = "\uFEFF" + headers.join(";") + "\r\n" + rows.join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -160,11 +160,11 @@ async function exportContactsCsv(contactIds: string[]) {
 
 async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof useNavigate>) {
   if (!contactIds.length) return;
-  const contacts = (await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, country, city")).filter((c: any) => c.email);
+  const contacts = (await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, country, city")).filter((c) => c.email);
   if (!contacts?.length) { toast({ title: "Nessun contatto con email", variant: "destructive" }); return; }
 
   if (contacts.length === 1) {
-    const ct = contacts[0] as any;
+    const ct = contacts[0] as Record<string, unknown>;
     navigate("/email-composer", {
       state: {
         prefilledRecipient: {
@@ -178,7 +178,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
     return;
   }
 
-  const recipients = contacts.map((ct: any) => ({
+  const recipients = contacts.map((ct) => ({
     email: ct.email,
     name: ct.name || undefined,
     company: ct.company_name || undefined,
@@ -194,7 +194,7 @@ async function createCampaignJobsAction(contactIds: string[], selection: ReturnT
   const contacts = await getContactsByIds(contactIds.slice(0, 200), "id, company_name, name, email, phone, country, city");
   if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
   const batchId = `contacts_${Date.now()}`;
-  const jobs = contacts.map((ct: any) => ({
+  const jobs = contacts.map((ct) => ({
     partner_id: ct.id, company_name: ct.company_name || ct.name || "Contatto",
     country_code: ct.country || "XX", country_name: ct.country || "Sconosciuto",
     city: ct.city || null, email: ct.email || null, phone: ct.phone || null,

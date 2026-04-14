@@ -74,7 +74,7 @@ export function OperativeBriefing({
 
       setCompletedIdx(prev => new Set(prev).add(idx));
     } catch (e: unknown) {
-      toast.error(e.message || "Errore nell'esecuzione");
+      toast.error((e instanceof Error ? e.message : String(e)) || "Errore nell'esecuzione");
       onAction(action);
     } finally {
       setExecutingIdx(null);

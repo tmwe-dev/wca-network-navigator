@@ -28,7 +28,7 @@ function useDirectoryTotal() {
     queryFn: async () => {
       const data = await rpcGetDirectoryCounts();
       const result: Record<string, { count: number; verified: boolean }> = {};
-      (data || []).forEach((r: Record<string, unknown>) => {
+      (data || []).forEach((r) => {
         result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
       });
       return result;
@@ -41,8 +41,8 @@ function useDirectoryTotal() {
 function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
   networkView: "partners" | "bca";
   setNetworkView: (v: "partners" | "bca") => void;
-  globalStats: Record<string, unknown>;
-  deepSearch: Record<string, unknown>;
+  globalStats: unknown;
+  deepSearch: unknown;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {

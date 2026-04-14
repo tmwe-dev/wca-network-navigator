@@ -88,7 +88,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
         source_meta: { company: contact.company, email: contact.email, country: contact.country, name: contact.name },
         partner_id: contact.partnerId,
         ...extra,
-      } as Parameters<typeof supabase.from>[0]);
+      });
 
       successCount++;
       if (status === "completed" || extra.due_date) {

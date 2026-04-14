@@ -4,20 +4,20 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function findProspects(select = "*", orderBy = "company_name") {
-  const { data, error } = await supabase.from("prospects" as any).select(select).order(orderBy);
+  const { data, error } = await supabase.from("prospects").select(select).order(orderBy);
   if (error) throw error;
   return data ?? [];
 }
 
-export async function queryProspects(builder: (q: any) => any) {
-  const base = supabase.from("prospects" as any).select("*").order("company_name");
+export async function queryProspects(builder: (q: unknown) => any) {
+  const base = supabase.from("prospects").select("*").order("company_name");
   const { data, error } = await builder(base);
   if (error) throw error;
   return data ?? [];
 }
 
 export async function updateProspectLeadStatus(id: string, status: string) {
-  const { error } = await supabase.from("prospects" as any).update({ lead_status: status }).eq("id", id);
+  const { error } = await supabase.from("prospects").update({ lead_status: status }).eq("id", id);
   if (error) throw error;
 }
 

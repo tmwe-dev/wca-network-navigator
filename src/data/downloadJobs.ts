@@ -70,7 +70,7 @@ export async function findJobsByStatusSelect(statuses: string[], select = "id, s
     .in("status", statuses)
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as Array<Record<string, unknown>>;
 }
 
 export async function findJobByCountryAndNetwork(countryCode: string, networkName: string, statuses: string[]) {
@@ -169,17 +169,17 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
     .select(select)
     .eq("job_id", jobId);
   if (error) throw error;
-  return (data ?? []) as any[];
+  return (data ?? []) as Array<Record<string, unknown>>;
 }
 
-export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<any> {
+export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<unknown> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
     .eq("id", itemId)
     .single();
   if (error) throw error;
-  return data as any;
+  return data as Record<string, unknown>;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {

@@ -87,7 +87,7 @@ export function useEmailGenerator() {
           email_body: result.body,
           scheduled_at: new Date().toISOString(),
           status: "pending",
-        } as any)
+        })
         .eq("id", params.activity_id);
 
       if (updateError) {
@@ -100,7 +100,7 @@ export function useEmailGenerator() {
       }
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore generazione", description: err.message, variant: "destructive" });
       return null;
     } finally {

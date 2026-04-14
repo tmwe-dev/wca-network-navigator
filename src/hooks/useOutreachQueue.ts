@@ -65,7 +65,7 @@ export function useOutreachQueue() {
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await updateOutreachItem(id, { attempts: (data as any).attempts + 1 });
+      await updateOutreachItem(id, { attempts: (data).attempts + 1 });
     }
   };
 
@@ -122,8 +122,8 @@ export function useOutreachQueue() {
         }
         default: await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`); return false;
       }
-    } catch (err: any) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
       log.error("queue processItem failed", { error: msg, channel: item.channel, id: item.id });
       await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
       return false;
@@ -144,8 +144,8 @@ export function useOutreachQueue() {
         const delay = CHANNEL_DELAYS[item.channel] || 3000;
         await new Promise(r => setTimeout(r, delay));
       }
-    } catch (err: any) {
-      log.error("processQueue failed", { error: err instanceof Error ? err.message : String(err) });
+    } catch (err: unknown) {
+      log.error("processQueue failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
     } finally { processingRef.current = false; setProcessing(false); }
   }, [processItem]);
 

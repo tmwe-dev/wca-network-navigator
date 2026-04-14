@@ -17,7 +17,7 @@ const log = createLogger("ConnectionsSettings");
 
 interface ConnectionsSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: (key: string, value: string) => void;
+  updateSetting: unknown;
 }
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {
@@ -64,7 +64,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
       if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
       else toast.warning("Cookie salvato ma la verifica è fallita.");
       ensureSession();
-    } catch (err: unknown) { toast.error("Errore: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto")); }
+    } catch (err: unknown) { toast.error("Errore: " + (err.message || "Sconosciuto")); }
     finally { setSavingCookie(false); }
   };
 

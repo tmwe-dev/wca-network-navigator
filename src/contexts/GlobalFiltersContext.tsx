@@ -46,7 +46,7 @@ export interface GlobalFilterState {
 // --- Reducer ---
 
 type FilterAction =
-  | { type: "SET"; key: keyof GlobalFilterState; value: any }
+  | { type: "SET"; key: keyof GlobalFilterState; value: string | string[] | boolean | number | null }
   | { type: "BATCH"; updates: Partial<GlobalFilterState> }
   | { type: "RESET" };
 
@@ -161,7 +161,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const legacySetters = useMemo(() => {
     const entries = Object.keys(defaults).map(key => [
       toSetterName(key),
-      (val: any) => dispatch({ type: "SET", key: key as keyof GlobalFilterState, value: val }),
+      (val: string) => dispatch({ type: "SET", key: key as keyof GlobalFilterState, value: val }),
     ]);
     return Object.fromEntries(entries) as unknown as LegacySetters;
   }, []);

@@ -60,7 +60,7 @@ export default function AdminUsers() {
       if (!newEmail.trim()) throw new Error("Email obbligatoria");
       const { error } = await supabase
         .from("authorized_users")
-        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }] );
+        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -76,7 +76,7 @@ export default function AdminUsers() {
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
         .from("authorized_users")
-        .update({ is_active } )
+        .update({ is_active })
         .eq("id", id);
       if (error) throw error;
     },

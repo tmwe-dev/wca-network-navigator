@@ -11,7 +11,7 @@ export interface EmailDraft {
   html_body: string | null;
   category: string | null;
   recipient_type: string;
-  recipient_filter: any;
+  recipient_filter: unknown;
   attachment_ids: string[];
   link_urls: { label: string; url: string }[];
   status: string;
@@ -30,6 +30,7 @@ export function useEmailDrafts() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       return (data || []) as any as EmailDraft[];
     },
   });

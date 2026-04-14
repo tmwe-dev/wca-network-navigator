@@ -253,7 +253,7 @@ function GroupRulesSection() {
             {g.descrizione && <p className="text-[10px] text-muted-foreground">{g.descrizione}</p>}
           </div>
           <Badge variant="outline" className="text-[10px]">{groupCounts[g.nome_gruppo] || 0} address</Badge>
-          <Select value={(g as Record<string, string>).auto_action || "none"} onValueChange={(v) => updateGroup.mutate({ id: g.id, auto_action: v })}>
+          <Select value={(g).auto_action || "none"} onValueChange={(v) => updateGroup.mutate({ id: g.id, auto_action: v })}>
             <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>{AUTO_ACTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
           </Select>

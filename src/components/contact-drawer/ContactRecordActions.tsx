@@ -35,7 +35,8 @@ export function ContactRecordActions({ record }: Props): ReactElement {
         phone,
         contactName: record.contactName || undefined,
         companyName: record.companyName || undefined,
-        sourceType: record.sourceType as string || "partner",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type narrowing for component props
+        sourceType: record.sourceType as any || "partner",
         sourceId: record.sourceId || undefined,
         partnerId: record.partnerId || undefined,
       });

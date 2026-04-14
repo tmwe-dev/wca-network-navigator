@@ -49,8 +49,8 @@ export function useActionPanelLogic({
       if (countryCodes.length === 0) return [];
       try {
         return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
-      } catch (e: any) {
-        toast({ title: "Errore directory cache", description: e.message, variant: "destructive" });
+      } catch (e: unknown) {
+        toast({ title: "Errore directory cache", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
         return [];
       }
     },
@@ -84,9 +84,10 @@ export function useActionPanelLogic({
   });
 
   // ── Derived ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
     const members = entry.members as any[];
-    return (members || []).map((m: any) => ({
+    return (members || []).map((m) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
     }));
@@ -134,6 +135,7 @@ export function useActionPanelLogic({
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await upsertDirectoryCache({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
       country_code: countryCode, network_name: netKey, members: membersJson as any,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
@@ -151,7 +153,7 @@ export function useActionPanelLogic({
       document.addEventListener("visibilitychange", handler);
     });
 
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e) => e.country_code));
 
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;

@@ -59,19 +59,19 @@ export function useOperationsCenter() {
       if (error) throw error;
 
       // Get agent names
-      const agentIds = [...new Set((data || []).map((t: any) => t.agent_id))];
+      const agentIds = [...new Set((data || []).map((t) => t.agent_id))];
       const agentMap: Record<string, { name: string; emoji: string }> = {};
       if (agentIds.length > 0) {
         const { data: agents } = await supabase
           .from("agents")
           .select("id, name, avatar_emoji")
           .in("id", agentIds);
-        (agents || []).forEach((a: any) => {
+        (agents || []).forEach((a) => {
           agentMap[a.id] = { name: a.name, emoji: a.avatar_emoji };
         });
       }
 
-      return (data || []).map((t: any) => ({
+      return (data || []).map((t) => ({
         ...t,
         agent_name: agentMap[t.agent_id]?.name || "Agente",
         agent_emoji: agentMap[t.agent_id]?.emoji || "🤖",
@@ -108,7 +108,7 @@ export function useOperationsCenter() {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data || []).map((a: any) => ({
+      return (data || []).map((a) => ({
         ...a,
         partner_name: a.partners?.company_name || null,
       })) as ActivityLive[];

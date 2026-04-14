@@ -116,7 +116,7 @@ export function AttivitaTab() {
     if (!noteText.trim()) return;
     try {
       const { error } = await supabase.from("activities")
-        .update({ description: noteText.trim() } )
+        .update({ description: noteText.trim() })
         .eq("id", id);
       if (error) throw error;
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Nota aggiunta`, decision_origin: "manual", target_type: "activity", target_id: id });

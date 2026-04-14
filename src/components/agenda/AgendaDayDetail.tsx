@@ -326,7 +326,7 @@ function ActivityList({
   );
 }
 
-function ReminderList({ reminders }: { reminders: Array<{ id: string; title: string; time?: string; type?: string }> }) {
+function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) {
   if (reminders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/50">

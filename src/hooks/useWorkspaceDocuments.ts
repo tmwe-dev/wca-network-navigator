@@ -33,7 +33,7 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        }) as any;
+        }) as Record<string, unknown>;
 
       const doc: WorkspaceDoc = {
         id: data.id,
@@ -44,8 +44,8 @@ export function useWorkspaceDocuments() {
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
       return doc;
-    } catch (err: any) {
-      toast({ title: "Errore upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore upload", description: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err), variant: "destructive" });
       return null;
     } finally {
       setUploading(false);

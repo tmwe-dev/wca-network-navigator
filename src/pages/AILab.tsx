@@ -34,7 +34,7 @@ interface TestResult {
   status: "pass" | "fail" | "warn" | "running" | "pending";
   output?: string;
   subject?: string;
-  debug?: Record<string, unknown>;
+  debug?: unknown;
   issues: string[];
   score: number;
   durationMs?: number;
@@ -291,7 +291,7 @@ export default function AILab() {
         durationMs: Date.now() - start,
       };
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e);
       return { id: scenario.id, status: "fail", issues: [`❌ Errore: ${msg}`], score: 0, durationMs: Date.now() - start };
     }
   }, []);

@@ -37,7 +37,9 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editing, setEditing] = useState<OcrFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BusinessCard extended properties not in base type
   const ocrConf = (card as any).ocr_confidence as Record<string, number> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BusinessCard extended properties not in base type
   const manuallyCorrected = (card as any).manually_corrected as boolean | null;
 
   const startEdit = useCallback((field: OcrFieldKey) => {
@@ -50,6 +52,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
     const oldValue = (card[editing as keyof typeof card] as string) ?? "";
     if (editValue === oldValue) { setEditing(null); return; }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BusinessCard extended properties not in base type
     const existingNotes = (card as any).correction_notes;
     let notes: Array<Record<string, unknown>> = [];
     try { notes = existingNotes ? JSON.parse(existingNotes) : []; } catch { notes = []; }
@@ -61,11 +64,11 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
-      } as any);
+      });
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {
-      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+      toast({ title: "Errore", description: e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e), variant: "destructive" });
     }
   }, [editing, editValue, card, updateCard]);
 

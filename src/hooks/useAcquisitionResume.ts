@@ -79,6 +79,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               .eq("country_code", job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
                 const members = (entry.members as any[]) || [];
                 for (const m of members) {
                   if (!m.wca_id || !m.company_name) continue;
@@ -100,7 +101,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               const { scrapeWcaDirectory } = await import("@/lib/api/wcaScraper");
               const scanResult = await scrapeWcaDirectory(job.country_code, job.network_name || "");
               if (scanResult?.success && scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
+                const membersJson = scanResult.members.map((m) => ({
                   company_name: m.company_name,
                   city: m.city,
                   country_code: job.country_code,
@@ -109,6 +110,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
                     members: membersJson as any,
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),

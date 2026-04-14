@@ -42,8 +42,8 @@ export function useHoldingMessages(channel: HoldingChannel) {
           .in("lead_status", HOLDING_STATUSES),
       ]);
 
-      const partnerMap = new Map((holdingPartners || []).map((p: any) => [p.id, p]));
-      const partnerIds = (holdingPartners || []).map((p: any) => p.id);
+      const partnerMap = new Map((holdingPartners || []).map((p) => [p.id, p]));
+      const partnerIds = (holdingPartners || []).map((p) => p.id);
 
       const holdingContacts = holdingContactsRes.data || [];
       const contactEmails = holdingContacts
@@ -63,6 +63,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .order("email_date", { ascending: false, nullsFirst: false })
               .order("created_at", { ascending: false })
               .limit(200)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
           : Promise.resolve({ data: [] as any[], error: null }),
 
         contactEmails.length > 0
@@ -76,6 +77,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .in("from_address", contactEmails)
               .order("created_at", { ascending: false })
               .limit(100)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
           : Promise.resolve({ data: [] as any[], error: null }),
       ]);
 
@@ -89,6 +91,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
       // Step 3: Deduplicate
       const seen = new Set<string>();
       const deduped: ChannelMessage[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       for (const msg of allMessages as any as ChannelMessage[]) {
         if (msg.message_id_external) {
           if (seen.has(msg.message_id_external)) continue;
@@ -170,7 +173,7 @@ export function useHoldingUnreadCounts() {
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 
       const partners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id");
-      const partnerIds = (partners || []).map((p: any) => p.id);
+      const partnerIds = (partners || []).map((p) => p.id);
 
       const { data: holdingContacts } = await supabase
         .from("imported_contacts")

@@ -13,7 +13,7 @@ const log = createLogger("RASettings");
 
 interface RASettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: (key: string, value: string) => void;
+  updateSetting: unknown;
 }
 
 export function RASettings({ settings, updateSetting }: RASettingsProps) {

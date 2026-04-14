@@ -78,7 +78,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !c) return null;
-        const ed = (c.enrichment_data as any) || {};
+        const ed = (c.enrichment_data as Record<string, unknown>) || {};
         return {
           sourceType: "contact", sourceId,
           companyName: c.company_name || "", contactName: c.name || "",
@@ -102,7 +102,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as any;
+        const p = pr as Record<string, unknown>;
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,

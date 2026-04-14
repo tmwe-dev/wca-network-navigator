@@ -92,14 +92,14 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
       const BATCH = 50;
       for (let i = 0; i < contacts.length; i += BATCH) {
         const batch = contacts.slice(i, i + BATCH);
-        const { error } = await supabase.from("imported_contacts").insert(batch as Parameters<typeof supabase.from>[0]);
+        const { error } = await supabase.from("imported_contacts").insert(batch);
         if (error) throw error;
       }
 
       toast.success(`${contacts.length} contatti importati`);
       onFinish();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Errore importazione");
+      toast.error(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Errore importazione");
     } finally {
       setImporting(false);
     }

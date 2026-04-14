@@ -54,7 +54,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const _enrichment = partner.enrichment_data as Record<string, any>;
+  const _enrichment = partner.enrichment_data as Record<string, unknown>;
   const _branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
@@ -65,7 +65,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
       } else { toast.error(data?.error || "Errore"); }
-    } catch (e: unknown) { toast.error((e instanceof Error ? e.message : String(e)) || "Errore"); }
+    } catch (e: unknown) { toast.error(e?.message || "Errore"); }
     finally { setDeepSearching(false); }
   }, [partner.id, queryClient]);
 

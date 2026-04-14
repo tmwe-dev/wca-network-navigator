@@ -17,7 +17,7 @@ export interface ExtractionResult {
   debug?: Record<string, any>;
 }
 
-export function normalizeExtensionResult(raw: any): ExtractionResult {
+export function normalizeExtensionResult(raw: unknown): ExtractionResult {
   if (!raw) return { success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", companyName: null, contacts: [], profile: {}, profileHtml: null, htmlLength: 0, error: "No response" };
   return {
     success: raw.success ?? false,

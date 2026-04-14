@@ -83,12 +83,13 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         priority: "medium",
       }));
 
-      await createActivities(activityInserts as Parameters<typeof createActivities>[0]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
+      await createActivities(activityInserts as any);
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();
     } catch (err: unknown) {
-      toast.error(err.message || "Errore durante la creazione");
+      toast.error((err instanceof Error ? err.message : String(err)) || "Errore durante la creazione");
     } finally {
       setSending(false);
     }

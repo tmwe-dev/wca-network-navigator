@@ -166,7 +166,7 @@ export async function deleteActivities(ids: string[]) {
 }
 
 export async function insertActivity(activity: Record<string, unknown>) {
-  const { error } = await supabase.from("activities").insert(activity as any);
+  const { error } = await supabase.from("activities").insert(activity);
   if (error) throw error;
 }
 
@@ -177,7 +177,7 @@ export async function countActivitiesWithNullPartner() {
 }
 
 export async function approveActivity(id: string) {
-  const { error } = await supabase.from("activities").update({ status: "approved" as any, reviewed: true }).eq("id", id);
+  const { error } = await supabase.from("activities").update({ status: "approved", reviewed: true }).eq("id", id);
   if (error) throw error;
 }
 

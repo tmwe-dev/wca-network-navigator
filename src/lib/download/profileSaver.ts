@@ -12,6 +12,7 @@ import {
 export async function saveExtractionResult(
   partnerId: string,
   wcaId: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- External scraper result shape varies
   result: any,
   existingCompanyName: string,
 ) {
@@ -71,10 +72,10 @@ export async function saveExtractionResult(
   if (result.success && result.contacts?.length > 0) {
     const existingContacts = await findPartnerContacts(partnerId, "id, name, email");
     const existingByName = new Map(
-      (existingContacts || []).map((c: any) => [c.name?.trim().toLowerCase(), c])
+      (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
-    const toInsert: any[] = [];
+    const toInsert: Array<Record<string, unknown>> = [];
     const toUpdate: Array<{ id: string; updates: Record<string, string> }> = [];
 
     for (const c of result.contacts) {
@@ -103,17 +104,17 @@ export async function saveExtractionResult(
       await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts.filter((c) => c.email).length;
+    extractedPhoneCount = result.contacts.filter((c) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
   if (result.profile?.networks?.length > 0) {
     const existingNets = await findPartnerNetworks(partnerId);
-    const existingSet = new Set((existingNets || []).map((n: any) => n.network_name?.toLowerCase()));
+    const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
     const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
+      .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
     await insertPartnerNetworks(toInsert);
   }
 
@@ -149,9 +150,10 @@ export async function saveExtractionResult(
     )];
     if (mapped.length > 0) {
       const existingSvc = await findPartnerServices(partnerId);
-      const existingSet = new Set((existingSvc || []).map((s: any) => s.service_category as string));
+      const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
         service_category: s as any,
       }));
       await insertPartnerServices(toInsert);
@@ -174,9 +176,10 @@ export async function saveExtractionResult(
     )];
     if (mapped.length > 0) {
       const existingCerts = await findPartnerCertifications(partnerId);
-      const existingSet = new Set((existingCerts || []).map((c: any) => c.certification as string));
+      const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
         certification: c as any,
       }));
       await insertPartnerCertifications(toInsert);

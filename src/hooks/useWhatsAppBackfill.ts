@@ -96,6 +96,7 @@ export function useWhatsAppBackfill() {
 
       // Get unique contacts from sidebar
       const sidebarContacts = new Map<string, any>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
       for (const msg of sidebarResult.messages as any[]) {
         const contact = String(msg.contact || msg.from || "").trim();
         if (!contact || contact === "Sconosciuto" || msg.isVerify) continue;
@@ -155,17 +156,18 @@ export function useWhatsAppBackfill() {
         const chat = contactsWithGap[i];
         setProgress(p => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
 
-        let messages: any[] = [];
+        let messages: Array<Record<string, unknown>> = [];
 
         // Try readThread first (reads visible messages in chat)
         const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
         if (threadResult.success && threadResult.messages?.length) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
           messages = threadResult.messages as any[];
         }
 
         // If we have a last known message and got messages, check if we need deeper scroll
         if (chat.lastDbText && messages.length > 0) {
-          const foundAnchor = messages.some((m: any) => {
+          const foundAnchor = messages.some((m) => {
             const t = String(m.text || m.lastMessage || "").trim().toLowerCase();
             return t === chat.lastDbText!.trim().toLowerCase();
           });
@@ -175,6 +177,7 @@ export function useWhatsAppBackfill() {
             const backfillResult = await bridge.backfillChat(chat.name, chat.lastDbText, MAX_SCROLLS_PER_CHAT);
             if (backfillResult.success && backfillResult.messages?.length) {
               // Merge, dedup will handle overlaps
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
               messages = [...messages, ...(backfillResult.messages as any[])];
             }
           }
@@ -205,6 +208,7 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column accepts any serializable
               raw_payload: msg as any,
             }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
@@ -234,8 +238,8 @@ export function useWhatsAppBackfill() {
 
       setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
       toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
-    } catch (err: any) {
-      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: err.message }));
+    } catch (err: unknown) {
+      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: (err instanceof Error ? err.message : String(err)) }));
       toast.error(`Errore recupero: ${err.message}`);
     } finally {
       runningRef.current = false;

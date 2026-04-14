@@ -288,7 +288,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 ]}
                 onChange={(key, checked) => onChange({
                   ...stepData,
-                  deepSearch: { ...stepData.deepSearch, enabled: true, [key]: checked } as Record<string, unknown>,
+                  deepSearch: { ...stepData.deepSearch, enabled: true, [key]: checked },
                 })}
               />
             );

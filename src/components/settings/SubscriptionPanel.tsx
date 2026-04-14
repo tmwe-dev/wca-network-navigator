@@ -38,14 +38,14 @@ export function SubscriptionPanel() {
   const handleCheckout = async (priceId: string, tierKey: string) => {
     setCheckoutLoading(tierKey);
     try { await startCheckout(priceId); }
-    catch (e: unknown) { toast.error((e instanceof Error ? e.message : String(e)) || "Errore nell'apertura del checkout"); }
+    catch (e: unknown) { toast.error(e?.message || "Errore nell'apertura del checkout"); }
     finally { setCheckoutLoading(null); }
   };
 
   const handlePortal = async () => {
     setPortalLoading(true);
     try { await openPortal(); }
-    catch (e: unknown) { toast.error((e instanceof Error ? e.message : String(e)) || "Errore nell'apertura del portale"); }
+    catch (e: unknown) { toast.error(e?.message || "Errore nell'apertura del portale"); }
     finally { setPortalLoading(false); }
   };
 
@@ -54,7 +54,7 @@ export function SubscriptionPanel() {
     try {
       const data = await invokeEdge<Record<string, unknown>>("buy-credits", { body: { quantity: 1 }, context: "SubscriptionPanel.buy_credits" });
       if (data?.url) window.open(data.url, "_blank");
-    } catch (e: unknown) { toast.error((e instanceof Error ? e.message : String(e)) || "Errore nell'acquisto crediti"); }
+    } catch (e: unknown) { toast.error(e?.message || "Errore nell'acquisto crediti"); }
     finally { setBuyingCredits(false); }
   };
 

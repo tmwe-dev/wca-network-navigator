@@ -257,7 +257,7 @@ export async function getContactById(id: string) {
 export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
   // Dynamic select requires flexible return type for diverse consumers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: any[] = [];
+  const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
     const { data, error } = await supabase

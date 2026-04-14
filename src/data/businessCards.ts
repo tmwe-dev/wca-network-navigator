@@ -42,7 +42,7 @@ export async function findMatchedPartnerIds() {
     .select("matched_partner_id")
     .not("matched_partner_id", "is", null);
   if (error) throw error;
-  return new Set((data ?? []).map((r: any) => r.matched_partner_id));
+  return new Set((data ?? []).map((r) => r.matched_partner_id));
 }
 
 export async function findMatchedContactIds() {
@@ -51,7 +51,7 @@ export async function findMatchedContactIds() {
     .select("matched_contact_id")
     .not("matched_contact_id", "is", null);
   if (error) throw error;
-  return new Set((data ?? []).map((r: any) => r.matched_contact_id));
+  return new Set((data ?? []).map((r) => r.matched_contact_id));
 }
 
 export async function getBusinessCardFilterOptions() {

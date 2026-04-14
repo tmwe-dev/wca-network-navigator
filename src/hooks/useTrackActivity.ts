@@ -40,7 +40,7 @@ export function useTrackActivity() {
           email_subject: params.emailSubject || null,
           description: params.description || null,
         });
-      } catch (actErr: any) { log.error("track activity insert failed", { message: actErr?.message }); }
+      } catch (actErr: unknown) { log.error("track activity insert failed", { message: actErr?.message }); }
 
       // 2. Escalate lead_status new → contacted
       if (params.sourceType === "partner" && params.partnerId) {

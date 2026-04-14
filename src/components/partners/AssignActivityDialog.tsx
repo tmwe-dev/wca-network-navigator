@@ -123,7 +123,7 @@ export function AssignActivityDialog({
           partner_id: sourceType === "partner" ? pid : null,
           source_type: sourceType,
           source_id: pid,
-          activity_type: activityType as "send_email",
+          activity_type: activityType as typeof activityType,
           title: effectiveTitle,
           description: description.trim() || null,
           priority: "medium",

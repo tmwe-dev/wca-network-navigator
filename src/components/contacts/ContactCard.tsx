@@ -14,7 +14,7 @@ import { adaptImportedContact } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  c: any;
+  c: unknown;
   isActive: boolean;
   isSelected: boolean;
   hasBusinessCard?: boolean;

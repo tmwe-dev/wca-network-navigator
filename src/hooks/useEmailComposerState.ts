@@ -382,8 +382,8 @@ export function useEmailComposerState() {
         dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
       }
       toast.success("Email generata con Oracolo 🔮");
-    } catch (err: any) {
-      const message = err instanceof Error ? err.message : "Sconosciuto";
+    } catch (err: unknown) {
+      const message = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Sconosciuto";
       toast.error("Errore generazione AI: " + message);
     } finally { dispatch({ type: "SET_AI_GENERATING", payload: false }); }
   }, [goal, baseProposal, documents, referenceLinks, recipients, recipientsWithEmail]);
@@ -403,8 +403,8 @@ export function useEmailComposerState() {
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
       toast.success("Email migliorata con AI 🪄");
-    } catch (err: any) {
-      const message = err instanceof Error ? err.message : "Sconosciuto";
+    } catch (err: unknown) {
+      const message = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Sconosciuto";
       toast.error("Errore miglioramento: " + message);
     } finally { dispatch({ type: "SET_AI_IMPROVING", payload: false }); }
   }, [email.subject, email.htmlBody, recipientsWithEmail, recipients]);
@@ -419,8 +419,8 @@ export function useEmailComposerState() {
         const html = await res.text();
         dispatch({ type: "SET_HTML_BODY", payload: html });
         toast.success("Template caricato: " + name);
-      } catch (err: any) {
-        log.warn("template body fetch failed", { error: err instanceof Error ? err.message : String(err) });
+      } catch (err: unknown) {
+        log.warn("template body fetch failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
         toast.error("Impossibile caricare il body del template");
       }
     } else {
@@ -466,6 +466,7 @@ export function useEmailComposerState() {
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "queued", total_count: recipientsWithEmail.length,
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       const draftId = (savedDraft as any as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,

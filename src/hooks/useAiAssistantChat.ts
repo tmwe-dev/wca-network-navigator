@@ -28,7 +28,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant
 
 export function parseStructuredMessage(content: string) {
   let text = content;
-  let partners: any[] = [];
+  let partners: Array<Record<string, unknown>> = [];
   let jobCreated: JobCreatedInfo | null = null;
   let uiActions: UiAction[] = [];
 

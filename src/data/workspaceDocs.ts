@@ -10,7 +10,7 @@ export async function findWorkspaceDocs() {
 }
 
 export async function createWorkspaceDoc(doc: Record<string, unknown>) {
-  const { error } = await supabase.from("workspace_documents").insert(doc as any);
+  const { error } = await supabase.from("workspace_documents").insert(doc);
   if (error) throw error;
 }
 

@@ -187,7 +187,7 @@ export function PromptManager() {
       if (data?.html) setEditPrompt(data.html);
       toast.success("Prompt migliorato con AI");
     } catch (e: unknown) {
-      toast.error("Errore AI: " + (e.message || "sconosciuto"));
+      toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
     } finally {
       setImproving(false);
     }

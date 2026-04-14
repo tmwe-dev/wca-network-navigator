@@ -22,7 +22,7 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
   if (file.name.endsWith(".csv")) {
     const text = new TextDecoder().decode(buffer);
     const blob = new Blob([text], { type: "text/csv" });
-    const stream = blob.stream() as ReadableStream<Uint8Array>;
+    const stream = blob.stream() as Record<string, unknown>;
     await workbook.csv.read(stream);
   } else {
     await workbook.xlsx.load(buffer);
@@ -93,13 +93,13 @@ export default function BlacklistManager() {
   const handleImport = async () => {
     if (allParsed.length === 0) return;
     try {
-      const result = await importMutation.mutateAsync(allParsed as Parameters<typeof importMutation.mutateAsync>[0]);
+      const result = await importMutation.mutateAsync(allParsed);
       toast.success(`Importati ${result.imported} record, ${result.matched} match trovati`);
       setPreview(null);
       setAllParsed([]);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err: unknown) {
-      toast.error("Errore importazione: " + (err.message || "Sconosciuto"));
+      toast.error("Errore importazione: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
     }
   };
 
@@ -113,7 +113,7 @@ export default function BlacklistManager() {
         toast.error(data?.error || "Scraping fallito");
       }
     } catch (err: unknown) {
-      toast.error("Errore: " + (err.message || "Sconosciuto"));
+      toast.error("Errore: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
     } finally {
       setScraping(false);
     }

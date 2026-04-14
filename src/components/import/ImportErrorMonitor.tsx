@@ -22,7 +22,7 @@ interface ImportErrorMonitorProps {
   correctedErrors: ImportError[];
   dismissedErrors: ImportError[];
   activeLogId: string | null;
-  fixErrors: { mutate: (args: unknown) => void; isPending: boolean }; // UseMutationResult
+  fixErrors: unknown; // UseMutationResult
 }
 
 export function ImportErrorMonitor({

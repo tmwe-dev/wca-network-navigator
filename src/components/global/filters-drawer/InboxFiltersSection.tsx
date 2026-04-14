@@ -6,7 +6,7 @@ import { EMAIL_CATEGORIES, EMAIL_SORT } from "./constants";
 
 interface InboxFiltersSectionProps {
   channel: "email" | "whatsapp" | "linkedin";
-  channelIcon: React.ElementType;
+  channelIcon: unknown;
 }
 
 export function InboxFiltersSection({ channel, channelIcon: ChannelIcon }: InboxFiltersSectionProps) {

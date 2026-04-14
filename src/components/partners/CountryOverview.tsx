@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 
 interface CountryOverviewProps {
-  partners: Array<Record<string, any>>;
+  partners: Array<Record<string, unknown>>;
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -47,7 +47,7 @@ interface CountryGroup {
   withContacts: number;
   withWhatsApp: number;
   withEmail: number;
-  partners: Array<Record<string, any>>;
+  partners: Array<Record<string, unknown>>;
 }
 
 type ContactFilter = "all" | "whatsapp" | "email";
@@ -67,9 +67,9 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  const hasWhatsApp = (p: Record<string, any>) =>
+  const hasWhatsApp = (p) =>
     (p.partner_contacts || []).some((c) => c.mobile);
-  const hasEmail = (p: Record<string, any>) =>
+  const hasEmail = (p) =>
     (p.partner_contacts || []).some((c) => c.email);
 
   const countryGroups = useMemo(() => {
@@ -225,7 +225,7 @@ export function CountryOverview({
         </div>
 
         <div className="flex items-center gap-2">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "members" | "contacts" | "quality")}>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
               <SelectValue />
@@ -236,7 +236,7 @@ export function CountryOverview({
               <SelectItem value="pct">% Completi</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as "all" | "no-email" | "no-phone" | "no-contacts")}>
+          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as typeof filterMode)}>
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <Filter className="w-3 h-3 mr-1 shrink-0" />
               <SelectValue />

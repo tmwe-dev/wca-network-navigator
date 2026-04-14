@@ -36,7 +36,7 @@ export default function Contacts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlContactId]);
 
-  const handleSelect = useCallback((contact: Record<string, unknown>) => {
+  const handleSelect = useCallback((contact: Record<string, any>) => {
     setSelectedContact(contact);
     if (contact?.id) setUrlContactId(contact.id);
   }, [setUrlContactId]);

@@ -106,7 +106,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
-        const wcaId = (pn as Record<string, any>).partners?.wca_id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
+        const wcaId = (pn as any).partners?.wca_id;
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -202,7 +203,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           country_code: "ALL",
           country_name: "Re-sync Contatti",
           network_name: networkNames,
-          wca_ids: allWcaIds as number[],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
+          wca_ids: allWcaIds as any,
           total_count: allWcaIds.length,
           delay_seconds: delay,
           status: "pending",
@@ -219,7 +221,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
     } catch (err: unknown) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: "Errore", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
     }
     setStarting(false);
   }

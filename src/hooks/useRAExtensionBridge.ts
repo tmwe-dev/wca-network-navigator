@@ -20,8 +20,8 @@ type RAResponse = {
   errors?: number;
   currentCompany?: string;
   log?: Array<{ time: string; msg: string }>;
-  data?: any;
-  results?: any[];
+  data?: Record<string, unknown>;
+  results?: Array<Record<string, unknown>>;
   version?: string;
 };
 
@@ -100,6 +100,7 @@ export function useRAExtensionBridge() {
 
   /** Phase 1: Search only — returns list of companies without scraping profiles */
   const searchOnly = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic filter object shape
     (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: any; delaySeconds?: number }) => {
       return sendMessage("searchOnly", { params }, 600000); // 10min timeout
     },
