@@ -2,6 +2,9 @@
  * DAL — workspace_documents
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type DocInsert = Database["public"]["Tables"]["workspace_documents"]["Insert"];
 
 export async function findWorkspaceDocs() {
   const { data, error } = await supabase.from("workspace_documents").select("*").order("created_at", { ascending: false });
@@ -9,8 +12,8 @@ export async function findWorkspaceDocs() {
   return data ?? [];
 }
 
-export async function createWorkspaceDoc(doc: Record<string, unknown>) {
-  const { error } = await supabase.from("workspace_documents").insert(doc as any);
+export async function createWorkspaceDoc(doc: DocInsert) {
+  const { error } = await supabase.from("workspace_documents").insert(doc);
   if (error) throw error;
 }
 

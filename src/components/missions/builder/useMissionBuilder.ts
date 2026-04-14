@@ -8,6 +8,7 @@ import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { insertOutreachMission } from "@/data/outreachMissions";
+import type { Json } from "@/integrations/supabase/types";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 const log = createLogger("MissionBuilder");
@@ -214,10 +215,10 @@ export function useMissionBuilder() {
       const totalContacts = pendingPlan.totalContacts;
       const title = missionTitle || `Missione ${new Date().toLocaleDateString("it-IT")}`;
       const mission = await insertOutreachMission({
-        user_id: session.user.id, title, status: "active", target_filters: stepData.targets || {}, channel: stepData.channel || "email",
-        total_contacts: totalContacts, agent_assignments: stepData.agents || [], schedule_config: { type: stepData.schedule, date: stepData.scheduleDate },
-        idempotency_key: pendingPlan.idempotencyKey, plan_json: pendingPlan as unknown as Record<string, unknown>, danger_level: pendingPlan.dangerLevel, plan_status: "approved",
-        metadata: { deepSearch: stepData.deepSearch || {}, communication: stepData.communication || {}, attachments: stepData.attachments || {}, toneConfig: stepData.toneConfig || {} },
+        user_id: session.user.id, title, status: "active", target_filters: (stepData.targets || {}) as unknown as Json, channel: stepData.channel || "email",
+        total_contacts: totalContacts, agent_assignments: (stepData.agents || []) as unknown as Json, schedule_config: ({ type: stepData.schedule, date: stepData.scheduleDate }) as unknown as Json,
+        idempotency_key: pendingPlan.idempotencyKey, plan_json: (pendingPlan as unknown) as Json, danger_level: pendingPlan.dangerLevel, plan_status: "approved",
+        metadata: ({ deepSearch: stepData.deepSearch || {}, communication: stepData.communication || {}, attachments: stepData.attachments || {}, toneConfig: stepData.toneConfig || {} }) as unknown as Json,
       });
       const missionId = (mission as unknown as Record<string, unknown>).id as string;
       setCurrentMissionId(missionId);

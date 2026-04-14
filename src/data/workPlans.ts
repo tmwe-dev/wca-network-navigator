@@ -2,6 +2,9 @@
  * DAL — ai_work_plans
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type WorkPlanInsert = Database["public"]["Tables"]["ai_work_plans"]["Insert"];
 
 export async function findWorkPlans(userId: string, tags?: string[]) {
   let q = supabase.from("ai_work_plans").select("*").eq("user_id", userId).order("created_at", { ascending: false });
@@ -11,8 +14,8 @@ export async function findWorkPlans(userId: string, tags?: string[]) {
   return data ?? [];
 }
 
-export async function createWorkPlan(plan: Record<string, unknown>) {
-  const { data, error } = await supabase.from("ai_work_plans").insert(plan as any).select().single();
+export async function createWorkPlan(plan: WorkPlanInsert) {
+  const { data, error } = await supabase.from("ai_work_plans").insert(plan).select().single();
   if (error) throw error;
   return data;
 }

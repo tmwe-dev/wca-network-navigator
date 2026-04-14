@@ -36,7 +36,7 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
         source: "feedback",
         level: 1,
         confidence: 0.5,
-      } as Record<string, unknown>);
+      });
 
       // Also boost/reduce confidence of recent L1/L2 memories
       const { data: recentMemories } = await supabase

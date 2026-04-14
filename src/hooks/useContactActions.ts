@@ -101,9 +101,9 @@ export function useContactActions(deps: Deps) {
       if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
       const batchId = `campaign_${Date.now()}`;
       const jobs = contacts.map((ct) => ({
-        partner_id: ct.id, company_name: ct.company_name || ct.name || "Contatto",
-        country_code: ct.country || "XX", country_name: ct.country || "Sconosciuto",
-        city: ct.city || null, email: ct.email || null, phone: ct.phone || null,
+        partner_id: String(ct.id), company_name: String(ct.company_name || ct.name || "Contatto"),
+        country_code: String(ct.country || "XX"), country_name: String(ct.country || "Sconosciuto"),
+        city: ct.city ? String(ct.city) : null, email: ct.email ? String(ct.email) : null, phone: ct.phone ? String(ct.phone) : null,
         job_type: "email" as const, batch_id: batchId,
       }));
       await insertCampaignJobs(jobs);
@@ -195,9 +195,9 @@ async function createCampaignJobsAction(contactIds: string[], selection: ReturnT
   if (!contacts?.length) { toast({ title: "Nessun contatto trovato", variant: "destructive" }); return; }
   const batchId = `contacts_${Date.now()}`;
   const jobs = contacts.map((ct) => ({
-    partner_id: ct.id, company_name: ct.company_name || ct.name || "Contatto",
-    country_code: ct.country || "XX", country_name: ct.country || "Sconosciuto",
-    city: ct.city || null, email: ct.email || null, phone: ct.phone || null,
+    partner_id: String(ct.id), company_name: String(ct.company_name || ct.name || "Contatto"),
+    country_code: String(ct.country || "XX"), country_name: String(ct.country || "Sconosciuto"),
+    city: ct.city ? String(ct.city) : null, email: ct.email ? String(ct.email) : null, phone: ct.phone ? String(ct.phone) : null,
     job_type: "email" as const, batch_id: batchId,
   }));
   await insertCampaignJobs(jobs);
