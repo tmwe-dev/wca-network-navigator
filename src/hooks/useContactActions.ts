@@ -110,7 +110,7 @@ export function useContactActions(deps: Deps) {
       toast({ title: "Campagna creata", description: `${jobs.length} contatti aggiunti al batch` });
       selection.clear(); setSelectedGroups(new Set());
       navigate("/campaigns");
-    } catch (e: unknown) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [selection, navigate]);
 
   const handleAICommand = useCallback(async (cmd: AICommand) => {

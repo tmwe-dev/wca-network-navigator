@@ -78,20 +78,21 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !c) return null;
-        const ed = (c.enrichment_data as Record<string, unknown>) || {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic enrichment_data shape
+        const ed = (c.enrichment_data as any) || {};
         return {
           sourceType: "contact", sourceId,
           companyName: c.company_name || "", contactName: c.name || "",
           email: c.email, phone: c.phone, mobile: c.mobile,
           country: c.country, city: c.city, address: c.address,
-          position: c.position, website: ed.company_website || null,
+          position: c.position, website: (ed.company_website as string) || null,
           leadStatus: c.lead_status, note: c.note,
           enrichmentData: (c.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: c.deep_search_at, createdAt: c.created_at,
-          lastInteractionAt: c.last_interaction_at, interactionCount: c.interaction_count,
-          linkedinUrl: ed.linkedin_profile_url || ed.linkedin_url || null,
-          companyAlias: c.company_alias, contactAlias: c.contact_alias,
-          partnerId: null, raw: c,
+          deepSearchAt: c.deep_search_at as string | null, createdAt: c.created_at,
+          lastInteractionAt: c.last_interaction_at as string | null, interactionCount: c.interaction_count as number,
+          linkedinUrl: (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || null,
+          companyAlias: c.company_alias as string | null, contactAlias: c.contact_alias as string | null,
+          partnerId: null, raw: c as unknown as Record<string, unknown>,
         };
       }
 
@@ -102,22 +103,23 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic join shape
+        const p = pr as any;
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,
-          companyName: p.ragione_sociale || p.company_name || "",
-          contactName: pc?.name || "",
-          email: p.email || pc?.email || null, phone: pc?.phone || null, mobile: null,
-          country: "Italia", city: p.sede_legale || null, address: null,
-          position: pc?.role || null, website: p.website || null,
-          leadStatus: p.lead_status || "new", note: null,
+          companyName: String(p.ragione_sociale || p.company_name || ""),
+          contactName: String(pc?.name || ""),
+          email: (p.email || pc?.email || null) as string | null, phone: (pc?.phone || null) as string | null, mobile: null,
+          country: "Italia", city: (p.sede_legale || null) as string | null, address: null,
+          position: (pc?.role || null) as string | null, website: (p.website || null) as string | null,
+          leadStatus: String(p.lead_status || "new"), note: null,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: null, createdAt: p.created_at,
-          lastInteractionAt: p.last_interaction_at,
-          interactionCount: p.interaction_count || 0,
-          linkedinUrl: pc?.linkedin_url || null,
-          companyAlias: null, contactAlias: null, partnerId: null, raw: p,
+          deepSearchAt: null, createdAt: String(p.created_at),
+          lastInteractionAt: (p.last_interaction_at || null) as string | null,
+          interactionCount: Number(p.interaction_count || 0),
+          linkedinUrl: (pc?.linkedin_url || null) as string | null,
+          companyAlias: null, contactAlias: null, partnerId: null, raw: p as Record<string, unknown>,
         };
       }
 
