@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "../atoms/ErrorMessage";
-import { Loader2, Globe2, Mail, Lock } from "lucide-react";
+import { Loader2, Globe2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export function LoginPage(): React.ReactElement {
   const {
@@ -29,6 +29,8 @@ export function LoginPage(): React.ReactElement {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [resetSent, setResetSent] = useState(false);
 
@@ -87,7 +89,15 @@ export function LoginPage(): React.ReactElement {
                   <Label htmlFor="v2-login-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="v2-login-pw" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10" required />
+                    <Input id="v2-login-pw" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 pr-10" required />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -119,7 +129,15 @@ export function LoginPage(): React.ReactElement {
                   <Label htmlFor="v2-signup-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="v2-signup-pw" type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10" minLength={6} required />
+                    <Input id="v2-signup-pw" type={showSignupPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10 pr-10" minLength={6} required />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(v => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showSignupPassword ? "Nascondi password" : "Mostra password"}
+                    >
+                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
