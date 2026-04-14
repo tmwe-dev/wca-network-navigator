@@ -5,7 +5,7 @@ import type { PartnerWithRelations } from "@/data/partners";
 
 interface PartnerLike extends Record<string, unknown> {
   raw_profile_html?: string | null;
-  enrichment_data?: Record<string, unknown> | null;
+  enrichment_data?: unknown;
   email?: string | null;
   phone?: string | null;
   company_alias?: string | null;
