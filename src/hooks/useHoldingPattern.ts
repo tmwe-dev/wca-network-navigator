@@ -45,18 +45,18 @@ export function useHoldingPatternList() {
       // Partners
       const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as unknown[];
 
-      (partners || []).forEach((p: Record<string, unknown>) =>
+      ((partners || []) as Record<string, unknown>[]).forEach((p) =>
         items.push({
-          id: p.id,
+          id: String(p.id),
           source: "partner",
-          name: p.company_name,
-          country: p.country_name,
-          countryCode: p.country_code,
-          city: p.city,
-          email: p.email,
-          leadStatus: p.lead_status,
-          lastInteractionAt: p.last_interaction_at,
-          interactionCount: p.interaction_count,
+          name: String(p.company_name || ""),
+          country: String(p.country_name || ""),
+          countryCode: String(p.country_code || ""),
+          city: (p.city as string) || null,
+          email: (p.email as string) || null,
+          leadStatus: String(p.lead_status || ""),
+          lastInteractionAt: (p.last_interaction_at as string) || null,
+          interactionCount: Number(p.interaction_count || 0),
         })
       );
 
