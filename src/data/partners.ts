@@ -135,8 +135,8 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
     }
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- PartnerFilter string[] vs DB enum union
-    if (filters?.partnerTypes?.length) query = query.in("partner_type", filters.partnerTypes as readonly string[]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type requires cast
+    if (filters?.partnerTypes?.length) query = query.in("partner_type", filters.partnerTypes as any);
     if (filters?.favorites) query = query.eq("is_favorite", true);
 
     return query.order("company_name").range(from, to) as unknown as Promise<SupabaseQueryResult<PartnerWithRelations>>;
@@ -373,13 +373,13 @@ export async function searchPartnersByNameAlias(term: string, select: string, li
   return data ?? [];
 }
 
-/** Get partner WCA IDs by countries with optional profile filter */
-export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<Array<Record<string, unknown>>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic select string, caller must cast
+export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<any[]> {
   let q = supabase.from("partners").select(select).in("country_code", countryCodes).not("wca_id", "is", null);
   if (options?.noProfile) q = q.is("raw_profile_html", null);
   const { data, error } = await q.order("company_name");
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return data ?? [];
 }
 
 /** Delete partners and all related data by IDs */
@@ -398,14 +398,14 @@ export async function deletePartnersWithRelations(ids: string[]) {
   }
 }
 
-/** Get partners by lead status */
-export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<Array<Record<string, unknown>>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic select string, caller must cast
+export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<any[]> {
   const { data, error } = await supabase
     .from("partners")
     .select(select)
     .in("lead_status", statuses);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return data ?? [];
 }
 
 export async function findPartnerByEmail(email: string) {
@@ -422,8 +422,8 @@ export async function findPartnerByEmail(email: string) {
 export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
   let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- PartnerFilter string vs DB enum
-  if (filters.type) q = q.eq("partner_type", filters.type as Database["public"]["Tables"]["partners"]["Row"]["partner_type"]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type requires cast
+  if (filters.type) q = q.eq("partner_type", filters.type as any);
   if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
   const { data, error } = await q.limit(limit);
   if (error) throw error;
