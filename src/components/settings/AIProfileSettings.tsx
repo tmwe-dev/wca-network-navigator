@@ -57,7 +57,7 @@ function ImageUploadField({ label, value, onChange, hint }: {
       const { data: { publicUrl } } = supabase.storage.from("templates").getPublicUrl(path);
       onChange(publicUrl);
       toast.success("Immagine caricata");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || "Errore upload");
     } finally {
       setUploading(false);

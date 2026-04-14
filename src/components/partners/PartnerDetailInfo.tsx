@@ -82,7 +82,7 @@ export function PartnerDetailInfo({
 
   return (
     <>
-      <EnrichmentCard partner={partner as any} />
+      <EnrichmentCard partner={partner as Record<string, any>} />
 
       {partner.profile_description && (
         <Section>

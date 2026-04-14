@@ -38,7 +38,7 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { insertActivity } from "@/data/activities";
 
 interface PartnerDetailCompactProps {
-  partner: any;
+  partner: Record<string, any>;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
@@ -54,18 +54,18 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const _enrichment = partner.enrichment_data as any;
+  const _enrichment = partner.enrichment_data as Record<string, any>;
   const _branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
     try {
-      const data = await invokeEdge<any>("ai-utility", { body: { action: "deep_search", partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
+      const data = await invokeEdge<Record<string, unknown>>("ai-utility", { body: { action: "deep_search", partnerId: partner.id }, context: "PartnerDetailCompact.deep_search_partner" });
       if (data?.success) {
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
       } else { toast.error(data?.error || "Errore"); }
-    } catch (e: any) { toast.error(e?.message || "Errore"); }
+    } catch (e: unknown) { toast.error((e instanceof Error ? e.message : String(e)) || "Errore"); }
     finally { setDeepSearching(false); }
   }, [partner.id, queryClient]);
 
@@ -74,7 +74,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const networks = partner.partner_networks || [];
 
   // ── Email: navigate to composer with contact pre-filled ──
-  const handleSendEmail = useCallback((contact: any) => {
+  const handleSendEmail = useCallback((contact: Record<string, any>) => {
     navigate("/email-composer", {
       state: {
         partnerIds: [partner.id],
@@ -90,7 +90,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
-  const handleSendWhatsApp = useCallback(async (contact: any) => {
+  const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
     if (!waAvailable) {
@@ -108,27 +108,27 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await insertActivity({
-            activity_type: "whatsapp_message" as any,
+            activity_type: "whatsapp_message" as "whatsapp_message",
             title: `WhatsApp a ${contact.name} (${partner.company_name})`,
             source_type: "partner",
             source_id: partner.id,
             partner_id: partner.id,
             selected_contact_id: contact.id,
-            status: "completed" as any,
+            status: "completed" as "completed",
             user_id: user.id,
           });
         }
       } else {
         toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore invio WhatsApp");
     } finally {
       setWaSending(null);
     }
   }, [partner, waAvailable, sendWhatsApp]);
-  const _transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-  const _specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
+  const _transportServices = services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category));
+  const _specialtyServices = services.filter((s) => !TRANSPORT_SERVICES.includes(s.service_category));
 
   return (
     <div className="p-4 space-y-4">
@@ -172,7 +172,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
+          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Record<string, unknown>} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
@@ -194,7 +194,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {contacts.length > 0 && (
         <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
-          {contacts.map((c: any) => (
+          {contacts.map((c) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
@@ -276,7 +276,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: any, i: number) => {
+            {services.map((s: Record<string, any>, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>
@@ -296,7 +296,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
           <div className="flex flex-wrap gap-1.5">
-            {networks.map((n: any) => (
+            {networks.map((n) => (
               <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
                 {n.network_name}
                 {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}

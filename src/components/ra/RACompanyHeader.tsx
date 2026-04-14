@@ -14,7 +14,7 @@ const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }>
 };
 
 interface RACompanyHeaderProps {
-  prospect: any;
+  prospect: Record<string, any>;
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {

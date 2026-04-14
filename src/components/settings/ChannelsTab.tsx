@@ -16,8 +16,8 @@ interface ChannelsTabProps {
   liConnected: boolean;
   liHasCreds: boolean;
   liExtAvailable: boolean;
-  waExt: { isAvailable: boolean; verifySession: () => Promise<any> };
-  liExt: { isAvailable: boolean; verifySession: () => Promise<any> };
+  waExt: { isAvailable: boolean; verifySession: () => Promise<unknown> };
+  liExt: { isAvailable: boolean; verifySession: () => Promise<unknown> };
   connectingAll: boolean;
   onConnectAll: () => void;
 }

@@ -132,7 +132,7 @@ export function DownloadCanvas({ open, onClose, onStop, current, results, runnin
 }
 
 /* ── Mini summary chip ── */
-function MiniChip({ icon: Icon, value, color }: { icon: any; value: number; color: string }) {
+function MiniChip({ icon: Icon, value, color }: { icon: React.ElementType; value: number; color: string }) {
   const colorMap: Record<string, string> = {
     emerald: "text-emerald-500",
     muted: "text-muted-foreground",

@@ -215,7 +215,7 @@ export default function AddContactDialog({
       toast({ title: "✅ Contatto aggiunto", description: `${form.name || form.company} → ${destination === "contacts" ? "Contatti" : destination === "network" ? "Network" : "Cockpit"}` });
       resetForm();
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);

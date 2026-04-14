@@ -30,7 +30,7 @@ function getMemberBadgeColor(years: number): string {
 }
 
 interface PartnerCardProps {
-  partner: any;
+  partner: Record<string, any>;
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
 }
 
@@ -124,12 +124,12 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               {yearsM} yrs
             </span>
           )}
-          {!!(partner.enrichment_data as any)?.deep_search_at && (
+          {!!(partner.enrichment_data as Record<string, unknown>)?.deep_search_at && (
             <Tooltip>
               <TooltipTrigger>
                 <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
               </TooltipTrigger>
-              <TooltipContent>Deep Search – {new Date((partner.enrichment_data as any).deep_search_at).toLocaleDateString("it-IT")}</TooltipContent>
+              <TooltipContent>Deep Search – {new Date((partner.enrichment_data as Record<string, unknown>).deep_search_at).toLocaleDateString("it-IT")}</TooltipContent>
             </Tooltip>
           )}
           {(() => {
@@ -170,7 +170,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Services */}
         {partner.partner_services?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_services.slice(0, 4).map((s: any, i: number) => (
+            {partner.partner_services.slice(0, 4).map((s: Record<string, any>, i: number) => (
               <Tooltip key={i}>
                 <TooltipTrigger>
                   <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-medium", getServiceColor(s.service_category))}>
@@ -191,7 +191,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Networks */}
         {partner.partner_networks?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_networks.slice(0, 3).map((n: any) => (
+            {partner.partner_networks.slice(0, 3).map((n) => (
               <Tooltip key={n.id || n.network_name}>
                 <TooltipTrigger>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium truncate max-w-[100px] inline-block">
@@ -212,7 +212,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Primary contact info */}
         {(() => {
           const contacts = partner.partner_contacts || [];
-          const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+          const primary = contacts.find((c) => c.is_primary) || contacts[0];
           if (!primary) return (
             <div className="mt-3 pt-2 border-t">
               <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>

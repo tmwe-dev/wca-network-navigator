@@ -10,7 +10,7 @@ function Chip({
   onClick,
   onRemove,
 }: {
-  icon: any;
+  icon: React.ElementType;
   label: string;
   empty?: boolean;
   onClick: () => void;

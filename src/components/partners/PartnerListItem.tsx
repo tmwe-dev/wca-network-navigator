@@ -13,7 +13,7 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
 interface PartnerListItemProps {
-  partner: any;
+  partner: Record<string, any>;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -36,14 +36,14 @@ export function PartnerListItem({
   const years = getYearsMember(partner.member_since);
   const services = partner.partner_services || [];
   const allServices = [
-    ...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)),
-    ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
   const enrichment = asEnrichment(partner.enrichment_data);
   const hasDeepSearch = !!enrichment?.deep_search_at;
   const contacts = partner.partner_contacts || [];
-  const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+  const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
   const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
   const networks = partner.partner_networks || [];
@@ -118,7 +118,7 @@ export function PartnerListItem({
           {/* Row 4: Service icons */}
           {allServices.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5">
-              {allServices.slice(0, 6).map((s: any, i: number) => {
+              {allServices.slice(0, 6).map((s: Record<string, any>, i: number) => {
                 const Icon = getServiceIcon(s.service_category);
                 return (
                   <Tooltip key={i}>
@@ -135,7 +135,7 @@ export function PartnerListItem({
           {/* Row 5: Networks */}
           {networks.length > 0 && (
             <div className="flex items-center gap-1 mt-1">
-              {networks.slice(0, 3).map((n: any) => (
+              {networks.slice(0, 3).map((n) => (
                 <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
                   {n.network_name.replace("WCA ", "").substring(0, 10)}
                 </span>

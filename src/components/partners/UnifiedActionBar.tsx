@@ -15,7 +15,7 @@ const log = createLogger("UnifiedActionBar");
 
 interface UnifiedActionBarProps {
   selectedIds: Set<string>;
-  focusedPartner: any | null;
+  focusedPartner: Record<string, any> | null;
   onClearSelection: () => void;
   onAssignActivity: () => void;
   onDeepSearch: () => void;

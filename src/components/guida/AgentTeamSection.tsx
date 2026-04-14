@@ -32,7 +32,7 @@ const AgentTeamSection = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {agentList.map((agent: any) => (
+            {agentList.map((agent) => (
               <div key={agent.name} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group space-y-4 text-center">
                 <div className="text-5xl">{agent.avatar_emoji}</div>
                 <h3 className="text-xl font-bold text-white">{agent.name}</h3>

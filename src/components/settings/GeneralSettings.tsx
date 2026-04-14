@@ -19,7 +19,7 @@ const log = createLogger("GeneralSettings");
 
 interface GeneralSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: (key: string, value: string) => void;
 }
 
 export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProps) {
@@ -78,7 +78,7 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
           from: fromField,
         }, context: "GeneralSettings.send_email" });
       toast.success("Email di test inviata con successo!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore invio: " + (err.message || "Sconosciuto"));
     } finally {
       setSendingTest(false);

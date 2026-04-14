@@ -59,12 +59,12 @@ export function OperativeBriefing({
             task_type: "briefing_action",
             description: action.prompt,
             status: "pending",
-          } as any)
+          })
           .select("id")
           .single();
         if (taskErr) throw taskErr;
 
-        await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as any).id }, context: "OperativeBriefing.agent_execute" });
+        await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as Record<string, string>).id }, context: "OperativeBriefing.agent_execute" });
 
         toast.success(`Task assegnato a ${action.agentName}`);
         qc.invalidateQueries({ queryKey: ["agent-tasks"] });
@@ -73,7 +73,7 @@ export function OperativeBriefing({
       }
 
       setCompletedIdx(prev => new Set(prev).add(idx));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Errore nell'esecuzione");
       onAction(action);
     } finally {

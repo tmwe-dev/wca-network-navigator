@@ -6,7 +6,7 @@ import type { CountryWithPartners } from "@/standalone-globe/types";
 interface PartnerMiniGlobeProps {
   partnerCountryCode: string;
   partnerCity: string;
-  branchCities: any[] | null;
+  branchCities: Array<Record<string, unknown>> | null;
 }
 
 export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity, branchCities }: PartnerMiniGlobeProps) {
@@ -17,7 +17,7 @@ export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity
     codes.add(partnerCountryCode);
 
     const branches = Array.isArray(branchCities) ? branchCities : [];
-    branches.forEach((b: any) => {
+    branches.forEach((b) => {
       const code = b?.country_code || b?.country;
       if (code) codes.add(code);
     });

@@ -32,7 +32,7 @@ interface AgentAction {
   created_at: string;
   status: string;
   priority: string;
-  source_meta: any;
+  source_meta: Record<string, unknown>;
 }
 
 const CHANNEL_ICONS: Record<string, typeof Mail> = {
@@ -65,14 +65,14 @@ export function CodaAITab() {
     enabled: !mockEnabled,
   });
 
-  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as any as AgentAction[]) : pendingActions;
+  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as unknown as AgentAction[]) : pendingActions;
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "approved" as any, reviewed: true })
+        .update({ status: "approved", reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },
@@ -87,7 +87,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "cancelled" as any, reviewed: true })
+        .update({ status: "cancelled", reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },

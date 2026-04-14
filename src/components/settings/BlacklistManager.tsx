@@ -22,7 +22,7 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
   if (file.name.endsWith(".csv")) {
     const text = new TextDecoder().decode(buffer);
     const blob = new Blob([text], { type: "text/csv" });
-    const stream = blob.stream() as any;
+    const stream = blob.stream() as ReadableStream<Uint8Array>;
     await workbook.csv.read(stream);
   } else {
     await workbook.xlsx.load(buffer);
@@ -93,12 +93,12 @@ export default function BlacklistManager() {
   const handleImport = async () => {
     if (allParsed.length === 0) return;
     try {
-      const result = await importMutation.mutateAsync(allParsed as any);
+      const result = await importMutation.mutateAsync(allParsed as Parameters<typeof importMutation.mutateAsync>[0]);
       toast.success(`Importati ${result.imported} record, ${result.matched} match trovati`);
       setPreview(null);
       setAllParsed([]);
       if (fileRef.current) fileRef.current.value = "";
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore importazione: " + (err.message || "Sconosciuto"));
     }
   };
@@ -106,13 +106,13 @@ export default function BlacklistManager() {
   const handleScrape = async () => {
     setScraping(true);
     try {
-      const data = await invokeEdge<any>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
+      const data = await invokeEdge<Record<string, unknown>>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
       if (data?.success) {
         toast.success(`Scraping completato: ${data.entries_count || 0} record, ${data.matched_count || 0} match`);
       } else {
         toast.error(data?.error || "Scraping fallito");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Errore: " + (err.message || "Sconosciuto"));
     } finally {
       setScraping(false);

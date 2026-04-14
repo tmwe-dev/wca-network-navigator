@@ -19,7 +19,7 @@ interface AIDraftStudioProps {
   onGenerateAfterReview?: () => void;
 }
 
-const channelMeta: Record<string, { icon: any; label: string; color: string }> = {
+const channelMeta: Record<string, { icon: React.ElementType; label: string; color: string }> = {
   email: { icon: Mail, label: "Email", color: "text-primary" },
   linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-[hsl(210,80%,55%)]" },
   whatsapp: { icon: MessageCircle, label: "WhatsApp", color: "text-success" },
@@ -358,7 +358,7 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
   );
 }
 
-function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: any) {
+function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: Record<string, any>) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (
       <button onClick={onSendEmail} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
@@ -403,7 +403,7 @@ function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEm
 
 /* ── Tiny helpers ── */
 
-function DebugSection({ icon: Icon, color, label, children }: { icon: any; color: string; label: string; children: React.ReactNode }) {
+function DebugSection({ icon: Icon, color, label, children }: { icon: React.ElementType; color: string; label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">

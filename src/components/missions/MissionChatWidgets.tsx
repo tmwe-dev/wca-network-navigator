@@ -11,7 +11,7 @@ import type { MissionStepData } from "@/components/missions/MissionStepRenderer"
 
 export interface WidgetConfig {
   type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary" | "plan_review";
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 // ── Detect widget markers in AI text ──
@@ -220,7 +220,7 @@ interface MissionWidgetRendererProps {
   onLaunch: () => void;
   onPlanApprove?: () => void;
   onPlanCancel?: () => void;
-  planReviewProps?: { plan: any; isApproving: boolean };
+  planReviewProps?: { plan: Record<string, unknown>; isApproving: boolean };
 }
 
 export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
@@ -248,7 +248,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ChannelSelectWidget
                 key={i}
                 value={stepData.channel || "email"}
-                onChange={v => onChange({ ...stepData, channel: v as any })}
+                onChange={v => onChange({ ...stepData, channel: v as string })}
               />
             );
 
@@ -288,7 +288,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 ]}
                 onChange={(key, checked) => onChange({
                   ...stepData,
-                  deepSearch: { ...stepData.deepSearch, enabled: true, [key]: checked } as any,
+                  deepSearch: { ...stepData.deepSearch, enabled: true, [key]: checked } as Record<string, unknown>,
                 })}
               />
             );

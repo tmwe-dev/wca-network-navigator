@@ -107,16 +107,16 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      let data: any;
+      let data: Record<string, unknown> | undefined;
       if (targetAgent) {
         // Route to agent-execute
-        data = await invokeEdge<any>("agent-execute", {
+        data = await invokeEdge<Record<string, unknown>>("agent-execute", {
           body: { agent_id: targetAgent.id, messages: newMessages },
           context: "HomeAIPrompt.agent_execute",
         });
       } else {
         // Default: ai-assistant
-        data = await invokeEdge<any>("ai-assistant", {
+        data = await invokeEdge<Record<string, unknown>>("ai-assistant", {
           body: { messages: newMessages },
           context: "HomeAIPrompt.ai_assistant",
         });
@@ -125,7 +125,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setResponse("⚠️ " + (e.message || "Errore di comunicazione"));
     } finally {
       setLoading(false);

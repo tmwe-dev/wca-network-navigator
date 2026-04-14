@@ -68,7 +68,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
       selected_contact_id: contact.id,
       source_meta: { company: partner.company_name, email: contact.email, name: contact.name },
       ...extra,
-    } as any);
+    });
     qc.invalidateQueries({ queryKey: ["activities"] });
   };
 

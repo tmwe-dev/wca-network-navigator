@@ -116,7 +116,7 @@ export default function EmailCanvas({
     setSending(true);
     try {
       const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
-      const data = await invokeEdge<any>("send-email", { body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
+      const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
       // Track activity
@@ -129,7 +129,7 @@ export default function EmailCanvas({
         emailSubject: displaySubject,
         description: `Email inviata a ${displayEmail.contactEmail}`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore invio", description: err.message, variant: "destructive" });
     } finally { setSending(false); }
   };

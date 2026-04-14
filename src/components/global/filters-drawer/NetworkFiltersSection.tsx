@@ -23,8 +23,8 @@ export function NetworkFiltersSection() {
 
   const countries = useMemo(() => {
     if (!statsData?.byCountry) return [];
-    return Object.values(statsData.byCountry).map((s: any) => {
-      const wcaCountry = WCA_COUNTRIES.find((c: any) => c.code === s.country_code);
+    return Object.values(statsData.byCountry).map((s) => {
+      const wcaCountry = WCA_COUNTRIES.find((c) => c.code === s.country_code);
       return {
         code: s.country_code,
         name: wcaCountry?.name || s.country_code,
@@ -98,7 +98,7 @@ export function NetworkFiltersSection() {
                 <div className="px-2.5 py-1.5 bg-muted/30">
                   <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
                 </div>
-                {searchResults.map((p: any) => (
+                {searchResults.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => {
@@ -118,7 +118,7 @@ export function NetworkFiltersSection() {
                     </div>
                     {Array.isArray(p.partner_contacts) && p.partner_contacts.length > 0 && (
                       <div className="mt-1 ml-6 space-y-0.5">
-                        {p.partner_contacts.slice(0, 3).map((c: any) => (
+                        {p.partner_contacts.slice(0, 3).map((c) => (
                           <div key={c.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <Users className="w-2.5 h-2.5 shrink-0" />
                             <span className="truncate">{c.contact_alias || c.name}</span>

@@ -226,7 +226,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             phone: p.phone,
             email: p.email,
             website: p.website,
-            partner_type: p.partner_type as any,
+            partner_type: p.partner_type as "standard",
             wca_id: p.wca_id,
             is_active: true,
           })))

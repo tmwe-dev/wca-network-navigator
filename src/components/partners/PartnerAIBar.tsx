@@ -38,7 +38,7 @@ export function PartnerAIBar({ viewContext }: Props) {
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const data = await invokeEdge<any>("ai-assistant", { body: {
+      const data = await invokeEdge<Record<string, unknown>>("ai-assistant", { body: {
           messages: newMessages,
           context: viewContext ? {
             source: "partner_hub",
@@ -59,7 +59,7 @@ export function PartnerAIBar({ viewContext }: Props) {
       setLastResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
       setExpanded(true);
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
       toast.error(e.message || "Errore di comunicazione");
     } finally {

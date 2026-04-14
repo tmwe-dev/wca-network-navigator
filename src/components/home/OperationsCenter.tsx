@@ -29,7 +29,7 @@ function StatusIcon({ status }: { status: string }) {
   }
 }
 
-function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: any; accent?: string }) {
+function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: React.ElementType; accent?: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-3">
       <div className={cn("rounded-lg p-2 bg-muted/40", accent)}>

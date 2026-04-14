@@ -10,7 +10,7 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { EnrichedStatusIcons } from "./partner-list/SubComponents";
 
 interface Props {
-  partners: any[];
+  partners: Array<Record<string, any>>;
   isLoading: boolean;
   isDark: boolean;
   selectedPartnerId?: string | null;
@@ -50,13 +50,13 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const partner = partners[virtualRow.index] as any;
+          const partner = partners[virtualRow.index] as Record<string, any>;
           const contacts = partner.partner_contacts || [];
-          const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+          const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;
-          const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
-          const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
-          const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
+          const hasEmail = !!partner.email || contacts.some((c) => c.email);
+          const hasPhone = !!partner.phone || contacts.some((c) => c.direct_phone || c.mobile);
+          const hasDeep = !!(partner.enrichment_data as Record<string, unknown>)?.deep_search_at;
           const inHolding = partner.lead_status && partner.lead_status !== "new";
           const years = getYearsMember(partner.member_since);
           const logoUrl = getEffectiveLogoUrl(partner);
@@ -156,7 +156,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
       </div>
       {/* Infinite scroll sentinel */}
       {loadMoreRef && (
-        <div ref={loadMoreRef as any} className="h-10 flex items-center justify-center">
+        <div ref={loadMoreRef as React.Ref<HTMLDivElement>} className="h-10 flex items-center justify-center">
           {isFetchingNextPage && (
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           )}

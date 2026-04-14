@@ -82,7 +82,7 @@ export function AIPerformancePanel() {
       const map = new Map<string, { email: string; partner: string | null; approved: number; rejected: number; total: number }>();
       for (const r of data ?? []) {
         if (!r.email_address) continue;
-        const s = map.get(r.email_address) ?? { email: r.email_address, partner: (r as any).partners?.company_name ?? null, approved: 0, rejected: 0, total: 0 };
+        const s = map.get(r.email_address) ?? { email: r.email_address, partner: (r as Record<string, any>).partners?.company_name ?? null, approved: 0, rejected: 0, total: 0 };
         s.total++;
         if (r.user_review === "approved") s.approved++;
         if (r.user_review === "rejected") s.rejected++;

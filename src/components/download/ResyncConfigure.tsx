@@ -106,7 +106,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
-        const wcaId = (pn as any).partners?.wca_id;
+        const wcaId = (pn as Record<string, any>).partners?.wca_id;
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -202,12 +202,12 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           country_code: "ALL",
           country_name: "Re-sync Contatti",
           network_name: networkNames,
-          wca_ids: allWcaIds as any,
+          wca_ids: allWcaIds as number[],
           total_count: allWcaIds.length,
           delay_seconds: delay,
           status: "pending",
           job_type: "resync",
-        } as any)
+        })
         .select("id")
         .single();
 
@@ -218,7 +218,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     }
     setStarting(false);
