@@ -43,7 +43,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
   const yearsM = partner.member_since ? getYearsMember(partner.member_since) : null;
   const whatsappNumber = partner.mobile || partner.phone;
   const domain = hasWebsite
-    ? partner.website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+    ? partner.website!.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
     : null;
 
   return (
@@ -104,13 +104,13 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                     key={i}
                     className={cn(
                       "w-3 h-3",
-                      i < Math.round(partner.rating)
+                      i < Math.round(partner.rating ?? 0)
                         ? "fill-primary text-primary"
                         : "text-muted-foreground/50"
                     )}
                   />
                 ))}
-                <span className="text-[10px] text-muted-foreground ml-1">{partner.rating.toFixed(1)}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">{(partner.rating ?? 0).toFixed(1)}</span>
               </div>
             )}
           </div>
@@ -119,19 +119,19 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Badges row */}
         <div className="flex flex-wrap items-center gap-1.5 mt-3">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {formatPartnerType(partner.partner_type)}
+            {formatPartnerType(partner.partner_type ?? null)}
           </Badge>
           {yearsM != null && (
             <span className={cn("text-[10px] px-1.5 py-0.5 rounded", getMemberBadgeColor(yearsM))}>
               {yearsM} yrs
             </span>
           )}
-          {!!(partner.enrichment_data as Record<string, unknown>)?.deep_search_at && (
+          {!!(partner.enrichment_data as Record<string, unknown> | undefined)?.deep_search_at && (
             <Tooltip>
               <TooltipTrigger>
                 <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
               </TooltipTrigger>
-              <TooltipContent>Deep Search – {new Date(String((partner.enrichment_data as Record<string, any>).deep_search_at)).toLocaleDateString("it-IT")}</TooltipContent>
+              <TooltipContent>Deep Search – {new Date(String((partner.enrichment_data as Record<string, unknown>)?.deep_search_at)).toLocaleDateString("it-IT")}</TooltipContent>
             </Tooltip>
           )}
           {(() => {
@@ -170,9 +170,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         </div>
 
         {/* Services */}
-        {partner.partner_services?.length > 0 && (
+        {(partner.partner_services?.length ?? 0) > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_services.slice(0, 4).map((s: { service_category: string }, i: number) => (
+            {partner.partner_services!.slice(0, 4).map((s: { service_category: string }, i: number) => (
               <Tooltip key={i}>
                 <TooltipTrigger>
                   <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-medium", getServiceColor(s.service_category))}>
@@ -182,18 +182,18 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                 <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
               </Tooltip>
             ))}
-            {partner.partner_services.length > 4 && (
+            {partner.partner_services!.length > 4 && (
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                +{partner.partner_services.length - 4}
+                +{partner.partner_services!.length - 4}
               </span>
             )}
           </div>
         )}
 
         {/* Networks */}
-        {partner.partner_networks?.length > 0 && (
+        {(partner.partner_networks?.length ?? 0) > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_networks.slice(0, 3).map((n: { id?: string; network_name: string; expires?: string }) => (
+            {partner.partner_networks!.slice(0, 3).map((n) => (
               <Tooltip key={n.id || n.network_name}>
                 <TooltipTrigger>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium truncate max-w-[100px] inline-block">
@@ -203,9 +203,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                 <TooltipContent>{n.network_name}{n.expires ? ` — Scade ${new Date(n.expires).toLocaleDateString("it-IT")}` : ""}</TooltipContent>
               </Tooltip>
             ))}
-            {partner.partner_networks.length > 3 && (
+            {partner.partner_networks!.length > 3 && (
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                +{partner.partner_networks.length - 3}
+                +{partner.partner_networks!.length - 3}
               </span>
             )}
           </div>
@@ -214,7 +214,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Primary contact info */}
         {(() => {
           const contacts = partner.partner_contacts || [];
-          const primary = contacts.find((c: Record<string, any>) => c.is_primary) || contacts[0];
+          const primary = contacts.find((c) => c.is_primary) || contacts[0];
           if (!primary) return (
             <div className="mt-3 pt-2 border-t">
               <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>
