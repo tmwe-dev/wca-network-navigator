@@ -7,6 +7,7 @@ import { agentReadinessScore } from "@/v2/core/domain/rules/agent-rules";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
 import { X, Globe, Zap, Shield } from "lucide-react";
+import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 
 interface AgentDetailDrawerProps {
   readonly agent: Agent | null;
@@ -86,7 +87,7 @@ export function AgentDetailDrawer({
             <p className="text-xs text-muted-foreground font-medium">Firma email</p>
             <div
               className="text-sm border rounded p-3 bg-background"
-              dangerouslySetInnerHTML={{ __html: agent.signatureHtml }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(agent.signatureHtml) }}
             />
           </div>
         ) : null}
