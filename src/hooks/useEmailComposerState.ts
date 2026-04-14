@@ -466,6 +466,7 @@ export function useEmailComposerState() {
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "queued", total_count: recipientsWithEmail.length,
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       const draftId = (savedDraft as any as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,

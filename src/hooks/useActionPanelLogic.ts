@@ -85,6 +85,7 @@ export function useActionPanelLogic({
 
   // ── Derived ──
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
     const members = entry.members as any[];
     return (members || []).map((m) => ({
       company_name: m.company_name, city: m.city, country: m.country,
@@ -134,6 +135,7 @@ export function useActionPanelLogic({
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await upsertDirectoryCache({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
       country_code: countryCode, network_name: netKey, members: membersJson as any,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });

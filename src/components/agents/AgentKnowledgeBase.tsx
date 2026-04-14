@@ -16,9 +16,11 @@ interface Props {
 }
 
 export function AgentKnowledgeBase({ agent }: Props) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
   const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as any as KBEntry[]) || []);
   const { updateAgent } = useAgents();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
   useEffect(() => setEntries((agent.knowledge_base as any as KBEntry[]) || []), [agent.id]);
 
   const addEntry = () => setEntries([...entries, { title: "", content: "" }]);
@@ -33,6 +35,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
       { id: agent.id, knowledge_base: entries as any },
       { onSuccess: () => toast.success("Knowledge Base salvata") }
     );

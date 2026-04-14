@@ -96,6 +96,7 @@ export function useWhatsAppBackfill() {
 
       // Get unique contacts from sidebar
       const sidebarContacts = new Map<string, any>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
       for (const msg of sidebarResult.messages as any[]) {
         const contact = String(msg.contact || msg.from || "").trim();
         if (!contact || contact === "Sconosciuto" || msg.isVerify) continue;
@@ -160,6 +161,7 @@ export function useWhatsAppBackfill() {
         // Try readThread first (reads visible messages in chat)
         const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
         if (threadResult.success && threadResult.messages?.length) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
           messages = threadResult.messages as any[];
         }
 
@@ -175,6 +177,7 @@ export function useWhatsAppBackfill() {
             const backfillResult = await bridge.backfillChat(chat.name, chat.lastDbText, MAX_SCROLLS_PER_CHAT);
             if (backfillResult.success && backfillResult.messages?.length) {
               // Merge, dedup will handle overlaps
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped message payload
               messages = [...messages, ...(backfillResult.messages as any[])];
             }
           }
@@ -205,6 +208,7 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column accepts any serializable
               raw_payload: msg as any,
             }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 

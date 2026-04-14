@@ -12,6 +12,7 @@ import {
 export async function saveExtractionResult(
   partnerId: string,
   wcaId: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- External scraper result shape varies
   result: any,
   existingCompanyName: string,
 ) {
@@ -152,6 +153,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
         service_category: s as any,
       }));
       await insertPartnerServices(toInsert);
@@ -177,6 +179,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
         certification: c as any,
       }));
       await insertPartnerCertifications(toInsert);

@@ -47,6 +47,7 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Function signature variance in lock queue
     else lock.queue.push({ resolve, fn: run as any });
   });
 }

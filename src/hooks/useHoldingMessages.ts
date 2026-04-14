@@ -63,6 +63,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .order("email_date", { ascending: false, nullsFirst: false })
               .order("created_at", { ascending: false })
               .limit(200)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
           : Promise.resolve({ data: [] as any[], error: null }),
 
         contactEmails.length > 0
@@ -76,6 +77,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .in("from_address", contactEmails)
               .order("created_at", { ascending: false })
               .limit(100)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
           : Promise.resolve({ data: [] as any[], error: null }),
       ]);
 
@@ -89,6 +91,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
       // Step 3: Deduplicate
       const seen = new Set<string>();
       const deduped: ChannelMessage[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       for (const msg of allMessages as any as ChannelMessage[]) {
         if (msg.message_id_external) {
           if (seen.has(msg.message_id_external)) continue;

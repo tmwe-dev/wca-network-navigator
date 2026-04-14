@@ -33,6 +33,7 @@ export function useSupabaseQuery<T extends TableName, TResult>(
       const query = options?.filters ? options.filters(base) : base;
       const { data, error } = await query;
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       return ((data ?? []) as any as RowOf<T>[]).map(mapFn);
     },
     staleTime: options?.staleTime,

@@ -145,6 +145,7 @@ export function useTransferToPartners() {
           await insertPartnerContact({
             partner_id: partner.id, name: c.name, email: c.email,
             direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic property access on imported contact
             title: (c as any).position || null, is_primary: true,
           });
         }

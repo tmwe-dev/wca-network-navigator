@@ -171,6 +171,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         <>
           <div>
             <label className={`text-xs mb-1.5 block ${th.label}`}>Modalità download</label>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Select value to union type cast
             <Select value={logic.downloadMode} onValueChange={v => logic.setDownloadMode(v as any)}>
               <SelectTrigger className={th.selTrigger}><SelectValue /></SelectTrigger>
               <SelectContent className={th.selContent}>

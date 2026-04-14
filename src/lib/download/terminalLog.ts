@@ -56,6 +56,7 @@ async function flushBuffer(): Promise<void> {
     const updated = [...current, ...toFlush].slice(-150);
     await supabase
       .from("download_jobs")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
       .update({ terminal_log: updated as any })
       .eq("id", jobId);
   } catch (e) {

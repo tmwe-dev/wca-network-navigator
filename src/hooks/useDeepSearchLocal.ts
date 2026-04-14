@@ -168,6 +168,7 @@ export function useDeepSearchLocal() {
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
     await updatePartner(partnerId, { enrichment_data: updated as any as Record<string, string> });
 
     const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);

@@ -104,6 +104,7 @@ export function useImportBlacklist() {
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50) as BlacklistEntryInsert[];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase insert batch type mismatch
         await insertBlacklistBatch(batch as any[]); const error = null;
         if (error) throw error;
       }

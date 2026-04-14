@@ -56,9 +56,13 @@ export function useSystemDirectory() {
         findAgentTasksByUser(user.id, ["pending", "running"]),
         findOperativePrompts(user.id),
       ]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
       const agentsRes = { data: agentsData as any[] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
       const assignmentsRes = { data: assignmentsData as any[] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
       const tasksRes = { data: tasksData as any[] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
       const promptsRes = { data: promptsData as any[] };
 
       // Count assignments per agent
@@ -79,6 +83,7 @@ export function useSystemDirectory() {
         role: a.role,
         avatar_emoji: a.avatar_emoji,
         is_active: a.is_active,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
         stats: (a.stats as any as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
         clientCount: assignMap.get(a.id) || 0,
         activeTaskCount: taskMap.get(a.id) || 0,

@@ -41,6 +41,7 @@ function isReimportCorrection(headers: string[]): boolean {
 }
 
 function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Import mapping dynamic row type
   return transformRow(row as any, mapping);
 }
 
@@ -81,6 +82,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CSV import rows have dynamic shape
   const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
     setUploading(true);
     try {
