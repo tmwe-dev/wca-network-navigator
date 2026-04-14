@@ -22,7 +22,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           .eq("partner_id", partnerId)
           .order("interaction_date", { ascending: false })
           .limit(20);
-        return (data || []).map((i) => ({
+        return (data || []).map((i): ContactInteraction => ({
           id: i.id,
           contact_id: partnerId,
           interaction_type: i.interaction_type,
@@ -30,7 +30,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           description: i.notes,
           outcome: null,
           created_by: null,
-          created_at: i.interaction_date || i.created_at,
+          created_at: i.interaction_date || i.created_at || new Date().toISOString(),
         }));
       }
       if (sourceType === "contact") {
@@ -115,7 +115,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
               }`} />
               <span className="font-medium truncate flex-1">{a.title}</span>
               <span className="text-muted-foreground text-[10px] flex-shrink-0">
-                {a.due_date || a.scheduled_at ? new Date(a.due_date || a.scheduled_at).toLocaleDateString("it-IT") : ""}
+                {a.due_date || a.scheduled_at ? new Date((a.due_date || a.scheduled_at)!).toLocaleDateString("it-IT") : ""}
               </span>
             </div>
           ))}

@@ -240,7 +240,7 @@ interface CampaignGlobeProps {
 export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlobeProps) {
   // Fetch real data from Supabase
   const { data: globeData, isLoading } = usePartnersForGlobe();
-  const { data: countryPartners = [] } = usePartnersByCountryForGlobe(selectedCountry);
+  const { data: countryPartners = [] } = usePartnersByCountryForGlobe(selectedCountry) as { data: any[] };
   
   const countries = globeData?.countries || [];
   const userInteracting = useRef(false);

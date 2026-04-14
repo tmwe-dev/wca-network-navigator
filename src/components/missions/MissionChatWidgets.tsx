@@ -220,7 +220,8 @@ interface MissionWidgetRendererProps {
   onLaunch: () => void;
   onPlanApprove?: () => void;
   onPlanCancel?: () => void;
-  planReviewProps?: { plan: Record<string, unknown>; isApproving: boolean };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MissionPlan shape varies
+  planReviewProps?: { plan: any; isApproving: boolean };
 }
 
 export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
@@ -248,7 +249,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ChannelSelectWidget
                 key={i}
                 value={stepData.channel || "email"}
-                onChange={v => onChange({ ...stepData, channel: v as string })}
+                onChange={v => onChange({ ...stepData, channel: v as "email" | "linkedin" | "whatsapp" | "mix" })}
               />
             );
 
@@ -288,7 +289,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 ]}
                 onChange={(key, checked) => onChange({
                   ...stepData,
-                  deepSearch: { ...stepData.deepSearch, enabled: true, [key]: checked },
+                  deepSearch: { scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true, ...stepData.deepSearch, enabled: true, [key]: checked },
                 })}
               />
             );

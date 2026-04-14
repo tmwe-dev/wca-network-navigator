@@ -121,7 +121,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
           context: "HomeAIPrompt.ai_assistant",
         });
       }
-      const raw = data?.content || data?.message || "";
+      const raw = String((data as Record<string, unknown>)?.content || (data as Record<string, unknown>)?.message || "");
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);

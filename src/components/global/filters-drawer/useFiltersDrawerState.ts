@@ -36,7 +36,8 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (!isCockpit || !contacts.length) return [];
     const counts: Record<string, number> = {};
     contacts.forEach(c => {
-      const cc = (c as Record<string, string>).country?.toUpperCase() || "??";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CockpitContact has dynamic shape
+      const cc = ((c as any).country as string)?.toUpperCase() || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     });
     return Object.entries(counts)

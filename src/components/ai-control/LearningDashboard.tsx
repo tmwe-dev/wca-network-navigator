@@ -225,7 +225,7 @@ export function LearningDashboard() {
                           : '✎ Modificato'}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(fb.created_at).toLocaleDateString('it-IT')}
+                        {fb.created_at ? new Date(fb.created_at).toLocaleDateString('it-IT') : ''}
                       </span>
                     </div>
                     <p className="text-sm">

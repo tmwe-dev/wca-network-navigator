@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS, capitalizeLabel } from "./contactGridLayout";
 import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
 import { adaptImportedContact } from "@/lib/contactActionAdapter";
+import type { ImportedContactRecord } from "@/lib/contactActionAdapter";
 
 interface ContactCardProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  c: unknown;
+  c: ImportedContactRecord;
   isActive: boolean;
   isSelected: boolean;
   hasBusinessCard?: boolean;

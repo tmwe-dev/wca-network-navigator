@@ -31,14 +31,14 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
           setAgents(prev =>
             prev.map(a => {
               if (a.id !== row.agent_id) return a;
-              if (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status))) {
+              if (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status as string))) {
                 if (payload.eventType === "INSERT") {
-                  toast.info(`🤖 ${a.name}: nuovo task`, { description: row.description?.slice(0, 80) || "Task assegnato", duration: 5000 });
+                  toast.info(`🤖 ${a.name}: nuovo task`, { description: String(row.description ?? "Task assegnato").slice(0, 80), duration: 5000 });
                 }
-                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: row.description || a.lastTask };
+                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: String(row.description ?? "") || a.lastTask };
               }
               if (payload.eventType === "UPDATE" && row.status === "completed") {
-                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: row.description || a.lastTask };
+                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: String(row.description ?? '') || a.lastTask };
               }
               return a;
             })
