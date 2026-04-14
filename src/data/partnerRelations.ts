@@ -128,3 +128,22 @@ export async function getProspectContactsByIds(ids: string[], select = "id, name
   if (error) throw error;
   return (data ?? []) as unknown as ProspectContactResult[];
 }
+
+// ── partner_contacts by partner IDs (batched) ──
+export async function findPartnerContactsByPartnerIds(
+  partnerIds: string[],
+  select = "id, partner_id, name, title, email, direct_phone, mobile, is_primary, contact_alias",
+): Promise<PartnerContactResult[]> {
+  const results: PartnerContactResult[] = [];
+  const CHUNK = 200;
+  for (let i = 0; i < partnerIds.length; i += CHUNK) {
+    const chunk = partnerIds.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("partner_contacts")
+      .select(select)
+      .in("partner_id", chunk);
+    if (error) throw error;
+    if (data) results.push(...(data as unknown as PartnerContactResult[]));
+  }
+  return results;
+}
