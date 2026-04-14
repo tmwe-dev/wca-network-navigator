@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DiscoverResultSchema, CheckIdsResultSchema, JobStartResultSchema, WcaMemberSchema, ScrapeProfileSchema, safeParseDiscover, safeParseScrape, safeParseCheckIds, safeParseJobStart } from "@/lib/api/wcaAppApi.schemas";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   describe("WcaMemberSchema", () => {
     it("accetta member minimo (id + name)", () => {

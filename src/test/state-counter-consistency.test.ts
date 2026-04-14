@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { supabase } from "@/integrations/supabase/client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * [A05] State Counter Consistency
  * Scope: Verify counters match real record counts in DB.

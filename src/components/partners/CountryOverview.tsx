@@ -69,16 +69,14 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape
-  const hasWhatsApp = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.mobile);
-  const hasEmail = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.email);
+  const hasWhatsApp = (p: any) => // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape
+    (p.partner_contacts || []).some((c: any) => c.mobile); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+  const hasEmail = (p: any) => // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+    (p.partner_contacts || []).some((c: any) => c.email); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
-    (partners || []).forEach((p: any) => {
+    (partners || []).forEach((p: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
       if (!map.has(p.country_code)) {
         map.set(p.country_code, {
           code: p.country_code,

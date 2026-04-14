@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("@/integrations/supabase/client", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   supabase: {
     auth: { getUser: vi.fn() },
     functions: { invoke: vi.fn() },

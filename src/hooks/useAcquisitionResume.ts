@@ -79,8 +79,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               .eq("country_code", job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
-                const members = (entry.members as any[]) || [];
+                const members = (entry.members as any[]) || []; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
                 for (const m of members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing.find(q => q.wca_id === m.wca_id);
@@ -110,8 +109,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
-                    members: membersJson as any,
+                    members: membersJson as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),

@@ -19,8 +19,7 @@ export function useAcquisitionPipelineActions(
     extensionAvailable: boolean;
     waitForExtension: (ms?: number) => Promise<boolean>;
     verifySession: () => Promise<{ success: boolean; authenticated?: boolean }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extension bridge untyped API
-    runExtensionLoop: (jobId: string, items: any[], startFrom?: number) => Promise<LiveStats>;
+    runExtensionLoop: (jobId: string, items: any[], startFrom?: number) => Promise<LiveStats>; // eslint-disable-line @typescript-eslint/no-explicit-any -- Extension bridge untyped API
   }
 ) {
   const { extensionAvailable: _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;

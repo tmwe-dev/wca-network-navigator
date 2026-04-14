@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   bgSyncSubscribe,
   bgSyncSubscribeEmails,
   bgSyncGetEmailHistory,

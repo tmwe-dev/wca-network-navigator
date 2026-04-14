@@ -4,8 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function insertCockpitQueueItems(items: Array<{ user_id: string; source_type: string; source_id: string; partner_id?: string | null }>) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase upsert type mismatch
-  const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
+  const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase upsert type mismatch
   if (error) throw error;
 }
 

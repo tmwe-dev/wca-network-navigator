@@ -31,8 +31,7 @@ export interface FsExtractResult {
 
 export function useFireScrapeExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- extension bridge generic response
-  const pendingRef = useRef<Map<string, (r: any) => void>>(new Map());
+  const pendingRef = useRef<Map<string, (r: any) => void>>(new Map()); // eslint-disable-line @typescript-eslint/no-explicit-any -- extension bridge generic response
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Listen for responses from the webapp-bridge.js content script

@@ -13,8 +13,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API instance
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any -- Web Speech API instance
   const shouldListenRef = useRef(false);
   const accumulatedRef = useRef("");
 
@@ -23,8 +22,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const createRecognition = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API not in TS lib
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any -- Web Speech API not in TS lib
     if (!SR) return null;
 
     const recognition = new SR();
@@ -33,8 +31,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SpeechRecognition event
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- SpeechRecognition event
       let interim = "";
       let final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -53,8 +50,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       setInterimText(interim);
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SpeechRecognition error event
-    recognition.onerror = (e: any) => {
+    recognition.onerror = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- SpeechRecognition error event
       if (e.error === "no-speech" || e.error === "aborted") return;
       log.warn("speech error", { error: e.error });
     };

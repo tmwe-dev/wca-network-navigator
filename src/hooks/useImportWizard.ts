@@ -41,8 +41,7 @@ export function isReimportCorrection(headers: string[]): boolean {
 }
 
 function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Import mapping dynamic row type
-  return transformRow(row as any, mapping);
+  return transformRow(row as any, mapping); // eslint-disable-line @typescript-eslint/no-explicit-any -- Import mapping dynamic row type
 }
 
 export interface AiMappingResult {
@@ -82,8 +81,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CSV import rows have dynamic shape
-  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
+  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- CSV import rows have dynamic shape
     setUploading(true);
     try {
       const idKey = headers.find(h => {

@@ -3,6 +3,7 @@ import { buildDeterministicId } from "@/lib/messageDedup";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { queryKeys } from "@/lib/queryKeys";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("messageDedup — buildDeterministicId", () => {
   it("produce stesso ID per stesso input", () => {
     const a = buildDeterministicId("wa", "Mario", "Ciao", "2026-04-08");

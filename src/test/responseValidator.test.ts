@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateResponse, outreachSchema } from "@/lib/api/responseValidator";
 import { isApiError } from "@/lib/api/apiError";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("responseValidator", () => {
   const schema = {
     required: { name: "string" as const, age: "number" as const },

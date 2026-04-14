@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // senza toccare la rete reale (mock di wcaAppApi).
 
 vi.mock("@/lib/api/wcaAppApi", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   wcaScrape: vi.fn(),
   wcaDiscover: vi.fn(),
   wcaLogin: vi.fn(),

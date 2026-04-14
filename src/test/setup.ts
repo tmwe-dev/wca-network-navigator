@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 
 // Polyfill File.prototype.text for jsdom (used by parsers)
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 if (typeof File !== "undefined" && !File.prototype.text) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (File.prototype as any).text = function () {

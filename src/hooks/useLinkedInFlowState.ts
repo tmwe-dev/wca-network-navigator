@@ -32,9 +32,8 @@ export function useLinkedInFlowState() {
         schema: "public",
         table: "linkedin_flow_jobs",
         filter: `id=eq.${activeJobId}`,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- realtime payload
-      }, (payload: any) => {
-        const row = payload.new as any;
+      }, (payload: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- realtime payload
+        const row = payload.new as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
         setProgress({
           total: row.total_count,
           processed: row.processed_count,

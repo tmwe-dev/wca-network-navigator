@@ -13,8 +13,7 @@ interface ExpandedGroupContentProps {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic contact shape
-  onSelect: (contact: any) => void;
+  onSelect: (contact: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic contact shape
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;
@@ -82,7 +81,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
-                  c={c as any}
+                  c={c as any} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
                   isActive={selectedId === c.id}
                   isSelected={selection.selectedIds.has(c.id)}
                   onSelect={() => {}}

@@ -92,7 +92,7 @@ export default function Contacts() {
                 <ContactDetailPanel
                   key={selectedContact.id}
                   contact={selectedContact}
-                  onContactUpdated={handleContactUpdated as any}
+                  onContactUpdated={handleContactUpdated as any} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
                 />
               </div>
             </ResizablePanel>

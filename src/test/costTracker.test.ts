@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { checkBudget, trackCost, getSessionStats, resetSession, configureCostTracker } from "@/lib/api/costTracker";
 import { isApiError } from "@/lib/api/apiError";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 describe("costTracker", () => {
   beforeEach(() => {
     resetSession();

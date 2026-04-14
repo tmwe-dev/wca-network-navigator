@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("@/integrations/supabase/client", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   supabase: {
     auth: { getUser: vi.fn() },
     from: vi.fn(),

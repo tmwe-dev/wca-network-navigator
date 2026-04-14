@@ -25,7 +25,7 @@ export function useRADashboard() {
         untypedFrom("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
         untypedFrom("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
         untypedFrom("ra_prospects").select("codice_ateco, descrizione_ateco"),
-      ]) as any;
+      ]) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
 
       const atecoMap = new Map<string, { description: string; count: number }>();
       ((atecoData ?? []) as Record<string, string>[]).forEach((p) => {

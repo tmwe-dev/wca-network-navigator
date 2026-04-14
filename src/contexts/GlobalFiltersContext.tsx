@@ -146,7 +146,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const [filters, dispatch] = useReducer(filterReducer, undefined, cloneDefaults);
 
   const setFilter = useCallback(<K extends keyof GlobalFilterState>(key: K, value: GlobalFilterState[K]) => {
-    dispatch({ type: "SET", key, value: value as any });
+    dispatch({ type: "SET", key, value: value as any }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
   }, []);
 
   const batchUpdate = useCallback((updates: Partial<GlobalFilterState>) => {

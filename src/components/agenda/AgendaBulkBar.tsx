@@ -83,8 +83,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         priority: "medium",
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-      await createActivities(activityInserts as any);
+      await createActivities(activityInserts as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();

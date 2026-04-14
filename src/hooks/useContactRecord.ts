@@ -78,8 +78,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !c) return null;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic enrichment_data shape
-        const ed = (c.enrichment_data as any) || {};
+        const ed = (c.enrichment_data as any) || {}; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic enrichment_data shape
         return {
           sourceType: "contact", sourceId,
           companyName: c.company_name || "", contactName: c.name || "",
@@ -103,8 +102,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic join shape
-        const p = pr as any;
+        const p = pr as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic join shape
         const pc = p.prospect_contacts?.[0];
         return {
           sourceType: "prospect", sourceId,

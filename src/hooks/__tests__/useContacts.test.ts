@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("@/data/contacts", () => ({
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   findContacts: vi.fn(),
   findHoldingPatternContacts: vi.fn(),
   getHoldingPatternStats: vi.fn(),

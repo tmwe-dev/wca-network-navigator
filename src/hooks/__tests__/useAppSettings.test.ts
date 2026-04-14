@@ -3,6 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({

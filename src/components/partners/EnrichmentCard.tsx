@@ -21,8 +21,7 @@ const seniorityColors: Record<string, string> = {
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deeply nested enrichment JSON shape
-  const enrichment = partner.enrichment_data as any;
+  const enrichment = partner.enrichment_data as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- deeply nested enrichment JSON shape
   if (!enrichment && !partner.enriched_at && !partner.ai_parsed_at) return null;
 
   const companyProfile = enrichment?.company_profile;
@@ -100,7 +99,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
                   {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
-                    const label = typeof a === "string" ? a : String((a as any)?.name || (a as any)?.recipient || JSON.stringify(a));
+                    const label = typeof a === "string" ? a : String((a as any)?.name || (a as any)?.recipient || JSON.stringify(a)); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
