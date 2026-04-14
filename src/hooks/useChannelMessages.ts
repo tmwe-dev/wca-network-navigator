@@ -83,7 +83,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["channel-messages", channel, searchQuery, page, operatorUserId],
+    queryKey: queryKeys.channelMessages.all,
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")

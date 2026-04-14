@@ -30,7 +30,7 @@ export default function CRM() {
     onSuccess: () => {
       toast.success("Lead scores ricalcolati");
       qc.invalidateQueries({ queryKey: queryKeys.contacts.all });
-      qc.invalidateQueries({ queryKey: ["imported-contacts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
     },
     onError: (e: Error) => toast.error(e.message),
   });

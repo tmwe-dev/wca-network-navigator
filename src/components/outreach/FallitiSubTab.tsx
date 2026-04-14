@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { findFailedOutreach, retryMissionAction, cancelMissionAction, logAuditEntry } from "@/data/outreachPipeline";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface FailedItem {
   id: string;
@@ -28,7 +29,7 @@ export function FallitiSubTab() {
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach-failed"],
+    queryKey: queryKeys.outreach.failed(),
     queryFn: findFailedOutreach,
   });
 
@@ -62,7 +63,7 @@ export function FallitiSubTab() {
     try {
       if (item.type === "mission_action") await retryMissionAction(item.realId);
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Retry: ${item.label}`, decision_origin: "manual" });
-      qc.invalidateQueries({ queryKey: ["outreach-failed"] });
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.failed() });
       toast.success("Rimesso in coda");
     } catch { toast.error("Errore retry"); }
   };
@@ -70,7 +71,7 @@ export function FallitiSubTab() {
   const handleDismiss = async (item: FailedItem) => {
     try {
       if (item.type === "mission_action") await cancelMissionAction(item.realId);
-      qc.invalidateQueries({ queryKey: ["outreach-failed"] });
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.failed() });
       toast.info("Rimosso");
     } catch { toast.error("Errore"); }
   };

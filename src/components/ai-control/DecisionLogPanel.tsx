@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
 
 const DECISION_TYPES: Record<string, { color: string; label: string }> = {
   classify_email: { color: "bg-blue-400/10 text-blue-400", label: "Classifica Email" },
@@ -43,7 +44,7 @@ export function DecisionLogPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["ai-decision-log", typeFilter, autoOnly, searchEmail, page],
+    queryKey: queryKeys.ai.decisionLog(typeFilter, autoOnly, searchEmail, page),
     queryFn: async () => {
       let q = supabase
         .from("ai_decision_log")

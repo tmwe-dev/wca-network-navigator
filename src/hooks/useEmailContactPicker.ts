@@ -106,7 +106,7 @@ export function useEmailContactPicker() {
 
   // ── Contacts ──
   const { data: contacts = [] } = useQuery<ImportedContactRow[]>({
-    queryKey: ["picker-contacts", state.search, state.selectedCountry, state.originFilter],
+    queryKey: queryKeys.contacts.picker(state.search, state.selectedCountry, state.originFilter),
     enabled: state.tab === "contacts",
     queryFn: async () => {
       let q = supabase

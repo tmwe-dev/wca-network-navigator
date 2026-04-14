@@ -14,6 +14,7 @@ import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { findScheduledOutreach, cancelMissionAction, cancelActivity, updateMissionActionSchedule, updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { queryKeys } from "@/lib/queryKeys";
 
 const CHANNEL_COLORS: Record<string, string> = {
   send_email: "bg-primary/20 border-primary/30 text-primary",
@@ -39,7 +40,7 @@ export function ProgrammatiSubTab() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach-scheduled"],
+    queryKey: queryKeys.outreach.scheduled(),
     queryFn: findScheduledOutreach,
   });
 
@@ -74,7 +75,7 @@ export function ProgrammatiSubTab() {
       if (item.type === "mission_action") await cancelMissionAction(item.realId);
       else if (item.type === "activity") await cancelActivity(item.realId);
       await logAuditEntry({ action_category: "cadence_cancelled", action_detail: `Annullato programmato: ${item.label}`, decision_origin: "manual" });
-      qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.scheduled() });
       toast.success("Annullato");
     } catch { toast.error("Errore"); }
   };
@@ -84,7 +85,7 @@ export function ProgrammatiSubTab() {
       if (item.type === "mission_action") await updateMissionActionSchedule(item.realId, new Date().toISOString());
       else if (item.type === "activity") await updateActivitySchedule(item.realId, new Date().toISOString());
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Anticipato a oggi: ${item.label}`, decision_origin: "manual" });
-      qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.scheduled() });
       toast.success("Spostato a oggi");
     } catch { toast.error("Errore"); }
   };
@@ -145,7 +146,7 @@ export function ProgrammatiSubTab() {
                           try {
                             if (item.type === "mission_action") await updateMissionActionSchedule(item.realId, d.toISOString());
                             else if (item.type === "activity") await updateActivitySchedule(item.realId, d.toISOString());
-                            qc.invalidateQueries({ queryKey: ["outreach-scheduled"] });
+                            qc.invalidateQueries({ queryKey: queryKeys.outreach.scheduled() });
                             toast.success(`Posticipato a ${format(d, "dd MMM", { locale: it })}`);
                           } catch { toast.error("Errore"); }
                         }} className="p-3 pointer-events-auto" />

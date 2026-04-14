@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 type InitialEmailMessageContent = {
   bodyHtml?: string | null;
@@ -14,7 +15,7 @@ export function useEmailMessageContent(
   const fallbackBodyText = initialContent?.bodyText ?? null;
 
   const query = useQuery({
-    queryKey: ["email-message-content", messageId],
+    queryKey: queryKeys.email.messageContent(messageId),
     enabled: !!messageId,
     queryFn: async () => {
       const { data, error } = await supabase

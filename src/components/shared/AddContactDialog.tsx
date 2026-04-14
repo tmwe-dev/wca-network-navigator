@@ -115,7 +115,7 @@ export default function AddContactDialog({
         sourceId = contact!.id;
         sourceType = "contact";
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
-        queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
 
       } else if (destination === "network") {
         if (!partnerId) {

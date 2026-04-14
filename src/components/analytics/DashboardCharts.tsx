@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
+import { queryKeys } from "@/lib/queryKeys";
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -55,7 +56,7 @@ function useActivityTrend() {
 
 function useChannelDistribution() {
   return useQuery({
-    queryKey: ["dashboard-channel-dist"],
+    queryKey: queryKeys.dashboard.channelDist,
     queryFn: async () => {
       const { data } = await supabase
         .from("activities")
@@ -102,7 +103,7 @@ function useResponseByCountry() {
 
 function useLeadScoreDist() {
   return useQuery({
-    queryKey: ["dashboard-lead-score-dist"],
+    queryKey: queryKeys.dashboard.leadScoreDist,
     queryFn: async () => {
       const { data } = await supabase
         .from("imported_contacts")

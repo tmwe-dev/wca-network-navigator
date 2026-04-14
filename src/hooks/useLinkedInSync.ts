@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
 import { insertChannelMessage } from "@/data/channelMessages";
+import { queryKeys } from "@/lib/queryKeys";
 
 const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
@@ -81,7 +82,7 @@ export function useLinkedInSync() {
       }
 
       if (newMsgs > 0) {
-        queryClient.invalidateQueries({ queryKey: ["channel-messages", "linkedin"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
         toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
       }
       window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));

@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface InboundMessage {
   readonly id: string;
@@ -19,7 +20,7 @@ interface InboundMessage {
 
 export function useInreachV2(search: string, catFilter: string) {
   return useQuery({
-    queryKey: ["v2", "inreach", search, catFilter],
+    queryKey: queryKeys.v2.inreach(search, catFilter),
     queryFn: async (): Promise<readonly InboundMessage[]> => {
       let q = supabase
         .from("channel_messages")
@@ -56,7 +57,7 @@ export function useMarkReadV2() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["v2", "inreach"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.v2.inreach() }),
   });
 }
 

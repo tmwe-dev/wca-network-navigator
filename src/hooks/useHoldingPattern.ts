@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByLeadStatus } from "@/data/partners";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type HoldingSource = "partner" | "prospect" | "contact";
 
@@ -38,7 +39,7 @@ const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
 
 export function useHoldingPatternList() {
   return useQuery({
-    queryKey: ["holding-pattern-list"],
+    queryKey: queryKeys.contacts.holdingPatternList(),
     queryFn: async () => {
       const items: HoldingItem[] = [];
 
@@ -167,7 +168,7 @@ export function useHoldingPatternList() {
 
 export function useHoldingTimeline(item: HoldingItem | null) {
   return useQuery({
-    queryKey: ["holding-timeline", item?.id, item?.source],
+    queryKey: queryKeys.contacts.holdingTimeline(item?.id, item?.source),
     queryFn: async (): Promise<TimelineEntry[]> => {
       if (!item) return [];
       const entries: TimelineEntry[] = [];

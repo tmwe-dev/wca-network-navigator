@@ -8,6 +8,7 @@ import { extractDomainFromEmail, isPersonalEmail } from "@/components/ui/Company
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { toast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface EnrichedRow {
   id: string;
@@ -129,7 +130,7 @@ export function useEnrichmentData() {
   // ── Data queries ──
 
   const { data: partners = [] } = useQuery({
-    queryKey: ["enrichment-partners"],
+    queryKey: queryKeys.partners.enrichment(),
     queryFn: async () => {
       const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url");
       return data.map((p): EnrichedRow => ({

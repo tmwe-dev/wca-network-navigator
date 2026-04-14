@@ -130,7 +130,7 @@ export function useImportWizard() {
       }
 
       toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
     } catch (err) {
       toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
@@ -147,7 +147,7 @@ export function useImportWizard() {
       await deleteImportLog(logId);
       if (activeLogId === logId) setActiveLogId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
       toast({ title: "Import eliminato" });
     } catch (err) {
       toast({ title: "Errore eliminazione", description: String(err), variant: "destructive" });

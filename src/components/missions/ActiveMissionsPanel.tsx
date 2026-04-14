@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { pauseMission, resumeMission, cancelMission } from "@/data/outreachPipeline";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { queryKeys } from "@/lib/queryKeys";
 
 const statusIcon: Record<string, typeof Clock> = {
   planned: Clock,
@@ -42,14 +43,14 @@ export default function ActiveMissionsPanel() {
 
   const handlePause = async (missionId: string) => {
     setActing(missionId);
-    try { await pauseMission(missionId); qc.invalidateQueries({ queryKey: ["active-mission-actions"] }); toast.success("Missione in pausa"); }
+    try { await pauseMission(missionId); qc.invalidateQueries({ queryKey: queryKeys.missions.activeActions() }); toast.success("Missione in pausa"); }
     catch { toast.error("Errore pausa"); }
     finally { setActing(null); }
   };
 
   const handleResume = async (missionId: string) => {
     setActing(missionId);
-    try { await resumeMission(missionId); qc.invalidateQueries({ queryKey: ["active-mission-actions"] }); toast.success("Missione ripresa"); }
+    try { await resumeMission(missionId); qc.invalidateQueries({ queryKey: queryKeys.missions.activeActions() }); toast.success("Missione ripresa"); }
     catch { toast.error("Errore ripresa"); }
     finally { setActing(null); }
   };
@@ -57,7 +58,7 @@ export default function ActiveMissionsPanel() {
   const handleCancel = async (missionId: string) => {
     if (!confirm("Annullare questa missione?")) return;
     setActing(missionId);
-    try { await cancelMission(missionId); qc.invalidateQueries({ queryKey: ["active-mission-actions"] }); toast.info("Missione annullata"); }
+    try { await cancelMission(missionId); qc.invalidateQueries({ queryKey: queryKeys.missions.activeActions() }); toast.info("Missione annullata"); }
     catch { toast.error("Errore annullamento"); }
     finally { setActing(null); }
   };

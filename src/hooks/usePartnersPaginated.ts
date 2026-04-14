@@ -11,6 +11,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { PartnerFilters } from "./usePartners";
+import { queryKeys } from "@/lib/queryKeys";
 
 const PAGE_SIZE = 50;
 
@@ -22,7 +23,7 @@ export interface PaginatedFilters extends PartnerFilters {
 
 export function usePartnersPaginated(filters?: PaginatedFilters) {
   return useInfiniteQuery({
-    queryKey: ["partners-paginated", filters],
+    queryKey: queryKeys.partners.paginated(filters),
     queryFn: async ({ pageParam = 0 }) => {
       const from = pageParam * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;

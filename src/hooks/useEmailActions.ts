@@ -28,7 +28,7 @@ type MarkAsReadInput = {
 
 export function useMessageAttachments(messageId: string | null) {
   return useQuery({
-    queryKey: ["email-attachments", messageId],
+    queryKey: queryKeys.email.attachments(messageId),
     queryFn: async () => {
       if (!messageId) return [];
       const { data, error } = await supabase

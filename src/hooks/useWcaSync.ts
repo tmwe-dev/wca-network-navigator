@@ -77,7 +77,7 @@ export function useWcaSync() {
         }
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-      queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.paginated() });
       queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
       queryClient.invalidateQueries({ queryKey: queryKeys.partnerStats });
     } catch (e: unknown) {

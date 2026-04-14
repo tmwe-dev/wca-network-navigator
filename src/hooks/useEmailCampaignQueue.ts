@@ -6,6 +6,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { findCampaignQueueItems, insertCampaignQueueBatch, updateEmailDraft, getEmailDraftField } from "@/data/emailCampaigns";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useEmailCampaignQueue");
 
@@ -20,7 +21,7 @@ export interface QueueStats {
 
 export function useEmailCampaignQueue(draftId: string | null) {
   const { data: items = [], refetch: refetchItems } = useQuery({
-    queryKey: ["email-campaign-queue", draftId],
+    queryKey: queryKeys.email.campaignQueue(draftId),
     queryFn: () => draftId ? findCampaignQueueItems(draftId) : Promise.resolve([]),
     enabled: !!draftId,
     refetchInterval: false,
@@ -67,8 +68,8 @@ export function useEnqueueCampaign() {
       return { queued: rows.length };
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["email-campaign-queue"] });
-      qc.invalidateQueries({ queryKey: ["email-drafts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.campaignQueue() });
+      qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
       toast.success(`${data.queued} email in coda`);
     },
     onError: () => toast.error("Errore nell'accodamento"),
@@ -100,21 +101,21 @@ export function useProcessQueue() {
       }
     }
     setProcessing(false);
-    qc.invalidateQueries({ queryKey: ["email-drafts"] });
+    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
   }, [qc]);
 
   const pauseProcessing = useCallback(async (draftId: string) => {
     abortRef.current = true;
     try { await invokeEdge("process-email-queue", { body: { draft_id: draftId, action: "pause" }, context: "useEmailCampaignQueue.pause" }); } catch (err) { log.warn("pause failed", { message: err instanceof Error ? err.message : String(err) }); }
-    qc.invalidateQueries({ queryKey: ["email-drafts"] });
+    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
     toast.info("Campagna in pausa");
   }, [qc]);
 
   const cancelProcessing = useCallback(async (draftId: string) => {
     abortRef.current = true;
     try { await invokeEdge("process-email-queue", { body: { draft_id: draftId, action: "cancel" }, context: "useEmailCampaignQueue.cancel" }); } catch (err) { log.warn("cancel failed", { message: err instanceof Error ? err.message : String(err) }); }
-    qc.invalidateQueries({ queryKey: ["email-drafts"] });
-    qc.invalidateQueries({ queryKey: ["email-campaign-queue"] });
+    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
+    qc.invalidateQueries({ queryKey: queryKeys.email.campaignQueue() });
     toast.info("Campagna annullata");
   }, [qc]);
 

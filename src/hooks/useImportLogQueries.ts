@@ -84,7 +84,7 @@ export function useImportLogs() {
 
 export function useImportLog(id: string | null) {
   return useQuery({
-    queryKey: ["import-log", id],
+    queryKey: queryKeys.imports.log(id),
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
@@ -105,7 +105,7 @@ export function useImportLog(id: string | null) {
 
 export function useImportedContacts(importLogId: string | null) {
   return useQuery({
-    queryKey: ["imported-contacts", importLogId],
+    queryKey: queryKeys.contacts.imported(importLogId),
     queryFn: async () => {
       if (!importLogId) return [];
       const PAGE_SIZE = 1000;
@@ -132,7 +132,7 @@ export function useImportedContacts(importLogId: string | null) {
 
 export function useImportErrors(importLogId: string | null) {
   return useQuery({
-    queryKey: ["import-errors", importLogId],
+    queryKey: queryKeys.imports.errors(importLogId),
     queryFn: async () => {
       if (!importLogId) return [];
       const { data, error } = await supabase

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("HoldingPatternTab");
 
@@ -74,7 +75,7 @@ export function HoldingPatternTab() {
       } else {
         await updateLeadStatus("imported_contacts", item.id, newStatus);
       }
-      queryClient.invalidateQueries({ queryKey: ["holding-pattern-list"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.holdingPatternList() });
       toast.success("Stato aggiornato");
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

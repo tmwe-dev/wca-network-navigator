@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type DraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
 type DraftUpdate = Database["public"]["Tables"]["email_drafts"]["Update"];
@@ -23,7 +24,7 @@ export interface EmailDraft {
 
 export function useEmailDrafts() {
   return useQuery({
-    queryKey: ["email-drafts"],
+    queryKey: queryKeys.email.drafts(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_drafts")
@@ -55,6 +56,6 @@ export function useSaveEmailDraft() {
         return data;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["email-drafts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.drafts() }),
   });
 }

@@ -154,7 +154,7 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
         onContactUpdated?.(updated as ContactDetail);
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
-      queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {

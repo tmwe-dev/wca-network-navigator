@@ -38,7 +38,7 @@ export function useReminders() {
 
 export function usePendingReminders() {
   return useQuery({
-    queryKey: ["reminders", "pending"],
+    queryKey: queryKeys.reminders.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reminders")

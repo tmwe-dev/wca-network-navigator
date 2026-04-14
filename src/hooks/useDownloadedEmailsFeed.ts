@@ -28,7 +28,7 @@ export function useDownloadedEmailsFeed() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["downloaded-emails-feed"],
+    queryKey: queryKeys.email.downloadedFeed(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("channel_messages")

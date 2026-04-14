@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { RAContact, RAInteraction } from "@/types/ra";
 import type { RAProspect, RAProspectFilters, RALeadStatus } from "@/types/ra";
+import { queryKeys } from "@/lib/queryKeys";
 
 const RA_PROSPECTS_KEY = ["ra-prospects"] as const;
 const DEFAULT_PAGE_SIZE = 100;
@@ -55,7 +56,7 @@ export function useRAProspects(filters: RAProspectFilters = {}) {
 
 export function useRAProspect(id: string | undefined) {
   return useQuery({
-    queryKey: ["ra-prospect", id],
+    queryKey: queryKeys.prospects.ra.prospect(id),
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await untypedFrom("ra_prospects")
@@ -71,7 +72,7 @@ export function useRAProspect(id: string | undefined) {
 
 export function useRAProspectContacts(prospectId: string | undefined) {
   return useQuery({
-    queryKey: ["ra-prospect-contacts", prospectId],
+    queryKey: queryKeys.prospects.ra.contacts(prospectId),
     queryFn: async () => {
       if (!prospectId) return [];
       const { data, error } = await untypedFrom("ra_contacts")
@@ -87,7 +88,7 @@ export function useRAProspectContacts(prospectId: string | undefined) {
 
 export function useRAProspectInteractions(prospectId: string | undefined) {
   return useQuery({
-    queryKey: ["ra-prospect-interactions", prospectId],
+    queryKey: queryKeys.prospects.ra.interactions(prospectId),
     queryFn: async () => {
       if (!prospectId) return [];
       const { data, error } = await untypedFrom("ra_interactions")

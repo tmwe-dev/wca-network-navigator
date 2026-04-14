@@ -33,7 +33,7 @@ export function useContactActions(deps: Deps) {
 
   const invalidateContacts = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
-    queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
   };
 
   const handleDeepSearch = useCallback(async (contactIds: string[]) => {

@@ -4,6 +4,7 @@
  */
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { findContactsPaginated, type ContactPaginatedFilters } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type { ContactPaginatedFilters } from "@/data/contacts";
 
@@ -11,7 +12,7 @@ const PAGE_SIZE = 50;
 
 export function useContactsPaginated(filters?: ContactPaginatedFilters) {
   return useInfiniteQuery({
-    queryKey: ["contacts-paginated", filters],
+    queryKey: queryKeys.contacts.paginated(filters),
     queryFn: async ({ pageParam = 0 }) => {
       return findContactsPaginated(filters ?? {}, pageParam, PAGE_SIZE);
     },

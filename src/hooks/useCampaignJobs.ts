@@ -32,7 +32,7 @@ export { useContactsForPartners as useJobContacts } from "./useActivities";
 
 export function useCampaignJobs(batchId?: string | null) {
   return useQuery({
-    queryKey: ["campaign-jobs", batchId],
+    queryKey: queryKeys.campaigns.jobs(batchId),
     queryFn: async () => {
       if (!batchId) return [] as CampaignJob[];
       const { data, error } = await supabase
@@ -76,7 +76,7 @@ export function useCreateCampaignJobs() {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
+      qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
       qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });
@@ -92,7 +92,7 @@ export function useUpdateCampaignJob() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["campaign-jobs"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() }),
   });
 }
 
@@ -107,7 +107,7 @@ export function useDeleteCampaignJobs() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
+      qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
       qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });

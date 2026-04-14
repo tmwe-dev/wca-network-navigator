@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ── Types ──
 
@@ -95,7 +96,7 @@ export function SupervisorFeedPanel(): React.ReactElement {
 
   // Feed query
   const { data: feed, isLoading } = useQuery({
-    queryKey: ["supervisor-feed", actorFilter, originFilter, search, page],
+    queryKey: queryKeys.supervisor.feed(actorFilter, originFilter, search, page),
     queryFn: async () => {
       let q = supabase
         .from("supervisor_audit_log")

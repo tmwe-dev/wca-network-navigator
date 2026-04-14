@@ -13,6 +13,7 @@ import {
 } from "@/data/activities";
 import { supabase } from "@/integrations/supabase/client";
 import type { Activity, AllActivity, SourceMeta } from "@/data/activities";
+import { queryKeys } from "@/lib/queryKeys";
 
 // Re-export types for backward compat
 export type { Activity, AllActivity, SourceMeta };
@@ -69,7 +70,7 @@ export function useAllActivities() {
  */
 export function useContactsForPartners(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["partner-contacts-map", partnerIds],
+    queryKey: queryKeys.partnerContacts.map(partnerIds),
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, PartnerContactRecord[]>;
       const CHUNK = 100;

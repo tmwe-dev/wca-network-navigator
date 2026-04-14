@@ -76,7 +76,7 @@ export function useTrackActivity() {
       qc.invalidateQueries({ queryKey: queryKeys.activities.workedToday });
       qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
       qc.invalidateQueries({ queryKey: queryKeys.partners.all });
-      qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.paginated() });
       qc.invalidateQueries({ queryKey: queryKeys.contacts.contactsGroupCounts });
     },
   });

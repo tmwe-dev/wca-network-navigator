@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface DailyBriefing {
   readonly id: string;
@@ -14,7 +15,7 @@ interface DailyBriefing {
 
 export function useDailyBriefingV2() {
   return useQuery({
-    queryKey: ["v2", "daily-briefing"],
+    queryKey: queryKeys.v2.dailyBriefing,
     queryFn: async (): Promise<readonly DailyBriefing[]> => {
       const { data, error } = await supabase
         .from("ai_session_briefings")

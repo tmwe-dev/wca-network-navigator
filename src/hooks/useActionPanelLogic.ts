@@ -74,7 +74,7 @@ export function useActionPanelLogic({
   });
 
   const { data: noProfileIds = [] } = useQuery({
-    queryKey: ["no-profile-wca-ids", countryCodes],
+    queryKey: queryKeys.noProfileWcaIds(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       const data = await getPartnersByCountries(countryCodes, "wca_id", { noProfile: true });

@@ -22,6 +22,7 @@ import { WcaBrowser } from "./WcaBrowser";
 import { useTheme, t } from "./theme";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("AdvancedTools");
 
@@ -70,7 +71,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
   const [results, setResults] = useState<{ id: string; success: boolean }[]>([]);
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["enrichment-partners", filterCountry, filterType, onlyNotEnriched],
+    queryKey: queryKeys.partners.enrichment(filterCountry, filterType, onlyNotEnriched),
     queryFn: async () => {
       const data = await findPartnersForEnrichment({ country: filterCountry, type: filterType, onlyNotEnriched }, 500);
       return data as EnrichPartner[];

@@ -235,7 +235,7 @@ export function useContactListPanel() {
     }
     toast({ title: `✅ ${ids.length} contatti eliminati` });
     selection.clear();
-    qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+    qc.invalidateQueries({ queryKey: queryKeys.contacts.paginated() });
     qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
   }, [selection, qc]);
 
@@ -247,7 +247,7 @@ export function useContactListPanel() {
       });
       toast({ title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati` });
       selection.clear();
-      qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.paginated() });
       qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
     } catch (err: unknown) {
       toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
@@ -260,7 +260,7 @@ export function useContactListPanel() {
       const result = data as WcaMatchResult | null;
       toast({ title: `✅ WCA Match completato — ${result?.matched_count || 0} associazioni trovate` });
       selection.clear();
-      qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.paginated() });
       qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });

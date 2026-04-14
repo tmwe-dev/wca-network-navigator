@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface EmailDownloadJob {
   readonly id: string;
@@ -19,7 +20,7 @@ export function useEmailDownloadV2() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["v2", "email-download"],
+    queryKey: queryKeys.v2.emailDownload(),
     queryFn: async (): Promise<readonly EmailDownloadJob[]> => {
       const { data, error } = await supabase
         .from("email_sync_jobs")
@@ -42,7 +43,7 @@ export function useEmailDownloadV2() {
 
   const startSync = useMutation({
     mutationFn: () => invokeEdge("sync-emails", { context: "emailDownloadV2" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["v2", "email-download"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.emailDownload() }),
   });
 
   return { ...query, startSync: startSync.mutate, isSyncing: startSync.isPending };

@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, Send, Clock, Handshake, Star, Snowflake, ArrowRight, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ── Stage definitions mapped to lead_status ──
 interface Stage {
@@ -47,7 +48,7 @@ export function ContactPipelineView(): React.ReactElement {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   const { data: contacts, isLoading } = useQuery({
-    queryKey: ["pipeline-contacts"],
+    queryKey: queryKeys.contacts.pipeline(),
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user?.id) return [];
@@ -111,7 +112,7 @@ export function ContactPipelineView(): React.ReactElement {
 
     if (error) {
       toast.error("Errore aggiornamento stato");
-      qc.invalidateQueries({ queryKey: ["pipeline-contacts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.pipeline() });
     } else {
       toast.success(`Stato aggiornato a "${STAGES.find((s) => s.id === newStatus)?.label}"`);
     }

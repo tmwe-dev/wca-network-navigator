@@ -147,7 +147,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
 export function useBusinessCardsForCampaign(countryCode: string | null) {
   return useQuery({
-    queryKey: ["bca-campaign", countryCode],
+    queryKey: queryKeys.businessCards.campaign(countryCode),
     queryFn: async () => {
       if (!countryCode) return [];
 

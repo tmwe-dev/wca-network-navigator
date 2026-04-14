@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface BlacklistEntry {
   readonly id: string;
@@ -17,7 +18,7 @@ interface BlacklistEntry {
 
 export function useBlacklistV2() {
   return useQuery({
-    queryKey: ["v2", "blacklist"],
+    queryKey: queryKeys.v2.blacklist,
     queryFn: async (): Promise<readonly BlacklistEntry[]> => {
       const { data, error } = await supabase
         .from("blacklist_entries")

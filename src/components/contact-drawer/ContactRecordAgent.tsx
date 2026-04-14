@@ -6,6 +6,7 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Props {
   sourceId: string;
@@ -45,7 +46,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
   }, [assignment, agents, sourceId, sourceType]);
 
   const { data: agent } = useQuery({
-    queryKey: ["agent-for-record", assignment?.agent_id],
+    queryKey: queryKeys.agents.forRecord(assignment?.agent_id),
     queryFn: async () => {
       if (!assignment?.agent_id) return null;
       const { data } = await supabase

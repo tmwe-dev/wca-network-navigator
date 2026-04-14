@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface AgentTask {
   readonly id: string;
@@ -17,7 +18,7 @@ interface AgentTask {
 
 export function useAgentTasksV2(agentId?: string) {
   return useQuery({
-    queryKey: ["v2", "agent-tasks", agentId ?? "all"],
+    queryKey: queryKeys.v2.agentTasks(agentId ?? "all"),
     queryFn: async (): Promise<readonly AgentTask[]> => {
       let q = supabase.from("agent_tasks").select("*").order("created_at", { ascending: false }).limit(100);
       if (agentId) q = q.eq("agent_id", agentId);

@@ -45,7 +45,7 @@ export function useAgentDashboard() {
   });
 
   const tasksQuery = useQuery({
-    queryKey: ["agent-dashboard-tasks"],
+    queryKey: queryKeys.agents.dashboard.tasks(),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

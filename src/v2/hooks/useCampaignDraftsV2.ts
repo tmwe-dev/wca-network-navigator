@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface CampaignDraft {
   readonly id: string;
@@ -51,7 +52,7 @@ export function useCampaignStatsV2() {
 
 export function useCampaignDraftsV2() {
   return useQuery({
-    queryKey: ["v2", "campaign-drafts"],
+    queryKey: queryKeys.v2.campaignDrafts(),
     queryFn: async (): Promise<readonly CampaignDraft[]> => {
       const { data, error } = await supabase
         .from("email_drafts")
@@ -99,7 +100,7 @@ export function usePauseCampaignV2() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2", "campaign-drafts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.campaignDrafts() });
       toast.success("Campagna in pausa");
     },
   });
@@ -113,7 +114,7 @@ export function useResumeCampaignV2() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v2", "campaign-drafts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.v2.campaignDrafts() });
       toast.success("Campagna ripresa");
     },
   });

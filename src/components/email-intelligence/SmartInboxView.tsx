@@ -72,7 +72,7 @@ export function SmartInboxView() {
   const selected = classifications.find(c => c.id === selectedId);
 
   const { data: convContext } = useQuery({
-    queryKey: ["conv-context", selected?.email_address],
+    queryKey: queryKeys.convContext.byEmail(selected?.email_address),
     enabled: !!selected?.email_address,
     queryFn: async () => {
       const { data } = await supabase

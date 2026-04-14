@@ -20,6 +20,7 @@ import { MOCK_ACTIVITIES } from "@/lib/outreachMockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   send_email: Mail,
@@ -45,7 +46,7 @@ export function AttivitaTab() {
   const searchTerm = gf.search || "";
 
   const { data: activities, isLoading } = useQuery({
-    queryKey: ["activities-outreach"],
+    queryKey: queryKeys.activities.outreach(),
     queryFn: async () => {
       const { data } = await supabase
         .from("activities")
@@ -107,7 +108,7 @@ export function AttivitaTab() {
         .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["activities-outreach"] });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.outreach() });
       toast.success("Attività completata");
     } catch { toast.error("Errore"); }
   };
@@ -120,7 +121,7 @@ export function AttivitaTab() {
         .eq("id", id);
       if (error) throw error;
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Nota aggiunta`, decision_origin: "manual", target_type: "activity", target_id: id });
-      qc.invalidateQueries({ queryKey: ["activities-outreach"] });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.outreach() });
       toast.success("Nota salvata");
       setNoteText("");
     } catch { toast.error("Errore salvataggio nota"); }
@@ -290,7 +291,7 @@ export function AttivitaTab() {
                                   try {
                                     await updateActivitySchedule(item.id, d.toISOString());
                                     await logAuditEntry({ action_category: "activity_updated", action_detail: `Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`, decision_origin: "manual", target_type: "activity", target_id: item.id });
-                                    qc.invalidateQueries({ queryKey: ["activities-outreach"] });
+                                    qc.invalidateQueries({ queryKey: queryKeys.activities.outreach() });
                                     toast.success(`Riprogrammato per ${format(d, "dd MMM yyyy", { locale: it })}`);
                                   } catch { toast.error("Errore salvataggio"); }
                                 }

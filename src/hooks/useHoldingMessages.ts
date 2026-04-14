@@ -27,7 +27,7 @@ export interface HoldingMessageGroup {
 
 export function useHoldingMessages(channel: HoldingChannel) {
   return useQuery({
-    queryKey: ["holding-messages", channel],
+    queryKey: queryKeys.contacts.holdingMessages(channel),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;

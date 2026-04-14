@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchContacts, fetchContactById } from "@/v2/io/supabase/queries/contacts";
 import { isOk } from "@/v2/core/domain/result";
 import type { Contact } from "@/v2/core/domain/entities";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ContactFilters {
   readonly searchQuery?: string;
@@ -15,7 +16,7 @@ export interface ContactFilters {
 
 export function useContactsV2(filters: ContactFilters = {}) {
   return useQuery({
-    queryKey: ["v2", "contacts", filters],
+    queryKey: queryKeys.v2.contacts(filters),
     queryFn: async (): Promise<readonly Contact[]> => {
       const contactResult = await fetchContacts({
         search: filters.searchQuery,
@@ -32,7 +33,7 @@ export function useContactsV2(filters: ContactFilters = {}) {
 
 export function useContactDetail(contactId: string | null) {
   return useQuery({
-    queryKey: ["v2", "contact", contactId],
+    queryKey: queryKeys.v2.contact(contactId),
     queryFn: async (): Promise<Contact | null> => {
       if (!contactId) return null;
       const contactResult = await fetchContactById(contactId);

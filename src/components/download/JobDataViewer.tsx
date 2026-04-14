@@ -13,6 +13,7 @@ import {
   CheckCircle, XCircle, Building2, Loader2, MapPin, Radio, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface JobDataViewerProps {
   open: boolean;
@@ -58,7 +59,7 @@ export function JobDataViewer({
   const isJobActive = jobStatus === "running" || jobStatus === "pending";
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["job-data-viewer", processedIds],
+    queryKey: queryKeys.downloads.dataViewer(processedIds),
     queryFn: async () => {
       if (!processedIds.length) return [];
       const chunks: number[][] = [];
@@ -88,7 +89,7 @@ export function JobDataViewer({
 
   // Query failed profile names from directory_cache
   const { data: failedNames } = useQuery({
-    queryKey: ["failed-ids-names", failedIds],
+    queryKey: queryKeys.downloads.failedIdsNames(failedIds),
     queryFn: async () => {
       if (!failedIds.length) return new Map<number, string>();
       const { data: cacheEntries } = await supabase
