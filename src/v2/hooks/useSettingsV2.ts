@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface SettingsMap {
   readonly [key: string]: string;
@@ -10,7 +11,7 @@ export interface SettingsMap {
 
 export function useSettingsV2() {
   return useQuery({
-    queryKey: ["v2-settings"],
+    queryKey: queryKeys.v2.settings,
     queryFn: async (): Promise<SettingsMap> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return {};
@@ -54,6 +55,6 @@ export function useUpdateSettingV2() {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["v2-settings"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.v2.settings }),
   });
 }

@@ -9,6 +9,7 @@ import { updateBusinessCard } from "@/data/businessCards";
 import { createLogger } from "@/lib/log";
 import type { TrackActivityParams } from "@/types/tracking";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type _ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
@@ -70,13 +71,13 @@ export function useTrackActivity() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["today-activities"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
-      qc.invalidateQueries({ queryKey: ["worked-today"] });
-      qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
-      qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.today });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.workedToday });
+      qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
+      qc.invalidateQueries({ queryKey: queryKeys.partners.all });
       qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-      qc.invalidateQueries({ queryKey: ["contacts-group-counts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.contactsGroupCounts });
     },
   });
 }

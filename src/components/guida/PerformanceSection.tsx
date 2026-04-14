@@ -6,6 +6,7 @@ import { Globe, Users, Mail, Briefcase, Bot, Cpu } from "lucide-react";
 import { countChannelMessages } from "@/data/channelMessages";
 import { countActiveAgents } from "@/data/agents";
 import { countCompletedAgentTasks } from "@/data/agentTasks";
+import { queryKeys } from "@/lib/queryKeys";
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -38,7 +39,7 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
 
 const PerformanceSection = () => {
   const { data: stats } = useQuery({
-    queryKey: ["guida-stats"],
+    queryKey: queryKeys.guida.stats,
     queryFn: async () => {
       const [partnersCount, countryCodes, emails, agents, tasks] = await Promise.all([
         countActivePartners(),

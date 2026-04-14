@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useImportLogs";
 import { parseFile, transformRow, TARGET_COLUMNS } from "@/lib/import";
 import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } from "@/data/importLogs";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ── Utility helpers ──
 
@@ -130,7 +131,7 @@ export function useImportWizard() {
 
       toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
       queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
     } catch (err) {
       toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
     } finally {
@@ -145,7 +146,7 @@ export function useImportWizard() {
       await deleteImportedContactsByLogId(logId);
       await deleteImportLog(logId);
       if (activeLogId === logId) setActiveLogId(null);
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
       queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
       toast({ title: "Import eliminato" });
     } catch (err) {

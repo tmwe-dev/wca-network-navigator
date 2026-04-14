@@ -8,6 +8,7 @@ import { useTrackPage } from "@/hooks/useTrackPage";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
@@ -28,7 +29,7 @@ export default function CRM() {
     mutationFn: () => invokeEdge("calculate-lead-scores", { body: {}, context: "CRM.recalcScore" }),
     onSuccess: () => {
       toast.success("Lead scores ricalcolati");
-      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.all });
       qc.invalidateQueries({ queryKey: ["imported-contacts"] });
     },
     onError: (e: Error) => toast.error(e.message),

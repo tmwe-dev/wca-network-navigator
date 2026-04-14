@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommandBar";
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/pages/Cockpit";
+import { queryKeys } from "@/lib/queryKeys";
 
 /** Scrape a LinkedIn profile via extension bridge, with abort support. */
 async function scrapeLinkedInProfile(
@@ -323,7 +324,7 @@ export function useCockpitLogic() {
     const sourceIds = ids.map(id => contactsMap[id]).filter(c => c && c.sourceType === "contact").map(c => c!.sourceId);
     if (!sourceIds.length) { toast.info("Seleziona contatti importati per il LinkedIn Lookup"); return; }
     await linkedInLookup.lookupBatch(sourceIds);
-    queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
   }, [selection.selectedIds, contactsMap, linkedInLookup, queryClient]);
 
   const handleSingleDeepSearch = useCallback((id: string) => toast.info(`Deep Search per ${contactsMap[id]?.name || id}`), [contactsMap]);

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { queryKeys } from "@/lib/queryKeys";
 
 type Destination = "contacts" | "network" | "cockpit";
 
@@ -113,7 +114,7 @@ export default function AddContactDialog({
         if (error) throw error;
         sourceId = contact!.id;
         sourceType = "contact";
-        queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
         queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
 
       } else if (destination === "network") {
@@ -138,7 +139,7 @@ export default function AddContactDialog({
         if (error) throw error;
         sourceId = pc!.id;
         sourceType = "partner_contact";
-        queryClient.invalidateQueries({ queryKey: ["partners"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       }
 
       // If cockpit destination OR user wants it queued
@@ -149,7 +150,7 @@ export default function AddContactDialog({
           source_type: sourceType,
           partner_id: partnerId || null,
         }]);
-        queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
         const { data: existingLog } = await supabase
@@ -208,8 +209,8 @@ export default function AddContactDialog({
           source_id: contact!.id,
           source_type: "contact",
         }]);
-        queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
-        queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
       }
 
       toast({ title: "✅ Contatto aggiunto", description: `${form.name || form.company} → ${destination === "contacts" ? "Contatti" : destination === "network" ? "Network" : "Cockpit"}` });

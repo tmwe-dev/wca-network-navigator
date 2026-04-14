@@ -26,6 +26,7 @@ interface NetworkStats {
 }
 
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
+import { queryKeys } from "@/lib/queryKeys";
 
 function t(_dark: boolean) {
   return {
@@ -215,7 +216,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       // 🤖 Claude Engine V8: il job viene processato dal motore V8 nella UI
       // Non serve più chiamare Edge Function process-download-job
-      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.downloads.jobs });
       toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
     } catch (err: unknown) {

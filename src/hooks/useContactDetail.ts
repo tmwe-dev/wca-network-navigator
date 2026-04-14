@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useContacts";
 import { toast } from "@/hooks/use-toast";
 import { findBusinessCardForContact } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ContactDetail {
   id: string;
@@ -152,7 +153,7 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
         dispatch({ type: "SET_CONTACT", contact: updated as ContactDetail });
         onContactUpdated?.(updated as ContactDetail);
       }
-      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
       queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });

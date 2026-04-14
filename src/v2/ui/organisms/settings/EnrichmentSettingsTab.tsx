@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2 } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface SourceCount {
   readonly label: string;
@@ -15,7 +16,7 @@ interface SourceCount {
 
 export function EnrichmentSettingsTab(): React.ReactElement {
   const { data: counts, isLoading } = useQuery({
-    queryKey: ["v2-enrichment-counts"],
+    queryKey: queryKeys.v2.enrichmentCounts,
     queryFn: async () => {
       const [partners, contacts, emails, bca] = await Promise.all([
         supabase.from("partners").select("id", { count: "exact", head: true }),

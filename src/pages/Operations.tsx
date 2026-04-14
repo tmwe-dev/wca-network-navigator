@@ -20,11 +20,12 @@ import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
+import { queryKeys } from "@/lib/queryKeys";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
   return useQuery({
-    queryKey: ["cache-data-by-country"],
+    queryKey: queryKeys.cacheDataByCountry,
     queryFn: async () => {
       const data = await rpcGetDirectoryCounts();
       const result: Record<string, { count: number; verified: boolean }> = {};
@@ -189,8 +190,8 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
       const data = await invokeEdge<Record<string, unknown>>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
       if (data?.success) {
         toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
-        queryClient.invalidateQueries({ queryKey: ["partners"] });
-        queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
       } else {
         toast.error(String(data?.error || "Errore generazione alias"), { id: toastId });
       }

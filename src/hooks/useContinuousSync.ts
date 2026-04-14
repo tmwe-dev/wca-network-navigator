@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+import { queryKeys } from "@/lib/queryKeys";
   bgSyncSubscribe, bgSyncStart, bgSyncStop, bgSyncIsRunning, bgSyncReset,
   type BgSyncProgress,
 } from "@/lib/backgroundSync";
@@ -30,16 +31,16 @@ export function useContinuousSync() {
         const now = Date.now();
         if (now - lastCountInvalidation.current > COUNT_THROTTLE_MS) {
           lastCountInvalidation.current = now;
-          queryClient.invalidateQueries({ queryKey: ["email-count"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
         }
         return;
       }
 
       // On done/error: full refresh
       if (p.status === "done" || p.status === "error") {
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
-        queryClient.invalidateQueries({ queryKey: ["email-count"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
       }
     });
   }, [queryClient]);

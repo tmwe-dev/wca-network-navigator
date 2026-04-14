@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
+import { queryKeys } from "@/lib/queryKeys";
 
 const FEED_LIMIT = 50;
 
@@ -70,7 +71,7 @@ export function useDownloadedEmailsFeed() {
             if (old.some(e => e.id === newEmail.id)) return old;
             return [newEmail, ...old].slice(0, FEED_LIMIT);
           });
-          queryClient.invalidateQueries({ queryKey: ["email-count"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
         },
       )
       .subscribe();

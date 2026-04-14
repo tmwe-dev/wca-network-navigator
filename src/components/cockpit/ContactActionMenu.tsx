@@ -23,6 +23,7 @@ import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
 import { insertActivity } from "@/data/activities";
 import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
+import { queryKeys } from "@/lib/queryKeys";
 
 type ActivityType = Database["public"]["Enums"]["activity_type"];
 
@@ -71,8 +72,8 @@ export function ContactActionMenu({ contact, children }: Props) {
       await deleteCockpitQueueItem(contact.queueId);
     }
 
-    qc.invalidateQueries({ queryKey: ["cockpit-queue"] });
-    qc.invalidateQueries({ queryKey: ["activities"] });
+    qc.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+    qc.invalidateQueries({ queryKey: queryKeys.activities.all });
   };
 
   const handleMarkDone = async (type: ActivityType) => {

@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useEmailActions");
 
@@ -122,8 +123,8 @@ export function useMarkAsRead() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
     },
   });
 }

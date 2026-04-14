@@ -14,6 +14,7 @@ import { Sparkles, Check, X, Pencil, Loader2, ChevronDown, ChevronUp, Zap, Info 
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { EmailSenderGroup } from "@/types/email-management";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Suggestion {
   id: string;
@@ -34,7 +35,7 @@ export default function AISuggestionsTab() {
 
   // Load groups
   const { data: groups = [] } = useQuery({
-    queryKey: ["email-sender-groups"],
+    queryKey: queryKeys.email.senderGroups,
     queryFn: async () => {
       const { data } = await supabase
         .from("email_sender_groups")
@@ -79,8 +80,8 @@ export default function AISuggestionsTab() {
     },
     onSuccess: (data) => {
       toast.success(`${data?.processed || 0} address analizzati`);
-      qc.invalidateQueries({ queryKey: ["ai-suggestions"] });
-      qc.invalidateQueries({ queryKey: ["email-intel-ai-suggestions-count"] });
+      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -115,9 +116,9 @@ export default function AISuggestionsTab() {
     },
     onSuccess: () => {
       toast.success("Suggerimento accettato");
-      qc.invalidateQueries({ queryKey: ["ai-suggestions"] });
-      qc.invalidateQueries({ queryKey: ["email-intel-uncategorized-count"] });
-      qc.invalidateQueries({ queryKey: ["email-intel-ai-suggestions-count"] });
+      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
 
@@ -138,8 +139,8 @@ export default function AISuggestionsTab() {
     },
     onSuccess: () => {
       toast.success("Gruppo assegnato manualmente");
-      qc.invalidateQueries({ queryKey: ["ai-suggestions"] });
-      qc.invalidateQueries({ queryKey: ["email-intel-uncategorized-count"] });
+      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
     },
   });
 
@@ -152,8 +153,8 @@ export default function AISuggestionsTab() {
     },
     onSuccess: () => {
       toast.info("Suggerimento ignorato");
-      qc.invalidateQueries({ queryKey: ["ai-suggestions"] });
-      qc.invalidateQueries({ queryKey: ["email-intel-ai-suggestions-count"] });
+      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
 

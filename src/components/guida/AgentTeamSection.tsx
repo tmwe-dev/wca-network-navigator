@@ -1,6 +1,7 @@
 import SectionWrapper from "./SectionWrapper";
 import { useQuery } from "@tanstack/react-query";
 import { findActiveAgents } from "@/data/agents";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface AgentView {
   name: string;
@@ -12,7 +13,7 @@ interface AgentView {
 
 const AgentTeamSection = () => {
   const { data: agents } = useQuery({
-    queryKey: ["guida-agents"],
+    queryKey: queryKeys.guida.agents,
     queryFn: async () => {
       const data = await findActiveAgents("name, role, avatar_emoji, is_active, stats, territory_codes");
       return (data || []) as unknown as AgentView[];

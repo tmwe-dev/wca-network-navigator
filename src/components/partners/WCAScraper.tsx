@@ -10,6 +10,7 @@ import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailModal } from "./PartnerDetailModal";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ScrapeLog {
   wcaId: number;
@@ -43,7 +44,7 @@ export function WCAScraper() {
 
   // Get max wca_id for sync feature
   const { data: maxWcaId } = useQuery({
-    queryKey: ["max-wca-id"],
+    queryKey: queryKeys.downloads.maxWcaId,
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")
@@ -159,7 +160,7 @@ export function WCAScraper() {
     setCurrentId(null);
     setCountdown(0);
     setIsLoading(false);
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
 
     toast({
       title: abortRef.current ? "Scraping interrotto" : "Scraping completato",

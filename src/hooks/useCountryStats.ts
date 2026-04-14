@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { rpcGetCountryStats } from "@/data/rpc";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryStats {
   country_code: string;
@@ -22,7 +23,7 @@ export interface CountryStats {
  */
 export function useCountryStats() {
   return useQuery({
-    queryKey: ["country-stats"],
+    queryKey: queryKeys.countryStats,
     queryFn: async () => {
       const data = await rpcGetCountryStats();
       const _error = null;

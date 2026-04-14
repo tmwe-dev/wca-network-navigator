@@ -10,6 +10,7 @@ import { useSelection } from "@/hooks/useSelection";
 import type { AICommand } from "@/components/contacts/ContactAIBar";
 import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Deps {
   selection: ReturnType<typeof useSelection>;
@@ -31,7 +32,7 @@ export function useContactActions(deps: Deps) {
   const [linkedInLookupLoading, setLinkedInLookupLoading] = useState(false);
 
   const invalidateContacts = () => {
-    queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
     queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
   };
 

@@ -38,6 +38,7 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -188,7 +189,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       <GlobalErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <Suspense fallback={null}>
-            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: ["onboarding-completed"] })} />
+            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed })} />
           </Suspense>
         </QueryClientProvider>
       </GlobalErrorBoundary>

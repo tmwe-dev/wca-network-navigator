@@ -19,6 +19,7 @@ import { Slider } from "@/components/ui/slider";
 import { Plus, Pencil, Search, Trash2, BookOpen, Users2, FileText, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { EmailSenderGroup } from "@/types/email-management";
+import { queryKeys } from "@/lib/queryKeys";
 
 const AUTO_ACTIONS = [
   { value: "none", label: "Nessuna" },
@@ -90,7 +91,7 @@ function AddressRulesSection() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: groups = [] } = useQuery({
-    queryKey: ["email-sender-groups"],
+    queryKey: queryKeys.email.senderGroups,
     queryFn: async () => {
       const { data } = await supabase.from("email_sender_groups").select("*").order("sort_order");
       return (data || []) as EmailSenderGroup[];
@@ -120,7 +121,7 @@ function AddressRulesSection() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { toast.success("Regola salvata"); qc.invalidateQueries({ queryKey: ["address-rules-tab4"] }); setSheetOpen(false); },
+    onSuccess: () => { toast.success("Regola salvata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }); setSheetOpen(false); },
     onError: () => toast.error("Errore salvataggio"),
   });
 
@@ -129,14 +130,14 @@ function AddressRulesSection() {
       const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Eliminata"); qc.invalidateQueries({ queryKey: ["address-rules-tab4"] }); },
+    onSuccess: () => { toast.success("Eliminata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }); },
   });
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       await supabase.from("email_address_rules").update({ is_active }).eq("id", id);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["address-rules-tab4"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }),
   });
 
   const openEdit = (rule?: EditableRule) => {
@@ -245,7 +246,7 @@ function AddressRulesSection() {
 function GroupRulesSection() {
   const qc = useQueryClient();
   const { data: groups = [], isLoading } = useQuery({
-    queryKey: ["email-sender-groups-rules"],
+    queryKey: queryKeys.email.senderGroupsRules,
     queryFn: async () => {
       const { data } = await supabase.from("email_sender_groups").select("*").order("sort_order");
       return (data || []) as (EmailSenderGroup & { auto_action?: string; is_default?: boolean })[];
@@ -266,7 +267,7 @@ function GroupRulesSection() {
     mutationFn: async ({ id, auto_action }: { id: string; auto_action: string }) => {
       await supabase.from("email_sender_groups").update({ auto_action }).eq("id", id);
     },
-    onSuccess: () => { toast.success("Aggiornato"); qc.invalidateQueries({ queryKey: ["email-sender-groups-rules"] }); },
+    onSuccess: () => { toast.success("Aggiornato"); qc.invalidateQueries({ queryKey: queryKeys.email.senderGroupsRules }); },
   });
 
   if (isLoading) return <div className="flex items-center justify-center h-40"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -299,7 +300,7 @@ function PromptManagerSection() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: prompts = [], isLoading } = useQuery({
-    queryKey: ["email-prompts-tab4"],
+    queryKey: queryKeys.email.promptsTab4,
     queryFn: async () => {
       const { data, error } = await supabase.from("email_prompts").select("*").order("priority", { ascending: false });
       if (error) throw error;
@@ -317,7 +318,7 @@ function PromptManagerSection() {
         await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as never);
       }
     },
-    onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); setSheetOpen(false); },
+    onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); setSheetOpen(false); },
     onError: () => toast.error("Errore"),
   });
 
@@ -325,14 +326,14 @@ function PromptManagerSection() {
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       await supabase.from("email_prompts").update({ is_active }).eq("id", id);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await supabase.from("email_prompts").delete().eq("id", id);
     },
-    onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); },
+    onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); },
   });
 
   const openEdit = (prompt?: EditablePrompt) => {

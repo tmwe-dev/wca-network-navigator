@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface HealthCheck {
   status: "healthy" | "degraded";
@@ -9,7 +10,7 @@ export interface HealthCheck {
 
 export function useSystemHealth() {
   return useQuery<HealthCheck>({
-    queryKey: ["system-health"],
+    queryKey: queryKeys.system.health,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("health-check");
       if (error) throw error;

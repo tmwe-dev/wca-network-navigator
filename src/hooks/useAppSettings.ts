@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useAppSettings() {
   return useQuery({
-    queryKey: ["app-settings"],
+    queryKey: queryKeys.appSettings.all,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, string>;
@@ -52,7 +53,7 @@ export function useUpdateSetting() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.appSettings.all });
     },
   });
 }

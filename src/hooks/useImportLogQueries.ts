@@ -4,6 +4,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ImportLog {
   id: string;
@@ -69,7 +70,7 @@ export interface ImportError {
 
 export function useImportLogs() {
   return useQuery({
-    queryKey: ["import-logs"],
+    queryKey: queryKeys.imports.logs,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("import_logs")

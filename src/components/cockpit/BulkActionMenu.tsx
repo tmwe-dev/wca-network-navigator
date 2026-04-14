@@ -27,6 +27,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 import { insertActivity } from "@/data/activities";
 import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("BulkActionMenu");
 
@@ -97,9 +98,9 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
     }
 
     setIsProcessing(false);
-    qc.invalidateQueries({ queryKey: ["cockpit-queue"] });
-    qc.invalidateQueries({ queryKey: ["activities"] });
-    qc.invalidateQueries({ queryKey: ["worked-today"] });
+    qc.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+    qc.invalidateQueries({ queryKey: queryKeys.activities.all });
+    qc.invalidateQueries({ queryKey: queryKeys.activities.workedToday });
     return successCount;
   };
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 type CJInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
 type CJUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
@@ -50,7 +51,7 @@ export function useCampaignJobs(batchId?: string | null) {
 
 export function useEmailTemplates() {
   return useQuery({
-    queryKey: ["email-templates"],
+    queryKey: queryKeys.email.templates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_templates")
@@ -76,7 +77,7 @@ export function useCreateCampaignJobs() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });
 }
@@ -107,7 +108,7 @@ export function useDeleteCampaignJobs() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
-      qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
     },
   });
 }

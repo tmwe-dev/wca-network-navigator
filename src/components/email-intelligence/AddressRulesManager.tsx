@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Plus, Pencil, BookOpen, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 const AUTO_ACTIONS = [
   { value: "none", label: "Nessuna" },
@@ -82,7 +83,7 @@ export function AddressRulesManager() {
     },
     onSuccess: () => {
       toast.success("Regola salvata");
-      qc.invalidateQueries({ queryKey: ["email-address-rules"] });
+      qc.invalidateQueries({ queryKey: queryKeys.email.addressRules });
       setSheetOpen(false);
       setEditingRule(null);
     },
@@ -94,7 +95,7 @@ export function AddressRulesManager() {
       const { error } = await supabase.from("email_address_rules").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["email-address-rules"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.addressRules }),
   });
 
   const deleteMutation = useMutation({
@@ -102,7 +103,7 @@ export function AddressRulesManager() {
       const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Regola eliminata"); qc.invalidateQueries({ queryKey: ["email-address-rules"] }); },
+    onSuccess: () => { toast.success("Regola eliminata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRules }); },
     onError: () => toast.error("Errore nell'eliminazione"),
   });
 

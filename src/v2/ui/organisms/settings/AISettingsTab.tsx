@@ -8,6 +8,7 @@ import { useSettingsV2, useUpdateSettingV2 } from "@/v2/hooks/useSettingsV2";
 import { useState, useEffect } from "react";
 import { Button } from "../../atoms/Button";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function AISettingsTab(): React.ReactElement {
   const { data: settings } = useSettingsV2();
@@ -21,7 +22,7 @@ export function AISettingsTab(): React.ReactElement {
   }, [settings]);
 
   const { data: kbCount } = useQuery({
-    queryKey: ["v2-kb-count"],
+    queryKey: queryKeys.v2.kbCount,
     queryFn: async () => {
       const { count, error } = await supabase.from("kb_entries").select("id", { count: "exact", head: true });
       if (error) throw error;
@@ -30,7 +31,7 @@ export function AISettingsTab(): React.ReactElement {
   });
 
   const { data: memoryCount } = useQuery({
-    queryKey: ["v2-memory-count"],
+    queryKey: queryKeys.v2.memoryCount,
     queryFn: async () => {
       const { count, error } = await supabase.from("ai_memory").select("id", { count: "exact", head: true });
       if (error) throw error;

@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface EmailRecipient {
   readonly email: string;
@@ -56,7 +57,7 @@ export function useEmailComposerV2() {
 
   // Templates query
   const templates = useQuery({
-    queryKey: ["v2-email-templates"],
+    queryKey: queryKeys.v2.emailTemplates,
     queryFn: async () => {
       const { data } = await supabase
         .from("email_prompts")

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Brain, Zap, CheckCircle, Target, AlertTriangle } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface KPI {
   total: number;
@@ -28,7 +29,7 @@ export function AIPerformancePanel() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
   const { data: kpi, isLoading: kpiLoading } = useQuery<KPI>({
-    queryKey: ["ai-performance-kpi"],
+    queryKey: queryKeys.ai.performance.kpi,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_decision_log")
@@ -46,7 +47,7 @@ export function AIPerformancePanel() {
   });
 
   const { data: typeStats = [] } = useQuery<TypeStat[]>({
-    queryKey: ["ai-performance-types"],
+    queryKey: queryKeys.ai.performance.types,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_decision_log")
@@ -71,7 +72,7 @@ export function AIPerformancePanel() {
   });
 
   const { data: criticalContacts = [] } = useQuery({
-    queryKey: ["ai-performance-critical"],
+    queryKey: queryKeys.ai.performance.critical,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_decision_log")

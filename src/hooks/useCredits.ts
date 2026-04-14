@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { getSessionStats, type SessionStats } from "@/lib/api/costTracker";
 import { useAuth } from "@/providers/AuthProvider";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Refactored credits hook using React Query for caching and deduplication.
@@ -13,7 +14,7 @@ export function useCredits() {
   const { user, event } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["user-credits"],
+    queryKey: queryKeys.credits.all,
     queryFn: async () => {
       if (!user) return { balance: 0, totalConsumed: 0 };
 
@@ -36,7 +37,7 @@ export function useCredits() {
   // Refetch on sign-in
   useEffect(() => {
     if (event === "SIGNED_IN") {
-      queryClient.invalidateQueries({ queryKey: ["user-credits"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.credits.all });
     }
   }, [event, queryClient]);
 
@@ -44,7 +45,7 @@ export function useCredits() {
     balance: data?.balance ?? 0,
     totalConsumed: data?.totalConsumed ?? 0,
     loading: isLoading,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ["user-credits"] }),
+    refetch: () => queryClient.invalidateQueries({ queryKey: queryKeys.credits.all }),
     sessionStats: getSessionStats() as SessionStats,
   };
 }

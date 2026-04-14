@@ -215,9 +215,9 @@ export function useDeepSearchRunner(): DeepSearchState {
 
         // Live update caches
         if (mode === "contact") {
-          queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
           queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
-          queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
         } else {
           queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
         }
@@ -232,8 +232,8 @@ export function useDeepSearchRunner(): DeepSearchState {
         : toast.success(msg, { id: "deep-search-global" });
 
       if (mode === "contact") {
-        queryClient.invalidateQueries({ queryKey: ["contacts"] });
-        queryClient.invalidateQueries({ queryKey: ["all-activities"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
       } else {
         queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
         queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });

@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { approveActivity } from "@/data/activities";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface AgentAction {
   id: string;
@@ -47,7 +48,7 @@ export function CodaAITab() {
   const { mockEnabled } = useOutreachMock();
 
   const { data: pendingActions = [], isLoading } = useQuery({
-    queryKey: ["agent-pending-actions"],
+    queryKey: queryKeys.ai.agentPendingActions,
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session) return [];
@@ -77,7 +78,7 @@ export function CodaAITab() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions });
       toast.success("Azione approvata e messa in coda");
     },
   });
@@ -92,7 +93,7 @@ export function CodaAITab() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions });
       toast.info("Azione rifiutata");
     },
   });
@@ -106,7 +107,7 @@ export function CodaAITab() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions });
       toast.success(`${displayActions.length} azioni approvate`);
     },
   });
@@ -151,7 +152,7 @@ export function CodaAITab() {
             size="icon" aria-label="Azione"
             variant="ghost"
             className="h-7 w-7"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions })}
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>

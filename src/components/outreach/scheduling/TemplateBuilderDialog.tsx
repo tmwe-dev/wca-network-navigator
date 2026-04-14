@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { createTimingTemplate, type TimingStep } from "@/data/outreachTimingTemplates";
 import { SequenceVisualizer } from "./SequenceVisualizer";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 const CHANNELS = [
   { value: "email", label: "Email", icon: Mail },
@@ -99,7 +100,7 @@ export function TemplateBuilderDialog({ open, onOpenChange }: Props) {
         total_duration_days: totalDays,
         preferred_language: "auto", auto_translate: true,
       });
-      qc.invalidateQueries({ queryKey: ["timing-templates"] });
+      qc.invalidateQueries({ queryKey: queryKeys.timingTemplates.all });
       toast.success("Template creato!");
       onOpenChange(false);
       setName(""); setSteps([emptyStep(1)]);

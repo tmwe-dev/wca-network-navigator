@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, Trash2, Copy, Check, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface EmailImage {
   name: string;
@@ -23,7 +24,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const { data: images = [], isLoading } = useQuery({
-    queryKey: ["email-images"],
+    queryKey: queryKeys.email.images,
     queryFn: async () => {
       const { data, error } = await supabase.storage.from("email-images").list("", {
         limit: 100,
@@ -59,7 +60,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
         if (error) throw error;
       }
       toast.success("Immagini caricate");
-      queryClient.invalidateQueries({ queryKey: ["email-images"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.images });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Errore upload");
     } finally {
@@ -74,7 +75,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-images"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.images });
       toast.success("Immagine eliminata");
     },
   });

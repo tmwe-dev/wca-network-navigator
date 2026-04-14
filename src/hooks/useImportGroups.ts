@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ImportGroup {
   id: string;
@@ -12,7 +13,7 @@ export interface ImportGroup {
 
 export function useImportGroups() {
   return useQuery({
-    queryKey: ["import-groups"],
+    queryKey: queryKeys.imports.groups,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("import_logs")

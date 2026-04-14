@@ -6,10 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "../../molecules/StatCard";
 import { Database, Users, FileText, Mail } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function DataSettingsTab(): React.ReactElement {
   const { data: counts } = useQuery({
-    queryKey: ["v2-data-counts"],
+    queryKey: queryKeys.v2.dataCounts,
     queryFn: async () => {
       const [partners, contacts, activities, messages] = await Promise.all([
         supabase.from("partners").select("id", { count: "exact", head: true }),

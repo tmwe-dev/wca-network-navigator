@@ -11,6 +11,7 @@ import { useContactGroupCounts } from "@/hooks/useContactGroups";
 import { rpcMatchContactsToWca } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/queryKeys";
 
 type SortDir = "asc" | "desc" | null;
 
@@ -235,7 +236,7 @@ export function useContactListPanel() {
     toast({ title: `✅ ${ids.length} contatti eliminati` });
     selection.clear();
     qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-    qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+    qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
   }, [selection, qc]);
 
   const handleDeduplicate = useCallback(async () => {
@@ -247,7 +248,7 @@ export function useContactListPanel() {
       toast({ title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati` });
       selection.clear();
       qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-      qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
     } catch (err: unknown) {
       toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
@@ -260,7 +261,7 @@ export function useContactListPanel() {
       toast({ title: `✅ WCA Match completato — ${result?.matched_count || 0} associazioni trovate` });
       selection.clear();
       qc.invalidateQueries({ queryKey: ["contacts-paginated"] });
-      qc.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }

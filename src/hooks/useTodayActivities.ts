@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { asSourceMeta } from "@/lib/types/sourceMeta";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface TodayActivity {
   id: string;
@@ -17,7 +18,7 @@ export interface TodayActivity {
 
 export function useTodayActivities() {
   return useQuery({
-    queryKey: ["today-activities"],
+    queryKey: queryKeys.activities.today,
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);

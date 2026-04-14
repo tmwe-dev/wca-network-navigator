@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByLeadStatus } from "@/data/partners";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type HoldingChannel = "email" | "whatsapp" | "linkedin";
 
@@ -163,7 +164,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
 
 export function useHoldingUnreadCounts() {
   return useQuery({
-    queryKey: ["holding-unread-counts"],
+    queryKey: queryKeys.contacts.holdingUnreadCounts,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;

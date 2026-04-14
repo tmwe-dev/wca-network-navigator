@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPartnerStats } from "@/data/partners";
 import { WCA_COUNTRIES, WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryPartnerCount {
   code: string;
@@ -15,7 +16,7 @@ export interface CountryPartnerCount {
  */
 export function useCountryPartnerCounts() {
   return useQuery({
-    queryKey: ["country-partner-counts"],
+    queryKey: queryKeys.partners.countryPartnerCounts,
     queryFn: async () => {
       const stats = await getPartnerStats();
       const countMap: Record<string, number> = {};

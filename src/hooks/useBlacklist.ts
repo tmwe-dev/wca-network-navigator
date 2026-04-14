@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
+import { queryKeys } from "@/lib/queryKeys";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
 type BlacklistEntryInsert = Database["public"]["Tables"]["blacklist_entries"]["Insert"];
@@ -13,7 +14,7 @@ export type BlacklistSyncLog = BlacklistSyncLogRow;
 
 export function useBlacklistEntries() {
   return useQuery({
-    queryKey: ["blacklist-entries"],
+    queryKey: queryKeys.blacklist.all,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blacklist_entries")
@@ -27,7 +28,7 @@ export function useBlacklistEntries() {
 
 export function useBlacklistSyncLog() {
   return useQuery({
-    queryKey: ["blacklist-sync-log"],
+    queryKey: queryKeys.blacklist.syncLog,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blacklist_sync_log")
@@ -42,7 +43,7 @@ export function useBlacklistSyncLog() {
 
 export function useBlacklistStats() {
   return useQuery({
-    queryKey: ["blacklist-stats"],
+    queryKey: queryKeys.blacklist.stats,
     queryFn: async () => {
       const { data: entries, error: e1 } = await supabase
         .from("blacklist_entries")
@@ -145,10 +146,10 @@ export function useImportBlacklist() {
       return { imported: entries.length, matched: matchCount };
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["blacklist-entries"] });
-      qc.invalidateQueries({ queryKey: ["blacklist-stats"] });
-      qc.invalidateQueries({ queryKey: ["blacklist-sync-log"] });
-      qc.invalidateQueries({ queryKey: ["blacklist-partner-ids"] });
+      qc.invalidateQueries({ queryKey: queryKeys.blacklist.all });
+      qc.invalidateQueries({ queryKey: queryKeys.blacklist.stats });
+      qc.invalidateQueries({ queryKey: queryKeys.blacklist.syncLog });
+      qc.invalidateQueries({ queryKey: queryKeys.blacklist.partnerIds });
     },
   });
 }

@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("CSVImport");
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ParsedPartner {
   company_name: string;
@@ -250,8 +251,8 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       });
 
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partnerStats });
 
       toast({
         title: "Importazione completata",

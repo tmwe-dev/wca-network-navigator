@@ -6,6 +6,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type SyncJobStatus = "running" | "paused" | "completed" | "error";
 
@@ -29,7 +30,7 @@ export function useServerSyncJob() {
 
   // Get the current active job (most recent non-completed)
   const { data: activeJob, isLoading } = useQuery({
-    queryKey: ["email-sync-job"],
+    queryKey: queryKeys.email.syncJob,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_sync_jobs")
@@ -47,7 +48,7 @@ export function useServerSyncJob() {
 
   // Get the last completed job
   const { data: lastCompletedJob } = useQuery({
-    queryKey: ["email-sync-job-completed"],
+    queryKey: queryKeys.email.syncJobCompleted,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("email_sync_jobs")
@@ -70,9 +71,9 @@ export function useServerSyncJob() {
         "postgres_changes",
         { event: "*", schema: "public", table: "email_sync_jobs" },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
-          queryClient.invalidateQueries({ queryKey: ["email-sync-job-completed"] });
-          queryClient.invalidateQueries({ queryKey: ["email-count"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJobCompleted });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
         },
       )
       .subscribe();
@@ -108,7 +109,7 @@ export function useServerSyncJob() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -123,7 +124,7 @@ export function useServerSyncJob() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -138,7 +139,7 @@ export function useServerSyncJob() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -153,7 +154,7 @@ export function useServerSyncJob() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 

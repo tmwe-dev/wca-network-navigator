@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2, XCircle, Edit2, Calendar, Phone, ListTodo, Sparkles, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
+import { queryKeys } from "@/lib/queryKeys";
 
 interface AIActivity {
   id: string;
@@ -55,7 +56,7 @@ export function AIGeneratedActivitiesPanel() {
   const [editedDescription, setEditedDescription] = useState('');
 
   const { data: activities, isLoading } = useQuery({
-    queryKey: ['ai-generated-activities'],
+    queryKey: queryKeys.activities.aiGenerated,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('activities')
@@ -79,7 +80,7 @@ export function AIGeneratedActivitiesPanel() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ai-generated-activities'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Attività approvata');
     },
     onError: (err: Error) => toast.error(`Errore: ${err.message}`),
@@ -94,7 +95,7 @@ export function AIGeneratedActivitiesPanel() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ai-generated-activities'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Attività rifiutata');
     },
     onError: (err: Error) => toast.error(`Errore: ${err.message}`),
@@ -109,7 +110,7 @@ export function AIGeneratedActivitiesPanel() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ai-generated-activities'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Descrizione aggiornata');
       setEditingId(null);
     },

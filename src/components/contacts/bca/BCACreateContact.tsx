@@ -12,6 +12,7 @@ import { updateBusinessCard } from "@/data/businessCards";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Props {
   card: BusinessCardWithPartner;
@@ -76,8 +77,8 @@ export function BCACreateContact({ card }: Props) {
         });
       }
 
-      qc.invalidateQueries({ queryKey: ["business-cards"] });
-      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.all });
       toast({ title: "✅ Contatto creato da biglietto" });
       setShowForm(false);
     } catch (e: unknown) {

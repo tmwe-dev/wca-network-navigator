@@ -8,6 +8,7 @@ import { BrainCircuit, HandMetal, Sparkles, Settings2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
@@ -21,7 +22,7 @@ function TabFallback() {
 export function EmailIntelligencePage(): React.ReactElement {
   // Badge counts
   const { data: uncategorizedCount = 0 } = useQuery({
-    queryKey: ["email-intel-uncategorized-count"],
+    queryKey: queryKeys.emailIntel.uncategorizedCount,
     queryFn: async () => {
       const { count } = await supabase
         .from("email_address_rules")
@@ -33,7 +34,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   const { data: aiSuggestionsCount = 0 } = useQuery({
-    queryKey: ["email-intel-ai-suggestions-count"],
+    queryKey: queryKeys.emailIntel.aiSuggestionsCount,
     queryFn: async () => {
       const { count } = await supabase
         .from("email_address_rules")
@@ -47,7 +48,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   const { data: classifyTodayCount = 0 } = useQuery({
-    queryKey: ["email-intel-classify-today"],
+    queryKey: queryKeys.emailIntel.classifyToday,
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
       const { count } = await supabase
@@ -60,7 +61,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   const { data: activeRulesCount = 0 } = useQuery({
-    queryKey: ["email-intel-active-rules"],
+    queryKey: queryKeys.emailIntel.activeRules,
     queryFn: async () => {
       const { count } = await supabase
         .from("email_address_rules")

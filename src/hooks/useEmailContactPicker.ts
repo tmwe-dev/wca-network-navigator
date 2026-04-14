@@ -11,6 +11,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
 import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("EmailComposerContactPicker");
 
@@ -56,7 +57,7 @@ export function useEmailContactPicker() {
 
   // Origin options
   const { data: originOptions = [] } = useQuery<string[]>({
-    queryKey: ["picker-origin-options"],
+    queryKey: queryKeys.contacts.pickerOrigins,
     queryFn: async () => {
       const data = await rpcGetContactFilterOptions();
       if (!data) return [];

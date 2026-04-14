@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useWcaSync");
 
@@ -75,10 +76,10 @@ export function useWcaSync() {
           } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
         }
       }
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partnerStats });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Errore sincronizzazione", { id: toastId });
     }

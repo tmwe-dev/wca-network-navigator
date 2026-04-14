@@ -24,6 +24,7 @@ import { BcaCountrySidebar } from "./bca/BcaCountrySidebar";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "./bca/BcaCardRenderers";
 import { countryCodeToFlag } from "./bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("BusinessCardsView");
 
@@ -45,7 +46,7 @@ export function BusinessCardsView() {
     try {
       const data = await invokeEdge<Record<string, number>>("sync-business-cards", { context: "BusinessCardsView.sync_business_cards" });
       toast.success(`Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati`);
-      qc.invalidateQueries({ queryKey: ["business-cards"] });
+      qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
     } catch (e: unknown) {
       toast.error("Errore sincronizzazione: " + (e instanceof Error ? e.message : "sconosciuto"));
     } finally {

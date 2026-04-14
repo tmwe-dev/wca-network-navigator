@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface ImportLog {
   readonly id: string;
@@ -16,7 +17,7 @@ export interface ImportLog {
 
 export function useImportLogsV2() {
   return useQuery({
-    queryKey: ["v2-import-logs"],
+    queryKey: queryKeys.v2.importLogs,
     queryFn: async (): Promise<readonly ImportLog[]> => {
       const { data, error } = await supabase
         .from("import_logs")

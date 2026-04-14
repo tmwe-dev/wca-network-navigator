@@ -12,6 +12,7 @@ import type { ImportLog, ImportedContact } from "./useImportLogQueries";
 import { insertPartnerContact } from "@/data/partnerRelations";
 import { insertActivity } from "@/data/activities";
 import { updateImportLog } from "@/data/importLogs";
+import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useImportLogActions");
 
@@ -84,7 +85,7 @@ export function useCreateImport() {
 
       return importLog as ImportLog;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["import-logs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs }),
   });
 }
 
@@ -98,7 +99,7 @@ export function useProcessImport() {
       queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
       queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
       queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
       toast({ title: "Elaborazione completata" });
     },
     onError: (err) => toast({ title: "Errore elaborazione", description: String(err), variant: "destructive" }),
@@ -156,7 +157,7 @@ export function useTransferToPartners() {
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       toast({ title: `${count} partner trasferiti con successo` });
     },
   });
@@ -206,8 +207,8 @@ export function useCreateActivitiesFromImport() {
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       toast({ title: `${count} attività create con successo` });
     },
   });
@@ -289,6 +290,6 @@ export function useCreateImportFromParsedRows() {
 
       return importLog as ImportLog;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["import-logs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs }),
   });
 }
