@@ -9,13 +9,9 @@ import type { Database } from "@/integrations/supabase/types";
 type TableName = keyof Database["public"]["Tables"];
 type RowOf<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
-/** Apply additional filters to the query builder */
-type FilterFn<T extends TableName> = (
-  query: ReturnType<typeof supabase.from<T>>
-) => ReturnType<typeof supabase.from<T>>;
-
-interface SupabaseQueryOptions<T extends TableName> {
-  readonly filters?: FilterFn<T>;
+interface SupabaseQueryOptions {
+  /** Apply additional filters/ordering to the query builder */
+  readonly filters?: (query: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>;
   readonly staleTime?: number;
   readonly enabled?: boolean;
 }
@@ -25,17 +21,17 @@ export function useSupabaseQuery<T extends TableName, TResult>(
   table: T,
   select: string,
   mapFn: (row: RowOf<T>) => TResult,
-  options?: SupabaseQueryOptions<T>,
+  options?: SupabaseQueryOptions,
 ) {
   return useQuery<TResult[]>({
     queryKey: key,
     queryFn: async () => {
       const base = supabase.from(table).select(select);
-      const query = options?.filters ? options.filters(base as ReturnType<typeof supabase.from<T>>) : base;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select returns unknown shape; cast to Row for mapping
-      const { data, error } = await (query as unknown as Promise<{ data: RowOf<T>[] | null; error: { message: string } | null }>);
+      const query = options?.filters ? options.filters(base as ReturnType<typeof supabase.from>) : base;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string, must cast to Row
+      const { data, error } = await (query as any);
       if (error) throw error;
-      return (data ?? []).map(mapFn);
+      return ((data ?? []) as RowOf<T>[]).map(mapFn);
     },
     staleTime: options?.staleTime,
     enabled: options?.enabled,
