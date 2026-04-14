@@ -7,7 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 
-type KbInsert = Database["public"]["Tables"]queryKeys.v2.kbEntries()["Insert"];
+type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
 
 export interface KbEntry {
   id: string;

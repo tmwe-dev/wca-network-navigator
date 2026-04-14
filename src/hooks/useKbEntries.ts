@@ -14,7 +14,7 @@ import { getDefaultKbEntries } from "@/data/kbSeedData";
 import type { Database } from "@/integrations/supabase/types";
 import { queryKeys } from "@/lib/queryKeys";
 
-type KbInsert = Database["public"]["Tables"]queryKeys.v2.kbEntries()["Insert"];
+type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
 
 export type { KbEntry };
 
