@@ -1,7 +1,13 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "wca-network-navigator",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "CRM/Business Intelligence platform for managing logistics partners across WCA global networks",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/wca-network-navigator"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"
