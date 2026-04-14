@@ -78,7 +78,7 @@ export function SenderProfilesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-2">
             {profiles.map((p) => {
               const initials = p.email_address.substring(0, 2).toUpperCase();
-              const exchanges = Array.isArray(p.last_exchanges) ? p.last_exchanges as any[] : [];
+              const exchanges = Array.isArray(p.last_exchanges) ? p.last_exchanges as Array<Record<string, unknown>> : [];
               const lastSentiments = exchanges.slice(-5).map((e) => e.sentiment ?? "neutral");
               const expanded = expandedEmail === p.email_address;
 
@@ -133,7 +133,7 @@ export function SenderProfilesView() {
 
                   {expanded && exchanges.length > 0 && (
                     <div className="space-y-1 border-t border-border/30 pt-2">
-                      {exchanges.slice(-5).map((ex: any, i: number) => (
+                      {exchanges.slice(-5).map((ex: Record<string, unknown>, i: number) => (
                         <div key={i} className="flex items-start gap-2 text-[10px]">
                           <div className={`h-1.5 w-1.5 rounded-full mt-1 ${SENTIMENTS[ex.sentiment] ?? SENTIMENTS.neutral}`} />
                           <span className="text-muted-foreground">{ex.direction === "inbound" ? "←" : "→"} {ex.summary ?? ex.subject ?? "—"}</span>

@@ -24,7 +24,7 @@ interface Contact {
   origin: ContactOrigin;
   originDetail: string;
   deepSearchAt?: string;
-  enrichmentData?: any;
+  enrichmentData?: Record<string, unknown>;
 }
 
 interface Props {

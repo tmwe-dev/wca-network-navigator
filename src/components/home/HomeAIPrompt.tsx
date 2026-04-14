@@ -107,7 +107,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      let data: any;
+      let data: Record<string, unknown> | undefined;
       if (targetAgent) {
         // Route to agent-execute
         data = await invokeEdge<Record<string, unknown>>("agent-execute", {

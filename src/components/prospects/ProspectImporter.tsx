@@ -163,7 +163,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   const dedupAgainstDb = async (results: SearchResult[]): Promise<SearchResult[]> => {
     // Get all partita_iva from DB
     const { data: existing } = await supabase
-      .from("prospects" as any)
+      .from("prospects")
       .select("partita_iva, company_name")
       .not("partita_iva", "is", null);
 

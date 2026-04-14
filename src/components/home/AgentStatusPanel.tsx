@@ -26,7 +26,7 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
         "postgres_changes",
         { event: "*", schema: "public", table: "agent_tasks" },
         (payload) => {
-          const row = payload.new as any;
+          const row = payload.new as Record<string, unknown>;
           if (!row?.agent_id) return;
           setAgents(prev =>
             prev.map(a => {

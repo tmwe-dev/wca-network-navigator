@@ -19,7 +19,7 @@ const log = createLogger("GeneralSettings");
 
 interface GeneralSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: (key: string, value: string) => void;
 }
 
 export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProps) {

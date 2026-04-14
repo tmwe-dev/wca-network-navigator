@@ -24,7 +24,7 @@ import type { AiMappingResult } from "@/hooks/useImportWizard";
 interface ImportMappingPreviewProps {
   aiMapping: AiMappingResult;
   pendingFile: File | null;
-  pendingRows: any[];
+  pendingRows: Array<Record<string, unknown>>;
   groupName: string;
   setGroupName: (v: string) => void;
   importSource: "standard" | "business_card";

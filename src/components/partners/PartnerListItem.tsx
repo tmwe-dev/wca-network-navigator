@@ -13,7 +13,7 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
 interface PartnerListItemProps {
-  partner: any;
+  partner: Record<string, any>;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -118,7 +118,7 @@ export function PartnerListItem({
           {/* Row 4: Service icons */}
           {allServices.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5">
-              {allServices.slice(0, 6).map((s: any, i: number) => {
+              {allServices.slice(0, 6).map((s: Record<string, any>, i: number) => {
                 const Icon = getServiceIcon(s.service_category);
                 return (
                   <Tooltip key={i}>

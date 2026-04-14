@@ -48,7 +48,7 @@ export function ABTestCreator() {
         test_type: testType,
         variant_a: { [fieldKey]: variantA } as Record<string, unknown>,
         variant_b: { [fieldKey]: variantB } as Record<string, unknown>,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {

@@ -102,7 +102,7 @@ export function DecisionLogPanel() {
               const review = row.user_review ? REVIEW_ICONS[row.user_review] : null;
               const ReviewIcon = review?.icon ?? Clock;
               const expanded = expandedId === row.id;
-              const partnerName = (row as any).partners?.company_name;
+              const partnerName = (row as Record<string, any>).partners?.company_name;
 
               return (
                 <div key={row.id} className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">

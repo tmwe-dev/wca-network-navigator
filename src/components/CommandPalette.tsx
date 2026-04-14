@@ -58,7 +58,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   useEffect(() => {
     if (open && search.length >= 2) {
       searchPartners(search, 5).then((data) => {
-        setPartners(data.map(d => ({ ...d, city: (d as any).city ?? "" })) as Partner[]);
+        setPartners(data.map(d => ({ ...d, city: (d as Record<string, string>).city ?? "" })) as Partner[]);
       });
     } else {
       setPartners([]);

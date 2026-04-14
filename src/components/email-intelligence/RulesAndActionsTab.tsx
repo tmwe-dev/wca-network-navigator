@@ -80,7 +80,7 @@ function AddressRulesSection() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (rule: any) => {
+    mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
         const { error } = await supabase.from("email_address_rules").update(payload).eq("id", id);
@@ -110,7 +110,7 @@ function AddressRulesSection() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["address-rules-tab4"] }),
   });
 
-  const openEdit = (rule?: any) => {
+  const openEdit = (rule?: Record<string, unknown>) => {
     setEditingRule(rule ?? {
       email_address: "", display_name: "", category: "prospect",
       auto_action: "none", auto_execute: false, ai_confidence_threshold: 0.85,
@@ -253,7 +253,7 @@ function GroupRulesSection() {
             {g.descrizione && <p className="text-[10px] text-muted-foreground">{g.descrizione}</p>}
           </div>
           <Badge variant="outline" className="text-[10px]">{groupCounts[g.nome_gruppo] || 0} address</Badge>
-          <Select value={(g as any).auto_action || "none"} onValueChange={(v) => updateGroup.mutate({ id: g.id, auto_action: v })}>
+          <Select value={(g as Record<string, string>).auto_action || "none"} onValueChange={(v) => updateGroup.mutate({ id: g.id, auto_action: v })}>
             <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>{AUTO_ACTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
           </Select>
@@ -279,7 +279,7 @@ function PromptManagerSection() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (prompt: any) => {
+    mutationFn: async (prompt: Record<string, unknown>) => {
       const { id, ...payload } = prompt;
       if (id) {
         await supabase.from("email_prompts").update(payload).eq("id", id);
@@ -306,7 +306,7 @@ function PromptManagerSection() {
     onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); },
   });
 
-  const openEdit = (prompt?: any) => {
+  const openEdit = (prompt?: Record<string, unknown>) => {
     setEditingPrompt(prompt ?? { title: "", scope: "global", scope_value: null, instructions: "", priority: 5, is_active: true });
     setSheetOpen(true);
   };

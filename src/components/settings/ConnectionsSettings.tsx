@@ -17,7 +17,7 @@ const log = createLogger("ConnectionsSettings");
 
 interface ConnectionsSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: (key: string, value: string) => void;
 }
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {

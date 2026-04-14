@@ -71,13 +71,13 @@ export default function AISuggestionsTab() {
   // Analyze with AI
   const analyzeMutation = useMutation({
     mutationFn: async () => {
-      const data = await invokeEdge<{ processed: number; suggestions: any[] }>("suggest-email-groups", {
+      const data = await invokeEdge<{ processed: number; suggestions: Array<Record<string, unknown>> }>("suggest-email-groups", {
         body: { min_email_count: minEmailCount, batch_size: 20 },
         context: "ai-suggestions-tab",
       });
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast.success(`${data?.processed || 0} address analizzati`);
       qc.invalidateQueries({ queryKey: ["ai-suggestions"] });
       qc.invalidateQueries({ queryKey: ["email-intel-ai-suggestions-count"] });

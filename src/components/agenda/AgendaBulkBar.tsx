@@ -83,7 +83,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         priority: "medium",
       }));
 
-      await createActivities(activityInserts as any);
+      await createActivities(activityInserts as Parameters<typeof createActivities>[0]);
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();

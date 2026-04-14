@@ -145,7 +145,7 @@ export function ABTestResults() {
         status: "completed",
         winner,
         completed_at: new Date().toISOString(),
-      } as any).eq("id", testId);
+      }).eq("id", testId);
       if (error) throw error;
     },
     onSuccess: () => {

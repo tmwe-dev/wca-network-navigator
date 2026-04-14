@@ -38,7 +38,7 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { insertActivity } from "@/data/activities";
 
 interface PartnerDetailCompactProps {
-  partner: any;
+  partner: Record<string, any>;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
@@ -54,7 +54,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const _enrichment = partner.enrichment_data as any;
+  const _enrichment = partner.enrichment_data as Record<string, any>;
   const _branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
@@ -74,7 +74,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const networks = partner.partner_networks || [];
 
   // ── Email: navigate to composer with contact pre-filled ──
-  const handleSendEmail = useCallback((contact: any) => {
+  const handleSendEmail = useCallback((contact: Record<string, any>) => {
     navigate("/email-composer", {
       state: {
         partnerIds: [partner.id],
@@ -90,7 +90,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
-  const handleSendWhatsApp = useCallback(async (contact: any) => {
+  const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
     if (!waAvailable) {
@@ -108,13 +108,13 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await insertActivity({
-            activity_type: "whatsapp_message" as any,
+            activity_type: "whatsapp_message" as "whatsapp_message",
             title: `WhatsApp a ${contact.name} (${partner.company_name})`,
             source_type: "partner",
             source_id: partner.id,
             partner_id: partner.id,
             selected_contact_id: contact.id,
-            status: "completed" as any,
+            status: "completed" as "completed",
             user_id: user.id,
           });
         }
@@ -172,7 +172,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
+          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Record<string, unknown>} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
@@ -276,7 +276,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: any, i: number) => {
+            {services.map((s: Record<string, any>, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>

@@ -35,7 +35,7 @@ export function ContactRecordActions({ record }: Props): ReactElement {
         phone,
         contactName: record.contactName || undefined,
         companyName: record.companyName || undefined,
-        sourceType: record.sourceType as any || "partner",
+        sourceType: record.sourceType as string || "partner",
         sourceId: record.sourceId || undefined,
         partnerId: record.partnerId || undefined,
       });

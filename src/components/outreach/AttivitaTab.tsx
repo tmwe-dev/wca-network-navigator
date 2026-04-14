@@ -60,7 +60,7 @@ export function AttivitaTab() {
   const all = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
 
   const filtered = useMemo(() => {
-    let result = all as any[];
+    let result = all ;
     if (statusFilter !== "all") result = result.filter(a => a.status === statusFilter);
     if (typeFilter !== "all") result = result.filter(a => a.activity_type === typeFilter);
     if (priorityFilter !== "all") result = result.filter(a => a.priority === priorityFilter);
@@ -104,7 +104,7 @@ export function AttivitaTab() {
   const handleComplete = async (id: string) => {
     try {
       const { error } = await supabase.from("activities")
-        .update({ status: "completed" as any, completed_at: new Date().toISOString() })
+        .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["activities-outreach"] });
@@ -116,7 +116,7 @@ export function AttivitaTab() {
     if (!noteText.trim()) return;
     try {
       const { error } = await supabase.from("activities")
-        .update({ description: noteText.trim() } as any)
+        .update({ description: noteText.trim() } )
         .eq("id", id);
       if (error) throw error;
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Nota aggiunta`, decision_origin: "manual", target_type: "activity", target_id: id });

@@ -92,7 +92,7 @@ export function SmartInboxView() {
       user_review: "approved",
       confidence: item.confidence,
       user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
-    } as any);
+    });
     if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: ["email-classifications"] }); }
     else toast.error("Errore");
   };
@@ -176,7 +176,7 @@ export function SmartInboxView() {
               {classifications.map((c) => {
                 const cat = CATEGORIES[c.category] ?? CATEGORIES.uncategorized;
                 const CatIcon = cat.icon;
-                const partnerName = (c as any).partners?.company_name;
+                const partnerName = (c as Record<string, any>).partners?.company_name;
                 const isSelected = selectedId === c.id;
 
                 return (
@@ -252,11 +252,11 @@ export function SmartInboxView() {
               </div>
             )}
 
-            {convContext?.last_exchanges && Array.isArray(convContext.last_exchanges) && (convContext.last_exchanges as any[]).length > 0 && (
+            {convContext?.last_exchanges && Array.isArray(convContext.last_exchanges) && (convContext.last_exchanges as Array<Record<string, unknown>>).length > 0 && (
               <div>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Cronologia conversazione</p>
                 <div className="space-y-1.5">
-                  {(convContext.last_exchanges as any[]).slice(-5).map((ex: any, i: number) => (
+                  {(convContext.last_exchanges as Array<Record<string, unknown>>).slice(-5).map((ex: any, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
                       <div className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${SENTIMENTS[ex.sentiment] ?? SENTIMENTS.neutral}`} />
                       <div>
