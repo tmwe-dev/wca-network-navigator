@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Globe2, Mail, Lock } from "lucide-react";
+import { Loader2, Globe2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { useAuth } from "@/providers/AuthProvider";
@@ -39,6 +39,8 @@ export default function Auth() {
   const [resettingPassword, setResettingPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const isBusy = loading || resettingPassword;
   const authRedirectUrl = `${window.location.origin}/auth`;
@@ -177,7 +179,15 @@ export default function Auth() {
                   <Label htmlFor="login-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-pw" name="password" autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10" required />
+                    <Input id="login-pw" name="password" autoComplete="current-password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 pr-10" required />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -209,7 +219,15 @@ export default function Auth() {
                   <Label htmlFor="signup-pw" className="text-xs">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-pw" name="new-password" autoComplete="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10" minLength={6} required />
+                    <Input id="signup-pw" name="new-password" autoComplete="new-password" type={showSignupPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10 pr-10" minLength={6} required />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(v => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showSignupPassword ? "Nascondi password" : "Mostra password"}
+                    >
+                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isBusy}>
