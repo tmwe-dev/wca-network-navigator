@@ -146,7 +146,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const [filters, dispatch] = useReducer(filterReducer, undefined, cloneDefaults);
 
   const setFilter = useCallback(<K extends keyof GlobalFilterState>(key: K, value: GlobalFilterState[K]) => {
-    dispatch({ type: "SET", key, value: value as unknown });
+    dispatch({ type: "SET", key, value: value as string | number | boolean | string[] | null });
   }, []);
 
   const batchUpdate = useCallback((updates: Partial<GlobalFilterState>) => {
