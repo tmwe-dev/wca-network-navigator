@@ -15,29 +15,26 @@ Deno.test("CORS preflight returns 200", async () => {
   await res.text();
 });
 
-Deno.test("POST without auth returns 401", async () => {
+Deno.test("POST returns 200 with processed count (cron function, no auth required)", async () => {
   const res = await fetch(URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
     body: JSON.stringify({}),
   });
-  assert([401, 403].includes(res.status), `Expected 401/403, got ${res.status}`);
+  assertEquals(res.status, 200);
   const body = await res.json();
-  assert(body.error !== undefined, "Expected error field in response");
+  assert(typeof body.processed === "number", `Expected processed count, got: ${JSON.stringify(body)}`);
 });
 
-Deno.test("POST with invalid Bearer returns auth error", async () => {
+Deno.test("Response includes executed and pending_review fields", async () => {
   const res = await fetch(URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: ANON_KEY,
-      Authorization: "Bearer invalid-tok",
-    },
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
     body: JSON.stringify({}),
   });
-  assert([401, 403, 500].includes(res.status), `Expected auth error, got ${res.status}`);
-  await res.text();
+  const body = await res.json();
+  assert("executed" in body, "Missing 'executed' field");
+  assert("pending_review" in body, "Missing 'pending_review' field");
 });
 
 Deno.test("Response body is valid JSON", async () => {
@@ -52,7 +49,7 @@ Deno.test("Response body is valid JSON", async () => {
   assert(parsed, `Response is not valid JSON: ${text.substring(0, 100)}`);
 });
 
-Deno.test("CORS headers present on error response", async () => {
+Deno.test("CORS headers present on response", async () => {
   const res = await fetch(URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
