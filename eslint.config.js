@@ -66,11 +66,7 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "warn",
         {
-          selector: "CallExpression[callee.type='Import'][arguments.0.value=/^\\/pages\\//]",
-          message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
-        },
-        {
-          selector: "CallExpression[callee.type='Import'][arguments.0.value=/^@\\/pages\\//]",
+          selector: "ImportExpression > Literal[value=/^@\\/pages/]",
           message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
         },
       ],
