@@ -217,7 +217,7 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
     if (mountedRef.current) dispatch({ type: "SEND_END" });
 
     if (ttsEnabled && defaultVoiceId && !assistantContent.startsWith("⚠️")) {
-      playTTS(assistantContent, defaultVoiceId).catch(() => {});
+      playTTS(assistantContent, defaultVoiceId).catch((err) => { console.error("[TTS] playback failed:", err); });
     }
   }, [messages, state.isLoading, state.mode, addMessages, ttsEnabled, defaultVoiceId, onJobCreated]);
 

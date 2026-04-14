@@ -78,7 +78,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   private handleCopy = () => {
-    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch(() => {});
+    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch((err) => { console.error("[Clipboard] copy failed:", err); });
   };
 
   private handleReload = () => {
