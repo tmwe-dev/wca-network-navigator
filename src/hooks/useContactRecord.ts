@@ -102,21 +102,21 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           .eq("id", sourceId)
           .single();
         if (error || !pr) return null;
-        const p = pr as never;
-        const pc = p.prospect_contacts?.[0];
+        const p = pr as Record<string, unknown>;
+        const pc = (p.prospect_contacts as Array<Record<string, unknown>>)?.[0];
         return {
           sourceType: "prospect", sourceId,
           companyName: String(p.ragione_sociale || p.company_name || ""),
-          contactName: String(pc?.name || ""),
-          email: (p.email || pc?.email || null) as string | null, phone: (pc?.phone || null) as string | null, mobile: null,
+          contactName: String(pc?.name as string || ""),
+          email: (p.email || pc?.email as string || null) as string | null, phone: (pc?.phone as string || null) as string | null, mobile: null,
           country: "Italia", city: (p.sede_legale || null) as string | null, address: null,
-          position: (pc?.role || null) as string | null, website: (p.website || null) as string | null,
+          position: (pc?.role as string || null) as string | null, website: (p.website || null) as string | null,
           leadStatus: String(p.lead_status || "new"), note: null,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
           deepSearchAt: null, createdAt: String(p.created_at),
           lastInteractionAt: (p.last_interaction_at || null) as string | null,
           interactionCount: Number(p.interaction_count || 0),
-          linkedinUrl: (pc?.linkedin_url || null) as string | null,
+          linkedinUrl: (pc?.linkedin_url as string || null) as string | null,
           companyAlias: null, contactAlias: null, partnerId: null, raw: p as Record<string, unknown>,
         };
       }
