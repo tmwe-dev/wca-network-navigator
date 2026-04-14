@@ -70,7 +70,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
             const c = contacts[virtualRow.index];
             return (
               <div
-                key={c.id}
+                key={String(c.id)}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -81,12 +81,12 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
-                  c={c as unknown}
-                  isActive={selectedId === c.id}
-                  isSelected={selection.selectedIds.has(c.id)}
+                  c={c as Record<string, unknown> & import("@/hooks/useContacts").ImportedContactRecord}
+                  isActive={selectedId === String(c.id)}
+                  isSelected={selection.selectedIds.has(String(c.id))}
                   onSelect={() => {}}
                   onViewDetail={() => onSelect(c)}
-                  onToggle={() => selection.toggle(c.id)}
+                  onToggle={() => selection.toggle(String(c.id))}
                   index={page * pageSize + virtualRow.index}
                   
                 />

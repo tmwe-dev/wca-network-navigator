@@ -37,8 +37,9 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editing, setEditing] = useState<OcrFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const ocrConf = (card as Record<string, unknown>).ocr_confidence as Record<string, number> | null;
-  const manuallyCorrected = (card as Record<string, unknown>).manually_corrected as boolean | null;
+  const cardRec = card as Record<string, unknown>;
+  const ocrConf = cardRec.ocr_confidence as Record<string, number> | null;
+  const manuallyCorrected = cardRec.manually_corrected as boolean | null;
 
   const startEdit = useCallback((field: OcrFieldKey) => {
     setEditing(field);
@@ -50,7 +51,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
     const oldValue = (card[editing as keyof typeof card] as string) ?? "";
     if (editValue === oldValue) { setEditing(null); return; }
 
-    const existingNotes = (card as Record<string, unknown>).correction_notes;
+    const existingNotes = cardRec.correction_notes as string | null;
     let notes: Array<Record<string, unknown>> = [];
     try { notes = existingNotes ? JSON.parse(existingNotes) : []; } catch { notes = []; }
     notes.push({ field: editing, old_value: oldValue, new_value: editValue, corrected_at: new Date().toISOString() });
@@ -61,7 +62,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
-      } as never);
+      } as { id: string } & Partial<BusinessCardWithPartner>);
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {
