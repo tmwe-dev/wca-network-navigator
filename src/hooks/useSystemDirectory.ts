@@ -56,10 +56,10 @@ export function useSystemDirectory() {
         findAgentTasksByUser(user.id, ["pending", "running"]),
         findOperativePrompts(user.id),
       ]);
-      const agentsRes = { data: agentsData as unknown[] };
-      const assignmentsRes = { data: assignmentsData as unknown[] };
-      const tasksRes = { data: tasksData as unknown[] };
-      const promptsRes = { data: promptsData as unknown[] };
+      const agentsRes = { data: agentsData as any[] };
+      const assignmentsRes = { data: assignmentsData as any[] };
+      const tasksRes = { data: tasksData as any[] };
+      const promptsRes = { data: promptsData as any[] };
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();
@@ -79,7 +79,7 @@ export function useSystemDirectory() {
         role: a.role,
         avatar_emoji: a.avatar_emoji,
         is_active: a.is_active,
-        stats: (a.stats as unknown as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
+        stats: (a.stats as any as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
         clientCount: assignMap.get(a.id) || 0,
         activeTaskCount: taskMap.get(a.id) || 0,
       }));

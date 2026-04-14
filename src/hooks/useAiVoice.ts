@@ -24,7 +24,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
   const lastSpokenIdxRef = useRef(-1);
 
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<unknown>(null);
+  const recognitionRef = useRef<any>(null);
   const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
   const stopSpeaking = useCallback(() => {
@@ -67,13 +67,13 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
 
   const toggleListening = useCallback((onTranscript: (text: string) => void) => {
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = (window as unknown).webkitSpeechRecognition || (window as unknown).SpeechRecognition;
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SR) return;
     const recognition = new SR();
     recognition.lang = "it-IT";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (event: unknown) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
+    recognition.onresult = (event: any) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;

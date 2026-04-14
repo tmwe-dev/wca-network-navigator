@@ -13,7 +13,7 @@ export function useAppSettings() {
         .eq("user_id", user.id);
       if (error) throw error;
       const map: Record<string, string> = {};
-      data?.forEach((row: unknown) => {
+      data?.forEach((row: any) => {
         map[row.key] = row.value;
       });
       return map;

@@ -45,7 +45,7 @@ export function usePartnersForGlobe() {
     queryFn: async () => {
       // Paginate to fetch ALL partners (bypass 1000-row default limit)
       const PAGE_SIZE = 2000;
-      let allPartners: unknown[] = [];
+      let allPartners: any[] = [];
       let offset = 0;
 
       while (true) {
@@ -109,7 +109,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
       // Paginate to get all partners for the country
       const PAGE_SIZE = 2000;
-      let allData: unknown[] = [];
+      let allData: any[] = [];
       let offset = 0;
 
       while (true) {
@@ -157,12 +157,12 @@ export function useBusinessCardsForCampaign(countryCode: string | null) {
       if (error) throw error;
 
       return (data ?? [])
-        .filter((bc: unknown) => {
+        .filter((bc: any) => {
           if (bc.partner?.country_code === countryCode) return true;
           if (bc.location?.toUpperCase().includes(countryCode)) return true;
           return false;
         })
-        .map((bc: unknown) => ({
+        .map((bc: any) => ({
           id: bc.matched_partner_id || bc.id,
           company_name: bc.partner?.company_name || bc.company_name || "N/A",
           city: bc.partner?.city || bc.location || "",
@@ -195,7 +195,7 @@ export function useBcaCountryCounts() {
       if (error) throw error;
 
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((row: unknown) => {
+      (data ?? []).forEach((row: any) => {
         const countryCode = row.partner?.country_code;
         if (countryCode) counts[countryCode] = (counts[countryCode] || 0) + 1;
       });

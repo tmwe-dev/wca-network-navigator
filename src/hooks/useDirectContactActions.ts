@@ -81,7 +81,7 @@ export function useDirectContactActions() {
           toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
           return false;
         }
-      } catch (e: unknown) {
+      } catch (e: any) {
         toast.error(e?.message || "Errore invio WhatsApp");
         return false;
       } finally {

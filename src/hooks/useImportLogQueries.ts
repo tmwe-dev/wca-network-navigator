@@ -49,7 +49,7 @@ export interface ImportedContact {
   converted_at: string | null;
   is_selected: boolean;
   is_transferred: boolean;
-  raw_data: unknown;
+  raw_data: any;
   created_at: string;
 }
 
@@ -59,11 +59,11 @@ export interface ImportError {
   row_number: number;
   error_type: string;
   error_message: string | null;
-  raw_data: unknown;
-  corrected_data: unknown;
+  raw_data: any;
+  corrected_data: any;
   status: string;
   attempted_corrections: number;
-  ai_suggestions: unknown;
+  ai_suggestions: any;
   created_at: string;
 }
 
@@ -108,7 +108,7 @@ export function useImportedContacts(importLogId: string | null) {
     queryFn: async () => {
       if (!importLogId) return [];
       const PAGE_SIZE = 1000;
-      let allData: unknown[] = [];
+      let allData: any[] = [];
       let from = 0;
       let hasMore = true;
       while (hasMore) {

@@ -46,11 +46,11 @@ function applyMapping(row: Record<string, unknown>, mapping: Record<string, stri
 
 export interface AiMappingResult {
   column_mapping: Record<string, string>;
-  parsed_rows: unknown[];
+  parsed_rows: any[];
   confidence: number;
   warnings: string[];
   unmapped_columns?: string[];
-  data_quality?: unknown;
+  data_quality?: any;
 }
 
 export function useImportWizard() {
@@ -81,7 +81,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  const handleReimportCorrection = useCallback(async (rows: unknown[], headers: string[]) => {
+  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
     setUploading(true);
     try {
       const idKey = headers.find(h => {
@@ -183,7 +183,7 @@ export function useImportWizard() {
       setPendingRows(rowObjects);
       const sampleSize = Math.min(50, rowObjects.length);
       const step = rowObjects.length / sampleSize;
-      const sample: unknown[] = [];
+      const sample: any[] = [];
       for (let i = 0; i < sampleSize; i++) {
         sample.push(rowObjects[Math.floor(i * step)]);
       }
@@ -362,7 +362,7 @@ export function useImportWizard() {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
     const SEP = ";";
-    const escapeCell = (val: unknown) => {
+    const escapeCell = (val: any) => {
       if (val === null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;

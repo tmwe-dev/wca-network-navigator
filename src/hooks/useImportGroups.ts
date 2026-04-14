@@ -19,7 +19,7 @@ export function useImportGroups() {
         .select("id, group_name, file_name, created_at, imported_rows, status")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((d: unknown) => ({
+      return (data ?? []).map((d: any) => ({
         ...d,
         group_name: d.group_name || d.file_name?.replace(/\.(csv|xlsx|xls)$/i, "") || "Senza nome",
       })) as ImportGroup[];

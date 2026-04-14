@@ -11,7 +11,7 @@ export interface EmailDraft {
   html_body: string | null;
   category: string | null;
   recipient_type: string;
-  recipient_filter: unknown;
+  recipient_filter: any;
   attachment_ids: string[];
   link_urls: { label: string; url: string }[];
   status: string;
@@ -30,7 +30,7 @@ export function useEmailDrafts() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as EmailDraft[];
+      return (data || []) as any as EmailDraft[];
     },
   });
 }

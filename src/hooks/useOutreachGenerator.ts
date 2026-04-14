@@ -96,7 +96,7 @@ export function useOutreachGenerator() {
       const outreach = data as OutreachResult;
       setResult(outreach);
       return outreach;
-    } catch (err: unknown) {
+    } catch (err: any) {
       toast({ title: "Errore generazione", description: err.message, variant: "destructive" });
       return null;
     } finally {

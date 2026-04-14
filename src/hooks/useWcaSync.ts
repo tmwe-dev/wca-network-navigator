@@ -79,7 +79,7 @@ export function useWcaSync() {
       queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
     }
   }, [queryClient]);
