@@ -16,7 +16,7 @@ import { updateImportLog } from "@/data/importLogs";
 const log = createLogger("useImportLogActions");
 
 // ─── Field aliases for CSV mapping ─────────────────────
-const FIELD_ALIASES: Record<string, string[]> = {
+export const FIELD_ALIASES: Record<string, string[]> = {
   company_name: ["company_name", "ragione_sociale", "azienda", "company", "societa", "ditta", "denominazione", "name_2"],
   name: ["name", "nome", "contatto", "referente", "contact", "nome_contatto", "nome_referente"],
   email: ["email", "e_mail", "mail", "email_address", "posta_elettronica"],
@@ -32,7 +32,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
   contact_alias: ["contact_alias", "alias", "alias_contatto"],
 };
 
-function findField(row: Record<string, unknown>, aliases: string[]): string | null {
+export function findField(row: Record<string, unknown>, aliases: string[]): string | null {
   for (const alias of aliases) {
     if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
       return String(row[alias]).trim();

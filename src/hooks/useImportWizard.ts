@@ -24,7 +24,7 @@ import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } fr
 
 // ── Utility helpers ──
 
-function normalizeKey(key: string): string {
+export function normalizeKey(key: string): string {
   return key
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -35,7 +35,7 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");
 }
 
-function isReimportCorrection(headers: string[]): boolean {
+export function isReimportCorrection(headers: string[]): boolean {
   const normalized = headers.map(normalizeKey);
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
 }
