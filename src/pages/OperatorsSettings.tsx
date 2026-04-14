@@ -25,7 +25,7 @@ export default function OperatorsSettings() {
       toast.error("Nome e email sono obbligatori");
       return;
     }
-    await upsert.mutateAsync(editOp as any);
+    await upsert.mutateAsync(editOp);
     setDialogOpen(false);
     setEditOp(null);
   };

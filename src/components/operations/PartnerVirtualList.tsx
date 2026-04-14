@@ -10,7 +10,7 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { EnrichedStatusIcons } from "./partner-list/SubComponents";
 
 interface Props {
-  partners: any[];
+  partners: Array<Record<string, unknown>>;
   isLoading: boolean;
   isDark: boolean;
   selectedPartnerId?: string | null;
@@ -50,7 +50,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const partner = partners[virtualRow.index] as any;
+          const partner = partners[virtualRow.index] as Record<string, unknown>;
           const contacts = partner.partner_contacts || [];
           const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;

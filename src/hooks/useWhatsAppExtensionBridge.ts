@@ -10,7 +10,7 @@ type WaExtensionResponse = {
   authenticated?: boolean;
   reason?: string;
   method?: string;
-  messages?: any[];
+  messages?: Array<Record<string, unknown>>;
   scanned?: number;
 };
 

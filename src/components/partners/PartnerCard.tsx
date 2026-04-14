@@ -30,7 +30,7 @@ function getMemberBadgeColor(years: number): string {
 }
 
 interface PartnerCardProps {
-  partner: any;
+  partner: Record<string, any>;
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
 }
 

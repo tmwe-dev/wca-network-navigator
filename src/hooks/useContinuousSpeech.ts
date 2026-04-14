@@ -33,7 +33,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e: unknown) => {
       let interim = "";
       let final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -52,7 +52,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       setInterimText(interim);
     };
 
-    recognition.onerror = (e: any) => {
+    recognition.onerror = (e: unknown) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
       log.warn("speech error", { error: e.error });
     };

@@ -219,7 +219,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
     } catch (err: unknown) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: "Errore", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
     }
     setStarting(false);
   }

@@ -4,7 +4,7 @@ interface Plan {
   id: string;
   title: string;
   status: string;
-  steps: any[];
+  steps: Array<Record<string, unknown>>;
   current_step: number;
   tags: string[];
 }

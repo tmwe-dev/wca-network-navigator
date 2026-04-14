@@ -20,7 +20,7 @@ interface LinkedInTabProps {
   setLiPass: (v: string) => void;
   liAtCookie: string;
   setLiAtCookie: (v: string) => void;
-  updateSetting: any;
+  updateSetting: unknown;
 }
 
 export function LinkedInTab({

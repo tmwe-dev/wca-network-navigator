@@ -13,7 +13,7 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
 interface PartnerListItemProps {
-  partner: any;
+  partner: Record<string, any>;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];

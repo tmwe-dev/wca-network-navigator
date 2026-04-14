@@ -45,7 +45,7 @@ export function usePartnersForGlobe() {
     queryFn: async () => {
       // Paginate to fetch ALL partners (bypass 1000-row default limit)
       const PAGE_SIZE = 2000;
-      let allPartners: any[] = [];
+      let allPartners: Array<Record<string, unknown>> = [];
       let offset = 0;
 
       while (true) {
@@ -109,7 +109,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
       // Paginate to get all partners for the country
       const PAGE_SIZE = 2000;
-      let allData: any[] = [];
+      let allData: Array<Record<string, unknown>> = [];
       let offset = 0;
 
       while (true) {

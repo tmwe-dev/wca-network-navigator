@@ -46,11 +46,11 @@ function applyMapping(row: Record<string, unknown>, mapping: Record<string, stri
 
 export interface AiMappingResult {
   column_mapping: Record<string, string>;
-  parsed_rows: any[];
+  parsed_rows: Array<Record<string, unknown>>;
   confidence: number;
   warnings: string[];
   unmapped_columns?: string[];
-  data_quality?: any;
+  data_quality?: Record<string, unknown>;
 }
 
 export function useImportWizard() {
@@ -183,7 +183,7 @@ export function useImportWizard() {
       setPendingRows(rowObjects);
       const sampleSize = Math.min(50, rowObjects.length);
       const step = rowObjects.length / sampleSize;
-      const sample: any[] = [];
+      const sample: Array<Record<string, unknown>> = [];
       for (let i = 0; i < sampleSize; i++) {
         sample.push(rowObjects[Math.floor(i * step)]);
       }
@@ -362,7 +362,7 @@ export function useImportWizard() {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
     const SEP = ";";
-    const escapeCell = (val: any) => {
+    const escapeCell = (val: string) => {
       if (val === null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;

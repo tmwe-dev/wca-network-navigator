@@ -15,7 +15,7 @@ interface DiagState {
   activeJobs: number;
   queryCacheSize: number;
   lastFailedCall: { endpoint: string; status: number; ts: string } | null;
-  lastWcaError: any;
+  lastWcaError: unknown;
 }
 
 export function RuntimeDiagnosticPanel() {

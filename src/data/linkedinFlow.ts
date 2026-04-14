@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createLinkedInFlowJob(job: Record<string, unknown>) {
-  const { data, error } = await supabase.from("linkedin_flow_jobs").insert(job as any).select().single();
+  const { data, error } = await supabase.from("linkedin_flow_jobs").insert(job).select().single();
   if (error) throw error;
   return data;
 }
@@ -37,6 +37,6 @@ export async function updateLinkedInFlowItem(id: string, updates: Record<string,
 }
 
 export async function insertLinkedInFlowItems(items: Record<string, unknown>[]) {
-  const { error } = await supabase.from("linkedin_flow_items").insert(items as any);
+  const { error } = await supabase.from("linkedin_flow_items").insert(items);
   if (error) throw error;
 }

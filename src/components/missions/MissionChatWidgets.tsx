@@ -11,7 +11,7 @@ import type { MissionStepData } from "@/components/missions/MissionStepRenderer"
 
 export interface WidgetConfig {
   type: "country_select" | "channel_select" | "slider_batch" | "toggle_group" | "confirm_summary" | "plan_review";
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 // ── Detect widget markers in AI text ──

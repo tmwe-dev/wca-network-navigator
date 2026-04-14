@@ -139,7 +139,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
       setSelectedIds(new Set());
       navigate("/workspace");
     } catch (e: unknown) {
-      toast.error(e.message);
+      toast.error((e instanceof Error ? e.message : String(e)));
     } finally { setSending(false); }
   }, [selectedIds, filtered, navigate]);
 

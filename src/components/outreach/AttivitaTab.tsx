@@ -104,7 +104,7 @@ export function AttivitaTab() {
   const handleComplete = async (id: string) => {
     try {
       const { error } = await supabase.from("activities")
-        .update({ status: "completed" as any, completed_at: new Date().toISOString() })
+        .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["activities-outreach"] });

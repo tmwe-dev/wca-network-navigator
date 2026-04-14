@@ -50,7 +50,7 @@ export function useActionPanelLogic({
       try {
         return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
       } catch (e: unknown) {
-        toast({ title: "Errore directory cache", description: e.message, variant: "destructive" });
+        toast({ title: "Errore directory cache", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
         return [];
       }
     },

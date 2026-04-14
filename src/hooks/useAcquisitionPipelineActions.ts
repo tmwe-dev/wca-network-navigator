@@ -47,7 +47,7 @@ export function useAcquisitionPipelineActions(
       }
       state.setPipelineStatus("idle");
     } catch (err: unknown) {
-      toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
+      toast({ title: "Errore scansione", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
       state.setPipelineStatus("idle");
     }
   }, [state.selectedCountries, state.selectedNetworks]);

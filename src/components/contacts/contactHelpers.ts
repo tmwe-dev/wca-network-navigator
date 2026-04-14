@@ -19,7 +19,7 @@ export function formatPhone(phone: string): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getContactQuality(c: any): "good" | "partial" | "poor" {
+export function getContactQuality(c: unknown): "good" | "partial" | "poor" {
   const has = (v: unknown) => !!clean(v as string | null | undefined);
   const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
   const filled = fields.filter(Boolean).length;

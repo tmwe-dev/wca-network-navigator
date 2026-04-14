@@ -179,7 +179,7 @@ export async function getJobItemById(itemId: string, select = "attempt_count"): 
     .eq("id", itemId)
     .single();
   if (error) throw error;
-  return data as any;
+  return data as Record<string, unknown>;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {

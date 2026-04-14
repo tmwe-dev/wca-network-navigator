@@ -74,7 +74,7 @@ export async function saveExtractionResult(
       (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
-    const toInsert: any[] = [];
+    const toInsert: Array<Record<string, unknown>> = [];
     const toUpdate: Array<{ id: string; updates: Record<string, string> }> = [];
 
     for (const c of result.contacts) {

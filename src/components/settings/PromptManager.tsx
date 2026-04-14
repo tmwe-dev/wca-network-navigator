@@ -187,7 +187,7 @@ export function PromptManager() {
       if (data?.html) setEditPrompt(data.html);
       toast.success("Prompt migliorato con AI");
     } catch (e: unknown) {
-      toast.error("Errore AI: " + (e.message || "sconosciuto"));
+      toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
     } finally {
       setImproving(false);
     }
@@ -290,7 +290,7 @@ export function PromptManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={editSource} onValueChange={(v: any) => setEditSource(v)}>
+              <Select value={editSource} onValueChange={(v: string) => setEditSource(v)}>
                 <SelectTrigger className="h-9 text-xs flex-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email_type" className="text-xs">Tipo Email</SelectItem>

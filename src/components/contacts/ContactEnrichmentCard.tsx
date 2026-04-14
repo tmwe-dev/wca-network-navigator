@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface ContactEnrichmentCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  enrichmentData: any;
+  enrichmentData: Record<string, unknown>;
   deepSearchAt: string | null;
 }
 
@@ -37,7 +37,7 @@ function SocialButton({ url, label, icon }: { url: string; label: string; icon: 
 
 export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactEnrichmentCardProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const e = enrichmentData as any;
+  const e = enrichmentData as Record<string, unknown>;
   if (!e && !deepSearchAt) return null;
 
   const companyProfile = e?.company_profile;

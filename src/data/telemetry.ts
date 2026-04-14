@@ -4,5 +4,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function insertPageEvent(payload: Record<string, unknown>) {
-  await supabase.from("page_events").insert(payload as any);
+  await supabase.from("page_events").insert(payload);
 }

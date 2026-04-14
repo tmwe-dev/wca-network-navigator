@@ -32,7 +32,7 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<unknown> }> } {
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: string) => void; fn: () => Promise<unknown> }> } {
   if (!(window as Record<string, unknown>)[LOCK_KEY]) (window as Record<string, unknown>)[LOCK_KEY] = { busy: false, queue: [] };
   return (window as Record<string, unknown>)[LOCK_KEY];
 }

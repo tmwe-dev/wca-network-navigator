@@ -46,7 +46,7 @@ function findField(row: Record<string, unknown>, aliases: string[]): string | nu
 export function useCreateImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, rows, userId }: { file: File; rows: any[]; userId: string }) => {
+    mutationFn: async ({ file, rows, userId }: { file: File; rows: Array<Record<string, unknown>>; userId: string }) => {
       const filePath = `${userId}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage.from("import-files").upload(filePath, file);
       if (uploadError) throw uploadError;
@@ -215,8 +215,8 @@ export function useCreateActivitiesFromImport() {
 
 export function useAnalyzeImportStructure() {
   return useMutation({
-    mutationFn: async ({ sampleRows, inputType, rawText }: { sampleRows?: any[]; inputType: "paste" | "file"; rawText?: string }) => {
-      return invokeEdge<{ column_mapping: Record<string, string>; parsed_rows: any[]; confidence: number; warnings: string[]; unmapped_columns?: string[] }>(
+    mutationFn: async ({ sampleRows, inputType, rawText }: { sampleRows?: Array<Record<string, unknown>>; inputType: "paste" | "file"; rawText?: string }) => {
+      return invokeEdge<{ column_mapping: Record<string, string>; parsed_rows: Array<Record<string, unknown>>; confidence: number; warnings: string[]; unmapped_columns?: string[] }>(
         "analyze-import-structure",
         { body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText }, context: "useAnalyzeImportStructure" }
       );
@@ -247,7 +247,7 @@ export function useFixImportErrors() {
 export function useCreateImportFromParsedRows() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, userId, fileName, groupName, importSource }: { rows: any[]; userId: string; fileName: string; groupName?: string; importSource?: "standard" | "business_card" }) => {
+    mutationFn: async ({ rows, userId, fileName, groupName, importSource }: { rows: Array<Record<string, unknown>>; userId: string; fileName: string; groupName?: string; importSource?: "standard" | "business_card" }) => {
       const source = importSource || "standard";
       const normalizedGroupName = groupName?.trim() || null;
       const businessCardOrigin = normalizedGroupName ? `business_card:${normalizedGroupName}` : "business_card";

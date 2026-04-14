@@ -4,6 +4,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function insertContactInteraction(interaction: Record<string, unknown>) {
-  const { error } = await supabase.from("contact_interactions").insert(interaction as any);
+  const { error } = await supabase.from("contact_interactions").insert(interaction);
   if (error) throw error;
 }

@@ -11,7 +11,7 @@ export interface EmailDraft {
   html_body: string | null;
   category: string | null;
   recipient_type: string;
-  recipient_filter: any;
+  recipient_filter: unknown;
   attachment_ids: string[];
   link_urls: { label: string; url: string }[];
   status: string;

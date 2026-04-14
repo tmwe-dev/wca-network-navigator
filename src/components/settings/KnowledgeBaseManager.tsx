@@ -85,7 +85,7 @@ export function KnowledgeBaseManager() {
       toast.error("Titolo e contenuto sono obbligatori");
       return;
     }
-    upsert.mutate(editEntry as any, { onSuccess: () => setEditEntry(null) });
+    upsert.mutate(editEntry, { onSuccess: () => setEditEntry(null) });
   };
 
   const handleImproveWithAI = async () => {
@@ -99,7 +99,7 @@ export function KnowledgeBaseManager() {
         toast.success("Contenuto migliorato con AI");
       }
     } catch (e: unknown) {
-      toast.error("Errore AI: " + (e.message || "sconosciuto"));
+      toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
     } finally {
       setImproving(false);
     }

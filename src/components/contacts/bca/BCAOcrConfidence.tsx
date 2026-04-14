@@ -65,7 +65,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {
-      toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+      toast({ title: "Errore", description: e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e), variant: "destructive" });
     }
   }, [editing, editValue, card, updateCard]);
 

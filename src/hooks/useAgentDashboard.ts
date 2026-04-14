@@ -18,12 +18,12 @@ export interface AgentTaskRow {
   description: string;
   status: string;
   result_summary: string | null;
-  execution_log: any[];
+  execution_log: Array<Record<string, unknown>>;
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
-  target_filters: any;
+  target_filters: unknown;
 }
 
 export function useAgentDashboard() {

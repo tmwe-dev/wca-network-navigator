@@ -32,7 +32,7 @@ interface AgentAction {
   created_at: string;
   status: string;
   priority: string;
-  source_meta: any;
+  source_meta: Record<string, any>;
 }
 
 const CHANNEL_ICONS: Record<string, typeof Mail> = {
@@ -72,7 +72,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "approved" as any, reviewed: true })
+        .update({ status: "approved", reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },
@@ -87,7 +87,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "cancelled" as any, reviewed: true })
+        .update({ status: "cancelled", reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },

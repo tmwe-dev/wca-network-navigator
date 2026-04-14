@@ -64,7 +64,7 @@ export function useContactActions(deps: Deps) {
       toast({ title: processed === 0 ? "Alias già presenti" : "✨ Alias generati", description: processed === 0 ? "Tutti i contatti hanno già un alias" : `${processed} contatti elaborati` });
       invalidateContacts();
     } catch (e: unknown) {
-      toast({ title: "Errore generazione alias", description: e.message, variant: "destructive" });
+      toast({ title: "Errore generazione alias", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
     } finally { setAliasLoading(false); }
   }, [aliasLoading, selection, currentGroupBy, holdingPattern, queryClient]);
 
@@ -164,7 +164,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
   if (!contacts?.length) { toast({ title: "Nessun contatto con email", variant: "destructive" }); return; }
 
   if (contacts.length === 1) {
-    const ct = contacts[0] as any;
+    const ct = contacts[0] as Record<string, unknown>;
     navigate("/email-composer", {
       state: {
         prefilledRecipient: {

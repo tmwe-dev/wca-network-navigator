@@ -28,7 +28,7 @@ export interface BusinessCard {
   match_status: string;
   tags: string[];
   created_at: string;
-  raw_data: any;
+  raw_data: Record<string, unknown>;
   lead_status: string;
 }
 
@@ -56,7 +56,7 @@ export interface BusinessCardWithPartner extends BusinessCard {
     company_name: string;
     logo_url: string | null;
     company_alias: string | null;
-    enrichment_data: any;
+    enrichment_data: Record<string, unknown>;
     country_code: string | null;
   } | null;
 }
@@ -82,7 +82,7 @@ export function useUpdateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<BusinessCard>) => {
-      await updateBusinessCard(id, updates as any);
+      await updateBusinessCard(id, updates);
     },
     onSuccess: () => invalidateBusinessCards(qc),
   });

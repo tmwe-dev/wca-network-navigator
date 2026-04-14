@@ -41,8 +41,8 @@ function useDirectoryTotal() {
 function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
   networkView: "partners" | "bca";
   setNetworkView: (v: "partners" | "bca") => void;
-  globalStats: any;
-  deepSearch: any;
+  globalStats: unknown;
+  deepSearch: unknown;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {

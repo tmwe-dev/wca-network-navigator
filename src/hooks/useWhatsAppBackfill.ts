@@ -155,7 +155,7 @@ export function useWhatsAppBackfill() {
         const chat = contactsWithGap[i];
         setProgress(p => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
 
-        let messages: any[] = [];
+        let messages: Array<Record<string, unknown>> = [];
 
         // Try readThread first (reads visible messages in chat)
         const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
@@ -235,7 +235,7 @@ export function useWhatsAppBackfill() {
       setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
       toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
     } catch (err: unknown) {
-      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: err.message }));
+      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: (err instanceof Error ? err.message : String(err)) }));
       toast.error(`Errore recupero: ${err.message}`);
     } finally {
       runningRef.current = false;

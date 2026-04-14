@@ -88,7 +88,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();
     } catch (err: unknown) {
-      toast.error(err.message || "Errore durante la creazione");
+      toast.error((err instanceof Error ? err.message : String(err)) || "Errore durante la creazione");
     } finally {
       setSending(false);
     }

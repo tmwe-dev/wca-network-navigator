@@ -60,7 +60,7 @@ export default function AdminUsers() {
       if (!newEmail.trim()) throw new Error("Email obbligatoria");
       const { error } = await supabase
         .from("authorized_users")
-        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }] as any);
+        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }]);
       if (error) throw error;
     },
     onSuccess: () => {

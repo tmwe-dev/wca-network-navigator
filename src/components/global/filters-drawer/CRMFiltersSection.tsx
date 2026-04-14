@@ -27,7 +27,7 @@ export function CRMFiltersSection() {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const pageSize = 1000;
-        const allRows: any[] = [];
+        const allRows: Array<Record<string, unknown>> = [];
         let from = 0;
         while (true) {
           const { data: page, error } = await supabase

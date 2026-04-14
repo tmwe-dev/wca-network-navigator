@@ -14,7 +14,7 @@ interface ExpandedGroupContentProps {
   groupKey: string;
   selectedId: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSelect: (contact: any) => void;
+  onSelect: (contact: Record<string, any>) => void;
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;

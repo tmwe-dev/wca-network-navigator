@@ -107,7 +107,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      let data: any;
+      let data: unknown;
       if (targetAgent) {
         // Route to agent-execute
         data = await invokeEdge<Record<string, unknown>>("agent-execute", {
@@ -126,7 +126,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       setResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
     } catch (e: unknown) {
-      setResponse("⚠️ " + (e.message || "Errore di comunicazione"));
+      setResponse("⚠️ " + ((e instanceof Error ? e.message : String(e)) || "Errore di comunicazione"));
     } finally {
       setLoading(false);
       inputRef.current?.focus();

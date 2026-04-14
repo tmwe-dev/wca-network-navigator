@@ -286,7 +286,7 @@ export async function countPartnersWithoutCountry() {
 /** Get partners by IDs (batched) */
 export async function getPartnersByIds(ids: string[], select = "id, company_name, email, website") {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: any[] = [];
+  const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
     const { data, error } = await supabase
@@ -321,7 +321,7 @@ export async function deletePartnersByIds(ids: string[]) {
 
 /** Insert a new partner and return it */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function createPartner(partner: any) {
+export async function createPartner(partner: unknown) {
   const { data, error } = await supabase
     .from("partners")
     .insert(partner)
@@ -333,7 +333,7 @@ export async function createPartner(partner: any) {
 
 /** Get partners by IDs with custom select and filters */
 export async function getPartnersByIdsFiltered(ids: string[], select: string, filters?: Record<string, unknown>) {
-  const results: any[] = [];
+  const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
     let q = supabase.from("partners").select(select).in("id", batch);

@@ -12,7 +12,7 @@ export async function findWorkPlans(userId: string, tags?: string[]) {
 }
 
 export async function createWorkPlan(plan: Record<string, unknown>) {
-  const { data, error } = await supabase.from("ai_work_plans").insert(plan as any).select().single();
+  const { data, error } = await supabase.from("ai_work_plans").insert(plan).select().single();
   if (error) throw error;
   return data;
 }

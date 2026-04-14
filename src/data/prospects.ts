@@ -9,7 +9,7 @@ export async function findProspects(select = "*", orderBy = "company_name") {
   return data ?? [];
 }
 
-export async function queryProspects(builder: (q: any) => any) {
+export async function queryProspects(builder: (q: unknown) => any) {
   const base = supabase.from("prospects").select("*").order("company_name");
   const { data, error } = await builder(base);
   if (error) throw error;

@@ -9,7 +9,7 @@ interface EnrichmentCardProps {
   partner: {
     id: string;
     enriched_at?: string | null;
-    enrichment_data?: any;
+    enrichment_data?: Record<string, unknown>;
     ai_parsed_at?: string | null;
   };
 }
@@ -21,7 +21,7 @@ const seniorityColors: Record<string, string> = {
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
-  const enrichment = partner.enrichment_data as any;
+  const enrichment = partner.enrichment_data as Record<string, unknown>;
   if (!enrichment && !partner.enriched_at && !partner.ai_parsed_at) return null;
 
   const companyProfile = enrichment?.company_profile;

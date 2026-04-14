@@ -38,7 +38,7 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { insertActivity } from "@/data/activities";
 
 interface PartnerDetailCompactProps {
-  partner: any;
+  partner: Record<string, any>;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
@@ -54,7 +54,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const _enrichment = partner.enrichment_data as any;
+  const _enrichment = partner.enrichment_data as Record<string, unknown>;
   const _branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
@@ -74,7 +74,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const networks = partner.partner_networks || [];
 
   // ── Email: navigate to composer with contact pre-filled ──
-  const handleSendEmail = useCallback((contact: any) => {
+  const handleSendEmail = useCallback((contact: Record<string, any>) => {
     navigate("/email-composer", {
       state: {
         partnerIds: [partner.id],
@@ -90,7 +90,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
-  const handleSendWhatsApp = useCallback(async (contact: any) => {
+  const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
     if (!waAvailable) {

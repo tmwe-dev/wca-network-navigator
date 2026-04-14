@@ -20,8 +20,8 @@ type RAResponse = {
   errors?: number;
   currentCompany?: string;
   log?: Array<{ time: string; msg: string }>;
-  data?: any;
-  results?: any[];
+  data?: Record<string, unknown>;
+  results?: Array<Record<string, unknown>>;
   version?: string;
 };
 

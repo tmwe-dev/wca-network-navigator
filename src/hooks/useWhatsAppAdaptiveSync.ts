@@ -10,8 +10,8 @@ import { markSessionExpired } from "@/lib/inbox/sessionTracker";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
-function isAuthError(err: any): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
+function isAuthError(err: unknown): boolean {
+  const msg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
   return /auth|session|login|expired|unauthorized|qr|logout/i.test(msg);
 }
 
@@ -249,7 +249,7 @@ export function useWhatsAppAdaptiveSync() {
         window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "whatsapp" } }));
       }
     } catch (err: unknown) {
-      log.warn("sidebar_scan.failed", { error: err instanceof Error ? err.message : String(err) });
+      log.warn("sidebar_scan.failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }
@@ -281,7 +281,7 @@ export function useWhatsAppAdaptiveSync() {
         scheduleDeescalation();
       }
     } catch (err: unknown) {
-      log.warn("thread_scan.failed", { error: err instanceof Error ? err.message : String(err) });
+      log.warn("thread_scan.failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }

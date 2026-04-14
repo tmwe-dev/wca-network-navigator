@@ -6,7 +6,7 @@ import type { ImportError } from "./useImportLogQueries";
 
 export function exportErrorsToCSV(errors: ImportError[]) {
   const SEP = ";";
-  const escapeCell = (val: any) => {
+  const escapeCell = (val: string) => {
     if (val === null || val === undefined) return "";
     const s = String(val).replace(/"/g, '""');
     if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {

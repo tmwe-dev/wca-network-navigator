@@ -161,7 +161,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const legacySetters = useMemo(() => {
     const entries = Object.keys(defaults).map(key => [
       toSetterName(key),
-      (val: any) => dispatch({ type: "SET", key: key as keyof GlobalFilterState, value: val }),
+      (val: string) => dispatch({ type: "SET", key: key as keyof GlobalFilterState, value: val }),
     ]);
     return Object.fromEntries(entries) as unknown as LegacySetters;
   }, []);

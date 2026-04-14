@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 
 interface CountryOverviewProps {
-  partners: any[];
+  partners: Array<Record<string, unknown>>;
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -47,7 +47,7 @@ interface CountryGroup {
   withContacts: number;
   withWhatsApp: number;
   withEmail: number;
-  partners: any[];
+  partners: Array<Record<string, unknown>>;
 }
 
 type ContactFilter = "all" | "whatsapp" | "email";
@@ -67,9 +67,9 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  const hasWhatsApp = (p: any) =>
+  const hasWhatsApp = (p) =>
     (p.partner_contacts || []).some((c) => c.mobile);
-  const hasEmail = (p: any) =>
+  const hasEmail = (p) =>
     (p.partner_contacts || []).some((c) => c.email);
 
   const countryGroups = useMemo(() => {
