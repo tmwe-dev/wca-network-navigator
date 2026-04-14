@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Contacts.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * ContactsPage V2 — Thin wrapper mounting V1 Contacts
  * Contacts rubrica completa

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Outreach.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * OutreachPage V2 — Thin wrapper mounting V1 Outreach with all tabs
  * (Cockpit, In Uscita, Attività, Circuito/HoldingPattern, Coda AI)

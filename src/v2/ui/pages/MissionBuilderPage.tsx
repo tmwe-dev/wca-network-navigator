@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/MissionBuilder.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * MissionBuilderPage V2 — Thin wrapper mounting V1 MissionBuilder
  * Mission Builder creazione missioni

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Inreach.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * InreachPage V2 — Thin wrapper mounting V1 Inreach
  * Inreach email ricevute

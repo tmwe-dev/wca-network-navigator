@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Agenda.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * AgendaPage V2 — Thin wrapper mounting V1 Agenda
  * Agenda attività e follow-up

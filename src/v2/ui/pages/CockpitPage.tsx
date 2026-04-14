@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Cockpit.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * CockpitPage V2 — Thin wrapper mounting V1 Cockpit with full drag & drop
  */

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/RADashboard.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * RADashboardPage V2 — Thin wrapper mounting V1 RADashboard
  * RA Dashboard

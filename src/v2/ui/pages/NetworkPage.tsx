@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Network.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * NetworkPage V2 — Thin wrapper mounting V1 Network
  * Network partners con filtri, mappa, download

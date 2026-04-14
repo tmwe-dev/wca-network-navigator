@@ -48,4 +48,28 @@ export default tseslint.config(
       ],
     },
   },
+  // ── V2 migration guardrail: warn on v1 page imports in v2 pages ──
+  {
+    files: ["src/v2/ui/pages/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["@/pages/*", "@/pages/**"],
+              message: "V2 pages should not import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "ImportExpression > Literal[value=/^@\\/pages/]",
+          message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
+        },
+      ],
+    },
+  },
 );

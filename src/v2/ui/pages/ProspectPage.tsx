@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/ProspectCenter.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * ProspectPage V2 — Thin wrapper mounting V1 ProspectCenter
  * Prospect Center prospecting
