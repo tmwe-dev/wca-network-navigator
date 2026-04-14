@@ -18,5 +18,6 @@ export function CockpitPage(): React.ReactElement {
     >
       <CockpitV1 />
     </Suspense>
+    </div>
   );
 }

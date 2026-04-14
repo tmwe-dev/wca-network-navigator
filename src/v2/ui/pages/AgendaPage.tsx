@@ -19,5 +19,6 @@ export function AgendaPage(): React.ReactElement {
     >
       <V1Component />
     </Suspense>
+    </div>
   );
 }
