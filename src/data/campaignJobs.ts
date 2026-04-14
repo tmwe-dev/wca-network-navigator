@@ -2,8 +2,11 @@
  * DAL — campaign_jobs
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function insertCampaignJobs(jobs: Array<Record<string, unknown>>) {
-  const { error } = await supabase.from("campaign_jobs").insert(jobs as any);
+type CampaignJobInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
+
+export async function insertCampaignJobs(jobs: CampaignJobInsert[]) {
+  const { error } = await supabase.from("campaign_jobs").insert(jobs);
   if (error) throw error;
 }

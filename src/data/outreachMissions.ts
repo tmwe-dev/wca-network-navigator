@@ -2,9 +2,12 @@
  * DAL — outreach_missions
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function insertOutreachMission(mission: Record<string, unknown>) {
-  const { data, error } = await supabase.from("outreach_missions").insert(mission as any).select().single();
+type MissionInsert = Database["public"]["Tables"]["outreach_missions"]["Insert"];
+
+export async function insertOutreachMission(mission: MissionInsert) {
+  const { data, error } = await supabase.from("outreach_missions").insert(mission).select().single();
   if (error) throw error;
   return data;
 }

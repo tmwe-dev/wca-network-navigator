@@ -2,9 +2,12 @@
  * DAL — import_logs
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function createImportLog(log: Record<string, unknown>) {
-  const { data, error } = await supabase.from("import_logs").insert(log as any).select().single();
+type ImportLogInsert = Database["public"]["Tables"]["import_logs"]["Insert"];
+
+export async function createImportLog(log: ImportLogInsert) {
+  const { data, error } = await supabase.from("import_logs").insert(log).select().single();
   if (error) throw error;
   return data;
 }

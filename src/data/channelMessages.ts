@@ -2,9 +2,12 @@
  * DAL — channel_messages
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function insertChannelMessage(msg: Record<string, unknown>) {
-  const { error } = await supabase.from("channel_messages").insert(msg as any);
+type ChannelMessageInsert = Database["public"]["Tables"]["channel_messages"]["Insert"];
+
+export async function insertChannelMessage(msg: ChannelMessageInsert) {
+  const { error } = await supabase.from("channel_messages").insert(msg);
   if (error) throw error;
 }
 

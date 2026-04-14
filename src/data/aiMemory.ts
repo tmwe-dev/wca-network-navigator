@@ -2,9 +2,12 @@
  * DAL — ai_memory
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function createMemory(entry: Record<string, unknown>) {
-  const { error } = await supabase.from("ai_memory").insert(entry as any);
+type MemoryInsert = Database["public"]["Tables"]["ai_memory"]["Insert"];
+
+export async function createMemory(entry: MemoryInsert) {
+  const { error } = await supabase.from("ai_memory").insert(entry);
   if (error) throw error;
 }
 
