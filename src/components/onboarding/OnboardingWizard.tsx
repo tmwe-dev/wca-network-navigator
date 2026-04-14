@@ -23,6 +23,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [saving, setSaving] = useState(false);
 
   const next = () => setStep(s => Math.min(s + 1, 3));
+  const back = () => setStep(s => Math.max(s - 1, 0));
 
   const saveSetting = async (key: string, value: string) => {
     const { data: { user } } = await supabase.auth.getUser();
