@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { installRemoteSink, __getInstalledSinkState, __resetInstalledSinkState } from "@/lib/log/remoteSink";
 
 vi.mock("@/lib/log", async () => {
-  const sinks: Array<(r: any) => void> = [];
+  const sinks: Array<(r: unknown) => void> = [];
   return {
     logConfig: {
-      addSink: (s: (r: any) => void) => sinks.push(s),
+      addSink: (s: (r: unknown) => void) => sinks.push(s),
       _sinks: sinks,
     },
-    type LogLevel: {} as any,
-    type LogRecord: {} as any,
   };
 });
 
