@@ -1,61 +1,64 @@
 
-Obiettivo: spiegare perché i target `any = 0` e `disabled = 0` non sono stati raggiunti e cosa va corretto davvero per arrivarci.
 
-Diagnosi reale emersa dall’audit statico:
-- Non restano “pochi residui”: esistono ancora generatori strutturali di `any`.
-- Il build/tsc oggi può essere verde, ma la type safety non è ancora chiusa ai confini del sistema: DAL dinamici, JSON liberi, API browser non tipizzate, test mocks.
+## Audit Auth, Google OAuth, Ruoli e Accessi
 
-Perché non arrivo a `any non-disabled = 0`:
-1. `src/lib/supabaseUntyped.ts` usa ancora `(supabase as any).from(table)`. Finché esiste, tutto il layer RA (`useRADashboard`, `useRAJobs`, `useRAProspects`) continua a rigenerare cast e `any`.
-2. `src/hooks/useSupabaseQuery.ts` ha ancora `FilterFn`, `query as any`, `data as any as Row[]`. È un moltiplicatore centrale: non basta ripulire i consumer.
-3. In `src/data/partners.ts` e `src/data/partnerRelations.ts` esistono API pubbliche con `Promise<any[]>` e `select` dinamico. Se il contratto del DAL è `any[]`, i componenti a valle continueranno a castare.
-4. Alcune props UI entrano già come `Record<string, any>`: `PartnerDetailCompact`, `PartnerCard`, `UnifiedActionBar`, `ContactEnrichmentCard`, `ContactRecordFields`. Quindi il problema nasce prima del render.
-5. Alcuni residui sono boundary esterni non ancora incapsulati: Web Speech (`useContinuousSpeech`, `useAiVoice`), extension bridge (`useLinkedInExtensionBridge`, `TestDownload`), globals su `window` (`Operations`).
+### STATO ATTUALE — Cosa funziona e cosa no
 
-Perché non arrivo a `disabled = 0`:
-1. Ho trovato 27 file con `/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */`. Questo da solo rende impossibile target zero.
-2. Molti disable sono stati usati come tampone locale invece di chiudere la causa a monte: JSON Supabase, `select` dinamici, `window as any`, bridge payloads.
-3. La config lint spinge in quella direzione: `@typescript-eslint/no-explicit-any` è `warn`, ma `npm run lint` usa `--max-warnings 0`. Quindi ogni `any` rimasto o viene tipizzato davvero, o viene silenziato.
-4. Alcuni disable sono evitabili, ma solo dopo refactor di contratto; toglierli subito senza rifondare i tipi farebbe riesplodere lint o TypeScript.
+| Area | Stato | Dettaglio |
+|------|-------|-----------|
+| Login email/password (V1 `/auth`) | ✅ Funziona | Whitelist + login + redirect a `/v1` |
+| Login email/password (V2 `/v2/login`) | ✅ Funziona | Stessa logica tramite `useAuthV2` |
+| Google OAuth | ✅ Codice corretto | Usa `lovable.auth.signInWithOAuth("google")` sia in V1 che V2 |
+| Whitelist (`authorized_users`) | ✅ Funziona | 4 utenti autorizzati, RPC `is_email_authorized` ok |
+| Profilo di Luca (`lucaarcana@gmail.com`) | ❌ **MANCANTE** | auth.users ID `1d51961d...` NON ha riga in `profiles` |
+| Ruoli di TUTTI gli utenti | ❌ **VUOTO** | Tabella `user_roles` ha 0 righe. Nessuno è admin. |
+| Pagine admin (Telemetria, Diagnostica) | ❌ **Bloccate** | `useRequireRole("admin")` fallisce sempre → redirect |
+| Trigger `handle_new_user` | ⚠️ Parziale | Creato DOPO l'utente Luca → non ha generato il suo profilo |
+| Trigger `handle_new_user_role` | ⚠️ Parziale | Stesso problema: assegna ruolo solo ai NUOVI utenti |
 
-Conclusione onesta:
-- Non è che il target 0/0 sia “impossibile”.
-- È che il lavoro fatto finora ha corretto soprattutto build, tsc e struttura file, ma non ha ancora eliminato i 4 generatori che ricreano `any` in cascata:
-  - `src/lib/supabaseUntyped.ts`
-  - `src/hooks/useSupabaseQuery.ts`
-  - DAL con `select` dinamico / `Promise<any[]>`
-  - props UI `Record<string, any>`
-- Finché questi restano, i fix file-per-file abbassano il numero ma non lo azzerano.
+### UTENTI NEL SISTEMA
 
-Piano corretto per arrivare davvero a 0/0 o molto vicino:
-1. Chiudere i generatori centrali:
-   - sostituire `supabaseUntyped.ts` con wrapper generici o tipi RA locali;
-   - riscrivere `useSupabaseQuery.ts` senza `any`.
-2. Cambiare il contratto del DAL:
-   - rimuovere `Promise<any[]>`;
-   - usare funzioni generiche tipo `getPartnersByCountries<T>()` / `findPartnerContacts<T>()`.
-3. Tipizzare i boundary esterni:
-   - creare `src/types/web-speech.d.ts`;
-   - definire schema dei messaggi per extension bridge;
-   - eliminare `window as any`.
-4. Portare nella UI view-model veri:
-   - `PartnerWithRelations`
-   - `PartnerCardModel`
-   - `ContactEnrichmentData`
-   - `ContactRecordUpdates`
-5. Ripulire i test correttamente:
-   - togliere i 27 file-level disable;
-   - usare `unknown`, `Partial<T>`, `MockedFunction`, helper mock tipizzati;
-   - lasciare solo disable locali e motivati se davvero inevitabili.
-6. Solo alla fine rifare il conteggio e l’ultima passata sui residui.
+| Email | auth.users | Profilo | Ruolo |
+|-------|-----------|---------|-------|
+| lucaarcana@gmail.com | `1d51961d...` | ❌ MANCANTE | ❌ NESSUNO |
+| luigi@tmwe.it | `fe1db58a...` | ✅ "Luigi" | ❌ NESSUNO |
+| alexander.bittermann.88@gmail.com | `c8aadbed...` | ✅ "Alexander" | ❌ NESSUNO |
+| luca@tmwe.it | `ae35ad39...` | ✅ "Luca Arcanà" | ❌ NESSUNO |
+| imane@tmwe.it | `27b60e53...` | ✅ "imane" | ❌ NESSUNO |
 
-Priorità tecnica immediata:
-- Root blockers: `src/lib/supabaseUntyped.ts`, `src/hooks/useSupabaseQuery.ts`, `src/data/partners.ts`, `src/data/partnerRelations.ts`
-- Boundary blockers: `src/hooks/useContinuousSpeech.ts`, `src/hooks/useAiVoice.ts`, `src/hooks/useLinkedInExtensionBridge.ts`, `src/pages/Operations.tsx`
-- UI blockers: `src/components/partners/PartnerDetailCompact.tsx`, `src/components/partners/PartnerCard.tsx`, `src/components/partners/UnifiedActionBar.tsx`, `src/components/contacts/ContactEnrichmentCard.tsx`, `src/components/contact-drawer/ContactRecordFields.tsx`
-- Test blockers: `src/test/wca-app-api.test.ts` e gli altri file con disable di intero file
+**Problema chiave**: i trigger sono stati creati dopo la registrazione degli utenti. Quindi nessuno ha mai ricevuto un ruolo, e Luca (il primo utente) non ha nemmeno il profilo.
 
-Risposta breve alla tua domanda:
-- Non ho mancato il target per un ultimo dettaglio.
-- L’ho mancato perché la bonifica è stata fatta troppo dal bordo e non abbastanza dal nucleo.
-- Se vuoi davvero 0/0, il prossimo blocco deve partire dai generatori centrali sopra, non da altri cast sparsi.
+---
+
+### PIANO DI FIX
+
+#### Fix 1 — Migration SQL: backfill profilo + ruoli
+
+Una migration che:
+1. **Crea il profilo mancante** per `lucaarcana@gmail.com` (ID `1d51961d-da81-4914-b229-511cdce43e55`) con display_name "Luca"
+2. **Assegna ruolo `admin`** a Luca (lucaarcana@gmail.com)
+3. **Assegna ruolo `user`** a tutti gli altri utenti esistenti che non hanno ancora un ruolo
+4. Tutto con `ON CONFLICT DO NOTHING` per essere idempotente
+
+#### Fix 2 — useAuthV2: auto-creazione profilo se mancante
+
+Nella funzione `loadProfile`, se la query ritorna `null`, creare automaticamente il profilo usando i dati da `user.user_metadata` (display_name, avatar_url). Così qualsiasi utente futuro che "sfugge" al trigger viene recuperato al primo login.
+
+#### Fix 3 — Verifica accesso admin dopo i fix
+
+Dopo la migration, le pagine Telemetria e Diagnostica saranno accessibili a Luca perché `useRequireRole("admin")` troverà il suo ruolo nella tabella `user_roles`.
+
+---
+
+### File modificati
+
+1. **Nuova migration SQL** — backfill profilo Luca + ruoli per tutti
+2. **`src/v2/hooks/useAuthV2.ts`** — `loadProfile` con fallback auto-create (~15 righe)
+
+### Nessuna modifica necessaria a
+
+- Google OAuth (codice già corretto)
+- Pagina Auth V1 (funziona)
+- Trigger esistenti (funzionano per i nuovi utenti)
+- RLS policies (già corrette)
+
