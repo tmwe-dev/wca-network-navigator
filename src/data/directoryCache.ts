@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function upsertDirectoryCache(entry: Record<string, unknown>) {
-  const { error } = await supabase.from("directory_cache").upsert(entry as any, { onConflict: "country_code,network_name" }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema boundary cast
+  const { error } = await supabase.from("directory_cache").upsert(entry as never, { onConflict: "country_code,network_name" });
   if (error) throw error;
 }
 

@@ -42,7 +42,6 @@ export function ABTestCreator() {
       if (!user) throw new Error("Non autenticato");
 
       const fieldKey = testType === "body" ? "body" : testType;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic variant shape
       const { error } = await supabase.from("ab_tests").insert({
         user_id: user.id,
         test_name: name,

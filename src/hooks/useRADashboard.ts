@@ -16,7 +16,6 @@ export function useRADashboard() {
         { data: recentProspects },
         { data: activeJobs },
         { data: atecoData },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ] = await Promise.all([
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }),
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),

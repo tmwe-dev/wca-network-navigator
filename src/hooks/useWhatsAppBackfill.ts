@@ -197,7 +197,6 @@ export function useWhatsAppBackfill() {
 
           const { error, status } = await supabase
             .from("channel_messages")
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic upsert
             .upsert({
               user_id: user.id,
               channel: "whatsapp",

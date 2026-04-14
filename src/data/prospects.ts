@@ -9,7 +9,6 @@ export async function findProspects(select = "*", orderBy = "company_name") {
   return data ?? [];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic query builder returns untyped result
 export async function queryProspects(builder: (q: unknown) => unknown) {
   const base = supabase.from("prospects").select("*").order("company_name");
   const { data, error } = await (builder(base) as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast

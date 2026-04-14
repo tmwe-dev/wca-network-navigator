@@ -72,7 +72,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "approved" as any, reviewed: true }) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema boundary cast
+        .update({ status: "approved" as never, reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },

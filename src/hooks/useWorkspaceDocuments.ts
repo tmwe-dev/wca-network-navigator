@@ -29,7 +29,6 @@ export function useWorkspaceDocuments() {
         .from("workspace-docs")
         .createSignedUrl(path, 60 * 60 * 24 * 365);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = await createWorkspaceDoc({
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
