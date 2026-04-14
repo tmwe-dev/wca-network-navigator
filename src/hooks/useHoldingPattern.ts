@@ -45,7 +45,7 @@ export function useHoldingPatternList() {
       // Partners
       const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as unknown[];
 
-      (partners || []).forEach((p: any) => // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      (partners || []).forEach((p: Record<string, unknown>) =>
         items.push({
           id: p.id,
           source: "partner",
