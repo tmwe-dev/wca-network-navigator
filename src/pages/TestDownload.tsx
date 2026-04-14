@@ -7,12 +7,27 @@ const TEST_IDS = [62345, 91027, 90991, 118343, 115505];
 
 type LogEntry = { ts: string; msg: string; type: "info" | "ok" | "warn" | "error" };
 
+interface ExtensionResponse {
+  success?: boolean;
+  error?: string;
+  reason?: string;
+  version?: string;
+  authenticated?: boolean;
+  cookieLength?: number;
+  pageLoaded?: boolean;
+  htmlLength?: number;
+  companyName?: string;
+  profileHtml?: string;
+  contacts?: Array<{ name?: string; email?: string; title?: string }>;
+  profile?: { address?: string; phone?: string; networks?: unknown[] };
+}
+
 function ts() {
   return new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 /** Send a raw postMessage to the WCA extension and wait for response */
-function sendToExtension(action: string, payload: Record<string, unknown> = {}, timeoutMs = 90000): Promise<unknown> {
+function sendToExtension(action: string, payload: Record<string, unknown> = {}, timeoutMs = 90000): Promise<ExtensionResponse> {
   return new Promise((resolve) => {
     const requestId = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const timer = setTimeout(() => {

@@ -47,9 +47,9 @@ const AgentTeamSection = () => {
                 <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium uppercase">
                   {agent.role}
                 </span>
-                {agent.territory_codes?.length > 0 && (
+                {(agent.territory_codes?.length ?? 0) > 0 && (
                   <p className="text-xs text-white/30">
-                    Territori: {agent.territory_codes.join(", ")}
+                    Territori: {agent.territory_codes?.join(", ")}
                   </p>
                 )}
               </div>

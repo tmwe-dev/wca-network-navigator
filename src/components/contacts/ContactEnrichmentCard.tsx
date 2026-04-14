@@ -40,15 +40,15 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
   const e = enrichmentData as EnrichmentData | null;
   if (!e && !deepSearchAt) return null;
 
-  const companyProfile = e?.company_profile;
-  const contactProfile = e?.contact_profile;
-  const tokensUsed = e?.tokens_used;
-  const confidence = e?.confidence;
-  const websiteQuality = e?.website_quality_score;
+  const companyProfile = e?.company_profile ?? null;
+  const contactProfile = e?.contact_profile ?? null;
+  const tokensUsed = e?.tokens_used ?? null;
+  const confidence = e?.confidence ?? null;
+  const websiteQuality = e?.website_quality_score ?? null;
 
   const hasCompanyData = companyProfile && (
-    companyProfile.awards?.length > 0 ||
-    companyProfile.specialties?.length > 0 ||
+    (companyProfile.awards?.length ?? 0) > 0 ||
+    (companyProfile.specialties?.length ?? 0) > 0 ||
     companyProfile.recent_news ||
     companyProfile.founded_year ||
     companyProfile.employee_count_estimate
@@ -56,8 +56,8 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
 
   const hasContactProfile = contactProfile && (
     contactProfile.background ||
-    contactProfile.languages?.length > 0 ||
-    contactProfile.interests?.length > 0 ||
+    (contactProfile.languages?.length ?? 0) > 0 ||
+    (contactProfile.interests?.length ?? 0) > 0 ||
     contactProfile.seniority
   );
 
@@ -148,16 +148,16 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                 <p className="text-[11px] text-foreground leading-relaxed">{contactProfile.background}</p>
               )}
               <div className="flex flex-wrap gap-1">
-                {contactProfile.languages?.map((l: string, i: number) => (
+              {contactProfile.languages?.map((l: string, i: number) => (
                   <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">{l}</span>
                 ))}
                 {contactProfile.interests?.map((int: string, i: number) => (
                   <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-emerald-200">{int}</span>
                 ))}
               </div>
-              {contactProfile.other_companies?.length > 0 && (
+              {(contactProfile.other_companies?.length ?? 0) > 0 && (
                 <p className="text-[10px] text-muted-foreground">
-                  Altre aziende: {contactProfile.other_companies.join(", ")}
+                  Altre aziende: {contactProfile.other_companies?.join(", ")}
                 </p>
               )}
             </div>
@@ -191,19 +191,19 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                   )}
                 </div>
               )}
-              {companyProfile.specialties?.length > 0 && (
+              {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {companyProfile.specialties.map((s: string, i: number) => (
+                  {companyProfile.specialties?.map((s: string, i: number) => (
                     <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
                       {s}
                     </span>
                   ))}
                 </div>
               )}
-              {companyProfile.awards?.length > 0 && (
+              {(companyProfile.awards?.length ?? 0) > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
-                    const label = typeof a === "string" ? a : (a?.name || JSON.stringify(a));
+                  {companyProfile.awards?.map((a: string | Record<string, unknown>, i: number) => {
+                    const label = typeof a === "string" ? a : ((a as Record<string, unknown>)?.name || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
