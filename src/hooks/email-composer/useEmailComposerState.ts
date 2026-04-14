@@ -1,5 +1,6 @@
 /**
- * useEmailComposerState — All state + async logic for EmailComposer, extracted from the monolith.
+ * useEmailComposerState — All state + async logic for EmailComposer.
+ * Types, reducer, and utils extracted to sibling files.
  */
 import { useReducer, useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,196 +19,14 @@ import { findBusinessCardByEmail } from "@/data/businessCards";
 import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
 import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
+import type {
+  EmailTemplate, EmailComposerLocationState, GenerateContentResponse,
+  ImproveEmailResponse, PartnerPreviewData, LinkItem,
+} from "./types";
+import { reducer, initialState } from "./reducer";
+import { escapeHtml, isValidUrl } from "./utils";
 
 const log = createLogger("EmailComposer");
-
-export interface LinkItem { label: string; url: string }
-
-export interface EmailTemplate {
-  id: string;
-  name: string;
-  file_name: string;
-  file_url: string;
-  file_type: string;
-  file_size: number;
-  category: string | null;
-}
-
-interface EmailComposerLocationState {
-  prefilledRecipient?: {
-    partnerId?: string;
-    company?: string;
-    companyName?: string;
-    companyAlias?: string;
-    contactId?: string;
-    name?: string;
-    contactName?: string;
-    contactAlias?: string;
-    email?: string;
-    city?: string;
-    countryName?: string;
-    countryCode?: string;
-  };
-  prefilledSubject?: string;
-  prefilledBody?: string;
-}
-
-interface GenerateContentResponse {
-  body?: string;
-  subject?: string;
-}
-
-interface ImproveEmailResponse {
-  body?: string;
-  subject?: string;
-}
-
-interface PartnerPreviewData {
-  companyAlias?: string;
-  company_alias?: string;
-  companyName?: string;
-  company_name?: string;
-  contactAlias?: string;
-  contact_alias?: string;
-  city?: string;
-  countryName?: string;
-  country_name?: string;
-}
-
-// ── State shape ──────────────────────────────────────────────────────
-
-interface EmailState {
-  subject: string;
-  htmlBody: string;
-  selectedAttachments: string[];
-  emailLinks: LinkItem[];
-  newLinkLabel: string;
-  newLinkUrl: string;
-}
-
-interface UIState {
-  manualEmail: string;
-  previewOpen: boolean;
-  unknownEmailDialog: boolean;
-  pendingEmail: string;
-  manualContactName: string;
-  manualCompanyName: string;
-}
-
-interface AIState {
-  aiGenerating: boolean;
-  aiImproving: boolean;
-  aiGeneratedBody: string;
-  aiGeneratedSubject: string;
-  learningDialogOpen: boolean;
-  editAnalysis: EditAnalysis | null;
-  pendingSend: boolean;
-}
-
-interface TemplateState {
-  saveTemplateOpen: boolean;
-  templateName: string;
-  templateCategory: string;
-  customCategory: string;
-}
-
-interface QueueState {
-  sending: boolean;
-  activeDraftId: string | null;
-  activeQueueStatus: string;
-}
-
-export interface ComposerState {
-  email: EmailState;
-  ui: UIState;
-  ai: AIState;
-  template: TemplateState;
-  queue: QueueState;
-}
-
-// ── Actions ──────────────────────────────────────────────────────────
-
-type Action =
-  | { type: "SET_SUBJECT"; payload: string }
-  | { type: "SET_HTML_BODY"; payload: string }
-  | { type: "SET_ATTACHMENTS"; payload: string[] }
-  | { type: "SET_EMAIL_LINKS"; payload: LinkItem[] }
-  | { type: "SET_NEW_LINK_LABEL"; payload: string }
-  | { type: "SET_NEW_LINK_URL"; payload: string }
-  | { type: "SET_MANUAL_EMAIL"; payload: string }
-  | { type: "TOGGLE_PREVIEW" }
-  | { type: "SET_UNKNOWN_DIALOG"; payload: boolean }
-  | { type: "SET_PENDING_EMAIL"; payload: string }
-  | { type: "SET_MANUAL_CONTACT_NAME"; payload: string }
-  | { type: "SET_MANUAL_COMPANY_NAME"; payload: string }
-  | { type: "SET_AI_GENERATING"; payload: boolean }
-  | { type: "SET_AI_IMPROVING"; payload: boolean }
-  | { type: "SET_AI_GENERATED"; payload: { body: string; subject: string } }
-  | { type: "SET_LEARNING_DIALOG"; payload: boolean }
-  | { type: "SET_EDIT_ANALYSIS"; payload: EditAnalysis | null }
-  | { type: "SET_PENDING_SEND"; payload: boolean }
-  | { type: "SET_SAVE_TEMPLATE_OPEN"; payload: boolean }
-  | { type: "SET_TEMPLATE_NAME"; payload: string }
-  | { type: "SET_TEMPLATE_CATEGORY"; payload: string }
-  | { type: "SET_CUSTOM_CATEGORY"; payload: string }
-  | { type: "SET_SENDING"; payload: boolean }
-  | { type: "SET_ACTIVE_DRAFT"; payload: { id: string | null; status: string } }
-  | { type: "SET_QUEUE_STATUS"; payload: string }
-  | { type: "RESET_TEMPLATE_FORM" };
-
-const initialState: ComposerState = {
-  email: { subject: "", htmlBody: "", selectedAttachments: [], emailLinks: [], newLinkLabel: "", newLinkUrl: "" },
-  ui: { manualEmail: "", previewOpen: false, unknownEmailDialog: false, pendingEmail: "", manualContactName: "", manualCompanyName: "" },
-  ai: { aiGenerating: false, aiImproving: false, aiGeneratedBody: "", aiGeneratedSubject: "", learningDialogOpen: false, editAnalysis: null, pendingSend: false },
-  template: { saveTemplateOpen: false, templateName: "", templateCategory: "primo_contatto", customCategory: "" },
-  queue: { sending: false, activeDraftId: null, activeQueueStatus: "idle" },
-};
-
-function reducer(state: ComposerState, action: Action): ComposerState {
-  switch (action.type) {
-    case "SET_SUBJECT": return { ...state, email: { ...state.email, subject: action.payload } };
-    case "SET_HTML_BODY": return { ...state, email: { ...state.email, htmlBody: action.payload } };
-    case "SET_ATTACHMENTS": return { ...state, email: { ...state.email, selectedAttachments: action.payload } };
-    case "SET_EMAIL_LINKS": return { ...state, email: { ...state.email, emailLinks: action.payload } };
-    case "SET_NEW_LINK_LABEL": return { ...state, email: { ...state.email, newLinkLabel: action.payload } };
-    case "SET_NEW_LINK_URL": return { ...state, email: { ...state.email, newLinkUrl: action.payload } };
-    case "SET_MANUAL_EMAIL": return { ...state, ui: { ...state.ui, manualEmail: action.payload } };
-    case "TOGGLE_PREVIEW": return { ...state, ui: { ...state.ui, previewOpen: !state.ui.previewOpen } };
-    case "SET_UNKNOWN_DIALOG": return { ...state, ui: { ...state.ui, unknownEmailDialog: action.payload } };
-    case "SET_PENDING_EMAIL": return { ...state, ui: { ...state.ui, pendingEmail: action.payload } };
-    case "SET_MANUAL_CONTACT_NAME": return { ...state, ui: { ...state.ui, manualContactName: action.payload } };
-    case "SET_MANUAL_COMPANY_NAME": return { ...state, ui: { ...state.ui, manualCompanyName: action.payload } };
-    case "SET_AI_GENERATING": return { ...state, ai: { ...state.ai, aiGenerating: action.payload } };
-    case "SET_AI_IMPROVING": return { ...state, ai: { ...state.ai, aiImproving: action.payload } };
-    case "SET_AI_GENERATED": return { ...state, ai: { ...state.ai, aiGeneratedBody: action.payload.body, aiGeneratedSubject: action.payload.subject } };
-    case "SET_LEARNING_DIALOG": return { ...state, ai: { ...state.ai, learningDialogOpen: action.payload } };
-    case "SET_EDIT_ANALYSIS": return { ...state, ai: { ...state.ai, editAnalysis: action.payload } };
-    case "SET_PENDING_SEND": return { ...state, ai: { ...state.ai, pendingSend: action.payload } };
-    case "SET_SAVE_TEMPLATE_OPEN": return { ...state, template: { ...state.template, saveTemplateOpen: action.payload } };
-    case "SET_TEMPLATE_NAME": return { ...state, template: { ...state.template, templateName: action.payload } };
-    case "SET_TEMPLATE_CATEGORY": return { ...state, template: { ...state.template, templateCategory: action.payload } };
-    case "SET_CUSTOM_CATEGORY": return { ...state, template: { ...state.template, customCategory: action.payload } };
-    case "SET_SENDING": return { ...state, queue: { ...state.queue, sending: action.payload } };
-    case "SET_ACTIVE_DRAFT": return { ...state, queue: { ...state.queue, activeDraftId: action.payload.id, activeQueueStatus: action.payload.status } };
-    case "SET_QUEUE_STATUS": return { ...state, queue: { ...state.queue, activeQueueStatus: action.payload } };
-    case "RESET_TEMPLATE_FORM": return { ...state, template: { saveTemplateOpen: false, templateName: "", templateCategory: "primo_contatto", customCategory: "" } };
-    default: return state;
-  }
-}
-
-// ── Helpers (pure) ───────────────────────────────────────────────────
-
-const escapeHtml = (str: string) =>
-  str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-const isValidUrl = (url: string) => {
-  try { return ["http:", "https:"].includes(new URL(url).protocol); }
-  catch { return false; }
-};
-
-export const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{country}}"];
-
-// ── Hook ─────────────────────────────────────────────────────────────
 
 export function useEmailComposerState() {
   const mission = useMission();
@@ -271,7 +90,6 @@ export function useEmailComposerState() {
   }, []);
 
   // ── Named actions ──
-
   const setSubject = useCallback((v: string) => dispatch({ type: "SET_SUBJECT", payload: v }), []);
   const setHtmlBody = useCallback((v: string) => dispatch({ type: "SET_HTML_BODY", payload: v }), []);
   const setManualEmail = useCallback((v: string) => dispatch({ type: "SET_MANUAL_EMAIL", payload: v }), []);
@@ -376,15 +194,12 @@ export function useEmailComposerState() {
         recipient_company: singleRecipient ? (singleRecipient.companyAlias || singleRecipient.companyName || "") : "",
         oracle_type: config.emailType?.id || null, oracle_tone: config.tone, use_kb: config.useKB, deep_search: config.deepSearch,
       }, context: "EmailComposer.generate_email" });
-      if (data?.subject) { dispatch({ type: "SET_SUBJECT", payload: data.subject }); }
-      if (data?.body) { dispatch({ type: "SET_HTML_BODY", payload: data.body }); }
-      if (data?.subject || data?.body) {
-        dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
-      }
+      if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
+      if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
+      if (data?.subject || data?.body) dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
       toast.success("Email generata con Oracolo 🔮");
     } catch (err: unknown) {
-      const message = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Sconosciuto";
-      toast.error("Errore generazione AI: " + message);
+      toast.error("Errore generazione AI: " + (err instanceof Error ? err.message : "Sconosciuto"));
     } finally { dispatch({ type: "SET_AI_GENERATING", payload: false }); }
   }, [goal, baseProposal, documents, referenceLinks, recipients, recipientsWithEmail]);
 
@@ -404,8 +219,7 @@ export function useEmailComposerState() {
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
       toast.success("Email migliorata con AI 🪄");
     } catch (err: unknown) {
-      const message = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Sconosciuto";
-      toast.error("Errore miglioramento: " + message);
+      toast.error("Errore miglioramento: " + (err instanceof Error ? err.message : "Sconosciuto"));
     } finally { dispatch({ type: "SET_AI_IMPROVING", payload: false }); }
   }, [email.subject, email.htmlBody, recipientsWithEmail, recipients]);
 
@@ -420,7 +234,7 @@ export function useEmailComposerState() {
         dispatch({ type: "SET_HTML_BODY", payload: html });
         toast.success("Template caricato: " + name);
       } catch (err: unknown) {
-        log.warn("template body fetch failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
+        log.warn("template body fetch failed", { error: err instanceof Error ? err.message : String(err) });
         toast.error("Impossibile caricare il body del template");
       }
     } else {
@@ -466,7 +280,7 @@ export function useEmailComposerState() {
         attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "queued", total_count: recipientsWithEmail.length,
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast
       const draftId = (savedDraft as any as { id: string }).id;
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
         partner_id: r.partnerId, email: r.email!, name: r.companyAlias || r.companyName,
@@ -523,7 +337,6 @@ export function useEmailComposerState() {
   }, []);
 
   const handleSendAndSave = useCallback(() => {
-    // Fire-and-forget: persist edit pattern for learning
     if (ai.editAnalysis) {
       const lines = (email.htmlBody || "").replace(/<[^>]+>/g, "").split("\n").filter(Boolean);
       const origLines = (ai.aiGeneratedBody || "").replace(/<[^>]+>/g, "").split("\n").filter(Boolean);
@@ -552,43 +365,17 @@ export function useEmailComposerState() {
   }, []);
 
   return {
-    state,
-    dispatch,
-    // Derived
-    recipients,
-    removeRecipient,
-    recipientsWithEmail,
-    isEditedAfterGeneration,
-    templates,
-    templatesByCategory,
-    processing,
-    // Actions
-    setSubject,
-    setHtmlBody,
-    setManualEmail,
-    togglePreview,
-    setAttachments,
-    setEmailLinks,
-    setNewLinkLabel,
-    setNewLinkUrl,
-    insertVariable,
-    addLink,
-    removeLink,
-    toggleAttachment,
-    addManualEmail,
-    confirmUnknownEmail,
-    handleAIGenerate,
-    handleAIImprove,
-    handleLoadTemplate,
-    handleSaveAsTemplate,
-    openSaveTemplate,
-    handleSaveDraft,
-    handleEnqueue,
-    executeEnqueue,
-    handleInsertImage,
-    closeLearningDialog,
-    handleSendAndSave,
-    closeQueueMonitor,
-    buildFinalHtml,
+    state, dispatch,
+    recipients, removeRecipient, recipientsWithEmail, isEditedAfterGeneration,
+    templates, templatesByCategory, processing,
+    setSubject, setHtmlBody, setManualEmail, togglePreview,
+    setAttachments, setEmailLinks, setNewLinkLabel, setNewLinkUrl,
+    insertVariable, addLink, removeLink, toggleAttachment,
+    addManualEmail, confirmUnknownEmail,
+    handleAIGenerate, handleAIImprove,
+    handleLoadTemplate, handleSaveAsTemplate, openSaveTemplate,
+    handleSaveDraft, handleEnqueue, executeEnqueue,
+    handleInsertImage, closeLearningDialog, handleSendAndSave,
+    closeQueueMonitor, buildFinalHtml,
   };
 }

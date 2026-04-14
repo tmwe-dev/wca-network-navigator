@@ -14,7 +14,7 @@ export function useAppSettings() {
       if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach((row) => {
-        map[row.key] = row.value;
+        map[row.key] = row.value ?? "";
       });
       return map;
     },

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Braces, Paperclip, Eye, Plus, X } from "lucide-react";
 import { Link as LinkIcon } from "lucide-react";
-import { VARIABLES, type LinkItem } from "@/hooks/useEmailComposerState";
+import { VARIABLES, type LinkItem } from "@/hooks/email-composer";
 
 interface EmailToolbarProps {
   readonly emailLinks: LinkItem[];

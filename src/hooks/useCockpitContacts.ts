@@ -208,7 +208,7 @@ export function useCockpitContacts() {
       const partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
         const pData = await getPartnersByIds(uniquePartnerIds, "id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status");
-        for (const p of pData || []) partnersMap[p.id] = p as unknown as PartnerRow;
+        for (const p of pData || []) partnersMap[p.id as string] = p as unknown as PartnerRow;
       }
 
       // Build lookup maps
@@ -301,7 +301,7 @@ export function useCockpitContacts() {
           linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
-        const ic = icMap[sid] as ImportedContactRow | undefined;
+        const ic = icMap[sid] as unknown as ImportedContactRow | undefined;
         if (!ic) continue;
         const icEd = ic.enrichment_data || {};
         const contactProfiles = icEd.contact_profiles as Record<string, Record<string, unknown>> | undefined;

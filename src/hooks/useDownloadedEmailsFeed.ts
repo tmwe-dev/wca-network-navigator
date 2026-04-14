@@ -59,11 +59,11 @@ export function useDownloadedEmailsFeed() {
         (payload) => {
           const row = payload.new as Record<string, unknown>;
           const newEmail = mapRowToDownloadedEmail({
-            id: row.id,
-            subject: row.subject,
-            from_address: row.from_address,
-            email_date: row.email_date,
-            created_at: row.created_at,
+            id: row.id as string,
+            subject: row.subject as string | null,
+            from_address: row.from_address as string | null,
+            email_date: row.email_date as string | null,
+            created_at: row.created_at as string,
           });
           queryClient.setQueryData<DownloadedEmail[]>(["downloaded-emails-feed"], (old) => {
             if (!old) return [newEmail];

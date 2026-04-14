@@ -63,7 +63,7 @@ export interface ImportError {
   corrected_data: Record<string, unknown>;
   status: string;
   attempted_corrections: number;
-  ai_suggestions: unknown;
+  ai_suggestions: Record<string, unknown> | string | null;
   created_at: string;
 }
 

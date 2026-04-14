@@ -13,7 +13,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  const recognitionRef = useRef<unknown>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API instance
+  const recognitionRef = useRef<any>(null);
   const shouldListenRef = useRef(false);
   const accumulatedRef = useRef("");
 
@@ -22,9 +23,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const createRecognition = useCallback(() => {
-    const SR =
-      (window as Record<string, unknown>).SpeechRecognition ||
-      (window as Record<string, unknown>).webkitSpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API not in TS lib
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return null;
 
     const recognition = new SR();
@@ -33,7 +33,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SpeechRecognition event
+    recognition.onresult = (e: any) => {
       let interim = "";
       let final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -52,7 +53,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       setInterimText(interim);
     };
 
-    recognition.onerror = (e: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SpeechRecognition error event
+    recognition.onerror = (e: any) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
       log.warn("speech error", { error: e.error });
     };

@@ -8,7 +8,7 @@ import { Send, Save, Loader2, Mail, Bookmark, Eye } from "lucide-react";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
-import { useEmailComposerState } from "@/hooks/useEmailComposerState";
+import { useEmailComposerState } from "@/hooks/email-composer";
 import { EmailToolbar } from "@/components/email/EmailToolbar";
 import { EmailRecipientFields } from "@/components/email/EmailRecipientFields";
 import { EmailAIPanel } from "@/components/email/EmailAIPanel";

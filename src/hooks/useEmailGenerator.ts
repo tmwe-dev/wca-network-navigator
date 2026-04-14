@@ -101,7 +101,7 @@ export function useEmailGenerator() {
 
       return result;
     } catch (err: unknown) {
-      toast({ title: "Errore generazione", description: err.message, variant: "destructive" });
+      toast({ title: "Errore generazione", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       return null;
     } finally {
       setIsGenerating(false);

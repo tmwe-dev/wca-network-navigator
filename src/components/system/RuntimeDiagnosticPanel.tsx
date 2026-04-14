@@ -15,7 +15,7 @@ interface DiagState {
   activeJobs: number;
   queryCacheSize: number;
   lastFailedCall: { endpoint: string; status: number; ts: string } | null;
-  lastWcaError: unknown;
+  lastWcaError: Record<string, unknown> | null;
 }
 
 export function RuntimeDiagnosticPanel() {
@@ -133,7 +133,7 @@ export function RuntimeDiagnosticPanel() {
         {diag.lastWcaError && (
           <div className="pt-1 border-t border-border">
             <span className="text-red-400">Last WCA Error:</span>
-            <pre className="text-[10px] text-muted-foreground mt-0.5 whitespace-pre-wrap">{JSON.stringify(diag.lastWcaError as any, null, 1)}</pre>
+            <pre className="text-[10px] text-muted-foreground mt-0.5 whitespace-pre-wrap">{JSON.stringify(diag.lastWcaError, null, 1)}</pre>
           </div>
         )}
         {diag.lastFailedCall && (

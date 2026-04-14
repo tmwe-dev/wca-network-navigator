@@ -110,7 +110,7 @@ export function useContactActions(deps: Deps) {
       toast({ title: "Campagna creata", description: `${jobs.length} contatti aggiunti al batch` });
       selection.clear(); setSelectedGroups(new Set());
       navigate("/campaigns");
-    } catch (e: unknown) { toast({ title: "Errore", description: e.message, variant: "destructive" }); }
+    } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [selection, navigate]);
 
   const handleAICommand = useCallback(async (cmd: AICommand) => {
@@ -148,8 +148,8 @@ async function exportContactsCsv(contactIds: string[]) {
   const data = await getContactsByIds(contactIds.slice(0, 500), "company_name, name, email, phone, mobile, country, city, address, zip_code, origin, lead_status, position, note");
   if (!data?.length) return;
   const headers = ["Azienda", "Nome", "Email", "Telefono", "Cellulare", "Paese", "Città", "Indirizzo", "CAP", "Origine", "Stato", "Ruolo", "Note"];
-  const esc = (v: string | null) => { if (!v) return ""; const s = v.replace(/"/g, '""'); return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s; };
-  const rows = data.map((r) => [r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note].map(esc).join(";"));
+  const esc = (v: unknown) => { if (!v) return ""; const s = String(v).replace(/"/g, '""'); return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s; };
+  const rows = data.map((r: Record<string, unknown>) => [r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note].map(esc).join(";"));
   const csv = "\uFEFF" + headers.join(";") + "\r\n" + rows.join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

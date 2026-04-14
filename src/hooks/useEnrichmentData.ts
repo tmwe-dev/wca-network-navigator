@@ -223,11 +223,11 @@ export function useEnrichmentData() {
       const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];
       const fetchPartnerBatch = async (ids: string[]) => {
         const { getPartnersByIds } = await import("@/data/partners");
-        return await getPartnersByIds(ids, "id, company_name, email, website") as PartnerLookupRow[];
+        return await getPartnersByIds(ids, "id, company_name, email, website") as unknown as PartnerLookupRow[];
       };
       const fetchContactBatch = async (ids: string[]) => {
         const { getContactsByIds } = await import("@/data/contacts");
-        return await getContactsByIds(ids, "id, name, company_name, email") as ContactLookupRow[];
+        return await getContactsByIds(ids, "id, name, company_name, email") as unknown as ContactLookupRow[];
       };
       const [pData, cData] = await Promise.all([
         partnerIds.length ? fetchPartnerBatch(partnerIds) : [],
