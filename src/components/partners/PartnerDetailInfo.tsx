@@ -84,7 +84,7 @@ export function PartnerDetailInfo({
 
   return (
     <>
-      <EnrichmentCard partner={partner as any} /> // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      <EnrichmentCard partner={partner as unknown} />
 
       {partner.profile_description && (
         <Section>
@@ -302,7 +302,7 @@ export function PartnerDetailInfo({
                     <PartnerMiniGlobe
                       partnerCountryCode={String(partner.country_code)}
                       partnerCity={String(partner.city)}
-                      branchCities={partner.branch_cities as any} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+                      branchCities={partner.branch_cities as unknown}
                     />
                   </Suspense>
                 </Section>

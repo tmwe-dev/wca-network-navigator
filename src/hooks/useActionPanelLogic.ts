@@ -85,7 +85,7 @@ export function useActionPanelLogic({
 
   // ── Derived ──
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
-    const members = entry.members as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
+    const members = entry.members as unknown[];
     return (members || []).map((m) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,

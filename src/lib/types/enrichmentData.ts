@@ -1,6 +1,6 @@
 /**
  * Typed interfaces for enrichment_data JSON fields.
- * Replaces `as any` casts on enrichment_data across the codebase. // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+ * Replaces `as unknown` casts on enrichment_data across the codebase.
  */
 
 export interface ContactProfile {

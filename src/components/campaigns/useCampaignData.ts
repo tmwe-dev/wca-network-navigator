@@ -75,7 +75,7 @@ export function useCampaignData() {
   const countryPartners = useMemo((): CountryPartnerRaw[] => {
     if (source === "bca") {
       const seen = new Set<string>();
-      return ((bcaCountryData || []) as any as CountryPartnerRaw[]).filter((p) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      return ((bcaCountryData || []) as unknown as CountryPartnerRaw[]).filter((p) => {
         if (seen.has(p.id)) return false;
         seen.add(p.id);
         return true;

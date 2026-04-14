@@ -10,7 +10,7 @@ export async function countEmailDrafts() {
 }
 
 export async function insertEmailDraft(draft: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").insert(draft as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema cast
+  const { error } = await supabase.from("email_drafts").insert(draft as unknown);
   if (error) throw error;
 }
 

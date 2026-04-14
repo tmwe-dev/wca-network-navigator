@@ -85,7 +85,7 @@ export function KnowledgeBaseManager() {
       toast.error("Titolo e contenuto sono obbligatori");
       return;
     }
-    upsert.mutate(editEntry as any, { onSuccess: () => setEditEntry(null) }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+    upsert.mutate(editEntry as unknown, { onSuccess: () => setEditEntry(null) });
   };
 
   const handleImproveWithAI = async () => {
