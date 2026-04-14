@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { Clock, Mail, MessageCircle, Search, Bot, Save, RotateCcw } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Clock, Mail, MessageCircle, Search, Bot, Save, RotateCcw, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { nextDelayMs, type SoftTimerConfig } from "@/lib/time/softTimer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
