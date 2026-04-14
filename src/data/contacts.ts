@@ -63,8 +63,7 @@ const DEFAULT_PAGE_SIZE = 200;
 // ─── Query Builder type ─────────────────────────────────
 // The Supabase query builder is complex with generics; we use a lightweight alias
 // to avoid `any` while preserving chainability.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ContactQueryBuilder = any;
+type ContactQueryBuilder = ReturnType<typeof supabase.from<'imported_contacts'>>;
 
 // ─── Query Helpers ──────────────────────────────────────
 
