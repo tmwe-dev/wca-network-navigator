@@ -109,7 +109,7 @@ export function useImportBlacklist() {
       }
 
       // Match with partners
-      const allEntries = await findAllBlacklistEntries() as Record<string, unknown>[];
+      const allEntries = await findAllBlacklistEntries() as unknown as Record<string, unknown>[];
       const { data: partners } = await supabase
         .from("partners")
         .select("id, company_name, country_name");
