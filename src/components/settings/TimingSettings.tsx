@@ -55,6 +55,19 @@ const WA_STEALTH_KEYS = [
   { key: "wa_scan_work_end_hour", defaultValue: "22" },
 ];
 
+const LI_STEALTH_KEYS = [
+  { key: "li_scan_enabled", defaultValue: "true" },
+  { key: "li_scan_interval_sec", defaultValue: "14400" },
+  { key: "li_scan_top_threads", defaultValue: "10" },
+  { key: "li_scan_max_deep_reads", defaultValue: "2" },
+  { key: "li_scan_stagger_sec", defaultValue: "60" },
+  { key: "li_scan_jitter_pct", defaultValue: "30" },
+  { key: "li_scan_long_pause_pct", defaultValue: "15" },
+  { key: "li_scan_quick_check_pct", defaultValue: "3" },
+  { key: "li_scan_work_start_hour", defaultValue: "8" },
+  { key: "li_scan_work_end_hour", defaultValue: "20" },
+];
+
 export default function TimingSettings() {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
@@ -79,6 +92,7 @@ export default function TimingSettings() {
         ...TIMING_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
         ...SCHEDULE_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
         ...WA_STEALTH_KEYS.map(k => ({ key: k.key, value: getValue(k.key, k.defaultValue) })),
+        ...LI_STEALTH_KEYS.map(k => ({ key: k.key, value: getValue(k.key, k.defaultValue) })),
       ];
       for (const f of allFields) {
         await updateSetting.mutateAsync({ key: f.key, value: f.value });
@@ -171,6 +185,9 @@ export default function TimingSettings() {
       <WhatsAppStealthSection getValue={getValue} handleChange={handleChange} />
 
       <Separator />
+
+      {/* LinkedIn Stealth Section */}
+      <LinkedInStealthSection getValue={getValue} handleChange={handleChange} />
 
       {/* Approval mode */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
