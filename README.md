@@ -32,7 +32,7 @@ src/
 └── v2/            — Componenti e pagine evolute (v2 UI)
 
 supabase/
-├── functions/     — 76 Edge Functions in Deno
+├── functions/     — 77 Edge Functions in Deno
 ├── migrations/    — Migrazioni database SQL
 └── config.toml    — Configurazione progetto
 
@@ -98,7 +98,7 @@ e2e/               — Test End-to-End (Playwright)
 ## Testing
 
 - **Unit test**: Vitest con jsdom, 183+ file test, 1500+ test case
-- **E2E test**: Playwright con 28 spec
+- **E2E test**: Playwright con 32 spec
 - **Coverage**: Soglie minime configurate in `vitest.config.ts`
 - **CI/CD**: GitHub Actions con lint → type-check → test → build → e2e
 
