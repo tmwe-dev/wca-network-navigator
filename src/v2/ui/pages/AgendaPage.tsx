@@ -9,6 +9,7 @@ const V1Component = lazy(() => import("@/pages/Agenda"));
 
 export function AgendaPage(): React.ReactElement {
   return (
+    <div data-testid="page-agenda" className="h-full">
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center">
