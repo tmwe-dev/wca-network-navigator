@@ -110,7 +110,7 @@ export function UnifiedActionBar({
           {!deepSearching && !singleDeepSearching && (
             <div className="relative">
               <Button size="sm" variant="ghost"
-                onClick={() => isBulk ? onDeepSearch() : onSingleDeepSearch?.(focusedPartner.id)}
+                onClick={() => isBulk ? onDeepSearch() : onSingleDeepSearch?.(focusedPartner!.id)}
                 className={btnClass}>
                 <Sparkles className="w-3.5 h-3.5" /> Deep Search
               </Button>

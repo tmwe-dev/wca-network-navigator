@@ -216,7 +216,7 @@ export default function AddContactDialog({
       resetForm();
       onOpenChange(false);
     } catch (err: unknown) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setSaving(false);
     }

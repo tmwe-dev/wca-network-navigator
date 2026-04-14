@@ -85,7 +85,7 @@ export default function OperativeGuideSettings() {
       if (error) throw error;
       toast.success("Guida Operativa salvata");
     } catch (e: unknown) {
-      toast.error(e.message || "Errore nel salvataggio");
+      toast.error(e instanceof Error ? e.message : "Errore nel salvataggio");
     } finally {
       setSaving(false);
     }

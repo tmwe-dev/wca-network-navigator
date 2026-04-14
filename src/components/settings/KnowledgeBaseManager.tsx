@@ -85,7 +85,7 @@ export function KnowledgeBaseManager() {
       toast.error("Titolo e contenuto sono obbligatori");
       return;
     }
-    upsert.mutate(editEntry, { onSuccess: () => setEditEntry(null) });
+    upsert.mutate(editEntry as any, { onSuccess: () => setEditEntry(null) });
   };
 
   const handleImproveWithAI = async () => {
@@ -95,7 +95,7 @@ export function KnowledgeBaseManager() {
       const data = await invokeEdge<Record<string, unknown>>("improve-email", { body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false }, context: "KnowledgeBaseManager.improve_email" });
       const improved = data?.body || data?.html;
       if (improved) {
-        setEditEntry(prev => ({ ...prev, content: improved }));
+        setEditEntry(prev => ({ ...prev, content: String(improved) }));
         toast.success("Contenuto migliorato con AI");
       }
     } catch (e: unknown) {

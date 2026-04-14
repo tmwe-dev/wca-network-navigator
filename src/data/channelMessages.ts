@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function insertChannelMessage(msg: Record<string, unknown>) {
-  const { error } = await supabase.from("channel_messages").insert(msg);
+  const { error } = await supabase.from("channel_messages").insert(msg as any);
   if (error) throw error;
 }
 

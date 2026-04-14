@@ -5,7 +5,7 @@ import * as React from "react";
 import { Suspense, lazy } from "react";
 import { useRequireRole } from "@/v2/hooks/useRequireRole";
 
-const V1Component = lazy(() => import("@/pages/Telemetry"));
+const V1Component = lazy(() => import("@/pages/telemetry"));
 
 export function TelemetryPage(): React.ReactElement {
   const isAdmin = useRequireRole({ role: "admin" });

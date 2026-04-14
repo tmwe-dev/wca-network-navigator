@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/select";
 
 interface CountryOverviewProps {
-  partners: Array<Record<string, unknown>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape
+  partners: Array<Record<string, any>>;
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -47,7 +48,8 @@ interface CountryGroup {
   withContacts: number;
   withWhatsApp: number;
   withEmail: number;
-  partners: Array<Record<string, unknown>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  partners: Array<Record<string, any>>;
 }
 
 type ContactFilter = "all" | "whatsapp" | "email";

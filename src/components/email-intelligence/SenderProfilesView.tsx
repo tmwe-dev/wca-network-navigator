@@ -106,8 +106,8 @@ export function SenderProfilesView() {
                   {lastSentiments.length > 0 && (
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-muted-foreground mr-1">Sentiment:</span>
-                      {lastSentiments.map((s: string, i: number) => (
-                        <div key={i} className={`h-2.5 w-2.5 rounded-full ${SENTIMENTS[s] ?? SENTIMENTS.neutral}`} />
+                      {lastSentiments.map((s: unknown, i: number) => (
+                        <div key={i} className={`h-2.5 w-2.5 rounded-full ${SENTIMENTS[String(s)] ?? SENTIMENTS.neutral}`} />
                       ))}
                     </div>
                   )}
@@ -115,7 +115,7 @@ export function SenderProfilesView() {
                   {/* Rules summary */}
                    {p.rules && (
                     <div className="flex flex-wrap gap-1">
-                      {p.rules.auto_action && String(p.rules.auto_action) !== "none" && (
+                       {p.rules.auto_action && String(p.rules.auto_action) !== "none" && (
                         <Badge className="text-[10px] bg-primary/10 text-primary">{String(p.rules.auto_action)}</Badge>
                       )}
                       <Badge variant="outline" className="text-[10px]">{String(p.rules.preferred_channel ?? "email")}</Badge>

@@ -74,7 +74,7 @@ export function StaffChatCanvas({ agent }: Props) {
         body: { agent_id: agent.id, chat_messages: newMsgs.map((m) => ({ role: m.role, content: m.content })) },
         context: "StaffChatCanvas.agent_execute",
       });
-      setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
+      setMessages([...newMsgs, { role: "assistant", content: String(data?.response || "Nessuna risposta") }]);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione." }]);
