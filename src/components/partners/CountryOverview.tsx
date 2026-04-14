@@ -381,10 +381,10 @@ export function CountryOverview({
                                   <MapPin className="w-3 h-3" />
                                   {partner.city}
                                 </span>
-                                {partner.rating > 0 && (
+                                {(partner.rating ?? 0) > 0 && (
                                   <span className="flex items-center gap-0.5">
                                     <Star className="w-3 h-3 fill-primary text-primary" />
-                                    {partner.rating.toFixed(1)}
+                                    {partner.rating!.toFixed(1)}
                                   </span>
                                 )}
                               </div>
