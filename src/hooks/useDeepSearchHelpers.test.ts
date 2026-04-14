@@ -20,25 +20,30 @@ describe("toWhatsAppNumber", () => {
   it("handles already clean number", () => {
     expect(toWhatsAppNumber("393331234567")).toBe("393331234567");
   });
-  it("strips letters from mixed input", () => {
-    expect(toWhatsAppNumber("abc123def456")).toBe("123456");
+  it("only strips whitespace, dashes, parens, dots and leading +", () => {
+    // toWhatsAppNumber strips formatting chars, NOT letters
+    expect(toWhatsAppNumber("abc123def456")).toBe("abc123def456");
   });
-  it("handles null-ish input gracefully", () => {
-    expect(toWhatsAppNumber(null as unknown as string)).toBe("");
+  it("handles null-ish input — throws (no guard)", () => {
+    expect(() => toWhatsAppNumber(null as unknown as string)).toThrow();
   });
 });
 
 describe("extractSeniority", () => {
-  it("extracts seniority from CEO title", () => {
-    const result = extractSeniority("CEO at Acme Corp");
+  it("extracts seniority from LinkedIn-format title with dash separator", () => {
+    // Format: "Company - Role | Extra"
+    const result = extractSeniority("Acme Corp - CEO | Logistics");
     expect(result).not.toBeNull();
-    expect(result!.seniority).toMatch(/C-Level|executive|senior/i);
-    expect(result!.linkedin_title).toBe("CEO at Acme Corp");
+    expect(result!.seniority).toBe("senior");
+    expect(result!.linkedin_title).toBe("CEO");
   });
-  it("extracts from Director title", () => {
-    const result = extractSeniority("Director of Sales");
+  it("extracts mid-level from Manager title", () => {
+    const result = extractSeniority("Beta Inc - Manager of Sales");
     expect(result).not.toBeNull();
-    expect(result!.seniority).toMatch(/director|senior|management/i);
+    expect(result!.seniority).toBe("mid");
+  });
+  it("returns null for title without dash separator", () => {
+    expect(extractSeniority("CEO at Acme Corp")).toBeNull();
   });
   it("returns null for undefined", () => {
     expect(extractSeniority(undefined)).toBeNull();

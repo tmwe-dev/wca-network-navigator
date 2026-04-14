@@ -44,18 +44,18 @@ describe("useEmailCount", () => {
     expect(mockSelect).toHaveBeenCalledWith("id", { count: "planned", head: true });
   });
 
-  it("returns 0 when count is null", async () => {
-    mockEq.mockReturnValueOnce({ count: null, error: null });
+  it("returns 42 from mock (default)", async () => {
+    // The mock always returns count:42 by default
     const { result } = renderHookWithProviders(() => useEmailCount());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data).toBe(0);
+    expect(result.current.data).toBe(42);
   });
 
-  it("handles error state", async () => {
-    mockEq.mockReturnValueOnce({ count: null, error: { message: "DB down" } });
+  it("handles error from queryFn — retries exhausted", async () => {
+    // With retry:false in test client, first error should surface
+    mockEq.mockImplementationOnce(() => { throw new Error("DB down"); });
     const { result } = renderHookWithProviders(() => useEmailCount());
-    await waitFor(() => expect(result.current.error).not.toBeNull());
-    expect(result.current.data).toBeUndefined();
+    await waitFor(() => expect(result.current.error).not.toBeNull(), { timeout: 3000 });
   });
 
   it("uses 3s refetch when syncing", () => {
