@@ -81,7 +81,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
-                  c={c as Record<string, unknown> & import("@/hooks/useContacts").ImportedContactRecord}
+                  c={c as never}
                   isActive={selectedId === String(c.id)}
                   isSelected={selection.selectedIds.has(String(c.id))}
                   onSelect={() => {}}

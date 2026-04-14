@@ -40,7 +40,7 @@ function useTerminalData() {
     : null;
   const targetJob = activeJob || fallbackJob;
   const entries: LogEntry[] = targetJob
-    ? ((targetJob as Record<string, unknown>).terminal_log as LogEntry[] || [])
+    ? ((targetJob as unknown as Record<string, unknown>).terminal_log as LogEntry[] || [])
     : [];
   return { activeJob, entries };
 }

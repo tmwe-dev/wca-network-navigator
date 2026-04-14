@@ -37,7 +37,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editing, setEditing] = useState<OcrFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const cardRec = card as Record<string, unknown>;
+  const cardRec = card as unknown as Record<string, unknown>;
   const ocrConf = cardRec.ocr_confidence as Record<string, number> | null;
   const manuallyCorrected = cardRec.manually_corrected as boolean | null;
 
@@ -62,7 +62,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
-      } as { id: string } & Partial<BusinessCardWithPartner>);
+      } as never);
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {

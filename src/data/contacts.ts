@@ -63,14 +63,14 @@ const DEFAULT_PAGE_SIZE = 200;
 // ─── Query Builder type ─────────────────────────────────
 // The Supabase query builder is complex with generics; we use a lightweight alias
 // to avoid `any` while preserving chainability.
-type ContactQueryBuilder = ReturnType<typeof supabase.from<'imported_contacts'>>;
+// Query builder accessed via supabase.from('imported_contacts')
 
 // ─── Query Helpers ──────────────────────────────────────
 
 function applyContactFilters(
-  q: ContactQueryBuilder,
+  q: ReturnType<typeof supabase.from>,
   filters: ContactFilters
-): ContactQueryBuilder {
+): ReturnType<typeof supabase.from> {
   // Quality filter — base
   q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 

@@ -84,7 +84,7 @@ export function PartnerDetailInfo({
 
   return (
     <>
-      <EnrichmentCard partner={partner as unknown} />
+      <EnrichmentCard partner={partner as never} />
 
       {partner.profile_description && (
         <Section>
@@ -302,7 +302,7 @@ export function PartnerDetailInfo({
                     <PartnerMiniGlobe
                       partnerCountryCode={String(partner.country_code)}
                       partnerCity={String(partner.city)}
-                      branchCities={partner.branch_cities as unknown}
+                      branchCities={partner.branch_cities as never}
                     />
                   </Suspense>
                 </Section>
