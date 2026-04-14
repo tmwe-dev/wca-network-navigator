@@ -45,7 +45,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  directoryOnly: _directoryOnlyProp, _onDirectoryOnlyChange,
+  directoryOnly: _directoryOnlyProp, onDirectoryOnlyChange: _onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
@@ -92,7 +92,7 @@ export function PartnerListPanel({
 
   const _toggleFavorite = useToggleFavorite();
 
-  const { stats, verified, _missingDeep } = usePartnerListStats({ countryCodes, partners });
+  const { stats, verified, missingDeep: _missingDeep } = usePartnerListStats({ countryCodes, partners });
   const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {

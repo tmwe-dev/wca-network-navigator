@@ -44,7 +44,7 @@ function Filterable({ field, value, children, onFilterClick, className }: {
   );
 }
 
-export function ContactCard({ c, isActive, isSelected, hasBusinessCard, _onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect: _onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
   const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);

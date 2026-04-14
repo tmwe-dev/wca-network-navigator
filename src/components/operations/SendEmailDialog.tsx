@@ -22,7 +22,7 @@ interface SendEmailDialogProps {
 }
 
 export function SendEmailDialog({
-  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, _isDark,
+  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, isDark: _isDark,
 }: SendEmailDialogProps) {
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");

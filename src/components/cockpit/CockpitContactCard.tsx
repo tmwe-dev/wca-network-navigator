@@ -91,8 +91,8 @@ const phaseLabel: Record<string, string> = {
 };
 
 export function CockpitContactCard({
-  contact, _flag, index, isSelected, isWorked, assignment, sourceType, sourceId,
-  onToggleSelect, onDragStart, onDragEnd, onDeepSearch, _onAlias, onLinkedInLookup, enrichmentState,
+  contact, flag: _flag, index, isSelected, isWorked, assignment, sourceType, sourceId,
+  onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias: _onAlias, onLinkedInLookup, enrichmentState,
 }: CockpitContactCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { open: openDrawer } = useContactDrawer();

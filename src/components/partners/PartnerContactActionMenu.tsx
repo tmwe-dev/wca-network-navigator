@@ -39,7 +39,7 @@ interface Props {
   waAvailable?: boolean;
 }
 
-export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSendWhatsApp, _waAvailable }: Props) {
+export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSendWhatsApp, waAvailable: _waAvailable }: Props) {
   const navigate = useAppNavigate();
   const qc = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);

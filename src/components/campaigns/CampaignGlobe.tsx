@@ -179,7 +179,7 @@ function GlobeScene({
   countryPartners,
   userInteracting,
   isResetting,
-  _onStartReset
+  onStartReset: _onStartReset
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
