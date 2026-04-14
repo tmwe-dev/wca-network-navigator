@@ -48,7 +48,7 @@ export interface PartnerLike {
   mobile?: string | null;
   partner_contacts?: Array<Record<string, unknown>>;
   partner_social_links?: Array<Record<string, unknown>>;
-  branch_cities?: unknown[];
+  branch_cities?: Array<Record<string, unknown>>;
   country_code?: string;
   company_name?: string;
   country_name?: string;

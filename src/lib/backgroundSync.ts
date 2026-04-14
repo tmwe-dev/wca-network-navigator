@@ -178,7 +178,7 @@ export async function bgSyncStart() {
           skipped: totalSkipped,
           remaining: serverRemaining,
           batch: batchNum,
-          lastSubject: lastMsg?.subject || progress.lastSubject,
+          lastSubject: String(lastMsg?.subject || progress.lastSubject),
           status: "syncing",
         };
       } else {
