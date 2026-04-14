@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useMemo, type ReactNode } from "react";
 import { useWorkspaceDocuments, type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import type { EmailQuality } from "@/components/workspace/QualitySelector";
@@ -102,16 +102,18 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     if (activePresetId === id) setActivePresetId(null);
   };
 
+  const ctxValue = useMemo(() => ({
+    goal, setGoal, baseProposal, setBaseProposal,
+    referenceLinks, setReferenceLinks, context, setContext,
+    documents, uploading, upload, removeDocument: remove,
+    presets, activePresetId, setActivePresetId,
+    savePreset, deletePreset, loadPreset,
+    quality, setQuality,
+    recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
+  }), [goal, baseProposal, referenceLinks, context, documents, uploading, upload, remove, presets, activePresetId, savePreset, deletePreset, loadPreset, quality, recipients, addRecipient, clearRecipients]);
+
   return (
-    <MissionCtx.Provider value={{
-      goal, setGoal, baseProposal, setBaseProposal,
-      referenceLinks, setReferenceLinks, context, setContext,
-      documents, uploading, upload, removeDocument: remove,
-      presets, activePresetId, setActivePresetId,
-      savePreset, deletePreset, loadPreset,
-      quality, setQuality,
-      recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
-    }}>
+    <MissionCtx.Provider value={ctxValue}>
       {children}
     </MissionCtx.Provider>
   );

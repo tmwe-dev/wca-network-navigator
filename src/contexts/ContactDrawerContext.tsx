@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
 export type RecordSourceType =
   | "partner"
@@ -70,8 +70,12 @@ export function ContactDrawerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentIndex, list]);
 
+  const ctxValue = useMemo(() => ({
+    isOpen, target, list, currentIndex, open, close, goNext, goPrev,
+  }), [isOpen, target, list, currentIndex, open, close, goNext, goPrev]);
+
   return (
-    <ContactDrawerContext.Provider value={{ isOpen, target, list, currentIndex, open, close, goNext, goPrev }}>
+    <ContactDrawerContext.Provider value={ctxValue}>
       {children}
     </ContactDrawerContext.Provider>
   );

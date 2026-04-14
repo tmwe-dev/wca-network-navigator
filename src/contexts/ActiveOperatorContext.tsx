@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { useOperators, useCurrentOperator, type Operator } from "@/hooks/useOperators";
 
 type ActiveOperatorCtx = {
@@ -52,16 +52,18 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
 
   const isImpersonating = !viewingAll && activeOperator != null && currentOp != null && activeOperator.id !== currentOp.id;
 
+  const ctxValue = useMemo(() => ({
+    operators,
+    activeOperator,
+    setActiveOperatorId: handleSetActiveId,
+    isLoading: loadingOps || loadingCurrent,
+    viewingAll,
+    isImpersonating,
+    setViewingAll: handleSetViewingAll,
+  }), [operators, activeOperator, loadingOps, loadingCurrent, viewingAll, isImpersonating]);
+
   return (
-    <Ctx.Provider value={{
-      operators,
-      activeOperator,
-      setActiveOperatorId: handleSetActiveId,
-      isLoading: loadingOps || loadingCurrent,
-      viewingAll,
-      isImpersonating,
-      setViewingAll: handleSetViewingAll,
-    }}>
+    <Ctx.Provider value={ctxValue}>
       {children}
     </Ctx.Provider>
   );
