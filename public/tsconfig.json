@@ -11,5 +11,6 @@
     "skipLibCheck": true,
     "types": ["chrome"]
   },
-  "include": ["**/*.js", "**/*.mjs"]
+  "include": ["**/*.js", "**/*.mjs", "types/**/*.d.ts"],
+  "exclude": ["**/bridge/server.js"]
 }
