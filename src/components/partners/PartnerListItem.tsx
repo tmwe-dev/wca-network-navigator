@@ -12,45 +12,21 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
-interface PartnerContact {
-  id: string;
-  name: string;
-  title: string | null;
-  email: string | null;
-  direct_phone: string | null;
-  mobile: string | null;
-  is_primary: boolean | null;
-  contact_alias: string | null;
-}
-
-interface PartnerService {
-  service_category: string;
-}
-
-interface PartnerNetwork {
-  id: string;
-  network_name: string;
-  expires: string | null;
-}
-
-interface PartnerData {
-  id: string;
-  company_name: string;
-  country_code: string;
-  country_name: string;
-  city: string;
-  member_since: string | null;
-  rating: number | null;
-  is_favorite: boolean | null;
-  enrichment_data: unknown;
-  partner_services?: PartnerService[];
-  partner_contacts?: PartnerContact[];
-  partner_networks?: PartnerNetwork[];
-  [key: string]: unknown;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 20+ fields
 interface PartnerListItemProps {
-  partner: PartnerData;
+  partner: Record<string, any>;
+  isSelected: boolean;
+  isChecked: boolean;
+  socialLinks: SocialLink[];
+  hasBusinessCard?: boolean;
+  onSelect: (id: string) => void;
+  onToggleSelection: (id: string, e?: React.MouseEvent) => void;
+  index?: number;
+}
+
+interface ServiceItem { service_category: string }
+interface NetworkItem { id: string; network_name: string }
+interface ContactItem { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -71,7 +47,7 @@ export function PartnerListItem({
   index,
 }: PartnerListItemProps) {
   const years = getYearsMember(partner.member_since);
-  const services = partner.partner_services || [];
+  const services: ServiceItem[] = partner.partner_services || [];
   const allServices = [
     ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),
     ...services.filter((s) => SPECIALTY_SERVICES.includes(s.service_category)),
@@ -79,11 +55,11 @@ export function PartnerListItem({
   const branchCountries = getBranchCountries(partner);
   const enrichment = asEnrichment(partner.enrichment_data);
   const hasDeepSearch = !!enrichment?.deep_search_at;
-  const contacts = partner.partner_contacts || [];
+  const contacts: ContactItem[] = partner.partner_contacts || [];
   const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
   const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
-  const networks = partner.partner_networks || [];
+  const networks: NetworkItem[] = partner.partner_networks || [];
 
   return (
     <div
