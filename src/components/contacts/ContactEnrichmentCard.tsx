@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ContactEnrichmentCardProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  enrichmentData: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column with dynamic shape
+  enrichmentData: Record<string, any> | null;
   deepSearchAt: string | null;
 }
 
@@ -36,8 +36,8 @@ function SocialButton({ url, label, icon }: { url: string; label: string; icon: 
 }
 
 export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactEnrichmentCardProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const e = enrichmentData as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column with dynamic shape
+  const e = enrichmentData as Record<string, any> | null;
   if (!e && !deepSearchAt) return null;
 
   const companyProfile = e?.company_profile;

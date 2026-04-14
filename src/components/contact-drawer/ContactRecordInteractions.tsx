@@ -22,7 +22,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           .eq("partner_id", partnerId)
           .order("interaction_date", { ascending: false })
           .limit(20);
-        return (data || []).map((i) => ({
+        return (data || []).map((i): ContactInteraction => ({
           id: i.id,
           contact_id: partnerId,
           interaction_type: i.interaction_type,
