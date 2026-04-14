@@ -118,12 +118,12 @@ export function NetworkFiltersSection() {
                     </div>
                     {Array.isArray(p.partner_contacts) && p.partner_contacts.length > 0 && (
                       <div className="mt-1 ml-6 space-y-0.5">
-                        {p.partner_contacts.slice(0, 3).map((c: Record<string, any>) => (
-                          <div key={c.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        {p.partner_contacts.slice(0, 3).map((c: Record<string, unknown>) => (
+                          <div key={String(c.id)} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <Users className="w-2.5 h-2.5 shrink-0" />
-                            <span className="truncate">{c.contact_alias || c.name}</span>
-                            {c.title && <span className="text-[9px] opacity-60 truncate">· {c.title}</span>}
-                            {c.email && <span className="text-[9px] text-primary/70 truncate ml-auto">{c.email}</span>}
+                            <span className="truncate">{String(c.contact_alias || c.name || "")}</span>
+                            {c.title && <span className="text-[9px] opacity-60 truncate">· {String(c.title)}</span>}
+                            {c.email && <span className="text-[9px] text-primary/70 truncate ml-auto">{String(c.email)}</span>}
                           </div>
                         ))}
                         {p.partner_contacts.length > 3 && (

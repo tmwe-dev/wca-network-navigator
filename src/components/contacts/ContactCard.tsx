@@ -60,14 +60,14 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const rawCompany = cCompanyAlias || cName;
   const displayCompany = rawCompany ? rawCompany.toUpperCase() : "—";
   const displayContact = cContactAlias || cContact;
-  const flag = countryFlag(c.country);
+  const flag = countryFlag(c.country ?? null);
   const isWcaMatched = !!c.wca_partner_id;
   const cEmail = clean(c.email);
 
-  const ed = c.enrichment_data;
-  const linkedinUrl = ed?.linkedin_url;
-  const companyWebsite = ed?.company_website;
-  const inHolding = isInHoldingPattern(c.lead_status);
+  const ed = (c.enrichment_data ?? {}) as Record<string, unknown>;
+  const linkedinUrl = ed?.linkedin_url as string | undefined;
+  const companyWebsite = ed?.company_website as string | undefined;
+  const inHolding = isInHoldingPattern(c.lead_status ?? undefined);
 
   const handleRowClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -197,7 +197,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 2: indicators */}
         <div className="flex items-center justify-center gap-0.5">
           {linkedinUrl && (
-             <span className="p-0.5 rounded bg-muted">
+             <span className="p-0.5 rounded bg-muted" title={String(linkedinUrl)}>
                <Linkedin className="w-2.5 h-2.5 text-muted-foreground" />
              </span>
           )}
@@ -238,10 +238,10 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
 
         {/* Col 6: Score + Interaction count */}
         <div className="flex items-center gap-1.5">
-          <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} />
+          <LeadScoreBadge score={c.lead_score ?? undefined} breakdown={c.lead_score_breakdown as Record<string, number> | undefined} />
           <span className={cn(
             "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
-            c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
+            (c.interaction_count ?? 0) > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
           )}>
             <MessageCircle className="w-2.5 h-2.5" />{c.interaction_count || 0}
           </span>

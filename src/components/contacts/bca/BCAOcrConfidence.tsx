@@ -59,6 +59,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
     notes.push({ field: editing, old_value: oldValue, new_value: editValue, corrected_at: new Date().toISOString() });
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic field update
       await updateCard.mutateAsync({
         id: card.id,
         [editing]: editValue || null,

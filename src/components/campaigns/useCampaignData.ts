@@ -7,6 +7,7 @@ import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountr
 import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { type GlobePartner } from "@/hooks/usePartnersForGlobe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
@@ -80,7 +81,7 @@ export function useCampaignData() {
         return true;
       });
     }
-    return countryPartnersData.map((p) => ({
+    return countryPartnersData.map((p: GlobePartner) => ({
       id: p.id,
       company_name: p.company_name,
       city: p.city,

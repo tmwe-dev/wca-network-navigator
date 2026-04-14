@@ -134,7 +134,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
       }
       toast.success("Inviato ✓");
     } catch (err: unknown) {
-      toast.error(err.message);
+      toast.error(err instanceof Error ? err.message : "Errore invio");
       setReplyText(text);
     } finally {
       setIsSending(false);

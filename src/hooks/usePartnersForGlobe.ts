@@ -109,7 +109,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
       // Paginate to get all partners for the country
       const PAGE_SIZE = 2000;
-      let allData: Array<Record<string, unknown>> = [];
+      let allData: Array<{ id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; partner_type: string | null }> = [];
       let offset = 0;
 
       while (true) {
@@ -130,7 +130,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
       const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
       
-      return allData.map(p => ({
+      return allData.map((p): GlobePartner => ({
         ...p,
         lat: country?.lat || 0,
         lng: country?.lng || 0,

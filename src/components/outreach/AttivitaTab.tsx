@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- icon component map
 const ACTIVITY_ICONS: Record<string, any> = {
   send_email: Mail,
   email: Mail,
@@ -57,10 +58,11 @@ export function AttivitaTab() {
     enabled: !mockEnabled,
   });
 
-  const all = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mixed mock/real activity types
+  const all: any[] = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
 
   const filtered = useMemo(() => {
-    let result = all ;
+    let result = all;
     if (statusFilter !== "all") result = result.filter(a => a.status === statusFilter);
     if (typeFilter !== "all") result = result.filter(a => a.activity_type === typeFilter);
     if (priorityFilter !== "all") result = result.filter(a => a.priority === priorityFilter);

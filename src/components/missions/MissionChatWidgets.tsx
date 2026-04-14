@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Check, ChevronDown, Rocket } from "lucide-react";
 import type { MissionStepData } from "@/components/missions/MissionStepRenderer";
+import type { MissionPlan } from "@/hooks/useMissionActions";
 
 // ── Widget type definitions ──
 
@@ -220,8 +221,7 @@ interface MissionWidgetRendererProps {
   onLaunch: () => void;
   onPlanApprove?: () => void;
   onPlanCancel?: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MissionPlan shape varies
-  planReviewProps?: { plan: any; isApproving: boolean };
+  planReviewProps?: { plan: MissionPlan; isApproving: boolean };
 }
 
 export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
@@ -249,7 +249,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ChannelSelectWidget
                 key={i}
                 value={stepData.channel || "email"}
-                onChange={v => onChange({ ...stepData, channel: v as "email" | "linkedin" | "whatsapp" | "mix" })}
+                onChange={v => onChange({ ...stepData, channel: v as MissionStepData["channel"] })}
               />
             );
 
@@ -287,10 +287,10 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                   { key: "verifyWhatsApp", label: "💬 Verifica WhatsApp", desc: "Controlla disponibilità WhatsApp", checked: stepData.deepSearch?.verifyWhatsApp ?? false },
                   { key: "aiAnalysis", label: "🤖 Analisi AI", desc: "Riepilogo intelligente del profilo", checked: stepData.deepSearch?.aiAnalysis ?? true },
                 ]}
-                onChange={(key, checked) => onChange({
-                  ...stepData,
-                  deepSearch: { scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true, ...stepData.deepSearch, enabled: true, [key]: checked },
-                })}
+                onChange={(key, checked) => {
+                  const base = { scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true, ...stepData.deepSearch, enabled: true as const };
+                  onChange({ ...stepData, deepSearch: { ...base, [key]: checked } });
+                }}
               />
             );
 

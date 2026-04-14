@@ -37,7 +37,7 @@ export function SendEmailDialog({
     try {
       const html = body.replace(/\n/g, "<br/>");
       const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: recipientEmail, subject, html, partner_id: partnerId }, context: "SendEmailDialog.send_email" });
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(String(data.error));
       toast.success(`Email inviata a ${recipientEmail}`);
       trackActivity.mutate({
         activityType: "send_email",
@@ -51,7 +51,7 @@ export function SendEmailDialog({
       onOpenChange(false);
       setBody("");
     } catch (e: unknown) {
-      toast.error(e?.message || "Errore nell'invio dell'email");
+      toast.error((e instanceof Error ? e.message : null) || "Errore nell'invio dell'email");
     } finally {
       setSending(false);
     }

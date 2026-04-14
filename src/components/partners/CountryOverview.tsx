@@ -67,14 +67,16 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  const hasWhatsApp = (p) =>
-    (p.partner_contacts || []).some((c) => c.mobile);
-  const hasEmail = (p) =>
-    (p.partner_contacts || []).some((c) => c.email);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape
+  const hasWhatsApp = (p: any) =>
+    (p.partner_contacts || []).some((c: any) => c.mobile);
+  const hasEmail = (p: any) =>
+    (p.partner_contacts || []).some((c: any) => c.email);
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
-    (partners || []).forEach((p) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
+    (partners || []).forEach((p: any) => {
       if (!map.has(p.country_code)) {
         map.set(p.country_code, {
           code: p.country_code,
