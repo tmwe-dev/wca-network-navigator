@@ -15,16 +15,15 @@ Deno.test("CORS preflight returns 200", async () => {
   await res.text();
 });
 
-Deno.test("POST with empty body returns 200 (graceful handling)", async () => {
+Deno.test("POST with empty body returns 200 with success field", async () => {
   const res = await fetch(URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
     body: JSON.stringify({}),
   });
-  // Function handles missing fields gracefully
   assertEquals(res.status, 200);
   const body = await res.json();
-  assert("saved" in body || "error" in body, `Unexpected response: ${JSON.stringify(body).substring(0, 100)}`);
+  assert("success" in body, `Expected success field, got: ${JSON.stringify(body).substring(0, 100)}`);
 });
 
 Deno.test("POST with empty contacts array returns success with 0 saved", async () => {
