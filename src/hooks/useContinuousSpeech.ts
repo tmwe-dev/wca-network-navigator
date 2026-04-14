@@ -13,7 +13,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  const recognitionRef = useRef<unknown>(null);
+  const recognitionRef = useRef<any>(null);
   const shouldListenRef = useRef(false);
   const accumulatedRef = useRef("");
 
