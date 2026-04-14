@@ -6,7 +6,7 @@ import type { CountryWithPartners } from "@/standalone-globe/types";
 interface PartnerMiniGlobeProps {
   partnerCountryCode: string;
   partnerCity: string;
-  branchCities: any[] | null;
+  branchCities: Array<Record<string, unknown>> | null;
 }
 
 export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity, branchCities }: PartnerMiniGlobeProps) {

@@ -73,7 +73,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
     recognition.lang = "it-IT";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (event: any) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
+    recognition.onresult = (event: Record<string, any>) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;

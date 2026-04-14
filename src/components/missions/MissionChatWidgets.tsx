@@ -220,7 +220,7 @@ interface MissionWidgetRendererProps {
   onLaunch: () => void;
   onPlanApprove?: () => void;
   onPlanCancel?: () => void;
-  planReviewProps?: { plan: any; isApproving: boolean };
+  planReviewProps?: { plan: Record<string, unknown>; isApproving: boolean };
 }
 
 export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
@@ -248,7 +248,7 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ChannelSelectWidget
                 key={i}
                 value={stepData.channel || "email"}
-                onChange={v => onChange({ ...stepData, channel: v as any })}
+                onChange={v => onChange({ ...stepData, channel: v as string })}
               />
             );
 

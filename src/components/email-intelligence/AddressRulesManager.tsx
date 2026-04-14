@@ -53,7 +53,7 @@ export function AddressRulesManager() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (rule: any) => {
+    mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
         const { error } = await supabase.from("email_address_rules").update(payload).eq("id", id);
@@ -90,7 +90,7 @@ export function AddressRulesManager() {
     onError: () => toast.error("Errore nell'eliminazione"),
   });
 
-  const openEdit = (rule?: any) => {
+  const openEdit = (rule?: Record<string, unknown>) => {
     setEditingRule(rule ?? {
       email_address: "",
       display_name: "",

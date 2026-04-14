@@ -60,7 +60,7 @@ export function AttivitaTab() {
   const all = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
 
   const filtered = useMemo(() => {
-    let result = all as any[];
+    let result = all ;
     if (statusFilter !== "all") result = result.filter(a => a.status === statusFilter);
     if (typeFilter !== "all") result = result.filter(a => a.activity_type === typeFilter);
     if (priorityFilter !== "all") result = result.filter(a => a.priority === priorityFilter);

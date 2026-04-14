@@ -65,7 +65,7 @@ export function CodaAITab() {
     enabled: !mockEnabled,
   });
 
-  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as any as AgentAction[]) : pendingActions;
+  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as unknown as AgentAction[]) : pendingActions;
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {

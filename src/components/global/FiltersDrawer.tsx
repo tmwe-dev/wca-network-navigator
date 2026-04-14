@@ -82,7 +82,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     if (!isCockpit || !contacts.length) return [];
     const counts: Record<string, number> = {};
     contacts.forEach(c => {
-      const cc = (c as any).country?.toUpperCase() || "??";
+      const cc = (c as Record<string, string>).country?.toUpperCase() || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     });
     return Object.entries(counts)

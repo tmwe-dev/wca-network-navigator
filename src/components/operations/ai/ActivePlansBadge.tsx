@@ -17,7 +17,7 @@ interface Props {
 export function ActivePlansBadge({ plans, isDark }: Props) {
   if (plans.length === 0) return null;
 
-  const totalSteps = plans.reduce((sum, p) => sum + (p.steps as any[]).length, 0);
+  const totalSteps = plans.reduce((sum, p) => sum + (p.steps as Array<unknown>).length, 0);
   const completedSteps = plans.reduce((sum, p) => sum + p.current_step, 0);
 
   return (
@@ -27,7 +27,7 @@ export function ActivePlansBadge({ plans, isDark }: Props) {
           ? "bg-amber-500/15 text-amber-300 border border-amber-500/20"
           : "bg-amber-50 text-amber-700 border border-amber-200"
       }`}
-      title={plans.map(p => `${p.title} (${p.current_step}/${(p.steps as any[]).length})`).join("\n")}
+      title={plans.map(p => `${p.title} (${p.current_step}/${(p.steps as Array<unknown>).length})`).join("\n")}
     >
       <ListChecks className="w-3 h-3" />
       <span>{plans.length} piano{plans.length > 1 ? "i" : ""}</span>

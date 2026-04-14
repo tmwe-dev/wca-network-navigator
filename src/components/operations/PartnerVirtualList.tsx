@@ -56,7 +56,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
           const hasProfile = !!partner.raw_profile_html;
           const hasEmail = !!partner.email || contacts.some((c) => c.email);
           const hasPhone = !!partner.phone || contacts.some((c) => c.direct_phone || c.mobile);
-          const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
+          const hasDeep = !!(partner.enrichment_data as Record<string, unknown>)?.deep_search_at;
           const inHolding = partner.lead_status && partner.lead_status !== "new";
           const years = getYearsMember(partner.member_since);
           const logoUrl = getEffectiveLogoUrl(partner);
@@ -156,7 +156,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
       </div>
       {/* Infinite scroll sentinel */}
       {loadMoreRef && (
-        <div ref={loadMoreRef as any} className="h-10 flex items-center justify-center">
+        <div ref={loadMoreRef as React.Ref<HTMLDivElement>} className="h-10 flex items-center justify-center">
           {isFetchingNextPage && (
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           )}

@@ -14,7 +14,7 @@ type BridgeResponse = {
   error?: string;
   threads?: Array<{ name: string; lastMessage: string; unread: boolean; threadUrl: string }>;
   messages?: Array<{ text: string; sender: string; timestamp: string; direction: string }>;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 // ── Ensure LinkedIn extension has Supabase config ──

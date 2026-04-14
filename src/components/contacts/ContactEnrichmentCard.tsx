@@ -202,7 +202,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               )}
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: any, i: number) => {
+                  {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
                     const label = typeof a === "string" ? a : (a?.name || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">

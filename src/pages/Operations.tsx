@@ -96,7 +96,7 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
 export default function Operations({ activeView }: { activeView?: "partners" | "bca" }) {
   const [internalView, setInternalView] = useState<"partners" | "bca">("partners");
   const networkView = activeView ?? internalView;
-  const setNetworkView = activeView ? (() => {}) as any : setInternalView;
+  const setNetworkView = activeView ? (() => {}) as () => void : setInternalView;
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   // Sync with external theme changes (e.g. from V2 sidebar toggle)

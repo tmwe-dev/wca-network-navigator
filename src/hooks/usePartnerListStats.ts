@@ -4,7 +4,7 @@ import { asEnrichment } from "@/lib/partnerUtils";
 
 interface UsePartnerListStatsArgs {
   countryCodes: string[];
-  partners: any[] | undefined;
+  partners: Array<Record<string, any>> | undefined;
 }
 
 export function usePartnerListStats({ countryCodes, partners }: UsePartnerListStatsArgs) {

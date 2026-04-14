@@ -58,7 +58,7 @@ async function writeSession(session: ChannelSession): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const { upsertAppSetting } = await import("@/data/appSettings");
-  let error: any = null;
+  let error: unknown = null;
   try {
     await upsertAppSetting(user.id, keyFor(session.channel), JSON.stringify({
       status: session.status,
