@@ -20,7 +20,10 @@ vi.mock("@/data/partners", () => ({
 
 vi.mock("@/lib/queryKeys", () => ({
   queryKeys: {
-    partners: { filtered: (f: unknown) => ["partners", f] },
+    partners: {
+      filtered: (f: unknown) => ["partners", f],
+      byCountry: (code: string | null) => ["partners-by-country", code],
+    },
     partner: (id: string) => ["partner", id],
     partnerStats: ["partner-stats"],
   },
