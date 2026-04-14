@@ -6,6 +6,10 @@ import { updateProspect } from "@/data/prospects";
 import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import { queryKeys } from "@/lib/queryKeys";
+import type { Database } from "@/integrations/supabase/types";
+
+type PartnerContactUpdate = Database["public"]["Tables"]["partner_contacts"]["Update"];
+type PartnerContactInsert = Database["public"]["Tables"]["partner_contacts"]["Insert"];
 
 export interface UnifiedRecord {
   sourceType: RecordSourceType;
