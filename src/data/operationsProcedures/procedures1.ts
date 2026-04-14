@@ -1,7 +1,6 @@
 import type { OperationProcedure } from "./types";
 
 export const PROCEDURES_PART1: OperationProcedure[] = [
-export const OPERATIONS_PROCEDURES: OperationProcedure[] = [
   // ══════════════════════════════════════
   // OUTREACH (6 procedure)
   // ══════════════════════════════════════
@@ -240,4 +239,17 @@ export const OPERATIONS_PROCEDURES: OperationProcedure[] = [
     prerequisites: [
       { check: "partner_exists", label: "Il partner esiste nel database", tool: "search_partners" },
       { check: "has_credits", label: "Crediti sufficienti (costa 1 credito)" },
+    ],
+    steps: [
+      { order: 1, action: "Identifica il partner", tool: "get_partner_detail", detail: "Ottieni dettagli completi per verificare cosa manca." },
+      { order: 2, action: "Avvia Deep Search", tool: "deep_search_partner", detail: "Usa Partner Connect per cercare sul web." },
+      { order: 3, action: "Verifica risultati", tool: "get_partner_detail", detail: "Ricarica il partner per vedere i dati arricchiti." },
+    ],
+    related_pages: ["/partner-hub", "/operations"],
+    ai_tools_required: ["get_partner_detail", "deep_search_partner"],
+    tips: [
+      "Deep Search è più efficace quando il partner ha un sito web",
+      "I risultati includono logo, social links e descrizione aggiornata",
+    ],
+  },
 ];
