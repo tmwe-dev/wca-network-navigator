@@ -60,7 +60,7 @@ export function AgentSignatureConfig({ agent }: Props) {
         signature_html: signatureHtml || null,
         signature_image_url: signatureImageUrl || null,
         voice_call_url: voiceCallUrl || null,
-      } as any,
+      } as Record<string, unknown>,
       { onSuccess: () => toast.success("Firma agente salvata") }
     );
   };

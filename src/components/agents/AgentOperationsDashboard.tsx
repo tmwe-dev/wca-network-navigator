@@ -134,7 +134,7 @@ function AgentCard({ agent }: { agent: AgentWithTasks }) {
   );
 }
 
-function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: AgentTaskRow[]; stats: any }) {
+function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: AgentTaskRow[]; stats: Record<string, unknown> }) {
   const activeTasks = tasks.filter(t => t.status === "running" || t.status === "pending" || t.status === "proposed");
   const recentCompleted = tasks.filter(t => t.status === "completed").slice(0, 15);
   const agentMap = new Map(agents.map(a => [a.id, a.name]));
