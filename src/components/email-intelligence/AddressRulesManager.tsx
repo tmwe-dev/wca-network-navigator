@@ -56,8 +56,7 @@ export function AddressRulesManager() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        const { error } = await supabase.from("email_address_rules").update(payload as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema mismatch
-).eq("id", String(id));
+        const { error } = await supabase.from("email_address_rules").update(payload as any).eq("id", String(id)); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema mismatch
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
