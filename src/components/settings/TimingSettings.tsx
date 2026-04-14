@@ -153,6 +153,11 @@ export default function TimingSettings() {
 
       <Separator />
 
+      {/* WhatsApp Stealth Section */}
+      <WhatsAppStealthSection getValue={getValue} handleChange={handleChange} />
+
+      <Separator />
+
       {/* Approval mode */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
         <div>
