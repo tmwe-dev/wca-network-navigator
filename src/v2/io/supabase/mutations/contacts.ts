@@ -55,7 +55,7 @@ export async function updateContact(
     }
     const { data, error } = await supabase
       .from("imported_contacts")
-      .update(cleanUpdates as Record<string, string>)
+      .update(cleanUpdates as never)
       .eq("id", contactId)
       .select()
       .single();

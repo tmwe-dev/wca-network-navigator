@@ -73,7 +73,7 @@ export function AddressRulesManager() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        const { error } = await supabase.from("email_address_rules").update(payload as Record<string, unknown>).eq("id", String(id));
+        const { error } = await supabase.from("email_address_rules").update(payload as never).eq("id", String(id));
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();

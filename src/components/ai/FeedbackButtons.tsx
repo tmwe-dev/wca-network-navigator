@@ -53,7 +53,7 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
           const newConf = Math.max(0, Math.min(1, Number((m as Record<string, unknown>).confidence || 0.5) + delta));
           await supabase
             .from("ai_memory")
-            .update({ confidence: newConf } as Record<string, unknown>)
+            .update({ confidence: newConf } as never)
             .eq("id", m.id);
         }
       }

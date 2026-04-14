@@ -54,7 +54,7 @@ export const contactKeys = {
   filtered: (f: ContactFilters) => ["contacts", f] as const,
   interactions: (id: string) => ["contact-interactions", id] as const,
   filterOptions: ["contacts-filter-options"] as const,
-  holdingPattern: queryKeys.contacts.holdingPattern as const,
+  holdingPattern: queryKeys.contacts.holdingPattern,
   holdingPatternStats: ["holding-pattern-stats"] as const,
 };
 
@@ -205,7 +205,7 @@ export async function updateLeadStatus(ids: string[], status: LeadStatus) {
   if (status === "converted") updates.converted_at = new Date().toISOString();
   const { error } = await supabase
     .from("imported_contacts")
-    .update(updates)
+    .update(updates as never)
     .in("id", ids);
   if (error) throw error;
 }
@@ -238,7 +238,7 @@ export async function deleteContacts(ids: string[]) {
 export async function updateContact(id: string, updates: Record<string, unknown>) {
   const { error } = await supabase
     .from("imported_contacts")
-    .update(updates)
+    .update(updates as never)
     .eq("id", id);
   if (error) throw error;
 }
@@ -323,7 +323,7 @@ export async function updateContactStatus(id: string, status: string, extra?: Re
   const updates: Record<string, unknown> = { lead_status: status, ...extra };
   const { error } = await supabase
     .from("imported_contacts")
-    .update(updates)
+    .update(updates as never)
     .eq("id", id);
   if (error) throw error;
 }

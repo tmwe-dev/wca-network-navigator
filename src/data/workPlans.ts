@@ -21,7 +21,7 @@ export async function createWorkPlan(plan: WorkPlanInsert) {
 }
 
 export async function updateWorkPlan(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("ai_work_plans").update(updates).eq("id", id);
+  const { error } = await supabase.from("ai_work_plans").update(updates as never).eq("id", id);
   if (error) throw error;
 }
 

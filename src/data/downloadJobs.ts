@@ -110,7 +110,7 @@ export async function updateDownloadJob(
   }
   const { error } = await supabase
     .from("download_jobs")
-    .update(payload)
+    .update(payload as never)
     .eq("id", id);
   if (error) throw error;
 }
@@ -189,13 +189,13 @@ export async function getJobItemById(itemId: string, select = "attempt_count"): 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {
   const { error } = await supabase
     .from("download_job_items")
-    .update(updates)
+    .update(updates as never)
     .eq("id", itemId);
   if (error) throw error;
 }
 
 export async function updateJobItemsByJobIdAndStatus(jobId: string, fromStatus: string | string[], updates: Record<string, unknown>) {
-  let q = supabase.from("download_job_items").update(updates).eq("job_id", jobId);
+  let q = supabase.from("download_job_items").update(updates as never).eq("job_id", jobId);
   if (Array.isArray(fromStatus)) q = q.in("status", fromStatus);
   else q = q.eq("status", fromStatus);
   const { error } = await q;

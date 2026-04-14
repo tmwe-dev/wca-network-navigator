@@ -89,7 +89,7 @@ export function ManageActivityDialog({
 
       const { error } = await supabase
         .from("activities")
-        .update(updates)
+        .update(updates as never)
         .eq("id", activity.id);
 
       if (error) throw error;

@@ -33,7 +33,7 @@ export async function countPendingCampaignEmails() {
 }
 
 export async function updateEmailDraft(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").update(updates).eq("id", id);
+  const { error } = await supabase.from("email_drafts").update(updates as never).eq("id", id);
   if (error) throw error;
 }
 
