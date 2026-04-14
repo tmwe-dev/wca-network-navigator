@@ -244,7 +244,7 @@ export function useLinkedInLookup() {
       }
 
       // Save result
-      const existing = (c.enrichment_data as unknown) || {};
+      const existing = (c.enrichment_data as any) || {};
       const updated = {
         ...existing,
         linkedin_lookup_at: new Date().toISOString(),

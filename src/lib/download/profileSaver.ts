@@ -172,7 +172,7 @@ export async function saveExtractionResult(
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
-        service_category: s as unknown,
+        service_category: s as any,
       }));
       await insertPartnerServices(toInsert);
     }
@@ -199,7 +199,7 @@ export async function saveExtractionResult(
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum cast required
-        certification: c as unknown,
+        certification: c as any,
       }));
       await insertPartnerCertifications(toInsert);
     }

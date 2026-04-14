@@ -22,7 +22,7 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
   if (file.name.endsWith(".csv")) {
     const text = new TextDecoder().decode(buffer);
     const blob = new Blob([text], { type: "text/csv" });
-    const stream = blob.stream() as unknown;
+    const stream = blob.stream() as any;
     await workbook.csv.read(stream);
   } else {
     await workbook.xlsx.load(buffer);

@@ -34,7 +34,7 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        }) as unknown;
+        }) as any;
 
       const doc: WorkspaceDoc = {
         id: data?.id ?? "",

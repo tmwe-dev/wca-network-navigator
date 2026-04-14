@@ -72,7 +72,7 @@ export function CodaAITab() {
       if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
-        .update({ status: "approved" as unknown, reviewed: true })
+        .update({ status: "approved" as any, reviewed: true })
         .eq("id", actionId);
       if (error) throw error;
     },

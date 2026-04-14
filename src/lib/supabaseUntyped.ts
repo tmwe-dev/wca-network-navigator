@@ -16,5 +16,5 @@ import { supabase } from "@/integrations/supabase/client";
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Single escape hatch for RA tables not in generated schema
 export function untypedFrom(table: string): any {
-  return (supabase as unknown).from(table);
+  return (supabase as any).from(table);
 }

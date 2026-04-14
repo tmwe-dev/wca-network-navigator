@@ -219,7 +219,7 @@ export function useCockpitContacts() {
       const prcMap: Record<string, (typeof prcData)[number]> = {};
       for (const c of prcData) prcMap[c.id] = c;
       const icMap: Record<string, (typeof icData)[number]> = {};
-      for (const c of icData) icMap[(c as unknown).id] = c;
+      for (const c of icData) icMap[(c as any).id] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");

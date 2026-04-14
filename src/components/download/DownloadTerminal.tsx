@@ -40,7 +40,7 @@ function useTerminalData() {
     : null;
   const targetJob = activeJob || fallbackJob;
   const entries: LogEntry[] = targetJob
-    ? ((targetJob as unknown).terminal_log as LogEntry[] || []) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON
+    ? ((targetJob as any).terminal_log as LogEntry[] || []) // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON
     : [];
   return { activeJob, entries };
 }

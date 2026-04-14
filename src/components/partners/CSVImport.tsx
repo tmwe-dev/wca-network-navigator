@@ -230,7 +230,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             partner_type: p.partner_type as string,
             wca_id: p.wca_id,
             is_active: true,
-          })) as unknown)
+          })) as any)
           .select();
 
         if (error) {

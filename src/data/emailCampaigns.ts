@@ -44,7 +44,7 @@ export async function getEmailDraftField(id: string, field: string) {
 }
 
 export async function createEmailDraft(draft: Record<string, unknown>) {
-  const { data, error } = await supabase.from("email_drafts").insert(draft as unknown)
+  const { data, error } = await supabase.from("email_drafts").insert(draft as any)
   if (error) throw error;
   return data;
 }

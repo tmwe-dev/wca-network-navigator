@@ -12,7 +12,7 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
       let q = untypedFrom("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50) as unknown;
+        .limit(50) as any;
 
       if (status) q = q.eq("status", status);
 

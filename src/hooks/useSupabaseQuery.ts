@@ -30,7 +30,7 @@ export function useSupabaseQuery<T extends TableName, TResult>(
     queryFn: async () => {
       const base = supabase.from(table).select(select);
       const query = options?.filters ? options.filters(base) : base;
-      const { data, error } = await (query as unknown);
+      const { data, error } = await (query as any);
       if (error) throw error;
       return ((data ?? []) as RowOf<T>[]).map(mapFn);
     },

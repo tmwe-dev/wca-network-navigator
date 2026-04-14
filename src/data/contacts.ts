@@ -264,7 +264,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(data as unknown));
+    if (data) results.push(...(data as any));
   }
   return results;
 }

@@ -107,7 +107,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
 
       const { data, error } = await q;
       if (error) throw error;
-      return ((data || []) as unknown) as ChannelMessage[];
+      return ((data || []) as any) as ChannelMessage[];
     },
     staleTime: 30_000,
   });

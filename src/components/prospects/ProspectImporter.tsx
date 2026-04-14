@@ -137,7 +137,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
     if (res.success && res.results && res.results.length > 0) {
       // Dedup against DB using partita_iva
-      const deduped = await dedupAgainstDb(res.results as unknown);
+      const deduped = await dedupAgainstDb(res.results as any);
       setSearchResults(deduped);
       // Auto-select only new ones
       const newSet = new Set(deduped.filter(r => !r.inDb).map(r => r.url));

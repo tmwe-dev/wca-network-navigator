@@ -49,7 +49,7 @@ export function ABTestCreator() {
         test_type: testType,
         variant_a: { [fieldKey]: variantA },
         variant_b: { [fieldKey]: variantB },
-      } as unknown);
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {

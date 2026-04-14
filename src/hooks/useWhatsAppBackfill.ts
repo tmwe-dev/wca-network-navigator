@@ -206,8 +206,8 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
-              raw_payload: msg as unknown,
-            } as unknown, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+              raw_payload: msg as any,
+            } as any, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
           if (!error && status === 201) chatRecovered++;
         }
