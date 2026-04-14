@@ -229,7 +229,7 @@ export function useLinkedInLookup() {
           const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
           const { candidate, confidence } = pickBestLinkedInCandidate(rawResults, {
             name: searchName,
-            company: c.company_name,
+            company: String(c.company_name ?? ""),
           });
 
           if (candidate && confidence >= 0.5) {
@@ -253,7 +253,7 @@ export function useLinkedInLookup() {
       };
 
       const { updateContactEnrichment: updateEnrich } = await import("@/data/contacts");
-      await updateEnrich(c.id, updated);
+      await updateEnrich(c.id as string, updated);
 
       if (foundUrl) found++; else notFound++;
       setProgress(p => ({ ...p, found, notFound, currentMethod: undefined as string | undefined }));

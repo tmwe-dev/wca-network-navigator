@@ -200,6 +200,7 @@ export function useWhatsAppBackfill() {
 
           const { error, status } = await supabase
             .from("channel_messages")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic upsert
             .upsert({
               user_id: user.id,
               channel: "whatsapp",
@@ -208,9 +209,8 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column accepts any serializable
               raw_payload: msg as any,
-            }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+            } as any, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
           if (!error && status === 201) chatRecovered++;
         }
@@ -240,7 +240,7 @@ export function useWhatsAppBackfill() {
       toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
     } catch (err: unknown) {
       setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: (err instanceof Error ? err.message : String(err)) }));
-      toast.error(`Errore recupero: ${err.message}`);
+      toast.error(`Errore recupero: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       runningRef.current = false;
     }

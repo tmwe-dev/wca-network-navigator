@@ -88,7 +88,7 @@ export function useLinkedInSync() {
       setLastSyncAt(Date.now());
     } catch (err: unknown) {
       log.warn("sync error", { message: err instanceof Error ? err.message : String(err) });
-      toast.error(`Errore sync: ${err.message}`);
+      toast.error(`Errore sync: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsReading(false);
     }
