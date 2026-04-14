@@ -10,7 +10,6 @@ type TableName = keyof Database["public"]["Tables"];
 type RowOf<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
 /** Apply additional filters to the query builder (eq, in, order, limit, etc.) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FilterFn = (query: unknown) => unknown;
 
 interface SupabaseQueryOptions {
@@ -30,11 +29,11 @@ export function useSupabaseQuery<T extends TableName, TResult>(
     queryKey: key,
     queryFn: async () => {
       const base = supabase.from(table).select(select);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const query = options?.filters ? options.filters(base) : base;
-      const { data, error } = await (query as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase dynamic select: result shape depends on select string, must await as Promise
+      const { data, error } = await (query as any);
       if (error) throw error;
-      return ((data ?? []) as any as RowOf<T>[]).map(mapFn); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
+      return ((data ?? []) as RowOf<T>[]).map(mapFn);
     },
     staleTime: options?.staleTime,
     enabled: options?.enabled,

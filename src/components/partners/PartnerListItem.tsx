@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import type { PartnerViewModel, EnrichmentData } from "@/types/partner-views";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, Phone, ChevronRight, User, Brain, Handshake } from "lucide-react";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
@@ -14,11 +15,10 @@ import type { SocialLink } from "@/hooks/useSocialLinks";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string }
-interface ContactItem { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+interface ContactItem { id: string; name: string; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 20+ fields
 interface PartnerListItemProps {
-  partner: Record<string, any>;
+  partner: PartnerViewModel;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -38,7 +38,7 @@ export function PartnerListItem({
   onToggleSelection,
   index,
 }: PartnerListItemProps) {
-  const years = getYearsMember(partner.member_since);
+  const years = getYearsMember(partner.member_since ?? null);
   const services: ServiceItem[] = partner.partner_services || [];
   const allServices = [
     ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),

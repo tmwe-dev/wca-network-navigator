@@ -1,3 +1,4 @@
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,8 +68,8 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 
  
 interface PartnerDetailInfoProps {
-  partner: Record<string, any>;
-  enrichment: Record<string, any> | null;
+  partner: PartnerViewModel;
+  enrichment: Record<string, unknown> | null;
   contacts: PartnerContact[];
   networks: PartnerNetwork[];
   allServices: PartnerService[];
@@ -259,11 +260,11 @@ export function PartnerDetailInfo({
                 </Section>
               )}
 
-              {enrichment?.key_markets && Array.isArray(enrichment.key_markets) && (enrichment.key_markets as string[]).length > 0 && (
+              {enrichment && Array.isArray((enrichment as Record<string, unknown>).key_markets) && ((enrichment as Record<string, unknown>).key_markets as string[]).length > 0 && (
                 <Section>
                   <SectionTitle icon={Globe}>Mercati Principali</SectionTitle>
                   <div className="flex flex-wrap gap-1.5">
-                    {(enrichment.key_markets as string[]).map((market: string, i: number) => {
+                    {((enrichment as Record<string, unknown>).key_markets as string[]).map((market: string, i: number) => {
                       const code = resolveCountryCode(market);
                       return (
                         <span key={i} className="flex items-center gap-1 text-xs bg-card/60 border border-primary/10 rounded-lg py-1 px-2 text-foreground/80">
@@ -275,11 +276,11 @@ export function PartnerDetailInfo({
                 </Section>
               )}
 
-              {enrichment?.key_routes && Array.isArray(enrichment.key_routes) && (enrichment.key_routes as { from?: string; origin?: string; to?: string; destination?: string }[]).length > 0 && (
+              {enrichment && Array.isArray((enrichment as Record<string, unknown>).key_routes) && ((enrichment as Record<string, unknown>).key_routes as { from?: string; origin?: string; to?: string; destination?: string }[]).length > 0 && (
                 <Section>
                   <SectionTitle icon={ArrowUpRight}>Routing</SectionTitle>
                   <div className="space-y-1">
-                    {(enrichment.key_routes as { from?: string; origin?: string; to?: string; destination?: string }[]).map((route, i: number) => {
+                    {((enrichment as Record<string, unknown>).key_routes as { from?: string; origin?: string; to?: string; destination?: string }[]).map((route, i: number) => {
                       const fromCode = resolveCountryCode(route.from || route.origin || "");
                       const toCode = resolveCountryCode(route.to || route.destination || "");
                       return (

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,8 +43,7 @@ interface NetworkItem { id: string; network_name: string; expires: string | null
 interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
 
 interface PartnerDetailCompactProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 30+ fields accessed throughout
-  partner: Record<string, any>;
+  partner: PartnerViewModel;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
@@ -58,7 +58,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
-  const years = getYearsMember(partner.member_since);
+  const years = getYearsMember(partner.member_since ?? null);
   const _enrichment = partner.enrichment_data as Record<string, unknown>;
   const _branchCountries = getBranchCountries(partner);
 
@@ -177,7 +177,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          {(partner.rating ?? 0) > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Parameters<typeof PartnerRating>[0]["ratingDetails"]} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />

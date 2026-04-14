@@ -1,3 +1,4 @@
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -16,8 +17,8 @@ import { Box } from "lucide-react";
 
  
 interface PartnerDetailHeaderProps {
-  partner: Record<string, any>;
-  enrichment: Record<string, any> | null;
+  partner: PartnerViewModel;
+  enrichment: Record<string, unknown> | null;
   networks: { id: string; network_name: string }[];
   years: number;
   expiryDate: Date | null;
@@ -51,13 +52,13 @@ export function PartnerDetailHeader({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
-            {enrichment?.deep_search_at && (
+            {enrichment && typeof enrichment === "object" && (enrichment as {deep_search_at?: string}).deep_search_at && (
               <Tooltip>
                 <TooltipTrigger>
                   <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  Deep Search — {format(new Date(String(enrichment.deep_search_at)), "d MMM yyyy", { locale: it })}
+                  Deep Search — {format(new Date(String((enrichment as {deep_search_at?: string}).deep_search_at)), "d MMM yyyy", { locale: it })}
                 </TooltipContent>
               </Tooltip>
             )}
