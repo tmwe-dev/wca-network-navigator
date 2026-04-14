@@ -15,8 +15,8 @@ vi.mock("@/components/contacts/HoldingPatternIndicator", () => ({
 }));
 
 const RECORD: UnifiedRecord = {
-  id: "r1",
   sourceType: "contact",
+  sourceId: "r1",
   companyName: "Acme Corp",
   contactName: "John Doe",
   email: "john@acme.com",
@@ -30,7 +30,15 @@ const RECORD: UnifiedRecord = {
   note: "Good partner",
   leadStatus: "contacted",
   linkedinUrl: null,
-  origin: "import",
+  enrichmentData: null,
+  deepSearchAt: null,
+  createdAt: "2024-01-01",
+  lastInteractionAt: null,
+  interactionCount: 0,
+  companyAlias: null,
+  contactAlias: null,
+  partnerId: null,
+  raw: null,
 };
 
 describe("ContactRecordFields", () => {
