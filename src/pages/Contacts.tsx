@@ -7,11 +7,12 @@ import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
+import type { ContactDetail } from "@/hooks/useContactDetail";
 
 const log = createLogger("Contacts");
 
 export default function Contacts() {
-  const [selectedContact, setSelectedContact] = useState<Record<string, unknown> | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactDetail | null>(null);
   // URL-synced selected contact id → /crm?contact=<uuid> is deep-linkable
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
 
