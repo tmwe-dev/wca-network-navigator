@@ -23,6 +23,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [saving, setSaving] = useState(false);
 
   const next = () => setStep(s => Math.min(s + 1, 3));
+  const back = () => setStep(s => Math.max(s - 1, 0));
 
   const saveSetting = async (key: string, value: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -73,7 +74,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         {/* Progress */}
         <div className="flex gap-2 mb-8">
           {STEP_LABELS.map((label, i) => (
-            <div key={i} className="flex-1 space-y-1">
+            <button
+              key={i}
+              className="flex-1 space-y-1 cursor-pointer disabled:cursor-default"
+              disabled={i > step}
+              onClick={() => i < step && setStep(i)}
+            >
               <div className={cn(
                 "h-1.5 rounded-full transition-colors",
                 i <= step ? "bg-primary" : "bg-muted"
@@ -82,7 +88,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 "text-[10px] text-center",
                 i <= step ? "text-primary" : "text-muted-foreground"
               )}>{label}</p>
-            </div>
+            </button>
           ))}
         </div>
 
