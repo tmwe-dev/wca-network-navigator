@@ -18,7 +18,7 @@ interface JobRow {
   status: string;
   created_at: string;
   current_step: number;
-  steps: any;
+  steps: Record<string, unknown>;
 }
 
 const STAFF_ROLES = ["director", "account_manager", "strategist", "sales", "outreach", "research"];

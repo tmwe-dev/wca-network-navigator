@@ -60,7 +60,7 @@ export default function AgentChatHub() {
     forceRender((n) => n + 1);
 
     try {
-      const data = await invokeEdge<any>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
+      const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
       const reply: Message = { role: "assistant", content: data?.response || "Nessuna risposta" };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
     } catch (e) {
@@ -118,7 +118,7 @@ export default function AgentChatHub() {
         });
         toast.info("Feedback registrato — l'AI migliorerà");
       } else {
-        await (supabase.from("ai_memory") as any).insert({
+        await (supabase.from("ai_memory") ).insert({
           user_id: user.id,
           memory_type: "preference",
           content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
