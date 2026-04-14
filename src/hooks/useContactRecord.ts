@@ -212,7 +212,7 @@ export function useUpdateContactRecord() {
             else if (col === "email") typedUpdate.email = v;
             else if (col === "mobile") typedUpdate.mobile = v;
             else if (col === "title") typedUpdate.title = v;
-            else if (col === "name") typedUpdate.name = v;
+            else if (col === "name") typedUpdate.name = v ?? undefined;
             else if (col === "contact_alias") typedUpdate.contact_alias = v;
           }
 
