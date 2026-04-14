@@ -115,7 +115,7 @@ export function SenderProfilesView() {
                   {/* Rules summary */}
                    {p.rules && (
                     <div className="flex flex-wrap gap-1">
-                       {p.rules.auto_action && String(p.rules.auto_action) !== "none" && (
+                       {!!p.rules.auto_action && String(p.rules.auto_action) !== "none" && (
                         <Badge className="text-[10px] bg-primary/10 text-primary">{String(p.rules.auto_action)}</Badge>
                       )}
                       <Badge variant="outline" className="text-[10px]">{String(p.rules.preferred_channel ?? "email")}</Badge>
