@@ -60,7 +60,6 @@ function sendToLinkedInExt(action: string, data: Record<string, unknown> = {}, t
 }
 
 // ── FireScrape bridge (for reading pages) ──
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     const requestId = `fs_li_${crypto.randomUUID()}`;

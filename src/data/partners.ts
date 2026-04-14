@@ -136,7 +136,7 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
     if (filters?.partnerTypes?.length) {
-      query = query.in("partner_type", filters.partnerTypes as unknown); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema cast
+      query = query.in("partner_type", filters.partnerTypes as never);
     }
     if (filters?.favorites) query = query.eq("is_favorite", true);
 
@@ -423,7 +423,7 @@ export async function findPartnerByEmail(email: string) {
 export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
   let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
-  if (filters.type) q = q.eq("partner_type", filters.type as unknown); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema cast
+  if (filters.type) q = q.eq("partner_type", filters.type as never);
   if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
   const { data, error } = await q.limit(limit);
   if (error) throw error;

@@ -217,7 +217,6 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
         
         const { data, error } = await supabase
           .from("partners")
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CSV import dynamic shape
           .insert(batch.map(p => ({
             company_name: p.company_name,
             country_code: p.country_code,
@@ -230,7 +229,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             partner_type: p.partner_type as string,
             wca_id: p.wca_id,
             is_active: true,
-          })) as unknown)
+          })) as never)
           .select();
 
         if (error) {

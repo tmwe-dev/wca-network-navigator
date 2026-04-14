@@ -10,12 +10,12 @@ export async function countEmailDrafts() {
 }
 
 export async function insertEmailDraft(draft: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").insert(draft as unknown);
+  const { error } = await supabase.from("email_drafts").insert(draft as never);
   if (error) throw error;
 }
 
 export async function insertEmailDraftReturning(draft: Record<string, unknown>) {
-  const { data, error } = await supabase.from("email_drafts").insert(draft as unknown)
+  const { data, error } = await supabase.from("email_drafts").insert(draft as never)
   if (error) throw error;
   return data;
 }

@@ -109,7 +109,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    members: membersJson as unknown,
+                    members: membersJson as never,
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),

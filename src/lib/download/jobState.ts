@@ -89,7 +89,6 @@ export async function finalizeJob(jobId: string): Promise<void> {
   await updateDownloadJob(jobId, {
     status: finalStatus,
     completed_at: new Date().toISOString(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
     failed_ids: [] as unknown as import("@/integrations/supabase/types").Json,
   });
 

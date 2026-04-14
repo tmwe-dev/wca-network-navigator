@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
  * Access a Supabase table that isn't in the generated types yet.
  * Returns a PostgREST query builder with loose typing.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Single escape hatch for RA tables not in generated schema
-export function untypedFrom(table: string): any {
-  return (supabase as unknown).from(table);
+export function untypedFrom(table: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+  return (supabase as Record<string, unknown>).from(table);
 }

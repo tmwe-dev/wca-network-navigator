@@ -16,7 +16,6 @@ export function useRADashboard() {
         { data: recentProspects },
         { data: activeJobs },
         { data: atecoData },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ] = await Promise.all([
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }),
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
@@ -25,7 +24,7 @@ export function useRADashboard() {
         untypedFrom("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
         untypedFrom("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
         untypedFrom("ra_prospects").select("codice_ateco, descrizione_ateco"),
-      ]) as unknown;
+      ]) as never;
 
       const atecoMap = new Map<string, { description: string; count: number }>();
       ((atecoData ?? []) as Record<string, string>[]).forEach((p) => {

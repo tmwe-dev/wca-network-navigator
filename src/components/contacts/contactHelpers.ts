@@ -17,8 +17,7 @@ export function countryFlag(country: string | null): string {
 export function formatPhone(phone: string): string {
   return phone.replace(/[^0-9+]/g, "");
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic imported_contacts row
-export function getContactQuality(c: Record<string, any>): "good" | "partial" | "poor" {
+export function getContactQuality(c: Record<string, unknown>): "good" | "partial" | "poor" {
   const has = (v: unknown) => !!clean(v as string | null | undefined);
   const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
   const filled = fields.filter(Boolean).length;
@@ -29,8 +28,7 @@ export function getContactQuality(c: Record<string, any>): "good" | "partial" | 
 
 export type SortKey = "name" | "company" | "city" | "date" | "score";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic imported_contacts rows
-export function sortContacts(contacts: Record<string, any>[], sortKey: SortKey): Record<string, any>[] {
+export function sortContacts(contacts: Record<string, unknown>[], sortKey: SortKey): Record<string, unknown>[] {
   const sorted = [...contacts];
   sorted.sort((a, b) => {
     switch (sortKey) {

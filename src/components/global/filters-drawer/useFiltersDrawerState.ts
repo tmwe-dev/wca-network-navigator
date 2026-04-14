@@ -36,7 +36,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (!isCockpit || !contacts.length) return [];
     const counts: Record<string, number> = {};
     contacts.forEach(c => {
-      const cc = ((c as unknown).country as string)?.toUpperCase() || "??";
+      const cc = ((c as Record<string, unknown>).country as string)?.toUpperCase() || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     });
     return Object.entries(counts)

@@ -82,7 +82,7 @@ export function useUpdateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<BusinessCard>) => {
-      await updateBusinessCard(id, updates as unknown);
+      await updateBusinessCard(id, updates as never);
     },
     onSuccess: () => invalidateBusinessCards(qc),
   });

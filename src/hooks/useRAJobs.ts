@@ -8,11 +8,10 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
   return useQuery({
     queryKey: [...RA_JOBS_KEY, status],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = untypedFrom("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50) as unknown;
+        .limit(50) as never;
 
       if (status) q = q.eq("status", status);
 

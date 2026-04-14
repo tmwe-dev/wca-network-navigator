@@ -63,8 +63,7 @@ const DEFAULT_PAGE_SIZE = 200;
 // ─── Query Builder type ─────────────────────────────────
 // The Supabase query builder is complex with generics; we use a lightweight alias
 // to avoid `any` while preserving chainability.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ContactQueryBuilder = any;
+type ContactQueryBuilder = ReturnType<typeof supabase.from<'imported_contacts'>>;
 
 // ─── Query Helpers ──────────────────────────────────────
 
@@ -256,7 +255,6 @@ export async function getContactById(id: string) {
 
 export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
   // Dynamic select requires flexible return type for diverse consumers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
@@ -265,7 +263,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(data as unknown));
+    if (data) results.push(...(data as any)); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
   }
   return results;
 }
