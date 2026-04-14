@@ -244,7 +244,7 @@ export function useLinkedInLookup() {
       }
 
       // Save result
-      const existing = (c.enrichment_data as any) || {};
+      const existing = (c.enrichment_data as any) || {}; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic property access
       const updated = {
         ...existing,
         linkedin_lookup_at: new Date().toISOString(),

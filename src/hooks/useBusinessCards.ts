@@ -82,7 +82,7 @@ export function useUpdateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<BusinessCard>) => {
-      await updateBusinessCard(id, updates as any);
+      await updateBusinessCard(id, updates as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic property access
     },
     onSuccess: () => invalidateBusinessCards(qc),
   });

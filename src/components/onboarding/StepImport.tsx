@@ -92,7 +92,7 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
       const BATCH = 50;
       for (let i = 0; i < contacts.length; i += BATCH) {
         const batch = contacts.slice(i, i + BATCH);
-        const { error } = await supabase.from("imported_contacts").insert(batch as any);
+        const { error } = await supabase.from("imported_contacts").insert(batch as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema boundary cast
         if (error) throw error;
       }
 

@@ -34,7 +34,7 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        }) as any;
+        }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
 
       const doc: WorkspaceDoc = {
         id: data?.id ?? "",

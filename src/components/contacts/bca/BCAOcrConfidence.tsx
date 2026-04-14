@@ -37,7 +37,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editing, setEditing] = useState<OcrFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const ocrConf = (card as any).ocr_confidence as Record<string, number> | null;
+  const ocrConf = (card as any).ocr_confidence as Record<string, number> | null; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic property access
   const manuallyCorrected = (card as any).manually_corrected as boolean | null;
 
   const startEdit = useCallback((field: OcrFieldKey) => {
@@ -50,7 +50,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
     const oldValue = (card[editing as keyof typeof card] as string) ?? "";
     if (editValue === oldValue) { setEditing(null); return; }
 
-    const existingNotes = (card as any).correction_notes;
+    const existingNotes = (card as any).correction_notes; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic property access
     let notes: Array<Record<string, unknown>> = [];
     try { notes = existingNotes ? JSON.parse(existingNotes) : []; } catch { notes = []; }
     notes.push({ field: editing, old_value: oldValue, new_value: editValue, corrected_at: new Date().toISOString() });
@@ -62,7 +62,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
-      } as any);
+      } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {

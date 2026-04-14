@@ -12,7 +12,7 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
       let q = untypedFrom("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50) as any;
+        .limit(50) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
 
       if (status) q = q.eq("status", status);
 

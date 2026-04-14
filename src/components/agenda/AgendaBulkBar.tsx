@@ -83,7 +83,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
         priority: "medium",
       }));
 
-      await createActivities(activityInserts as any);
+      await createActivities(activityInserts as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
 
       toast.success(`${jobs.length} attività create → verifica in "In Uscita"`);
       onClear();
