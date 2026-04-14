@@ -27,6 +27,7 @@ export interface PartnerContactView {
   mobile?: string | null;
   is_primary?: boolean | null;
   contact_alias?: string | null;
+  [key: string]: unknown;
 }
 
 /** Interaction from Supabase join */
