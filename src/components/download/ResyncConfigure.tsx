@@ -204,7 +204,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           country_name: "Re-sync Contatti",
           network_name: networkNames,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Type not available in generated schema
-          wca_ids: allWcaIds as any,
+          wca_ids: allWcaIds as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase enum cast
           total_count: allWcaIds.length,
           delay_seconds: delay,
           status: "pending",

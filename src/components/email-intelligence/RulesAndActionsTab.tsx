@@ -87,7 +87,7 @@ function AddressRulesSection() {
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as any);
+        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema cast
         if (error) throw error;
       }
     },
@@ -285,7 +285,7 @@ function PromptManagerSection() {
         await supabase.from("email_prompts").update(payload as any).eq("id", String(id));
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as any);
+        await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase schema cast
       }
     },
     onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); setSheetOpen(false); },
