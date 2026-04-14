@@ -184,13 +184,13 @@ export function useUpdateContactRecord() {
       if (sourceType === "partner") {
         // Split updates into partner-table fields vs contact-table fields
         const partnerUpdates: Record<string, unknown> = {};
-        const contactUpdates: Record<string, string | null> = {};
+        const contactUpdateEntries: Array<[string, unknown]> = [];
 
         for (const [key, value] of Object.entries(updates)) {
           if (PARTNER_ONLY_FIELDS.has(key)) {
             partnerUpdates[key] = value;
           } else if (key in CONTACT_FIELD_MAP) {
-            contactUpdates[CONTACT_FIELD_MAP[key]] = value;
+            contactUpdateEntries.push([CONTACT_FIELD_MAP[key], value]);
           } else {
             // Unknown fields default to partner table
             partnerUpdates[key] = value;
@@ -203,7 +203,19 @@ export function useUpdateContactRecord() {
         }
 
         // Update partner_contacts if needed
-        if (Object.keys(contactUpdates).length > 0) {
+        if (contactUpdateEntries.length > 0) {
+          // Build typed update object
+          const typedUpdate: PartnerContactUpdate = {};
+          for (const [col, val] of contactUpdateEntries) {
+            const v = (val as string | null) ?? null;
+            if (col === "direct_phone") typedUpdate.direct_phone = v;
+            else if (col === "email") typedUpdate.email = v;
+            else if (col === "mobile") typedUpdate.mobile = v;
+            else if (col === "title") typedUpdate.title = v;
+            else if (col === "name") typedUpdate.name = v;
+            else if (col === "contact_alias") typedUpdate.contact_alias = v;
+          }
+
           // Find primary contact
           const { data: contacts } = await supabase
             .from("partner_contacts")
@@ -215,22 +227,25 @@ export function useUpdateContactRecord() {
           const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
 
           if (primary) {
-            // Update existing primary contact
             const { error } = await supabase
               .from("partner_contacts")
-              .update(contactUpdates)
+              .update(typedUpdate)
               .eq("id", primary.id);
             if (error) throw error;
           } else {
-            // Create a new primary contact row
+            const insert: PartnerContactInsert = {
+              partner_id: sourceId,
+              is_primary: true,
+              name: typedUpdate.name || "Primary Contact",
+              direct_phone: typedUpdate.direct_phone,
+              email: typedUpdate.email,
+              mobile: typedUpdate.mobile,
+              title: typedUpdate.title,
+              contact_alias: typedUpdate.contact_alias,
+            };
             const { error } = await supabase
               .from("partner_contacts")
-              .insert({
-                partner_id: sourceId,
-                is_primary: true,
-                name: (contactUpdates.name as string) || "Primary Contact",
-                ...contactUpdates,
-              });
+              .insert(insert);
             if (error) throw error;
           }
         }
