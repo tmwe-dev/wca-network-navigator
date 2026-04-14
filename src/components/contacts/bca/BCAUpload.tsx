@@ -27,11 +27,11 @@ export function useUploadAndParse() {
     if (parseResult?.error) throw new Error(parseResult.error);
     const extracted = parseResult?.data || {};
     await createCard.mutateAsync({
-      user_id: userId, company_name: extracted.company_name, contact_name: extracted.contact_name,
-      email: extracted.email, phone: extracted.phone, mobile: extracted.mobile, position: extracted.position,
+      user_id: userId, company_name: extracted.company_name as string, contact_name: extracted.contact_name as string,
+      email: extracted.email as string, phone: extracted.phone as string, mobile: extracted.mobile as string, position: extracted.position as string,
       photo_url: photoUrl, event_name: eventMeta.event_name || null, met_at: eventMeta.met_at || null,
-      location: eventMeta.location || null, notes: extracted.notes, raw_data: extracted,
-    } as Record<string, unknown>);
+      location: eventMeta.location || null, notes: extracted.notes as string, raw_data: extracted,
+    });
     return true;
   }, [createCard]);
 
@@ -48,7 +48,7 @@ export function useUploadAndParse() {
         email: card.email || null, phone: card.phone || null, mobile: card.mobile || null,
         position: card.position || null, notes: card.notes || null, event_name: eventMeta.event_name || null,
         met_at: eventMeta.met_at || null, location: eventMeta.location || null, raw_data: card.raw_data || null,
-      } as Record<string, unknown>);
+      });
       created++;
     }
     return created;

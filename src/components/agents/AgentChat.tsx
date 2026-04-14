@@ -43,7 +43,7 @@ export function AgentChat({ agent }: Props) {
 
     try {
       const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: agent.id, chat_messages: newMsgs }, context: "AgentChat.agent_execute" });
-      setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
+      setMessages([...newMsgs, { role: "assistant", content: String(data?.response ?? "Nessuna risposta") }]);
     } catch (_e) {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
     } finally {

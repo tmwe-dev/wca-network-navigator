@@ -1,7 +1,7 @@
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
-interface ImportedContactRecord {
+export interface ImportedContactRecord {
   id: string;
   contact_alias?: string;
   name?: string;

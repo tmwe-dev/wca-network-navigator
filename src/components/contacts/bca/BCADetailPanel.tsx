@@ -38,7 +38,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
 
   const confirmMatch = useCallback(async (partnerId: string) => {
     try {
-      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as Record<string, unknown>);
+      await updateCard.mutateAsync({ id: card.id, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 });
       toast({ title: "✅ Match confermato" });
     } catch (e: unknown) { toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
   }, [card.id, updateCard]);

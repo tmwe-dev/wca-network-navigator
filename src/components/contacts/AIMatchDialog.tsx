@@ -111,7 +111,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     let ok = 0, fail = 0;
     for (const [cardId, partnerId] of selected) {
       try {
-        await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 } as Record<string, unknown>);
+        await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 });
         ok++;
       } catch (e) {
         log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

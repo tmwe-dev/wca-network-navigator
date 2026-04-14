@@ -204,7 +204,7 @@ export function CockpitContactCard({
                 )}
 
                 {hasEnrichmentData ? (
-                  <ContactEnrichmentCard enrichmentData={contact.enrichmentData} deepSearchAt={contact.deepSearchAt || null} />
+                  <ContactEnrichmentCard enrichmentData={contact.enrichmentData ?? null} deepSearchAt={contact.deepSearchAt || null} />
                 ) : !hasLiveLinkedin ? (
                   <div className="text-center py-3 space-y-2">
                     <p className="text-xs text-muted-foreground">Nessun dato AI disponibile</p>
