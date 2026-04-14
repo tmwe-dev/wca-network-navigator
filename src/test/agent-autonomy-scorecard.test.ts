@@ -75,6 +75,7 @@ describe("Routing correctness", () => {
 
     let assigned: string | null = null;
     if (clientAssignment) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
       assigned = (clientAssignment as any).agent_id;
     } else {
       const cc = partnerCountry.toUpperCase();
@@ -88,6 +89,7 @@ describe("Routing correctness", () => {
 
 // ── Test 3: Approval discipline ──
 describe("Approval discipline", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
   function isHighStakes(partner: any): boolean {
     if (partner.lead_status === "in_progress" || partner.lead_status === "negotiation") return true;
     if (partner.source === "ex_client") return true;

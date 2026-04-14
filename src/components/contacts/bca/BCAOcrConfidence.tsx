@@ -65,6 +65,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
       } as any);
       toast({ title: "✓ Campo corretto" });
       setEditing(null);

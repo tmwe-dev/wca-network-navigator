@@ -39,6 +39,7 @@ describe("Agent Task Stats Consistency (logic)", () => {
   });
 
   it("should handle missing stats gracefully", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     const stats: any = {};
     const taskStatus = "completed";
 

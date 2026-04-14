@@ -34,6 +34,7 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
         }) as any;
 
       const doc: WorkspaceDoc = {

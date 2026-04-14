@@ -54,6 +54,7 @@ describe("State Counter Consistency [A05]", () => {
     if (!agents || agents.length === 0) return;
 
     for (const agent of agents) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
       const stats = agent.stats as any;
       const claimedCompleted = stats?.tasks_completed || 0;
       if (claimedCompleted === 0) continue;

@@ -1,5 +1,6 @@
 /**
  * Typed interfaces for enrichment_data JSON fields.
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
  * Replaces `as any` casts on enrichment_data across the codebase.
  */
 

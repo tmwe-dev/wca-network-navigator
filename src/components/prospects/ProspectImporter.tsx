@@ -137,6 +137,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
     if (res.success && res.results && res.results.length > 0) {
       // Dedup against DB using partita_iva
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
       const deduped = await dedupAgainstDb(res.results as any);
       setSearchResults(deduped);
       // Auto-select only new ones

@@ -29,8 +29,10 @@ interface TestResult {
   contact: TestContact;
   status: "pending" | "running" | "done" | "error";
   url: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
   profile: any;
   log: SearchLogEntry[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
   scrapeResult: any;
   error?: string;
 }

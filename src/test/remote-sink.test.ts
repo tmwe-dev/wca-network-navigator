@@ -60,7 +60,9 @@ describe("remoteSink", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe("https://x.example.com");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     expect((opts as any).method).toBe("POST");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     const body = JSON.parse((opts as any).body);
     expect(body.records).toHaveLength(2);
     expect(body.records[0].level).toBe("warn");
@@ -71,6 +73,7 @@ describe("remoteSink", () => {
     installRemoteSink({ endpoint: "https://x.example.com", token: "secret123", flushAt: 1 });
     createLogger("test").error("boom");
     const [, opts] = fetchMock.mock.calls[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     expect((opts as any).headers.Authorization).toBe("Bearer secret123");
   });
 

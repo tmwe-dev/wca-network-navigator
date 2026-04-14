@@ -30,6 +30,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("usePartners", () => {
   it("fetches partners list", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as any);
     const { result } = renderHook(() => usePartners(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -44,6 +45,7 @@ describe("usePartners", () => {
 
   it("passes filters through", async () => {
     vi.mocked(findPartners).mockResolvedValue([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     renderHook(() => usePartners({ country: "IT" } as any), { wrapper });
     await waitFor(() => expect(findPartners).toHaveBeenCalledWith({ country: "IT" }));
   });
@@ -57,6 +59,7 @@ describe("usePartners", () => {
 
 describe("usePartner", () => {
   it("fetches single partner by id", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as any);
     const { result } = renderHook(() => usePartner("p1"), { wrapper });
     await waitFor(() => expect(result.current.data?.company_name).toBe("Acme"));

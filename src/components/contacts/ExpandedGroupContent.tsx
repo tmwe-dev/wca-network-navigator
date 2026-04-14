@@ -82,6 +82,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
                   c={c as any}
                   isActive={selectedId === c.id}
                   isSelected={selection.selectedIds.has(c.id)}

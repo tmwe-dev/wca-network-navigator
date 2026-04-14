@@ -118,6 +118,7 @@ export function NetworkFiltersSection() {
                     </div>
                     {Array.isArray(p.partner_contacts) && p.partner_contacts.length > 0 && (
                       <div className="mt-1 ml-6 space-y-0.5">
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
                         {p.partner_contacts.slice(0, 3).map((c: any) => (
                           <div key={String(c.id)} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <Users className="w-2.5 h-2.5 shrink-0" />

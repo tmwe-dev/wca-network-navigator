@@ -204,6 +204,7 @@ export function CockpitContactCard({
                 )}
 
                 {hasEnrichmentData ? (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
                   <ContactEnrichmentCard enrichmentData={(contact.enrichmentData ?? null) as any} deepSearchAt={contact.deepSearchAt || null} />
                 ) : !hasLiveLinkedin ? (
                   <div className="text-center py-3 space-y-2">

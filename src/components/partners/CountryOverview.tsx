@@ -71,8 +71,11 @@ export function CountryOverview({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape
   const hasWhatsApp = (p: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
     (p.partner_contacts || []).some((c: any) => c.mobile);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
   const hasEmail = (p: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
     (p.partner_contacts || []).some((c: any) => c.email);
 
   const countryGroups = useMemo(() => {

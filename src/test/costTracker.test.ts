@@ -30,6 +30,7 @@ describe("costTracker", () => {
     expect(() => checkBudget()).toThrow();
     try { checkBudget(); } catch (e) {
       expect(isApiError(e)).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
       expect((e as any).code).toBe("RATE_LIMITED");
     }
   });

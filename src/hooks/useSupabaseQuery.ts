@@ -32,6 +32,7 @@ export function useSupabaseQuery<T extends TableName, TResult>(
       const base = supabase.from(table).select(select);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const query = options?.filters ? options.filters(base) : base;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
       const { data, error } = await (query as any);
       if (error) throw error;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required

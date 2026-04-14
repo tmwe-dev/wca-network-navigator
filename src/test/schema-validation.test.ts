@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
  */
 
 // Replicate the validation schema inline (since Zod runs in browser)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
 function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   

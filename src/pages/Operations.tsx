@@ -79,12 +79,14 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
       {globalStats && (
         <span className="hidden md:flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
           <Users className="w-3 h-3" />
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
           <span className="font-mono">{(globalStats as any).totalPartners}</span> partner
         </span>
       )}
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {((deepSearch as any).running || (deepSearch as any).results?.length > 0) && !(deepSearch as any).canvasOpen && (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
         <button onClick={() => (deepSearch as any).setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
           <Eye className="w-3.5 h-3.5" />
         </button>
@@ -164,6 +166,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
     const _WCA = (window as any).__WCA_COUNTRIES;
     return activeCountryCodes.map(code => {
       const found = WCA_COUNTRIES.find((c) => c.code === code);

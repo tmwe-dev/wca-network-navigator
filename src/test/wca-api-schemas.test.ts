@@ -25,6 +25,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
         custom_extra_field_2030: "futuro",
       });
       expect(r.success).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
       expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" });
     });
 
@@ -120,6 +121,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   });
 
   describe("safeParse* — best-effort, no throw", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     let warnSpy: any;
 
     beforeEach(() => {

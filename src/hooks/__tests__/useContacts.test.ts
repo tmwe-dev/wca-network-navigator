@@ -32,6 +32,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("useContacts", () => {
   it("fetches contacts with default filters", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findContacts).mockResolvedValue({ items: [{ id: "c1" }], totalCount: 1, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -39,12 +40,14 @@ describe("useContacts", () => {
   });
 
   it("passes filters to findContacts", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     renderHook(() => useContacts({ country: "IT" }), { wrapper });
     await waitFor(() => expect(findContacts).toHaveBeenCalledWith({ country: "IT" }));
   });
 
   it("returns empty array when no contacts match", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result } = renderHook(() => useContacts({ search: "xyz" }), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -58,12 +61,14 @@ describe("useContacts", () => {
   });
 
   it("exposes loading state", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findContacts).mockReturnValue(new Promise(() => {}) as any);
     const { result } = renderHook(() => useContacts(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("re-fetches when filters change", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
     const { result, rerender } = renderHook(
       ({ f }) => useContacts(f),
@@ -77,6 +82,7 @@ describe("useContacts", () => {
 
 describe("useContactFilterOptions", () => {
   it("fetches filter options", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(getContactFilterOptions).mockResolvedValue({ countries: ["IT", "DE"] } as any);
     const { result } = renderHook(() => useContactFilterOptions(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

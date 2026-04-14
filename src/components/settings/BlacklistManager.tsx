@@ -22,6 +22,7 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
   if (file.name.endsWith(".csv")) {
     const text = new TextDecoder().decode(buffer);
     const blob = new Blob([text], { type: "text/csv" });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
     const stream = blob.stream() as any;
     await workbook.csv.read(stream);
   } else {

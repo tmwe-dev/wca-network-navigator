@@ -48,6 +48,7 @@ describe("groupByCountry", () => {
   });
 
   it("ritorna array vuoto su input vuoto", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]);
   });
 });

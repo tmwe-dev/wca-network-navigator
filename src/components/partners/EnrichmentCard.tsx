@@ -100,6 +100,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
                   {companyProfile.awards.map((a: Record<string, unknown>, i: number) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column
                     const label = typeof a === "string" ? a : String((a as any)?.name || (a as any)?.recipient || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">

@@ -82,6 +82,7 @@ describe("lazyRetry", () => {
     const Lazy = lazyRetry(factory);
     expect(Lazy).toBeDefined();
     // React.lazy restituisce un object con $$typeof
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     expect((Lazy as any).$$typeof).toBeDefined();
   });
 
@@ -90,6 +91,7 @@ describe("lazyRetry", () => {
     const factory = vi.fn().mockResolvedValue({ default: Comp });
     const Lazy = lazyRetry(factory);
     // Force resolve via internal _payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     const payload = (Lazy as any)._payload;
     if (payload && typeof payload._result === "function") {
       try { await payload._result(); } catch { /* ignore */ }
@@ -108,9 +110,11 @@ describe("lazyRetry", () => {
     });
     const Lazy = lazyRetry(factory, 10);
     // Trigger underlying load via React.lazy payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
     const payload = (Lazy as any)._payload;
     // payload._result is the original promise factory wrapper
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
       await (payload._result as any)();
     } catch { /* ignore */ }
     // Wait a tick + retry delay

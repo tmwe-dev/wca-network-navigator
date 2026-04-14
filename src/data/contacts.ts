@@ -265,6 +265,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
       .select(select)
       .in("id", batch);
     if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
     if (data) results.push(...(data as any));
   }
   return results;
