@@ -64,7 +64,7 @@ const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
 const Guida = lazyRetry(() => import("./pages/Guida"));
 const AILab = lazyRetry(() => import("./pages/AILab"));
 const MissionBuilder = lazyRetry(() => import("./pages/MissionBuilder"));
-const Telemetry = lazyRetry(() => import("./pages/Telemetry"));
+const Telemetry = lazyRetry(() => import("./pages/telemetry"));
 const StaffDirezionale = lazyRetry(() => import("./pages/StaffDirezionale"));
 const AIArena = lazyRetry(() => import("./pages/AIArena").then(m => ({ default: m.AIArenaPage })));
 const AIControlCenterPage = lazyRetry(() => import("./v2/ui/pages/AIControlCenterPage").then(m => ({ default: m.AIControlCenterPage })));
