@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/telemetry/. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * TelemetryPage V2 — Admin-only page for telemetry metrics and logs.
  */

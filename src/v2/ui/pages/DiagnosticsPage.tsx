@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Diagnostics.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * DiagnosticsPage V2 — Admin-only page for diagnostics and connection tests.
  */

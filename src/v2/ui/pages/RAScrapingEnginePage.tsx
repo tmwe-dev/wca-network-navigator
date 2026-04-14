@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/RAScrapingEngine.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * RAScrapingEnginePage V2 — Thin wrapper mounting V1 RAScrapingEngine
  * RA Scraping Engine

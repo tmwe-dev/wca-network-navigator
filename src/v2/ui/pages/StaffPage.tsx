@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/StaffDirezionale.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * StaffPage V2 — Thin wrapper mounting V1 StaffDirezionale
  * Staff Direzionale con briefing AI

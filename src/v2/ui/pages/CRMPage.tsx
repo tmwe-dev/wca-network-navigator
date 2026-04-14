@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/CRM.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * CRMPage V2 — Thin wrapper mounting V1 CRM
  * CRM contatti con drawer, filtri, azioni

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Sorting.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * SortingPage V2 — Thin wrapper mounting V1 Sorting
  * Sorting regole ordinamento

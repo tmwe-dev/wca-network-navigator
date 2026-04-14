@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/StaffDirezionale.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * KnowledgeBasePage V2 — Thin wrapper mounting V1 StaffDirezionale
  * Knowledge Base gestione KB

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/Onboarding.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * OnboardingPage V2 — Thin wrapper mounting V1 Onboarding
  */

@@ -1,3 +1,4 @@
+// TODO(v2-migration): wrapper temporaneo di src/pages/CampaignJobs.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
  * CampaignJobsPage V2 — Thin wrapper mounting V1 CampaignJobs
  * Campaign Jobs queue
