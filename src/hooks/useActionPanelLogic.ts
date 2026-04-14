@@ -49,7 +49,7 @@ export function useActionPanelLogic({
       if (countryCodes.length === 0) return [];
       try {
         return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ title: "Errore directory cache", description: e.message, variant: "destructive" });
         return [];
       }
@@ -84,9 +84,9 @@ export function useActionPanelLogic({
   });
 
   // ── Derived ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
     const members = entry.members as any[];
-    return (members || []).map((m: any) => ({
+    return (members || []).map((m) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
     }));
@@ -151,7 +151,7 @@ export function useActionPanelLogic({
       document.addEventListener("visibilitychange", handler);
     });
 
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e) => e.country_code));
 
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;

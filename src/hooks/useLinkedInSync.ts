@@ -86,7 +86,7 @@ export function useLinkedInSync() {
       }
       window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
       setLastSyncAt(Date.now());
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn("sync error", { message: err instanceof Error ? err.message : String(err) });
       toast.error(`Errore sync: ${err.message}`);
     } finally {

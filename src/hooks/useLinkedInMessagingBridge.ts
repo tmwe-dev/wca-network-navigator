@@ -60,7 +60,7 @@ function sendToLinkedInExt(action: string, data: Record<string, unknown> = {}, t
 }
 
 // ── FireScrape bridge (for reading pages) ──
-function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any> {
+function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<unknown> {
   return new Promise((resolve) => {
     const requestId = `fs_li_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {

@@ -71,7 +71,7 @@ export async function saveExtractionResult(
   if (result.success && result.contacts?.length > 0) {
     const existingContacts = await findPartnerContacts(partnerId, "id, name, email");
     const existingByName = new Map(
-      (existingContacts || []).map((c: any) => [c.name?.trim().toLowerCase(), c])
+      (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
     const toInsert: any[] = [];
@@ -103,17 +103,17 @@ export async function saveExtractionResult(
       await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts.filter((c) => c.email).length;
+    extractedPhoneCount = result.contacts.filter((c) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
   if (result.profile?.networks?.length > 0) {
     const existingNets = await findPartnerNetworks(partnerId);
-    const existingSet = new Set((existingNets || []).map((n: any) => n.network_name?.toLowerCase()));
+    const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
     const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
+      .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
     await insertPartnerNetworks(toInsert);
   }
 
@@ -149,7 +149,7 @@ export async function saveExtractionResult(
     )];
     if (mapped.length > 0) {
       const existingSvc = await findPartnerServices(partnerId);
-      const existingSet = new Set((existingSvc || []).map((s: any) => s.service_category as string));
+      const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
         service_category: s as any,
@@ -174,7 +174,7 @@ export async function saveExtractionResult(
     )];
     if (mapped.length > 0) {
       const existingCerts = await findPartnerCertifications(partnerId);
-      const existingSet = new Set((existingCerts || []).map((c: any) => c.certification as string));
+      const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
         certification: c as any,

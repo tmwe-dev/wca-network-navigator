@@ -57,7 +57,7 @@ export function AIGeneratedActivitiesPanel() {
   const { data: activities, isLoading } = useQuery({
     queryKey: ['ai-generated-activities'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('activities')
         .select('id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta')
         .eq('status', 'pending')
@@ -72,7 +72,7 @@ export function AIGeneratedActivitiesPanel() {
 
   const approveMutation = useMutation({
     mutationFn: async (activityId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('activities')
         .update({ status: 'in_progress' })
         .eq('id', activityId);
@@ -87,7 +87,7 @@ export function AIGeneratedActivitiesPanel() {
 
   const rejectMutation = useMutation({
     mutationFn: async (activityId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('activities')
         .update({ status: 'cancelled' })
         .eq('id', activityId);
@@ -102,7 +102,7 @@ export function AIGeneratedActivitiesPanel() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, description }: { id: string; description: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('activities')
         .update({ description })
         .eq('id', id);

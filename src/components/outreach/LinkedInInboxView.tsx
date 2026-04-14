@@ -133,7 +133,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
         return;
       }
       toast.success("Inviato ✓");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message);
       setReplyText(text);
     } finally {

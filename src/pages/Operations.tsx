@@ -28,7 +28,7 @@ function useDirectoryTotal() {
     queryFn: async () => {
       const data = await rpcGetDirectoryCounts();
       const result: Record<string, { count: number; verified: boolean }> = {};
-      (data || []).forEach((r: any) => {
+      (data || []).forEach((r) => {
         result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
       });
       return result;
@@ -163,9 +163,9 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
-    const _WCA = (window as any).__WCA_COUNTRIES;
+    const _WCA = (window as Record<string, unknown>).__WCA_COUNTRIES;
     return activeCountryCodes.map(code => {
-      const found = WCA_COUNTRIES.find((c: any) => c.code === code);
+      const found = WCA_COUNTRIES.find((c) => c.code === code);
       return found?.name || code;
     });
   }, [activeCountryCodes]);
@@ -186,7 +186,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
     setAliasGenerating(true);
     const toastId = toast.loading("Generazione alias in corso...");
     try {
-      const data = await invokeEdge<any>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
+      const data = await invokeEdge<Record<string, unknown>>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
       if (data?.success) {
         toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
         queryClient.invalidateQueries({ queryKey: ["partners"] });
@@ -194,7 +194,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
       } else {
         toast.error(data?.error || "Errore generazione alias", { id: toastId });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore", { id: toastId });
     } finally {
       setAliasGenerating(false);
@@ -296,7 +296,7 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
 
 /* ── Stat Pill — tri-state color by value ── */
 function StatPill({ icon: Icon, value, label, isDark: _isDark, onClick, active, variant = "info" }: {
-  icon: any; value: number; label: string; isDark: boolean;
+  icon: React.ElementType; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
   variant?: "info" | "warn" | "ok";
 }) {

@@ -427,7 +427,7 @@ export async function getPartnerWebsite(id: string) {
 }
 
 export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
-  const { error } = await (supabase as any).from(table).update({ lead_status: status }).eq("id", id);
+  const { error } = await supabase.from(table).update({ lead_status: status }).eq("id", id);
   if (error) throw error;
 }
 

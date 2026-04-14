@@ -103,7 +103,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   const loadVoices = async () => {
     setLoadingVoices(true);
     try {
-      const data = await invokeEdge<any>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
+      const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
       setApiStatus(data.status || "error");
       if (data.voices?.length > 0) setVoices(data.voices);
     } catch (e) {

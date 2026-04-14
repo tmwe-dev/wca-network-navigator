@@ -62,8 +62,8 @@ export function useContactCompleteness() {
 /** Check if a single partner has personal contacts */
 export function getPartnerContactQuality(partnerContacts: any[] | undefined): "complete" | "partial" | "missing" {
   if (!partnerContacts || partnerContacts.length === 0) return "missing";
-  const hasEmail = partnerContacts.some((c: any) => !!c.email);
-  const hasPhone = partnerContacts.some((c: any) => !!c.direct_phone || !!c.mobile);
+  const hasEmail = partnerContacts.some((c) => !!c.email);
+  const hasPhone = partnerContacts.some((c) => !!c.direct_phone || !!c.mobile);
   if (hasEmail && hasPhone) return "complete";
   if (hasEmail || hasPhone) return "partial";
   return "missing";

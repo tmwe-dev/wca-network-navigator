@@ -29,7 +29,7 @@ export function useOperativeJobs() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      return findWorkPlans(user.id, [TAG]) as Promise<any> as Promise<OperativeJob[]>;
+      return findWorkPlans(user.id, [TAG]) as Promise<unknown> as Promise<OperativeJob[]>;
     },
   });
 
@@ -42,7 +42,7 @@ export function useOperativeJobs() {
         title: input.title, description: input.description,
         steps: JSON.parse(JSON.stringify(steps)), metadata: JSON.parse("{}"),
         tags: [TAG], status: "running", user_id: user.id,
-      }) as Promise<any> as Promise<OperativeJob>;
+      }) as Promise<unknown> as Promise<OperativeJob>;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
     onError: (e: any) => toast.error(e.message || "Errore creazione job"),
@@ -85,14 +85,14 @@ Istruzioni: ${job.description || "Nessuna istruzione specifica"}
 Canali: ${(job.steps?.channels || []).join(", ") || "tutti"}
 Scadenza: ${job.steps?.deadline || "non specificata"}`;
 
-      const res = await invokeEdge<any>("agent-execute", {
+      const res = await invokeEdge<Record<string, unknown>>("agent-execute", {
         body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
         context: "useOperativeJobs.generatePrompt",
       });
 
       const prompt = res?.response || res?.content || "Prompt non generato";
       await updateWorkPlan(job.id, {
-        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() },
       });
       return prompt;
     },
@@ -103,7 +103,7 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
   const savePrompt = useMutation({
     mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
       await updateWorkPlan(id, {
-        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() },
       });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },

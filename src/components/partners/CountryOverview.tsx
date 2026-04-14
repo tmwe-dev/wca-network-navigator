@@ -68,13 +68,13 @@ export function CountryOverview({
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
   const hasWhatsApp = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.mobile);
+    (p.partner_contacts || []).some((c) => c.mobile);
   const hasEmail = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.email);
+    (p.partner_contacts || []).some((c) => c.email);
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
-    (partners || []).forEach((p: any) => {
+    (partners || []).forEach((p) => {
       if (!map.has(p.country_code)) {
         map.set(p.country_code, {
           code: p.country_code,
@@ -138,7 +138,7 @@ export function CountryOverview({
   const visiblePartnerIds = useMemo(() => {
     const ids: string[] = [];
     filteredGroups.forEach((g) => {
-      g.partners.forEach((p: any) => {
+      g.partners.forEach((p) => {
         if (contactFilter === "whatsapp" && !hasWhatsApp(p)) return;
         if (contactFilter === "email" && !hasEmail(p)) return;
         ids.push(p.id);
@@ -151,7 +151,7 @@ export function CountryOverview({
 
   const totalPartners = partners?.length || 0;
   const totalWithContacts = useMemo(
-    () => (partners || []).filter((p: any) => {
+    () => (partners || []).filter((p) => {
       const q = getPartnerContactQuality(p.partner_contacts);
       return q === "complete" || q === "partial";
     }).length,
@@ -272,7 +272,7 @@ export function CountryOverview({
             const completePct = group.total > 0 ? Math.round((group.withContacts / group.total) * 100) : 0;
 
             // Filter partners within group by contactFilter
-            const visiblePartners = group.partners.filter((p: any) => {
+            const visiblePartners = group.partners.filter((p) => {
               if (contactFilter === "whatsapp") return hasWhatsApp(p);
               if (contactFilter === "email") return hasEmail(p);
               return true;
@@ -331,8 +331,8 @@ export function CountryOverview({
                 <CollapsibleContent>
                   <div className="bg-muted/30 divide-y divide-border/50">
                     {visiblePartners
-                      .sort((a: any, b: any) => a.company_name.localeCompare(b.company_name))
-                      .map((partner: any) => {
+                      .sort((a, b) => a.company_name.localeCompare(b.company_name))
+                      .map((partner) => {
                         const q = getPartnerContactQuality(partner.partner_contacts);
                         const contactCount = (partner.partner_contacts || []).length;
                         const pHasWhatsApp = hasWhatsApp(partner);

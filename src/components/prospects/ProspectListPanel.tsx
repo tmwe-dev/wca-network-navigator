@@ -138,7 +138,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
       toast.success(`${activities.length} attività create nel Workspace`);
       setSelectedIds(new Set());
       navigate("/workspace");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message);
     } finally { setSending(false); }
   }, [selectedIds, filtered, navigate]);
@@ -303,7 +303,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
     queryKey: ["prospect-contacts", prospect.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospect_contacts" as any)
+        .from("prospect_contacts")
         .select("*")
         .eq("prospect_id", prospect.id);
       if (error) throw error;
@@ -391,7 +391,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
       {/* Contatti Personali (Management) */}
       {contacts.length > 0 && (
         <Section title={`Management (${contacts.length})`}>
-          {contacts.map((c: any) => (
+          {contacts.map((c) => (
             <div key={c.id} className={`p-2.5 rounded-lg border bg-card/40 border-border`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />

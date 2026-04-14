@@ -44,7 +44,7 @@ export function useWorkspaceDocuments() {
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
       return doc;
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       return null;
     } finally {

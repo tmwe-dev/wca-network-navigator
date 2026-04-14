@@ -22,7 +22,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           .eq("partner_id", partnerId)
           .order("interaction_date", { ascending: false })
           .limit(20);
-        return (data || []).map((i: any) => ({
+        return (data || []).map((i) => ({
           id: i.id,
           contact_id: partnerId,
           interaction_type: i.interaction_type,
@@ -49,7 +49,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           .eq("prospect_id", sourceId)
           .order("created_at", { ascending: false })
           .limit(20);
-        return (data || []).map((i: any) => ({
+        return (data || []).map((i) => ({
           id: i.id,
           contact_id: sourceId,
           interaction_type: i.interaction_type,
@@ -106,7 +106,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
       {activities && activities.length > 0 && (
         <div className="space-y-2 mt-3">
           <div className="text-[11px] font-medium text-muted-foreground">Attività programmate</div>
-          {activities.map((a: any) => (
+          {activities.map((a) => (
             <div key={a.id} className="flex items-center gap-2 text-xs bg-muted/30 rounded-lg p-2">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                 a.status === "completed" ? "bg-success" :

@@ -335,7 +335,7 @@ export default function ContentManager() {
       }
       toast.success(`${files.length} documento/i caricato/i`);
       qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
-    } catch (err: any) { toast.error("Errore upload: " + err.message); }
+    } catch (err: unknown) { toast.error("Errore upload: " + err.message); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
@@ -411,7 +411,7 @@ export default function ContentManager() {
           {documents.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">Nessun documento caricato</p>
           ) : (
-            documents.map((d: any) => (
+            documents.map((d) => (
               <Card key={d.id}>
                 <CardContent className="py-2 px-3 flex items-center gap-3">
                   <File className="w-5 h-5 text-muted-foreground shrink-0" />

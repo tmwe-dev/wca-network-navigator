@@ -92,7 +92,7 @@ export function useProcessImport() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (importLogId: string) => {
-      return invokeEdge<any>("process-ai-import", { body: { import_log_id: importLogId }, context: "useProcessImport" });
+      return invokeEdge<Record<string, unknown>>("process-ai-import", { body: { import_log_id: importLogId }, context: "useProcessImport" });
     },
     onSuccess: (_, importLogId) => {
       queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });

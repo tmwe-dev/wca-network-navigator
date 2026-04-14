@@ -50,7 +50,7 @@ export function AIAutomationDashboard() {
   const { data: rules = [], isLoading, refetch } = useQuery({
     queryKey: ['ai-automation-rules'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('email_address_rules')
         .select('id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at')
         .order('created_at', { ascending: false });
@@ -61,7 +61,7 @@ export function AIAutomationDashboard() {
 
   const fetchExecutionLogs = async (emailAddress: string) => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('ai_decision_log')
         .select('id, decision_type, ai_reasoning, confidence, was_auto_executed, user_review, created_at')
         .eq('email_address', emailAddress)
@@ -94,7 +94,7 @@ export function AIAutomationDashboard() {
 
   const handleToggleActive = async (ruleId: string, currentState: boolean) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('email_address_rules')
         .update({ is_active: !currentState })
         .eq('id', ruleId);

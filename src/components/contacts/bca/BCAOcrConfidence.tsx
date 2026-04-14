@@ -61,7 +61,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
         [editing]: editValue || null,
         manually_corrected: true,
         correction_notes: JSON.stringify(notes),
-      } as any);
+      });
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {

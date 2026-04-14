@@ -70,7 +70,7 @@ export function NetworkFilterSlot() {
   );
 }
 
-function FilterSection({ icon: Icon, label, children }: { icon: any; label: string; children: React.ReactNode }) {
+function FilterSection({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1">

@@ -100,7 +100,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               const { scrapeWcaDirectory } = await import("@/lib/api/wcaScraper");
               const scanResult = await scrapeWcaDirectory(job.country_code, job.network_name || "");
               if (scanResult?.success && scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
+                const membersJson = scanResult.members.map((m) => ({
                   company_name: m.company_name,
                   city: m.city,
                   country_code: job.country_code,

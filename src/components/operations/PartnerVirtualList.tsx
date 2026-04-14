@@ -52,10 +52,10 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const partner = partners[virtualRow.index] as any;
           const contacts = partner.partner_contacts || [];
-          const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+          const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;
-          const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
-          const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
+          const hasEmail = !!partner.email || contacts.some((c) => c.email);
+          const hasPhone = !!partner.phone || contacts.some((c) => c.direct_phone || c.mobile);
           const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
           const inHolding = partner.lead_status && partner.lead_status !== "new";
           const years = getYearsMember(partner.member_since);

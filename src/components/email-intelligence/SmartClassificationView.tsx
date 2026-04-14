@@ -38,7 +38,7 @@ export function SmartClassificationView() {
   const { data: classifications = [], isLoading } = useQuery({
     queryKey: ['email-classifications', selectedCategory],
     queryFn: async () => {
-      let q = (supabase as any)
+      let q = supabase
         .from('email_classifications')
         .select('*')
         .order('classified_at', { ascending: false })
@@ -54,7 +54,7 @@ export function SmartClassificationView() {
   const { data: allClassifications = [] } = useQuery({
     queryKey: ['email-classifications-counts'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('email_classifications')
         .select('category');
       if (error) throw error;

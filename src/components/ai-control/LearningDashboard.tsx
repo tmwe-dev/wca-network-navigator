@@ -24,7 +24,7 @@ export function LearningDashboard() {
     queryKey: ['learning-decisions'],
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('ai_decision_log')
         .select('decision_type, email_address, confidence, user_review, was_auto_executed')
         .gte('created_at', thirtyDaysAgo);
@@ -36,7 +36,7 @@ export function LearningDashboard() {
   const { data: recentFeedback = [] } = useQuery({
     queryKey: ['recent-feedback-decisions'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('ai_decision_log')
         .select('id, decision_type, ai_reasoning, confidence, user_review, user_correction, email_address, created_at')
         .not('user_review', 'is', null)
@@ -210,7 +210,7 @@ export function LearningDashboard() {
           <ScrollArea className="h-[300px]">
             {recentFeedback.length > 0 ? (
               <div className="space-y-3">
-                {recentFeedback.map((fb: any) => (
+                {recentFeedback.map((fb) => (
                   <div key={fb.id} className="p-3 border rounded-lg space-y-2">
                     <div className="flex items-center justify-between">
                       <Badge

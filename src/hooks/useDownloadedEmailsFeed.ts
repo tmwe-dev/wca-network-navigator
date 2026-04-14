@@ -57,7 +57,7 @@ export function useDownloadedEmailsFeed() {
           filter: "channel=eq.email",
         },
         (payload) => {
-          const row = payload.new as any;
+          const row = payload.new as Record<string, unknown>;
           const newEmail = mapRowToDownloadedEmail({
             id: row.id,
             subject: row.subject,

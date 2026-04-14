@@ -141,7 +141,7 @@ function InfoField({ label, value, mono }: { label: string; value: string; mono?
   );
 }
 
-function ContactRow({ icon: Icon, label, value, iconColor }: { icon: any; label: string; value: string; iconColor?: string }) {
+function ContactRow({ icon: Icon, label, value, iconColor }: { icon: React.ElementType; label: string; value: string; iconColor?: string }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 border border-border backdrop-blur-sm hover:border-foreground/20 transition-colors">
       <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || "text-muted-foreground"}`} />

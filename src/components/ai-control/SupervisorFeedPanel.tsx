@@ -77,7 +77,7 @@ export function SupervisorFeedPanel(): React.ReactElement {
   const { data: kpis } = useQuery({
     queryKey: ["supervisor-kpis", todayStart],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("supervisor_audit_log")
         .select("decision_origin", { count: "exact" })
         .gte("created_at", todayStart);
@@ -97,7 +97,7 @@ export function SupervisorFeedPanel(): React.ReactElement {
   const { data: feed, isLoading } = useQuery({
     queryKey: ["supervisor-feed", actorFilter, originFilter, search, page],
     queryFn: async () => {
-      let q = (supabase as any)
+      let q = supabase
         .from("supervisor_audit_log")
         .select("*")
         .order("created_at", { ascending: false })

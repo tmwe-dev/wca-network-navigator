@@ -248,7 +248,7 @@ export function useWhatsAppAdaptiveSync() {
         }
         window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "whatsapp" } }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn("sidebar_scan.failed", { error: err instanceof Error ? err.message : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
@@ -280,7 +280,7 @@ export function useWhatsAppAdaptiveSync() {
         queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
         scheduleDeescalation();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn("thread_scan.failed", { error: err instanceof Error ? err.message : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));

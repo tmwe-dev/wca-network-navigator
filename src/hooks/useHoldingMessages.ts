@@ -42,8 +42,8 @@ export function useHoldingMessages(channel: HoldingChannel) {
           .in("lead_status", HOLDING_STATUSES),
       ]);
 
-      const partnerMap = new Map((holdingPartners || []).map((p: any) => [p.id, p]));
-      const partnerIds = (holdingPartners || []).map((p: any) => p.id);
+      const partnerMap = new Map((holdingPartners || []).map((p) => [p.id, p]));
+      const partnerIds = (holdingPartners || []).map((p) => p.id);
 
       const holdingContacts = holdingContactsRes.data || [];
       const contactEmails = holdingContacts
@@ -170,7 +170,7 @@ export function useHoldingUnreadCounts() {
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 
       const partners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id");
-      const partnerIds = (partners || []).map((p: any) => p.id);
+      const partnerIds = (partners || []).map((p) => p.id);
 
       const { data: holdingContacts } = await supabase
         .from("imported_contacts")

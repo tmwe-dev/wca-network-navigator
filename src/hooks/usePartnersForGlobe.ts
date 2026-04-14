@@ -157,12 +157,12 @@ export function useBusinessCardsForCampaign(countryCode: string | null) {
       if (error) throw error;
 
       return (data ?? [])
-        .filter((bc: any) => {
+        .filter((bc) => {
           if (bc.partner?.country_code === countryCode) return true;
           if (bc.location?.toUpperCase().includes(countryCode)) return true;
           return false;
         })
-        .map((bc: any) => ({
+        .map((bc) => ({
           id: bc.matched_partner_id || bc.id,
           company_name: bc.partner?.company_name || bc.company_name || "N/A",
           city: bc.partner?.city || bc.location || "",
@@ -195,7 +195,7 @@ export function useBcaCountryCounts() {
       if (error) throw error;
 
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((row: any) => {
+      (data ?? []).forEach((row) => {
         const countryCode = row.partner?.country_code;
         if (countryCode) counts[countryCode] = (counts[countryCode] || 0) + 1;
       });

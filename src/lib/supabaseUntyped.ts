@@ -1,6 +1,6 @@
 /**
  * Typed escape hatch for Supabase tables not yet in the generated types.
- * Use `untypedFrom(tableName)` instead of `(supabase as any).from(tableName)`.
+ * Use `untypedFrom(tableName)` instead of `supabase.from(tableName)`.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,5 +11,5 @@ import { supabase } from "@/integrations/supabase/client";
  
 export function untypedFrom(table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (supabase as any).from(table);
+  return supabase.from(table);
 }

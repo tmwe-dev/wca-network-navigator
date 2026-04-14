@@ -59,7 +59,7 @@ export function OperativeBriefing({
             task_type: "briefing_action",
             description: action.prompt,
             status: "pending",
-          } as any)
+          })
           .select("id")
           .single();
         if (taskErr) throw taskErr;
@@ -73,7 +73,7 @@ export function OperativeBriefing({
       }
 
       setCompletedIdx(prev => new Set(prev).add(idx));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Errore nell'esecuzione");
       onAction(action);
     } finally {

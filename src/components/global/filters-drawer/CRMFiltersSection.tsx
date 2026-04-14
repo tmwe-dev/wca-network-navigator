@@ -41,7 +41,7 @@ export function CRMFiltersSection() {
         }
         const countryCounts: Record<string, number> = {};
         const originCounts: Record<string, number> = {};
-        allRows.forEach((r: any) => {
+        allRows.forEach((r) => {
           const raw = (r.country || "").trim();
           if (raw) countryCounts[raw] = (countryCounts[raw] || 0) + 1;
           const o = (r.origin || "").trim();
@@ -51,7 +51,7 @@ export function CRMFiltersSection() {
           Object.entries(countryCounts)
             .map(([value, total]) => {
               const resolved = resolveCountryCode(value);
-              const wcaCountry = resolved ? WCA_COUNTRIES.find((c: any) => c.code === resolved) : null;
+              const wcaCountry = resolved ? WCA_COUNTRIES.find((c) => c.code === resolved) : null;
               return { value, name: wcaCountry?.name || value, flag: resolved ? getCountryFlag(resolved) : "", total };
             })
             .sort((a, b) => b.total - a.total)
@@ -182,7 +182,7 @@ export function CRMFiltersSection() {
                 <div className="px-2.5 py-1.5 bg-muted/30">
                   <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
                 </div>
-                {searchResults.map((c: any) => {
+                {searchResults.map((c) => {
                   const resolvedCountry = resolveCountryCode(c.country || "");
                   return (
                     <button

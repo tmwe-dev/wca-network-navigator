@@ -165,7 +165,7 @@ export function useWhatsAppBackfill() {
 
         // If we have a last known message and got messages, check if we need deeper scroll
         if (chat.lastDbText && messages.length > 0) {
-          const foundAnchor = messages.some((m: any) => {
+          const foundAnchor = messages.some((m) => {
             const t = String(m.text || m.lastMessage || "").trim().toLowerCase();
             return t === chat.lastDbText!.trim().toLowerCase();
           });
@@ -234,7 +234,7 @@ export function useWhatsAppBackfill() {
 
       setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
       toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: err.message }));
       toast.error(`Errore recupero: ${err.message}`);
     } finally {

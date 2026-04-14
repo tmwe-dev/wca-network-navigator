@@ -191,7 +191,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Networks */}
         {partner.partner_networks?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_networks.slice(0, 3).map((n: any) => (
+            {partner.partner_networks.slice(0, 3).map((n) => (
               <Tooltip key={n.id || n.network_name}>
                 <TooltipTrigger>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium truncate max-w-[100px] inline-block">
@@ -212,7 +212,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Primary contact info */}
         {(() => {
           const contacts = partner.partner_contacts || [];
-          const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+          const primary = contacts.find((c) => c.is_primary) || contacts[0];
           if (!primary) return (
             <div className="mt-3 pt-2 border-t">
               <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>

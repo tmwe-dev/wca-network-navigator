@@ -24,10 +24,10 @@ interface BufferState {
 }
 
 function getBuffer(): BufferState {
-  if (!(window as any)[BUFFER_KEY]) {
-    (window as any)[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
+  if (!(window as Record<string, unknown>)[BUFFER_KEY]) {
+    (window as Record<string, unknown>)[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
   }
-  return (window as any)[BUFFER_KEY];
+  return (window as Record<string, unknown>)[BUFFER_KEY];
 }
 
 /**

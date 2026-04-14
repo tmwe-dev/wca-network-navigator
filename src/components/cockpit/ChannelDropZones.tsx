@@ -4,7 +4,7 @@ import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search, AlertTrian
 import { cn } from "@/lib/utils";
 import type { DraftChannel } from "@/pages/Cockpit";
 
-const channels: { id: DraftChannel; label: string; icon: any; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
+const channels: { id: DraftChannel; label: string; icon: React.ElementType; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
   { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary", requiredField: "email" },
   { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]", requiredField: "linkedinUrl" },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]", requiredField: "phone" },

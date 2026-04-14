@@ -60,7 +60,7 @@ export default function AgentChatHub() {
     forceRender((n) => n + 1);
 
     try {
-      const data = await invokeEdge<any>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
+      const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
       const reply: Message = { role: "assistant", content: data?.response || "Nessuna risposta" };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
     } catch (e) {

@@ -46,7 +46,7 @@ export function useAcquisitionPipelineActions(
         ));
       }
       state.setPipelineStatus("idle");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
       state.setPipelineStatus("idle");
     }

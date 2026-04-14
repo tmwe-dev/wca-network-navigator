@@ -45,7 +45,7 @@ function useRecentContacts() {
         .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
         .order("created_at", { ascending: false })
         .limit(100);
-      return (data || []).map((pc: any) => ({
+      return (data || []).map((pc) => ({
         id: pc.id,
         name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
         company: pc.partners?.company_name || "—",
