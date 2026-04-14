@@ -179,30 +179,34 @@ export function useDeepSearchLocal() {
   const searchContact = useCallback(async (contactId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
     const { getContactsByIds } = await import("@/data/contacts");
-    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data") as unknown[];
+    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data") as Record<string, unknown>[];
     const contact = contacts[0] || null;
     const cErr = !contact ? "not found" : null;
     if (cErr || !contact) return { ...failResult, error: "Contact not found" };
 
-    const companyName = (contact.company_name || "Unknown") as string;
-    const location = `${contact.city || ""} ${contact.country || ""}`.trim();
+    const s = (k: string) => String(contact[k] || "");
+    const companyName = s("company_name") || "Unknown";
+    const location = `${s("city")} ${s("country")}`.trim();
     let partnerId: string | null = null;
-    if (contact.company_name) {
-      const partner = await findPartnerByName(contact.company_name as string);
+    if (s("company_name")) {
+      const partner = await findPartnerByName(s("company_name"));
       partnerId = partner?.id || null;
     }
     let socialLinksFound = 0;
     const contactProfiles: Record<string, Record<string, string>> = {};
 
-    if (contact.name && (contact.name as string).length >= 3) {
-      const domainKw = extractDomainKeyword(contact.email as string | null | undefined);
-      const lastName = getLastName(contact.name as string);
+    const contactName = s("name");
+    const contactEmail = s("email") || null;
+    const contactPosition = s("position");
+    if (contactName && contactName.length >= 3) {
+      const domainKw = extractDomainKeyword(contactEmail);
+      const lastName = getLastName(contactName);
       const cascadeQueries = [
-        `"${contact.name}" "${companyName}" site:linkedin.com/in`,
-        ...(domainKw ? [`"${contact.name}" "${domainKw}" site:linkedin.com/in`] : []),
-        `"${contact.name}" site:linkedin.com/in`,
+        `"${contactName}" "${companyName}" site:linkedin.com/in`,
+        ...(domainKw ? [`"${contactName}" "${domainKw}" site:linkedin.com/in`] : []),
+        `"${contactName}" site:linkedin.com/in`,
         ...(domainKw ? [`"${lastName}" "${domainKw}" site:linkedin.com/in`] : []),
-        `${contact.name} LinkedIn`,
+        `${contactName} LinkedIn`,
       ];
       let results: GoogleSearchResult[] = [];
       for (const q of cascadeQueries) {
@@ -213,14 +217,14 @@ export function useDeepSearchLocal() {
       if (results.length > 0) {
         const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
         const answer = await aiCall(
-          `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.position ? ` Title: "${contact.position}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
+          `Find the PERSONAL LinkedIn profile of "${contactName}" at "${companyName}" in ${location}.${contactPosition ? ` Title: "${contactPosition}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
         );
         if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
           const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
           if (m) {
             socialLinksFound++;
             const sr = extractSeniority(results[0]?.title);
-            if (sr) contactProfiles[contactId] = { name: contact.name as string, title: (contact.position || "") as string, ...sr };
+            if (sr) contactProfiles[contactId] = { name: contactName, title: contactPosition, ...sr };
             if (partnerId) {
               await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
             }
@@ -230,7 +234,7 @@ export function useDeepSearchLocal() {
       await delay(800);
     }
 
-    const waNumber = (contact.mobile || contact.phone) as string | null;
+    const waNumber = s("mobile") || s("phone") || null;
     if (waNumber) {
       const cleaned = toWhatsAppNumber(waNumber);
       if (cleaned.length >= 8) {
@@ -252,8 +256,8 @@ export function useDeepSearchLocal() {
     }
 
     let websiteUrl: string | null = null;
-    if (contact.email && !/(gmail|yahoo|hotmail|outlook|libero|alice|tin\.it)/i.test(contact.email as string)) {
-      const domain = (contact.email as string).split("@")[1];
+    if (contactEmail && !/(gmail|yahoo|hotmail|outlook|libero|alice|tin\.it)/i.test(contactEmail)) {
+      const domain = contactEmail.split("@")[1];
       if (domain) websiteUrl = `https://${domain}`;
     }
     let logoFound = false;
@@ -269,7 +273,7 @@ export function useDeepSearchLocal() {
       }
     }
 
-    const existing = (contact.enrichment_data as Record<string, unknown>) || {};
+    const existing = (contact["enrichment_data"] as Record<string, unknown>) || {};
     const updated = {
       ...existing,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),

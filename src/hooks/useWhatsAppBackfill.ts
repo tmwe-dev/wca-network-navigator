@@ -96,7 +96,7 @@ export function useWhatsAppBackfill() {
 
       // Get unique contacts from sidebar
       const sidebarContacts = new Map<string, any>();
-      for (const msg of sidebarResult.messages as unknown[]) {
+      for (const msg of sidebarResult.messages as Record<string, unknown>[]) {
         const contact = String(msg.contact || msg.from || "").trim();
         if (!contact || contact === "Sconosciuto" || msg.isVerify) continue;
         if (!sidebarContacts.has(contact.toLowerCase())) {
@@ -160,7 +160,7 @@ export function useWhatsAppBackfill() {
         // Try readThread first (reads visible messages in chat)
         const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
         if (threadResult.success && threadResult.messages?.length) {
-          messages = threadResult.messages as unknown[];
+          messages = threadResult.messages as Record<string, unknown>[];
         }
 
         // If we have a last known message and got messages, check if we need deeper scroll
@@ -175,7 +175,7 @@ export function useWhatsAppBackfill() {
             const backfillResult = await bridge.backfillChat(chat.name, chat.lastDbText, MAX_SCROLLS_PER_CHAT);
             if (backfillResult.success && backfillResult.messages?.length) {
               // Merge, dedup will handle overlaps
-              messages = [...messages, ...(backfillResult.messages as unknown[])];
+              messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
             }
           }
         }

@@ -80,12 +80,13 @@ export function useAcquisitionResume(setters: ResumeSetters) {
             if (cacheEntries) {
               for (const entry of cacheEntries) {
                 const members = (entry.members as unknown[]) || [];
-                for (const m of members) {
+              for (const raw of members) {
+                  const m = raw as Record<string, unknown>;
                   if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing.find(q => q.wca_id === m.wca_id);
+                  const qi = stillMissing.find(q => q.wca_id === (m.wca_id as number));
                   if (qi) {
-                    qi.company_name = m.company_name;
-                    if (m.city) qi.city = m.city;
+                    qi.company_name = String(m.company_name);
+                    if (m.city) qi.city = String(m.city);
                   }
                 }
               }

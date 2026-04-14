@@ -33,13 +33,13 @@ export function useWorkspaceDocuments() {
           file_name: file.name,
           file_url: urlData?.signedUrl || path,
           file_size: file.size,
-        }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+        }) as unknown as Record<string, unknown> | null;
 
       const doc: WorkspaceDoc = {
-        id: data?.id ?? "",
-        file_name: data?.file_name ?? file.name,
-        file_url: data?.file_url ?? path,
-        file_size: data?.file_size ?? file.size,
+        id: String(data?.id ?? ""),
+        file_name: String(data?.file_name ?? file.name),
+        file_url: String(data?.file_url ?? path),
+        file_size: Number(data?.file_size ?? file.size),
       };
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
