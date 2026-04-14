@@ -12,7 +12,7 @@ function ts() {
 }
 
 /** Send a raw postMessage to the WCA extension and wait for response */
-function sendToExtension(action: string, payload: Record<string, any> = {}, timeoutMs = 90000): Promise<unknown> {
+function sendToExtension(action: string, payload: Record<string, any> = {}, timeoutMs = 90000): Promise<any> {
   return new Promise((resolve) => {
     const requestId = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const timer = setTimeout(() => {
