@@ -57,10 +57,21 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["**/src/pages/**", "../../pages/*", "../../../pages/*", "@/pages/*"],
+              group: ["@/pages/*", "@/pages/**"],
               message: "V2 pages should not import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
             },
           ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.type='Import'][arguments.0.value=/^\\/pages\\//]",
+          message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
+        },
+        {
+          selector: "CallExpression[callee.type='Import'][arguments.0.value=/^@\\/pages\\//]",
+          message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
         },
       ],
     },
