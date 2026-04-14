@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { User, Globe } from "lucide-react";
+import { User, Globe, Phone, Mail, Briefcase } from "lucide-react";
 
 const LANGUAGES = [
   { code: "it", label: "🇮🇹 Italiano" },
@@ -16,15 +16,37 @@ const LANGUAGES = [
   { code: "zh", label: "🇨🇳 中文" },
 ];
 
-interface StepProfileProps {
+const ROLES = [
+  "Sales Manager",
+  "Account Manager",
+  "Business Development",
+  "Operations Manager",
+  "General Manager",
+  "Director",
+  "CEO",
+  "Altro",
+];
+
+export interface ProfileData {
   displayName: string;
+  email: string;
+  phone: string;
   language: string;
-  onDisplayNameChange: (v: string) => void;
-  onLanguageChange: (v: string) => void;
+  role: string;
+}
+
+interface StepProfileProps {
+  data: ProfileData;
+  onChange: (data: ProfileData) => void;
   onNext: () => void;
 }
 
-export function StepProfile({ displayName, language, onDisplayNameChange, onLanguageChange, onNext }: StepProfileProps) {
+export function StepProfile({ data, onChange, onNext }: StepProfileProps) {
+  const update = (field: keyof ProfileData, value: string) =>
+    onChange({ ...data, [field]: value });
+
+  const canContinue = data.displayName.trim() && data.email.trim();
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -37,35 +59,79 @@ export function StepProfile({ displayName, language, onDisplayNameChange, onLang
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
-          <Label className="text-sm font-medium">Nome visualizzato</Label>
+          <Label className="text-sm font-medium">Nome visualizzato *</Label>
           <Input
-            value={displayName}
-            onChange={e => onDisplayNameChange(e.target.value)}
-            placeholder="Il tuo nome"
+            value={data.displayName}
+            onChange={e => update("displayName", e.target.value)}
+            placeholder="Mario Rossi"
             className="mt-1"
           />
         </div>
 
         <div>
           <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Globe className="w-4 h-4" /> Lingua preferita
+            <Mail className="w-3.5 h-3.5" /> Email aziendale *
           </Label>
-          <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="mt-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map(l => (
-                <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            type="email"
+            value={data.email}
+            onChange={e => update("email", e.target.value)}
+            placeholder="mario@transportmgmt.com"
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Phone className="w-3.5 h-3.5" /> Telefono / WhatsApp
+          </Label>
+          <Input
+            type="tel"
+            value={data.phone}
+            onChange={e => update("phone", e.target.value)}
+            placeholder="+39 333 1234567"
+            className="mt-1"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Lingua
+            </Label>
+            <Select value={data.language} onValueChange={v => update("language", v)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map(l => (
+                  <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Briefcase className="w-3.5 h-3.5" /> Ruolo
+            </Label>
+            <Select value={data.role} onValueChange={v => update("role", v)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Seleziona..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map(r => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <Button onClick={onNext} className="w-full" disabled={!displayName.trim()}>
+      <Button onClick={onNext} className="w-full" disabled={!canContinue}>
         Continua
       </Button>
     </div>

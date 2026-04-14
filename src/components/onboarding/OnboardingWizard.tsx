@@ -1,26 +1,42 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StepProfile } from "./StepProfile";
-import { StepWCA } from "./StepWCA";
-import { StepAI } from "./StepAI";
-import { StepImport } from "./StepImport";
+import { StepProfile, type ProfileData } from "./StepProfile";
+import { StepCompany, type CompanyData } from "./StepCompany";
+import { StepPreferences, type PreferencesData } from "./StepPreferences";
+import { StepSummary } from "./StepSummary";
 import { cn } from "@/lib/utils";
 
 interface OnboardingWizardProps {
   onComplete: () => void;
 }
 
-const STEP_LABELS = ["Profilo", "Network", "AI", "Contatti"];
+const STEP_LABELS = ["Profilo", "Azienda", "AI", "Riepilogo"];
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
-  const [displayName, setDisplayName] = useState("");
-  const [language, setLanguage] = useState("it");
-  const [wcaUsername, setWcaUsername] = useState("");
-  const [wcaPassword, setWcaPassword] = useState("");
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const [profile, setProfile] = useState<ProfileData>({
+    displayName: "",
+    email: "",
+    phone: "",
+    language: "it",
+    role: "",
+  });
+
+  const [company, setCompany] = useState<CompanyData>({
+    companyName: "Transport Management",
+    networks: [],
+    signatureText: "",
+    signatureImageUrl: null,
+  });
+
+  const [preferences, setPreferences] = useState<PreferencesData>({
+    tone: "professionale",
+    objectives: "",
+    focusAreas: "",
+  });
 
   const next = () => setStep(s => Math.min(s + 1, 3));
   const back = () => setStep(s => Math.max(s - 1, 0));
@@ -34,35 +50,32 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     );
   };
 
-  const handleProfileNext = async () => {
-    await saveSetting("display_name", displayName);
-    await saveSetting("preferred_language", language);
-    next();
-  };
-
   const handleFinish = async () => {
     setSaving(true);
     try {
-      for (const [provider, key] of Object.entries(apiKeys)) {
-        if (key.trim()) await saveSetting(`ai_key_${provider}`, key.trim());
-      }
+      // Profile
+      await saveSetting("display_name", profile.displayName);
+      await saveSetting("preferred_language", profile.language);
+      await saveSetting("user_email", profile.email);
+      await saveSetting("user_phone", profile.phone);
+      await saveSetting("user_role", profile.role);
+
+      // Company
+      await saveSetting("ai_company_name", company.companyName);
+      await saveSetting("wca_networks", JSON.stringify(company.networks));
+      if (company.signatureText) await saveSetting("ai_email_signature", company.signatureText);
+      if (company.signatureImageUrl) await saveSetting("signature_image_data", company.signatureImageUrl);
+
+      // Preferences
+      await saveSetting("ai_tone", preferences.tone);
+      if (preferences.objectives) await saveSetting("ai_custom_goals", preferences.objectives);
+      if (preferences.focusAreas) await saveSetting("ai_focus_areas", preferences.focusAreas);
+
       await saveSetting("onboarding_completed", "true");
       toast.success("Configurazione completata!");
       onComplete();
     } catch {
       toast.error("Errore nel salvataggio");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSkipToEnd = async () => {
-    setSaving(true);
-    try {
-      await saveSetting("onboarding_completed", "true");
-      onComplete();
-    } catch {
-      toast.error("Errore");
     } finally {
       setSaving(false);
     }
@@ -93,39 +106,23 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         </div>
 
         {/* Steps */}
-        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-lg">
+        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-lg max-h-[80vh] overflow-y-auto">
           {step === 0 && (
-            <StepProfile
-              displayName={displayName}
-              language={language}
-              onDisplayNameChange={setDisplayName}
-              onLanguageChange={setLanguage}
-              onNext={handleProfileNext}
-            />
+            <StepProfile data={profile} onChange={setProfile} onNext={next} />
           )}
           {step === 1 && (
-            <StepWCA
-              wcaUsername={wcaUsername}
-              wcaPassword={wcaPassword}
-              onUsernameChange={setWcaUsername}
-              onPasswordChange={setWcaPassword}
-              onNext={next}
-              onSkip={next}
-            />
+            <StepCompany data={company} onChange={setCompany} onNext={next} onBack={back} />
           )}
           {step === 2 && (
-            <StepAI
-              apiKeys={apiKeys}
-              onApiKeyChange={(p, k) => setApiKeys(prev => ({ ...prev, [p]: k }))}
-              onFinish={next}
-              onSkip={next}
-              loading={saving}
-            />
+            <StepPreferences data={preferences} onChange={setPreferences} onNext={next} onBack={back} />
           )}
           {step === 3 && (
-            <StepImport
+            <StepSummary
+              profile={profile}
+              company={company}
+              preferences={preferences}
               onFinish={handleFinish}
-              onSkip={handleSkipToEnd}
+              onBack={back}
               loading={saving}
             />
           )}
