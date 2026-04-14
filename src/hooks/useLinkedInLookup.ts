@@ -210,7 +210,7 @@ export function useLinkedInLookup() {
       }
 
       const c = toProcess[i];
-      const searchName = c.name || c.company_name || "";
+      const searchName = String(c.name || c.company_name || "");
       if (!searchName.trim()) { notFound++; continue; }
 
       setProgress(p => ({ ...p, current: i + 1, currentName: searchName, currentMethod: "Google Search" }));
@@ -243,7 +243,8 @@ export function useLinkedInLookup() {
       }
 
       // Save result
-      const existing = (c.enrichment_data as Record<string, any>) || {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic enrichment data
+      const existing = (c.enrichment_data as any) || {};
       const updated = {
         ...existing,
         linkedin_lookup_at: new Date().toISOString(),
@@ -255,7 +256,7 @@ export function useLinkedInLookup() {
       await updateEnrich(c.id, updated);
 
       if (foundUrl) found++; else notFound++;
-      setProgress(p => ({ ...p, found, notFound, currentMethod: undefined }));
+      setProgress(p => ({ ...p, found, notFound, currentMethod: undefined as string | undefined }));
 
       await ensureMinDuration(opStart);
       if (i < toProcess.length - 1 && !abortRef.current) {
