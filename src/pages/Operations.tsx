@@ -41,8 +41,8 @@ function useDirectoryTotal() {
 function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
   networkView: "partners" | "bca";
   setNetworkView: (v: "partners" | "bca") => void;
-  globalStats: { totalPartners: number; [k: string]: unknown } | null;
-  deepSearch: { running: boolean; results: unknown[]; canvasOpen: boolean; setCanvasOpen: (v: boolean) => void; [k: string]: unknown };
+  globalStats: { totalPartners: number } & Record<string, unknown> | null;
+  deepSearch: DeepSearchState;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {
