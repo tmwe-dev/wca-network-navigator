@@ -19,7 +19,7 @@ const STATUS_OPTIONS = [
 
 interface Props {
   record: UnifiedRecord;
-  onSave: (updates: Record<string, any>) => void;
+  onSave: (updates: Record<string, unknown>) => void;
   isSaving: boolean;
 }
 
@@ -78,7 +78,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
   const cancelEdit = () => { setEditing(false); setDraft({}); };
 
   const handleSave = () => {
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     if (record.sourceType === "partner") {
       if (draft.company_name !== record.companyName) updates.company_name = draft.company_name;
       if (draft.email !== (record.email || "")) updates.email = draft.email || null;
@@ -109,7 +109,8 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
     setEditing(false);
   };
 
-  const val = (key: string) => editing ? (draft[key] || "") : ((record as any)[key === "contact_name" ? "contactName" : key === "company_name" ? "companyName" : key === "lead_status" ? "leadStatus" : key] || ""); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase insert type mismatch
+  const fieldMap: Record<string, keyof UnifiedRecord> = { contact_name: "contactName", company_name: "companyName", lead_status: "leadStatus" };
+  const val = (key: string) => editing ? (draft[key] || "") : (String(record[fieldMap[key] ?? key as keyof UnifiedRecord] ?? ""));
 
   return (
     <div className="space-y-3">
@@ -133,7 +134,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
       {/* Status + Holding Pattern */}
       <div className="flex items-center gap-2">
-        <HoldingPatternIndicator status={record.leadStatus as any} /> // eslint-disable-line @typescript-eslint/no-explicit-any -- Union type narrowing for component props
+        <HoldingPatternIndicator status={record.leadStatus as "new" | "contacted" | "in_progress" | "negotiation" | "converted" | "lost"} />
         {editing ? (
           <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
             <SelectTrigger className="h-7 w-36 text-xs">

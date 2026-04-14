@@ -38,7 +38,7 @@ interface Props {
   onDragEnd: () => void;
 }
 
-const channelIcon: Record<string, any> = {
+const channelIcon: Record<string, React.ComponentType<{ className?: string }>> = {
   email: Mail, linkedin: Linkedin, whatsapp: MessageCircle, sms: Smartphone,
 };
 

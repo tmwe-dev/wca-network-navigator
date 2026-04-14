@@ -21,8 +21,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- icon component map
-const ACTIVITY_ICONS: Record<string, any> = {
+const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   send_email: Mail,
   email: Mail,
   phone_call: Phone,

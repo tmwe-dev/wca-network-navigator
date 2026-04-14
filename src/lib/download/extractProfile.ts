@@ -10,17 +10,16 @@ export interface ExtractionResult {
   errorCode?: string | null;
   companyName: string | null;
   contacts: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
-  profile: Record<string, any>;
+  profile: Record<string, unknown>;
   profileHtml: string | null;
   htmlLength: number;
   error?: string | null;
-  debug?: Record<string, any>;
+  debug?: Record<string, unknown>;
 }
 
 export function normalizeExtensionResult(raw: unknown): ExtractionResult {
   if (!raw) return { success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", companyName: null, contacts: [], profile: {}, profileHtml: null, htmlLength: 0, error: "No response" };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const r = raw as any;
+  const r = raw as Record<string, unknown>;
   return {
     success: r.success ?? false,
     wcaId: r.wcaId,

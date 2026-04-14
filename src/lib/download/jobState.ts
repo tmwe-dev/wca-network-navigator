@@ -24,10 +24,10 @@ export async function updateItem(
   extra?: { errorCode?: string; errorMessage?: string; contactsFound?: number; contactsMissing?: number },
 ): Promise<void> {
   const current = await getJobItemById(itemId, "attempt_count");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const newAttempt = (((current as any)?.attempt_count) || 0) + 1;
+  const currentObj = current as Record<string, unknown> | null;
+  const newAttempt = ((Number(currentObj?.attempt_count) || 0)) + 1;
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     status,
     attempt_count: newAttempt,
   };
@@ -62,7 +62,7 @@ export async function snapshotProgress(jobId: string, lastWcaId?: number, lastCo
   const contactsFound = items.reduce((s, i) => s + (i.contacts_found || 0), 0);
   const contactsMissing = items.reduce((s, i) => s + (i.contacts_missing || 0), 0);
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     current_index: finalized.length,
     contacts_found_count: contactsFound,
     contacts_missing_count: contactsMissing,
@@ -136,7 +136,7 @@ export async function recoverOrphanJobs(): Promise<string[]> {
 
 /** Emit an event to the append-only log. */
 export async function emitEvent(
-  jobId: string, itemId: string | null, eventType: string, payload: Record<string, any>,
+  jobId: string, itemId: string | null, eventType: string, payload: Record<string, unknown>,
 ): Promise<void> {
   await insertJobEvent({
     job_id: jobId,

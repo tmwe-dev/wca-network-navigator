@@ -73,7 +73,7 @@ export function ManageActivityDialog({
     if (!activity) return;
     setSaving(true);
     try {
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         status,
         priority,
         description: description || null,

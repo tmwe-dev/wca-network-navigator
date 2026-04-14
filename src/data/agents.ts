@@ -30,13 +30,13 @@ export async function findAgents(userId: string): Promise<Agent[]> {
   return (data ?? []) as Agent[];
 }
 
-export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<any[]> {
+export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase
     .from("agents")
     .select(fields)
     .eq("is_active", true);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Array<Record<string, unknown>>;
 }
 
 export async function getAgentById(id: string): Promise<Agent | null> {
@@ -83,10 +83,10 @@ export async function countActiveAgents() {
   return count ?? 0;
 }
 
-export async function findAgentsByUser(userId: string, select = "id, name, role, avatar_emoji, is_active, stats") {
+export async function findAgentsByUser(userId: string, select = "id, name, role, avatar_emoji, is_active, stats"): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase.from("agents").select(select).eq("user_id", userId);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Array<Record<string, unknown>>;
 }
 
 export async function findAgentByUserAndName(userId: string, name: string) {

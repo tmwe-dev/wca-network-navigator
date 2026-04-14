@@ -63,7 +63,7 @@ export async function getDownloadJob(id: string): Promise<DownloadJob | null> {
   return data as DownloadJob | null;
 }
 
-export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10): Promise<any[]> {
+export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase
     .from("download_jobs")
     .select(select)
@@ -163,7 +163,7 @@ export async function deleteJobsByStatus(statuses: string[]): Promise<number> {
 
 // ── Job Items ──
 
-export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<any[]> {
+export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
