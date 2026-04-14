@@ -78,7 +78,7 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) return;
       const data = await findActiveWorkPlans(session.user.id);
-      setActivePlans((data || []) as Array<{ id: string; title: string; status: string; steps: Array<Record<string, unknown>>; current_step: number; tags: string[] }>);
+      setActivePlans((data || []) as unknown as Array<{ id: string; title: string; status: string; steps: Array<Record<string, unknown>>; current_step: number; tags: string[] }>);
     })();
   }, [open, messages.length]);
 

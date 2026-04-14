@@ -46,7 +46,7 @@ export function BCACreateContact({ card }: Props) {
     setSearching(true);
     try {
       const data = await searchPartnersByNameAlias(form.company_name.trim(), "id, company_name, country_code, city");
-      setPartnerResults((data ?? []) as Array<{ id: string; company_name: string; country_code?: string; city?: string }>);
+      setPartnerResults((data ?? []) as unknown as Array<{ id: string; company_name: string; country_code?: string; city?: string }>);
     } catch { /* ignore */ }
     finally { setSearching(false); }
   }, [form.company_name]);

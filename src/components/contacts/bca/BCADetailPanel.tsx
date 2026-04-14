@@ -32,7 +32,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
     setSearching(true); setSearched(true);
     try {
       const data = await searchPartnersByNameAlias(searchTerm.trim(), "id, company_name, company_alias, country_code, country_name, city");
-      setResults((data ?? []) as Array<{ id: string; company_name: string; company_alias?: string; country_code?: string; country_name?: string; city?: string }>);
+      setResults((data ?? []) as unknown as Array<{ id: string; company_name: string; company_alias?: string; country_code?: string; country_name?: string; city?: string }>);
     } catch (e: unknown) { toast({ title: "Errore ricerca", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
     finally { setSearching(false); }
   }, [searchTerm]);
