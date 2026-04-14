@@ -1,14 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function seedTestData() {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   const testUser = {
-    email: "test@wca-navigator.test",
-    password: "test-password-123",
   };
 
   await supabase.from("partners").insert([
@@ -58,6 +60,8 @@ export async function seedTestData() {
 }
 
 export async function cleanupTestData() {
+  const supabase = getSupabase();
+  if (!supabase) return;
   await supabase.from("agents").delete().eq("name", "Test Agent");
   await supabase.from("imported_contacts").delete().eq("email", "mario@test.com");
   await supabase.from("imported_contacts").delete().eq("email", "hans@test.de");
