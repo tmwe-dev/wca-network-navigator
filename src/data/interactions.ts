@@ -2,8 +2,11 @@
  * DAL — interactions (partner interactions)
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function createInteraction(interaction: Record<string, unknown>) {
-  const { error } = await supabase.from("interactions").insert(interaction as any);
+type InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
+
+export async function createInteraction(interaction: InteractionInsert) {
+  const { error } = await supabase.from("interactions").insert(interaction);
   if (error) throw error;
 }

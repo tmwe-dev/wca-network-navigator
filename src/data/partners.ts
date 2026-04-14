@@ -6,6 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
+import type { Database } from "@/integrations/supabase/types";
+
+type PartnerRow = Database["public"]["Tables"]["partners"]["Row"];
+type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
 
 // ─── Types ──────────────────────────────────────────────
 export interface Partner {
@@ -96,13 +100,18 @@ const PARTNER_DETAIL_SELECT = `
 `;
 
 // ─── Helpers ────────────────────────────────────────────
+
+interface SupabaseQueryResult<T> {
+  data: T[] | null;
+  error: { message: string } | null;
+}
+
 /** Fetch all rows by iterating with .range() in blocks of 1000 */
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => unknown): Promise<T[]> {
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => Promise<SupabaseQueryResult<T>>): Promise<T[]> {
   const all: T[] = [];
   let offset = 0;
   while (true) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic query builder return type
-    const { data, error } = await (buildQuery(offset, offset + PAGE_SIZE - 1) as any);
+    const { data, error } = await buildQuery(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
     all.push(...data);
@@ -126,11 +135,11 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
     }
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type mismatch
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type requires cast
     if (filters?.partnerTypes?.length) query = query.in("partner_type", filters.partnerTypes as any);
     if (filters?.favorites) query = query.eq("is_favorite", true);
 
-    return query.order("company_name").range(from, to);
+    return query.order("company_name").range(from, to) as unknown as Promise<SupabaseQueryResult<PartnerWithRelations>>;
   });
 }
 
@@ -141,7 +150,7 @@ export async function findPartnersByCountry(countryCode: string): Promise<Partne
       .select(`*, partner_services (service_category), partner_certifications (certification)`)
       .eq("country_code", countryCode)
       .order("company_name")
-      .range(from, to)
+      .range(from, to) as unknown as Promise<SupabaseQueryResult<PartnerWithRelations>>
   );
 }
 
@@ -155,7 +164,7 @@ export async function getPartner(id: string) {
   return data;
 }
 
-export async function updatePartner(id: string, updates: Record<string, unknown>) {
+export async function updatePartner(id: string, updates: Partial<PartnerRow>) {
   const { error } = await supabase
     .from("partners")
     .update(updates)
@@ -177,7 +186,7 @@ export async function getPartnerStats() {
       supabase
         .from("partners")
         .select("id, country_code, country_name, partner_type, member_since")
-        .range(from, to)
+        .range(from, to) as unknown as Promise<SupabaseQueryResult<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }>>
   );
 
   const totalPartners = partners.length;
@@ -287,7 +296,6 @@ export async function countPartnersWithoutCountry() {
 
 /** Get partners by IDs (batched) */
 export async function getPartnersByIds(ids: string[], select = "id, company_name, email, website") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
@@ -296,7 +304,7 @@ export async function getPartnersByIds(ids: string[], select = "id, company_name
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(data as any));
+    if (data) results.push(...(data as unknown as Array<Record<string, unknown>>));
   }
   return results;
 }
@@ -322,11 +330,10 @@ export async function deletePartnersByIds(ids: string[]) {
 }
 
 /** Insert a new partner and return it */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function createPartner(partner: unknown) {
+export async function createPartner(partner: PartnerInsert) {
   const { data, error } = await supabase
     .from("partners")
-    .insert(partner as any)
+    .insert(partner)
     .select()
     .single();
   if (error) throw error;
@@ -347,7 +354,7 @@ export async function getPartnersByIdsFiltered(ids: string[], select: string, fi
     }
     const { data, error } = await q;
     if (error) throw error;
-    if (data) results.push(...(data as any));
+    if (data) results.push(...(data as unknown as Array<Record<string, unknown>>));
   }
   return results;
 }
@@ -366,7 +373,7 @@ export async function searchPartnersByNameAlias(term: string, select: string, li
   return data ?? [];
 }
 
-/** Get partner WCA IDs by countries with optional profile filter */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic select string, caller must cast
 export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<any[]> {
   let q = supabase.from("partners").select(select).in("country_code", countryCodes).not("wca_id", "is", null);
   if (options?.noProfile) q = q.is("raw_profile_html", null);
@@ -391,7 +398,7 @@ export async function deletePartnersWithRelations(ids: string[]) {
   }
 }
 
-/** Get partners by lead status */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic select string, caller must cast
 export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<any[]> {
   const { data, error } = await supabase
     .from("partners")
@@ -415,7 +422,7 @@ export async function findPartnerByEmail(email: string) {
 export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
   let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type mismatch
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase enum filter type requires cast
   if (filters.type) q = q.eq("partner_type", filters.type as any);
   if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
   const { data, error } = await q.limit(limit);

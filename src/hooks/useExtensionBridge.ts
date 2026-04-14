@@ -2,10 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
  * V5: Extension bridge with improved reliability.
- * - Content script handles ping locally (fast)
- * - Heartbeat-based availability detection
- * - Serial queue for extractions
- * - Returns BridgeResult with bridgeHealthy flag
  */
 
 export type ExtractionResult = {
@@ -32,28 +28,29 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- global singleton lock
-  const w = window as any;
-  if (!w[LOCK_KEY]) w[LOCK_KEY] = { busy: false, queue: [] };
-  return w[LOCK_KEY];
+
+interface LockState {
+  busy: boolean;
+  queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- bridge generic
+function getLock(): LockState {
+  const w = window as Window & { [LOCK_KEY]?: LockState };
+  if (!w[LOCK_KEY]) w[LOCK_KEY] = { busy: false, queue: [] };
+  return w[LOCK_KEY]!;
+}
+
 async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
   const lock = getLock();
   return new Promise<T>((resolve) => {
     const run = async () => {
       lock.busy = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown as T); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Function signature variance in lock queue
-    else lock.queue.push({ resolve: resolve as any, fn: run as any });
+    else lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run as () => Promise<unknown> });
   });
 }
 
@@ -95,12 +92,10 @@ export function useExtensionBridge() {
   }, []);
 
   const checkAvailable = useCallback(async (): Promise<boolean> => {
-    // Quick check: if heartbeat was recent, we're good
     if (Date.now() - lastHeartbeatRef.current < 15000) {
       setIsAvailable(true);
       return true;
     }
-    // Ping with retries
     for (let i = 0; i < 3; i++) {
       const r = await sendMessage("ping", {}, 3000);
       if (r.success) { setIsAvailable(true); lastHeartbeatRef.current = Date.now(); return true; }
@@ -113,12 +108,10 @@ export function useExtensionBridge() {
     return serialExtract(async () => {
       const raw = await sendMessage("extractContacts", { wcaId }, 60000);
 
-      // Bridge-level failure
       if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT" || raw.errorCode === "EXT_CONTEXT_INVALIDATED") {
         return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
       }
 
-      // Bridge worked, return extraction result
       return {
         bridgeHealthy: true,
         extraction: {

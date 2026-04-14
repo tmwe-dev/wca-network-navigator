@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Database } from "@/integrations/supabase/types";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
 import {
@@ -51,7 +52,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
   const hasPhone = !!(contact.mobile || contact.direct_phone);
 
   const createActivity = async (
-    activityType: string,
+    activityType: Database["public"]["Enums"]["activity_type"],
     status: "completed" | "pending",
     extra: { due_date?: string; description?: string; completed_at?: string } = {}
   ) => {

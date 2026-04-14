@@ -165,8 +165,8 @@ export async function deleteActivities(ids: string[]) {
   if (error) throw error;
 }
 
-export async function insertActivity(activity: Record<string, unknown>) {
-  const { error } = await supabase.from("activities").insert(activity as any);
+export async function insertActivity(activity: ActivityInsert) {
+  const { error } = await supabase.from("activities").insert(activity);
   if (error) throw error;
 }
 
@@ -177,7 +177,7 @@ export async function countActivitiesWithNullPartner() {
 }
 
 export async function approveActivity(id: string) {
-  const { error } = await supabase.from("activities").update({ status: "approved" as any, reviewed: true }).eq("id", id);
+  const { error } = await supabase.from("activities").update({ status: "approved" as Database["public"]["Enums"]["activity_status"], reviewed: true }).eq("id", id);
   if (error) throw error;
 }
 
