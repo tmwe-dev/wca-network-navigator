@@ -105,10 +105,11 @@ export type SortOption =
 export function getBranchCountries(partner: PartnerLike): { code: string; name: string }[] {
   if (!partner.branch_cities || !Array.isArray(partner.branch_cities)) return [];
   const map = new Map<string, string>();
-  partner.branch_cities.forEach((b) => {
-    const code = b?.country_code || b?.country;
-    if (code && code !== partner.country_code) {
-      map.set(code, b?.country_name || code);
+  partner.branch_cities.forEach((b: unknown) => {
+    const item = b as Record<string, unknown> | null;
+    const code = item?.country_code || item?.country;
+    if (typeof code === "string" && code !== partner.country_code) {
+      map.set(code, typeof item?.country_name === "string" ? item.country_name : code);
     }
   });
   return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
