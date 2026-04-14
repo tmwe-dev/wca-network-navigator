@@ -8,6 +8,7 @@ import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { insertOutreachMission } from "@/data/outreachMissions";
+import type { Json } from "@/integrations/supabase/types";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 const log = createLogger("MissionBuilder");
