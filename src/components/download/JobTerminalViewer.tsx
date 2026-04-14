@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import {
 import { queryKeys } from "@/lib/queryKeys";
+import {
   Terminal, Building2, Mail, Phone, FileText,
   CheckCircle, XCircle, AlertTriangle, SkipForward, Zap, Clock,
 } from "lucide-react";

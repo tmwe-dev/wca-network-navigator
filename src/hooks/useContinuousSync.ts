@@ -3,8 +3,8 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
 import { queryKeys } from "@/lib/queryKeys";
+import {
   bgSyncSubscribe, bgSyncStart, bgSyncStop, bgSyncIsRunning, bgSyncReset,
   type BgSyncProgress,
 } from "@/lib/backgroundSync";

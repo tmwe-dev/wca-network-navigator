@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import {
 import { queryKeys } from "@/lib/queryKeys";
+import {
   findDownloadJobs, updateDownloadJob, deleteJobsByStatus, findJobByCountryAndNetwork,
   insertJobItems, insertJobEvent, findDeadPartnerIds, createDownloadJob,
   invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
