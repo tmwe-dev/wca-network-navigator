@@ -196,3 +196,131 @@ export default function TimingSettings() {
     </div>
   );
 }
+
+// ── WhatsApp Stealth Section ──
+
+interface StealthProps {
+  getValue: (key: string, def: string | number) => string;
+  handleChange: (key: string, val: string) => void;
+}
+
+function WhatsAppStealthSection({ getValue, handleChange }: StealthProps) {
+  const intervalSec = Number(getValue("wa_scan_interval_sec", "120"));
+  const jitterPct = Number(getValue("wa_scan_jitter_pct", "25"));
+  const longPausePct = Number(getValue("wa_scan_long_pause_pct", "10"));
+  const quickCheckPct = Number(getValue("wa_scan_quick_check_pct", "5"));
+  const normalPct = 100 - longPausePct - quickCheckPct;
+  const workStart = getValue("wa_scan_work_start_hour", "7");
+  const workEnd = getValue("wa_scan_work_end_hour", "22");
+  const enabled = getValue("wa_scan_enabled", "true") === "true";
+
+  // Estimate next delay for live preview
+  const estimatedCfg: SoftTimerConfig = useMemo(() => ({
+    baseIntervalSec: intervalSec,
+    jitterPct,
+    longPauseChancePct: longPausePct,
+    longPauseMinMult: 1.8,
+    longPauseMaxMult: 3.5,
+    quickCheckChancePct: quickCheckPct,
+    quickCheckMinMult: 0.5,
+    quickCheckMaxMult: 0.8,
+    antiRepeatToleranceMs: 1500,
+  }), [intervalSec, jitterPct, longPausePct, quickCheckPct]);
+
+  const sampleDelay = useMemo(() => nextDelayMs(estimatedCfg), [estimatedCfg]);
+  const estMin = Math.floor(sampleDelay.delayMs / 60000);
+  const estSec = Math.round((sampleDelay.delayMs % 60000) / 1000);
+
+  const sliders: { key: string; label: string; min: number; max: number; unit: string }[] = [
+    { key: "wa_scan_interval_sec", label: "Intervallo base", min: 60, max: 600, unit: "sec" },
+    { key: "wa_scan_top_chats", label: "Chat da scansionare", min: 3, max: 20, unit: "chat" },
+    { key: "wa_scan_max_deep_reads", label: "Max letture deep", min: 1, max: 10, unit: "chat" },
+    { key: "wa_scan_stagger_sec", label: "Stagger tra deep reads", min: 5, max: 60, unit: "sec" },
+    { key: "wa_scan_jitter_pct", label: "Jitter", min: 0, max: 50, unit: "%" },
+    { key: "wa_scan_long_pause_pct", label: "Prob. pausa lunga", min: 0, max: 30, unit: "%" },
+    { key: "wa_scan_quick_check_pct", label: "Prob. check rapido", min: 0, max: 20, unit: "%" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Shield className="w-4 h-4 text-primary" />
+        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">WhatsApp — Lettura Stealth</h4>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Modalità stealth: intervalli variabili e pause notturne per simulare un pattern umano. Nessun ritmo regolare. Valori alti = più sicuro, più latenza.
+      </p>
+
+      {/* Enable switch */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+        <Label className="text-xs font-medium">Scansione stealth attiva</Label>
+        <Switch
+          checked={enabled}
+          onCheckedChange={(v) => handleChange("wa_scan_enabled", v ? "true" : "false")}
+        />
+      </div>
+
+      {/* Sliders */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sliders.map(s => {
+          const val = Number(getValue(s.key, WA_STEALTH_KEYS.find(k => k.key === s.key)?.defaultValue || "0"));
+          return (
+            <div key={s.key} className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs font-medium">{s.label}</Label>
+                <span className="text-xs font-mono text-muted-foreground">{val} {s.unit}</span>
+              </div>
+              <Slider
+                min={s.min}
+                max={s.max}
+                step={1}
+                value={[val]}
+                onValueChange={([v]) => handleChange(s.key, String(v))}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Work hours */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
+          <Label className="text-xs font-medium">Inizio lavoro (CET)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={23}
+            value={workStart}
+            onChange={e => handleChange("wa_scan_work_start_hour", e.target.value)}
+            className="h-7 text-xs"
+          />
+        </div>
+        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
+          <Label className="text-xs font-medium">Fine lavoro (CET)</Label>
+          <Input
+            type="number"
+            min={1}
+            max={24}
+            value={workEnd}
+            onChange={e => handleChange("wa_scan_work_end_hour", e.target.value)}
+            className="h-7 text-xs"
+          />
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
+        <p className="text-xs font-medium text-primary">Anteprima distribuzione</p>
+        <p className="text-[10px] text-muted-foreground">
+          Prossima lettura stimata: tra ~{estMin}m {estSec}s ({sampleDelay.pattern})
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          Distribuzione: {normalPct}% normale, {longPausePct}% pausa lunga, {quickCheckPct}% rapida
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          Pausa notturna: dalle {workEnd}:00 alle {workStart}:00 (CET)
+        </p>
+      </div>
+    </div>
+  );
+}
