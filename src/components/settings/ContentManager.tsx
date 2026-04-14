@@ -335,7 +335,7 @@ export default function ContentManager() {
       }
       toast.success(`${files.length} documento/i caricato/i`);
       qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
-    } catch (err: unknown) { toast.error("Errore upload: " + err.message); }
+    } catch (err: unknown) { toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err))); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 

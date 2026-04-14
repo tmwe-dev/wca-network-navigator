@@ -82,7 +82,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
-                  c={c}
+                  c={c as any}
                   isActive={selectedId === c.id}
                   isSelected={selection.selectedIds.has(c.id)}
                   onSelect={() => {}}

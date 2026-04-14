@@ -58,7 +58,7 @@ function ImageUploadField({ label, value, onChange, hint }: {
       onChange(publicUrl);
       toast.success("Immagine caricata");
     } catch (err: unknown) {
-      toast.error(err.message || "Errore upload");
+      toast.error(err instanceof Error ? err.message : "Errore upload");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

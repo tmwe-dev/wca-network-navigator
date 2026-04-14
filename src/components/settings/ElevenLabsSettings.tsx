@@ -104,8 +104,8 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     setLoadingVoices(true);
     try {
       const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
-      setApiStatus(data.status || "error");
-      if (data.voices?.length > 0) setVoices(data.voices);
+      setApiStatus(String(data.status || "error") as any);
+      if (Array.isArray(data.voices) && data.voices.length > 0) setVoices(data.voices as any);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setApiStatus("error");
