@@ -14,6 +14,7 @@ import { MiniAgenda } from "./shared/MiniAgenda";
 import { StatsBar } from "./shared/StatsBar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 const TABS = [
   { key: "outreach", label: "Outreach", icon: Radar },
@@ -31,7 +32,7 @@ const FILTER_CHIPS: FilterChip[] = [
 
 function usePartnerContacts() {
   return useQuery({
-    queryKey: ["proto-partner-contacts"],
+    queryKey: queryKeys.contacts.proto.partnerContacts(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partner_contacts")

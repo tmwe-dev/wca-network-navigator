@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface AuthorizedUser {
   readonly id: string;
@@ -16,7 +17,7 @@ interface AuthorizedUser {
 
 export function useAdminUsersV2() {
   return useQuery({
-    queryKey: ["v2", "admin-users"],
+    queryKey: queryKeys.v2.authorizedUsers,
     queryFn: async (): Promise<readonly AuthorizedUser[]> => {
       const { data, error } = await supabase
         .from("authorized_users")

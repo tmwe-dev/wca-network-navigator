@@ -31,7 +31,7 @@ export function InviatiSubTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach-sent"],
+    queryKey: queryKeys.outreach.sent(),
     queryFn: findSentOutreach,
   });
 

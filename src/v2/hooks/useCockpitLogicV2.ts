@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface CockpitItem {
   readonly id: string;
@@ -15,7 +16,7 @@ interface CockpitItem {
 
 export function useCockpitLogicV2() {
   return useQuery({
-    queryKey: ["v2", "cockpit-queue"],
+    queryKey: queryKeys.v2.cockpit(),
     queryFn: async (): Promise<readonly CockpitItem[]> => {
       const { data, error } = await supabase
         .from("cockpit_queue")

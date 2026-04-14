@@ -11,6 +11,7 @@ import { useTrackPage } from "@/hooks/useTrackPage";
 import { cn } from "@/lib/utils";
 import { Loader2, Briefcase, Crown, Circle } from "lucide-react";
 import { StaffChatCanvas } from "@/components/staff/StaffChatCanvas";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface JobRow {
   id: string;
@@ -39,7 +40,7 @@ export default function StaffDirezionale() {
 
   // Jobs from ai_work_plans
   const { data: jobs } = useQuery({
-    queryKey: ["staff-jobs"],
+    queryKey: queryKeys.downloads.staffJobs(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_work_plans")

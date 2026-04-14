@@ -87,7 +87,7 @@ export function SendConfirmationGate({
 
   // Fetch address rules
   const { data: rules } = useQuery({
-    queryKey: ["send-gate-rules", payload?.recipientEmail],
+    queryKey: queryKeys.sendGate.rules,
     queryFn: async () => {
       if (!payload?.recipientEmail) return null;
       const { data } = await supabase

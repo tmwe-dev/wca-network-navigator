@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Clock, CheckCircle2, XCircle, Loader2, Send } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
 
 type QueueFilter = "all" | "pending" | "sent" | "failed";
 
@@ -15,7 +16,7 @@ export function CampagneTab() {
   const [filter, setFilter] = useState<QueueFilter>("all");
 
   const { data: campaignJobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ["campaign-jobs-outreach"],
+    queryKey: queryKeys.campaigns.jobsOutreach(),
     queryFn: async () => {
       const { data } = await supabase
         .from("campaign_jobs")
@@ -27,7 +28,7 @@ export function CampagneTab() {
   });
 
   const { data: emailQueue, isLoading: queueLoading } = useQuery({
-    queryKey: ["email-queue-outreach"],
+    queryKey: queryKeys.email.queueOutreach(),
     queryFn: async () => {
       const { data } = await supabase
         .from("email_campaign_queue")

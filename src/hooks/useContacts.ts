@@ -14,6 +14,7 @@ import {
   invalidateContactCache,
 } from "@/data/contacts";
 import type { ContactFilters, ContactInteraction, LeadStatus } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 // Re-export types for backward compat
 export type { ContactFilters, ContactInteraction, LeadStatus };
@@ -35,7 +36,7 @@ export function useContacts(filters: ContactFilters = {}) {
 
 export function useHoldingPatternContacts(filters: ContactFilters = {}) {
   return useQuery({
-    queryKey: ["holding-pattern", filters],
+    queryKey: queryKeys.contacts.holdingPattern,
     queryFn: () => findHoldingPatternContacts(filters),
   });
 }

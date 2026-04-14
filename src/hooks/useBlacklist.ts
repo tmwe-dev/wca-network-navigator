@@ -81,7 +81,7 @@ export function useBlacklistForPartner(partnerId: string | undefined) {
 
 export function useBlacklistByPartnerIds(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["blacklist-partner-ids", partnerIds.sort().join(",")],
+    queryKey: queryKeys.blacklist.partnerIds,
     enabled: partnerIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase

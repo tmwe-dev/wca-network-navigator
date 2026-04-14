@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Send, CheckCircle2, XCircle, Percent } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { queryKeys } from "@/lib/queryKeys";
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -34,7 +35,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; labe
 
 export function CampaignAnalyticsTab() {
   const { data, isLoading } = useQuery({
-    queryKey: ["campaign-analytics"],
+    queryKey: queryKeys.campaigns.analytics(),
     queryFn: async () => {
       const { data: jobs } = await supabase
         .from("campaign_jobs")

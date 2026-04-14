@@ -99,7 +99,7 @@ function AddressRulesSection() {
   });
 
   const { data: rules = [], isLoading } = useQuery({
-    queryKey: ["address-rules-tab4", search],
+    queryKey: queryKeys.email.addressRulesTab4,
     queryFn: async () => {
       let q = supabase.from("email_address_rules").select("*").order("email_count", { ascending: false });
       if (search.trim()) q = q.ilike("email_address", `%${search.trim()}%`);
@@ -254,7 +254,7 @@ function GroupRulesSection() {
   });
 
   const { data: groupCounts = {} } = useQuery({
-    queryKey: ["group-address-counts"],
+    queryKey: queryKeys.groupAddressCounts(),
     queryFn: async () => {
       const { data } = await supabase.from("email_address_rules").select("group_name");
       const counts: Record<string, number> = {};

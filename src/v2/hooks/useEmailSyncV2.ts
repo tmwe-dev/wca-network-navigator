@@ -3,6 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface EmailSyncJob {
   readonly id: string;
@@ -18,7 +19,7 @@ interface EmailSyncJob {
 
 export function useEmailSyncV2() {
   return useQuery({
-    queryKey: ["v2", "email-sync-jobs"],
+    queryKey: queryKeys.v2.emailSync(),
     queryFn: async (): Promise<readonly EmailSyncJob[]> => {
       const { data, error } = await supabase
         .from("email_sync_jobs")

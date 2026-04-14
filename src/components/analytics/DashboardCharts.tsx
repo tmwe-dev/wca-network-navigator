@@ -23,7 +23,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 function useActivityTrend() {
   return useQuery({
-    queryKey: ["dashboard-activity-trend"],
+    queryKey: queryKeys.dashboard.activityTrend(),
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
       const { data } = await supabase
@@ -81,7 +81,7 @@ function useChannelDistribution() {
 
 function useResponseByCountry() {
   return useQuery({
-    queryKey: ["dashboard-response-country"],
+    queryKey: queryKeys.dashboard.responseCountry(),
     queryFn: async () => {
       const { data } = await supabase
         .from("response_patterns")

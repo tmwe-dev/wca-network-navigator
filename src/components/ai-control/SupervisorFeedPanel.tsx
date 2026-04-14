@@ -76,7 +76,7 @@ export function SupervisorFeedPanel(): React.ReactElement {
 
   // KPI query (today)
   const { data: kpis } = useQuery({
-    queryKey: ["supervisor-kpis", todayStart],
+    queryKey: queryKeys.supervisor.kpis,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supervisor_audit_log")

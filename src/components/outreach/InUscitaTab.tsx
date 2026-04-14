@@ -12,12 +12,13 @@ import { InviatiSubTab } from "./InviatiSubTab";
 import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
 import { FallitiSubTab } from "./FallitiSubTab";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function InUscitaTab() {
   const [sub, setSub] = useState("da-inviare");
 
   const { data: counts } = useQuery({
-    queryKey: ["outreach-sub-counts"],
+    queryKey: queryKeys.outreach.subCounts(),
     queryFn: async () => {
       const [pending, sent, scheduled, failed] = await Promise.all([
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),

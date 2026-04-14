@@ -59,7 +59,7 @@ export function AddressRulesManager() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: rules = [], isLoading } = useQuery({
-    queryKey: ["email-address-rules", search],
+    queryKey: queryKeys.email.addressRules,
     queryFn: async () => {
       let q = supabase.from("email_address_rules").select("*").order("email_address");
       if (search.trim()) q = q.ilike("email_address", `%${search.trim()}%`);

@@ -216,7 +216,7 @@ export function useDeepSearchRunner(): DeepSearchState {
         // Live update caches
         if (mode === "contact") {
           queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
-          queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupItems() });
           queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
         } else {
           queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });

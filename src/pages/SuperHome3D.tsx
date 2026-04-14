@@ -22,7 +22,7 @@ const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateC
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
-    queryKey: ["super-home-count", table],
+    queryKey: queryKeys.superHome.count,
     queryFn: async () => {
       const { count, error } = await supabase
         .from(table)

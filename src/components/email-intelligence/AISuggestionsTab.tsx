@@ -47,7 +47,7 @@ export default function AISuggestionsTab() {
 
   // Load suggestions (uncategorized with ai_suggested_group)
   const { data: suggestions = [], isLoading } = useQuery({
-    queryKey: ["ai-suggestions", minEmailCount, confidenceFilter],
+    queryKey: queryKeys.ai.suggestions,
     queryFn: async () => {
       const q = supabase
         .from("email_address_rules")

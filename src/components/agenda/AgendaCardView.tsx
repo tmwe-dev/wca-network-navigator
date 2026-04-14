@@ -10,6 +10,7 @@ import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Search, Mail, Phone, User, Building2, MapPin } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerCard {
   id: string;
@@ -38,7 +39,7 @@ export default function AgendaCardView() {
   const [search, setSearch] = useState("");
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["agenda-card-partners"],
+    queryKey: queryKeys.partners.agendaCard(),
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")

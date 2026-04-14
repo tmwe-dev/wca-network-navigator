@@ -45,7 +45,7 @@ export function useActionPanelLogic({
 
   // ── Queries ──
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
-    queryKey: ["directory-cache", countryCodes, networkKeys],
+    queryKey: queryKeys.directoryCache(countryCodes, networkKeys),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       try {
@@ -60,7 +60,7 @@ export function useActionPanelLogic({
   });
 
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
-    queryKey: ["db-partners-for-countries", countryCodes],
+    queryKey: queryKeys.dbPartnersForCountries(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
       const data = await getPartnersByCountries(countryCodes, "wca_id, company_name, city, country_code, country_name, updated_at");
@@ -281,7 +281,7 @@ export function useActionPanelLogic({
       }
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.dbPartnersForCountriesAll });
-      await queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.noProfileWcaIds([]) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       setDownloadMode("no_profile");
 

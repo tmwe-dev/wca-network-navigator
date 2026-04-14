@@ -28,7 +28,7 @@ export function useEmailContactPicker() {
 
   // ── Country stats ──
   const { data: countryStats = [] } = useQuery<CountryStat[]>({
-    queryKey: ["picker-country-stats-v2"],
+    queryKey: queryKeys.contacts.pickerCountryStats(),
     queryFn: async () => {
       try {
         const rpcData = await rpcGetCountryStats();
@@ -125,7 +125,7 @@ export function useEmailContactPicker() {
 
   // ── BCA ──
   const { data: bcaCards = [] } = useQuery<BcaRow[]>({
-    queryKey: ["picker-bca", state.search, state.selectedCountry],
+    queryKey: queryKeys.businessCards.campaign(state.search, state.selectedCountry),
     enabled: state.tab === "bca",
     queryFn: async () => {
       let q = supabase

@@ -66,7 +66,7 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
         if ((data as Record<string, unknown>)?.data_modified) {
           queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
           queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
-          queryClient.invalidateQueries({ queryKey: ["import-errors"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors("") });
           if (activeLogId) {
             queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(activeLogId) });
             queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(activeLogId) });

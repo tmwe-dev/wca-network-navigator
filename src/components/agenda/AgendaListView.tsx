@@ -12,6 +12,7 @@ import { Search, Mail, Phone, ArrowUpDown } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerRow {
   id: string;
@@ -35,7 +36,7 @@ export default function AgendaListView() {
   const [sortAsc, setSortAsc] = useState(false);
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["agenda-list-partners"],
+    queryKey: queryKeys.partners.agendaList(),
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")

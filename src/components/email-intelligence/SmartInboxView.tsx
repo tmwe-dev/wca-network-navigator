@@ -40,7 +40,7 @@ export function SmartInboxView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: classifications = [], isLoading } = useQuery({
-    queryKey: ["email-classifications", categoryFilter],
+    queryKey: queryKeys.email.classifications,
     queryFn: async () => {
       let q = supabase
         .from("email_classifications")

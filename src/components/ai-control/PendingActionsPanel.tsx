@@ -51,7 +51,7 @@ export function PendingActionsPanel() {
   const [rejectReason, setRejectReason] = useState("");
 
   const { data: actions = [], isLoading } = useQuery({
-    queryKey: ["ai-pending-actions", typeFilter, sourceFilter],
+    queryKey: queryKeys.ai.pendingActions,
     queryFn: async () => {
       let q = supabase
         .from("ai_pending_actions")

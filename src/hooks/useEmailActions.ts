@@ -44,7 +44,7 @@ export function useMessageAttachments(messageId: string | null) {
 
 export function useUnreadCount(channel?: string) {
   return useQuery({
-    queryKey: ["channel-messages-unread", channel],
+    queryKey: queryKeys.channelMessages.unread,
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")

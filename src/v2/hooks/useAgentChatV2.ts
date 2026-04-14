@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ChatMessage {
   readonly role: "user" | "assistant";
@@ -17,7 +18,7 @@ export function useAgentChatV2(agentId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
 
   const agentQuery = useQuery({
-    queryKey: ["v2", "agent-detail", agentId],
+    queryKey: queryKeys.v2.agentChat(agentId),
     queryFn: async () => {
       if (!agentId) return null;
       const { data, error } = await supabase

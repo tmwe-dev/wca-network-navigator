@@ -144,7 +144,7 @@ export function useEnrichmentData() {
   });
 
   const { data: contacts = [], refetch: refetchContacts } = useQuery({
-    queryKey: ["enrichment-contacts"],
+    queryKey: queryKeys.enrichment.contacts(),
     queryFn: async () => {
       const data = await loadAllRows<ContactRow>(
         "imported_contacts",
@@ -167,7 +167,7 @@ export function useEnrichmentData() {
   });
 
   const { data: bcaItems = [] } = useQuery({
-    queryKey: ["enrichment-bca"],
+    queryKey: queryKeys.enrichment.bca(),
     queryFn: async () => {
       const data = await loadAllRows<BcaRow>(
         "business_cards",
@@ -184,7 +184,7 @@ export function useEnrichmentData() {
   });
 
   const { data: emailSenders = [] } = useQuery({
-    queryKey: ["enrichment-email-senders"],
+    queryKey: queryKeys.enrichment.emailSenders(),
     queryFn: async () => {
       const data = await loadAllRows<EmailSenderRow>(
         "channel_messages", "from_address",
@@ -216,7 +216,7 @@ export function useEnrichmentData() {
   });
 
   const { data: cockpitItems = [] } = useQuery({
-    queryKey: ["enrichment-cockpit"],
+    queryKey: queryKeys.enrichment.cockpit(),
     queryFn: async () => {
       const queue = await loadAllRows<CockpitQueueRow>("cockpit_queue", "id, source_id, source_type, partner_id, status");
       if (!queue.length) return [];
