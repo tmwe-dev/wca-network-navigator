@@ -13,6 +13,7 @@ const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
 };
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS } from "@/data/defaultEmailTypes";
 import { cn } from "@/lib/utils";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 interface OraclePanelV2Props {
   readonly emailType: string;
@@ -49,7 +50,7 @@ export function OraclePanelV2({
             activeTab === "oracle" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <img src={albertTalkGif} alt="Oracolo" className="w-4 h-4 inline-block" /> Oracolo
+          <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-4 h-4 inline-block" /> Oracolo
         </button>
         <button
           onClick={() => setActiveTab("templates")}
