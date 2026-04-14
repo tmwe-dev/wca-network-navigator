@@ -112,7 +112,7 @@ const App = () => (
           <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Launcher — no auth */}
-              <Route path="/" element={<LauncherHome />} />
+              <Route path="/" element={withFeatureBoundary(<LauncherHome />, "Launcher")} />
 
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
@@ -159,7 +159,7 @@ const App = () => (
               </Route>
 
               {/* V2 routes */}
-              <Route path="/v2/*" element={<V2Routes />} />
+              <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
