@@ -29,7 +29,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   const filtered = useMemo(() => {
     const search = searchFilter?.trim().toLowerCase();
     if (!search) return rawContacts;
-    return rawContacts.filter((c) =>
+    return rawContacts.filter((c: Record<string, string | null>) =>
       (c.company_name || "").toLowerCase().includes(search) ||
       (c.name || "").toLowerCase().includes(search) ||
       (c.email || "").toLowerCase().includes(search) ||
