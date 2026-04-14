@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,8 +43,7 @@ interface NetworkItem { id: string; network_name: string; expires: string | null
 interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
 
 interface PartnerDetailCompactProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 30+ fields accessed throughout
-  partner: Record<string, any>;
+  partner: PartnerViewModel;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;

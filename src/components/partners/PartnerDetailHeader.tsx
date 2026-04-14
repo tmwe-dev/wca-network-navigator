@@ -1,3 +1,4 @@
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -16,8 +17,8 @@ import { Box } from "lucide-react";
 
  
 interface PartnerDetailHeaderProps {
-  partner: Record<string, any>;
-  enrichment: Record<string, any> | null;
+  partner: PartnerViewModel;
+  enrichment: Record<string, unknown> | null;
   networks: { id: string; network_name: string }[];
   years: number;
   expiryDate: Date | null;

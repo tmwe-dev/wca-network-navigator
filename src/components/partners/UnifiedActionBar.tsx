@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -15,7 +16,7 @@ const log = createLogger("UnifiedActionBar");
 
 interface UnifiedActionBarProps {
   selectedIds: Set<string>;
-  focusedPartner: Record<string, any> | null;
+  focusedPartner: PartnerViewModel | null;
   onClearSelection: () => void;
   onAssignActivity: () => void;
   onDeepSearch: () => void;

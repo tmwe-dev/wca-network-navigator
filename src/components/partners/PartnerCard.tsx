@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { PartnerViewModel, EnrichmentData } from "@/types/partner-views";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +32,7 @@ function getMemberBadgeColor(years: number): string {
 }
 
 interface PartnerCardProps {
-  partner: Record<string, any>;
+  partner: PartnerViewModel;
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
 }
 

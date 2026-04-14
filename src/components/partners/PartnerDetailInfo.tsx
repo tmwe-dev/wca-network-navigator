@@ -1,3 +1,4 @@
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,8 +68,8 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 
  
 interface PartnerDetailInfoProps {
-  partner: Record<string, any>;
-  enrichment: Record<string, any> | null;
+  partner: PartnerViewModel;
+  enrichment: Record<string, unknown> | null;
   contacts: PartnerContact[];
   networks: PartnerNetwork[];
   allServices: PartnerService[];

@@ -1,3 +1,4 @@
+import type { PartnerViewModel } from "@/types/partner-views";
 /**
  * PartnerDetailFull — shell that composes Header, Info, Activity sub-components
  */
@@ -10,7 +11,7 @@ import { PartnerDetailActivity } from "./PartnerDetailActivity";
 
  
 interface PartnerDetailFullProps {
-  partner: Record<string, any>;
+  partner: PartnerViewModel;
   onToggleFavorite: () => void;
 }
 
