@@ -224,6 +224,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                   <MissionProvider>
                     <SonnerToaster position="top-right" richColors closeButton />
                     <Toaster />
+                    <LiveRegion message="" />
 
                     <div className="flex h-screen bg-background">
                       {/* Skip navigation link for accessibility */}
