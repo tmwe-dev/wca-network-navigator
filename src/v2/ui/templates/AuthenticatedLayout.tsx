@@ -66,25 +66,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const [sessionReady, setSessionReady] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    let sub: { unsubscribe: () => void } | null = null;
-    const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-      if (session) { setSessionReady(true); }
-      else {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-          if (s && mounted) setSessionReady(true);
-        });
-        sub = subscription;
-      }
-    };
-    check();
-    return () => { mounted = false; sub?.unsubscribe(); };
-  }, []);
+  // Session readiness sourced from centralized AuthProvider
+  const { status: authStatus } = useAuth();
+  const sessionReady = authStatus === "authenticated";
 
   useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
 
