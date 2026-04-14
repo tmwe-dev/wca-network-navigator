@@ -12,21 +12,13 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 20+ fields
-interface PartnerListItemProps {
-  partner: Record<string, any>;
-  isSelected: boolean;
-  isChecked: boolean;
-  socialLinks: SocialLink[];
-  hasBusinessCard?: boolean;
-  onSelect: (id: string) => void;
-  onToggleSelection: (id: string, e?: React.MouseEvent) => void;
-  index?: number;
-}
-
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string }
 interface ContactItem { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 20+ fields
+interface PartnerListItemProps {
+  partner: Record<string, any>;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
