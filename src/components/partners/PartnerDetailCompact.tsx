@@ -42,7 +42,8 @@ interface NetworkItem { id: string; network_name: string; expires: string | null
 interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
 
 interface PartnerDetailCompactProps {
-  partner: Record<string, unknown> & { id: string; company_name: string; partner_contacts?: ContactItem[]; partner_services?: ServiceItem[]; partner_networks?: NetworkItem[]; [k: string]: unknown };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join shape with 30+ fields accessed throughout
+  partner: Record<string, any>;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
