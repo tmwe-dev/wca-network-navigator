@@ -42,6 +42,19 @@ const SCHEDULE_FIELDS = [
   { key: "agent_work_days", label: "Giorni lavorativi", defaultValue: "1,2,3,4,5", unit: "1=Lun...7=Dom" },
 ];
 
+const WA_STEALTH_KEYS = [
+  { key: "wa_scan_enabled", defaultValue: "true" },
+  { key: "wa_scan_interval_sec", defaultValue: "120" },
+  { key: "wa_scan_top_chats", defaultValue: "8" },
+  { key: "wa_scan_max_deep_reads", defaultValue: "3" },
+  { key: "wa_scan_stagger_sec", defaultValue: "15" },
+  { key: "wa_scan_jitter_pct", defaultValue: "25" },
+  { key: "wa_scan_long_pause_pct", defaultValue: "10" },
+  { key: "wa_scan_quick_check_pct", defaultValue: "5" },
+  { key: "wa_scan_work_start_hour", defaultValue: "7" },
+  { key: "wa_scan_work_end_hour", defaultValue: "22" },
+];
+
 export default function TimingSettings() {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
