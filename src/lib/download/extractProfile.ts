@@ -21,16 +21,16 @@ export function normalizeExtensionResult(raw: unknown): ExtractionResult {
   if (!raw) return { success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", companyName: null, contacts: [], profile: {}, profileHtml: null, htmlLength: 0, error: "No response" };
   const r = raw as Record<string, unknown>;
   return {
-    success: r.success ?? false,
-    wcaId: r.wcaId,
-    state: r.state || (r.success ? "ok" : "not_loaded"),
-    errorCode: r.errorCode || null,
-    companyName: r.companyName || null,
-    contacts: r.contacts || [],
-    profile: r.profile || {},
-    profileHtml: r.profileHtml || null,
-    htmlLength: r.htmlLength || r.profileHtml?.length || 0,
-    error: r.error || null,
-    debug: r.debug || {},
+    success: (r.success as boolean) ?? false,
+    wcaId: r.wcaId as number | undefined,
+    state: (r.state as ExtractionResult["state"]) || (r.success ? "ok" : "not_loaded"),
+    errorCode: (r.errorCode as string) || null,
+    companyName: (r.companyName as string) || null,
+    contacts: (r.contacts as ExtractionResult["contacts"]) || [],
+    profile: (r.profile as Record<string, unknown>) || {},
+    profileHtml: (r.profileHtml as string) || null,
+    htmlLength: (r.htmlLength as number) || (typeof r.profileHtml === "string" ? r.profileHtml.length : 0) || 0,
+    error: (r.error as string) || null,
+    debug: (r.debug as Record<string, unknown>) || {},
   };
 }

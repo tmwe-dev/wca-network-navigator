@@ -83,7 +83,7 @@ export function useAcquisitionPipelineActions(
       if (!jobId) {
         const countryCode = items[0]?.country_code || state.selectedCountries[0] || "";
         const countryPartners = await getPartnersByCountries([countryCode], "country_name");
-        const countryName = countryPartners[0]?.country_name || countryCode;
+        const countryName = String(countryPartners[0]?.country_name ?? countryCode);
 
         jobId = await createDownloadJob({
           country_code: countryCode,

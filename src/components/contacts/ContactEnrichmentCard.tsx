@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import type { EnrichmentData } from "@/types/partner-views";
 
 interface ContactEnrichmentCardProps {
-  enrichmentData: Record<string, unknown> | null;
+  enrichmentData: EnrichmentData | Record<string, unknown> | null;
   deepSearchAt: string | null;
 }
 
@@ -36,7 +37,7 @@ function SocialButton({ url, label, icon }: { url: string; label: string; icon: 
 }
 
 export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactEnrichmentCardProps) {
-  const e = enrichmentData as Record<string, unknown> | null;
+  const e = enrichmentData as EnrichmentData | null;
   if (!e && !deepSearchAt) return null;
 
   const companyProfile = e?.company_profile;
