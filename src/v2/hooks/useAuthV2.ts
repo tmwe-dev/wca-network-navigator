@@ -59,12 +59,35 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!data) return null;
+  if (data) {
+    return {
+      userId,
+      email: "",
+      displayName: data.display_name,
+      avatarUrl: null,
+    };
+  }
+
+  // Auto-creazione profilo se mancante (utenti pre-trigger)
+  const { data: { user } } = await supabase.auth.getUser();
+  const displayName = user?.user_metadata?.full_name
+    ?? user?.user_metadata?.display_name
+    ?? user?.email
+    ?? null;
+
+  const { error: insertErr } = await supabase
+    .from("profiles")
+    .insert({ user_id: userId, display_name: displayName });
+
+  if (insertErr) {
+    console.warn("[useAuthV2] Auto-create profilo fallito:", insertErr.message);
+    return null;
+  }
 
   return {
     userId,
     email: "",
-    displayName: data.display_name,
+    displayName,
     avatarUrl: null,
   };
 }
