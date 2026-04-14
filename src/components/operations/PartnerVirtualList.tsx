@@ -123,9 +123,9 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-sm leading-none shrink-0">{flag}</span>
                     <span className={cn("text-[11px] truncate", isDark ? "text-slate-400" : "text-slate-500")}>{partner.city}</span>
-                    {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
+                    {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
                     {primaryContact && (
-                      <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {primaryContact.name}</span>
+                      <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {String(primaryContact.name ?? "")}</span>
                     )}
                   </div>
                   {snippet && (
@@ -143,7 +143,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 />
                 <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {primaryContact?.email && (
-                    <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
+                    <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: String(primaryContact.email), name: String(primaryContact.name ?? ""), company: partner.company_name ?? "", partnerId: partner.id }); }}
                       className={cn("p-1 rounded-md transition-all", isDark ? "text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10")}>
                       <Send className="w-3 h-3" />
                     </button>

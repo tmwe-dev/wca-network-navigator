@@ -190,11 +190,11 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       )}
 
       {/* Token consumption */}
-      {tokensUsed && tokensUsed.credits_consumed > 0 && (
+      {tokensUsed && (tokensUsed.credits_consumed ?? 0) > 0 && (
         <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
           <Coins className={cn("w-3.5 h-3.5", 
-            tokensUsed.credits_consumed > 50 ? "text-destructive" : 
-            tokensUsed.credits_consumed > 20 ? "text-primary" : "text-emerald-500"
+            (tokensUsed.credits_consumed ?? 0) > 50 ? "text-destructive" : 
+            (tokensUsed.credits_consumed ?? 0) > 20 ? "text-primary" : "text-emerald-500"
           )} />
           <span className="text-[10px] text-muted-foreground">
             {tokensUsed.credits_consumed} crediti AI
