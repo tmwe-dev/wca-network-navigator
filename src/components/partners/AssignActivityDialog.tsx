@@ -32,7 +32,7 @@ interface AssignActivityDialogProps {
   partnerContactInfo?: PartnerContactInfo[];
   onSuccess: () => void;
   sourceType?: "partner" | "prospect" | "contact";
-  extraSourceMeta?: Record<string, Record<string, any>>;
+  extraSourceMeta?: Record<string, Record<string, unknown>>;
 }
 
 type ActivityTypeValue = "send_email" | "phone_call" | "meeting" | "follow_up" | "other";

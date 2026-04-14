@@ -229,10 +229,10 @@ export function useActionPanelLogic({
     const activeJobs = await findJobsByStatusSelect(["pending", "running"], "id, status, updated_at", 1);
     if (activeJobs.length > 0) {
       const job = activeJobs[0];
-      const ageMs = Date.now() - new Date(job.updated_at).getTime();
+      const ageMs = Date.now() - new Date(String(job.updated_at)).getTime();
       if (job.status === "running" && ageMs > 120_000) {
-        await updateDownloadJob(job.id, { status: "stopped", error_message: "Resettato — job orfano" });
-        await updateJobItemsByJobIdAndStatus(job.id, "processing", { status: "pending" });
+        await updateDownloadJob(String(job.id), { status: "stopped", error_message: "Resettato — job orfano" });
+        await updateJobItemsByJobIdAndStatus(String(job.id), "processing", { status: "pending" });
       } else {
         toast({ title: "Job già in corso", description: "Attendi il completamento.", variant: "destructive" }); return;
       }
@@ -269,10 +269,10 @@ export function useActionPanelLogic({
 
       const dbPartnersForCleanup = await getPartnersByCountries(countryCodes, "id, wca_id");
       const dbList = dbPartnersForCleanup || [];
-      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id));
+      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id as number));
 
       if (stalePartners.length > 0) {
-        const staleIds = stalePartners.map(p => p.id);
+        const staleIds = stalePartners.map(p => String(p.id));
         await deletePartnersWithRelations(staleIds);
       }
 

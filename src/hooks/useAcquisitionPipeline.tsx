@@ -171,8 +171,8 @@ export function useAcquisitionPipeline() {
             const dbContacts = await findPartnerContacts(partnerId, "name, title, email, direct_phone, mobile");
             if (dbContacts.length && dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
               canvas.contacts = dbContacts.map(c => ({
-                name: c.name, title: c.title || undefined, email: c.email || undefined,
-                direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined,
+                name: String(c.name ?? ""), title: String(c.title ?? "") || undefined, email: String(c.email ?? "") || undefined,
+                direct_phone: String(c.direct_phone ?? "") || undefined, mobile: String(c.mobile ?? "") || undefined,
               }));
               canvas.contactSource = "extension";
               state.setCanvasData({ ...canvas });

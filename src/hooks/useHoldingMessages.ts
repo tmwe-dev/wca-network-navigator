@@ -118,9 +118,9 @@ export function useHoldingMessages(channel: HoldingChannel) {
             const p = partnerMap.get(pid)!;
             groupMap.set(pid, {
               partnerId: pid,
-              companyName: p.company_name,
-              email: p.email,
-              leadStatus: p.lead_status,
+              companyName: p.company_name || "",
+              email: p.email ?? null,
+              leadStatus: p.lead_status || "",
               messages: [],
               unreadCount: 0,
               latestDate: msg.email_date || msg.created_at,

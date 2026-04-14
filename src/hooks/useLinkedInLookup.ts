@@ -10,11 +10,12 @@ const moduleLog = createLogger("useLinkedInLookup");
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Get existing LinkedIn URL from enrichment_data (check all known fields) */
-const getExistingLinkedInUrl = (enrichmentData: Record<string, any> | null): string | null => {
+const getExistingLinkedInUrl = (enrichmentData: Record<string, unknown> | null): string | null => {
   if (!enrichmentData) return null;
-  return enrichmentData.linkedin_profile_url
-    || enrichmentData.linkedin_url
-    || enrichmentData.social_links?.linkedin
+  const socialLinks = enrichmentData.social_links as Record<string, unknown> | undefined;
+  return (enrichmentData.linkedin_profile_url as string)
+    || (enrichmentData.linkedin_url as string)
+    || (socialLinks?.linkedin as string)
     || null;
 };
 

@@ -62,10 +62,10 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           const partners = await getPartnersByCountries([job.country_code], "wca_id, company_name, city");
           if (partners) {
             for (const p of partners) {
-              const qi = queueItems.find((q) => q.wca_id === p.wca_id);
+              const qi = queueItems.find((q) => q.wca_id === (p.wca_id as number));
               if (qi) {
-                qi.company_name = p.company_name;
-                qi.city = p.city;
+                qi.company_name = String(p.company_name ?? "");
+                qi.city = String(p.city ?? "");
               }
             }
           }

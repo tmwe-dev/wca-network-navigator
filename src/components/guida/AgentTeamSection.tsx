@@ -2,17 +2,25 @@ import SectionWrapper from "./SectionWrapper";
 import { useQuery } from "@tanstack/react-query";
 import { findActiveAgents } from "@/data/agents";
 
+interface AgentView {
+  name: string;
+  role: string;
+  avatar_emoji: string;
+  territory_codes?: string[];
+  stats?: Record<string, unknown>;
+}
+
 const AgentTeamSection = () => {
   const { data: agents } = useQuery({
     queryKey: ["guida-agents"],
     queryFn: async () => {
       const data = await findActiveAgents("name, role, avatar_emoji, is_active, stats, territory_codes");
-      return data || [];
+      return (data || []) as unknown as AgentView[];
     },
     staleTime: 60000,
   });
 
-  const agentList = agents && agents.length > 0 ? agents : [
+  const agentList: AgentView[] = agents && agents.length > 0 ? agents : [
     { name: "Sales Agent", role: "outreach", avatar_emoji: "🎯", territory_codes: ["EU"], stats: {} },
     { name: "Support Agent", role: "support", avatar_emoji: "🛡️", territory_codes: ["GLOBAL"], stats: {} },
     { name: "Strategy Agent", role: "strategy", avatar_emoji: "🧠", territory_codes: ["ALL"], stats: {} },
@@ -39,9 +47,9 @@ const AgentTeamSection = () => {
                 <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium uppercase">
                   {agent.role}
                 </span>
-                {agent.territory_codes?.length > 0 && (
+                {(agent.territory_codes?.length ?? 0) > 0 && (
                   <p className="text-xs text-white/30">
-                    Territori: {agent.territory_codes.join(", ")}
+                    Territori: {agent.territory_codes?.join(", ")}
                   </p>
                 )}
               </div>
