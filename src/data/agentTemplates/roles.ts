@@ -27,7 +27,7 @@ export const ROBIN_VOICE_CALL_URL = "https://elevenlabs.io/app/talk-to?agent_id=
 // Full operational tool set (all agents get these)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const ALL_OPERATIONAL_TOOLS: string[] = [
+export const ALL_OPERATIONAL_TOOLS: string[] = [
   // Partner
   "search_partners", "get_partner_detail", "update_partner", "add_partner_note",
   "manage_partner_contact", "bulk_update_partners",
@@ -53,7 +53,7 @@ const ALL_OPERATIONAL_TOOLS: string[] = [
 ];
 
 // Management tools — only for Director (Luca)
-const MANAGEMENT_TOOLS: string[] = [
+export const MANAGEMENT_TOOLS: string[] = [
   "create_agent_task", "list_agent_tasks", "get_team_status",
   "update_agent_prompt", "add_agent_kb_entry",
   // Director-only campaign tools
@@ -61,7 +61,7 @@ const MANAGEMENT_TOOLS: string[] = [
 ];
 
 // Strategic tools — only for Director (Luca)
-const STRATEGIC_TOOLS: string[] = [
+export const STRATEGIC_TOOLS: string[] = [
   "create_work_plan", "list_work_plans", "update_work_plan",
   "manage_workspace_preset", "get_system_analytics",
 ];
