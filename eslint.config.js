@@ -27,4 +27,25 @@ export default tseslint.config(
       "eqeqeq": ["error", "always"],
     },
   },
+  // ── DAL enforcement: ban supabase.from() outside src/data/ ──
+  {
+    files: [
+      "src/**/*.{ts,tsx}",
+    ],
+    ignores: [
+      "src/data/**",
+      "src/integrations/**",
+      "src/test/**",
+      "src/**/*.test.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
+        },
+      ],
+    },
+  },
 );
