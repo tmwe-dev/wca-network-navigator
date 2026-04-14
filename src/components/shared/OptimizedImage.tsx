@@ -1,3 +1,5 @@
+import React from "react";
+
 interface OptimizedImageProps {
   src: string;
   alt: string;
@@ -5,6 +7,7 @@ interface OptimizedImageProps {
   height?: number;
   className?: string;
   loading?: "lazy" | "eager";
+  onError?: React.ReactEventHandler<HTMLImageElement>;
 }
 
 export function OptimizedImage({
@@ -14,6 +17,7 @@ export function OptimizedImage({
   height,
   className,
   loading = "lazy",
+  onError,
 }: OptimizedImageProps) {
   return (
     <img
@@ -24,6 +28,7 @@ export function OptimizedImage({
       className={className}
       loading={loading}
       decoding="async"
+      onError={onError}
     />
   );
 }
