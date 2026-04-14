@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createLinkedInFlowJob(job: Record<string, unknown>) {
-  const { data, error } = await supabase.from("linkedin_flow_jobs").insert(job).select().single();
+  const { data, error } = await supabase.from("linkedin_flow_jobs").insert(job as any).select().single();
   if (error) throw error;
   return data;
 }
