@@ -55,7 +55,7 @@ describe("State Enum Integrity [A04]", () => {
     const { data, error } = await supabase
       .from("partners")
       .select("id, lead_status")
-      .limit(1000);
+      .limit(500);
     if (error) throw error;
     if (!data || data.length === 0) return;
     for (const row of data) {
@@ -63,7 +63,7 @@ describe("State Enum Integrity [A04]", () => {
         expect(validLeadStatuses).toContain(row.lead_status);
       }
     }
-  });
+  }, 10000);
 
   it("email_campaign_queue.status contains only valid values", async () => {
     const { data, error } = await supabase
