@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
-import { useLinkedInSync } from "@/hooks/useLinkedInSync";
+import { useLinkedInSoftSync } from "@/hooks/useLinkedInSoftSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
   const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
-  const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
+  const { enabled, toggle, isReading, isAvailable, manualCycle, lastCycleAt, nextCycleAt, isPausedForNight } = useLinkedInSoftSync();
   const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
 
   // Group messages by contact
@@ -141,8 +141,8 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
     }
   };
 
-  const nextSyncIn = lastSyncAt
-    ? Math.max(0, Math.round((lastSyncAt + 30 * 60 * 1000 - Date.now()) / 60000))
+  const nextSyncIn = nextCycleAt
+    ? Math.max(0, Math.round((nextCycleAt.getTime() - Date.now()) / 60000))
     : null;
 
   return (
@@ -173,10 +173,10 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                 <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={readNow} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">
-                  {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                  Leggi
-                </Button>
+                <Button size="sm" variant="outline" onClick={manualCycle} disabled={isReading} className="gap-1 h-7 text-[11px] px-2">
+                   {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                   Leggi ora
+                 </Button>
                 <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2">
                   {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   {enabled ? "ON" : "OFF"}
@@ -201,8 +201,11 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
               </div>
 
               {/* Sync info */}
-              {enabled && nextSyncIn !== null && (
-                <p className="text-[9px] text-muted-foreground">🔄 Prossimo sync tra ~{nextSyncIn} min</p>
+              {isPausedForNight && (
+                <p className="text-[9px] text-yellow-600">🌙 Pausa notturna attiva</p>
+              )}
+              {enabled && nextSyncIn !== null && !isPausedForNight && (
+                <p className="text-[9px] text-muted-foreground">🔄 Prossima automatica tra ~{nextSyncIn > 60 ? `${Math.floor(nextSyncIn/60)}h ${nextSyncIn%60}m` : `${nextSyncIn} min`}</p>
               )}
 
               {/* Backfill progress */}
@@ -399,7 +402,8 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
               <Linkedin className="w-12 h-12 mx-auto opacity-30" />
               <p className="text-sm">Seleziona una conversazione</p>
               <p className="text-xs">Le chat LinkedIn appariranno come tabs in alto</p>
-              {enabled && <p className="text-[10px]">🔄 Sync automatico ogni 30 minuti</p>}
+              {enabled && <p className="text-[10px]">🔄 Sync stealth attivo (4-6 letture/giorno)</p>}
+              {isPausedForNight && <p className="text-[10px] text-yellow-600">🌙 Pausa notturna</p>}
             </div>
           </div>
         )}
