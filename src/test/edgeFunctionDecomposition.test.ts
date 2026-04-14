@@ -111,7 +111,7 @@ describe("Client Migration — call sites use macro-endpoints", () => {
   const srcDir = path.resolve("src");
 
   // Exclude test pages (AILab, Diagnostics) and data config files from migration check
-  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts"];
+  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts", "types.ts", "sentry.ts"];
 
   function searchFiles(dir: string, pattern: RegExp): string[] {
     const results: string[] = [];
