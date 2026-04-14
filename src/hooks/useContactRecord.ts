@@ -151,6 +151,24 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
   });
 }
 
+/**
+ * Field mapping: UI field names → partner_contacts column names.
+ * Fields NOT in this map go to the partners table.
+ */
+const CONTACT_FIELD_MAP: Record<string, string> = {
+  phone: "direct_phone",
+  email: "email",
+  mobile: "mobile",
+  position: "title",
+  contact_name: "name",
+  contact_alias: "contact_alias",
+};
+
+const PARTNER_ONLY_FIELDS = new Set([
+  "company_name", "city", "address", "website",
+  "lead_status", "profile_description",
+]);
+
 export function useUpdateContactRecord() {
   const qc = useQueryClient();
   return useMutation({
@@ -160,7 +178,58 @@ export function useUpdateContactRecord() {
       updates: Record<string, unknown>;
     }) => {
       if (sourceType === "partner") {
-        await updatePartner(sourceId, updates);
+        // Split updates into partner-table fields vs contact-table fields
+        const partnerUpdates: Record<string, unknown> = {};
+        const contactUpdates: Record<string, unknown> = {};
+
+        for (const [key, value] of Object.entries(updates)) {
+          if (PARTNER_ONLY_FIELDS.has(key)) {
+            partnerUpdates[key] = value;
+          } else if (key in CONTACT_FIELD_MAP) {
+            contactUpdates[CONTACT_FIELD_MAP[key]] = value;
+          } else {
+            // Unknown fields default to partner table
+            partnerUpdates[key] = value;
+          }
+        }
+
+        // Update partners table if needed
+        if (Object.keys(partnerUpdates).length > 0) {
+          await updatePartner(sourceId, partnerUpdates);
+        }
+
+        // Update partner_contacts if needed
+        if (Object.keys(contactUpdates).length > 0) {
+          // Find primary contact
+          const { data: contacts } = await supabase
+            .from("partner_contacts")
+            .select("id, is_primary")
+            .eq("partner_id", sourceId)
+            .order("is_primary", { ascending: false })
+            .limit(5);
+
+          const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
+
+          if (primary) {
+            // Update existing primary contact
+            const { error } = await supabase
+              .from("partner_contacts")
+              .update(contactUpdates)
+              .eq("id", primary.id);
+            if (error) throw error;
+          } else {
+            // Create a new primary contact row
+            const { error } = await supabase
+              .from("partner_contacts")
+              .insert({
+                partner_id: sourceId,
+                is_primary: true,
+                name: (contactUpdates.name as string) || "Primary Contact",
+                ...contactUpdates,
+              });
+            if (error) throw error;
+          }
+        }
       } else if (sourceType === "contact") {
         await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
@@ -171,6 +240,9 @@ export function useUpdateContactRecord() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.contacts.record(vars.sourceType, vars.sourceId) });
+      if (vars.sourceType === "partner") {
+        qc.invalidateQueries({ queryKey: queryKeys.partners.all });
+      }
     },
   });
 }
