@@ -94,7 +94,7 @@ function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
 
 export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const {
-    state, dispatch, _interactions, matchedCard, needsAlias,
+    state, dispatch, interactions: _interactions, matchedCard, needsAlias,
     createInteractionPending, handleGenerateAlias, handleStatusChange, handleAddInteraction,
   } = useContactDetail({ contact, onContactUpdated });
 

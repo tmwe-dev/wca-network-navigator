@@ -45,7 +45,7 @@ function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
   const abortRef = useRef(false);
-  const { _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
+  const { isAvailable: _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
 
   const startBackfill = useCallback(async () => {
     if (progress.status === "running") return;
@@ -102,7 +102,7 @@ export function useLinkedInBackfill() {
 
       setProgress(p => ({ ...p, status: "done", currentThread: null }));
       toast.success(`Backfill LinkedIn completato`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setProgress(p => ({ ...p, status: "error", lastError: err.message }));
       toast.error(`Errore: ${err.message}`);
     }

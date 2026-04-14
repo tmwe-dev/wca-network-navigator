@@ -220,7 +220,7 @@ export function useEmailComposerState() {
   const { processing, startProcessing } = useProcessQueue();
 
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { email, ui, ai, template, _queue } = state;
+  const { email, ui, ai, template, queue: _queue } = state;
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
   const isEditedAfterGeneration = ai.aiGeneratedBody && (email.htmlBody !== ai.aiGeneratedBody || email.subject !== ai.aiGeneratedSubject);

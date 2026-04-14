@@ -23,7 +23,7 @@ interface UseActionPanelProps {
 }
 
 export function useActionPanelLogic({
-  selectedCountries, networks, networkKeys, delay, _directoryOnly, onJobCreated,
+  selectedCountries, networks, networkKeys, delay, directoryOnly: _directoryOnly, onJobCreated,
 }: UseActionPanelProps) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
@@ -49,7 +49,7 @@ export function useActionPanelLogic({
       if (countryCodes.length === 0) return [];
       try {
         return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ title: "Errore directory cache", description: e.message, variant: "destructive" });
         return [];
       }
@@ -84,9 +84,9 @@ export function useActionPanelLogic({
   });
 
   // ── Derived ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
-    const members = entry.members as any[];
-    return (members || []).map((m: any) => ({
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: unknown) => {
+    const members = entry.members as unknown[];
+    return (members || []).map((m: unknown) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
     }));
@@ -134,7 +134,7 @@ export function useActionPanelLogic({
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await upsertDirectoryCache({
-      country_code: countryCode, network_name: netKey, members: membersJson as any,
+      country_code: countryCode, network_name: netKey, members: membersJson as unknown,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
@@ -151,7 +151,7 @@ export function useActionPanelLogic({
       document.addEventListener("visibilitychange", handler);
     });
 
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e: unknown) => e.country_code));
 
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;

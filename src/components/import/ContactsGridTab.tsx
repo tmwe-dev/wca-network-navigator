@@ -22,7 +22,7 @@ interface ContactsGridTabProps {
 
 const PAGE_SIZES = [25, 50, 100, 250];
 
-export function ContactsGridTab({ contacts, _activeLogId }: ContactsGridTabProps) {
+export function ContactsGridTab({ contacts, activeLogId: _activeLogId }: ContactsGridTabProps) {
   const [search, setSearch] = useState("");
   const [filterOrigin, setFilterOrigin] = useState<string>("__all__");
   const [filterCountry, setFilterCountry] = useState<string>("__all__");

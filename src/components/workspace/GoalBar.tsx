@@ -54,7 +54,7 @@ export default function GoalBar({
   goal, baseProposal, onGoalChange, onBaseProposalChange,
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
-  presets, activePresetId, onLoadPreset, onSavePreset, _onDeletePreset,
+  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset: _onDeletePreset,
 }: GoalBarProps) {
   const safeDocuments = documents ?? [];
   const safeLinks = referenceLinks ?? [];

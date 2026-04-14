@@ -15,11 +15,11 @@ export type ExtractionResult = {
   errorCode?: string | null;
   companyName?: string | null;
   contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
-  profile?: Record<string, any>;
+  profile?: Record<string, unknown>;
   profileHtml?: string | null;
   htmlLength?: number;
   error?: string | null;
-  debug?: Record<string, any>;
+  debug?: Record<string, unknown>;
 };
 
 export type BridgeResult = {
@@ -32,9 +32,9 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
-  if (!(window as any)[LOCK_KEY]) (window as any)[LOCK_KEY] = { busy: false, queue: [] };
-  return (window as any)[LOCK_KEY];
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }> } {
+  if (!(window as unknown)[LOCK_KEY]) (window as unknown)[LOCK_KEY] = { busy: false, queue: [] };
+  return (window as unknown)[LOCK_KEY];
 }
 
 async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
@@ -43,11 +43,11 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
     const run = async () => {
       lock.busy = true;
       try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
-    else lock.queue.push({ resolve, fn: run as any });
+    else lock.queue.push({ resolve, fn: run as unknown });
   });
 }
 
@@ -76,7 +76,7 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<RawResponse> => {
+  const sendMessage = useCallback((action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<RawResponse> => {
     return new Promise((resolve) => {
       const requestId = `${action}_${crypto.randomUUID()}`;
       const timer = setTimeout(() => {

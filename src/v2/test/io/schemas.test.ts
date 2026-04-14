@@ -59,7 +59,7 @@ describe("Zod Schemas", () => {
   });
 
   it("PartnerRowSchema rejects missing company_name", () => {
-    const { _company_name, ...invalid } = VALID_PARTNER_ROW;
+    const { company_name: _company_name, ...invalid } = VALID_PARTNER_ROW;
     expect(PartnerRowSchema.safeParse(invalid).success).toBe(false);
   });
 

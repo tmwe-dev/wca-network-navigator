@@ -9,7 +9,7 @@ interface PartnerMiniGlobeProps {
   branchCities: any[] | null;
 }
 
-export function PartnerMiniGlobe({ partnerCountryCode, _partnerCity, branchCities }: PartnerMiniGlobeProps) {
+export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity, branchCities }: PartnerMiniGlobeProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   const countries: CountryWithPartners[] = useMemo(() => {

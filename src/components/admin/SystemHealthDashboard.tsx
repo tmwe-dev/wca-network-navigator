@@ -28,7 +28,7 @@ function pushHistory(entry: HealthCheck) {
 }
 
 export function SystemHealthDashboard() {
-  const { _t } = useTranslation();
+  const { t: _t } = useTranslation();
   const { data, isLoading, refetch, dataUpdatedAt } = useSystemHealth();
 
   React.useEffect(() => {

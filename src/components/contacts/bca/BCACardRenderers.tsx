@@ -9,7 +9,7 @@ import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { BCAQuickActions, STATUS_COLORS, STATUS_LABELS, getCardOriginClasses, getCardCountryCode, countryFlag, getWcaYear } from "./bcaUtils";
 
 /* ═══ Compact List Row ═══ */
-export function CompactRow({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
+export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleLogo: _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
@@ -46,7 +46,7 @@ export function CompactRow({ card, isSelected, onSelect, onShowDetail, _onGoogle
 }
 
 /* ═══ Card Grid Item ═══ */
-export function CardGridItem({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
+export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo: _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;
@@ -89,7 +89,7 @@ export function CardGridItem({ card, isSelected, onSelect, onShowDetail, _onGoog
 }
 
 /* ═══ Expanded Card ═══ */
-export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, _onGoogleLogo }: {
+export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onGoogleLogo: _onGoogleLogo }: {
   card: BusinessCardWithPartner; isSelected: boolean; onSelect: () => void; onShowDetail: () => void; onGoogleLogo: () => void;
 }) {
   const sc = STATUS_COLORS[card.match_status] || STATUS_COLORS.pending;

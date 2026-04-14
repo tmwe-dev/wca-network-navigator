@@ -79,7 +79,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               .eq("country_code", job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
-                const members = (entry.members as any[]) || [];
+                const members = (entry.members as unknown[]) || [];
                 for (const m of members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing.find(q => q.wca_id === m.wca_id);
@@ -100,7 +100,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               const { scrapeWcaDirectory } = await import("@/lib/api/wcaScraper");
               const scanResult = await scrapeWcaDirectory(job.country_code, job.network_name || "");
               if (scanResult?.success && scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
+                const membersJson = scanResult.members.map((m: unknown) => ({
                   company_name: m.company_name,
                   city: m.city,
                   country_code: job.country_code,
@@ -109,7 +109,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    members: membersJson as any,
+                    members: membersJson as unknown,
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),

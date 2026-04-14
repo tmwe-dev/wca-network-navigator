@@ -42,8 +42,8 @@ export function useHoldingMessages(channel: HoldingChannel) {
           .in("lead_status", HOLDING_STATUSES),
       ]);
 
-      const partnerMap = new Map((holdingPartners || []).map((p: any) => [p.id, p]));
-      const partnerIds = (holdingPartners || []).map((p: any) => p.id);
+      const partnerMap = new Map((holdingPartners || []).map((p: unknown) => [p.id, p]));
+      const partnerIds = (holdingPartners || []).map((p: unknown) => p.id);
 
       const holdingContacts = holdingContactsRes.data || [];
       const contactEmails = holdingContacts
@@ -63,7 +63,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .order("email_date", { ascending: false, nullsFirst: false })
               .order("created_at", { ascending: false })
               .limit(200)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as unknown[], error: null }),
 
         contactEmails.length > 0
           ? supabase
@@ -76,7 +76,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               .in("from_address", contactEmails)
               .order("created_at", { ascending: false })
               .limit(100)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as unknown[], error: null }),
       ]);
 
       if (partnerMsgs.error) throw partnerMsgs.error;
@@ -170,7 +170,7 @@ export function useHoldingUnreadCounts() {
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 
       const partners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id");
-      const partnerIds = (partners || []).map((p: any) => p.id);
+      const partnerIds = (partners || []).map((p: unknown) => p.id);
 
       const { data: holdingContacts } = await supabase
         .from("imported_contacts")

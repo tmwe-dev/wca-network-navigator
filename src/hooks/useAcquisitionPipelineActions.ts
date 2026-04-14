@@ -19,10 +19,10 @@ export function useAcquisitionPipelineActions(
     extensionAvailable: boolean;
     waitForExtension: (ms?: number) => Promise<boolean>;
     verifySession: () => Promise<{ success: boolean; authenticated?: boolean }>;
-    runExtensionLoop: (jobId: string, items: any[], startFrom?: number) => Promise<LiveStats>;
+    runExtensionLoop: (jobId: string, items: unknown[], startFrom?: number) => Promise<LiveStats>;
   }
 ) {
-  const { _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
+  const { extensionAvailable: _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
 
   const handleScan = useCallback(async () => {
     if (state.selectedCountries.length === 0) {
@@ -46,7 +46,7 @@ export function useAcquisitionPipelineActions(
         ));
       }
       state.setPipelineStatus("idle");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
       state.setPipelineStatus("idle");
     }

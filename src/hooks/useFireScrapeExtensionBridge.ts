@@ -25,13 +25,13 @@ export interface FsScrapeResult {
 }
 
 export interface FsExtractResult {
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   url: string;
 }
 
 export function useFireScrapeExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
-  const pendingRef = useRef<Map<string, (r: any) => void>>(new Map());
+  const pendingRef = useRef<Map<string, (r: unknown) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Listen for responses from the webapp-bridge.js content script
@@ -72,7 +72,7 @@ export function useFireScrapeExtensionBridge() {
 
   /** Send a message to FireScrape background via the webapp-bridge content script */
   const sendMessage = useCallback(
-    <T = any>(action: string, payload?: Record<string, any>, timeoutMs = 30000): Promise<FsResponse<T>> =>
+    <T = any>(action: string, payload?: Record<string, unknown>, timeoutMs = 30000): Promise<FsResponse<T>> =>
       new Promise((resolve) => {
         const requestId = `fs_${action}_${crypto.randomUUID()}`;
         const timer = setTimeout(() => {
@@ -100,7 +100,7 @@ export function useFireScrapeExtensionBridge() {
       const navResult = await sendMessage("agent-action", {
         step: { action: "navigate", url }
       }, 20000);
-      if (!navResult.success) return navResult as any;
+      if (!navResult.success) return navResult as unknown;
       // Wait for page load then scrape
       await new Promise(r => setTimeout(r, 2000));
       return scrape(true);
@@ -116,14 +116,14 @@ export function useFireScrapeExtensionBridge() {
 
   /** Run an agent action (click, type, navigate, scroll, wait) */
   const agentAction = useCallback(
-    (step: { action: string; [key: string]: any }) =>
+    (step: { action: string; [key: string]: unknown }) =>
       sendMessage("agent-action", { step }, 30000),
     [sendMessage]
   );
 
   /** Run a multi-step agent sequence */
   const agentSequence = useCallback(
-    (steps: Array<{ action: string; [key: string]: any }>) =>
+    (steps: Array<{ action: string; [key: string]: unknown }>) =>
       sendMessage("agent-sequence", { steps }, 60000),
     [sendMessage]
   );

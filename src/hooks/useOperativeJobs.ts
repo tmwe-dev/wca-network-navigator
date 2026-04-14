@@ -45,23 +45,23 @@ export function useOperativeJobs() {
       }) as Promise<unknown> as Promise<OperativeJob>;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
-    onError: (e: any) => toast.error(e.message || "Errore creazione job"),
+    onError: (e: unknown) => toast.error(e.message || "Errore creazione job"),
   });
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const upd: any = { status };
+      const upd: Record<string, unknown> = { status };
       if (status === "completed") upd.completed_at = new Date().toISOString();
       await updateWorkPlan(id, upd);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e.message),
   });
 
   const deleteJobMut = useMutation({
     mutationFn: (id: string) => deleteWorkPlan(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job eliminato"); },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e.message),
   });
 
   const generatePrompt = useMutation({
@@ -85,29 +85,29 @@ Istruzioni: ${job.description || "Nessuna istruzione specifica"}
 Canali: ${(job.steps?.channels || []).join(", ") || "tutti"}
 Scadenza: ${job.steps?.deadline || "non specificata"}`;
 
-      const res = await invokeEdge<any>("agent-execute", {
+      const res = await invokeEdge<unknown>("agent-execute", {
         body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
         context: "useOperativeJobs.generatePrompt",
       });
 
       const prompt = res?.response || res?.content || "Prompt non generato";
       await updateWorkPlan(job.id, {
-        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as unknown,
       });
       return prompt;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt AI generato"); },
-    onError: (e: any) => toast.error(e.message || "Errore generazione prompt"),
+    onError: (e: unknown) => toast.error(e.message || "Errore generazione prompt"),
   });
 
   const savePrompt = useMutation({
-    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: any }) => {
+    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
       await updateWorkPlan(id, {
-        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as any,
+        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() } as unknown,
       });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e.message),
   });
 
   return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob: deleteJobMut, generatePrompt, savePrompt };

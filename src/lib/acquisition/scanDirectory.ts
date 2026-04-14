@@ -10,6 +10,7 @@ import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
 import { upsertDirectoryCache } from "@/data/directoryCache";
 import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
+import { asEnrichment } from "@/lib/partnerUtils";
 
 const log = createLogger("scanDirectory");
 
@@ -192,12 +193,12 @@ export async function loadPartnerPreview(wcaId: number) {
     contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
     services: (svcs || []).map(s => s.service_category),
     key_markets: (ed as Record<string, unknown>)?.key_markets as string[] || [],
-    key_routes: (ed as Record<string, unknown>)?.key_routes as string[] || [],
+    key_routes: ((ed as Record<string, unknown>)?.key_routes as Array<{ from: string; to: string }> | string[] || []).map(r => typeof r === "string" ? { from: r, to: "" } : r),
     networks: (nets || []).map(n => n.network_name),
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
     profile_description: partner.profile_description || undefined,
-    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin").map((l) => ({ name: "LinkedIn", url: l.url })),
+    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin" && l.url).map((l) => ({ name: "LinkedIn", url: l.url! })),
     warehouse_sqm: (ed as Record<string, unknown>)?.warehouse_sqm as number | undefined,
     employees: (ed as Record<string, unknown>)?.employee_count as number | undefined,
     founded: (ed as Record<string, unknown>)?.founding_year ? String((ed as Record<string, unknown>).founding_year) : undefined,

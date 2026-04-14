@@ -104,12 +104,12 @@ export function useImportBlacklist() {
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50) as BlacklistEntryInsert[];
-        await insertBlacklistBatch(batch as any[]); const error = null;
+        await insertBlacklistBatch(batch as unknown[]); const error = null;
         if (error) throw error;
       }
 
       // Match with partners
-      const allEntries = await findAllBlacklistEntries() as any[];
+      const allEntries = await findAllBlacklistEntries() as unknown[];
       const { data: partners } = await supabase
         .from("partners")
         .select("id, company_name, country_name");

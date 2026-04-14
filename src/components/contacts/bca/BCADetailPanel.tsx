@@ -74,7 +74,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
 }
 
 /* ═══ Detail Side Panel ═══ */
-export function BusinessCardDetailPanel({ card, _onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
+export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: BusinessCardWithPartner; onClose: () => void }) {
   const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = card.mobile || card.phone;

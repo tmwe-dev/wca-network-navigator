@@ -16,7 +16,7 @@ import {
 const log = createLogger("Sorting");
 
 export default function Sorting() {
-  const { data: jobs = [], _isLoading } = useSortingJobs();
+  const { data: jobs = [], isLoading: _isLoading } = useSortingJobs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);

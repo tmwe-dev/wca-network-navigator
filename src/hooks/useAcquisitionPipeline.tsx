@@ -194,7 +194,7 @@ export function useAcquisitionPipeline() {
       }
 
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
-      if (!hasAnyContact) _consecutiveEmpty++; else consecutiveEmpty = 0;
+      if (!hasAnyContact) consecutiveEmpty++; else consecutiveEmpty = 0;
 
       // Enrich + Deep Search
       const parallelTasks: Promise<void>[] = [];

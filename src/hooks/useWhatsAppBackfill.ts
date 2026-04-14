@@ -96,7 +96,7 @@ export function useWhatsAppBackfill() {
 
       // Get unique contacts from sidebar
       const sidebarContacts = new Map<string, any>();
-      for (const msg of sidebarResult.messages as any[]) {
+      for (const msg of sidebarResult.messages as unknown[]) {
         const contact = String(msg.contact || msg.from || "").trim();
         if (!contact || contact === "Sconosciuto" || msg.isVerify) continue;
         if (!sidebarContacts.has(contact.toLowerCase())) {
@@ -155,17 +155,17 @@ export function useWhatsAppBackfill() {
         const chat = contactsWithGap[i];
         setProgress(p => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
 
-        let messages: any[] = [];
+        let messages: unknown[] = [];
 
         // Try readThread first (reads visible messages in chat)
         const threadResult = await bridge.readThread(chat.name, MAX_MESSAGES_PER_THREAD);
         if (threadResult.success && threadResult.messages?.length) {
-          messages = threadResult.messages as any[];
+          messages = threadResult.messages as unknown[];
         }
 
         // If we have a last known message and got messages, check if we need deeper scroll
         if (chat.lastDbText && messages.length > 0) {
-          const foundAnchor = messages.some((m: any) => {
+          const foundAnchor = messages.some((m: unknown) => {
             const t = String(m.text || m.lastMessage || "").trim().toLowerCase();
             return t === chat.lastDbText!.trim().toLowerCase();
           });
@@ -175,7 +175,7 @@ export function useWhatsAppBackfill() {
             const backfillResult = await bridge.backfillChat(chat.name, chat.lastDbText, MAX_SCROLLS_PER_CHAT);
             if (backfillResult.success && backfillResult.messages?.length) {
               // Merge, dedup will handle overlaps
-              messages = [...messages, ...(backfillResult.messages as any[])];
+              messages = [...messages, ...(backfillResult.messages as unknown[])];
             }
           }
         }
@@ -205,7 +205,7 @@ export function useWhatsAppBackfill() {
               to_address: finalDirection === "outbound" ? contact : undefined,
               body_text: text,
               message_id_external: extId,
-              raw_payload: msg as any,
+              raw_payload: msg as unknown,
             }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
           if (!error && status === 201) chatRecovered++;
@@ -234,7 +234,7 @@ export function useWhatsAppBackfill() {
 
       setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
       toast.success(`Recupero completato: ${totalRecovered} messaggi da ${contactsWithGap.length} chat`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: err.message }));
       toast.error(`Errore recupero: ${err.message}`);
     } finally {

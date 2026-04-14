@@ -27,7 +27,7 @@ interface PartnerQueueProps {
   onPartnerClick?: (wcaId: number) => void;
 }
 
-export function PartnerQueue({ items, _activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
+export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
   const selectedCount = items.filter((i) => selectedIds.has(i.wca_id)).length;
   const allSelected = items.length > 0 && selectedCount === items.length;
 

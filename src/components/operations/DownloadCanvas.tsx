@@ -35,7 +35,7 @@ interface Props {
   isDark: boolean;
 }
 
-export function DownloadCanvas({ open, onClose, onStop, current, results, running, _isDark }: Props) {
+export function DownloadCanvas({ open, onClose, onStop, current, results, running, isDark: _isDark }: Props) {
   const historyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

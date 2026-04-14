@@ -13,7 +13,7 @@ interface Props {
 
 export function ContactRecordActions({ record }: Props): ReactElement {
   const [liDmOpen, setLiDmOpen] = useState(false);
-  const { handleSendEmail, handleSendWhatsApp, _waSending, _waAvailable } = useDirectContactActions();
+  const { handleSendEmail, handleSendWhatsApp, waSending: _waSending, waAvailable: _waAvailable } = useDirectContactActions();
 
   const handleEmail = () => {
     if (record.email) {
