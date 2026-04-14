@@ -62,12 +62,12 @@ interface EditableRule {
   group_color?: string | null;
   group_icon?: string | null;
   auto_action?: string | null;
-  auto_execute?: boolean;
-  ai_confidence_threshold?: number;
+  auto_execute?: boolean | null;
+  ai_confidence_threshold?: number | null;
   tone_override?: string | null;
   custom_prompt?: string | null;
   notes?: string | null;
-  is_active?: boolean;
+  is_active?: boolean | null;
   [key: string]: unknown;
 }
 
@@ -78,7 +78,7 @@ interface EditablePrompt {
   scope_value?: string | null;
   instructions: string;
   priority: number;
-  is_active?: boolean;
+  is_active?: boolean | null;
   [key: string]: unknown;
 }
 
@@ -295,7 +295,7 @@ function GroupRulesSection() {
 /* ── Section C: Prompt Manager ── */
 function PromptManagerSection() {
   const qc = useQueryClient();
-  const [editingPrompt, setEditingPrompt] = useState<Record<string, string | number | boolean | null | undefined> | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<EditablePrompt | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: prompts = [], isLoading } = useQuery({
@@ -335,7 +335,7 @@ function PromptManagerSection() {
     onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); },
   });
 
-  const openEdit = (prompt?: Record<string, unknown>) => {
+  const openEdit = (prompt?: EditablePrompt) => {
     setEditingPrompt(prompt ?? { title: "", scope: "global", scope_value: null, instructions: "", priority: 5, is_active: true });
     setSheetOpen(true);
   };

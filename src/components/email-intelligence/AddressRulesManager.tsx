@@ -41,13 +41,13 @@ interface EditableRule {
   display_name?: string | null;
   category?: string | null;
   auto_action?: string | null;
-  auto_action_params?: Record<string, unknown> | null;
-  auto_execute?: boolean;
-  ai_confidence_threshold?: number;
+  auto_action_params?: unknown;
+  auto_execute?: boolean | null;
+  ai_confidence_threshold?: number | null;
   preferred_channel?: string | null;
   tone_override?: string | null;
   notes?: string | null;
-  is_active?: boolean;
+  is_active?: boolean | null;
   [key: string]: unknown;
 }
 
