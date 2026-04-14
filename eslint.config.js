@@ -66,7 +66,7 @@ export default tseslint.config(
       ],
     },
   },
-  // ── Layer enforcement: hooks should not import types from components ──
+  // ── Layer enforcement: hooks should not import types from components (except ui) ──
   {
     files: ["src/hooks/**/*.{ts,tsx}"],
     ignores: ["src/hooks/use-toast.ts"],
@@ -76,8 +76,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["@/components/*", "@/components/**"],
-              allowList: ["@/components/ui/*"],
+              group: ["@/components/acquisition/*", "@/components/cockpit/*", "@/components/contacts/*", "@/components/email/*", "@/components/operations/*", "@/components/global/*"],
               message: "Hooks should not import from src/components/. Move shared types to src/types/. See docs/architecture/OVERVIEW-2026-04-14.md",
             },
           ],
