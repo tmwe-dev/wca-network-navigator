@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { Sentry } from "@/lib/sentry";
 import { V2Routes } from "@/v2/routes";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
@@ -85,19 +84,7 @@ function PageFallback() {
   );
 }
 
-const SentryFallback = ({ error }: { error: Error }) => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="text-center space-y-4 p-8">
-      <div className="text-4xl">⚠️</div>
-      <h2 className="text-lg font-semibold text-foreground">Errore imprevisto</h2>
-      <p className="text-sm text-muted-foreground max-w-md">{error?.message || "Si è verificato un errore. Ricarica la pagina."}</p>
-      <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-all">Ricarica pagina</button>
-    </div>
-  </div>
-);
-
 const App = () => (
-  <Sentry.ErrorBoundary fallback={({ error }) => <SentryFallback error={error as Error} />}>
   <GlobalErrorBoundary>
     <AuthProvider>
     <QueryClientProvider client={queryClient}>
@@ -173,7 +160,6 @@ const App = () => (
     </QueryClientProvider>
     </AuthProvider>
   </GlobalErrorBoundary>
-  </Sentry.ErrorBoundary>
 );
 
 export default App;
