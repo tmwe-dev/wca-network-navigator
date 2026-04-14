@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
@@ -36,7 +36,7 @@ export interface AuthState {
 
 interface AuthActions {
   readonly signInWithEmail: (email: string, password: string) => Promise<void>;
-  readonly signInWithGoogle: () => Promise<void>;
+  
   readonly signUp: (email: string, password: string, displayName: string) => Promise<void>;
   readonly signOut: () => Promise<void>;
   readonly resetPassword: (email: string) => Promise<void>;
@@ -208,27 +208,6 @@ export function useAuthV2(): UseAuthV2Return {
     }
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/v2/login`,
-      });
-      if (result.error) {
-        setError("Errore con Google Sign-In");
-        setIsLoading(false);
-        return;
-      }
-      if (result.redirected) {
-        return;
-      }
-      setTimeout(() => setIsLoading(false), 5000);
-    } catch (err) {
-      setIsLoading(false);
-      setError(err instanceof Error ? err.message : "Errore con Google Sign-In");
-    }
-  }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     setError(null);
@@ -285,7 +264,7 @@ export function useAuthV2(): UseAuthV2Return {
   return {
     user, session, profile, roles,
     isLoading, isAuthenticated, isAdmin, error,
-    signInWithEmail, signInWithGoogle, signUp,
+    signInWithEmail, signUp,
     signOut, resetPassword, updatePassword, clearError,
   };
 }
