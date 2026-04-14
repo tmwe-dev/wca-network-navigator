@@ -26,6 +26,10 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
       if (!user) return;
 
       await createMemory({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- spreading typed insert with extra fields
+      } as Parameters<typeof createMemory>[0] & Record<string, unknown>);
+      // The actual call:
+      await createMemory({
         user_id: user.id,
         content: type === "up"
           ? `L'utente ha gradito la risposta #${messageIndex} dell'assistente.`
