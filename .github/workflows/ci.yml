@@ -20,6 +20,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Verify lockfile is in sync
+        run: git diff --exit-code package-lock.json
       - run: npm run lint
       - run: npm run typecheck
       - name: Security audit
