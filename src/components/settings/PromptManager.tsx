@@ -290,7 +290,7 @@ export function PromptManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={editSource} onValueChange={(v: any) => setEditSource(v)}>
+              <Select value={editSource} onValueChange={(v: string) => setEditSource(v)}>
                 <SelectTrigger className="h-9 text-xs flex-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email_type" className="text-xs">Tipo Email</SelectItem>

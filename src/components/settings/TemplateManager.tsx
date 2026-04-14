@@ -97,7 +97,7 @@ export default function TemplateManager() {
           file_size: file.size,
           file_type: file.type || "application/octet-stream",
           category: uploadCategory,
-        } as any);
+        });
       }
       toast.success(`${files.length} file caricati`);
       qc.invalidateQueries({ queryKey: ["email-templates"] });
