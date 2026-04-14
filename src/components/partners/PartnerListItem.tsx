@@ -15,7 +15,7 @@ import type { SocialLink } from "@/hooks/useSocialLinks";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string }
-interface ContactItem { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+interface ContactItem { id: string; name: string; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 
 interface PartnerListItemProps {
   partner: PartnerViewModel;
@@ -38,7 +38,7 @@ export function PartnerListItem({
   onToggleSelection,
   index,
 }: PartnerListItemProps) {
-  const years = getYearsMember(partner.member_since);
+  const years = getYearsMember(partner.member_since ?? null);
   const services: ServiceItem[] = partner.partner_services || [];
   const allServices = [
     ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),

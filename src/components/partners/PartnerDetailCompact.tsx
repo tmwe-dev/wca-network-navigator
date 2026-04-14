@@ -58,7 +58,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
-  const years = getYearsMember(partner.member_since);
+  const years = getYearsMember(partner.member_since ?? null);
   const _enrichment = partner.enrichment_data as Record<string, unknown>;
   const _branchCountries = getBranchCountries(partner);
 
@@ -177,7 +177,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          {(partner.rating ?? 0) > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as Record<string, unknown>} />}
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
