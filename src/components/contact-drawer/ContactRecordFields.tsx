@@ -84,6 +84,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
       if (draft.email !== (record.email || "")) updates.email = draft.email || null;
       if (draft.phone !== (record.phone || "")) updates.phone = draft.phone || null;
       if (draft.mobile !== (record.mobile || "")) updates.mobile = draft.mobile || null;
+      if (draft.position !== (record.position || "")) updates.position = draft.position || null;
       if (draft.city !== (record.city || "")) updates.city = draft.city;
       if (draft.address !== (record.address || "")) updates.address = draft.address || null;
       if (draft.website !== (record.website || "")) updates.website = draft.website || null;
