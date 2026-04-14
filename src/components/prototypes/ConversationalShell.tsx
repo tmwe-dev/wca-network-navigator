@@ -30,7 +30,7 @@ function usePartnerContactsList() {
         .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
         .order("created_at", { ascending: false })
         .limit(150);
-      return ((data || []) as Array<Record<string, unknown>>).map((pc) => ({
+      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
         company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
