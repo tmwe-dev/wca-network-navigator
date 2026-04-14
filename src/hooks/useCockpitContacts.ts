@@ -219,8 +219,7 @@ export function useCockpitContacts() {
       const prcMap: Record<string, (typeof prcData)[number]> = {};
       for (const c of prcData) prcMap[c.id] = c;
       const icMap: Record<string, (typeof icData)[number]> = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Supabase join type
-      for (const c of icData) icMap[(c as any).id] = c;
+      for (const c of icData) icMap[(c as unknown).id] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");

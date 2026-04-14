@@ -118,8 +118,7 @@ export default function AgentChatHub() {
         });
         toast.info("Feedback registrato — l'AI migliorerà");
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from("ai_memory") as any).insert({  // eslint-disable-line @typescript-eslint/no-explicit-any -- table not in schema
+        await (supabase.from("ai_memory") as unknown).insert({  // eslint-disable-line @typescript-eslint/no-explicit-any -- table not in schema
           user_id: user.id,
           memory_type: "preference",
           content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
