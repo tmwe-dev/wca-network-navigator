@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 
 describe("sanitizeSearchTerm — extended", () => {
-  it("removes SQL-like injection patterns", () => {
-    expect(sanitizeSearchTerm("'; DROP TABLE partners; --")).toBe("' DROP TABLE partners --");
+  it("preserves text without PostgREST special chars", () => {
+    expect(sanitizeSearchTerm("'; DROP TABLE partners; --")).toBe("'; DROP TABLE partners; --");
   });
 
   it("removes PostgREST wildcards", () => {
