@@ -852,7 +852,7 @@ async function runScrapeSelected(params) {
       if (pr.success && pr.data) { batch.push(pr.data); addLog("✅ " + items[i].name); }
       else { scrapingState.errors++; if (pr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); if (batch.length > 0) await saveBatch(batch); scrapingState.active = false; return { success: false, error: "session_expired", saved: scrapingState.saved }; } addLog("❌ " + items[i].name); }
       if (batch.length >= batchSize) { await saveBatch(batch); batch = []; }
-      if (i < items.length - 1 && !scrapingState.stopped) { var jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
+      if (i < items.length - 1 && !scrapingState.stopped) { const jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
     }
     if (batch.length > 0) await saveBatch(batch);
     addLog("Completato. Salvati: " + scrapingState.saved + ", Errori: " + scrapingState.errors);
