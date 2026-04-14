@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Database } from "@/integrations/supabase/types";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
 import {
