@@ -41,7 +41,8 @@ interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires: string | null }
 interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
 
-  partner: Record<string, any>;
+interface PartnerDetailCompactProps {
+  partner: Record<string, unknown> & { id: string; company_name: string; partner_contacts?: ContactItem[]; partner_services?: ServiceItem[]; partner_networks?: NetworkItem[]; [k: string]: unknown };
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
