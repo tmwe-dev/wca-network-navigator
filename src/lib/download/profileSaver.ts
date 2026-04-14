@@ -67,7 +67,7 @@ export async function saveExtractionResult(
       if (ot.includes("head") || ot.includes("main")) partnerUpdate.office_type = "head_office";
       else if (ot.includes("branch")) partnerUpdate.office_type = "branch";
     }
-    if (p.branchCities?.length > 0) {
+    if ((p.branchCities?.length ?? 0) > 0) {
       partnerUpdate.has_branches = true;
       partnerUpdate.branch_cities = p.branchCities;
     }
@@ -84,7 +84,8 @@ export async function saveExtractionResult(
   }
 
   // ── 3. Batch save contacts ──
-  if (result.success && result.contacts?.length > 0) {
+  if (result.success && (result.contacts?.length ?? 0) > 0) {
+    const contacts = result.contacts!;
     const existingContacts = await findPartnerContacts(partnerId, "id, name, email");
     const existingByName = new Map(
       (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
@@ -93,7 +94,7 @@ export async function saveExtractionResult(
     const toInsert: Array<Record<string, unknown>> = [];
     const toUpdate: Array<{ id: string; updates: Record<string, string> }> = [];
 
-    for (const c of result.contacts) {
+    for (const c of contacts) {
       const nameKey = (c.name || c.title || "Sconosciuto").trim().toLowerCase();
       if (!existingByName.has(nameKey)) {
         toInsert.push({
@@ -119,22 +120,24 @@ export async function saveExtractionResult(
       await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c) => c.phone || c.mobile).length;
+    extractedEmailCount = contacts.filter((c) => c.email).length;
+    extractedPhoneCount = contacts.filter((c) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
-  if (result.profile?.networks?.length > 0) {
+  if ((result.profile?.networks?.length ?? 0) > 0) {
+    const networks = result.profile!.networks!;
     const existingNets = await findPartnerNetworks(partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
-    const toInsert = result.profile.networks
+    const toInsert = networks
       .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
       .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
     await insertPartnerNetworks(toInsert);
   }
 
   // ── 5. Batch save services ──
-  if (result.profile?.services?.length > 0) {
+  if ((result.profile?.services?.length ?? 0) > 0) {
+    const services = result.profile!.services!;
     const serviceMap: Record<string, string> = {
       air: "air_freight", "air freight": "air_freight",
       "ocean fcl": "ocean_fcl", "sea fcl": "ocean_fcl", fcl: "ocean_fcl",
@@ -161,7 +164,7 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.services.map((s: string) => mapService(s)).filter(Boolean) as string[]
+      services.map((s: string) => mapService(s)).filter(Boolean) as string[]
     )];
     if (mapped.length > 0) {
       const existingSvc = await findPartnerServices(partnerId);
@@ -176,7 +179,8 @@ export async function saveExtractionResult(
   }
 
   // ── 6. Batch save certifications ──
-  if (result.profile?.certifications?.length > 0) {
+  if ((result.profile?.certifications?.length ?? 0) > 0) {
+    const certifications = result.profile!.certifications!;
     const validCerts = ["IATA", "BASC", "ISO", "C-TPAT", "AEO"] as const;
     const mapCert = (text: string): typeof validCerts[number] | null => {
       const upper = text.trim().toUpperCase();
@@ -187,7 +191,7 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.certifications.map((c: string) => mapCert(c)).filter(Boolean) as string[]
+      certifications.map((c: string) => mapCert(c)).filter(Boolean) as string[]
     )];
     if (mapped.length > 0) {
       const existingCerts = await findPartnerCertifications(partnerId);
