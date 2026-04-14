@@ -24,7 +24,8 @@ export async function updateItem(
   extra?: { errorCode?: string; errorMessage?: string; contactsFound?: number; contactsMissing?: number },
 ): Promise<void> {
   const current = await getJobItemById(itemId, "attempt_count");
-  const newAttempt = ((current?.attempt_count) || 0) + 1;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const newAttempt = (((current as any)?.attempt_count) || 0) + 1;
 
   const payload: Record<string, any> = {
     status,

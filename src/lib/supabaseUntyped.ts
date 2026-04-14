@@ -11,5 +11,5 @@ import { supabase } from "@/integrations/supabase/client";
  
 export function untypedFrom(table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return supabase.from(table);
+  return (supabase as any).from(table);
 }

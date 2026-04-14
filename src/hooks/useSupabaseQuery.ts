@@ -30,8 +30,9 @@ export function useSupabaseQuery<T extends TableName, TResult>(
     queryKey: key,
     queryFn: async () => {
       const base = supabase.from(table).select(select);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const query = options?.filters ? options.filters(base) : base;
-      const { data, error } = await query;
+      const { data, error } = await (query as any);
       if (error) throw error;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
       return ((data ?? []) as any as RowOf<T>[]).map(mapFn);

@@ -32,7 +32,8 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: string) => void; fn: () => Promise<unknown> }> } {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- global singleton lock
   const w = window as any;
   if (!w[LOCK_KEY]) w[LOCK_KEY] = { busy: false, queue: [] };

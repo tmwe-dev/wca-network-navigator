@@ -24,10 +24,12 @@ interface BufferState {
 }
 
 function getBuffer(): BufferState {
-  if (!(window as Record<string, unknown>)[BUFFER_KEY]) {
-    (window as Record<string, unknown>)[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any;
+  if (!w[BUFFER_KEY]) {
+    w[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
   }
-  return (window as Record<string, unknown>)[BUFFER_KEY];
+  return w[BUFFER_KEY];
 }
 
 /**
