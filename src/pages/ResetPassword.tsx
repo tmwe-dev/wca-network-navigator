@@ -7,49 +7,29 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { session, event, status } = useAuth();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [canReset, setCanReset] = useState(false);
 
+  const checking = status === "loading";
+  const hasRecoveryHash = typeof window !== "undefined" && window.location.hash.includes("type=recovery");
+
+  // Derive canReset from auth provider state
   useEffect(() => {
-    let mounted = true;
-    const hasRecoveryHash = window.location.hash.includes("type=recovery");
-
-    const bootstrap = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setCanReset(hasRecoveryHash || !!session);
-      setChecking(false);
-    };
-
-    bootstrap();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-
-      if (event === "PASSWORD_RECOVERY" || (event === "INITIAL_SESSION" && hasRecoveryHash && !!session)) {
-        setCanReset(true);
-      }
-
-      setChecking(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+    if (event === "PASSWORD_RECOVERY") {
+      setCanReset(true);
+    } else if (event === "INITIAL_SESSION" && hasRecoveryHash && !!session) {
+      setCanReset(true);
+    } else if (!checking && (hasRecoveryHash || !!session)) {
+      setCanReset(true);
+    }
+  }, [event, session, checking, hasRecoveryHash]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
