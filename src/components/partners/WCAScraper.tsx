@@ -121,7 +121,7 @@ export function WCAScraper() {
           log.aiClassification = result.aiClassification;
           // Check if contacts have email or phone
           const contacts = result.partner?.contacts || [];
-          log.hasContactDetails = contacts.some((c) => c.email || c.direct_phone || c.mobile);
+          log.hasContactDetails = contacts.some((c) => c.email || c.phone);
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
