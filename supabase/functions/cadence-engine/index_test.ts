@@ -1,0 +1,60 @@
+import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+try { loadSync({ export: true, examplePath: null }); } catch(_) {}
+import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
+
+const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
+const ANON_KEY = Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY")!;
+const URL = `${SUPABASE_URL}/functions/v1/cadence-engine`;
+
+Deno.test("CORS preflight returns 200", async () => {
+  const res = await fetch(URL, {
+    method: "OPTIONS",
+    headers: { Origin: "http://localhost:3000", "Access-Control-Request-Method": "POST" },
+  });
+  assertEquals(res.status, 200);
+  await res.text();
+});
+
+Deno.test("POST returns 200 with processed count (cron function, no auth required)", async () => {
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assert(typeof body.processed === "number", `Expected processed count, got: ${JSON.stringify(body)}`);
+});
+
+Deno.test("Response includes executed and pending_review fields", async () => {
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json();
+  assert("executed" in body, "Missing 'executed' field");
+  assert("pending_review" in body, "Missing 'pending_review' field");
+});
+
+Deno.test("Response body is valid JSON", async () => {
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  const text = await res.text();
+  let parsed = false;
+  try { JSON.parse(text); parsed = true; } catch { /* */ }
+  assert(parsed, `Response is not valid JSON: ${text.substring(0, 100)}`);
+});
+
+Deno.test("CORS headers present on response", async () => {
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({}),
+  });
+  assert(res.headers.get("access-control-allow-origin") !== null, "Missing CORS");
+  await res.text();
+});
