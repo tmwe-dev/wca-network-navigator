@@ -31,3 +31,29 @@ export async function deleteImportedContactsByLogId(importLogId: string) {
   const { error } = await supabase.from("imported_contacts").delete().eq("import_log_id", importLogId);
   if (error) throw error;
 }
+
+export async function findOrCreateManualImportLog(userId: string): Promise<string> {
+  const { data: existing } = await supabase
+    .from("import_logs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("file_name", "__manual_entry__")
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: newLog, error } = await supabase
+    .from("import_logs")
+    .insert({
+      user_id: userId,
+      file_name: "__manual_entry__",
+      total_rows: 0,
+      status: "completed",
+      group_name: "Inserimento Manuale",
+    })
+    .select("id")
+    .single();
+  if (error || !newLog) throw error || new Error("Failed to create import log");
+  return newLog.id;
+}

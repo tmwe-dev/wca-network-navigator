@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnerContactsByPartnerIds, type PartnerContactResult } from "@/data/partnerRelations";
 
 export interface PartnerContact {
   id: string;
@@ -22,31 +22,25 @@ export function usePartnerContacts(partnerIds: string[]) {
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, PartnerContact[]>;
 
-      const map: Record<string, PartnerContact[]> = {};
-      // Batch in chunks of 200 to avoid query limits
-      const CHUNK = 200;
-      for (let i = 0; i < partnerIds.length; i += CHUNK) {
-        const chunk = partnerIds.slice(i, i + CHUNK);
-        const { data, error } = await supabase
-          .from("partner_contacts")
-          .select("id, partner_id, name, title, email, direct_phone, mobile, is_primary, contact_alias")
-          .in("partner_id", chunk);
+      const data = await findPartnerContactsByPartnerIds(partnerIds);
 
-        if (error) throw error;
-        for (const c of data ?? []) {
-          if (!map[c.partner_id]) map[c.partner_id] = [];
-          map[c.partner_id].push({
-            id: c.id,
-            partner_id: c.partner_id,
-            name: c.name,
-            title: c.title,
-            email: c.email,
-            direct_phone: c.direct_phone,
-            mobile: c.mobile,
-            is_primary: c.is_primary ?? false,
-            contact_alias: c.contact_alias,
-          });
-        }
+      const map: Record<string, PartnerContact[]> = {};
+      for (const c of data) {
+        const raw = c as unknown as PartnerContactResult & { partner_id: string; is_primary?: boolean };
+        const pid = raw.partner_id;
+        if (!pid) continue;
+        if (!map[pid]) map[pid] = [];
+        map[pid].push({
+          id: raw.id,
+          partner_id: pid,
+          name: raw.name,
+          title: raw.title ?? null,
+          email: raw.email ?? null,
+          direct_phone: raw.direct_phone ?? null,
+          mobile: raw.mobile ?? null,
+          is_primary: raw.is_primary ?? false,
+          contact_alias: raw.contact_alias ?? null,
+        });
       }
 
       // Sort: primary first, then alphabetically
