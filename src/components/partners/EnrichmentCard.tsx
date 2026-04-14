@@ -21,7 +21,8 @@ const seniorityColors: Record<string, string> = {
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
-  const enrichment = partner.enrichment_data as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deeply nested enrichment JSON shape
+  const enrichment = partner.enrichment_data as any;
   if (!enrichment && !partner.enriched_at && !partner.ai_parsed_at) return null;
 
   const companyProfile = enrichment?.company_profile;

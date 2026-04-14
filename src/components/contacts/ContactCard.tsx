@@ -67,7 +67,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const ed = (c.enrichment_data ?? {}) as Record<string, unknown>;
   const linkedinUrl = ed?.linkedin_url as string | undefined;
   const companyWebsite = ed?.company_website as string | undefined;
-  const inHolding = isInHoldingPattern(c.lead_status);
+  const inHolding = isInHoldingPattern(c.lead_status ?? undefined);
 
   const handleRowClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
