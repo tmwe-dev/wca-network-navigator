@@ -51,9 +51,10 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const partner = partners[virtualRow.index] as Record<string, unknown> & { id: string; partner_contacts?: Array<Record<string, unknown>>; company_name?: string; company_alias?: string; city?: string; rating?: number; email?: string; phone?: string; lead_status?: string; member_since?: string | null; country_code?: string; raw_profile_html?: string; enrichment_data?: Record<string, unknown> };
+          type PartnerContact = { email?: string; name?: string; is_primary?: boolean; direct_phone?: string; mobile?: string; [k: string]: unknown };
+          const partner = partners[virtualRow.index] as Record<string, unknown> & { id: string; partner_contacts?: PartnerContact[]; company_name?: string; company_alias?: string; city?: string; rating?: number; email?: string; phone?: string; lead_status?: string; member_since?: string | null; country_code?: string; raw_profile_html?: string; enrichment_data?: Record<string, unknown> };
           const contacts = partner.partner_contacts || [];
-          const primaryContact = contacts.find((c: Record<string, unknown>) => c.is_primary) || contacts[0];
+          const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;
           const hasEmail = !!partner.email || contacts.some((c: Record<string, unknown>) => c.email);
           const hasPhone = !!partner.phone || contacts.some((c: Record<string, unknown>) => c.direct_phone || c.mobile);
