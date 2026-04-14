@@ -148,8 +148,7 @@ export function useDeepSearchLocal() {
 
   const searchPartner = useCallback(async (partnerId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from getPartner
-    const partner = await getPartner(partnerId) as any;
+    const partner = await getPartner(partnerId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape from getPartner
     if (!partner) return { ...failResult, error: "Partner not found" };
 
     const contactsData = await findPartnerContacts(partnerId, "id, name, title, email, mobile, direct_phone");
@@ -169,8 +168,7 @@ export function useDeepSearchLocal() {
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
-    await updatePartner(partnerId, { enrichment_data: updated as any as Record<string, string> });
+    await updatePartner(partnerId, { enrichment_data: updated as any as Record<string, string> }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
 
     const rating = await calculateRating(partnerId, websiteQualityScore, partner.website as string | null, partner.member_since as string | null, partner.branch_cities as string | null);
     await updatePartner(partnerId, { rating });
@@ -181,8 +179,7 @@ export function useDeepSearchLocal() {
   const searchContact = useCallback(async (contactId: string) => {
     const failResult = { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?" as string, error: undefined as string | undefined };
     const { getContactsByIds } = await import("@/data/contacts");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic contact shape
-    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data") as any[];
+    const contacts = await getContactsByIds([contactId], "id, name, company_name, email, phone, mobile, country, city, position, enrichment_data") as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic contact shape
     const contact = contacts[0] || null;
     const cErr = !contact ? "not found" : null;
     if (cErr || !contact) return { ...failResult, error: "Contact not found" };

@@ -25,10 +25,8 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((e as any).code).toBe("SCHEMA_MISMATCH");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((e as any).message).toContain("age");
+      expect((e as any).code).toBe("SCHEMA_MISMATCH"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+      expect((e as any).message).toContain("age"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     }
   });
 
@@ -38,8 +36,7 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((e as any).message).toContain("age");
+      expect((e as any).message).toContain("age"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     }
   });
 
@@ -48,8 +45,7 @@ describe("responseValidator", () => {
       validateResponse({ name: "Bob", age: 30, tags: "not-array" }, schema);
       throw new Error("should have thrown");
     } catch (e) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((e as any).message).toContain("tags");
+      expect((e as any).message).toContain("tags"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     }
   });
 

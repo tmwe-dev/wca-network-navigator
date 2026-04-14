@@ -29,8 +29,7 @@ beforeEach(() => {
 
 describe("useAppSettings", () => {
   it("loads settings as key-value map", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     mockEq.mockResolvedValue({ data: [{ key: "theme", value: "dark" }, { key: "lang", value: "it" }], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -38,16 +37,14 @@ describe("useAppSettings", () => {
   });
 
   it("returns empty object when user not authenticated", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({});
   });
 
   it("returns empty object when no settings exist", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     mockEq.mockResolvedValue({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -55,16 +52,14 @@ describe("useAppSettings", () => {
   });
 
   it("throws on supabase error", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     mockEq.mockResolvedValue({ data: null, error: { message: "DB error" } });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it("has staleTime of 5 minutes", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     mockEq.mockResolvedValue({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -72,8 +67,7 @@ describe("useAppSettings", () => {
   });
 
   it("exposes loading state", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });

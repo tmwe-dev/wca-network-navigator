@@ -102,8 +102,7 @@ export function DecisionLogPanel() {
               const review = row.user_review ? REVIEW_ICONS[row.user_review] : null;
               const ReviewIcon = review?.icon ?? Clock;
               const expanded = expandedId === row.id;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
-              const partnerName = (row as any).partners?.company_name;
+              const partnerName = (row as any).partners?.company_name; // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase join type not in generated types
 
               return (
                 <div key={row.id} className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">

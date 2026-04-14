@@ -58,8 +58,7 @@ export function AttivitaTab() {
     enabled: !mockEnabled,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mixed mock/real activity types
-  const all: any[] = mockEnabled ? MOCK_ACTIVITIES : (activities || []);
+  const all: any[] = mockEnabled ? MOCK_ACTIVITIES : (activities || []); // eslint-disable-line @typescript-eslint/no-explicit-any -- mixed mock/real activity types
 
   const filtered = useMemo(() => {
     let result = all;

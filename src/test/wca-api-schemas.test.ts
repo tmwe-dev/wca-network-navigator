@@ -25,8 +25,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
         custom_extra_field_2030: "futuro",
       });
       expect(r.success).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" });
+      expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" }); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     });
 
     it("logo_url può essere null", () => {
@@ -121,8 +120,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   });
 
   describe("safeParse* — best-effort, no throw", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    let warnSpy: any;
+    let warnSpy: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
     beforeEach(() => {
       warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

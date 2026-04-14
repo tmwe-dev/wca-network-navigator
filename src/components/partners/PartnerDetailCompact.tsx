@@ -177,8 +177,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
         {/* Membership KPIs row */}
         <div className="flex items-center gap-3 flex-wrap">
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
+          {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />} // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
            {years > 0 && (
              <div className="flex items-center gap-1">
                <Trophy className="w-4 h-4 text-primary fill-primary" />
@@ -194,15 +193,13 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       </div>
 
       {/* Enrichment — top priority */}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-      <EnrichmentCard partner={partner as any} />
+      <EnrichmentCard partner={partner as any} /> // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
 
       {/* Contacts */}
       {contacts.length > 0 && (
         <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-          {contacts.map((c: any) => (
+          {contacts.map((c: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
@@ -304,8 +301,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
           <div className="flex flex-wrap gap-1.5">
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
-            {networks.map((n: any) => (
+            {networks.map((n: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
               <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
                 {n.network_name}
                 {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}

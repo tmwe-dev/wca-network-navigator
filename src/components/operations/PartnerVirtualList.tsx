@@ -51,8 +51,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
-          const partner = partners[virtualRow.index] as any;
+          const partner = partners[virtualRow.index] as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic partner shape from Supabase join
           const contacts = partner.partner_contacts || [];
           const primaryContact = contacts.find((c: Record<string, unknown>) => c.is_primary) || contacts[0];
           const hasProfile = !!partner.raw_profile_html;

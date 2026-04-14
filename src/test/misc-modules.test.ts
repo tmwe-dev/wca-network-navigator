@@ -49,8 +49,7 @@ describe("activityConstants", () => {
 
   it("STATUS_LABELS / STATUS_ICONS in coppia per ogni status", () => {
     for (const k of Object.keys(STATUS_LABELS)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((STATUS_ICONS as any)[k]).toBeDefined();
+      expect((STATUS_ICONS as any)[k]).toBeDefined(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     }
   });
 

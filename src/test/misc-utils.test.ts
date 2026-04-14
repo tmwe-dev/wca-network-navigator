@@ -61,8 +61,7 @@ describe("capitalizeFirst", () => {
 
   it("ritorna input invariato su empty/null", () => {
     expect(capitalizeFirst("")).toBe("");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    expect(capitalizeFirst(null as any)).toBeNull();
+    expect(capitalizeFirst(null as any)).toBeNull(); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
   });
 
   it("preserva il resto della stringa", () => {

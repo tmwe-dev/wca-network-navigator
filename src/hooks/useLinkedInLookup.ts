@@ -243,8 +243,7 @@ export function useLinkedInLookup() {
       }
 
       // Save result
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic enrichment data
-      const existing = (c.enrichment_data as any) || {};
+      const existing = (c.enrichment_data as any) || {}; // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic enrichment data
       const updated = {
         ...existing,
         linkedin_lookup_at: new Date().toISOString(),

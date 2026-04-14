@@ -17,8 +17,7 @@ describe("wcaCheckpoint — global rate-limit gate", () => {
   beforeEach(() => {
     // Reset state on window
     if (typeof window !== "undefined") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      delete (window as any).__wcaCheckpoint__;
+      delete (window as any).__wcaCheckpoint__; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     }
     setGreenZoneDelay(20); // reset to default
   });

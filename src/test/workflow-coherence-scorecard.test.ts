@@ -180,8 +180,7 @@ describe("Auditability", () => {
   it("agent tasks include execution_log for traceability", () => {
     // agent_tasks table has execution_log JSONB column
     const taskSchema = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      execution_log: [] as any[], // defaults to empty array
+      execution_log: [] as any[], // defaults to empty array // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       result_summary: null as string | null,
       completed_at: null as string | null,
     };

@@ -22,8 +22,7 @@ describe("ai/agentResponse", () => {
 
     it("ritorna stringa vuota su input vuoto", () => {
       expect(sanitizeVisibleAiText("")).toBe("");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect(sanitizeVisibleAiText(null as any)).toBe("");
+      expect(sanitizeVisibleAiText(null as any)).toBe(""); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     });
 
     it("collassa più newline consecutivi", () => {
@@ -106,8 +105,7 @@ describe("ai/agentResponse", () => {
 
   describe("dispatchAiUiActions / dispatchAiAgentEffects", () => {
     let dispatched: CustomEvent[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    let dispatchSpy: any;
+    let dispatchSpy: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
     beforeEach(() => {
       dispatched = [];
@@ -128,8 +126,7 @@ describe("ai/agentResponse", () => {
       ]);
       expect(dispatched).toHaveLength(2);
       expect(dispatched[0].type).toBe("ai-ui-action");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect((dispatched[0] as any).detail.action_type).toBe("navigate");
+      expect((dispatched[0] as any).detail.action_type).toBe("navigate"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     });
 
     it("dispatchAiAgentEffects auto-aggiunge start_download_job dal jobCreated", () => {
@@ -147,8 +144,7 @@ describe("ai/agentResponse", () => {
         },
       });
       expect(dispatched).toHaveLength(1);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      const detail = (dispatched[0] as any).detail;
+      const detail = (dispatched[0] as any).detail; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       expect(detail.action_type).toBe("start_download_job");
       expect(detail.job_id).toBe("j99");
     });

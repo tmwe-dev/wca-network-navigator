@@ -75,8 +75,7 @@ describe("Routing correctness", () => {
 
     let assigned: string | null = null;
     if (clientAssignment) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      assigned = (clientAssignment as any).agent_id;
+      assigned = (clientAssignment as any).agent_id; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     } else {
       const cc = partnerCountry.toUpperCase();
       const terAgent = agents.find(a => a.territory_codes?.some(t => t.toUpperCase() === cc));
@@ -89,8 +88,7 @@ describe("Routing correctness", () => {
 
 // ── Test 3: Approval discipline ──
 describe("Approval discipline", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-  function isHighStakes(partner: any): boolean {
+  function isHighStakes(partner: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     if (partner.lead_status === "in_progress" || partner.lead_status === "negotiation") return true;
     if (partner.source === "ex_client") return true;
     if (partner.rating && partner.rating >= 4) return true;

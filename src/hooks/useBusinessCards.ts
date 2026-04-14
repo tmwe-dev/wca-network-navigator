@@ -82,8 +82,7 @@ export function useUpdateBusinessCard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<BusinessCard>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial update shape
-      await updateBusinessCard(id, updates as any);
+      await updateBusinessCard(id, updates as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- partial update shape
     },
     onSuccess: () => invalidateBusinessCards(qc),
   });

@@ -22,8 +22,7 @@ interface ImportErrorMonitorProps {
   correctedErrors: ImportError[];
   dismissedErrors: ImportError[];
   activeLogId: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UseMutationResult type
-  fixErrors: any;
+  fixErrors: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- UseMutationResult type
 }
 
 export function ImportErrorMonitor({

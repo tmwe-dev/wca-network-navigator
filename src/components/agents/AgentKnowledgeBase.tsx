@@ -16,12 +16,10 @@ interface Props {
 }
 
 export function AgentKnowledgeBase({ agent }: Props) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
-  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as any as KBEntry[]) || []);
+  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as any as KBEntry[]) || []); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
   const { updateAgent } = useAgents();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
-  useEffect(() => setEntries((agent.knowledge_base as any as KBEntry[]) || []), [agent.id]);
+  useEffect(() => setEntries((agent.knowledge_base as any as KBEntry[]) || []), [agent.id]); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column double-cast required
 
   const addEntry = () => setEntries([...entries, { title: "", content: "" }]);
 
@@ -35,8 +33,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
-      { id: agent.id, knowledge_base: entries as any },
+      { id: agent.id, knowledge_base: entries as any }, // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON column type mismatch
       { onSuccess: () => toast.success("Knowledge Base salvata") }
     );
   };

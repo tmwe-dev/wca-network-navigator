@@ -34,8 +34,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
             state: "ok",
             company_name: "Acme Logistics",
             country_code: "IT",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-          } as any,
+          } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
         ],
       });
       const result = await scrapeWcaPartnerById(12345);
@@ -58,8 +57,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
     it("ritorna found=false quando state != ok", async () => {
       mockedScrape.mockResolvedValueOnce({
         success: true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-        results: [{ wca_id: 42, state: "not_found", company_name: "" } as any],
+        results: [{ wca_id: 42, state: "not_found", company_name: "" } as any], // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       });
       const result = await scrapeWcaPartnerById(42);
       expect(result.success).toBe(true);
@@ -98,8 +96,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
             website: "https://globex.de",
             networks: ["WCA First", { name: "WCA Projects" }],
             contacts: [{ name: "Hans", email: "hans@globex.de" }],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-          } as any,
+          } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
         ],
       });
 
@@ -118,8 +115,7 @@ describe("wcaScraper — contract E2E (mocked network)", () => {
     it("ritorna found=false ma authStatus=authenticated se profilo vuoto", async () => {
       mockedScrape.mockResolvedValueOnce({
         success: true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-        results: [{ wca_id: 99, state: "ok", company_name: "" } as any],
+        results: [{ wca_id: 99, state: "ok", company_name: "" } as any], // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       });
       const result = await previewWcaProfile(99);
       expect(result.success).toBe(true);

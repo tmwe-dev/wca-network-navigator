@@ -23,8 +23,7 @@ describe("countries helpers", () => {
       expect(getCountryFlag("")).toBe("🌍");
       expect(getCountryFlag("X")).toBe("🌍");
       expect(getCountryFlag("ITA")).toBe("🌍");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      expect(getCountryFlag(null as any)).toBe("🌍");
+      expect(getCountryFlag(null as any)).toBe("🌍"); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     });
   });
 

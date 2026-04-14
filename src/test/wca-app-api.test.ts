@@ -12,14 +12,12 @@ import {
 
 const originalFetch = global.fetch;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-function mockFetch(response: any, ok = true, status = 200) {
+function mockFetch(response: any, ok = true, status = 200) { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
   return vi.fn().mockResolvedValue({
     ok,
     status,
     json: vi.fn().mockResolvedValue(response),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-  } as any);
+  } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 }
 
 describe("wcaAppApi — contract tests (mocked fetch)", () => {
@@ -53,8 +51,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
         hasNext: false,
         totalResults: 1,
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = fakeFetch as any;
+      global.fetch = fakeFetch as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
       const result = await wcaDiscover("IT");
       expect(result.success).toBe(true);
@@ -75,8 +72,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
         page: 1,
         hasNext: false,
         totalResults: 0,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      }) as any;
+      }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
       await wcaDiscover("DE", 2, {
         networks: ["WCA First"],
@@ -84,8 +80,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
         city: "Berlin",
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body);
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       expect(body.filters.networks).toEqual(["WCA First"]);
       expect(body.filters.searchTerm).toBe("logistics");
       expect(body.filters.city).toBe("Berlin");
@@ -93,13 +88,11 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
     });
 
     it("throws ApiError SERVER_ERROR su 500 (Vol. II §5.3)", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = mockFetch({}, false, 500) as any;
+      global.fetch = mockFetch({}, false, 500) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       try {
         await wcaDiscover("IT");
         throw new Error("expected to throw");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      } catch (err: any) {
+      } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
         expect(err.name).toBe("ApiError");
         expect(err.code).toBe("SERVER_ERROR");
         expect(err.httpStatus).toBe(500);
@@ -114,8 +107,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
         success: true,
         results: [{ wca_id: 1, state: "ok", company_name: "X" }],
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = fakeFetch as any;
+      global.fetch = fakeFetch as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
       const result = await wcaScrape([1, 2, 3]);
       expect(result.success).toBe(true);
@@ -128,8 +120,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
 
     it("include networkDomain se passato", async () => {
       const fakeFetch = mockFetch({ success: true, results: [] });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = fakeFetch as any;
+      global.fetch = fakeFetch as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       await wcaScrape([1], "elitegln.com");
       const body = JSON.parse(fakeFetch.mock.calls[0][1].body);
       expect(body.networkDomain).toBe("elitegln.com");
@@ -145,8 +136,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
         found: 7,
         missing: [4, 5, 6],
         elapsed_ms: 42,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      }) as any;
+      }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
       const result = await wcaCheckIds([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "IT");
       expect(result.missing).toEqual([4, 5, 6]);
@@ -157,8 +147,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
   describe("wcaJobStart / wcaJobPause", () => {
     it("job-start invia countries + options", async () => {
       const fakeFetch = mockFetch({ success: true, jobId: "job-1", status: "running" });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = fakeFetch as any;
+      global.fetch = fakeFetch as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
       const result = await wcaJobStart(
         [{ code: "IT", name: "Italy" }],
@@ -173,8 +162,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
 
     it("job-pause invia action=pause", async () => {
       const fakeFetch = mockFetch({ success: true, action: "paused" });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      global.fetch = fakeFetch as any;
+      global.fetch = fakeFetch as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       await wcaJobPause("job-xyz");
       const body = JSON.parse(fakeFetch.mock.calls[0][1].body);
       expect(body.action).toBe("pause");

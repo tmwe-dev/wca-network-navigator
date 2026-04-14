@@ -32,10 +32,8 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("useAgents", () => {
   it("returns agents list on success", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(findAgents).mockResolvedValue([{ id: "a1", name: "Agent A" }] as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
+    vi.mocked(findAgents).mockResolvedValue([{ id: "a1", name: "Agent A" }] as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.agents).toHaveLength(1);
@@ -43,8 +41,7 @@ describe("useAgents", () => {
   });
 
   it("returns empty array when no agents", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -52,23 +49,20 @@ describe("useAgents", () => {
   });
 
   it("throws when user is not authenticated", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.agents).toEqual([]);
   });
 
   it("exposes isLoading=true initially", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const { result } = renderHook(() => useAgents(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("exposes createAgent mutation", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -77,8 +71,7 @@ describe("useAgents", () => {
   });
 
   it("exposes deleteAgent mutation", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

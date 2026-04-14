@@ -166,8 +166,7 @@ describe("AI malformed response handling", () => {
     ];
 
     for (const response of malformedResponses) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      let parsed: any = null;
+      let parsed: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
       let error = false;
       try {
         parsed = response ? JSON.parse(response) : null;
@@ -183,11 +182,9 @@ describe("AI malformed response handling", () => {
 // ── Test 6: Broken settings resilience ──
 describe("Broken settings resilience", () => {
   it("should use defaults when app_settings returns empty", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    const settingsRows: any[] = []; // empty
+    const settingsRows: any[] = []; // empty // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     const cfg: Record<string, string> = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-    settingsRows.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+    settingsRows.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; }); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
 
     const DEFAULT_BUDGET = 10;
     const DEFAULT_WORK_START = 6;

@@ -1,7 +1,6 @@
 /**
  * Typed interface for source_meta JSON fields on activities, contacts, etc.
- // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
- * Replaces `as any` casts on source_meta across the codebase.
+ * Replaces `as any` casts on source_meta across the codebase. // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
  */
 
 export interface SourceMeta {

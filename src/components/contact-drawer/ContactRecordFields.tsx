@@ -109,8 +109,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
     setEditing(false);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase insert type mismatch
-  const val = (key: string) => editing ? (draft[key] || "") : ((record as any)[key === "contact_name" ? "contactName" : key === "company_name" ? "companyName" : key === "lead_status" ? "leadStatus" : key] || "");
+  const val = (key: string) => editing ? (draft[key] || "") : ((record as any)[key === "contact_name" ? "contactName" : key === "company_name" ? "companyName" : key === "lead_status" ? "leadStatus" : key] || ""); // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase insert type mismatch
 
   return (
     <div className="space-y-3">
@@ -134,8 +133,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
       {/* Status + Holding Pattern */}
       <div className="flex items-center gap-2">
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type narrowing for component props
-        <HoldingPatternIndicator status={record.leadStatus as any} />
+        <HoldingPatternIndicator status={record.leadStatus as any} /> // eslint-disable-line @typescript-eslint/no-explicit-any -- Union type narrowing for component props
         {editing ? (
           <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
             <SelectTrigger className="h-7 w-36 text-xs">

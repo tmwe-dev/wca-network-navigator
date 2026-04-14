@@ -8,8 +8,7 @@ if (typeof File !== "undefined" && !File.prototype.text) {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => reject(reader.error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
-      reader.readAsText(this as any);
+      reader.readAsText(this as any); // eslint-disable-line @typescript-eslint/no-explicit-any -- test mock
     });
   };
 }
