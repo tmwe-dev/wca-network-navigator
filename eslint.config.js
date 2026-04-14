@@ -72,4 +72,23 @@ export default tseslint.config(
       ],
     },
   },
+  // ── public/ browser extensions: basic JS linting ──
+  {
+    files: ["public/**/*.js", "public/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+        ...globals.webextensions,
+        chrome: "readonly",
+      },
+    },
+    rules: {
+      "no-var": "error",
+      "prefer-const": "error",
+      "eqeqeq": ["error", "always"],
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
 );
