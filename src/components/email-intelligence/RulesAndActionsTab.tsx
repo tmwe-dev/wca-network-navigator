@@ -53,11 +53,40 @@ export default function RulesAndActionsTab() {
   );
 }
 
+interface EditableRule {
+  id?: string;
+  email_address: string;
+  display_name?: string | null;
+  group_id?: string | null;
+  group_name?: string | null;
+  group_color?: string | null;
+  group_icon?: string | null;
+  auto_action?: string | null;
+  auto_execute?: boolean | null;
+  ai_confidence_threshold?: number | null;
+  tone_override?: string | null;
+  custom_prompt?: string | null;
+  notes?: string | null;
+  is_active?: boolean | null;
+  [key: string]: unknown;
+}
+
+interface EditablePrompt {
+  id?: string;
+  title: string;
+  scope: string;
+  scope_value?: string | null;
+  instructions: string;
+  priority: number;
+  is_active?: boolean | null;
+  [key: string]: unknown;
+}
+
 /* ── Section A: Address Rules ── */
 function AddressRulesSection() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [editingRule, setEditingRule] = useState<any | null>(null);
+  const [editingRule, setEditingRule] = useState<EditableRule | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: groups = [] } = useQuery({
@@ -110,7 +139,7 @@ function AddressRulesSection() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["address-rules-tab4"] }),
   });
 
-  const openEdit = (rule?: Record<string, unknown>) => {
+  const openEdit = (rule?: EditableRule) => {
     setEditingRule(rule ?? {
       email_address: "", display_name: "", category: "prospect",
       auto_action: "none", auto_execute: false, ai_confidence_threshold: 0.85,
@@ -266,7 +295,7 @@ function GroupRulesSection() {
 /* ── Section C: Prompt Manager ── */
 function PromptManagerSection() {
   const qc = useQueryClient();
-  const [editingPrompt, setEditingPrompt] = useState<any | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<EditablePrompt | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: prompts = [], isLoading } = useQuery({
@@ -306,7 +335,7 @@ function PromptManagerSection() {
     onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: ["email-prompts-tab4"] }); },
   });
 
-  const openEdit = (prompt?: Record<string, unknown>) => {
+  const openEdit = (prompt?: EditablePrompt) => {
     setEditingPrompt(prompt ?? { title: "", scope: "global", scope_value: null, instructions: "", priority: 5, is_active: true });
     setSheetOpen(true);
   };

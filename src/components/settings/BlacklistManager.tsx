@@ -68,8 +68,8 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
 
 export default function BlacklistManager() {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<any[] | null>(null);
-  const [allParsed, setAllParsed] = useState<any[]>([]);
+  const [preview, setPreview] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] | null>(null);
+  const [allParsed, setAllParsed] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]>([]);
   const [scraping, setScraping] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useBlacklistStats();

@@ -22,7 +22,7 @@ import { OptimizedImage } from "@/components/shared/OptimizedImage";
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
   const [searchTerm, setSearchTerm] = useState(card.company_name || "");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Array<{ id: string; company_name: string; company_alias?: string; country_code?: string; country_name?: string; city?: string }>>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const updateCard = useUpdateBusinessCard();
@@ -32,7 +32,7 @@ function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
     setSearching(true); setSearched(true);
     try {
       const data = await searchPartnersByNameAlias(searchTerm.trim(), "id, company_name, company_alias, country_code, country_name, city");
-      setResults(data ?? []);
+      setResults((data ?? []) as unknown as Array<{ id: string; company_name: string; company_alias?: string; country_code?: string; country_name?: string; city?: string }>);
     } catch (e: unknown) { toast({ title: "Errore ricerca", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
     finally { setSearching(false); }
   }, [searchTerm]);

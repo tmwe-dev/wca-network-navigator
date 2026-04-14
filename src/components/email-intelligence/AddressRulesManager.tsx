@@ -35,10 +35,26 @@ const TONES = [
   { value: "friendly", label: "Amichevole" },
 ];
 
+interface EditableRule {
+  id?: string;
+  email_address: string;
+  display_name?: string | null;
+  category?: string | null;
+  auto_action?: string | null;
+  auto_action_params?: unknown;
+  auto_execute?: boolean | null;
+  ai_confidence_threshold?: number | null;
+  preferred_channel?: string | null;
+  tone_override?: string | null;
+  notes?: string | null;
+  is_active?: boolean | null;
+  [key: string]: unknown;
+}
+
 export function AddressRulesManager() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [editingRule, setEditingRule] = useState<any | null>(null);
+  const [editingRule, setEditingRule] = useState<EditableRule | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: rules = [], isLoading } = useQuery({
@@ -90,7 +106,7 @@ export function AddressRulesManager() {
     onError: () => toast.error("Errore nell'eliminazione"),
   });
 
-  const openEdit = (rule?: Record<string, unknown>) => {
+  const openEdit = (rule?: EditableRule) => {
     setEditingRule(rule ?? {
       email_address: "",
       display_name: "",
