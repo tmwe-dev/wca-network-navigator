@@ -24,7 +24,7 @@ export interface KbEntry {
   updated_at: string;
 }
 
-const QUERY_KEY = queryKeys.v2.kbEntries() as const;
+const QUERY_KEY = queryKeys.v2.kbEntries();
 
 // ── Reads ──
 

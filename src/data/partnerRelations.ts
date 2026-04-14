@@ -38,7 +38,7 @@ export async function insertPartnerContact(contact: Record<string, unknown>) {
 }
 
 export async function updatePartnerContact(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("partner_contacts").update(updates).eq("id", id);
+  const { error } = await supabase.from("partner_contacts").update(updates as never).eq("id", id);
   if (error) throw error;
 }
 

@@ -11,15 +11,15 @@ export const queryKeys = {
     all: ["partners"] as const,
     filtered: (filters?: Record<string, unknown>) => ["partners", filters] as const,
     paginated: (filters?: unknown) => ["partners-paginated", filters] as const,
-    byCountry: (countryCode: string) => ["partners-by-country", countryCode] as const,
+    byCountry: (countryCode?: string | null) => ["partners-by-country", countryCode] as const,
     globe: ["partners-globe"] as const,
-    globeCountry: (code: string) => ["partners-globe-country", code] as const,
+    globeCountry: (code?: string | null) => ["partners-globe-country", code] as const,
     countryPartnerCounts: ["country-partner-counts"] as const,
-    enrichment: (filters?: unknown) => ["enrichment-partners", filters] as const,
+    enrichment: (...args: unknown[]) => ["enrichment-partners", ...args] as const,
     agendaCard: (ids?: unknown) => ["agenda-card-partners", ids] as const,
     agendaList: (filters?: unknown) => ["agenda-list-partners", filters] as const,
     downloadAgenda: (filters?: unknown) => ["download-agenda-partners", filters] as const,
-    picker: (filters?: unknown) => ["picker-partners", filters] as const,
+    picker: (...args: unknown[]) => ["picker-partners", ...args] as const,
   },
   partner: (id: string) => ["partner", id] as const,
 
@@ -27,7 +27,7 @@ export const queryKeys = {
   partnerContacts: {
     all: ["partner-contacts"] as const,
     forCampaign: (ids: string) => ["partner-contacts-for-campaign", ids] as const,
-    map: (partnerId: string) => ["partner-contacts-map", partnerId] as const,
+    map: (...args: unknown[]) => ["partner-contacts-map", ...args] as const,
     picker: (filters?: unknown) => ["partner-contacts-picker", filters] as const,
     pickerPartner: (filters?: unknown) => ["picker-partner-contacts", filters] as const,
   },
@@ -35,7 +35,7 @@ export const queryKeys = {
   // ── Social Links ──────────────────────────────────────
   socialLinks: {
     all: ["social-links"] as const,
-    byPartner: (partnerId: string) => ["social-links", partnerId] as const,
+    byPartner: (partnerId?: string | null) => ["social-links", partnerId] as const,
     batch: (ids?: unknown) => ["social-links-batch", ids] as const,
     linkedin: (filters?: unknown) => ["linkedin-links-workspace", filters] as const,
   },
@@ -44,7 +44,7 @@ export const queryKeys = {
   contacts: {
     all: ["contacts"] as const,
     imported: (filters?: unknown) => ["imported-contacts", filters] as const,
-    paginated: (filters?: unknown) => ["contacts-paginated", filters] as const,
+    paginated: (...args: unknown[]) => ["contacts-paginated", ...args] as const,
     byGroup: (...args: unknown[]) =>
       ["contacts-by-group", ...args] as const,
     groupCounts: ["contact-group-counts"] as const,
@@ -53,15 +53,15 @@ export const queryKeys = {
     pipeline: (filters?: unknown) => ["pipeline-contacts", filters] as const,
     holdingPattern: ["holding-pattern"] as const,
     holdingPatternList: (filters?: unknown) => ["holding-pattern-list", filters] as const,
-    holdingPatternEmails: (filters?: unknown) => ["holding-pattern-emails", filters] as const,
+    holdingPatternEmails: (...args: unknown[]) => ["holding-pattern-emails", ...args] as const,
     holdingMessages: (filters?: unknown) => ["holding-messages", filters] as const,
     holdingUnreadCounts: ["holding-unread-counts"] as const,
-    holdingTimeline: (contactId?: string) => ["holding-timeline", contactId] as const,
-    record: (contactId: string) => ["contact-record", contactId] as const,
+    holdingTimeline: (...args: unknown[]) => ["holding-timeline", ...args] as const,
+    record: (...args: unknown[]) => ["contact-record", ...args] as const,
     recordInteractions: (...args: unknown[]) => ["record-interactions", ...args] as const,
     recordActivities: (...args: unknown[]) => ["record-activities", ...args] as const,
     groupItems: (groupType?: string, groupKey?: string) => ["contact-group-items", groupType, groupKey] as const,
-    picker: (filters?: unknown) => ["picker-contacts", filters] as const,
+    picker: (...args: unknown[]) => ["picker-contacts", ...args] as const,
     pickerOrigins: ["picker-origin-options"] as const,
     pickerCountryStats: (filters?: unknown) => ["picker-country-stats-v2", filters] as const,
     proto: {
@@ -75,19 +75,19 @@ export const queryKeys = {
   // ── Contact Interactions ──────────────────────────────
   contactInteractions: {
     all: ["contact-interactions"] as const,
-    byContact: (contactId: string) => ["contact-interactions", contactId] as const,
+    byContact: (contactId?: string | null) => ["contact-interactions", contactId] as const,
   },
 
   // ── Business Cards ────────────────────────────────────
   businessCards: {
     all: ["business-cards"] as const,
-    forContact: (contactId: string) => ["business-card-for-contact", contactId] as const,
+    forContact: (contactId?: string | null) => ["business-card-for-contact", contactId] as const,
     matches: ["business-card-matches"] as const,
     matchesPartners: ["business-card-matches", "partners"] as const,
     matchesContacts: ["business-card-matches", "contacts"] as const,
     details: (filters?: unknown) => ["bca-details-for-list", filters] as const,
     countryCounts: ["bca-country-counts"] as const,
-    campaign: (filters?: unknown) => ["bca-campaign", filters] as const,
+    campaign: (...args: unknown[]) => ["bca-campaign", ...args] as const,
   },
 
   // ── Activities ────────────────────────────────────────
@@ -98,7 +98,7 @@ export const queryKeys = {
     outreach: (filters?: unknown) => ["activities-outreach", filters] as const,
     aiGenerated: ["ai-generated-activities"] as const,
     workedToday: ["worked-today"] as const,
-    agendaDay: (date?: string) => ["agenda-day", date] as const,
+    agendaDay: (...args: unknown[]) => ["agenda-day", ...args] as const,
   },
 
   // ── Outreach ──────────────────────────────────────────
@@ -131,8 +131,8 @@ export const queryKeys = {
     campaignQueue: (filters?: unknown) => ["email-campaign-queue", filters] as const,
     queueOutreach: (filters?: unknown) => ["email-queue-outreach", filters] as const,
     queueGlobalCounts: ["email-queue-global-counts"] as const,
-    messageContent: (messageId: string) => ["email-message-content", messageId] as const,
-    attachments: (messageId: string) => ["email-attachments", messageId] as const,
+    messageContent: (messageId?: string | null) => ["email-message-content", messageId] as const,
+    attachments: (messageId?: string | null) => ["email-attachments", messageId] as const,
     downloadedFeed: (filters?: unknown) => ["downloaded-emails-feed", filters] as const,
     promptsTab4: ["email-prompts-tab4"] as const,
     addressRulesTab4: ["address-rules-tab4"] as const,
@@ -168,8 +168,8 @@ export const queryKeys = {
   // ── Import ────────────────────────────────────────────
   imports: {
     logs: ["import-logs"] as const,
-    log: (importLogId: string) => ["import-log", importLogId] as const,
-    errors: (importLogId: string) => ["import-errors", importLogId] as const,
+    log: (importLogId?: string | null) => ["import-log", importLogId] as const,
+    errors: (importLogId?: string | null) => ["import-errors", importLogId] as const,
     groups: ["import-groups"] as const,
   },
 
@@ -225,13 +225,13 @@ export const queryKeys = {
   // ── Prospects ─────────────────────────────────────────
   prospects: {
     all: ["prospects"] as const,
-    byAteco: (filters?: unknown) => ["prospects-by-ateco", filters] as const,
+    byAteco: (...args: unknown[]) => ["prospects-by-ateco", ...args] as const,
     contacts: (prospectId: string) => ["prospect-contacts", prospectId] as const,
     globalStats: ["prospect-global-stats"] as const,
     ra: {
-      prospect: (id: string) => ["ra-prospect", id] as const,
-      contacts: (id: string) => ["ra-prospect-contacts", id] as const,
-      interactions: (id: string) => ["ra-prospect-interactions", id] as const,
+      prospect: (id?: string) => ["ra-prospect", id] as const,
+      contacts: (id?: string) => ["ra-prospect-contacts", id] as const,
+      interactions: (id?: string) => ["ra-prospect-interactions", id] as const,
     },
   },
 
@@ -241,7 +241,7 @@ export const queryKeys = {
     stats: ["blacklist-stats"] as const,
     syncLog: ["blacklist-sync-log"] as const,
     partnerIds: ["blacklist-partner-ids"] as const,
-    partner: (partnerId: string) => ["blacklist-partner", partnerId] as const,
+    partner: (partnerId?: string) => ["blacklist-partner", partnerId] as const,
   },
 
   // ── AI ────────────────────────────────────────────────
@@ -262,7 +262,7 @@ export const queryKeys = {
   agents: {
     all: ["agents"] as const,
     tasks: (filters?: unknown) => ["agent-tasks", filters] as const,
-    clients: (agentId: string) => ["agent-clients", agentId] as const,
+    clients: (agentId?: string) => ["agent-clients", agentId] as const,
     forRecord: (sourceId?: string) => ["agent-for-record", sourceId] as const,
     dashboard: {
       tasks: (filters?: unknown) => ["agent-dashboard-tasks", filters] as const,

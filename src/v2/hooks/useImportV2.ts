@@ -110,7 +110,7 @@ export function useImportV2() {
         }>;
         const { error: insertErr } = await supabase
           .from("imported_contacts")
-          .insert(typedBatch);
+          .insert(typedBatch as never);
         if (insertErr) { errors += batch.length; } else { imported += batch.length; }
       }
 

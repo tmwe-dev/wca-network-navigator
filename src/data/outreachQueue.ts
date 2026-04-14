@@ -16,7 +16,7 @@ export async function findPendingOutreachItems(limit = 5) {
 }
 
 export async function updateOutreachItem(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("outreach_queue").update(updates).eq("id", id);
+  const { error } = await supabase.from("outreach_queue").update(updates as never).eq("id", id);
   if (error) throw error;
 }
 

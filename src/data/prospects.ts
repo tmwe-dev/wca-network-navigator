@@ -28,6 +28,6 @@ export async function getProspectWithContacts(id: string) {
 }
 
 export async function updateProspect(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("prospects").update(updates).eq("id", id);
+  const { error } = await supabase.from("prospects").update(updates as never).eq("id", id);
   if (error) throw error;
 }
