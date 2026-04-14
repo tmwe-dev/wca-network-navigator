@@ -18,7 +18,7 @@ try {
 }
 
 // ── Action registry ──
-var ACTION_HANDLERS = {
+const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({ success: true, version: "5.1-csp" });
     return false;
@@ -104,7 +104,7 @@ var ACTION_HANDLERS = {
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message || message.source !== "wa-content-bridge") return false;
 
-  var handler = ACTION_HANDLERS[message.action];
+  const handler = ACTION_HANDLERS[message.action];
   if (handler) return handler(message, sendResponse);
 
   sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, "Azione sconosciuta: " + message.action));

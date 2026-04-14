@@ -5,14 +5,14 @@
 // ══════════════════════════════════════════════
 
 (function () {
-  var BASE_HEARTBEAT_MS = 8000;
-  var MAX_HEARTBEAT_MS = 30000;
-  var currentHeartbeat = BASE_HEARTBEAT_MS;
-  var alive = true;
-  var heartbeatTimer = null;
+  const BASE_HEARTBEAT_MS = 8000;
+  const MAX_HEARTBEAT_MS = 30000;
+  let currentHeartbeat = BASE_HEARTBEAT_MS;
+  let alive = true;
+  let heartbeatTimer = null;
 
   // Allowed actions whitelist
-  var ALLOWED_ACTIONS = [
+  const ALLOWED_ACTIONS = [
     "ping", "verifySession", "syncCookie", "autoLogin",
     "extractProfile", "sendMessage", "sendConnectionRequest",
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
@@ -20,7 +20,7 @@
   ];
 
   // Max payload sizes
-  var MAX_STRING_LENGTH = 5000;
+  const MAX_STRING_LENGTH = 5000;
 
   function isExtensionAlive() {
     try {
@@ -52,9 +52,9 @@
     if (!data.action || typeof data.action !== "string") return "Missing action";
     if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
     // Validate string fields don't exceed max length
-    var stringFields = ["url", "message", "note", "query", "threadUrl"];
-    for (var i = 0; i < stringFields.length; i++) {
-      var field = stringFields[i];
+    const stringFields = ["url", "message", "note", "query", "threadUrl"];
+    for (let i = 0; i < stringFields.length; i++) {
+      const field = stringFields[i];
       if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {
         return "Field " + field + " exceeds max length";
       }
@@ -64,7 +64,7 @@
 
   function relayMessage(data) {
     // Validate payload before relay
-    var validationError = validatePayload(data);
+    const validationError = validatePayload(data);
     if (validationError) {
       failResponse(data, validationError, "ERR_VALIDATION");
       return;
@@ -79,7 +79,7 @@
     }
 
     try {
-      var msg = { source: "li-content-bridge", action: data.action };
+      const msg = { source: "li-content-bridge", action: data.action };
       if (data.url) msg.url = data.url;
       if (data.message) msg.message = data.message;
       if (data.note !== undefined) msg.note = data.note;
@@ -125,7 +125,7 @@
   function scheduleHeartbeat() {
     if (heartbeatTimer) clearTimeout(heartbeatTimer);
     heartbeatTimer = setTimeout(function () {
-      var nowAlive = isExtensionAlive();
+      const nowAlive = isExtensionAlive();
       if (nowAlive && !alive) {
         alive = true;
         currentHeartbeat = BASE_HEARTBEAT_MS; // reset on reconnect
@@ -144,7 +144,7 @@
 
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
-    var data = event.data;
+    const data = event.data;
     if (!data || data.direction !== "from-webapp-li") return;
     relayMessage(data);
   });

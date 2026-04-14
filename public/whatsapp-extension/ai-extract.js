@@ -5,15 +5,15 @@
 // invalidation
 // ══════════════════════════════════════════════
 
-var AiExtract = (function () {
-  var SCHEMA_TTL_MS = 3 * 60 * 60 * 1000; // 3h
-  var MAX_FAILURES_BEFORE_INVALIDATE = 3;
+const AiExtract = (function () {
+  const SCHEMA_TTL_MS = 3 * 60 * 60 * 1000; // 3h
+  const MAX_FAILURES_BEFORE_INVALIDATE = 3;
 
-  var _schema = null;
-  var _schemaAt = 0;
-  var _schemaKey = "";
-  var _failureCount = 0;
-  var _learning = false;
+  let _schema = null;
+  let _schemaAt = 0;
+  let _schemaKey = "";
+  let _failureCount = 0;
+  let _learning = false;
 
   // ── Composite cache key ──
   function buildCacheKey(hostname) {
@@ -23,7 +23,7 @@ var AiExtract = (function () {
   // ── Load from storage ──
   async function loadSchema() {
     try {
-      var data = await chrome.storage.local.get(["waSchema", "waSchemaAt", "waSchemaKey"]);
+      const data = await chrome.storage.local.get(["waSchema", "waSchemaAt", "waSchemaKey"]);
       if (data.waSchema && data.waSchemaAt) {
         _schema = data.waSchema;
         _schemaAt = data.waSchemaAt;
@@ -70,14 +70,14 @@ var AiExtract = (function () {
   async function callAiExtract(html, mode) {
     if (!Config.hasConfig()) return null;
     try {
-      var url = Config.getUrl() + "/functions/v1/whatsapp-ai-extract";
-      var headers = {
+      const url = Config.getUrl() + "/functions/v1/whatsapp-ai-extract";
+      const headers = {
         "Content-Type": "application/json",
         "apikey": Config.getKey(),
       };
       headers["Authorization"] = "Bearer " + (Config.getToken() || Config.getKey());
 
-      var resp = await fetch(url, {
+      const resp = await fetch(url, {
         method: "POST",
         headers: headers,
         body: JSON.stringify({ html: html, mode: mode }),
@@ -95,14 +95,14 @@ var AiExtract = (function () {
 
   // ── Grab sidebar HTML ──
   async function grabSidebarHtml(tabId) {
-    var results = await chrome.scripting.executeScript({
+    const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       func: function () {
         function scanShadowRoots(root, roots, seen) {
           try {
-            var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
             while (walker.nextNode()) {
-              var el = walker.currentNode;
+              const el = walker.currentNode;
               if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
                 seen.add(el.shadowRoot);
                 roots.push(el.shadowRoot);
@@ -111,16 +111,16 @@ var AiExtract = (function () {
             }
           } catch (_) {}
         }
-        var rootsCache = null;
+        let rootsCache = null;
         function getRoots() {
           if (rootsCache) return rootsCache;
-          var roots = [document]; var seen = new Set([document]);
+          const roots = [document]; const seen = new Set([document]);
           scanShadowRoots(document, roots, seen);
           rootsCache = roots; return roots;
         }
         function qsaDeep(sel) {
-          var out = [], seen = new Set();
-          for (var root of getRoots()) {
+          const out = [], seen = new Set();
+          for (const root of getRoots()) {
             try {
               root.querySelectorAll(sel).forEach(function (el) {
                 if (!seen.has(el)) { seen.add(el); out.push(el); }
@@ -131,24 +131,24 @@ var AiExtract = (function () {
         }
         function qsDeep(sel) { return qsaDeep(sel)[0] || null; }
 
-        var candidates = [
+        const candidates = [
           '#pane-side', '#side',
           '[data-testid="chatlist"]', '[data-testid="chat-list"]',
           '[role="navigation"]',
           '[aria-label*="chat" i]', '[aria-label*="elenco" i]',
         ];
-        for (var sel of candidates) {
-          var el = qsDeep(sel);
+        for (const sel of candidates) {
+          const el = qsDeep(sel);
           if (el && el.outerHTML.length > 100) return el.outerHTML;
         }
         // Fallback: container with most span[title] density
-        var allContainers = qsaDeep('div, nav, section, aside');
-        var best = null, bestScore = 0;
-        for (var cont of allContainers) {
-          var titleCount = cont.querySelectorAll('span[title]').length;
-          var html = cont.outerHTML;
+        const allContainers = qsaDeep('div, nav, section, aside');
+        let best = null, bestScore = 0;
+        for (const cont of allContainers) {
+          const titleCount = cont.querySelectorAll('span[title]').length;
+          const html = cont.outerHTML;
           if (titleCount >= 3 && html.length > 200 && html.length < 500000) {
-            var score = titleCount / (html.length / 1000);
+            const score = titleCount / (html.length / 1000);
             if (score > bestScore) { bestScore = score; best = cont; }
           }
         }
@@ -164,19 +164,19 @@ var AiExtract = (function () {
     _learning = true;
     try {
       if (!tabId) {
-        var r = await TabManager.getOrCreateWaTab();
+        const r = await TabManager.getOrCreateWaTab();
         tabId = r.tab.id;
         await TabManager.sleep(r.reused ? 1000 : 4000);
       }
 
-      var results = await chrome.scripting.executeScript({
+      const results = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
           function scanShadowRoots(root, roots, seen) {
             try {
-              var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+              const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
               while (walker.nextNode()) {
-                var el = walker.currentNode;
+                const el = walker.currentNode;
                 if (el && el.shadowRoot && !seen.has(el.shadowRoot)) {
                   seen.add(el.shadowRoot);
                   roots.push(el.shadowRoot);
@@ -185,16 +185,16 @@ var AiExtract = (function () {
               }
             } catch (_) {}
           }
-          var rootsCache = null;
+          let rootsCache = null;
           function getRoots() {
             if (rootsCache) return rootsCache;
-            var roots = [document]; var seen = new Set([document]);
+            const roots = [document]; const seen = new Set([document]);
             scanShadowRoots(document, roots, seen);
             rootsCache = roots; return roots;
           }
           function qsaDeep(sel) {
-            var out = [], seen = new Set();
-            for (var root of getRoots()) {
+            const out = [], seen = new Set();
+            for (const root of getRoots()) {
               try { root.querySelectorAll(sel).forEach(function (el) { if (!seen.has(el)) { seen.add(el); out.push(el); } }); }
               catch (_) {}
             }
@@ -202,10 +202,10 @@ var AiExtract = (function () {
           }
           function qsDeep(sel) { return qsaDeep(sel)[0] || null; }
 
-          var snapshot = { timestamp: Date.now() };
+          const snapshot = { timestamp: Date.now() };
 
           // data-testid inventory
-          var testIds = [];
+          const testIds = [];
           qsaDeep('[data-testid]').forEach(function (e) {
             testIds.push({
               testId: e.getAttribute('data-testid'),
@@ -217,15 +217,15 @@ var AiExtract = (function () {
           snapshot.dataTestIds = testIds.slice(0, 100);
 
           // Role inventory
-          var roles = {};
+          const roles = {};
           qsaDeep('[role]').forEach(function (e) {
-            var r = e.getAttribute('role');
+            const r = e.getAttribute('role');
             roles[r] = (roles[r] || 0) + 1;
           });
           snapshot.roles = roles;
 
           // Aria-labels
-          var labels = [];
+          const labels = [];
           qsaDeep('[aria-label]').forEach(function (e) {
             labels.push({
               label: e.getAttribute('aria-label'),
@@ -236,15 +236,15 @@ var AiExtract = (function () {
           snapshot.ariaLabels = labels.slice(0, 60);
 
           // HTML samples
-          var sidebar = qsDeep('#pane-side') || qsDeep('#side') ||
+          const sidebar = qsDeep('#pane-side') || qsDeep('#side') ||
             qsDeep('[data-testid="chatlist"]') || qsDeep('[role="navigation"]');
           if (sidebar) snapshot.sidebarSample = sidebar.outerHTML.slice(0, 5000);
 
-          var main = qsDeep('#main') || qsDeep('[data-testid="conversation-panel-messages"]');
+          const main = qsDeep('#main') || qsDeep('[data-testid="conversation-panel-messages"]');
           if (main) snapshot.mainSample = main.outerHTML.slice(0, 3000);
 
           if (!snapshot.sidebarSample) {
-            var app = document.querySelector('#app') || document.body;
+            const app = document.querySelector('#app') || document.body;
             snapshot.broadSample = app.outerHTML.slice(0, 8000);
           }
 
@@ -252,14 +252,14 @@ var AiExtract = (function () {
         },
       });
 
-      var snapshot = results && results[0] ? results[0].result : null;
+      const snapshot = results && results[0] ? results[0].result : null;
       if (!snapshot) { _learning = false; return { success: false, error: "Could not capture snapshot" }; }
 
       if (!Config.hasConfig()) { _learning = false; return { success: false, error: "No config for AI call" }; }
 
-      var aiResult = await callAiExtract(JSON.stringify(snapshot), "learnDom");
+      const aiResult = await callAiExtract(JSON.stringify(snapshot), "learnDom");
       if (aiResult && aiResult.success && aiResult.items && aiResult.items.length > 0) {
-        var schema = aiResult.items[0];
+        const schema = aiResult.items[0];
         await saveSchema(schema, "web.whatsapp.com");
         console.log("[WA AI] ✅ Learned " + Object.keys(schema).length + " selectors");
         _learning = false;

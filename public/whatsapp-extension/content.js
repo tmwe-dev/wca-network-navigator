@@ -6,20 +6,20 @@
 // ══════════════════════════════════════════════
 
 (function () {
-  var BASE_HEARTBEAT_MS = 8000;
-  var MAX_HEARTBEAT_MS = 30000;
-  var currentHeartbeat = BASE_HEARTBEAT_MS;
-  var alive = false;
-  var heartbeatTimer = null;
+  const BASE_HEARTBEAT_MS = 8000;
+  const MAX_HEARTBEAT_MS = 30000;
+  let currentHeartbeat = BASE_HEARTBEAT_MS;
+  let alive = false;
+  let heartbeatTimer = null;
 
   // ── Allowed actions whitelist ──
-  var ALLOWED_ACTIONS = [
+  const ALLOWED_ACTIONS = [
     "ping", "setConfig", "verifySession", "sendWhatsApp",
     "readUnread", "learnDom", "diagnosticDom", "readThread",
     "backfillChat",
   ];
 
-  var MAX_STRING_LENGTH = 5000;
+  const MAX_STRING_LENGTH = 5000;
 
   function isExtensionAlive() {
     try {
@@ -48,9 +48,9 @@
     if (!data || typeof data !== "object") return "Invalid payload";
     if (!data.action || typeof data.action !== "string") return "Missing action";
     if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
-    var stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
-    for (var i = 0; i < stringFields.length; i++) {
-      var field = stringFields[i];
+    const stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+    for (let i = 0; i < stringFields.length; i++) {
+      const field = stringFields[i];
       if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {
         return "Field " + field + " exceeds max length";
       }
@@ -59,7 +59,7 @@
   }
 
   function relayMessage(data) {
-    var validationError = validatePayload(data);
+    const validationError = validatePayload(data);
     if (validationError) {
       failResponse(data, validationError, "ERR_VALIDATION");
       return;
@@ -74,7 +74,7 @@
     }
 
     try {
-      var msg = { source: "wa-content-bridge", action: data.action };
+      const msg = { source: "wa-content-bridge", action: data.action };
       if (data.phone) msg.phone = data.phone;
       if (data.text) msg.text = data.text;
       if (data.contact) msg.contact = data.contact;
@@ -120,7 +120,7 @@
   function scheduleHeartbeat() {
     if (heartbeatTimer) clearTimeout(heartbeatTimer);
     heartbeatTimer = setTimeout(function () {
-      var nowAlive = isExtensionAlive();
+      const nowAlive = isExtensionAlive();
       if (nowAlive && !alive) {
         alive = true;
         currentHeartbeat = BASE_HEARTBEAT_MS;
@@ -143,7 +143,7 @@
 
   globalThis.__WA_MSG_LISTENER__ = function (event) {
     if (event.source !== window) return;
-    var data = event.data;
+    const data = event.data;
     if (!data || data.direction !== "from-webapp-wa") return;
     relayMessage(data);
   };

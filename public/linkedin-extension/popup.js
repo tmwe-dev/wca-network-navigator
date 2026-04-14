@@ -1,7 +1,7 @@
 
-var statusEl = document.getElementById("status");
-var logEl = document.getElementById("log");
-var mainBtn = document.getElementById("mainBtn");
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+const mainBtn = document.getElementById("mainBtn");
 
 function setStatus(text, cls) {
   statusEl.className = "status " + cls;
@@ -10,7 +10,7 @@ function setStatus(text, cls) {
 
 function log(text, cls) {
   cls = cls || "";
-  var line = document.createElement("div");
+  const line = document.createElement("div");
   line.className = cls;
   line.textContent = text;
   logEl.appendChild(line);
@@ -52,8 +52,8 @@ function renderResult(result) {
     return;
   }
 
-  var reason = result && result.reason ? result.reason : "generic_error";
-  var message = result && (result.message || result.error) ? (result.message || result.error) : "Login non completato.";
+  const reason = result && result.reason ? result.reason : "generic_error";
+  const message = result && (result.message || result.error) ? (result.message || result.error) : "Login non completato.";
 
   if (reason === "google_auth_timeout") {
     setStatus("⚠️ Completa Google nel tab aperto", "error");
@@ -92,7 +92,7 @@ mainBtn.addEventListener("click", async function () {
   log("③ Aspetto il ritorno su LinkedIn e il cookie li_at...", "wait");
 
   try {
-    var result = await sendToBackground("autoLogin");
+    const result = await sendToBackground("autoLogin");
     renderResult(result);
   } catch (err) {
     setStatus("❌ " + err.message, "error");

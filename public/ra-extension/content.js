@@ -6,10 +6,10 @@
 (function () {
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
-    var data = event.data;
+    const data = event.data;
     if (!data || data.direction !== "from-webapp-ra") return;
 
-    var msg = { source: "ra-content-bridge", action: data.action };
+    const msg = { source: "ra-content-bridge", action: data.action };
     if (data.params) msg.params = data.params;
     if (data.url) msg.url = data.url;
     chrome.runtime.sendMessage(

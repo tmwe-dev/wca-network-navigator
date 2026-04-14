@@ -3,10 +3,10 @@
 // Tab lifecycle, queue serialization, hydration
 // ══════════════════════════════════════════════
 
-var TabManager = (function () {
+const TabManager = (function () {
   // ── Two-lane queue: session (lightweight) vs action (heavy) ──
-  var _sessionQueue = Promise.resolve();
-  var _actionQueue = Promise.resolve();
+  let _sessionQueue = Promise.resolve();
+  let _actionQueue = Promise.resolve();
 
   function enqueueSession(fn) {
     _sessionQueue = _sessionQueue.then(fn).catch(function (e) {
@@ -26,7 +26,7 @@ var TabManager = (function () {
 
   // ── Safe tab operations with retry ──
   async function safeCreateTab(url, active) {
-    for (var i = 0; i < 3; i++) {
+    for (let i = 0; i < 3; i++) {
       try {
         return await chrome.tabs.create({ url: url, active: active || false });
       } catch (e) {
@@ -41,11 +41,11 @@ var TabManager = (function () {
   }
 
   async function waitForLoad(tabId, timeoutMs) {
-    var start = Date.now();
-    var limit = timeoutMs || 30000;
+    const start = Date.now();
+    const limit = timeoutMs || 30000;
     while (Date.now() - start < limit) {
       try {
-        var tab = await chrome.tabs.get(tabId);
+        const tab = await chrome.tabs.get(tabId);
         if (tab.status === "complete") return true;
       } catch (_) { return false; }
       await sleep(500);
@@ -55,8 +55,8 @@ var TabManager = (function () {
 
   function sortTabsByFreshness(tabs) {
     return (tabs || []).slice().sort(function (a, b) {
-      var aScore = (a.active ? 1000 : 0) + (a.status === "complete" ? 100 : 0);
-      var bScore = (b.active ? 1000 : 0) + (b.status === "complete" ? 100 : 0);
+      const aScore = (a.active ? 1000 : 0) + (a.status === "complete" ? 100 : 0);
+      const bScore = (b.active ? 1000 : 0) + (b.status === "complete" ? 100 : 0);
       if (bScore !== aScore) return bScore - aScore;
       return Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0);
     });
@@ -64,14 +64,14 @@ var TabManager = (function () {
 
   async function getBestExistingWaTab() {
     try {
-      var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+      const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
       return sortTabsByFreshness(tabs)[0] || null;
     } catch (_) { return null; }
   }
 
   async function getLastFocusedActiveTab() {
     try {
-      var tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       return tabs && tabs[0] ? tabs[0] : null;
     } catch (_) { return null; }
   }
@@ -79,7 +79,7 @@ var TabManager = (function () {
   // ── Temporary tab activation for background hydration ──
   async function activateTabTemporarily(tabId) {
     try {
-      var previous = await getLastFocusedActiveTab();
+      const previous = await getLastFocusedActiveTab();
       if (!previous || previous.id !== tabId) {
         await chrome.tabs.update(tabId, { active: true });
         await sleep(900);
@@ -95,7 +95,7 @@ var TabManager = (function () {
   }
 
   async function withTemporarilyVisibleTab(tabId, fn) {
-    var restoreCtx = await activateTabTemporarily(tabId);
+    const restoreCtx = await activateTabTemporarily(tabId);
     try {
       return await fn();
     } finally {
@@ -106,14 +106,14 @@ var TabManager = (function () {
   // ── Get or create WA tab ──
   async function getOrCreateWaTab() {
     try {
-      var existing = await getBestExistingWaTab();
+      const existing = await getBestExistingWaTab();
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
         return { tab: existing, reused: true };
       }
     } catch (_) {}
-    var tab = await safeCreateTab(Config.WA_BASE, false);
-    var loaded = await waitForLoad(tab.id, 30000);
+    const tab = await safeCreateTab(Config.WA_BASE, false);
+    const loaded = await waitForLoad(tab.id, 30000);
     if (!loaded) throw new Error("WhatsApp Web non caricato");
     await sleep(4000);
     return { tab: tab, reused: false };
@@ -132,12 +132,12 @@ var TabManager = (function () {
 
   async function injectBridgeIntoTab(tabId) {
     try {
-      var frames = await chrome.webNavigation.getAllFrames({ tabId: tabId });
+      const frames = await chrome.webNavigation.getAllFrames({ tabId: tabId });
       if (!frames || !frames.length) return false;
-      var injected = false;
-      for (var i = 0; i < frames.length; i++) {
+      let injected = false;
+      for (let i = 0; i < frames.length; i++) {
         if (!Config.isAppUrl(frames[i].url)) continue;
-        var ok = await injectBridgeIntoFrame(tabId, frames[i].frameId);
+        const ok = await injectBridgeIntoFrame(tabId, frames[i].frameId);
         injected = ok || injected;
       }
       return injected;
@@ -146,8 +146,8 @@ var TabManager = (function () {
 
   async function syncBridgeAcrossOpenTabs() {
     try {
-      var tabs = await chrome.tabs.query({});
-      for (var i = 0; i < tabs.length; i++) {
+      const tabs = await chrome.tabs.query({});
+      for (let i = 0; i < tabs.length; i++) {
         if (typeof tabs[i].id !== "number") continue;
         await injectBridgeIntoTab(tabs[i].id);
       }
