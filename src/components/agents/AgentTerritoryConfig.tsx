@@ -44,7 +44,7 @@ export function AgentTerritoryConfig({ agent }: Props) {
       ? territories.filter(c => c !== code)
       : [...territories, code];
     updateAgent.mutate(
-      { id: agent.id, territory_codes: next } as any,
+      { id: agent.id, territory_codes: next } as Record<string, unknown>,
       { onSuccess: () => toast.success("Zone aggiornate") }
     );
   };
@@ -53,7 +53,7 @@ export function AgentTerritoryConfig({ agent }: Props) {
     const code = customCode.toUpperCase().trim();
     if (code.length < 2 || territories.includes(code)) return;
     updateAgent.mutate(
-      { id: agent.id, territory_codes: [...territories, code] } as any,
+      { id: agent.id, territory_codes: [...territories, code] } as Record<string, unknown>,
       { onSuccess: () => { toast.success(`${code} aggiunto`); setCustomCode(""); } }
     );
   };

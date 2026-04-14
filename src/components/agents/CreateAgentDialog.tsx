@@ -62,7 +62,7 @@ export function CreateAgentDialog({ open, onOpenChange }: Props) {
         signature_html: signatureHtml,
         voice_call_url: ROBIN_VOICE_CALL_URL,
         knowledge_base: kb,
-      } as any,
+      } as Record<string, unknown>,
       {
         onSuccess: () => {
           toast.success("Agente creato con voce, firma e KB operativa!");

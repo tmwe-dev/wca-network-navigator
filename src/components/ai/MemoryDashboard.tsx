@@ -63,13 +63,13 @@ export default function MemoryDashboard() {
             pending_promotion: false,
             decay_rate: 0,
             promoted_at: new Date().toISOString(),
-          } as any)
+          } as Record<string, unknown>)
           .eq("id", id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("ai_memory")
-          .update({ pending_promotion: false } as any)
+          .update({ pending_promotion: false } as Record<string, unknown>)
           .eq("id", id);
         if (error) throw error;
       }
@@ -93,7 +93,7 @@ export default function MemoryDashboard() {
 
   const runPromoterMutation = useMutation({
     mutationFn: async () => {
-      const data = await invokeEdge<any>("memory-promoter", { context: "MemoryDashboard.memory_promoter" });
+      const data = await invokeEdge<Record<string, unknown>>("memory-promoter", { context: "MemoryDashboard.memory_promoter" });
       return data;
     },
     onSuccess: (data) => {

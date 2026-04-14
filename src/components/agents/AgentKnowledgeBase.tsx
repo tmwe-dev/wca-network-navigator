@@ -33,7 +33,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      { id: agent.id, knowledge_base: entries } as any,
+      { id: agent.id, knowledge_base: entries } as Record<string, unknown>,
       { onSuccess: () => toast.success("Knowledge Base salvata") }
     );
   };

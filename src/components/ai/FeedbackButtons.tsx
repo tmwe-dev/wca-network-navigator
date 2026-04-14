@@ -36,24 +36,24 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
         source: "feedback",
         level: 1,
         confidence: 0.5,
-      } as any);
+      } as Record<string, unknown>);
 
       // Also boost/reduce confidence of recent L1/L2 memories
       const { data: recentMemories } = await supabase
         .from("ai_memory")
         .select("id, confidence, level")
         .eq("user_id", user.id)
-        .in("level", [1, 2] as any)
+        .in("level", [1, 2] as number[])
         .order("last_accessed_at", { ascending: false })
         .limit(5);
 
       if (recentMemories?.length) {
         const delta = type === "up" ? 0.05 : -0.08;
         for (const m of recentMemories) {
-          const newConf = Math.max(0, Math.min(1, Number((m as any).confidence || 0.5) + delta));
+          const newConf = Math.max(0, Math.min(1, Number((m as Record<string, unknown>).confidence || 0.5) + delta));
           await supabase
             .from("ai_memory")
-            .update({ confidence: newConf } as any)
+            .update({ confidence: newConf } as Record<string, unknown>)
             .eq("id", m.id);
         }
       }
