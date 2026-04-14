@@ -12,7 +12,7 @@ type PartnerCertInsert = Database["public"]["Tables"]["partner_certifications"][
 type PartnerSocialLinkInsert = Database["public"]["Tables"]["partner_social_links"]["Insert"];
 
 // ── partner_contacts ──
-export interface PartnerContactResult { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias: string | null; [k: string]: unknown }
+export interface PartnerContactResult { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias: string | null; partner_id?: string; [k: string]: unknown }
 
 export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<PartnerContactResult[]> {
   const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId);
