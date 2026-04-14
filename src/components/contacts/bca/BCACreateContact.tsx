@@ -21,7 +21,7 @@ export function BCACreateContact({ card }: Props) {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [partnerResults, setPartnerResults] = useState<any[]>([]);
+  const [partnerResults, setPartnerResults] = useState<Record<string, unknown>[]>([]);
   const [_searching, setSearching] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(card.matched_partner_id);
 

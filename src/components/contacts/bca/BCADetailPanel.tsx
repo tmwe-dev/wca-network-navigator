@@ -22,7 +22,7 @@ import { OptimizedImage } from "@/components/shared/OptimizedImage";
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
   const [searchTerm, setSearchTerm] = useState(card.company_name || "");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const updateCard = useUpdateBusinessCard();

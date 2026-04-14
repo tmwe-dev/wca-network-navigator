@@ -67,7 +67,7 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [activePlans, setActivePlans] = useState<any[]>([]);
+  const [activePlans, setActivePlans] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
