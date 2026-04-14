@@ -49,8 +49,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   const deepSearchAt = enrichment?.deep_search_at;
   const tokensUsed = enrichment?.tokens_used;
   const hasCompanyData = companyProfile && (
-    companyProfile.awards?.length > 0 ||
-    companyProfile.specialties?.length > 0 ||
+    (companyProfile.awards?.length ?? 0) > 0 ||
+    (companyProfile.specialties?.length ?? 0) > 0 ||
     companyProfile.recent_news ||
     companyProfile.founded_year ||
     companyProfile.employee_count_estimate
