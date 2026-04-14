@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Globe, Users, Eye, CreditCard } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
-import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
 
 import { ThemeCtx } from "@/components/download/theme";
 import { type FilterKey } from "@/components/download/CountryGrid";
