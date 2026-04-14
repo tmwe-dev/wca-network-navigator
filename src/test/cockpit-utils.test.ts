@@ -205,7 +205,7 @@ describe("partnerUtils", () => {
 
     it("ritorna array vuoto se branch_cities mancante", () => {
       expect(getBranchCountries({ country_code: "IT" })).toEqual([]);
-      expect(getBranchCountries({ country_code: "IT", branch_cities: null })).toEqual([]);
+      expect(getBranchCountries({ country_code: "IT", branch_cities: null as unknown as undefined })).toEqual([]);
     });
   });
 

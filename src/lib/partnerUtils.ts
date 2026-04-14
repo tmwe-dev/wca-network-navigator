@@ -121,7 +121,7 @@ export function sortPartners(partners: PartnerLike[], sortBy: SortOption): Partn
     case "name_asc": return sorted.sort((a, b) => (a.company_name ?? "").localeCompare(b.company_name ?? ""));
     case "name_desc": return sorted.sort((a, b) => (b.company_name ?? "").localeCompare(a.company_name ?? ""));
     case "rating_desc": return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    case "years_desc": return sorted.sort((a, b) => getYearsMember(b.member_since) - getYearsMember(a.member_since));
+    case "years_desc": return sorted.sort((a, b) => getYearsMember(b.member_since ?? null) - getYearsMember(a.member_since ?? null));
     case "country_asc": return sorted.sort((a, b) => (a.country_name ?? "").localeCompare(b.country_name ?? ""));
     case "branches_desc": return sorted.sort((a, b) => {
       const ba = Array.isArray(b.branch_cities) ? b.branch_cities.length : 0;
