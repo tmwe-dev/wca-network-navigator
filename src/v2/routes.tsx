@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -108,6 +108,11 @@ export function V2Routes(): React.ReactElement {
         {/* Public routes */}
         <Route element={<PublicLayout />}>
           <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
+        </Route>
+
+        {/* Fullscreen authenticated routes (no sidebar/header) */}
+        <Route element={<V2AuthGateRaw />}>
+          <Route path="command" element={guardedPage(CommandPage, "Command")} />
         </Route>
 
         {/* Authenticated routes */}
