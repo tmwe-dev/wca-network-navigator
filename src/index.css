@@ -45,6 +45,9 @@ html {
     --input: 214 32% 91%;
     --ring: 199 89% 48%;
     --radius: 0.5rem;
+    /* Design system IntelliFlow */
+    --info: 210 100% 66%;
+    --info-foreground: 210 100% 95%;
     --sidebar-background: 215 28% 17%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 199 89% 48%;
@@ -84,6 +87,9 @@ html {
     --border: 216 34% 17%;
     --input: 216 34% 17%;
     --ring: 210 100% 56%;
+    /* Design system IntelliFlow */
+    --info: 210 100% 66%;
+    --info-foreground: 210 100% 95%;
     --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 100% 56%;
