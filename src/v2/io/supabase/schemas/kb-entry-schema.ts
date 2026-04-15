@@ -13,7 +13,8 @@ export const KbEntryRowSchema = z.object({
   priority: z.number(),
   sort_order: z.number(),
   is_active: z.boolean(),
-  user_id: z.string().uuid(),
+  user_id: z.string().uuid().nullable(),
+  source_path: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
