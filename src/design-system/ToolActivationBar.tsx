@@ -1,10 +1,11 @@
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
 export interface ToolActivation {
-  icon: ComponentType<{ className?: string; strokeWidth?: number; style?: React.CSSProperties }>;
+  icon: LucideIcon;
   label: string;
   color: string;
 }
