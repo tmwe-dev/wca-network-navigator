@@ -50,7 +50,7 @@ const PlanStepSchema = z.object({
   stepNumber: z.number(),
   toolId: z.string(),
   reasoning: z.string(),
-  params: z.record(z.unknown()).default({}),
+  params: z.record(z.string(), z.unknown()).default({}),
 });
 
 const PlanSchema = z.object({
