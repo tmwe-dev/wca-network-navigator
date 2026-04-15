@@ -103,6 +103,7 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/v1/mission-builder" element={<Navigate to="/v2/missions" replace />} />
 
                   {/* V1 — Protected routes under /v1 */}
                   <Route path="/v1" element={<ProtectedRoute />}>
