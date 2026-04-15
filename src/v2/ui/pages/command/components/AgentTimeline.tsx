@@ -79,10 +79,26 @@ export default function AgentTimeline({ state, onStop, onApprove, onReject, auto
                   {JSON.stringify(step.args).slice(0, 60)}
                 </span>
               )}
+              {/* Screenshot thumbnail for browser-action results */}
+              {step.result.success && step.result.data && typeof step.result.data === "object" && "finalScreenshot" in (step.result.data as Record<string, unknown>) && (
+                <button
+                  onClick={() => {
+                    const ss = (step.result.data as Record<string, string>).finalScreenshot;
+                    if (ss) window.open(`data:image/jpeg;base64,${ss}`, "_blank");
+                  }}
+                  className="mt-1 block rounded overflow-hidden border border-border/30 hover:border-primary/50 transition-colors"
+                >
+                  <img
+                    src={`data:image/jpeg;base64,${(step.result.data as Record<string, string>).finalScreenshot}`}
+                    alt="Screenshot"
+                    className="w-full max-w-[200px] h-auto"
+                  />
+                </button>
+              )}
             </div>
             <span className="flex-shrink-0">
               {step.result.success ? (
-                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
               ) : (
                 <XCircle className="w-3.5 h-3.5 text-destructive" />
               )}
