@@ -11,6 +11,7 @@ import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/compo
 import CardGridCanvas from "./command/canvas/CardGridCanvas";
 import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FlowCanvas from "./command/canvas/FlowCanvas";
+import ComposerCanvas from "./command/canvas/ComposerCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
@@ -31,7 +32,7 @@ interface Message {
   governance?: string;
 }
 
-type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | "live-flow" | null;
+type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | "live-flow" | "live-composer" | null;
 type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";
 type ToolPhase = "activating" | "active" | "done";
 
@@ -57,12 +58,12 @@ const agentDots = [
 
 const quickPrompts = [
   "Mostra i partner WCA attivi in Europa",
-  "Campagna per 50 lead da import + deep search",
+  "Scrivi email a partner per proposta collaborazione",
   "Report executive partner Asia cross-source",
   "Prepara follow-up per clienti inattivi >30gg",
-  "10 bozze email personalizzate per partner Asia",
+  "Componi email di primo contatto per nuovo lead",
   "Leggi ad alta voce il riepilogo prima della conferma",
-  "Lancia invio batch con approvazione step-by-step",
+  "Mostra stato campagne attive",
   "Salva questo flusso come template operativo",
 ];
 
@@ -324,12 +325,15 @@ const CommandPage = () => {
     const isCardGrid = tool.id === "followup-batch";
     const isTimeline = tool.id === "agent-report";
     const isFlow = tool.id === "campaign-status";
-    const agentLabel = isFlow ? "Campaign Manager" : isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
-    const queryLabel = isFlow ? "Query Supabase · Campaign Jobs" : isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
+    const isComposer = tool.id === "compose-email";
+    const agentLabel = isComposer ? "Email Composer" : isFlow ? "Campaign Manager" : isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
+    const queryLabel = isComposer ? "Preparazione Composer" : isFlow ? "Query Supabase · Campaign Jobs" : isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
 
     addMessage({
       role: "assistant",
-      content: isFlow
+      content: isComposer
+        ? `Sto preparando il composer email...\n\nAnalisi del prompt per estrarre destinatario e oggetto.`
+        : isFlow
         ? `Sto analizzando lo stato delle campagne usando **Campaign Jobs**...\n\nAggregazione batch in corso.`
         : isTimeline
         ? `Sto aggregando le attività degli agenti negli ultimi 7 giorni usando **Agents + Activities**...\n\nReport in preparazione.`
@@ -338,7 +342,7 @@ const CommandPage = () => {
         : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
       agentName: agentLabel,
       timestamp: ts(),
-      meta: isFlow ? "campaign-mgr · campaign_jobs · 1 modulo" : isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
+      meta: isComposer ? "composer · generate-email + send-email · 2 edge fn" : isFlow ? "campaign-mgr · campaign_jobs · 1 modulo" : isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
       governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
     });
 
@@ -367,10 +371,12 @@ const CommandPage = () => {
 
       setFlowPhase("done");
       setChainHighlight(6);
-      setCanvas(isFlow ? "live-flow" : isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
+      setCanvas(isComposer ? "live-composer" : isFlow ? "live-flow" : isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
       setShowTools(false);
 
-      const countLabel = isFlow
+      const countLabel = isComposer
+        ? "Composer pronto"
+        : isFlow
         ? `${result.meta?.count ?? 0} job in ${result.kind === "flow" ? result.nodes.length / 2 : 0} batch`
         : isTimeline
         ? `${result.meta?.count ?? 0} attività negli ultimi 7gg`
@@ -851,6 +857,15 @@ const CommandPage = () => {
                     />
                   )}
                 </div>
+              )}
+              {canvas === "live-composer" && liveResult && liveResult.kind === "composer" && (
+                <ComposerCanvas
+                  initialTo={liveResult.initialTo}
+                  initialSubject={liveResult.initialSubject}
+                  initialBody={liveResult.initialBody}
+                  promptHint={liveResult.promptHint}
+                  onClose={() => { setCanvas(null); setLiveResult(null); }}
+                />
               )}
             </motion.div>
           )}
