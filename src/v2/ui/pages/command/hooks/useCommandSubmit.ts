@@ -8,7 +8,8 @@ import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { resolveTool, TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import { planExecution } from "@/v2/io/edge/aiAssistant";
-import { executePlan, type PlanExecutionState } from "../planRunner";
+import { executePlan, executeApprovedStep, buildInitialStepStates, MAX_PLAN_STEPS, type PlanExecutionState } from "../planRunner";
+import { scenarios, detectScenario } from "../constants";
 import { scenarios, detectScenario } from "../constants";
 import type { Message, CanvasType, FlowPhase, Scenario } from "../constants";
 
