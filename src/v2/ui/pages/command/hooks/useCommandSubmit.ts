@@ -448,5 +448,5 @@ export function useCommandSubmit(state: CommandStateApi) {
     }
   }, [addMessage, resetForNewMessage, runFlow, runLiveTool, runPlan, setExecSteps, setFlowPhase, setMessages, setPlanState, ts]);
 
-  return { sendMessage, handleApprove, handleCancel, addAssistantMessage };
+  return { sendMessage, handleApprove, handleCancel, handleApproveStep, addAssistantMessage };
 }
