@@ -5,15 +5,52 @@ import { agentReportTool } from "./agentReport";
 import { campaignStatusTool } from "./campaignStatus";
 import { composeEmailTool } from "./composeEmail";
 import { searchKbTool } from "./searchKb";
+import { contactSearchTool } from "./contactSearch";
+import { prospectSearchTool } from "./prospectSearch";
+import { dashboardSnapshotTool } from "./dashboardSnapshot";
+import { outreachQueueStatusTool } from "./outreachQueueStatus";
+import { deepSearchPartnerTool } from "./deepSearchPartner";
+import { deepSearchContactTool } from "./deepSearchContact";
+import { createContactTool } from "./createContact";
+import { updateContactTool } from "./updateContact";
+import { createPartnerTool } from "./createPartner";
+import { updatePartnerStatusTool } from "./updatePartnerStatus";
+import { createCampaignTool } from "./createCampaign";
+import { enqueueOutreachTool } from "./enqueueOutreach";
+import { createAgentTool } from "./createAgent";
+import { createKbEntryTool } from "./createKbEntry";
+import { analyzePartnerTool } from "./analyzePartner";
+import { calculateLeadScoresTool } from "./calculateLeadScores";
+import { deduplicateContactsTool } from "./deduplicateContacts";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
+  // Composers / special
   composeEmailTool,
-  campaignStatusTool,
-  agentReportTool,
-  followupBatchTool,
+  // Reads
+  contactSearchTool,
   partnerSearchTool,
+  prospectSearchTool,
+  dashboardSnapshotTool,
+  outreachQueueStatusTool,
+  followupBatchTool,
+  agentReportTool,
+  campaignStatusTool,
   searchKbTool,
+  deepSearchPartnerTool,
+  deepSearchContactTool,
+  analyzePartnerTool,
+  // Writes (approval required)
+  createContactTool,
+  updateContactTool,
+  createPartnerTool,
+  updatePartnerStatusTool,
+  createCampaignTool,
+  enqueueOutreachTool,
+  createAgentTool,
+  createKbEntryTool,
+  calculateLeadScoresTool,
+  deduplicateContactsTool,
 ];
 
 /**
