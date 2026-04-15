@@ -63,6 +63,7 @@ const TOOLS: readonly Tool[] = [
   enrichPartnerFromWebTool,
   enrichPartnerFromWebsiteTool,
   enrichProspectFromWebsiteTool,
+  scrapePartnerTool,
 ];
 
 /* ─── Tool metadata for plan-execution ─── */
