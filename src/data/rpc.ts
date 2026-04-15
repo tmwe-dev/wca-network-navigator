@@ -72,9 +72,20 @@ export async function rpcMatchContactsToWca() {
 }
 
 export async function rpcIsEmailAuthorized(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
-  if (error) throw error;
-  return data === true;
+  // Retry up to 3 times to handle transient PGRST002 / 503 errors
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
+    if (!error) return data === true;
+    // PGRST002 = schema cache reloading (503) — retry after short delay
+    if (error.code === "PGRST002" || error.message?.includes("schema cache")) {
+      lastError = error;
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      continue;
+    }
+    throw error;
+  }
+  throw lastError;
 }
 
 export async function rpcRecordUserLogin(email: string): Promise<void> {
