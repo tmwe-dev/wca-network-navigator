@@ -1,43 +1,31 @@
 /**
- * ProtectedRoute — dead simple.
- * 1. getSession() once on mount
- * 2. If session exists → whitelist check → "authed" or signOut
- * 3. onAuthStateChange for SIGNED_IN / TOKEN_REFRESHED / SIGNED_OUT
- * No AuthProvider dependency. No prefetch. No side effects.
+ * ProtectedRoute — minimal auth gate.
+ * getSession → whitelist check → authed or guest.
+ * onAuthStateChange for SIGNED_IN / TOKEN_REFRESHED / SIGNED_OUT.
  */
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcIsEmailAuthorized } from "@/data/rpc";
 import { Loader2 } from "lucide-react";
 
-type AuthGate = "loading" | "authed" | "guest";
+type State = "loading" | "authed" | "guest";
 
 export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
-  const location = useLocation();
-  const [gate, setGate] = useState<AuthGate>("loading");
+  const [state, setState] = useState<State>("loading");
   const checkingRef = useRef(false);
 
-  const verifyAndSet = useCallback(async (email: string | undefined) => {
-    if (!email) {
-      await supabase.auth.signOut();
-      setGate("guest");
-      return;
-    }
+  const check = useCallback(async () => {
     if (checkingRef.current) return;
     checkingRef.current = true;
-
     try {
-      const allowed = await rpcIsEmailAuthorized(email);
-      if (allowed) {
-        setGate("authed");
-      } else {
-        await supabase.auth.signOut();
-        setGate("guest");
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) { setState("guest"); return; }
+      const allowed = await rpcIsEmailAuthorized(session.user.email);
+      if (!allowed) { await supabase.auth.signOut(); setState("guest"); return; }
+      setState("authed");
     } catch {
-      // Fail-open: if RPC is down, allow (the login page already checked)
-      setGate("authed");
+      setState("guest");
     } finally {
       checkingRef.current = false;
     }
@@ -46,37 +34,18 @@ export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Bootstrap: check existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    check();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (!mounted) return;
-      if (session?.user?.email) {
-        verifyAndSet(session.user.email);
-      } else {
-        setGate("guest");
-      }
-    }).catch(() => {
-      if (mounted) setGate("guest");
+      if (event === "SIGNED_OUT") setState("guest");
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") check();
     });
 
-    // 2. Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if (event === "SIGNED_OUT") {
-        setGate("guest");
-        return;
-      }
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        verifyAndSet(session?.user?.email);
-      }
-    });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, [check]);
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [verifyAndSet]);
-
-  if (gate === "loading") {
+  if (state === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -84,9 +53,7 @@ export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
     );
   }
 
-  if (gate === "guest") {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
+  if (state === "guest") return <Navigate to="/auth" replace />;
 
   return children ? <>{children}</> : <Outlet />;
 }
