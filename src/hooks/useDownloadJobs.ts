@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   findDownloadJobs, updateDownloadJob, deleteJobsByStatus, findJobByCountryAndNetwork,
   insertJobItems, insertJobEvent, findDeadPartnerIds, createDownloadJob,
@@ -26,13 +27,17 @@ function getRtState(): RtState {
 export function useDownloadJobs() {
   const queryClient = useQueryClient();
   const mountedRef = useRef(false);
+  const { status } = useAuth();
+  const isAuthenticated = status === "authenticated";
 
   const query = useQuery({
     queryKey: queryKeys.downloads.jobs,
     queryFn: () => findDownloadJobs(50),
+    enabled: isAuthenticated,
   });
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (mountedRef.current) return;
     mountedRef.current = true;
     const rt = getRtState();
@@ -55,7 +60,7 @@ export function useDownloadJobs() {
         rtCleanup.channel = null;
       }
     };
-  }, [queryClient]);
+  }, [queryClient, isAuthenticated]);
 
   return query;
 }
