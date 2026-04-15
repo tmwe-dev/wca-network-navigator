@@ -24,6 +24,8 @@ describe("Auth and routing legacy leak guardrails", () => {
   });
 
   it("legacy mission-builder url redirects to V2", () => {
-    expect(appSource).toContain('<Route path="/v1/mission-builder" element={<Navigate to="/v2/missions" replace />} />');
+    expect(appSource).toContain('<Route path="/" element={<Navigate to="/v2" replace />} />');
+    expect(appSource).toContain('<Route path="/v1/*" element={<V1DeprecationRedirect />} />');
+    expect(appSource).not.toContain('LauncherHome');
   });
 });
