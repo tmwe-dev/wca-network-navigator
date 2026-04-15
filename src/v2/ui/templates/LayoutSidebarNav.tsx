@@ -141,31 +141,37 @@ export function LayoutSidebarNav({
         </div>
       </div>
       <nav className="flex-1 p-2 overflow-y-auto" data-testid="main-sidebar">
-        {navGroupsDef.map((group) => (
-          <div key={group.titleKey} className="mb-3">
-            <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              {t(group.titleKey)}
-            </p>
-            {group.items.map((navItem) => {
-              const navId = navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
-              return (
-              <button
-                key={navItem.path}
-                data-testid={`nav-${navId}`}
-                onMouseEnter={() => prefetchRoute(navItem.path)}
-                onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  isActive(navItem.path)
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
-                )}
-              >
-                {navItem.icon}
-                {t(navItem.labelKey)}
-              </button>
-              );
-            })}
+        {navGroupsDef.map((group, groupIdx) => (
+          <div key={group.titleKey}>
+            <div className="mb-3">
+              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                {t(group.titleKey)}
+              </p>
+              {group.items.map((navItem) => {
+                const navId = navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
+                return (
+                <button
+                  key={navItem.path}
+                  data-testid={`nav-${navId}`}
+                  onMouseEnter={() => prefetchRoute(navItem.path)}
+                  onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive(navItem.path)
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                  )}
+                >
+                  {navItem.icon}
+                  {t(navItem.labelKey)}
+                  {navItem.path === "/v2/command" && (
+                    <span className="ml-auto text-[9px] font-bold uppercase bg-primary/15 text-primary px-1.5 py-0.5 rounded">NEW</span>
+                  )}
+                </button>
+                );
+              })}
+            </div>
+            {groupIdx === 0 && <div className="mx-3 mb-3 border-b border-border/50" />}
           </div>
         ))}
       </nav>
