@@ -1,12 +1,7 @@
-/**
- * Auth page — single form, two buttons (Entra / Registrati).
- * No OAuth, no tabs, no forgot password, no reset.
- */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,91 +11,60 @@ import { toast } from "sonner";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
-  const normalize = (e: string) => e.trim().toLowerCase();
-
-  const validate = (): string | null => {
-    if (!email.trim()) return "Inserisci l'email.";
-    if (password.length < 6) return "La password deve avere almeno 6 caratteri.";
-    return null;
-  };
-
-  // ── Entra ──────────────────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const err = validate();
-    if (err) { toast.error(err); return; }
-    setLoading(true);
-    const normalizedEmail = normalize(email);
-
-    try {
-      const allowed = await rpcIsEmailAuthorized(normalizedEmail);
-      if (!allowed) { toast.error("Email non autorizzata."); setLoading(false); return; }
-    } catch (ex) {
-      toast.error(ex instanceof Error ? ex.message : "Errore verifica accesso.");
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) navigate("/v2", { replace: true });
     });
+  }, [navigate]);
 
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
+  const run = async (mode: "signin" | "signup") => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      toast.error("Email e password obbligatorie");
       return;
     }
-
-    // Background: record login
-    try { await rpcRecordUserLogin(normalizedEmail); } catch { /* non-blocking */ }
-
-    navigate("/v2", { replace: true });
-  };
-
-  // ── Registrati ─────────────────────────────────────────────────────
-  const handleSignup = async () => {
-    const err = validate();
-    if (err) { toast.error(err); return; }
+    if (password.length < 6) {
+      toast.error("Password minimo 6 caratteri");
+      return;
+    }
     setLoading(true);
-    const normalizedEmail = normalize(email);
-
     try {
-      const allowed = await rpcIsEmailAuthorized(normalizedEmail);
-      if (!allowed) { toast.error("Email non autorizzata."); setLoading(false); return; }
-    } catch (ex) {
-      toast.error(ex instanceof Error ? ex.message : "Errore verifica accesso.");
-      setLoading(false);
-      return;
-    }
+      let allowed = false;
+      try {
+        allowed = await rpcIsEmailAuthorized(normalizedEmail);
+      } catch (e) {
+        toast.error(`Errore rete: ${e instanceof Error ? e.message : String(e)}`);
+        setLoading(false);
+        return;
+      }
+      if (!allowed) {
+        toast.error("Email non autorizzata");
+        setLoading(false);
+        return;
+      }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-    });
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({ email: normalizedEmail, password });
+        if (error) { toast.error(error.message); setLoading(false); return; }
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (signInErr) { toast.error(signInErr.message); setLoading(false); return; }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (error) { toast.error(error.message); setLoading(false); return; }
+      }
 
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (data.session) {
-      // Auto-confirmed → go straight in
       try { await rpcRecordUserLogin(normalizedEmail); } catch { /* non-blocking */ }
       navigate("/v2", { replace: true });
-    } else {
-      toast.success("Account creato. Ora clicca Entra.");
+    } finally {
       setLoading(false);
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -111,9 +75,8 @@ export default function Auth() {
           <CardTitle className="text-2xl">WCA Network Navigator</CardTitle>
           <CardDescription>Accedi per gestire i tuoi partner e network</CardDescription>
         </CardHeader>
-
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-3">
+          <div className="space-y-3">
             <div>
               <Label htmlFor="auth-email" className="text-xs">Email</Label>
               <div className="relative">
@@ -121,7 +84,7 @@ export default function Auth() {
                 <Input
                   id="auth-email" type="email" autoComplete="email"
                   value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@esempio.com" className="pl-10" required
+                  placeholder="email@esempio.com" className="pl-10" disabled={loading}
                 />
               </div>
             </div>
@@ -130,28 +93,28 @@ export default function Auth() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="auth-pw" type={showPassword ? "text" : "password"} autoComplete="current-password"
+                  id="auth-pw" type={showPw ? "text" : "password"} autoComplete="current-password"
                   value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimo 6 caratteri" className="pl-10 pr-10" required
+                  placeholder="Minimo 6 caratteri" className="pl-10 pr-10" disabled={loading}
                 />
                 <button
-                  type="button" onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                  type="button" onClick={() => setShowPw(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  aria-label={showPw ? "Nascondi" : "Mostra"}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             <div className="flex gap-3">
-              <Button type="submit" className="flex-1" disabled={loading}>
+              <Button type="button" className="flex-1" onClick={() => run("signin")} disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Entra
               </Button>
-              <Button type="button" variant="outline" className="flex-1" disabled={loading} onClick={handleSignup}>
-                Registrati
+              <Button type="button" variant="outline" className="flex-1" onClick={() => run("signup")} disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Registrati
               </Button>
             </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>
