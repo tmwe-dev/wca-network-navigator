@@ -3,11 +3,12 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { useAuth } from "@/providers/AuthProvider";
 
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -64,6 +65,21 @@ function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name:
   );
 }
 
+function V2AuthGate(): React.ReactElement {
+  const { status } = useAuth();
+  const location = useLocation();
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
+
+  if (status === "unauthenticated") {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  return <AuthenticatedLayout />;
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
@@ -76,7 +92,7 @@ export function V2Routes(): React.ReactElement {
         </Route>
 
         {/* Authenticated routes */}
-        <Route element={<AuthenticatedLayout />}>
+        <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />

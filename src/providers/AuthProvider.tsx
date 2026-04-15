@@ -4,7 +4,7 @@
  * Every component/hook that needs auth state MUST use the useAuth() hook
  * exported from this module instead of calling supabase.auth directly.
  */
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -27,34 +27,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [event, setEvent] = useState<AuthChangeEvent | null>(null);
   const initialised = useRef(false);
 
+  const setUnauthenticated = useCallback(() => {
+    setSession(null);
+    setUser(null);
+    setStatus("unauthenticated");
+  }, []);
+
+  const applyValidatedSession = useCallback(async (currentSession: Session | null) => {
+    if (!currentSession) {
+      setUnauthenticated();
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        await supabase.auth.signOut();
+        setUnauthenticated();
+        return;
+      }
+
+      setSession(currentSession);
+      setUser(data.user);
+      setStatus("authenticated");
+    } catch {
+      await supabase.auth.signOut();
+      setUnauthenticated();
+    }
+  }, [setUnauthenticated]);
+
   useEffect(() => {
     let mounted = true;
 
-    // Single listener for the entire app
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (authEvent, currentSession) => {
         if (!mounted) return;
         setEvent(authEvent);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setStatus(currentSession ? "authenticated" : "unauthenticated");
+
+        void applyValidatedSession(currentSession);
       },
     );
 
-    // Bootstrap: read the existing session once
     supabase.auth.getSession().then(({ data: { session: initial } }) => {
       if (!mounted || initialised.current) return;
       initialised.current = true;
-      setSession(initial);
-      setUser(initial?.user ?? null);
-      setStatus(initial ? "authenticated" : "unauthenticated");
+      void applyValidatedSession(initial);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applyValidatedSession]);
 
   return (
     <AuthContext.Provider value={{ session, user, status, event }}>
