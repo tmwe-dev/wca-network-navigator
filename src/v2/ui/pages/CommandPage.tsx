@@ -273,6 +273,7 @@ const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+  const tts = useVoiceOutput();
 
   // Voice input hook — real Web Speech API
   const voice = useVoiceInput({
