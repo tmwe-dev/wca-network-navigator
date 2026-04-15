@@ -41,7 +41,7 @@ export function useConversation() {
       const title = firstUserPrompt
         ? firstUserPrompt.slice(0, 60)
         : "Nuova conversazione";
-      const res = await createConversation(session?.userId, title);
+      const res = await createConversation(userId!, title);
       if (!isOk(res)) return null;
       const newConv = res.value;
       setConversationId(newConv.id);
