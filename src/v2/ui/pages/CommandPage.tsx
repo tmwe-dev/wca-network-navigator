@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Wand2, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
+import { Send, Wand2, Mic, MicOff, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -16,6 +17,7 @@ import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
+import { useVoiceInput } from "./command/hooks/useVoiceInput";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -268,6 +270,23 @@ const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+
+  // Voice input hook — real Web Speech API
+  const voice = useVoiceInput({
+    onTranscript: (text) => setInput(text),
+    onAutoSubmit: (text) => {
+      setInput("");
+      sendMessage(text);
+    },
+    silenceMs: 2000,
+    lang: "it-IT",
+  });
+
+  useEffect(() => {
+    if (voice.error) {
+      toast.error(voice.error);
+    }
+  }, [voice.error]);
   const [inputFocused, setInputFocused] = useState(false);
   const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
@@ -728,7 +747,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={voiceSpeaking} listening={false} speaking={voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking || voice.listening} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
@@ -746,6 +765,15 @@ const CommandPage = () => {
                   title="Lettura vocale"
                 >
                   {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </motion.button>
+                <motion.button
+                  onClick={() => voice.toggle()}
+                  whileTap={{ scale: 0.9 }}
+                  disabled={!voice.supported}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voice.listening ? "bg-primary/20 text-primary animate-pulse" : "text-muted-foreground/100 hover:text-foreground/100"} ${!voice.supported ? "opacity-30 cursor-not-allowed" : ""}`}
+                  title={voice.supported ? (voice.listening ? "Stop registrazione" : "Registrazione vocale") : "Voce non supportata da questo browser"}
+                >
+                  {voice.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </motion.button>
                 <input
                   type="text"
