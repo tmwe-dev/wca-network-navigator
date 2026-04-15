@@ -12,6 +12,8 @@ export interface FlowNode {
 interface FlowCanvasProps {
   nodes: FlowNode[];
   title?: string;
+  badge?: string;
+  sourceLabel?: string;
 }
 
 const nodeIcon = {
@@ -28,11 +30,14 @@ const nodeBorder = {
   end: "border-success/20",
 };
 
-const FlowCanvas = ({ nodes, title }: FlowCanvasProps) => (
+const FlowCanvas = ({ nodes, title, badge, sourceLabel }: FlowCanvasProps) => (
   <div className="space-y-4">
     <div className="flex items-center gap-2">
-      <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-warning/20 text-warning">DEMO</span>
+      <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider ${badge === "LIVE" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"}`}>
+        {badge ?? "DEMO"}
+      </span>
       {title && <span className="text-[10px] text-muted-foreground font-mono">{title}</span>}
+      {sourceLabel && <span className="text-[9px] text-muted-foreground/60 font-mono ml-auto">{sourceLabel}</span>}
     </div>
 
     <div className="flex flex-col items-center gap-0">
