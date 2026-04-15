@@ -19,7 +19,6 @@ import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
 
-const Auth = lazyRetry(() => import("./pages/Auth"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 // Prefetch high-traffic routes after initial load
@@ -60,7 +59,7 @@ const App = () => (
               <Route path="/" element={<Navigate to="/v2" replace />} />
 
               {/* Public routes */}
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth" element={<Navigate to="/v2" replace />} />
 
               {/* V1 catch-all → V2 redirect */}
               <Route path="/v1/*" element={<Navigate to="/v2" replace />} />
