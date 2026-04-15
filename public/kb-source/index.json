@@ -1,7 +1,28 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": [
-    { "path": "01-intro.md", "slug": "intro", "title": "Introduzione al Sistema", "tags": ["intro", "overview"], "category": "general", "priority": 10 },
-    { "path": "02-architettura.md", "slug": "architettura", "title": "Architettura del Sistema", "tags": ["architettura", "sistema"], "category": "general", "priority": 8 }
+    { "path": "admin.md", "slug": "admin", "title": "Admin", "tags": ["crm", "kb", "admin"], "category": "guida" },
+    { "path": "agenda.md", "slug": "agenda", "title": "Agenda", "tags": ["crm", "kb", "agenda"], "category": "guida" },
+    { "path": "agents.md", "slug": "agents", "title": "Agenti AI", "tags": ["crm", "kb", "agents", "ai"], "category": "guida" },
+    { "path": "crm.md", "slug": "crm", "title": "CRM", "tags": ["crm", "kb", "partners"], "category": "guida" },
+    { "path": "data-model.md", "slug": "data-model", "title": "Data Model", "tags": ["crm", "kb", "data-model"], "category": "guida" },
+    { "path": "email.md", "slug": "email", "title": "Email", "tags": ["crm", "kb", "email"], "category": "guida" },
+    { "path": "glossario.md", "slug": "glossario", "title": "Glossario", "tags": ["crm", "kb", "glossario"], "category": "guida" },
+    { "path": "integrations.md", "slug": "integrations", "title": "Integrazioni", "tags": ["crm", "kb", "integrations"], "category": "guida" },
+    { "path": "known-issues.md", "slug": "known-issues", "title": "Known Issues", "tags": ["crm", "kb", "issues", "bugs"], "category": "guida" },
+    { "path": "outreach.md", "slug": "outreach", "title": "Outreach", "tags": ["crm", "kb", "outreach"], "category": "guida" },
+    { "path": "prospects.md", "slug": "prospects", "title": "Prospects", "tags": ["crm", "kb", "prospects"], "category": "guida" },
+    { "path": "research.md", "slug": "research", "title": "Research", "tags": ["crm", "kb", "research"], "category": "guida" },
+    { "path": "routes.md", "slug": "routes", "title": "Routes", "tags": ["crm", "kb", "routes"], "category": "guida" },
+    { "path": "states.md", "slug": "states", "title": "Stati e Transizioni", "tags": ["crm", "kb", "states", "workflow"], "category": "guida" },
+    { "path": "test-checklists.md", "slug": "test-checklists", "title": "Test Checklists", "tags": ["crm", "kb", "test", "qa"], "category": "guida" },
+    { "path": "workflow/chat-with-agent.md", "slug": "wf-chat-with-agent", "title": "Workflow: Chat con Agente AI", "tags": ["crm", "kb", "workflow", "agent", "chat"], "category": "workflow" },
+    { "path": "workflow/create-agent.md", "slug": "wf-create-agent", "title": "Workflow: Creare un Agente AI", "tags": ["crm", "kb", "workflow", "agent"], "category": "workflow" },
+    { "path": "workflow/create-campaign.md", "slug": "wf-create-campaign", "title": "Workflow: Creare una Campagna", "tags": ["crm", "kb", "workflow", "campaign"], "category": "workflow" },
+    { "path": "workflow/create-contact.md", "slug": "wf-create-contact", "title": "Workflow: Creare un Contatto", "tags": ["crm", "kb", "workflow", "contact"], "category": "workflow" },
+    { "path": "workflow/create-mission.md", "slug": "wf-create-mission", "title": "Workflow: Creare una Missione", "tags": ["crm", "kb", "workflow", "mission"], "category": "workflow" },
+    { "path": "workflow/deep-search.md", "slug": "wf-deep-search", "title": "Workflow: Deep Search", "tags": ["crm", "kb", "workflow", "search"], "category": "workflow" },
+    { "path": "workflow/import-contacts.md", "slug": "wf-import-contacts", "title": "Workflow: Importare Contatti", "tags": ["crm", "kb", "workflow", "import"], "category": "workflow" },
+    { "path": "workflow/send-email.md", "slug": "wf-send-email", "title": "Workflow: Inviare una Email", "tags": ["crm", "kb", "workflow", "email"], "category": "workflow" }
   ]
 }
