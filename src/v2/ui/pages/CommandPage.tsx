@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Wand2, Volume2, VolumeX, Globe2 } from "lucide-react";
+import { Send, Wand2, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -259,6 +260,7 @@ function detectScenario(text: string): string | null {
 
 /* ─── Component ─── */
 const CommandPage = () => {
+  const nav = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
@@ -510,6 +512,15 @@ const CommandPage = () => {
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
+          <motion.button
+            onClick={() => nav("/v2")}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
+            title="Torna alla dashboard"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </motion.button>
           <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/95" animate={{ opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 3, repeat: Infinity }} />
           <span className="text-[11px] text-muted-foreground/98 font-light tracking-wide">Sessione attiva</span>
           {flowPhase !== "idle" && flowPhase !== "done" && (

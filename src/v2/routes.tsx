@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -82,6 +82,22 @@ function V2AuthGate(): React.ReactElement {
   return <AuthenticatedLayout />;
 }
 
+/** Auth gate without layout — for fullscreen pages like Command */
+function V2AuthGateRaw(): React.ReactElement {
+  const { status } = useAuth();
+  const location = useLocation();
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
+
+  if (status === "unauthenticated") {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  return <Outlet />;
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
@@ -92,6 +108,11 @@ export function V2Routes(): React.ReactElement {
         {/* Public routes */}
         <Route element={<PublicLayout />}>
           <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
+        </Route>
+
+        {/* Fullscreen authenticated routes (no sidebar/header) */}
+        <Route element={<V2AuthGateRaw />}>
+          <Route path="command" element={guardedPage(CommandPage, "Command")} />
         </Route>
 
         {/* Authenticated routes */}
@@ -136,7 +157,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
-          <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
