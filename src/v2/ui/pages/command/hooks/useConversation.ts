@@ -2,7 +2,7 @@
  * useConversation — multi-turn conversation persistence for /v2/command
  */
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { isOk } from "@/v2/core/domain/result";
 import {
   fetchConversations,

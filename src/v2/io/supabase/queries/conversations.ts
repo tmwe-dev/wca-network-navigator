@@ -3,7 +3,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
-import { toAppError } from "../../../core/domain/errors";
+import { fromUnknown } from "../../../core/domain/errors";
 
 export interface Conversation {
   id: string;
