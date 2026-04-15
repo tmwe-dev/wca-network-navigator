@@ -11,6 +11,7 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import { TOOLS } from "../tools/registry";
 import type { Message, FlowPhase, ToolPhase, Scenario } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
+import PlanTimeline from "./PlanTimeline";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
