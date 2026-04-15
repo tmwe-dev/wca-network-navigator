@@ -680,11 +680,12 @@ const CommandPage = () => {
                 style={{ background: "hsl(240 5% 6% / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
               >
                 <motion.button
-                  onClick={() => { setMicActive(!micActive); setVoiceSpeaking(false); }}
+                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${micActive ? "bg-primary/12 text-primary/92" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+                  title="Lettura vocale"
                 >
-                  {micActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </motion.button>
                 <input
                   type="text"
@@ -697,12 +698,12 @@ const CommandPage = () => {
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/80 font-light text-foreground/100"
                 />
                 <motion.button
-                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
+                  onClick={() => { /* Wand2 action placeholder */ }}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-accent/12 text-accent/92" : "text-muted-foreground/98 hover:text-muted-foreground/97"}`}
-                  title="Lettura vocale"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 text-[hsl(270_60%_70%)] hover:bg-[hsl(270_60%_60%)]/10"
+                  title="Suggerimento AI"
                 >
-                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  <Wand2 className="w-4 h-4" />
                 </motion.button>
                 <motion.button onClick={() => sendMessage()} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary/92 hover:bg-primary/15 hover:text-primary/96 transition-all duration-500 disabled:opacity-20">
                   <Send className="w-3.5 h-3.5" />
