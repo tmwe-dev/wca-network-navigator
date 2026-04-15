@@ -3,15 +3,15 @@
  * Uses scrape-website edge function with scrape_cache.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;
 
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await supabase
-    .from("scrape_cache")
+  const { data } = await untypedFrom("scrape_cache")
     .select("payload, scraped_at")
     .eq("url", url)
     .maybeSingle();
@@ -24,9 +24,8 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
-  await supabase
-    .from("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() } as never);
+  await untypedFrom("scrape_cache")
+    .upsert({ url, payload, scraped_at: new Date().toISOString() });
 }
 
 export const scrapeProspectTool: Tool = {
@@ -46,13 +45,12 @@ export const scrapeProspectTool: Tool = {
       for (const [k, v] of Object.entries(payload)) {
         if (k !== "prospectId") updateData[k] = v;
       }
-      const { error } = await supabase
-        .from("prospects")
-        .update(updateData as unknown as Record<string, never>)
+      const { error } = await untypedFrom("prospects")
+        .update(updateData)
         .eq("id", prospectId);
 
       if (error) {
-        return { kind: "result", title: "Errore", message: `Errore aggiornamento: ${error.message}` };
+        return { kind: "result", title: "Errore", message: `Errore aggiornamento: ${(error as Error).message}` };
       }
       return { kind: "result", title: "Prospect Aggiornato", message: "Dati del prospect aggiornati con successo." };
     }
@@ -64,8 +62,7 @@ export const scrapeProspectTool: Tool = {
       return { kind: "result", title: "Errore", message: "Specifica il nome del prospect da analizzare." };
     }
 
-    const { data: prospect, error: pErr } = await supabase
-      .from("prospects")
+    const { data: prospect, error: pErr } = await untypedFrom("prospects")
       .select("id, company_name, website, email, phone")
       .or(`company_name.ilike.%${searchTerm}%`)
       .limit(1)

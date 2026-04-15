@@ -2,6 +2,7 @@
  * Scrape tool for agent loop — calls scrape-website edge function with cache.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { AgentTool, AgentToolResult } from "./index";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -18,8 +19,7 @@ function getDomain(url: string): string {
 }
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await supabase
-    .from("scrape_cache")
+  const { data } = await untypedFrom("scrape_cache")
     .select("payload, scraped_at")
     .eq("url", url)
     .maybeSingle();
@@ -32,9 +32,8 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
-  await supabase
-    .from("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() } as never);
+  await untypedFrom("scrape_cache")
+    .upsert({ url, payload, scraped_at: new Date().toISOString() });
 }
 
 export const scrapeUrlTool: AgentTool = {
@@ -88,7 +87,6 @@ export const scrapeUrlTool: AgentTool = {
       if (error) return { success: false, error: error.message };
 
       const payload = data as Record<string, unknown>;
-      // Store in cache
       await setCachedScrape(url, payload);
 
       return {
