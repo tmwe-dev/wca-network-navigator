@@ -11,6 +11,7 @@ export interface ActivityFilters {
   readonly partnerId?: string;
   readonly status?: ActivityStatus;
   readonly activityType?: ActivityType;
+  readonly since?: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -24,6 +25,7 @@ export async function fetchActivities(
     if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
     if (filters?.status) query = query.eq("status", filters.status);
     if (filters?.activityType) query = query.eq("activity_type", filters.activityType);
+    if (filters?.since) query = query.gte("created_at", filters.since);
 
     const limit = filters?.limit ?? 100;
     const offset = filters?.offset ?? 0;

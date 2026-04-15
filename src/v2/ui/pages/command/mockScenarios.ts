@@ -211,9 +211,6 @@ export function matchScenario(prompt: string): MockScenario {
   if (lower.includes("email")) {
     return followupBatch;
   }
-  if (lower.includes("agent") || lower.includes("riepilogo") || lower.includes("report") || lower.includes("performance")) {
-    return agentReport;
-  }
   if (lower.includes("campagna") || lower.includes("campaign") || lower.includes("lancia") || lower.includes("flusso")) {
     return campaignPreview;
   }
