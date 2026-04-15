@@ -11,6 +11,7 @@ import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/compo
 import CardGridCanvas from "./command/canvas/CardGridCanvas";
 import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FlowCanvas from "./command/canvas/FlowCanvas";
+import ComposerCanvas from "./command/canvas/ComposerCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
@@ -31,7 +32,7 @@ interface Message {
   governance?: string;
 }
 
-type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | "live-flow" | null;
+type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | "live-flow" | "live-composer" | null;
 type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";
 type ToolPhase = "activating" | "active" | "done";
 
@@ -57,12 +58,12 @@ const agentDots = [
 
 const quickPrompts = [
   "Mostra i partner WCA attivi in Europa",
-  "Campagna per 50 lead da import + deep search",
+  "Scrivi email a partner per proposta collaborazione",
   "Report executive partner Asia cross-source",
   "Prepara follow-up per clienti inattivi >30gg",
-  "10 bozze email personalizzate per partner Asia",
+  "Componi email di primo contatto per nuovo lead",
   "Leggi ad alta voce il riepilogo prima della conferma",
-  "Lancia invio batch con approvazione step-by-step",
+  "Mostra stato campagne attive",
   "Salva questo flusso come template operativo",
 ];
 
