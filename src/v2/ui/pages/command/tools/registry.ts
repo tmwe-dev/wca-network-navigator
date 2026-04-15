@@ -32,6 +32,7 @@ import { scrapeCompanyWebsiteTool } from "./scrapeCompanyWebsite";
 import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
 import { enrichPartnerFromWebsiteTool } from "./enrichPartnerFromWebsite";
 import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
+import { scrapeProspectTool } from "./scrapeProspect";
 
 const TOOLS: readonly Tool[] = [
   // Composers / special
@@ -67,6 +68,7 @@ const TOOLS: readonly Tool[] = [
   enrichPartnerFromWebsiteTool,
   enrichProspectFromWebsiteTool,
   scrapePartnerTool,
+  scrapeProspectTool,
   // Browser-action tools (approval required)
   browserNavigateAndExtractTool,
   browserFillFormTool,
@@ -85,7 +87,7 @@ const ACTION_TOOL_IDS = new Set([
   "scrape-linkedin-profile", "scrape-company-website", "enrich-partner-from-web",
   "enrich-partner-from-website", "enrich-prospect-from-website",
   "browser-navigate-extract", "browser-fill-form", "browser-auto-complete",
-  "scrape-partner-website",
+  "scrape-partner-website", "scrape-prospect-website",
 ]);
 
 export const TOOL_METADATA = TOOLS.map((t) => ({
