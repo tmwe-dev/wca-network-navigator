@@ -5,7 +5,7 @@ import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
-import { PublicLayout } from "./ui/templates/PublicLayout";
+
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
@@ -67,11 +67,8 @@ export function V2Routes(): React.ReactElement {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
-        {/* Public routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="login" element={<Navigate to="/auth" replace />} />
-          <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
-        </Route>
+        {/* Legacy redirects */}
+        <Route path="login" element={<Navigate to="/auth" replace />} />
 
         {/* Authenticated routes */}
         <Route element={<AuthenticatedLayout />}>

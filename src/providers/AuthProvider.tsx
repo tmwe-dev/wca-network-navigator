@@ -1,10 +1,9 @@
 /**
- * AuthProvider — Single centralized onAuthStateChange listener.
- *
- * Every component/hook that needs auth state MUST use the useAuth() hook
- * exported from this module instead of calling supabase.auth directly.
+ * useAuth — Lightweight auth hook (replaces AuthProvider).
+ * Subscribes directly to supabase.auth without needing a Context/Provider wrapper.
+ * Module-level singleton: all useAuth() calls share ONE listener.
  */
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -14,69 +13,77 @@ export interface AuthContextValue {
   readonly session: Session | null;
   readonly user: User | null;
   readonly status: AuthStatus;
-  /** Last auth event emitted by Supabase (useful for PASSWORD_RECOVERY, TOKEN_REFRESHED, etc.) */
   readonly event: AuthChangeEvent | null;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+// ── Singleton store ──────────────────────────────────────────────────
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [status, setStatus] = useState<AuthStatus>("loading");
-  const [event, setEvent] = useState<AuthChangeEvent | null>(null);
-  const initialised = useRef(false);
+let _snapshot: AuthContextValue = {
+  session: null,
+  user: null,
+  status: "loading",
+  event: null,
+};
 
-  useEffect(() => {
-    let mounted = true;
+const _listeners = new Set<() => void>();
+let _subscribed = false;
 
-    const syncAuthState = (nextEvent: AuthChangeEvent | null, nextSession: Session | null) => {
-      if (!mounted) return;
-      initialised.current = true;
-      if (nextEvent) setEvent(nextEvent);
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setStatus(nextSession ? "authenticated" : "unauthenticated");
-    };
+function notify() {
+  _listeners.forEach((l) => l());
+}
 
-    // Single listener for the entire app
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (authEvent, currentSession) => {
-        syncAuthState(authEvent, currentSession);
-      },
-    );
+function updateSnapshot(
+  session: Session | null,
+  event: AuthChangeEvent | null,
+) {
+  _snapshot = {
+    session,
+    user: session?.user ?? null,
+    status: session ? "authenticated" : "unauthenticated",
+    event: event ?? _snapshot.event,
+  };
+  notify();
+}
 
-    // Bootstrap: read the existing session once
-    void supabase.auth
-      .getSession()
-      .then(({ data: { session: initial } }) => {
-        if (!mounted || initialised.current) return;
-        syncAuthState(null, initial);
-      })
-      .catch(() => {
-        if (!mounted || initialised.current) return;
-        syncAuthState(null, null);
-      });
+function ensureSubscription() {
+  if (_subscribed) return;
+  _subscribed = true;
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ session, user, status, event }}>
-      {children}
-    </AuthContext.Provider>
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (authEvent, currentSession) => {
+      updateSnapshot(currentSession, authEvent);
+    },
   );
+
+  // Bootstrap
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (_snapshot.status === "loading") {
+      updateSnapshot(session, null);
+    }
+  }).catch(() => {
+    if (_snapshot.status === "loading") {
+      updateSnapshot(null, null);
+    }
+  });
+
+  // Keep subscription reference to prevent GC (intentionally never unsubscribe — app-level singleton)
+  void subscription;
+}
+
+function subscribe(cb: () => void) {
+  ensureSubscription();
+  _listeners.add(cb);
+  return () => { _listeners.delete(cb); };
+}
+
+function getSnapshot(): AuthContextValue {
+  return _snapshot;
 }
 
 /**
- * Hook to consume auth state from the centralized AuthProvider.
- * Must be used inside <AuthProvider>.
+ * Hook to consume auth state. Drop-in replacement for the old AuthProvider's useAuth().
+ * No Provider needed — uses a module-level singleton.
  */
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth() must be used inside <AuthProvider>");
-  return ctx;
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

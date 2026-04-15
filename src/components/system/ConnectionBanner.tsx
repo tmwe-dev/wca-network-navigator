@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
 import { createLogger } from "@/lib/log";
 import { checkProfileConnection } from "@/data/profiles";
-import { useAuth } from "@/providers/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import type { AuthChangeEvent } from "@supabase/supabase-js";
 
 const log = createLogger("ConnectionBanner");
 
@@ -14,19 +15,31 @@ const log = createLogger("ConnectionBanner");
  */
 export function ConnectionBanner() {
   const [dbLost, setDbLost] = useState(false);
-  const { status, event } = useAuth();
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
-  const hasSession = status === "authenticated";
 
-  // React to specific auth events
   useEffect(() => {
-    if (event === "TOKEN_REFRESHED") setDbLost(false);
-    if (event === "SIGNED_OUT") {
-      setDbLost(false);
-      navigate("/auth", { replace: true });
-    }
-  }, [event, navigate]);
+    let mounted = true;
+
+    // Bootstrap
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) setHasSession(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
+      if (!mounted) return;
+      if (event === "TOKEN_REFRESHED") setDbLost(false);
+      if (event === "SIGNED_OUT") {
+        setDbLost(false);
+        setHasSession(false);
+        navigate("/auth", { replace: true });
+      }
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") setHasSession(true);
+    });
+
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, [navigate]);
 
   // Heartbeat only when session is active
   useEffect(() => {
