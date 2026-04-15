@@ -223,7 +223,7 @@ export async function executeApprovedStep(
     return { ...state, stepStates: errStates, status: "error", error: `Tool non trovato` };
   }
 
-  let current = { ...state, status: "running" as const, approvalStepNumber: undefined };
+  let current: PlanExecutionState = { ...state, status: "running", approvalStepNumber: undefined };
   const runStates = [...current.stepStates];
   runStates[stepIdx] = { ...runStates[stepIdx], status: "running" as PlanStepStatus };
   current = { ...current, stepStates: runStates };
@@ -238,7 +238,7 @@ export async function executeApprovedStep(
       `Step ${step.stepNumber} (${step.toolId})`,
     );
     const doneStates = [...current.stepStates];
-    doneStates[stepIdx] = { ...doneStates[stepIdx], status: "done", result };
+    doneStates[stepIdx] = { ...doneStates[stepIdx], status: "done" as PlanStepStatus, result };
     current = {
       ...current,
       stepStates: doneStates,
