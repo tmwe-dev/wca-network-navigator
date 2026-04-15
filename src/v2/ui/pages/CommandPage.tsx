@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Wand2, Volume2, VolumeX, Globe2 } from "lucide-react";
+import { Send, Wand2, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
