@@ -125,25 +125,17 @@ export default function CommandThread({
           </motion.div>
         )}
 
-        {planState?.status === "awaiting-approval" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            <ApprovalPanel
-              visible
-              title="Conferma piano"
-              description={planState.summary}
-              details={planState.steps.map((s) => ({
-                label: `Step ${s.stepNumber} · ${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}`,
-                value: s.reasoning,
-              }))}
-              governance={{ role: governance.role, permission: "EXECUTE:PLAN", policy: governance.policy }}
-              onApprove={onApprove}
-              onModify={() => {}}
-              onCancel={() => onCancel()}
-            />
-          </motion.div>
+        {/* PlanTimeline — per-step approval */}
+        {planState && planState.stepStates && planState.stepStates.length > 0 && (
+          <PlanTimeline
+            stepStates={planState.stepStates}
+            visible={flowPhase === "executing" || flowPhase === "proposal" || flowPhase === "done"}
+            onApproveStep={onApproveStep}
+            onRejectStep={() => onCancel()}
+          />
         )}
 
-        <ExecutionFlow visible={flowPhase === "executing"} steps={execSteps} progress={execProgress} />
+        <ExecutionFlow visible={flowPhase === "executing" && (!planState || !planState.stepStates?.length)} steps={execSteps} progress={execProgress} />
 
         <div ref={chatEndRef} />
       </div>
