@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@/providers/AuthProvider";
 
 type OperatorRow = Database["public"]["Tables"]["operators"]["Row"];
 type OperatorInsert = Database["public"]["Tables"]["operators"]["Insert"];
@@ -11,6 +12,8 @@ type OperatorUpdate = Database["public"]["Tables"]["operators"]["Update"];
 export type Operator = OperatorRow;
 
 export function useOperators() {
+  const { status } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.operators.all,
     queryFn: async () => {
@@ -21,10 +24,13 @@ export function useOperators() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: status === "authenticated",
   });
 }
 
 export function useCurrentOperator() {
+  const { status } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.operators.current,
     queryFn: async () => {
@@ -38,6 +44,7 @@ export function useCurrentOperator() {
       if (error) throw error;
       return data;
     },
+    enabled: status === "authenticated",
   });
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCheckInbox } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("useEmailAutoSync");
 
@@ -14,6 +15,7 @@ interface Options {
 
 export function useEmailAutoSync(options: Options = {}) {
   const { paused = false } = options;
+  const { status } = useAuth();
 
   // Default to TRUE (auto-enabled)
   const [enabled, setEnabled] = useState(() => {
@@ -34,7 +36,7 @@ export function useEmailAutoSync(options: Options = {}) {
     });
   }, []);
 
-  const active = enabled && !paused;
+  const active = enabled && !paused && status === "authenticated";
 
   useEffect(() => {
     if (!active) {

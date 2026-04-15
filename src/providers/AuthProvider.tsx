@@ -20,6 +20,37 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function clearSupabaseAuthStorage() {
+  try {
+    const authKeys = Object.keys(localStorage).filter(
+      (key) => (key.includes("supabase") || key.startsWith("sb-")) && key.includes("auth"),
+    );
+    authKeys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // local cleanup only — best effort
+  }
+}
+
+function hasValidAccessToken(accessToken: string | null | undefined): boolean {
+  if (!accessToken) return false;
+
+  const parts = accessToken.split(".");
+  if (parts.length !== 3) return false;
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const payload = JSON.parse(atob(padded)) as { sub?: unknown; exp?: unknown };
+
+    if (typeof payload.sub !== "string" || payload.sub.length === 0) return false;
+    if (typeof payload.exp === "number" && payload.exp * 1000 <= Date.now()) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -39,10 +70,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (!currentSession.user?.id || !hasValidAccessToken(currentSession.access_token)) {
+      clearSupabaseAuthStorage();
+      await supabase.auth.signOut({ scope: "local" });
+      setUnauthenticated();
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) {
-        await supabase.auth.signOut();
+        clearSupabaseAuthStorage();
+        await supabase.auth.signOut({ scope: "local" });
         setUnauthenticated();
         return;
       }
@@ -51,7 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setStatus("authenticated");
     } catch {
-      await supabase.auth.signOut();
+      clearSupabaseAuthStorage();
+      await supabase.auth.signOut({ scope: "local" });
       setUnauthenticated();
     }
   }, [setUnauthenticated]);

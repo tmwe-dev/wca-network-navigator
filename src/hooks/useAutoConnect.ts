@@ -4,6 +4,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("useAutoConnect");
 
@@ -18,9 +19,11 @@ export function useAutoConnect() {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
   const updateSetting = useUpdateSetting();
+  const { status } = useAuth();
   const didRun = useRef(false);
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     if (didRun.current) return;
     didRun.current = true;
 
@@ -63,5 +66,5 @@ export function useAutoConnect() {
 
     const timer = setTimeout(run, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [li, wa, updateSetting, status]);
 }
