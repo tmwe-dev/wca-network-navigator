@@ -11,6 +11,7 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import { TOOLS } from "../tools/registry";
 import type { Message, FlowPhase, ToolPhase, Scenario } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
+import PlanTimeline from "./PlanTimeline";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -29,12 +30,13 @@ interface Props {
   chatEndRef: RefObject<HTMLDivElement>;
   onApprove: () => void;
   onCancel: () => void;
+  onApproveStep?: (stepNumber: number) => void;
 }
 
 export default function CommandThread({
   messages, activeScenarioKey, showTools, flowPhase, toolPhase, chainHighlight,
   activeScenario, planState, execSteps, execProgress, governance, chatEndRef,
-  onApprove, onCancel,
+  onApprove, onCancel, onApproveStep,
 }: Props) {
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6">
@@ -123,25 +125,17 @@ export default function CommandThread({
           </motion.div>
         )}
 
-        {planState?.status === "awaiting-approval" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            <ApprovalPanel
-              visible
-              title="Conferma piano"
-              description={planState.summary}
-              details={planState.steps.map((s) => ({
-                label: `Step ${s.stepNumber} · ${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}`,
-                value: s.reasoning,
-              }))}
-              governance={{ role: governance.role, permission: "EXECUTE:PLAN", policy: governance.policy }}
-              onApprove={onApprove}
-              onModify={() => {}}
-              onCancel={() => onCancel()}
-            />
-          </motion.div>
+        {/* PlanTimeline — per-step approval */}
+        {planState && planState.stepStates && planState.stepStates.length > 0 && (
+          <PlanTimeline
+            stepStates={planState.stepStates}
+            visible={flowPhase === "executing" || flowPhase === "proposal" || flowPhase === "done"}
+            onApproveStep={onApproveStep}
+            onRejectStep={() => onCancel()}
+          />
         )}
 
-        <ExecutionFlow visible={flowPhase === "executing"} steps={execSteps} progress={execProgress} />
+        <ExecutionFlow visible={flowPhase === "executing" && (!planState || !planState.stepStates?.length)} steps={execSteps} progress={execProgress} />
 
         <div ref={chatEndRef} />
       </div>

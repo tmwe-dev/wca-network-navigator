@@ -104,6 +104,7 @@ const CommandPage = () => {
               chatEndRef={s.chatEndRef as React.RefObject<HTMLDivElement>}
               onApprove={() => submit.handleApprove(s.planState, s.pendingApproval, s.activeScenario)}
               onCancel={submit.handleCancel}
+              onApproveStep={(stepNum) => s.planState && submit.handleApproveStep(s.planState)}
             />
           )}
 
