@@ -1,54 +1,72 @@
 
 
-# Piano: Reset Autenticazione e Pulizia Whitelist
+# Piano: Rimozione Completa Autenticazione
 
-## Situazione Attuale
+## Obiettivo
+Eliminare ogni gate di autenticazione. L'app si apre direttamente su `/v2` con una schermata di selezione operatore obbligatoria. L'utente corrente è determinato esclusivamente dal selettore operatore nell'header.
 
-Ho analizzato tutto in profondità. Ecco lo stato reale:
+## Impatto
 
-**Auth.tsx è GIÀ corretto** — il codice attuale è il form minimale (email + password, due bottoni Entra/Registrati, nessun Google, nessun tab, nessun reset password, redirect a `/v2`). Il file corrisponde esattamente a quello che avevi richiesto.
+### File da modificare
 
-**luca@tmwe.it esiste** in auth.users con email confermata, profilo creato, operatore admin. Il login DOVREBBE funzionare se la password è corretta.
+1. **`src/v2/ui/templates/AuthenticatedLayout.tsx`** (cuore del cambiamento)
+   - Rimuovere `useAuthV2()` e tutti i check `isAuthenticated`, `isLoading`, redirect a `/auth`
+   - Rimuovere il gate `sessionReady` — il layout si mostra sempre
+   - `backgroundEnabled` diventa `true` dopo 1.5s senza condizioni di sessione
+   - Rimuovere query onboarding che dipende da `auth.getUser()`
+   - La riga `if (!isAuthenticated) return null` e il loading spinner condizionale vengono eliminati
 
-## Problemi Identificati
+2. **`src/hooks/useOperators.ts`**
+   - Rimuovere `useAuth()` e la condizione `enabled: status === "authenticated"`
+   - Le query partono sempre (accesso pubblico)
+   - `useCurrentOperator` non può più basarsi su `user.id` — deve usare l'operatore selezionato dal contesto
 
-1. **user_roles**: luca@tmwe.it ha ruolo `user` invece di `admin` — alcune pagine (Diagnostics, Telemetry) richiedono ruolo admin e non saranno accessibili
-2. **Import morto**: `ProtectedRoute` è importato in App.tsx ma mai usato nel JSX — codice morto da rimuovere
-3. **Whitelist sporca**: 4 utenti presenti, l'utente vuole solo luca@tmwe.it
-4. **LoginPage.tsx V2 ancora esiste**: `src/v2/ui/pages/LoginPage.tsx` è ancora nel filesystem (usa `useAuthV2` con tabs) — file residuo da eliminare
+3. **`src/contexts/ActiveOperatorContext.tsx`**
+   - Aggiungere stato `requiresSelection: boolean` — se nessun operatore è selezionato, mostra un overlay di selezione
+   - Rimuovere dipendenza da `useCurrentOperator` basato su auth
 
-## Azioni
+4. **`src/providers/AuthProvider.tsx`** (`useAuth`)
+   - Forzare `status: "authenticated"` sempre, senza sottoscriversi a Supabase auth
+   - Oppure fornire un mock statico per non rompere i 47+ file che importano `useAuth()`
 
-### 1. Database — Pulizia whitelist e ruoli
-```sql
--- Disattivare tutti tranne luca@tmwe.it
-UPDATE authorized_users SET is_active = false WHERE email != 'luca@tmwe.it';
+5. **`src/components/auth/ProtectedRoute.tsx`**
+   - Rendere pass-through: ritorna sempre `<Outlet />` senza check
 
--- Promuovere luca@tmwe.it ad admin nei ruoli
-UPDATE user_roles SET role = 'admin' WHERE user_id = 'ae35ad39-de57-45df-9d24-538cdbbd5e87';
-```
+6. **`src/App.tsx`**
+   - Rimuovere la route `/auth` (o redirect a `/v2`)
+   - Root `/` → `/v2` (già presente)
 
-### 2. Eliminare file residui
-- `src/v2/ui/pages/LoginPage.tsx` — pagina login V2 obsoleta, ancora presente
+7. **`src/pages/Auth.tsx`**
+   - Eliminare o svuotare (redirect immediato a `/v2`)
 
-### 3. Pulizia App.tsx
-- Rimuovere import inutilizzato di `ProtectedRoute`
+8. **`src/v2/hooks/useAuthV2.ts`**
+   - Forzare `isAuthenticated: true`, `isLoading: false`, `isAdmin: true`, `roles: ["admin"]`
+   - Mantenere l'interfaccia per non rompere i consumatori
+   - Rimuovere tutta la logica di login/signup/signOut/whitelist
 
-### 4. Verifica e test
-- `npx tsc --noEmit` per confermare compilazione pulita
-- Test login su `/auth` con luca@tmwe.it
+9. **`src/v2/hooks/useRequireRole.ts`**
+   - Ritorna sempre `true` senza redirect
 
-## Dettagli Tecnici
+10. **`src/components/system/ConnectionBanner.tsx`**
+    - Rimuovere redirect a `/auth` su SIGNED_OUT
+    - Heartbeat senza condizione di sessione
 
-Il flusso auth attuale funziona così:
-```text
-/auth (Auth.tsx) → signInWithPassword → navigate("/v2")
-/v2/* → AuthenticatedLayout → useAuthV2 → getSession + rpcIsEmailAuthorized
-```
+11. **`src/components/header/OperatorSelector.tsx`**
+    - Rimuovere il gate `if (!currentOp?.is_admin) return null` — visibile sempre
+    - Rimuovere il gate `if (operators.length <= 1) return null`
 
-Non c'è nessun bug nel codice auth. Se il login fallisce, le cause possibili sono:
-- Password errata (l'utente potrebbe aver dimenticato quale password ha usato durante la registrazione)
-- Errore PGRST002 transiente (già gestito con retry)
+12. **`src/data/rpc.ts`**
+    - `rpcIsEmailAuthorized` e `rpcRecordUserLogin` diventano no-op (return true / void)
 
-Se la password è persa, l'unica soluzione senza flusso "Password dimenticata" è eliminare l'utente da auth.users e ri-registrarsi.
+### File da creare
+
+13. **`src/components/OperatorSelectionOverlay.tsx`**
+    - Overlay fullscreen modale che mostra la lista operatori
+    - L'utente deve selezionarne uno per procedere
+    - Si integra nel `ActiveOperatorProvider`
+
+### Dettagli Tecnici
+
+- Le RLS policies sulle tabelle Supabase che dipendono da `auth.uid()` dovranno essere bypassate. Dato che l'app non avrà più sessioni auth, le query falliranno a meno di usare la chiave anonima con policy permissive. Valuterò se servono migration per aprire le RLS o se le policy attuali sono già sufficientemente aperte.
+- I 47+ file che importano `useAuth()` non verranno toccati singolarmente — il mock a livello di provider garantisce compatibilità.
 
