@@ -208,7 +208,7 @@ export const mockScenarios: Record<string, MockScenario> = {
 
 export function matchScenario(prompt: string): MockScenario {
   const lower = prompt.toLowerCase();
-  if (lower.includes("email") || lower.includes("follow-up") || lower.includes("followup") || lower.includes("inattiv")) {
+  if (lower.includes("email")) {
     return followupBatch;
   }
   if (lower.includes("agent") || lower.includes("riepilogo") || lower.includes("report") || lower.includes("performance")) {

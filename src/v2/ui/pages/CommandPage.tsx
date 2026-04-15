@@ -8,6 +8,7 @@ import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/Execut
 import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/components/workspace/CanvasViews";
+import CardGridCanvas from "./command/canvas/CardGridCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
@@ -28,7 +29,7 @@ interface Message {
   governance?: string;
 }
 
-type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | null;
+type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | null;
 type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";
 type ToolPhase = "activating" | "active" | "done";
 
@@ -253,7 +254,7 @@ function detectScenario(text: string): string | null {
   if (lower.includes("business card") || lower.includes("bigliett")) return "businesscard";
   if (lower.includes("campagna") || lower.includes("lead")) return "campaign";
   if (lower.includes("report") || lower.includes("asia") || lower.includes("board")) return "report";
-  if (lower.includes("bozze") || lower.includes("email") || lower.includes("draft") || lower.includes("follow-up") || lower.includes("followup") || lower.includes("inattivi")) return "email";
+  if (lower.includes("bozze") || lower.includes("email") || lower.includes("draft")) return "email";
   if (lower.includes("leggi") || lower.includes("voce") || lower.includes("alta voce")) return "voice";
   return "churn";
 }
@@ -318,12 +319,18 @@ const CommandPage = () => {
     setToolPhase("active");
     setChainHighlight(3);
 
+    const isCardGrid = tool.id === "followup-batch";
+    const agentLabel = isCardGrid ? "Follow-up Watcher" : "Partner Scout";
+    const queryLabel = isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
+
     addMessage({
       role: "assistant",
-      content: `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
-      agentName: "Partner Scout",
+      content: isCardGrid
+        ? `Sto cercando contatti inattivi nel database usando **Search Contacts**...\n\nFiltro: nessuna interazione negli ultimi 30 giorni.`
+        : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
+      agentName: agentLabel,
       timestamp: ts(),
-      meta: "partner-mgmt · search-partners · 1 modulo",
+      meta: isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
       governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
     });
 
@@ -332,7 +339,7 @@ const CommandPage = () => {
 
     const liveSteps: ExecutionStep[] = [
       { label: "Interpretazione richiesta", status: "done" },
-      { label: "Query Supabase · Search Partners", status: "running" },
+      { label: queryLabel, status: "running" },
       { label: "Rendering canvas", status: "pending" },
     ];
     setExecSteps(liveSteps);
@@ -342,7 +349,7 @@ const CommandPage = () => {
       const result = await tool.execute(prompt);
       setExecSteps([
         { label: "Interpretazione richiesta", status: "done" },
-        { label: "Query Supabase · Search Partners", status: "done", detail: `${result.meta?.count ?? 0} risultati` },
+        { label: queryLabel, status: "done", detail: `${result.meta?.count ?? 0} risultati` },
         { label: "Rendering canvas", status: "done" },
       ]);
       setExecProgress(100);
@@ -352,13 +359,17 @@ const CommandPage = () => {
 
       setFlowPhase("done");
       setChainHighlight(6);
-      setCanvas("live-table");
+      setCanvas(isCardGrid ? "live-card-grid" : "live-table");
       setShowTools(false);
+
+      const countLabel = isCardGrid
+        ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
+        : `${result.meta?.count ?? 0} partner`;
 
       addMessage({
         role: "assistant",
-        content: `Trovati **${result.meta?.count ?? 0} partner** nel database WCA. Canvas aggiornato con i risultati live.\n\nDati da: ${result.meta?.sourceLabel ?? "Supabase · partners"}`,
-        agentName: "Partner Scout",
+        content: `Trovati **${countLabel}** nel database. Canvas aggiornato con i risultati live.\n\nDati da: ${result.meta?.sourceLabel ?? "Supabase"}`,
+        agentName: agentLabel,
         timestamp: ts(),
         meta: `${result.meta?.sourceLabel ?? "Supabase"} · ${result.meta?.count ?? 0} record · LIVE`,
       });
@@ -366,13 +377,13 @@ const CommandPage = () => {
       const msg = err instanceof Error ? err.message : "Errore sconosciuto";
       setExecSteps([
         { label: "Interpretazione richiesta", status: "done" },
-        { label: "Query Supabase · Search Partners", status: "error", detail: "FAIL" },
+        { label: queryLabel, status: "error", detail: "FAIL" },
         { label: "Rendering canvas", status: "pending" },
       ]);
       addMessage({
         role: "assistant",
         content: `Errore nella query: ${msg}`,
-        agentName: "Partner Scout",
+        agentName: agentLabel,
         timestamp: ts(),
       });
       setFlowPhase("idle");
@@ -752,16 +763,38 @@ const CommandPage = () => {
               {canvas === "result" && <ResultCanvas onClose={() => setCanvas(null)} scenarioKey={activeScenarioKey || undefined} />}
               {canvas === "live-table" && liveResult && (
                 <TableCanvas
-                  data={liveResult.rows.map(r => ({
+                  data={liveResult.kind === "table" ? liveResult.rows.map((r: Record<string, string | number | null>) => ({
                     name: String(r["companyName"] ?? r["name"] ?? ""),
                     sector: String(r["countryName"] ?? r["country"] ?? ""),
                     revenue: String(r["email"] ?? "—"),
                     days: String(r["city"] ?? "—"),
                     churn: Number(r["rating"] ?? 0),
-                  }))}
+                  })) : []}
                   onClose={() => { setCanvas(null); setLiveResult(null); }}
                   title={`LIVE · ${liveResult.meta?.count ?? 0} partner · ${liveResult.meta?.sourceLabel ?? "Supabase"}`}
                 />
+              )}
+              {canvas === "live-card-grid" && liveResult && liveResult.kind === "card-grid" && (
+                <div className="float-panel p-6 rounded-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                    <button onClick={() => { setCanvas(null); setLiveResult(null); }} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+                  </div>
+                  <CardGridCanvas
+                    items={liveResult.cards.map(c => ({
+                      name: c.title,
+                      company: c.subtitle,
+                      lastContact: c.lastContact
+                        ? `${Math.round((Date.now() - new Date(c.lastContact).getTime()) / (1000 * 60 * 60 * 24))} giorni fa`
+                        : "Mai contattato",
+                      action: c.suggestedAction,
+                      meta: [...c.meta],
+                    }))}
+                    title={`${liveResult.cards.length} contatti inattivi`}
+                    badge="LIVE"
+                    sourceLabel={liveResult.meta?.sourceLabel}
+                  />
+                </div>
               )}
             </motion.div>
           )}
