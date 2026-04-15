@@ -371,10 +371,12 @@ const CommandPage = () => {
 
       setFlowPhase("done");
       setChainHighlight(6);
-      setCanvas(isFlow ? "live-flow" : isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
+      setCanvas(isComposer ? "live-composer" : isFlow ? "live-flow" : isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
       setShowTools(false);
 
-      const countLabel = isFlow
+      const countLabel = isComposer
+        ? "Composer pronto"
+        : isFlow
         ? `${result.meta?.count ?? 0} job in ${result.kind === "flow" ? result.nodes.length / 2 : 0} batch`
         : isTimeline
         ? `${result.meta?.count ?? 0} attività negli ultimi 7gg`
