@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const AiDecisionSchema = z.object({
   toolId: z.string(),
-  toolParams: z.record(z.unknown()).optional(),
+  toolParams: z.record(z.string(), z.unknown()).optional(),
   reasoning: z.string().optional(),
 });
 

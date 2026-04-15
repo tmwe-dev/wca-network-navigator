@@ -43,7 +43,7 @@ export function useCommandFlow() {
   }, []);
 
   const runLiveTool = useCallback(async (prompt: string) => {
-    const tool = resolveTool(prompt);
+    const tool = await resolveTool(prompt);
     if (!tool) return false;
 
     const liveSteps: ExecutionStep[] = [
