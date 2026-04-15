@@ -5,7 +5,7 @@ import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
-import { PublicLayout } from "./ui/templates/PublicLayout";
+
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
