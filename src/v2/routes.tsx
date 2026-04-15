@@ -53,6 +53,7 @@ const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePag
 const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
+const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
