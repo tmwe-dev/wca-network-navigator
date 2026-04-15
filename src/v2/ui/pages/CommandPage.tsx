@@ -246,10 +246,10 @@ const scenarios: Record<string, Scenario> = {
   },
 };
 
-function detectScenario(text: string): string | null {
+async function detectScenario(text: string): Promise<string | null> {
   const lower = text.toLowerCase();
-  // Check for real tool match first
-  const tool = resolveTool(text);
+  // Check for real tool match first (async now)
+  const tool = await resolveTool(text);
   if (tool) return null; // null = use live tool
   if (lower.includes("template") || lower.includes("salva questo flusso")) return "template";
   if (lower.includes("batch") || lower.includes("invio batch")) return "batch";
@@ -296,8 +296,16 @@ const CommandPage = () => {
   }, []);
 
   const runLiveTool = useCallback(async (prompt: string) => {
-    const tool = resolveTool(prompt);
-    if (!tool) return false;
+    const tool = await resolveTool(prompt);
+    if (!tool) {
+      addMessage({
+        role: "assistant",
+        content: "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?",
+        timestamp: ts(),
+        agentName: "Orchestratore",
+      });
+      return false;
+    }
 
     setFlowPhase("thinking");
     setShowTools(true);
@@ -517,7 +525,7 @@ const CommandPage = () => {
     setChainHighlight(undefined);
     setLiveResult(null);
 
-    const scenarioKey = detectScenario(content);
+    const scenarioKey = await detectScenario(content);
     if (scenarioKey === null) {
       // Live tool
       await runLiveTool(content);
