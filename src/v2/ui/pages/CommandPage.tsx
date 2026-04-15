@@ -685,13 +685,12 @@ const CommandPage = () => {
         });
       }
 
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: `✅ Piano completato: ${final.summary}`,
         agentName: "Orchestratore",
         timestamp: ts(),
         meta: `${final.steps.length} step · plan-execution`,
-      });
+      }, `Piano completato. ${final.summary}`);
       setFlowPhase("done");
       setExecProgress(100);
       toast.success("Piano completato");
