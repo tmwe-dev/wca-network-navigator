@@ -802,6 +802,29 @@ const CommandPage = () => {
                   />
                 </div>
               )}
+              {canvas === "live-timeline" && liveResult && liveResult.kind === "timeline" && (
+                <div className="float-panel p-6 rounded-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-success/20 text-success">LIVE</span>
+                      <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                    </div>
+                    <button onClick={() => { setCanvas(null); setLiveResult(null); }} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+                  </div>
+                  {liveResult.meta?.sourceLabel && (
+                    <div className="text-[9px] text-muted-foreground/60 font-mono mb-3">{liveResult.meta.sourceLabel} · {liveResult.meta.count} record</div>
+                  )}
+                  {liveResult.events.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-[12px] text-muted-foreground/60 font-light">Nessuna attività registrata negli ultimi 7gg</p>
+                    </div>
+                  ) : (
+                    <TimelineCanvas
+                      events={[...liveResult.events]}
+                      kpis={[...liveResult.kpis]}
+                    />
+                  )}
+                </div>
             </motion.div>
           )}
         </AnimatePresence>
