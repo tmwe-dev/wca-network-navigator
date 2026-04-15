@@ -16,10 +16,10 @@ export async function createConversation(
       .insert({ user_id: userId, title: title ?? null })
       .select()
       .single();
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok(data as Conversation);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }
 
@@ -44,7 +44,7 @@ export async function appendMessage(
       })
       .select()
       .single();
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
 
     // Bump last_message_at
     await (supabase as any)
@@ -54,7 +54,7 @@ export async function appendMessage(
 
     return ok(data as ConversationMessage);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }
 
@@ -67,10 +67,10 @@ export async function updateConversationTitle(
       .from("command_conversations")
       .update({ title })
       .eq("id", id);
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok(undefined);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }
 
@@ -80,9 +80,9 @@ export async function archiveConversation(id: string): Promise<Result<void>> {
       .from("command_conversations")
       .update({ archived: true })
       .eq("id", id);
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok(undefined);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }

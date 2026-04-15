@@ -32,10 +32,10 @@ export async function fetchConversations(limit = 30): Promise<Result<Conversatio
       .eq("archived", false)
       .order("last_message_at", { ascending: false })
       .limit(limit);
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok((data ?? []) as Conversation[]);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }
 
@@ -50,9 +50,9 @@ export async function fetchConversationMessages(
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(limit);
-    if (error) return err(fromUnknown(error));
+    if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok((data ?? []) as ConversationMessage[]);
   } catch (e) {
-    return err(fromUnknown(e));
+    return err(fromUnknown(e, "DATABASE_ERROR"));
   }
 }
