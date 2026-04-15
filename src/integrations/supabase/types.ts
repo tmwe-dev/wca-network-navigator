@@ -2988,6 +2988,7 @@ export type Database = {
           last_accessed_at: string | null
           priority: number
           sort_order: number
+          source_path: string | null
           tags: string[]
           title: string
           updated_at: string
@@ -3007,6 +3008,7 @@ export type Database = {
           last_accessed_at?: string | null
           priority?: number
           sort_order?: number
+          source_path?: string | null
           tags?: string[]
           title: string
           updated_at?: string
@@ -3026,6 +3028,7 @@ export type Database = {
           last_accessed_at?: string | null
           priority?: number
           sort_order?: number
+          source_path?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
@@ -5008,6 +5011,8 @@ export type Database = {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_mission_progress: { Args: { p_mission_id: string }; Returns: Json }
     }
     Enums: {
