@@ -23,16 +23,24 @@ function getRtState(): RtState {
   return w[RT_KEY] as RtState;
 }
 
-export function useDownloadJobs() {
+interface UseDownloadJobsOptions {
+  enabled?: boolean;
+}
+
+export function useDownloadJobs(options: UseDownloadJobsOptions = {}) {
+  const { enabled = true } = options;
   const queryClient = useQueryClient();
   const mountedRef = useRef(false);
 
   const query = useQuery({
     queryKey: queryKeys.downloads.jobs,
     queryFn: () => findDownloadJobs(50),
+    enabled,
   });
 
   useEffect(() => {
+    if (!enabled) return;
+
     if (mountedRef.current) return;
     mountedRef.current = true;
     const rt = getRtState();
@@ -55,7 +63,7 @@ export function useDownloadJobs() {
         rtCleanup.channel = null;
       }
     };
-  }, [queryClient]);
+  }, [enabled, queryClient]);
 
   return query;
 }

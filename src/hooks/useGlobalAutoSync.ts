@@ -1,27 +1,38 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 import { useWhatsAppSoftSync } from "@/hooks/useWhatsAppSoftSync";
-import { isOutsideWorkHours, msUntilNextWorkStart } from "@/lib/time/workHours";
 
-export function useGlobalAutoSync() {
-  useAutoConnect();
+interface UseGlobalAutoSyncOptions {
+  enabled?: boolean;
+}
+
+export function useGlobalAutoSync(options: UseGlobalAutoSyncOptions = {}) {
+  const { enabled = true } = options;
+
+  useAutoConnect({ enabled });
 
   // Email auto-sync
-  const emailSync = useEmailAutoSync();
+  const emailSync = useEmailAutoSync({ paused: !enabled });
 
   // WhatsApp soft sync — night pauses handled internally
   const waSync = useWhatsAppSoftSync();
 
   const waInitDone = useRef(false);
   useEffect(() => {
+    if (!enabled) {
+      waInitDone.current = false;
+      if (waSync.enabled) waSync.setEnabled(false);
+      return;
+    }
+
     if (waInitDone.current) return;
     waInitDone.current = true;
     if (!waSync.enabled) waSync.setEnabled(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, waSync.enabled, waSync.setEnabled]);
 
   // Legacy compat: expose night pause info for ConnectionStatusBar
-  const nightPause = waSync.isPausedForNight;
+  const nightPause = enabled ? waSync.isPausedForNight : false;
 
   return {
     nightPause,

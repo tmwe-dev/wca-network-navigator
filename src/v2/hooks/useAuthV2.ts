@@ -52,7 +52,8 @@ function normalizeEmail(email: string): string {
 
 // ── Helper: load profile ─────────────────────────────────────────────
 
-async function loadProfile(userId: string): Promise<UserProfile | null> {
+async function loadProfile(authUser: User): Promise<UserProfile | null> {
+  const userId = authUser.id;
   const { data } = await supabase
     .from("profiles")
     .select("id, display_name, user_id")
@@ -69,10 +70,10 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
   }
 
   // Auto-creazione profilo se mancante (utenti pre-trigger)
-  const { data: { user } } = await supabase.auth.getUser();
-  const displayName = user?.user_metadata?.full_name
-    ?? user?.user_metadata?.display_name
-    ?? user?.email
+  const displayName = authUser.user_metadata?.full_name
+    ?? authUser.user_metadata?.display_name
+    ?? authUser.user_metadata?.name
+    ?? authUser.email
     ?? null;
 
   const { error: insertErr } = await supabase
@@ -149,7 +150,7 @@ export function useAuthV2(): UseAuthV2Return {
       }
 
       const [userProfile, userRoles] = await Promise.all([
-        loadProfile(authUser.id),
+        loadProfile(authUser),
         loadRoles(authUser.id),
       ]);
 

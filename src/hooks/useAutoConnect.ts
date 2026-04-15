@@ -7,6 +7,10 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("useAutoConnect");
 
+interface UseAutoConnectOptions {
+  enabled?: boolean;
+}
+
 /**
  * Auto-verifies LinkedIn and WhatsApp connections on mount
  * and persists the result in app_settings.
@@ -14,14 +18,15 @@ const log = createLogger("useAutoConnect");
  * LinkedIn: requires BOTH extension available AND authenticated session.
  * WhatsApp: extension session OR API sender configured.
  */
-export function useAutoConnect() {
+export function useAutoConnect(options: UseAutoConnectOptions = {}) {
+  const { enabled = true } = options;
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
   const updateSetting = useUpdateSetting();
   const didRun = useRef(false);
 
   useEffect(() => {
-    if (didRun.current) return;
+    if (!enabled || didRun.current) return;
     didRun.current = true;
 
     const run = async () => {
@@ -63,5 +68,5 @@ export function useAutoConnect() {
 
     const timer = setTimeout(run, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [enabled, li.isAvailable, updateSetting, wa.isAvailable]);
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createLogger } from "@/lib/log";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("useWhatsAppExtensionBridge");
 
@@ -15,12 +16,14 @@ type WaExtensionResponse = {
 };
 
 export function useWhatsAppExtensionBridge() {
+  const { session, status } = useAuth();
   const [isAvailable, setIsAvailable] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
   const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
+  const lastSentTokenRef = useRef<string | null>(null);
   const sidebarChangedCbRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -30,7 +33,12 @@ export function useWhatsAppExtensionBridge() {
       if (!data || data.direction !== "from-extension-wa") return;
 
       if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-      if (data.action === "extensionDead") { setIsAvailable(false); return; }
+       if (data.action === "extensionDead") {
+         setIsAvailable(false);
+         configSentRef.current = false;
+         lastSentTokenRef.current = null;
+         return;
+       }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
       if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
 
@@ -52,21 +60,13 @@ export function useWhatsAppExtensionBridge() {
   }, []);
 
   // Send Supabase config to extension so it can call AI edge function
-  const sendConfig = useCallback(async () => {
-    if (configSentRef.current) return;
-    
+  const sendConfig = useCallback(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    
-    if (!supabaseUrl || !anonKey) return;
+    if (!supabaseUrl || !anonKey || status === "loading") return;
 
-    // Get auth token if available
-    let authToken = "";
-    try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data } = await supabase.auth.getSession();
-      authToken = data.session?.access_token || "";
-    } catch (err) { console.warn("[WA Bridge] Failed to get auth session:", err); }
+    const authToken = status === "authenticated" ? session?.access_token || "" : "";
+    if (configSentRef.current && lastSentTokenRef.current === authToken) return;
 
     const requestId = `wa_setConfig_${Date.now()}`;
     window.postMessage({
@@ -77,9 +77,10 @@ export function useWhatsAppExtensionBridge() {
       anonKey,
       authToken,
     }, window.location.origin);
-    
+
+    lastSentTokenRef.current = authToken;
     configSentRef.current = true;
-  }, []);
+  }, [session?.access_token, status]);
 
   useEffect(() => {
     const doPing = () => {
@@ -97,7 +98,7 @@ export function useWhatsAppExtensionBridge() {
 
   // Send config when extension becomes available
   useEffect(() => {
-    if (isAvailable && !configSentRef.current) {
+    if (isAvailable) {
       sendConfig();
     }
   }, [isAvailable, sendConfig]);
