@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, BarChart3, Activity, Zap, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { queryKeys } from "@/lib/queryKeys";
 
 interface UsageSummary {
   totalAiTokens: number;
