@@ -1,13 +1,13 @@
 /**
- * useAuthV2 — STEP 3: Auth hook completo
+ * useAuthV2 — Auth hook completo
  *
- * Login email/password, Google OAuth, profilo, ruoli, whitelist.
+ * Login email/password, profilo, ruoli, whitelist.
  * Session state sourced from centralized AuthProvider.
+ * Google OAuth RIMOSSO — solo email+password+whitelist.
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
@@ -36,7 +36,6 @@ export interface AuthState {
 
 interface AuthActions {
   readonly signInWithEmail: (email: string, password: string) => Promise<void>;
-  readonly signInWithGoogle: () => Promise<void>;
   readonly signUp: (email: string, password: string, displayName: string) => Promise<void>;
   readonly signOut: () => Promise<void>;
   readonly resetPassword: (email: string) => Promise<void>;
@@ -81,7 +80,7 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
   return data.map((row) => row.role as AppRole);
 }
 
-// ── Helper: check whitelist ──────────────────────────────────────────
+// ── Helper: check whitelist (throws on network error) ────────────────
 
 async function isEmailAuthorized(email: string): Promise<boolean> {
   return rpcIsEmailAuthorized(normalizeEmail(email));
@@ -90,13 +89,16 @@ async function isEmailAuthorized(email: string): Promise<boolean> {
 // ── Helper: record login ─────────────────────────────────────────────
 
 async function recordLogin(email: string): Promise<void> {
-  await rpcRecordUserLogin(normalizeEmail(email));
+  try {
+    await rpcRecordUserLogin(normalizeEmail(email));
+  } catch {
+    // non-critical
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────
 
 export function useAuthV2(): UseAuthV2Return {
-  // Source session/user from centralized AuthProvider
   const { session, user, status } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -134,10 +136,12 @@ export function useAuthV2(): UseAuthV2Return {
       setRoles(userRoles);
       await recordLogin(email);
     } catch (err) {
-      await supabase.auth.signOut();
-      setProfile(null);
-      setRoles([]);
-      setError(err instanceof Error ? err.message : "Errore durante il caricamento dell'utente.");
+      // Distinguish network errors from whitelist rejection
+      setError(
+        err instanceof Error && (err.message.includes("503") || err.message.includes("fetch"))
+          ? "Errore di connessione al server. Riprova tra qualche istante."
+          : err instanceof Error ? err.message : "Errore durante il caricamento dell'utente."
+      );
     }
   }, []);
 
@@ -171,9 +175,16 @@ export function useAuthV2(): UseAuthV2Return {
     setIsLoading(true);
 
     const normalizedEmail = normalizeEmail(email);
-    const authorized = await isEmailAuthorized(normalizedEmail);
-    if (!authorized) {
-      setError("Email non autorizzata. Contatta l'amministratore.");
+
+    try {
+      const authorized = await isEmailAuthorized(normalizedEmail);
+      if (!authorized) {
+        setError("Email non autorizzata. Contatta l'amministratore.");
+        setIsLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError("Errore di connessione al server. Riprova tra qualche istante.");
       setIsLoading(false);
       return;
     }
@@ -185,37 +196,21 @@ export function useAuthV2(): UseAuthV2Return {
     }
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/v2/login`,
-      });
-      if (result.error) {
-        setError("Errore con Google Sign-In");
-        setIsLoading(false);
-        return;
-      }
-      if (result.redirected) {
-        return;
-      }
-      setTimeout(() => setIsLoading(false), 5000);
-    } catch (err) {
-      setIsLoading(false);
-      setError(err instanceof Error ? err.message : "Errore con Google Sign-In");
-    }
-  }, []);
-
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     setError(null);
     setIsLoading(true);
 
     const normalizedEmail = normalizeEmail(email);
 
-    const authorized = await isEmailAuthorized(normalizedEmail);
-    if (!authorized) {
-      setError("Email non autorizzata. Contatta l'amministratore per essere aggiunto alla whitelist.");
+    try {
+      const authorized = await isEmailAuthorized(normalizedEmail);
+      if (!authorized) {
+        setError("Email non autorizzata. Contatta l'amministratore per essere aggiunto alla whitelist.");
+        setIsLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError("Errore di connessione al server. Riprova tra qualche istante.");
       setIsLoading(false);
       return;
     }
@@ -224,7 +219,7 @@ export function useAuthV2(): UseAuthV2Return {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/v2/login`,
+        emailRedirectTo: `${window.location.origin}/auth`,
         data: { display_name: displayName },
       },
     });
@@ -246,7 +241,7 @@ export function useAuthV2(): UseAuthV2Return {
   const resetPassword = useCallback(async (email: string) => {
     setError(null);
     const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/v2/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (authError) setError(authError.message);
   }, []);
@@ -262,7 +257,7 @@ export function useAuthV2(): UseAuthV2Return {
   return {
     user, session, profile, roles,
     isLoading, isAuthenticated, isAdmin, error,
-    signInWithEmail, signInWithGoogle, signUp,
+    signInWithEmail, signUp,
     signOut, resetPassword, updatePassword, clearError,
   };
 }
