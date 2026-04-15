@@ -13,11 +13,13 @@ import CardGridCanvas from "./command/canvas/CardGridCanvas";
 import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FlowCanvas from "./command/canvas/FlowCanvas";
 import ComposerCanvas from "./command/canvas/ComposerCanvas";
+import ConversationSidebar from "./command/ConversationSidebar";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool, TOOLS } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { useConversation } from "./command/hooks/useConversation";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -302,8 +304,9 @@ const CommandPage = () => {
   const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const conv = useConversation();
   const governance = useGovernance(activeScenarioKey ?? undefined);
-  const isEmpty = messages.length === 0;
+  const isEmpty = messages.length === 0 && conv.messages.length === 0;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -641,14 +644,41 @@ const CommandPage = () => {
     setChainHighlight(undefined);
     setLiveResult(null);
 
+    // Persist user message
+    conv.addMessage({ role: "user", content });
+
+    const history = conv.getHistory(10);
     const scenarioKey = await detectScenario(content);
     if (scenarioKey === null) {
-      // Live tool
+      // Live tool — pass history for AI context
+      const tool = await resolveTool(content, history);
+      if (!tool) {
+        const noUnderstand = "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?";
+        addMessage({ role: "assistant", content: noUnderstand, timestamp: ts(), agentName: "Orchestratore" });
+        conv.addMessage({ role: "assistant", content: noUnderstand });
+        return;
+      }
       await runLiveTool(content);
     } else {
       runFlow(scenarioKey);
     }
   };
+
+  // When loading a saved conversation, restore last tool result as canvas
+  useEffect(() => {
+    if (!conv.conversationId || conv.messages.length === 0) return;
+    const last = [...conv.messages].reverse().find(m => m.role === "tool" && m.tool_result);
+    if (last?.tool_result) {
+      setLiveResult(last.tool_result as ToolResult);
+      const kind = (last.tool_result as ToolResult).kind;
+      if (kind === "table") setCanvas("live-table");
+      else if (kind === "card-grid") setCanvas("live-card-grid");
+      else if (kind === "timeline") setCanvas("live-timeline");
+      else if (kind === "flow") setCanvas("live-flow");
+      else if (kind === "composer") setCanvas("live-composer");
+      else if (kind === "report") setCanvas("live-report");
+    }
+  }, [conv.conversationId]);
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
@@ -712,6 +742,14 @@ const CommandPage = () => {
 
       {/* Main */}
       <div className="flex-1 flex overflow-hidden relative z-10">
+        {/* Conversation Sidebar */}
+        <ConversationSidebar
+          conversations={conv.conversations}
+          activeId={conv.conversationId}
+          onSelect={(id) => { conv.loadConversation(id); setMessages([]); setCanvas(null); }}
+          onNew={() => { conv.newConversation(); setMessages([]); setCanvas(null); setFlowPhase("idle"); }}
+          onArchive={(id) => conv.archive(id)}
+        />
         {/* ─── CONVERSATION ─── */}
         <div className={`flex-1 flex flex-col transition-all duration-700 ease-out ${canvas ? "max-w-[50%]" : ""}`}>
           {isEmpty ? (
