@@ -337,12 +337,11 @@ const CommandPage = () => {
   const runLiveTool = useCallback(async (prompt: string) => {
     const tool = await resolveTool(prompt);
     if (!tool) {
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?",
         timestamp: ts(),
         agentName: "Orchestratore",
-      });
+      }, "Non ho capito. Puoi riformulare?");
       return false;
     }
 
