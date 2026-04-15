@@ -23,6 +23,9 @@ import { analyzePartnerTool } from "./analyzePartner";
 import { calculateLeadScoresTool } from "./calculateLeadScores";
 import { deduplicateContactsTool } from "./deduplicateContacts";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
+import { scrapeLinkedInProfileTool } from "./scrapeLinkedInProfile";
+import { scrapeCompanyWebsiteTool } from "./scrapeCompanyWebsite";
+import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
 
 const TOOLS: readonly Tool[] = [
   // Composers / special
@@ -51,6 +54,10 @@ const TOOLS: readonly Tool[] = [
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
+  // Scraper tools (approval required)
+  scrapeLinkedInProfileTool,
+  scrapeCompanyWebsiteTool,
+  enrichPartnerFromWebTool,
 ];
 
 /* ─── Tool metadata for plan-execution ─── */
@@ -62,6 +69,7 @@ const WRITE_TOOL_IDS = new Set([
 
 const ACTION_TOOL_IDS = new Set([
   "calculate-lead-scores", "deduplicate-contacts",
+  "scrape-linkedin-profile", "scrape-company-website", "enrich-partner-from-web",
 ]);
 
 export const TOOL_METADATA = TOOLS.map((t) => ({
