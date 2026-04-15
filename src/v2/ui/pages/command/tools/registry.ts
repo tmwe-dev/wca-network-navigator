@@ -65,7 +65,10 @@ function resolveToolFast(prompt: string): Tool | null {
  * 1. Fast keyword match first (free, instant)
  * 2. Falls back to AI decision via ai-assistant edge function
  */
-export async function resolveTool(prompt: string): Promise<Tool | null> {
+export async function resolveTool(
+  prompt: string,
+  history: { role: string; content: string }[] = [],
+): Promise<Tool | null> {
   // Fast-path: keyword match
   const fast = resolveToolFast(prompt);
   if (fast) return fast;
@@ -75,6 +78,7 @@ export async function resolveTool(prompt: string): Promise<Tool | null> {
     const decision = await decideToolFromPrompt(
       prompt,
       TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description })),
+      history,
     );
 
     if (decision._tag === "Err" || decision.value.toolId === "none") {
