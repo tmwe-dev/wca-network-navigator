@@ -7,7 +7,7 @@ import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
-import { OperatorSelectionOverlay } from "@/components/OperatorSelectionOverlay";
+const OperatorSelectionOverlay = lazy(() => import("@/components/OperatorSelectionOverlay").then(m => ({ default: m.OperatorSelectionOverlay })));
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
