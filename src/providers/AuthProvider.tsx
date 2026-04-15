@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Trust the local JWT if it has a valid structure and isn't expired
     if (!currentSession.user?.id || !hasValidAccessToken(currentSession.access_token)) {
       clearSupabaseAuthStorage();
       await supabase.auth.signOut({ scope: "local" });
@@ -77,23 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
-        clearSupabaseAuthStorage();
-        await supabase.auth.signOut({ scope: "local" });
-        setUnauthenticated();
-        return;
-      }
-
-      setSession(currentSession);
-      setUser(data.user);
-      setStatus("authenticated");
-    } catch {
-      clearSupabaseAuthStorage();
-      await supabase.auth.signOut({ scope: "local" });
-      setUnauthenticated();
-    }
+    // Session JWT is valid — authenticate immediately without network call.
+    // getUser() was causing sign-outs when the DB returned 503.
+    setSession(currentSession);
+    setUser(currentSession.user);
+    setStatus("authenticated");
   }, [setUnauthenticated]);
 
   useEffect(() => {
