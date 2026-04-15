@@ -19,7 +19,7 @@ export function mapKbEntryRow(row: unknown): Result<KbEntry, AppError> {
     title: r.title,
     content: r.content,
     tags: r.tags ?? [],
-    userId: userId(r.user_id),
+    userId: r.user_id ? userId(r.user_id) : userId("00000000-0000-0000-0000-000000000000"),
     createdAt: r.created_at,
   });
 }
