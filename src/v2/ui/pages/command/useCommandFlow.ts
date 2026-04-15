@@ -66,7 +66,6 @@ export function useCommandFlow() {
     try {
       const result = await tool.execute(prompt);
 
-      // Step 2 done, step 3 running
       setState((s) => ({
         ...s,
         executionSteps: [
@@ -77,7 +76,6 @@ export function useCommandFlow() {
         executionProgress: 66,
       }));
 
-      // Small delay for rendering step
       await new Promise((r) => setTimeout(r, 400));
 
       setState((s) => ({
@@ -112,7 +110,6 @@ export function useCommandFlow() {
   const submit = useCallback(async (prompt: string) => {
     clearTimers();
 
-    // Phase 1: thinking
     setState({
       phase: "thinking",
       scenario: null,
@@ -129,7 +126,6 @@ export function useCommandFlow() {
     }, 400);
     timersRef.current.push(t1);
 
-    // After short thinking, try live tool
     await new Promise((r) => {
       const t = setTimeout(r, 800);
       timersRef.current.push(t);
@@ -138,7 +134,6 @@ export function useCommandFlow() {
     const handled = await runLiveTool(prompt);
     if (handled) return;
 
-    // Fall back to mock scenarios
     const scenario = matchScenario(prompt);
     const skipApproval = scenario.approvalPayload === null;
 
