@@ -966,7 +966,7 @@ const CommandPage = () => {
                   </AnimatePresence>
                 ))}
 
-                {activeScenario?.approval && (flowPhase === "proposal" || flowPhase === "approval") && (
+                {activeScenario?.approval && (flowPhase === "proposal" || flowPhase === "approval") && !planState && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
                     <ApprovalPanel
                       visible
@@ -977,6 +977,24 @@ const CommandPage = () => {
                       onApprove={handleApprove}
                       onModify={() => {}}
                       onCancel={handleCancel}
+                    />
+                  </motion.div>
+                )}
+
+                {planState?.status === "awaiting-approval" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                    <ApprovalPanel
+                      visible
+                      title="Conferma piano"
+                      description={planState.summary}
+                      details={planState.steps.map((s) => ({
+                        label: `Step ${s.stepNumber} · ${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}`,
+                        value: s.reasoning,
+                      }))}
+                      governance={{ role: governance.role, permission: "EXECUTE:PLAN", policy: governance.policy }}
+                      onApprove={handleApprove}
+                      onModify={() => {}}
+                      onCancel={() => { setPlanState(null); setFlowPhase("idle"); toast("Piano annullato"); }}
                     />
                   </motion.div>
                 )}
