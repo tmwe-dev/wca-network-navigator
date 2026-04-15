@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
@@ -68,10 +67,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Session readiness sourced from centralized AuthProvider
-  const { status: authStatus } = useAuth();
-  const sessionReady = authStatus === "authenticated";
-  const backgroundEnabled = sessionReady && isAuthenticated && backgroundReady;
+  const sessionReady = isAuthenticated && !isLoading;
+  const backgroundEnabled = sessionReady && backgroundReady;
 
   useEffect(() => {
     if (!sessionReady || !isAuthenticated) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createLogger } from "@/lib/log";
-import { useAuth } from "@/providers/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 
 const log = createLogger("useWhatsAppExtensionBridge");
 
@@ -16,8 +17,25 @@ type WaExtensionResponse = {
 };
 
 export function useWhatsAppExtensionBridge() {
-  const { session, status } = useAuth();
+  const [session, setSessionState] = useState<Session | null>(null);
+  const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
   const [isAvailable, setIsAvailable] = useState(false);
+
+  // Local auth listener
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return;
+      setSessionState(s);
+      setStatus(s ? "authenticated" : "unauthenticated");
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_ev, s) => {
+      if (!mounted) return;
+      setSessionState(s);
+      setStatus(s ? "authenticated" : "unauthenticated");
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, []);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
   const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
