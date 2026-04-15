@@ -549,6 +549,16 @@ const CommandPage = () => {
   }, [addMessage]);
 
   const handleApprove = useCallback(async () => {
+    // Plan approval flow
+    if (planState?.status === "awaiting-approval") {
+      setFlowPhase("executing");
+      addMessage({ role: "assistant", content: "Piano approvato. Esecuzione in corso...", timestamp: ts(), agentName: "Automation" });
+      const updated: PlanExecutionState = { ...planState, status: "running" };
+      setPlanState(updated);
+      await runPlan(updated);
+      return;
+    }
+
     // Live tool approval flow
     if (pendingApproval) {
       const tool = TOOLS.find(t => t.id === pendingApproval.toolId);
