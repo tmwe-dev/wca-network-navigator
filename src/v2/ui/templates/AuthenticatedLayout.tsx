@@ -53,7 +53,7 @@ const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav")
 const PWAInstallPrompt = lazy(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
+  const { profile } = useAuthV2();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,20 +67,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const sessionReady = isAuthenticated && !isLoading;
-  const backgroundEnabled = sessionReady && backgroundReady;
-
   useEffect(() => {
-    if (!sessionReady || !isAuthenticated) {
-      setBackgroundReady(false);
-      return;
-    }
-
     const timer = setTimeout(() => setBackgroundReady(true), 1500);
     return () => clearTimeout(timer);
-  }, [isAuthenticated, sessionReady]);
-
-  useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
+  }, []);
 
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
@@ -101,32 +91,15 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const deepSearch = useDeepSearchRunner();
 
   // Onboarding check
-  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
-    queryKey: queryKeys.onboarding.completed,
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return true;
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("user_id", user.id)
-        .eq("key", "onboarding_completed")
-        .maybeSingle();
-      return data?.value === "true";
-    },
-    staleTime: Infinity,
-    enabled: isAuthenticated && sessionReady,
-  });
+  // Onboarding skipped — no auth
+  const onboardingDone = true;
+  const onboardingLoading = false;
 
-  useJobHealthMonitor({ enabled: backgroundEnabled });
+  useJobHealthMonitor({ enabled: backgroundReady });
   useWcaSync();
-  const outreachQueue = useOutreachQueue({ enabled: backgroundEnabled });
-  const globalSync = useGlobalAutoSync({ enabled: backgroundEnabled });
+  const outreachQueue = useOutreachQueue({ enabled: backgroundReady });
+  const globalSync = useGlobalAutoSync({ enabled: backgroundReady });
   const wcaSession = useWcaSession();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) navigate("/auth", { replace: true });
-  }, [isLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -182,15 +155,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     if (t) clearTimeout(t);
   };
 
-  if (isLoading || !sessionReady) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) return null;
+  // No auth gate — always render
 
   // Show onboarding wizard if not completed
   if (!onboardingLoading && onboardingDone === false) {
