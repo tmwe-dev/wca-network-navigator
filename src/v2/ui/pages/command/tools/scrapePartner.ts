@@ -1,11 +1,32 @@
 /**
  * scrapePartner tool — Scrapes a partner's website and proposes updates.
- * Wraps existing wcaScraper + scrape-website edge function.
+ * Wraps existing scrape-website edge function with scrape_cache.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
+
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
+  const { data } = await untypedFrom("scrape_cache")
+    .select("payload, scraped_at")
+    .eq("url", url)
+    .maybeSingle();
+
+  if (!data) return null;
+  const rec = data as { payload: Record<string, unknown>; scraped_at: string };
+  const age = Date.now() - new Date(rec.scraped_at).getTime();
+  if (age > CACHE_TTL_MS) return null;
+  return rec.payload;
+}
+
+async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
+  await untypedFrom("scrape_cache")
+    .upsert({ url, payload, scraped_at: new Date().toISOString() });
+}
 
 export const scrapePartnerTool: Tool = {
   id: "scrape-partner-website",
@@ -61,30 +82,42 @@ export const scrapePartnerTool: Tool = {
       return { kind: "result", title: "Nessun Sito", message: `${partner.company_name} non ha un sito web registrato.` };
     }
 
-    // Call scrape-website edge function
-    const { data: scraped, error: sErr } = await supabase.functions.invoke("scrape-website", {
-      body: { url: website, mode: "static" },
-    });
+    // Cache lookup
+    const cached = await getCachedScrape(website);
+    let scraped: Record<string, unknown>;
 
-    if (sErr || !scraped) {
-      return { kind: "result", title: "Errore Scraping", message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}` };
+    if (cached) {
+      scraped = cached;
+    } else {
+      const { data, error: sErr } = await supabase.functions.invoke("scrape-website", {
+        body: { url: website, mode: "static" },
+      });
+      if (sErr || !data) {
+        return { kind: "result", title: "Errore Scraping", message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}` };
+      }
+      scraped = data as Record<string, unknown>;
+      await setCachedScrape(website, scraped);
     }
+
+    const emails = scraped.emails as string[] | undefined;
+    const phones = scraped.phones as string[] | undefined;
+    const description = scraped.description as string | undefined;
 
     // Build proposed updates
     const proposedUpdates: Record<string, string> = {};
     const details: Array<{ label: string; value: string }> = [];
 
-    if (scraped.emails?.length > 0 && !partner.email) {
-      proposedUpdates.email = scraped.emails[0];
-      details.push({ label: "Email", value: scraped.emails[0] });
+    if (emails?.length && !partner.email) {
+      proposedUpdates.email = emails[0];
+      details.push({ label: "Email", value: emails[0] });
     }
-    if (scraped.phones?.length > 0 && !partner.phone) {
-      proposedUpdates.phone = scraped.phones[0];
-      details.push({ label: "Telefono", value: scraped.phones[0] });
+    if (phones?.length && !partner.phone) {
+      proposedUpdates.phone = phones[0];
+      details.push({ label: "Telefono", value: phones[0] });
     }
-    if (scraped.description) {
-      proposedUpdates.profile_description = scraped.description.slice(0, 500);
-      details.push({ label: "Descrizione", value: scraped.description.slice(0, 200) });
+    if (description) {
+      proposedUpdates.profile_description = description.slice(0, 500);
+      details.push({ label: "Descrizione", value: description.slice(0, 200) });
     }
 
     if (details.length === 0) {
