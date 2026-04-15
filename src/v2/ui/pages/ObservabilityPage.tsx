@@ -34,7 +34,7 @@ interface MissionStats {
 
 function useUsageSummary(userId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.observability?.usage ?? ["observability", "usage", userId],
+    queryKey: ["observability", "usage", userId],
     queryFn: async (): Promise<UsageSummary> => {
       if (!userId) return { totalAiTokens: 0, totalTtsChars: 0, aiTokenCap: 500000, ttsCharCap: 50000, daysTracked: 0 };
       const { data } = await untypedFrom("usage_daily_budget")
@@ -58,7 +58,7 @@ function useUsageSummary(userId: string | undefined) {
 
 function useToolStats(userId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.observability?.tools ?? ["observability", "tools", userId],
+    queryKey: ["observability", "tools", userId],
     queryFn: async (): Promise<ToolStats[]> => {
       if (!userId) return [];
       const { data } = await untypedFrom("agent_action_log")
@@ -83,7 +83,7 @@ function useToolStats(userId: string | undefined) {
 
 function useMissionStats(userId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.observability?.missions ?? ["observability", "missions", userId],
+    queryKey: ["observability", "missions", userId],
     queryFn: async (): Promise<MissionStats> => {
       if (!userId) return { totalMissions: 0, avgSteps: 0, totalErrors: 0 };
       const { data } = await untypedFrom("agent_action_log")
