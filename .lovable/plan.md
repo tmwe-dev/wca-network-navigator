@@ -1,64 +1,54 @@
 
 
-## Audit Auth, Google OAuth, Ruoli e Accessi
+# Piano: Reset Autenticazione e Pulizia Whitelist
 
-### STATO ATTUALE — Cosa funziona e cosa no
+## Situazione Attuale
 
-| Area | Stato | Dettaglio |
-|------|-------|-----------|
-| Login email/password (V1 `/auth`) | ✅ Funziona | Whitelist + login + redirect a `/v1` |
-| Login email/password (V2 `/v2/login`) | ✅ Funziona | Stessa logica tramite `useAuthV2` |
-| Google OAuth | ✅ Codice corretto | Usa `lovable.auth.signInWithOAuth("google")` sia in V1 che V2 |
-| Whitelist (`authorized_users`) | ✅ Funziona | 4 utenti autorizzati, RPC `is_email_authorized` ok |
-| Profilo di Luca (`lucaarcana@gmail.com`) | ❌ **MANCANTE** | auth.users ID `1d51961d...` NON ha riga in `profiles` |
-| Ruoli di TUTTI gli utenti | ❌ **VUOTO** | Tabella `user_roles` ha 0 righe. Nessuno è admin. |
-| Pagine admin (Telemetria, Diagnostica) | ❌ **Bloccate** | `useRequireRole("admin")` fallisce sempre → redirect |
-| Trigger `handle_new_user` | ⚠️ Parziale | Creato DOPO l'utente Luca → non ha generato il suo profilo |
-| Trigger `handle_new_user_role` | ⚠️ Parziale | Stesso problema: assegna ruolo solo ai NUOVI utenti |
+Ho analizzato tutto in profondità. Ecco lo stato reale:
 
-### UTENTI NEL SISTEMA
+**Auth.tsx è GIÀ corretto** — il codice attuale è il form minimale (email + password, due bottoni Entra/Registrati, nessun Google, nessun tab, nessun reset password, redirect a `/v2`). Il file corrisponde esattamente a quello che avevi richiesto.
 
-| Email | auth.users | Profilo | Ruolo |
-|-------|-----------|---------|-------|
-| lucaarcana@gmail.com | `1d51961d...` | ❌ MANCANTE | ❌ NESSUNO |
-| luigi@tmwe.it | `fe1db58a...` | ✅ "Luigi" | ❌ NESSUNO |
-| alexander.bittermann.88@gmail.com | `c8aadbed...` | ✅ "Alexander" | ❌ NESSUNO |
-| luca@tmwe.it | `ae35ad39...` | ✅ "Luca Arcanà" | ❌ NESSUNO |
-| imane@tmwe.it | `27b60e53...` | ✅ "imane" | ❌ NESSUNO |
+**luca@tmwe.it esiste** in auth.users con email confermata, profilo creato, operatore admin. Il login DOVREBBE funzionare se la password è corretta.
 
-**Problema chiave**: i trigger sono stati creati dopo la registrazione degli utenti. Quindi nessuno ha mai ricevuto un ruolo, e Luca (il primo utente) non ha nemmeno il profilo.
+## Problemi Identificati
 
----
+1. **user_roles**: luca@tmwe.it ha ruolo `user` invece di `admin` — alcune pagine (Diagnostics, Telemetry) richiedono ruolo admin e non saranno accessibili
+2. **Import morto**: `ProtectedRoute` è importato in App.tsx ma mai usato nel JSX — codice morto da rimuovere
+3. **Whitelist sporca**: 4 utenti presenti, l'utente vuole solo luca@tmwe.it
+4. **LoginPage.tsx V2 ancora esiste**: `src/v2/ui/pages/LoginPage.tsx` è ancora nel filesystem (usa `useAuthV2` con tabs) — file residuo da eliminare
 
-### PIANO DI FIX
+## Azioni
 
-#### Fix 1 — Migration SQL: backfill profilo + ruoli
+### 1. Database — Pulizia whitelist e ruoli
+```sql
+-- Disattivare tutti tranne luca@tmwe.it
+UPDATE authorized_users SET is_active = false WHERE email != 'luca@tmwe.it';
 
-Una migration che:
-1. **Crea il profilo mancante** per `lucaarcana@gmail.com` (ID `1d51961d-da81-4914-b229-511cdce43e55`) con display_name "Luca"
-2. **Assegna ruolo `admin`** a Luca (lucaarcana@gmail.com)
-3. **Assegna ruolo `user`** a tutti gli altri utenti esistenti che non hanno ancora un ruolo
-4. Tutto con `ON CONFLICT DO NOTHING` per essere idempotente
+-- Promuovere luca@tmwe.it ad admin nei ruoli
+UPDATE user_roles SET role = 'admin' WHERE user_id = 'ae35ad39-de57-45df-9d24-538cdbbd5e87';
+```
 
-#### Fix 2 — useAuthV2: auto-creazione profilo se mancante
+### 2. Eliminare file residui
+- `src/v2/ui/pages/LoginPage.tsx` — pagina login V2 obsoleta, ancora presente
 
-Nella funzione `loadProfile`, se la query ritorna `null`, creare automaticamente il profilo usando i dati da `user.user_metadata` (display_name, avatar_url). Così qualsiasi utente futuro che "sfugge" al trigger viene recuperato al primo login.
+### 3. Pulizia App.tsx
+- Rimuovere import inutilizzato di `ProtectedRoute`
 
-#### Fix 3 — Verifica accesso admin dopo i fix
+### 4. Verifica e test
+- `npx tsc --noEmit` per confermare compilazione pulita
+- Test login su `/auth` con luca@tmwe.it
 
-Dopo la migration, le pagine Telemetria e Diagnostica saranno accessibili a Luca perché `useRequireRole("admin")` troverà il suo ruolo nella tabella `user_roles`.
+## Dettagli Tecnici
 
----
+Il flusso auth attuale funziona così:
+```text
+/auth (Auth.tsx) → signInWithPassword → navigate("/v2")
+/v2/* → AuthenticatedLayout → useAuthV2 → getSession + rpcIsEmailAuthorized
+```
 
-### File modificati
+Non c'è nessun bug nel codice auth. Se il login fallisce, le cause possibili sono:
+- Password errata (l'utente potrebbe aver dimenticato quale password ha usato durante la registrazione)
+- Errore PGRST002 transiente (già gestito con retry)
 
-1. **Nuova migration SQL** — backfill profilo Luca + ruoli per tutti
-2. **`src/v2/hooks/useAuthV2.ts`** — `loadProfile` con fallback auto-create (~15 righe)
-
-### Nessuna modifica necessaria a
-
-- Google OAuth (codice già corretto)
-- Pagina Auth V1 (funziona)
-- Trigger esistenti (funzionano per i nuovi utenti)
-- RLS policies (già corrette)
+Se la password è persa, l'unica soluzione senza flusso "Password dimenticata" è eliminare l'utente da auth.users e ri-registrarsi.
 
