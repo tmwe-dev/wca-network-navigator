@@ -739,7 +739,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={voiceSpeaking} listening={false} speaking={voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking || voice.listening} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
@@ -757,6 +757,15 @@ const CommandPage = () => {
                   title="Lettura vocale"
                 >
                   {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </motion.button>
+                <motion.button
+                  onClick={() => voice.toggle()}
+                  whileTap={{ scale: 0.9 }}
+                  disabled={!voice.supported}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voice.listening ? "bg-primary/20 text-primary animate-pulse" : "text-muted-foreground/100 hover:text-foreground/100"} ${!voice.supported ? "opacity-30 cursor-not-allowed" : ""}`}
+                  title={voice.supported ? (voice.listening ? "Stop registrazione" : "Registrazione vocale") : "Voce non supportata da questo browser"}
+                >
+                  {voice.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </motion.button>
                 <input
                   type="text"
