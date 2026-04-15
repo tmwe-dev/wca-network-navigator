@@ -3,15 +3,13 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
 // ── Lazy pages ───────────────────────────────────────────────────────
-const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
-const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
 const CRMPage = lazy(() => import("./ui/pages/CRMPage").then((m) => ({ default: m.CRMPage })));
@@ -71,8 +69,8 @@ export function V2Routes(): React.ReactElement {
       <Routes>
         {/* Public routes */}
         <Route element={<PublicLayout />}>
-          <Route path="login" element={guardedPage(LoginPage, "Login")} />
-          <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
+          <Route path="login" element={<Navigate to="/auth" replace />} />
+          <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
         </Route>
 
         {/* Authenticated routes */}
