@@ -304,8 +304,9 @@ const CommandPage = () => {
   const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const conv = useConversation();
   const governance = useGovernance(activeScenarioKey ?? undefined);
-  const isEmpty = messages.length === 0;
+  const isEmpty = messages.length === 0 && conv.messages.length === 0;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
