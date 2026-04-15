@@ -644,14 +644,41 @@ const CommandPage = () => {
     setChainHighlight(undefined);
     setLiveResult(null);
 
+    // Persist user message
+    conv.addMessage({ role: "user", content });
+
+    const history = conv.getHistory(10);
     const scenarioKey = await detectScenario(content);
     if (scenarioKey === null) {
-      // Live tool
+      // Live tool — pass history for AI context
+      const tool = await resolveTool(content, history);
+      if (!tool) {
+        const noUnderstand = "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?";
+        addMessage({ role: "assistant", content: noUnderstand, timestamp: ts(), agentName: "Orchestratore" });
+        conv.addMessage({ role: "assistant", content: noUnderstand });
+        return;
+      }
       await runLiveTool(content);
     } else {
       runFlow(scenarioKey);
     }
   };
+
+  // When loading a saved conversation, restore last tool result as canvas
+  useEffect(() => {
+    if (!conv.conversationId || conv.messages.length === 0) return;
+    const last = [...conv.messages].reverse().find(m => m.role === "tool" && m.tool_result);
+    if (last?.tool_result) {
+      setLiveResult(last.tool_result as ToolResult);
+      const kind = (last.tool_result as ToolResult).kind;
+      if (kind === "table") setCanvas("live-table");
+      else if (kind === "card-grid") setCanvas("live-card-grid");
+      else if (kind === "timeline") setCanvas("live-timeline");
+      else if (kind === "flow") setCanvas("live-flow");
+      else if (kind === "composer") setCanvas("live-composer");
+      else if (kind === "report") setCanvas("live-report");
+    }
+  }, [conv.conversationId]);
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
