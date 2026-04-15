@@ -18,6 +18,8 @@ export async function fetchCampaignJobs(
     if (batchId) query = query.eq("batch_id", batchId);
     query = query.order("created_at", { ascending: false }).limit(200);
 
+    const { data, error } = await query;
+
     if (error) {
       return err(ioError("DATABASE_ERROR", error.message, {
         table: "campaign_jobs", batchId,
