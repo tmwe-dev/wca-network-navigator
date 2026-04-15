@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import { Input } from "@/components/ui/input";
@@ -32,8 +32,17 @@ async function recordLogin(email: string) {
   }
 }
 
+interface AuthLocationState {
+  readonly from?: {
+    readonly pathname?: string;
+    readonly search?: string;
+    readonly hash?: string;
+  };
+}
+
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, event } = useAuth();
   const [loading, setLoading] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -42,6 +51,16 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const isBusy = loading || resettingPassword;
+  const redirectTo = useMemo(() => {
+    const state = location.state as AuthLocationState | null;
+    const from = state?.from;
+
+    if (!from?.pathname || from.pathname === "/auth" || from.pathname === "/v2/login") {
+      return "/v2";
+    }
+
+    return `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`;
+  }, [location.state]);
 
   // React to auth events from centralized provider
   useEffect(() => {
@@ -57,13 +76,13 @@ export default function Auth() {
           return;
         }
         if (event === "SIGNED_IN") await recordLogin(session.user.email!);
-        navigate("/v1", { replace: true });
+        navigate(redirectTo, { replace: true });
       } catch (err) {
         log.error("whitelist check failed on session", { error: err instanceof Error ? err.message : String(err) });
         toast.error("Errore di connessione al server. Riprova tra qualche istante.");
       }
     })();
-  }, [session, event, navigate]);
+  }, [session, event, navigate, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
