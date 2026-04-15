@@ -1,4 +1,5 @@
 import type { Tool } from "./types";
+import { scrapePartnerTool } from "./scrapePartner";
 import { partnerSearchTool } from "./partnerSearch";
 import { followupBatchTool } from "./followupBatch";
 import { agentReportTool } from "./agentReport";
