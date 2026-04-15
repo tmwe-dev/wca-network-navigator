@@ -367,7 +367,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                     <Suspense fallback={null}><ContactRecordDrawer /></Suspense>
                     <ClaudeBadge />
-                    <Suspense fallback={null}><GlobalVoiceFAB /></Suspense>
+                    {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>

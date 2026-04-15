@@ -2,6 +2,7 @@
  * LayoutHeader — Desktop header bar with status, operator, actions
  */
 import * as React from "react";
+import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../atoms/Button";
@@ -9,9 +10,10 @@ import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
 import {
   Menu, ArrowRight, Plus, DatabaseZap, Activity,
-  FlaskConical, Sparkles, WifiOff,
+  FlaskConical, Sparkles, WifiOff, Globe2,
 } from "lucide-react";
 
 interface OutreachQueue {
