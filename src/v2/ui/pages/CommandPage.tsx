@@ -463,13 +463,12 @@ const CommandPage = () => {
         setFlowPhase("done");
         setCanvas("live-report");
         setShowTools(false);
-        addMessage({
-          role: "assistant",
+        addAssistantMessage({
           content: `Report generato con **${result.sections.length} sezioni**.\n\nDati da: ${result.meta?.sourceLabel ?? "AI"}`,
           agentName: agentLabel,
           timestamp: ts(),
           meta: result.meta?.sourceLabel,
-        });
+        }, `Report generato con ${result.sections.length} sezioni.`);
         return true;
       }
 
