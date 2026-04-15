@@ -67,11 +67,8 @@ export function V2Routes(): React.ReactElement {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
-        {/* Public routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="login" element={<Navigate to="/auth" replace />} />
-          <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
-        </Route>
+        {/* Legacy redirects */}
+        <Route path="login" element={<Navigate to="/auth" replace />} />
 
         {/* Authenticated routes */}
         <Route element={<AuthenticatedLayout />}>
