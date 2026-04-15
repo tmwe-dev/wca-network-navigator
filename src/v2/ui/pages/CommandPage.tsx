@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Wand2, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
+import { Send, Wand2, Mic, MicOff, Volume2, VolumeX, Globe2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -16,6 +17,7 @@ import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
+import { useVoiceInput } from "./command/hooks/useVoiceInput";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
