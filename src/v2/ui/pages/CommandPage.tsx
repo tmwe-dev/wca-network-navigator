@@ -260,6 +260,7 @@ function detectScenario(text: string): string | null {
 
 /* ─── Component ─── */
 const CommandPage = () => {
+  const nav = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
