@@ -87,7 +87,7 @@ const CommandPage = () => {
 
     // Auto-detect mission mode or use toggle
     if (missionMode || isMissionPrompt(text)) {
-      s.addMessage({ role: "user", content: text, timestamp: String(Date.now()) });
+      s.addMessage({ role: "user", content: text, timestamp: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) });
       agent.start(text);
     } else {
       submit.sendMessage(text);
