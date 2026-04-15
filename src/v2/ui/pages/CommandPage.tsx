@@ -20,7 +20,6 @@ import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
 import { planExecution } from "@/v2/io/edge/aiAssistant";
 import { executePlan, type PlanExecutionState } from "./command/planRunner";
-import { useVoiceInput } from "./command/hooks/useVoiceInput";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
