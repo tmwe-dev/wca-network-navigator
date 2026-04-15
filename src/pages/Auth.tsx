@@ -37,8 +37,9 @@ export default function Auth() {
       let allowed = false;
       try {
         allowed = await rpcIsEmailAuthorized(normalizedEmail);
-      } catch (e) {
-        toast.error(`Errore rete: ${e instanceof Error ? e.message : String(e)}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : (e as Record<string, unknown>)?.message ?? JSON.stringify(e);
+        toast.error(`Errore rete: ${msg}`);
         setLoading(false);
         return;
       }
