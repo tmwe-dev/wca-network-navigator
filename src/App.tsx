@@ -16,6 +16,7 @@ import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 const Auth = lazyRetry(() => import("./pages/Auth"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
 const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
@@ -101,8 +102,8 @@ const App = () => (
                   <Route path="/v1/*" element={<V1DeprecationRedirect />} />
 
                   {/* V2 routes */}
-                  <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="/v2/*" element={<FeatureErrorBoundary featureName="V2"><V2Routes /></FeatureErrorBoundary>} />
+                  <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
                 </Routes>
               </Suspense>
             </BrowserRouter>
