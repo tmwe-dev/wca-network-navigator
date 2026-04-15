@@ -126,6 +126,84 @@ serve(async (req) => {
     // ── Parse request ──
     const { messages, context, mode, scope } = await req.json();
 
+    // ═══ TOOL-DECISION MODE ═══
+    // Fast branch: AI picks the best tool from a list, returns JSON {toolId, toolParams, reasoning}
+    if (mode === "tool-decision") {
+      const toolList = context?.tools;
+      const userPrompt = Array.isArray(messages) && messages.length > 0
+        ? (messages[messages.length - 1]?.content ?? "")
+        : "";
+
+      if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
+        return new Response(
+          JSON.stringify({ toolId: "none", reasoning: "Missing tools or prompt" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      const toolDescriptions = toolList
+        .map((t: Record<string, unknown>) => `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}"`)
+        .join("\n");
+
+      const decisionSystemPrompt = `Sei un router di tool. Dato il prompt utente e la lista di tool disponibili, scegli il tool più appropriato.
+Rispondi SOLO con un JSON valido: {"toolId": "<id>", "reasoning": "<spiegazione breve>"}
+Se nessun tool è adatto, rispondi: {"toolId": "none", "reasoning": "<motivo>"}
+
+Tool disponibili:
+${toolDescriptions}`;
+
+      const decisionResponse = await fetch(provider.baseUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${provider.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages: [
+            { role: "system", content: decisionSystemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 200,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!decisionResponse.ok) {
+        return new Response(
+          JSON.stringify({ toolId: "none", reasoning: "AI call failed" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      const decisionData = await decisionResponse.json();
+      const rawContent = decisionData?.choices?.[0]?.message?.content ?? '{"toolId":"none"}';
+
+      try {
+        const parsed = JSON.parse(rawContent);
+        // Deduct minimal credits
+        if (!provider.isUserKey) {
+          await consumeCredits(supabase, userId, 1);
+        }
+        endMetrics(metrics, 200);
+        return new Response(
+          JSON.stringify({
+            toolId: parsed.toolId ?? "none",
+            toolParams: parsed.toolParams ?? {},
+            reasoning: parsed.reasoning ?? "",
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      } catch {
+        endMetrics(metrics, 200);
+        return new Response(
+          JSON.stringify({ toolId: "none", reasoning: "Failed to parse AI response" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // ── Detect conversational mode ──
     const isConversational: boolean =
       mode === "conversational" ||
