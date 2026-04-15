@@ -858,6 +858,15 @@ const CommandPage = () => {
                   )}
                 </div>
               )}
+              {canvas === "live-composer" && liveResult && liveResult.kind === "composer" && (
+                <ComposerCanvas
+                  initialTo={liveResult.initialTo}
+                  initialSubject={liveResult.initialSubject}
+                  initialBody={liveResult.initialBody}
+                  promptHint={liveResult.promptHint}
+                  onClose={() => { setCanvas(null); setLiveResult(null); }}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
