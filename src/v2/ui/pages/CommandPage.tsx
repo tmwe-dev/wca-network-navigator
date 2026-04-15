@@ -442,13 +442,12 @@ const CommandPage = () => {
         setFlowPhase("done");
         setShowTools(false);
         toast.success(result.message);
-        addMessage({
-          role: "assistant",
+        addAssistantMessage({
           content: `✅ **${result.title}**\n${result.message}`,
           agentName: agentLabel,
           timestamp: ts(),
           meta: result.meta?.sourceLabel,
-        });
+        }, `${result.title}. ${result.message}`);
         return true;
       }
 
