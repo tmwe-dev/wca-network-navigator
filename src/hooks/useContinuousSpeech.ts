@@ -9,7 +9,7 @@ const log = createLogger("useContinuousSpeech");
  * Auto-restarts on Chrome timeout (~60s).
  * Accumulates text with interim results shown live.
  */
-export function useContinuousSpeech(onFinalText?: (text: string) => void) {
+export function useContinuousSpeech(onFinalText?: (text: string) => void, langCode = "it-IT") {
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
@@ -26,7 +26,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     if (!SR) return null;
 
     const recognition = new SR();
-    recognition.lang = "it-IT";
+    recognition.lang = langCode;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
@@ -69,7 +69,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     };
 
     return recognition;
-  }, [onFinalText]);
+  }, [langCode, onFinalText]);
 
   const start = useCallback(() => {
     if (!hasSpeechAPI) return;

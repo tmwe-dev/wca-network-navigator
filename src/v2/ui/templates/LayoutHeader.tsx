@@ -2,7 +2,7 @@
  * LayoutHeader — Desktop header bar with status, operator, actions
  */
 import * as React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../atoms/Button";
@@ -10,6 +10,7 @@ import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
 import {
   Menu, ArrowRight, Plus, DatabaseZap, Activity,
@@ -49,13 +50,23 @@ export function LayoutHeader({
   const location = useLocation();
   const { t } = useTranslation();
   const isOnline = useOnlineStatus();
+  const { data: settings } = useAppSettings();
+  const updateSetting = useUpdateSetting();
   const [voiceLang, setVoiceLang] = useState<string>("it");
+
+  useEffect(() => {
+    const savedLang = settings?.elevenlabs_language;
+    if (savedLang && VOICE_LANGUAGE_MAP[savedLang]) {
+      setVoiceLang(savedLang);
+    }
+  }, [settings?.elevenlabs_language]);
 
   const cycleLang = useCallback(() => {
     const idx = VOICE_LANG_KEYS.indexOf(voiceLang);
     const next = VOICE_LANG_KEYS[(idx + 1) % VOICE_LANG_KEYS.length];
     setVoiceLang(next);
-  }, [voiceLang]);
+    updateSetting.mutate({ key: "elevenlabs_language", value: next });
+  }, [voiceLang, updateSetting]);
 
   const langConfig = VOICE_LANGUAGE_MAP[voiceLang] || VOICE_LANGUAGE_MAP.it;
 
@@ -96,11 +107,14 @@ export function LayoutHeader({
       <div className="flex items-center gap-0.5">
         <button
           onClick={cycleLang}
-          className="h-7 flex items-center gap-1.5 px-2 rounded-md bg-[hsl(270,60%,60%)]/10 border border-[hsl(270,60%,60%)]/20 text-[hsl(270,60%,70%)] hover:bg-[hsl(270,60%,60%)]/15 transition-all text-[10px] font-semibold tracking-wider uppercase mr-1"
-          title="Cambia lingua vocale"
+          disabled={updateSetting.isPending}
+          className="mr-1 flex h-7 items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/20 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-foreground backdrop-blur-sm transition-all hover:bg-accent/30 disabled:cursor-not-allowed disabled:opacity-60"
+          title={`Lingua vocale: ${langConfig.label}`}
+          aria-label={`Cambia lingua vocale, attuale ${langConfig.label}`}
         >
           <Globe2 className="w-3 h-3" />
-          {langConfig.flag} {voiceLang.toUpperCase()}
+          <span>{langConfig.flag}</span>
+          <span>{voiceLang.toUpperCase()}</span>
         </button>
         <OperatorSelector />
         <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAddContact} aria-label={t("common.add_contact")}>

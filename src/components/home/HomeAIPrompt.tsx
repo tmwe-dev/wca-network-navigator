@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
 import { createLogger } from "@/lib/log";
 
@@ -74,8 +76,19 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
   const [response, setResponse] = useState<string | null>(null);
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { data: settings } = useAppSettings();
 
-  const speech = useContinuousSpeech((text) => setInput(text));
+  const currentVoiceLang = useMemo(() => {
+    const savedLang = settings?.elevenlabs_language;
+    return savedLang && VOICE_LANGUAGE_MAP[savedLang] ? savedLang : "it";
+  }, [settings?.elevenlabs_language]);
+
+  const currentVoiceConfig = useMemo(
+    () => VOICE_LANGUAGE_MAP[currentVoiceLang] || VOICE_LANGUAGE_MAP.it,
+    [currentVoiceLang]
+  );
+
+  const speech = useContinuousSpeech((text) => setInput(text), currentVoiceConfig.sttCode);
 
   const smartPrompts = useMemo(() => buildSmartPrompts(systemStats, briefingActions), [systemStats, briefingActions]);
 
@@ -133,7 +146,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     }
   }, [input, loading, history, agents]);
 
-  const playTTS = async (text: string) => {
+  const playTTS = useCallback(async (text: string) => {
     try {
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
@@ -144,14 +157,18 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: "FGY2WhTYpPnrIDTdsKH5" }),
+          body: JSON.stringify({
+            text: text.slice(0, 3000),
+            voiceId: settings?.elevenlabs_custom_voice_id || currentVoiceConfig.voiceId,
+            language: currentVoiceLang,
+          }),
         }
       );
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
     } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
-  };
+  }, [currentVoiceConfig.voiceId, currentVoiceLang, settings?.elevenlabs_custom_voice_id]);
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto space-y-3", className)}>
@@ -189,22 +206,23 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       <div className="relative rounded-2xl border border-border bg-card shadow-glass backdrop-blur-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
           <Button
+            type="button"
             variant="ghost"
-            size="icon"
             className={cn(
-              "h-10 w-10 shrink-0 rounded-full transition-all",
+              "h-10 shrink-0 rounded-xl border px-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
               speech.listening
-                ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
-                : "text-muted-foreground hover:text-foreground"
+                ? "border-accent/50 bg-accent/30 text-accent-foreground hover:bg-accent/35"
+                : "border-accent/35 bg-accent/15 text-accent-foreground hover:bg-accent/25"
             )}
             onClick={speech.toggle}
-            aria-label={speech.listening ? "Stop ascolto" : "Parla"}
+            aria-label={speech.listening ? "Ferma ascolto" : `Avvia ascolto in ${currentVoiceConfig.label}`}
           >
             {speech.listening ? (
-              <MicOff className="h-5 w-5 animate-pulse" />
+              <MicOff className="h-4 w-4 animate-pulse" />
             ) : (
-              <Mic className="h-5 w-5" />
+              <Mic className="h-4 w-4" />
             )}
+            <span>{speech.listening ? "Stop" : "Parla"}</span>
           </Button>
 
           <input
