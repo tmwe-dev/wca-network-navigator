@@ -10,6 +10,7 @@ import VoicePresence from "@/components/workspace/VoicePresence";
 import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/components/workspace/CanvasViews";
 import CardGridCanvas from "./command/canvas/CardGridCanvas";
 import TimelineCanvas from "./command/canvas/TimelineCanvas";
+import FlowCanvas from "./command/canvas/FlowCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
@@ -30,7 +31,7 @@ interface Message {
   governance?: string;
 }
 
-type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | null;
+type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | "live-flow" | null;
 type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";
 type ToolPhase = "activating" | "active" | "done";
 
@@ -322,19 +323,22 @@ const CommandPage = () => {
 
     const isCardGrid = tool.id === "followup-batch";
     const isTimeline = tool.id === "agent-report";
-    const agentLabel = isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
-    const queryLabel = isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
+    const isFlow = tool.id === "campaign-status";
+    const agentLabel = isFlow ? "Campaign Manager" : isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
+    const queryLabel = isFlow ? "Query Supabase · Campaign Jobs" : isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
 
     addMessage({
       role: "assistant",
-      content: isTimeline
+      content: isFlow
+        ? `Sto analizzando lo stato delle campagne usando **Campaign Jobs**...\n\nAggregazione batch in corso.`
+        : isTimeline
         ? `Sto aggregando le attività degli agenti negli ultimi 7 giorni usando **Agents + Activities**...\n\nReport in preparazione.`
         : isCardGrid
         ? `Sto cercando contatti inattivi nel database usando **Search Contacts**...\n\nFiltro: nessuna interazione negli ultimi 30 giorni.`
         : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
       agentName: agentLabel,
       timestamp: ts(),
-      meta: isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
+      meta: isFlow ? "campaign-mgr · campaign_jobs · 1 modulo" : isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
       governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
     });
 
@@ -363,10 +367,12 @@ const CommandPage = () => {
 
       setFlowPhase("done");
       setChainHighlight(6);
-      setCanvas(isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
+      setCanvas(isFlow ? "live-flow" : isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
       setShowTools(false);
 
-      const countLabel = isTimeline
+      const countLabel = isFlow
+        ? `${result.meta?.count ?? 0} job in ${result.kind === "flow" ? result.nodes.length / 2 : 0} batch`
+        : isTimeline
         ? `${result.meta?.count ?? 0} attività negli ultimi 7gg`
         : isCardGrid
         ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
