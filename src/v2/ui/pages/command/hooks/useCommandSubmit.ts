@@ -410,12 +410,14 @@ export function useCommandSubmit(state: CommandStateApi) {
         return meta?.requiresApproval;
       });
 
+      const cappedSteps = plan.steps.slice(0, MAX_PLAN_STEPS);
       const newState: PlanExecutionState = {
-        steps: plan.steps,
+        steps: cappedSteps,
+        stepStates: buildInitialStepStates(cappedSteps),
         summary: plan.summary,
         results: {},
         currentStep: 0,
-        status: requiresApproval ? "awaiting-approval" : "running",
+        status: "running",
       };
       setPlanState(newState);
 
