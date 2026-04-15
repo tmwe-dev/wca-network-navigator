@@ -531,7 +531,16 @@ const CommandPage = () => {
             ))}
           </div>
           <span className="text-[8px] text-muted-foreground/100 font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
-        </div>
+          <motion.button
+            onClick={() => setLang(lang === "it" ? "en" : "it")}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[hsl(270_60%_60%)]/10 border border-[hsl(270_60%_60%)]/20 text-[hsl(270_60%_70%)] hover:bg-[hsl(270_60%_60%)]/15 transition-all duration-300"
+            title="Cambia lingua"
+          >
+            <Globe2 className="w-3 h-3" />
+            <span className="text-[9px] font-semibold tracking-wider uppercase">{lang === "it" ? "IT" : "EN"}</span>
+          </motion.button>
       </div>
 
       {/* Main */}
