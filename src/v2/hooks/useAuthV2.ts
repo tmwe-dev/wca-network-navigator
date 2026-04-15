@@ -115,33 +115,28 @@ export function useAuthV2(): UseAuthV2Return {
     try {
       const email = authUser.email;
       if (!email) {
-        await supabase.auth.signOut();
         setError("Account senza email associata.");
         return;
       }
 
-      const authorized = await isEmailAuthorized(email);
-      if (!authorized) {
-        await supabase.auth.signOut();
-        setError("Email non autorizzata. Contatta l'amministratore.");
-        return;
-      }
+      // Do NOT re-check whitelist on session restore — user already passed it at login.
+      // Whitelist is only checked in signInWithEmail() and signUp().
+      // This prevents sign-outs when the DB returns 503.
 
-      const [userProfile, userRoles] = await Promise.all([
+      const [userProfile, userRoles] = await Promise.allSettled([
         loadProfile(authUser.id),
         loadRoles(authUser.id),
       ]);
 
-      setProfile(userProfile);
-      setRoles(userRoles);
-      await recordLogin(email);
+      setProfile(userProfile.status === "fulfilled" ? userProfile.value : null);
+      setRoles(userRoles.status === "fulfilled" ? (userRoles.value ?? ["user"]) : ["user"]);
+
+      // Fire-and-forget login record
+      recordLogin(email);
     } catch (err) {
-      // Distinguish network errors from whitelist rejection
-      setError(
-        err instanceof Error && (err.message.includes("503") || err.message.includes("fetch"))
-          ? "Errore di connessione al server. Riprova tra qualche istante."
-          : err instanceof Error ? err.message : "Errore durante il caricamento dell'utente."
-      );
+      // Network errors should NOT block the session
+      console.warn("[useAuthV2] loadUserData non-critical error:", err);
+      // Still let user in — profile/roles will be defaults
     }
   }, []);
 
