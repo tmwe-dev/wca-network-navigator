@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, Wand2, Volume2, VolumeX } from "lucide-react";
+import { Send, Wand2, Volume2, VolumeX, Globe2 } from "lucide-react";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -261,9 +261,9 @@ function detectScenario(text: string): string | null {
 const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [micActive, setMicActive] = useState(false);
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
   const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
