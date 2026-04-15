@@ -23,13 +23,13 @@ export const outreachQueueStatusTool: Tool = {
         { key: "position", label: "#" },
         { key: "contactName", label: "Contatto" },
         { key: "status", label: "Stato" },
-        { key: "templateId", label: "Template" },
+        { key: "subject", label: "Oggetto" },
       ],
       rows: items.map((item) => ({
         position: item.position ?? 0,
-        contactName: item.contactName ?? "—",
+        contactName: item.recipientName ?? item.recipientEmail ?? "—",
         status: item.status ?? "pending",
-        templateId: item.templateId ?? "—",
+        subject: item.subject ?? "—",
       })),
     };
   },

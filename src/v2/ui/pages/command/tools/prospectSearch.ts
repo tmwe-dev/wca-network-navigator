@@ -22,12 +22,12 @@ export const prospectSearchTool: Tool = {
       columns: [
         { key: "companyName", label: "Azienda" },
         { key: "region", label: "Regione" },
-        { key: "status", label: "Stato" },
+        { key: "city", label: "Città" },
       ],
       rows: prospects.map(p => ({
         companyName: p.companyName ?? "—",
         region: p.region ?? "—",
-        status: p.status ?? "—",
+        city: p.city ?? "—",
       })),
     };
   },
