@@ -497,13 +497,12 @@ const CommandPage = () => {
         ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
         : `${result.meta?.count ?? 0} risultati`;
 
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: `Trovati **${countLabel}** nel database. Canvas aggiornato con i risultati live.\n\nDati da: ${result.meta?.sourceLabel ?? "Supabase"}`,
         agentName: agentLabel,
         timestamp: ts(),
         meta: `${result.meta?.sourceLabel ?? "Supabase"} · ${result.meta?.count ?? 0} record · LIVE`,
-      });
+      }, `Trovati ${countLabel} nel database.`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Errore sconosciuto";
       setExecSteps([
