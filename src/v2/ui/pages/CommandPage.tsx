@@ -668,7 +668,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={micActive || voiceSpeaking} listening={micActive && !voiceSpeaking} speaking={voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking} listening={false} speaking={voiceSpeaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
