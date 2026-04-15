@@ -4,6 +4,8 @@
 import { useState, useRef, useCallback } from "react";
 import { runAgentLoop, type AgentState, type AgentStep } from "@/v2/agent/runtime/agentLoop";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
+import { Sentry } from "@/lib/sentry";
 
 export interface UseAgentLoopReturn {
   state: AgentState;
@@ -54,6 +56,11 @@ export function useAgentLoop(): UseAgentLoopReturn {
       saveTranscript(goal, finalState.transcript);
     }).catch((e) => {
       setState((prev) => ({ ...prev, running: false, error: e.message }));
+      // Sentry: capture agent loop error with transcript context
+      Sentry.captureException(e, {
+        tags: { "agent.goal": goal.slice(0, 100) },
+        extra: { transcript: state.transcript.map((s) => ({ tool: s.toolName, success: s.result.success })) },
+      } as Record<string, unknown>);
     });
   }, [autonomousMode]);
 
@@ -83,9 +90,11 @@ async function saveTranscript(goal: string, transcript: AgentStep[]) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const conversationId = crypto.randomUUID();
+
     // Save as a single summary message
     const summary = {
-      conversation_id: crypto.randomUUID(),
+      conversation_id: conversationId,
       role: "tool",
       content: JSON.stringify({
         type: "agent_transcript",
@@ -99,6 +108,19 @@ async function saveTranscript(goal: string, transcript: AgentStep[]) {
       }),
     };
     await supabase.from("command_messages").insert(summary);
+
+    // Save each step to agent_action_log for audit
+    const logEntries = transcript.map((s) => ({
+      user_id: user.id,
+      conversation_id: conversationId,
+      tool_name: s.toolName,
+      args: s.args ?? {},
+      result: { success: s.result.success, error: s.result.error ?? null },
+    }));
+
+    if (logEntries.length > 0) {
+      await untypedFrom("agent_action_log").insert(logEntries);
+    }
   } catch {
     // Non-critical — don't break the agent
   }

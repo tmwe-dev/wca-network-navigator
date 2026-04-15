@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Per-user rate limit: 60 req/min
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token = authHeader.replace("Bearer ", "");
+  let userId = "anonymous";
+  if (token) {
+    try {
+      const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY") ?? "");
+      const { data: { user } } = await sb.auth.getUser(token);
+      if (user) userId = user.id;
+    } catch { /* ignore */ }
+  }
+  const rl = checkRateLimit(`scrape-website:${userId}`, { maxTokens: 60, refillRate: 1 });
+  if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
   const startMs = Date.now();
   const headers = { ...corsHeaders, "Content-Type": "application/json" };
