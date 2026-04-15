@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "entries": [
+    { "path": "01-intro.md", "slug": "intro", "title": "Introduzione al Sistema", "tags": ["intro", "overview"], "category": "general", "priority": 10 },
+    { "path": "02-architettura.md", "slug": "architettura", "title": "Architettura del Sistema", "tags": ["architettura", "sistema"], "category": "general", "priority": 8 }
+  ]
+}
