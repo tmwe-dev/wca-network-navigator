@@ -24,6 +24,12 @@ export interface TimelineKpiItem {
   readonly value: string;
 }
 
+export interface FlowNodeItem {
+  readonly label: string;
+  readonly type: "trigger" | "action" | "condition" | "end";
+  readonly detail?: string;
+}
+
 export interface ToolResultMeta {
   readonly count: number;
   readonly sourceLabel: string;
@@ -48,6 +54,12 @@ export type ToolResult =
       readonly title: string;
       readonly events: readonly TimelineEventItem[];
       readonly kpis: readonly TimelineKpiItem[];
+      readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "flow";
+      readonly title: string;
+      readonly nodes: readonly FlowNodeItem[];
       readonly meta?: ToolResultMeta;
     };
 

@@ -8,14 +8,17 @@ import { type CampaignJob } from "../../../core/domain/entities";
 import { mapCampaignJobRow } from "../../../core/mappers/campaign-mapper";
 
 export async function fetchCampaignJobs(
-  batchId: string,
+  batchId?: string,
 ): Promise<Result<CampaignJob[], AppError>> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("campaign_jobs")
-      .select("*")
-      .eq("batch_id", batchId)
-      .order("created_at", { ascending: true });
+      .select("*");
+
+    if (batchId) query = query.eq("batch_id", batchId);
+    query = query.order("created_at", { ascending: false }).limit(200);
+
+    const { data, error } = await query;
 
     if (error) {
       return err(ioError("DATABASE_ERROR", error.message, {
