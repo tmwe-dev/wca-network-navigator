@@ -18,6 +18,7 @@ import { resolveTool, TOOLS, TOOL_METADATA } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
 import { planExecution } from "@/v2/io/edge/aiAssistant";
 import { executePlan, type PlanExecutionState } from "./command/planRunner";
 
@@ -272,6 +273,7 @@ const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+  const tts = useVoiceOutput();
 
   // Voice input hook — real Web Speech API
   const voice = useVoiceInput({
@@ -283,6 +285,11 @@ const CommandPage = () => {
     silenceMs: 2000,
     lang: "it-IT",
   });
+
+  // Stop TTS when user starts speaking
+  useEffect(() => {
+    if (voice.listening) tts.stop();
+  }, [voice.listening, tts]);
 
   useEffect(() => {
     if (voice.error) {
@@ -318,15 +325,23 @@ const CommandPage = () => {
     setMessages((prev) => [...prev, { ...msg, id: Date.now() + Math.random() }]);
   }, []);
 
+  // Speak assistant responses via TTS
+  const addAssistantMessage = useCallback((msg: Omit<Message, "id" | "role">, spokenSummary?: string) => {
+    addMessage({ ...msg, role: "assistant" });
+    if (!msg.thinking) {
+      const textToSpeak = spokenSummary || msg.content.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/[#*_`→✅❌🔧●○]/g, "").slice(0, 200);
+      if (textToSpeak.trim()) tts.speak(textToSpeak);
+    }
+  }, [addMessage, tts]);
+
   const runLiveTool = useCallback(async (prompt: string) => {
     const tool = await resolveTool(prompt);
     if (!tool) {
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?",
         timestamp: ts(),
         agentName: "Orchestratore",
-      });
+      }, "Non ho capito. Puoi riformulare?");
       return false;
     }
 
@@ -427,13 +442,12 @@ const CommandPage = () => {
         setFlowPhase("done");
         setShowTools(false);
         toast.success(result.message);
-        addMessage({
-          role: "assistant",
+        addAssistantMessage({
           content: `✅ **${result.title}**\n${result.message}`,
           agentName: agentLabel,
           timestamp: ts(),
           meta: result.meta?.sourceLabel,
-        });
+        }, `${result.title}. ${result.message}`);
         return true;
       }
 
@@ -449,13 +463,12 @@ const CommandPage = () => {
         setFlowPhase("done");
         setCanvas("live-report");
         setShowTools(false);
-        addMessage({
-          role: "assistant",
+        addAssistantMessage({
           content: `Report generato con **${result.sections.length} sezioni**.\n\nDati da: ${result.meta?.sourceLabel ?? "AI"}`,
           agentName: agentLabel,
           timestamp: ts(),
           meta: result.meta?.sourceLabel,
-        });
+        }, `Report generato con ${result.sections.length} sezioni.`);
         return true;
       }
 
@@ -484,13 +497,12 @@ const CommandPage = () => {
         ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
         : `${result.meta?.count ?? 0} risultati`;
 
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: `Trovati **${countLabel}** nel database. Canvas aggiornato con i risultati live.\n\nDati da: ${result.meta?.sourceLabel ?? "Supabase"}`,
         agentName: agentLabel,
         timestamp: ts(),
         meta: `${result.meta?.sourceLabel ?? "Supabase"} · ${result.meta?.count ?? 0} record · LIVE`,
-      });
+      }, `Trovati ${countLabel} nel database.`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Errore sconosciuto";
       setExecSteps([
@@ -673,13 +685,12 @@ const CommandPage = () => {
         });
       }
 
-      addMessage({
-        role: "assistant",
+      addAssistantMessage({
         content: `✅ Piano completato: ${final.summary}`,
         agentName: "Orchestratore",
         timestamp: ts(),
         meta: `${final.steps.length} step · plan-execution`,
-      });
+      }, `Piano completato. ${final.summary}`);
       setFlowPhase("done");
       setExecProgress(100);
       toast.success("Piano completato");
@@ -1008,7 +1019,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={voiceSpeaking || voice.listening} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking || voice.listening || tts.speaking} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking || tts.speaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
@@ -1020,12 +1031,12 @@ const CommandPage = () => {
                 style={{ background: "hsl(240 5% 6% / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
               >
                 <motion.button
-                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
+                  onClick={() => tts.toggleMute()}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]" : "text-muted-foreground/100 hover:text-foreground/100"}`}
-                  title="Lettura vocale"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${tts.muted ? "text-muted-foreground/100 hover:text-foreground/100" : "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]"}`}
+                  title={tts.muted ? "Attiva voce AI" : "Disattiva voce AI"}
                 >
-                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  {tts.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </motion.button>
                 <motion.button
                   onClick={() => voice.toggle()}
