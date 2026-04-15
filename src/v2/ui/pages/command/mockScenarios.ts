@@ -212,8 +212,6 @@ export function matchScenario(prompt: string): MockScenario {
     return followupBatch;
   }
   if (lower.includes("campagna") || lower.includes("campaign") || lower.includes("lancia") || lower.includes("flusso")) {
-  }
-  if (lower.includes("campagna") || lower.includes("campaign") || lower.includes("lancia") || lower.includes("flusso")) {
     return campaignPreview;
   }
   return partnerSearch;

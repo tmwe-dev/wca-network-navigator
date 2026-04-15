@@ -825,6 +825,7 @@ const CommandPage = () => {
                     />
                   )}
                 </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
