@@ -61,6 +61,15 @@ export type ToolResult =
       readonly title: string;
       readonly nodes: readonly FlowNodeItem[];
       readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "composer";
+      readonly title: string;
+      readonly initialTo: string;
+      readonly initialSubject: string;
+      readonly initialBody: string;
+      readonly promptHint: string;
+      readonly meta?: ToolResultMeta;
     };
 
 export interface Tool {
