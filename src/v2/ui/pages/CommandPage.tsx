@@ -742,6 +742,14 @@ const CommandPage = () => {
 
       {/* Main */}
       <div className="flex-1 flex overflow-hidden relative z-10">
+        {/* Conversation Sidebar */}
+        <ConversationSidebar
+          conversations={conv.conversations}
+          activeId={conv.conversationId}
+          onSelect={(id) => { conv.loadConversation(id); setMessages([]); setCanvas(null); }}
+          onNew={() => { conv.newConversation(); setMessages([]); setCanvas(null); setFlowPhase("idle"); }}
+          onArchive={(id) => conv.archive(id)}
+        />
         {/* ─── CONVERSATION ─── */}
         <div className={`flex-1 flex flex-col transition-all duration-700 ease-out ${canvas ? "max-w-[50%]" : ""}`}>
           {isEmpty ? (
