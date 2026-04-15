@@ -53,15 +53,15 @@ export function useCommandSubmit(state: CommandStateApi) {
   const runPlan = useCallback(async (planStateVal: PlanExecutionState) => {
     const final = await executePlan(planStateVal, (s) => {
       setPlanState(s);
-      setExecSteps(
-        planStateVal.steps.map((step, i) => ({
-          label: TOOLS.find((t) => t.id === step.toolId)?.label ?? step.toolId,
-          detail: step.reasoning,
-          status: (i + 1 < s.currentStep ? "done" : i + 1 === s.currentStep ? "running" : "pending") as ExecutionStep["status"],
-        })),
-      );
       setExecProgress(Math.round((Object.keys(s.results).length / planStateVal.steps.length) * 100));
     });
+
+    if (final.status === "awaiting-approval") {
+      // Per-step approval: pause and show PlanTimeline with blocked step
+      setFlowPhase("proposal");
+      addMessage({ role: "assistant", content: `⏸ Step ${final.approvalStepNumber} richiede approvazione.`, agentName: "Orchestratore", timestamp: ts() });
+      return;
+    }
 
     if (final.status === "done") {
       const lastStep = final.steps[final.steps.length - 1];
@@ -86,10 +86,32 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     } else if (final.status === "error") {
       toast.error(final.error ?? "Errore esecuzione piano");
-      addMessage({ role: "assistant", content: `❌ Piano fallito: ${final.error}`, agentName: "Orchestratore", timestamp: ts() });
+      addMessage({ role: "assistant", content: `❌ Piano fallito: ${final.error}\n\nRiformula la richiesta per un nuovo piano.`, agentName: "Orchestratore", timestamp: ts() });
       setFlowPhase("idle");
     }
-  }, [addMessage, addAssistantMessage, setCanvas, setExecProgress, setExecSteps, setFlowPhase, setLiveResult, setPlanState, ts]);
+  }, [addMessage, addAssistantMessage, setCanvas, setExecProgress, setFlowPhase, setLiveResult, setPlanState, ts]);
+
+  /** Called when user approves a blocked write-step */
+  const approveStep = useCallback(async (stepNumber: number) => {
+    const currentPlan = /* will be passed */ undefined;
+    // This is wired via handleApproveStep in CommandPage
+    void stepNumber;
+    void currentPlan;
+  }, []);
+
+  const handleApproveStep = useCallback(async (planStateVal: PlanExecutionState) => {
+    if (planStateVal.status !== "awaiting-approval") return;
+    setFlowPhase("executing");
+    addMessage({ role: "assistant", content: `✓ Step ${planStateVal.approvalStepNumber} approvato. Continuo...`, agentName: "Automation", timestamp: ts() });
+    const final = await executeApprovedStep(planStateVal, (s) => {
+      setPlanState(s);
+      setExecProgress(Math.round((Object.keys(s.results).length / planStateVal.steps.length) * 100));
+    });
+    // Recurse through runPlan to handle next approval or completion
+    if (final.status === "awaiting-approval" || final.status === "done" || final.status === "error") {
+      await runPlan(final);
+    }
+  }, [addMessage, runPlan, setExecProgress, setFlowPhase, setPlanState, ts]);
 
   const runLiveTool = useCallback(async (prompt: string) => {
     const tool = await resolveTool(prompt);
