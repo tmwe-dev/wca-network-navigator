@@ -8,14 +8,18 @@ interface ScrapeResult {
   ogDescription: string;
   emails: string[];
   phones: string[];
+  headings: string[];
+  links: string[];
+  rawText: string;
   length: number;
+  fromCache?: boolean;
 }
 
 export const scrapeCompanyWebsiteTool: Tool = {
   id: "scrape-company-website",
   label: "Scrape sito aziendale",
   description:
-    "Scarica una pagina web ed estrae email, telefoni, titolo e descrizione",
+    "Scarica una pagina web ed estrae email, telefoni, titolo, headings e link",
   match: (p: string) =>
     /scrape.*sito|scrape.*website|estrai.*sito|scrape\s+https?:\/\//i.test(p),
   execute: async (prompt, context) => {
@@ -35,8 +39,8 @@ export const scrapeCompanyWebsiteTool: Tool = {
         description: "Scarico la pagina ed estraggo contatti pubblici.",
         details: [
           { label: "URL", value: url },
-          { label: "Estraggo", value: "email, telefoni, title, meta" },
-          { label: "Sorgente", value: "Edge · scrape-website" },
+          { label: "Estraggo", value: "email, telefoni, title, headings, link" },
+          { label: "Sorgente", value: "Edge · scrape-website (cheerio)" },
         ],
         governance: {
           role: "USER",
@@ -48,15 +52,17 @@ export const scrapeCompanyWebsiteTool: Tool = {
       } as ToolResult;
     }
 
-    const res = await invokeEdgeRaw("scrape-website", { url });
+    const mode = (context?.payload?.mode as string) ?? "static";
+    const res = await invokeEdgeRaw("scrape-website", { url, mode });
     if (res._tag === "Err")
       throw new Error(res.error.message ?? "Scrape fallito");
 
     const data = res.value as ScrapeResult;
+    const cacheNote = data.fromCache ? " (da cache)" : "";
 
     return {
       kind: "report",
-      title: `Risultati scrape · ${url}`,
+      title: `Risultati scrape · ${url}${cacheNote}`,
       meta: {
         count: data.emails.length + data.phones.length,
         sourceLabel: "Edge · scrape-website",
@@ -73,6 +79,10 @@ export const scrapeCompanyWebsiteTool: Tool = {
         {
           heading: `Telefoni trovati (${data.phones.length})`,
           body: data.phones.join("\n") || "Nessuno",
+        },
+        {
+          heading: `Headings (${data.headings?.length ?? 0})`,
+          body: data.headings?.join("\n") || "Nessuno",
         },
       ],
     } as ToolResult;

@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,48 +7,177 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+const USER_AGENT = "WCA-NetworkNavigator/1.0";
+const FETCH_TIMEOUT_MS = 25_000;
+const MAX_RAW_TEXT = 8_000;
+const CACHE_TTL_DAYS = 7;
+
+/* ── in-memory rate limit: 1 req/sec per domain ── */
+const lastFetchByDomain = new Map<string, number>();
+
+function rateLimitDomain(hostname: string): boolean {
+  const now = Date.now();
+  const last = lastFetchByDomain.get(hostname) ?? 0;
+  if (now - last < 1_000) return false;
+  lastFetchByDomain.set(hostname, now);
+  return true;
+}
+
+/* ── robots.txt check ── */
+async function isAllowedByRobots(parsed: URL): Promise<boolean> {
+  try {
+    const robotsUrl = `${parsed.protocol}//${parsed.host}/robots.txt`;
+    const res = await fetch(robotsUrl, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok) return true; // no robots.txt → allowed
+    const txt = await res.text();
+    const lines = txt.split("\n");
+    let inWildcard = false;
+    for (const raw of lines) {
+      const line = raw.trim().toLowerCase();
+      if (line.startsWith("user-agent:")) {
+        const ua = line.slice(11).trim();
+        inWildcard = ua === "*" || ua === "wca-networknavigator";
+      }
+      if (inWildcard && line.startsWith("disallow:")) {
+        const path = line.slice(9).trim();
+        if (path === "/" || (path && parsed.pathname.startsWith(path))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  } catch {
+    return true; // can't fetch robots → allow
+  }
+}
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   const startMs = Date.now();
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
 
   try {
-    const { url } = await req.json();
+    const body = await req.json();
+    const url = body.url as string | undefined;
+    const mode = (body.mode as string) ?? "static";
+    const selectors = Array.isArray(body.selectors) ? body.selectors as string[] : [];
+
     if (!url || typeof url !== "string") {
-      return new Response(
-        JSON.stringify({ error: "url required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "url required" }), { status: 400, headers });
     }
 
-    // Basic URL validation
     let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid URL" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    try { parsed = new URL(url); } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400, headers });
     }
-
     if (!["http:", "https:"].includes(parsed.protocol)) {
-      return new Response(
-        JSON.stringify({ error: "Only http/https URLs supported" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Only http/https URLs" }), { status: 400, headers });
     }
 
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; WCA-Bot/1.0)" },
-      signal: AbortSignal.timeout(15000),
-      redirect: "follow",
-    });
-    const html = await res.text();
+    /* ── rate limit ── */
+    if (!rateLimitDomain(parsed.hostname)) {
+      return new Response(JSON.stringify({ error: "Rate limit: 1 req/sec per dominio" }), { status: 429, headers });
+    }
 
-    // Extract emails
+    /* ── cache lookup ── */
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: cached } = await supabaseAdmin
+      .from("scrape_cache")
+      .select("payload, scraped_at")
+      .eq("url", url)
+      .maybeSingle();
+
+    if (cached) {
+      const age = Date.now() - new Date(cached.scraped_at).getTime();
+      if (age < CACHE_TTL_DAYS * 86_400_000) {
+        console.log(JSON.stringify({ fn: "scrape-website", cache: "hit", url }));
+        return new Response(JSON.stringify({ ...cached.payload, fromCache: true }), { headers });
+      }
+    }
+
+    /* ── robots.txt ── */
+    const allowed = await isAllowedByRobots(parsed);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Scraping non consentito da robots.txt" }), { status: 403, headers });
+    }
+
+    /* ── fetch HTML (static mode or render fallback) ── */
+    let html: string;
+
+    if (mode === "render") {
+      const browserlessUrl = Deno.env.get("BROWSERLESS_URL");
+      const browserlessToken = Deno.env.get("BROWSERLESS_TOKEN");
+      if (browserlessUrl && browserlessToken) {
+        try {
+          const contentRes = await fetch(`${browserlessUrl}/content?token=${browserlessToken}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, waitFor: 3000 }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          });
+          html = await contentRes.text();
+        } catch {
+          // fallback to static
+          const res = await fetch(url, {
+            headers: { "User-Agent": USER_AGENT },
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            redirect: "follow",
+          });
+          html = await res.text();
+        }
+      } else {
+        // no browserless env → static fallback with warning
+        const res = await fetch(url, {
+          headers: { "User-Agent": USER_AGENT },
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          redirect: "follow",
+        });
+        html = await res.text();
+      }
+    } else {
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        redirect: "follow",
+      });
+      html = await res.text();
+    }
+
+    /* ── parse with cheerio ── */
+    const $ = cheerio.load(html);
+
+    const title = $("title").first().text().trim();
+    const description = $('meta[name="description"]').attr("content")?.trim() ?? "";
+    const ogTitle = $('meta[property="og:title"]').attr("content")?.trim() ?? "";
+    const ogDescription = $('meta[property="og:description"]').attr("content")?.trim() ?? "";
+
+    // headings
+    const headings: string[] = [];
+    $("h1, h2, h3").each((_i: number, el: cheerio.Element) => {
+      const t = $(el).text().trim();
+      if (t) headings.push(t);
+    });
+
+    // links
+    const links: string[] = [];
+    $("a[href]").each((_i: number, el: cheerio.Element) => {
+      const href = $(el).attr("href");
+      if (href && (href.startsWith("http") || href.startsWith("/"))) {
+        links.push(href);
+      }
+    });
+
+    // emails
     const emails = Array.from(
       new Set(
         (html.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}/g) ?? [])
@@ -55,58 +185,60 @@ serve(async (req) => {
       ),
     );
 
-    // Extract phones
+    // phones
     const phones = Array.from(
       new Set(
         (html.match(/(\+?\d[\d\s().-]{7,}\d)/g) ?? []).map((p: string) => p.trim()),
       ),
     );
 
-    // Extract metadata
-    const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] ?? "").trim();
-    const description = (
-      html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)?.[1] ?? ""
-    ).trim();
-    const ogTitle = (
-      html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i)?.[1] ?? ""
-    ).trim();
-    const ogDescription = (
-      html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i)?.[1] ?? ""
-    ).trim();
+    // custom selectors
+    const selectorResults: Record<string, string[]> = {};
+    for (const sel of selectors) {
+      const found: string[] = [];
+      $(sel).each((_i: number, el: cheerio.Element) => {
+        found.push($(el).text().trim());
+      });
+      selectorResults[sel] = found;
+    }
 
-    const durationMs = Date.now() - startMs;
-    console.log(
-      JSON.stringify({
-        fn: "scrape-website",
-        url,
-        emails: emails.length,
-        phones: phones.length,
-        htmlLen: html.length,
-        durationMs,
-      }),
-    );
+    // raw text (capped)
+    const rawText = $("body").text().replace(/\s+/g, " ").trim().slice(0, MAX_RAW_TEXT);
 
-    return new Response(
-      JSON.stringify({
-        url,
-        title,
-        description,
-        ogTitle,
-        ogDescription,
-        emails,
-        phones,
-        length: html.length,
-        durationMs,
-        timestamp: new Date().toISOString(),
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    const payload = {
+      url,
+      mode,
+      title,
+      description,
+      ogTitle,
+      ogDescription,
+      emails,
+      phones,
+      headings: headings.slice(0, 50),
+      links: links.slice(0, 100),
+      rawText,
+      selectorResults,
+      length: html.length,
+      durationMs: Date.now() - startMs,
+      timestamp: new Date().toISOString(),
+    };
+
+    /* ── upsert cache ── */
+    await supabaseAdmin
+      .from("scrape_cache")
+      .upsert({ url, mode, payload, scraped_at: new Date().toISOString() }, { onConflict: "url" });
+
+    console.log(JSON.stringify({
+      fn: "scrape-website", url, mode,
+      emails: emails.length, phones: phones.length,
+      headings: headings.length, htmlLen: html.length,
+      durationMs: payload.durationMs,
+    }));
+
+    return new Response(JSON.stringify(payload), { headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "scrape failed";
     console.error(JSON.stringify({ fn: "scrape-website", error: msg }));
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers });
   }
 });
