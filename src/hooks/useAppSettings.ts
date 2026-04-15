@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@/providers/AuthProvider";
 
 export function useAppSettings() {
+  const { status, user } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.appSettings.all,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, string>;
+
       const { data, error } = await supabase
         .from("app_settings")
         .select("key, value")
@@ -19,16 +22,17 @@ export function useAppSettings() {
       });
       return map;
     },
+    enabled: status === "authenticated" && !!user?.id,
     staleTime: 5 * 60_000,
   });
 }
 
 export function useUpdateSetting() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data: existing } = await supabase

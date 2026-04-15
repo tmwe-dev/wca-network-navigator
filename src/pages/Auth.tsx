@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
@@ -34,7 +34,7 @@ async function recordLogin(email: string) {
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { session, event } = useAuth();
+  const { session, event, status } = useAuth();
   const [loading, setLoading] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -44,6 +44,18 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
   const isBusy = loading || resettingPassword;
   const authRedirectUrl = `${window.location.origin}/auth`;
+  const clearedStaleSessionRef = useRef(false);
+
+  useEffect(() => {
+    if (status !== "unauthenticated" || clearedStaleSessionRef.current) return;
+    clearedStaleSessionRef.current = true;
+
+    void supabase.auth.signOut({ scope: "local" }).catch((err) => {
+      log.debug("local session cleanup skipped", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }, [status]);
 
   // React to auth events from centralized provider
   useEffect(() => {
@@ -72,6 +84,14 @@ export default function Auth() {
       toast.error("Email non autorizzata. Contatta l'amministratore.");
       setLoading(false);
       return;
+    }
+
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (err) {
+      log.debug("pre-login local cleanup skipped", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
