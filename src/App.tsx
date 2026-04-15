@@ -95,9 +95,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ViteChunkRecovery />
-          <BackgroundSyncIndicator />
-          <ConnectionBanner />
-          <RuntimeDiagnosticPanel />
           <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Launcher — no auth */}
@@ -152,6 +149,10 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          {/* Global singletons — only render inside router, gated by auth internally */}
+          <BackgroundSyncIndicator />
+          <ConnectionBanner />
+          <RuntimeDiagnosticPanel />
         </BrowserRouter>
         <ContactRecordDrawer />
       </TooltipProvider>
