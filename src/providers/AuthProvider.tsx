@@ -1,8 +1,9 @@
 /**
  * useAuth — Lightweight auth hook (replaces AuthProvider).
  * Subscribes directly to supabase.auth without needing a Context/Provider wrapper.
+ * Module-level singleton: all useAuth() calls share ONE listener.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -15,17 +16,33 @@ export interface AuthContextValue {
   readonly event: AuthChangeEvent | null;
 }
 
-// ── Singleton store so multiple useAuth() calls share ONE listener ────
+// ── Singleton store ──────────────────────────────────────────────────
 
-let _session: Session | null = null;
-let _user: User | null = null;
-let _status: AuthStatus = "loading";
-let _event: AuthChangeEvent | null = null;
-let _listeners = new Set<() => void>();
+let _snapshot: AuthContextValue = {
+  session: null,
+  user: null,
+  status: "loading",
+  event: null,
+};
+
+const _listeners = new Set<() => void>();
 let _subscribed = false;
 
 function notify() {
   _listeners.forEach((l) => l());
+}
+
+function updateSnapshot(
+  session: Session | null,
+  event: AuthChangeEvent | null,
+) {
+  _snapshot = {
+    session,
+    user: session?.user ?? null,
+    status: session ? "authenticated" : "unauthenticated",
+    event: event ?? _snapshot.event,
+  };
+  notify();
 }
 
 function ensureSubscription() {
@@ -34,26 +51,18 @@ function ensureSubscription() {
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     (authEvent, currentSession) => {
-      _event = authEvent;
-      _session = currentSession;
-      _user = currentSession?.user ?? null;
-      _status = currentSession ? "authenticated" : "unauthenticated";
-      notify();
+      updateSnapshot(currentSession, authEvent);
     },
   );
 
   // Bootstrap
   supabase.auth.getSession().then(({ data: { session } }) => {
-    if (_status === "loading") {
-      _session = session;
-      _user = session?.user ?? null;
-      _status = session ? "authenticated" : "unauthenticated";
-      notify();
+    if (_snapshot.status === "loading") {
+      updateSnapshot(session, null);
     }
   }).catch(() => {
-    if (_status === "loading") {
-      _status = "unauthenticated";
-      notify();
+    if (_snapshot.status === "loading") {
+      updateSnapshot(null, null);
     }
   });
 
@@ -68,7 +77,7 @@ function subscribe(cb: () => void) {
 }
 
 function getSnapshot(): AuthContextValue {
-  return { session: _session, user: _user, status: _status, event: _event };
+  return _snapshot;
 }
 
 /**
