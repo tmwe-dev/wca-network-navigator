@@ -11,7 +11,7 @@ import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 const RuntimeDiagnosticPanel = lazyRetry(() => import("@/components/system/RuntimeDiagnosticPanel").then(m => ({ default: m.RuntimeDiagnosticPanel })));
 import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
