@@ -1,8 +1,8 @@
 /**
- * CommandComposer — input bar with voice, mute, wand, send buttons.
+ * CommandComposer — input bar with voice, mute, wand, mission toggle, send buttons.
  */
 import { motion } from "framer-motion";
-import { Send, Wand2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Send, Wand2, Mic, MicOff, Volume2, VolumeX, Rocket } from "lucide-react";
 
 interface Props {
   input: string;
@@ -16,11 +16,14 @@ interface Props {
   onVoiceToggle: () => void;
   ttsMuted: boolean;
   onTtsMuteToggle: () => void;
+  missionMode?: boolean;
+  onToggleMissionMode?: () => void;
 }
 
 export default function CommandComposer({
   input, onInputChange, onSend, inputFocused, onFocus, onBlur,
   voiceListening, voiceSupported, onVoiceToggle, ttsMuted, onTtsMuteToggle,
+  missionMode, onToggleMissionMode,
 }: Props) {
   return (
     <div className="px-8 pb-20 pt-2">
@@ -50,7 +53,7 @@ export default function CommandComposer({
           </motion.button>
           <input
             type="text"
-            placeholder="Scrivi un obiettivo..."
+            placeholder={missionMode ? "Descrivi la missione..." : "Scrivi un obiettivo..."}
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onSend()}
@@ -58,6 +61,16 @@ export default function CommandComposer({
             onBlur={onBlur}
             className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/80 font-light text-foreground/100"
           />
+          {onToggleMissionMode && (
+            <motion.button
+              onClick={onToggleMissionMode}
+              whileTap={{ scale: 0.9 }}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${missionMode ? "bg-primary/20 text-primary" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+              title={missionMode ? "Modalità Missione attiva" : "Attiva Modalità Missione"}
+            >
+              <Rocket className="w-4 h-4" />
+            </motion.button>
+          )}
           <motion.button
             onClick={() => {}}
             whileTap={{ scale: 0.9 }}
