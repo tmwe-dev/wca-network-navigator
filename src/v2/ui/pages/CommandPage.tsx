@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, Wand2, Volume2, VolumeX } from "lucide-react";
+import { Send, Wand2, Volume2, VolumeX, Globe2 } from "lucide-react";
 import AiEntity from "@/components/ai/AiEntity";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -261,9 +261,9 @@ function detectScenario(text: string): string | null {
 const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [micActive, setMicActive] = useState(false);
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
   const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
@@ -531,6 +531,16 @@ const CommandPage = () => {
             ))}
           </div>
           <span className="text-[8px] text-muted-foreground/100 font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
+          <motion.button
+            onClick={() => setLang(lang === "it" ? "en" : "it")}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[hsl(270_60%_60%)]/10 border border-[hsl(270_60%_60%)]/20 text-[hsl(270_60%_70%)] hover:bg-[hsl(270_60%_60%)]/15 transition-all duration-300"
+            title="Cambia lingua"
+          >
+            <Globe2 className="w-3 h-3" />
+            <span className="text-[9px] font-semibold tracking-wider uppercase">{lang === "it" ? "IT" : "EN"}</span>
+          </motion.button>
         </div>
       </div>
 
@@ -668,7 +678,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={micActive || voiceSpeaking} listening={micActive && !voiceSpeaking} speaking={voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking} listening={false} speaking={voiceSpeaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
@@ -680,11 +690,12 @@ const CommandPage = () => {
                 style={{ background: "hsl(240 5% 6% / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
               >
                 <motion.button
-                  onClick={() => { setMicActive(!micActive); setVoiceSpeaking(false); }}
+                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${micActive ? "bg-primary/12 text-primary/92" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+                  title="Lettura vocale"
                 >
-                  {micActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </motion.button>
                 <input
                   type="text"
@@ -697,12 +708,12 @@ const CommandPage = () => {
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/80 font-light text-foreground/100"
                 />
                 <motion.button
-                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
+                  onClick={() => { /* Wand2 action placeholder */ }}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-accent/12 text-accent/92" : "text-muted-foreground/98 hover:text-muted-foreground/97"}`}
-                  title="Lettura vocale"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 text-[hsl(270_60%_70%)] hover:bg-[hsl(270_60%_60%)]/10"
+                  title="Suggerimento AI"
                 >
-                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  <Wand2 className="w-4 h-4" />
                 </motion.button>
                 <motion.button onClick={() => sendMessage()} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary/92 hover:bg-primary/15 hover:text-primary/96 transition-all duration-500 disabled:opacity-20">
                   <Send className="w-3.5 h-3.5" />
