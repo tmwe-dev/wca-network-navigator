@@ -1,4 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+/**
+ * Auth page — dead simple login/signup/forgot-password.
+ * No OAuth, no complex state, no AuthProvider dependency.
+ */
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
@@ -7,167 +11,120 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Globe2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { createLogger } from "@/lib/log";
-import { useAuth } from "@/providers/AuthProvider";
 
-const log = createLogger("Auth");
-
-async function checkWhitelist(email: string): Promise<boolean> {
-  try {
-    return await rpcIsEmailAuthorized(email);
-  } catch (err) {
-    log.warn("whitelist check threw", { message: err instanceof Error ? err.message : String(err) });
-    return false;
-  }
-}
-
-async function recordLogin(email: string) {
-  try {
-    await rpcRecordUserLogin(email);
-  } catch (e) {
-    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-  }
-}
+type View = "login" | "signup" | "forgot";
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { session, event, status } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [resettingPassword, setResettingPassword] = useState(false);
+  const [view, setView] = useState<View>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const isBusy = loading || resettingPassword;
-  const authRedirectUrl = `${window.location.origin}/auth`;
-  const clearedStaleSessionRef = useRef(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (status !== "unauthenticated" || clearedStaleSessionRef.current) return;
-    clearedStaleSessionRef.current = true;
-
-    void supabase.auth.signOut({ scope: "local" }).catch((err) => {
-      log.debug("local session cleanup skipped", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }, [status]);
-
-  // React to auth events from centralized provider
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    if (event !== "SIGNED_IN" && event !== "INITIAL_SESSION") return;
-
-    (async () => {
-      const allowed = await checkWhitelist(session.user.email!);
-      if (!allowed) {
-        toast.error("Accesso non autorizzato. Contatta l'amministratore.");
-        await supabase.auth.signOut();
-        return;
-      }
-      if (event === "SIGNED_IN") await recordLogin(session.user.email!);
-      navigate("/v1", { replace: true });
-    })();
-  }, [session, event, navigate]);
-
+  // ── Login ──────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const normalizedEmail = email.trim().toLowerCase();
-    const allowed = await checkWhitelist(normalizedEmail);
-    if (!allowed) {
-      toast.error("Email non autorizzata. Contatta l'amministratore.");
+
+    try {
+      const allowed = await rpcIsEmailAuthorized(normalizedEmail);
+      if (!allowed) {
+        toast.error("Email non autorizzata. Contatta l'amministratore.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      toast.error("Impossibile verificare l'autorizzazione. Riprova.");
       setLoading(false);
       return;
     }
 
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-    } catch (err) {
-      log.debug("pre-login local cleanup skipped", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-    if (error) {
-      toast.error(
-        error.message === "Invalid login credentials"
-          ? "Credenziali non valide. Se non ricordi la password, usa \u201cPassword dimenticata?\u201d."
-          : error.message,
-      );
-    }
-    setLoading(false);
-  };
-
-  const handleForgotPassword = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      toast.error("Inserisci prima la tua email.");
-      return;
-    }
-
-    setResettingPassword(true);
-
-    const allowed = await checkWhitelist(normalizedEmail);
-    if (!allowed) {
-      toast.error("Email non autorizzata. Contatta l'amministratore.");
-      setResettingPassword(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
     });
 
     if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Ti ho inviato il link per reimpostare la password.");
-    }
-
-    setResettingPassword(false);
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const allowed = await checkWhitelist(normalizedEmail);
-    if (!allowed) {
-      toast.error("Email non autorizzata. Solo gli utenti invitati possono registrarsi.");
+      toast.error(
+        error.message === "Invalid login credentials"
+          ? "Credenziali non valide. Se non ricordi la password, usa «Password dimenticata?»."
+          : error.message,
+      );
       setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    // Login succeeded — record and redirect
+    try {
+      await rpcRecordUserLogin(normalizedEmail);
+    } catch {
+      // non-blocking
+    }
+
+    navigate("/", { replace: true });
+  };
+
+  // ── Signup ─────────────────────────────────────────────────────────
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+      const allowed = await rpcIsEmailAuthorized(normalizedEmail);
+      if (!allowed) {
+        toast.error("Email non autorizzata. Chiedi all'admin di aggiungerti.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      toast.error("Impossibile verificare l'autorizzazione. Riprova.");
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: authRedirectUrl,
-        data: { full_name: displayName },
+        emailRedirectTo: `${window.location.origin}/auth`,
+        data: { full_name: displayName || normalizedEmail },
       },
     });
 
     if (error) {
       toast.error(error.message);
-    } else if (!data.session && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      toast.info("Account già presente. Usa Accedi o \u201cPassword dimenticata?\u201d.");
     } else {
-      toast.success("Controlla la tua email per confermare la registrazione");
+      toast.success("Controlla la tua email per confermare la registrazione.");
     }
 
     setLoading(false);
   };
 
+  // ── Forgot password ────────────────────────────────────────────────
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      { redirectTo: `${window.location.origin}/reset-password` },
+    );
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Se l'email esiste, riceverai il link per reimpostare la password.");
+    }
+    setLoading(false);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -176,86 +133,95 @@ export default function Auth() {
             <Globe2 className="w-6 h-6 text-primary" />
           </div>
           <CardTitle className="text-2xl">WCA Network Navigator</CardTitle>
-          <CardDescription>Accedi per gestire i tuoi partner e network</CardDescription>
+          <CardDescription>
+            {view === "login" && "Accedi per gestire i tuoi partner e network"}
+            {view === "signup" && "Crea il tuo account"}
+            {view === "forgot" && "Recupera la tua password"}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Accedi</TabsTrigger>
-              <TabsTrigger value="signup">Registrati</TabsTrigger>
-            </TabsList>
+        <CardContent>
+          {/* ── Login form ── */}
+          {view === "login" && (
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div>
+                <Label htmlFor="login-email" className="text-xs">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="login-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="login-pw" className="text-xs">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="login-pw" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 pr-10" required />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPassword ? "Nascondi password" : "Mostra password"}>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Entra
+              </Button>
+              <div className="flex justify-between text-xs">
+                <button type="button" className="text-primary hover:underline" onClick={() => setView("forgot")}>Password dimenticata?</button>
+                <button type="button" className="text-primary hover:underline" onClick={() => setView("signup")}>Non hai un account? Registrati</button>
+              </div>
+            </form>
+          )}
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-3 mt-3">
-                <div>
-                  <Label htmlFor="login-email" className="text-xs">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-email" name="email" autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
-                  </div>
+          {/* ── Signup form ── */}
+          {view === "signup" && (
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div>
+                <Label htmlFor="signup-name" className="text-xs">Nome</Label>
+                <Input id="signup-name" autoComplete="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Il tuo nome" required />
+              </div>
+              <div>
+                <Label htmlFor="signup-email" className="text-xs">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="signup-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
                 </div>
-                <div>
-                  <Label htmlFor="login-pw" className="text-xs">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-pw" name="password" autoComplete="current-password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 pr-10" required />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label={showPassword ? "Nascondi password" : "Mostra password"}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+              </div>
+              <div>
+                <Label htmlFor="signup-pw" className="text-xs">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="signup-pw" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10 pr-10" minLength={6} required />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPassword ? "Nascondi password" : "Mostra password"}>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-                <div className="flex justify-end">
-                  <Button type="button" variant="link" className="h-auto px-0 text-xs" onClick={handleForgotPassword} disabled={isBusy}>
-                    {resettingPassword && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-                    Password dimenticata?
-                  </Button>
-                </div>
-                <Button type="submit" className="w-full" disabled={isBusy}>
-                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Accedi
-                </Button>
-              </form>
-            </TabsContent>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Registrati
+              </Button>
+              <div className="text-center text-xs">
+                <button type="button" className="text-primary hover:underline" onClick={() => setView("login")}>Hai già un account? Accedi</button>
+              </div>
+            </form>
+          )}
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-3 mt-3">
-                <div>
-                  <Label htmlFor="signup-name" className="text-xs">Nome</Label>
-                  <Input id="signup-name" name="name" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Il tuo nome" required />
+          {/* ── Forgot password form ── */}
+          {view === "forgot" && (
+            <form onSubmit={handleForgot} className="space-y-3">
+              <div>
+                <Label htmlFor="forgot-email" className="text-xs">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="forgot-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
                 </div>
-                <div>
-                  <Label htmlFor="signup-email" className="text-xs">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-email" name="email" autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@esempio.com" className="pl-10" required />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="signup-pw" className="text-xs">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-pw" name="new-password" autoComplete="new-password" type={showSignupPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimo 6 caratteri" className="pl-10 pr-10" minLength={6} required />
-                    <button
-                      type="button"
-                      onClick={() => setShowSignupPassword(v => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label={showSignupPassword ? "Nascondi password" : "Mostra password"}
-                    >
-                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full" disabled={isBusy}>
-                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Registrati
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Invia link di recupero
+              </Button>
+              <div className="text-center text-xs">
+                <button type="button" className="text-primary hover:underline" onClick={() => setView("login")}>Torna al login</button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
