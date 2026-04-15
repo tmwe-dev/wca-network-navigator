@@ -18,7 +18,7 @@ import {
 } from "@/v2/io/supabase/mutations/conversations";
 
 export function useConversation() {
-  const { user } = useAuth();
+  const { session } = useAuthV2();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -27,20 +27,20 @@ export function useConversation() {
 
   // Load conversation list on mount
   useEffect(() => {
-    if (!user?.id) return;
+    if (!session?.user?.id) return;
     fetchConversations(30).then((res) => {
       if (isOk(res)) setConversations(res.value);
     });
-  }, [user?.id]);
+  }, [session?.user?.id]);
 
   const ensureConversation = useCallback(
     async (firstUserPrompt?: string): Promise<string | null> => {
       if (conversationId) return conversationId;
-      if (!user?.id) return null;
+      if (!session?.user?.id) return null;
       const title = firstUserPrompt
         ? firstUserPrompt.slice(0, 60)
         : "Nuova conversazione";
-      const res = await createConversation(user.id, title);
+      const res = await createConversation(session?.session?.user?.id, title);
       if (!isOk(res)) return null;
       const newConv = res.value;
       setConversationId(newConv.id);
@@ -48,7 +48,7 @@ export function useConversation() {
       titleSetRef.current = false;
       return newConv.id;
     },
-    [conversationId, user?.id],
+    [conversationId, session?.user?.id],
   );
 
   const loadConversation = useCallback(async (id: string) => {

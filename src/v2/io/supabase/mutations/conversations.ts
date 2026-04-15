@@ -16,10 +16,10 @@ export async function createConversation(
       .insert({ user_id: userId, title: title ?? null })
       .select()
       .single();
-    if (error) return err(toAppError(error));
+    if (error) return err(fromUnknown(error));
     return ok(data as Conversation);
   } catch (e) {
-    return err(toAppError(e));
+    return err(fromUnknown(e));
   }
 }
 
@@ -44,7 +44,7 @@ export async function appendMessage(
       })
       .select()
       .single();
-    if (error) return err(toAppError(error));
+    if (error) return err(fromUnknown(error));
 
     // Bump last_message_at
     await (supabase as any)
@@ -54,7 +54,7 @@ export async function appendMessage(
 
     return ok(data as ConversationMessage);
   } catch (e) {
-    return err(toAppError(e));
+    return err(fromUnknown(e));
   }
 }
 
@@ -67,10 +67,10 @@ export async function updateConversationTitle(
       .from("command_conversations")
       .update({ title })
       .eq("id", id);
-    if (error) return err(toAppError(error));
+    if (error) return err(fromUnknown(error));
     return ok(undefined);
   } catch (e) {
-    return err(toAppError(e));
+    return err(fromUnknown(e));
   }
 }
 
@@ -80,9 +80,9 @@ export async function archiveConversation(id: string): Promise<Result<void>> {
       .from("command_conversations")
       .update({ archived: true })
       .eq("id", id);
-    if (error) return err(toAppError(error));
+    if (error) return err(fromUnknown(error));
     return ok(undefined);
   } catch (e) {
-    return err(toAppError(e));
+    return err(fromUnknown(e));
   }
 }
