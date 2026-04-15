@@ -325,6 +325,15 @@ const CommandPage = () => {
     setMessages((prev) => [...prev, { ...msg, id: Date.now() + Math.random() }]);
   }, []);
 
+  // Speak assistant responses via TTS
+  const addAssistantMessage = useCallback((msg: Omit<Message, "id" | "role">, spokenSummary?: string) => {
+    addMessage({ ...msg, role: "assistant" });
+    if (!msg.thinking) {
+      const textToSpeak = spokenSummary || msg.content.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/[#*_`→✅❌🔧●○]/g, "").slice(0, 200);
+      if (textToSpeak.trim()) tts.speak(textToSpeak);
+    }
+  }, [addMessage, tts]);
+
   const runLiveTool = useCallback(async (prompt: string) => {
     const tool = await resolveTool(prompt);
     if (!tool) {
