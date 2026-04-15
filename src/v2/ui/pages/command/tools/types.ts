@@ -35,6 +35,17 @@ export interface ToolResultMeta {
   readonly sourceLabel: string;
 }
 
+export interface ApprovalDetail {
+  readonly label: string;
+  readonly value: string;
+}
+
+export interface GovernanceInfo {
+  readonly role: string;
+  readonly permission: string;
+  readonly policy: string;
+}
+
 export type ToolResult =
   | {
       readonly kind: "table";
@@ -70,12 +81,39 @@ export type ToolResult =
       readonly initialBody: string;
       readonly promptHint: string;
       readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "approval";
+      readonly title: string;
+      readonly description: string;
+      readonly details: readonly ApprovalDetail[];
+      readonly governance: GovernanceInfo;
+      readonly pendingPayload: Record<string, unknown>;
+      readonly toolId: string;
+      readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "report";
+      readonly title: string;
+      readonly sections: readonly { heading: string; body: string }[];
+      readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "result";
+      readonly title: string;
+      readonly message: string;
+      readonly meta?: ToolResultMeta;
     };
+
+export interface ToolContext {
+  readonly confirmed?: boolean;
+  readonly payload?: Record<string, unknown>;
+}
 
 export interface Tool {
   readonly id: string;
   readonly label: string;
   readonly description: string;
   match(prompt: string): boolean;
-  execute(prompt: string): Promise<ToolResult>;
+  execute(prompt: string, context?: ToolContext): Promise<ToolResult>;
 }
