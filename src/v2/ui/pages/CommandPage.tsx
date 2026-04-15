@@ -270,6 +270,23 @@ const CommandPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+
+  // Voice input hook — real Web Speech API
+  const voice = useVoiceInput({
+    onTranscript: (text) => setInput(text),
+    onAutoSubmit: (text) => {
+      setInput("");
+      sendMessage(text);
+    },
+    silenceMs: 2000,
+    lang: "it-IT",
+  });
+
+  useEffect(() => {
+    if (voice.error) {
+      toast.error(voice.error);
+    }
+  }, [voice.error]);
   const [inputFocused, setInputFocused] = useState(false);
   const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
