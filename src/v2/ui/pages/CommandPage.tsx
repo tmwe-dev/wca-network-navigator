@@ -1024,7 +1024,7 @@ const CommandPage = () => {
           )}
 
           {/* Voice presence */}
-          <VoicePresence active={voiceSpeaking || voice.listening} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking} />
+          <VoicePresence active={voiceSpeaking || voice.listening || tts.speaking} listening={voice.listening && !voice.speaking} speaking={voice.speaking || voiceSpeaking || tts.speaking} />
 
           {/* Input */}
           <div className="px-8 pb-20 pt-2">
@@ -1036,12 +1036,12 @@ const CommandPage = () => {
                 style={{ background: "hsl(240 5% 6% / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
               >
                 <motion.button
-                  onClick={() => setVoiceSpeaking(!voiceSpeaking)}
+                  onClick={() => tts.toggleMute()}
                   whileTap={{ scale: 0.9 }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]" : "text-muted-foreground/100 hover:text-foreground/100"}`}
-                  title="Lettura vocale"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${tts.muted ? "text-muted-foreground/100 hover:text-foreground/100" : "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]"}`}
+                  title={tts.muted ? "Attiva voce AI" : "Disattiva voce AI"}
                 >
-                  {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  {tts.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </motion.button>
                 <motion.button
                   onClick={() => voice.toggle()}
