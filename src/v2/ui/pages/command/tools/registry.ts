@@ -53,6 +53,24 @@ const TOOLS: readonly Tool[] = [
   deduplicateContactsTool,
 ];
 
+/* ─── Tool metadata for plan-execution ─── */
+
+const WRITE_TOOL_IDS = new Set([
+  "create-contact", "update-contact", "create-partner", "update-partner-status",
+  "create-campaign", "enqueue-outreach", "create-agent", "create-kb-entry",
+]);
+
+const ACTION_TOOL_IDS = new Set([
+  "calculate-lead-scores", "deduplicate-contacts",
+]);
+
+export const TOOL_METADATA = TOOLS.map((t) => ({
+  id: t.id,
+  label: t.label,
+  description: t.description,
+  requiresApproval: WRITE_TOOL_IDS.has(t.id) || ACTION_TOOL_IDS.has(t.id),
+}));
+
 /**
  * Fast-path keyword match (no network). Returns tool if regex matches.
  */
