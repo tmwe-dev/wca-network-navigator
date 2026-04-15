@@ -26,6 +26,8 @@ import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 import { scrapeLinkedInProfileTool } from "./scrapeLinkedInProfile";
 import { scrapeCompanyWebsiteTool } from "./scrapeCompanyWebsite";
 import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
+import { enrichPartnerFromWebsiteTool } from "./enrichPartnerFromWebsite";
+import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
 
 const TOOLS: readonly Tool[] = [
   // Composers / special
