@@ -22,12 +22,16 @@ export interface ToolDescriptor {
 export async function decideToolFromPrompt(
   prompt: string,
   availableTools: readonly ToolDescriptor[],
+  history: { role: string; content: string }[] = [],
 ) {
   return invokeEdgeV2(
     "ai-assistant",
     {
       mode: "tool-decision",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: prompt },
+      ],
       context: {
         tools: availableTools.map((t) => ({
           id: t.id,
