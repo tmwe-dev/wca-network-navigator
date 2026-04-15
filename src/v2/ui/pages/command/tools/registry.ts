@@ -32,6 +32,7 @@ import { scrapeCompanyWebsiteTool } from "./scrapeCompanyWebsite";
 import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
 import { enrichPartnerFromWebsiteTool } from "./enrichPartnerFromWebsite";
 import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
+import { scrapeProspectTool } from "./scrapeProspect";
 
 const TOOLS: readonly Tool[] = [
   // Composers / special
