@@ -1,7 +1,7 @@
 /**
  * useRequireAuth — STEP 3
  *
- * Redirect a /v2/login se l'utente non è autenticato.
+ * Redirect a /auth se l'utente non è autenticato.
  */
 
 import { useEffect } from "react";
@@ -14,7 +14,7 @@ export function useRequireAuth(): void {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/v2/login", { replace: true });
+      navigate("/auth", { replace: true });
     }
   }, [isAuthenticated, isLoading, navigate]);
 }

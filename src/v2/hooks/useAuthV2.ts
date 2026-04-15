@@ -1,7 +1,7 @@
 /**
  * useAuthV2 — STEP 3: Auth hook completo
  *
- * Login email/password, Google OAuth, profilo, ruoli, whitelist.
+ * Login email/password, profilo, ruoli, whitelist.
  * Session state sourced from centralized AuthProvider.
  */
 
@@ -274,7 +274,7 @@ export function useAuthV2(): UseAuthV2Return {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/v2/login`,
+        emailRedirectTo: `${window.location.origin}/auth`,
         data: { display_name: displayName },
       },
     });
@@ -296,7 +296,7 @@ export function useAuthV2(): UseAuthV2Return {
   const resetPassword = useCallback(async (email: string) => {
     setError(null);
     const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/v2/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (authError) setError(authError.message);
   }, []);

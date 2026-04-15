@@ -128,7 +128,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const wcaSession = useWcaSession();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) navigate("/v2/login", { replace: true });
+    if (!isLoading && !isAuthenticated) navigate("/auth", { replace: true });
   }, [isLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
