@@ -1,12 +1,12 @@
 /**
  * WhatsAppInboxView — orchestratore sottile per la vista inbox WhatsApp.
- * Compone WhatsAppChatList + WhatsAppChatThread.
+ * Compone WhatsAppChatList + WhatsAppChatThread (Documento 2 §2.4 "un solo scopo").
  */
 import { useState, useMemo, useCallback } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead } from "@/hooks/useChannelMessages";
-import { useWhatsAppSoftSync } from "@/hooks/useWhatsAppSoftSync";
+import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { WhatsAppChatList } from "./WhatsAppChatList";
 import { WhatsAppChatThread } from "./WhatsAppChatThread";
@@ -14,7 +14,7 @@ import { isSidebarGhostMessage } from "./whatsappTypes";
 import type { ChatThread } from "./whatsappTypes";
 
 type WhatsAppInboxViewProps = {
-  syncState?: { enabled: boolean; isAvailable: boolean };
+  syncState?: { enabled: boolean; focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
   backfillState?: unknown;
   operatorUserId?: string;
 };
@@ -22,15 +22,14 @@ type WhatsAppInboxViewProps = {
 export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxViewProps = {}) {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [focusedChat, setFocusedChat] = useState<string | null>(null);
 
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendWhatsApp } = useWhatsAppExtensionBridge();
 
-  const ownSync = useWhatsAppSoftSync();
+  const ownSync = useWhatsAppAdaptiveSync();
   const sync = syncState || ownSync;
-  const { enabled } = sync;
+  const { enabled, focusedChat, focusOn } = sync;
 
   const threads = useMemo(() => {
     const visibleMessages = messages.filter(msg => !isSidebarGhostMessage(msg));
@@ -54,10 +53,6 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
   }, [messages]);
 
   const activeThread = activeTab ? threads.find(t => t.contact === activeTab) : null;
-
-  const focusOn = useCallback((contact: string) => {
-    setFocusedChat(contact);
-  }, []);
 
   const openChat = useCallback((contact: string) => {
     if (!openTabs.includes(contact)) setOpenTabs(prev => [...prev, contact]);
@@ -91,6 +86,7 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+        {/* Horizontal tabs */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
             {openTabs.map(contact => {

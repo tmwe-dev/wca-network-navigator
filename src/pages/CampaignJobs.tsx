@@ -112,7 +112,7 @@ export default function CampaignJobs() {
     <div className="h-[calc(100vh-4rem)] flex flex-col -m-6">
       {/* Header */}
       <div className="flex items-center gap-4 px-6 py-3 border-b border-border bg-background flex-shrink-0">
-        <Link to="/v2/campaigns">
+        <Link to={location.pathname.startsWith("/v2") ? "/v2/campaigns" : "/v1/campaigns"}>
           <Button variant="ghost" size="sm" className="gap-1.5">
             <ArrowLeft className="w-4 h-4" />
             Campagne

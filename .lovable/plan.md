@@ -1,72 +1,61 @@
 
+Obiettivo: spiegare perché i target `any = 0` e `disabled = 0` non sono stati raggiunti e cosa va corretto davvero per arrivarci.
 
-# Piano: Rimozione Completa Autenticazione
+Diagnosi reale emersa dall’audit statico:
+- Non restano “pochi residui”: esistono ancora generatori strutturali di `any`.
+- Il build/tsc oggi può essere verde, ma la type safety non è ancora chiusa ai confini del sistema: DAL dinamici, JSON liberi, API browser non tipizzate, test mocks.
 
-## Obiettivo
-Eliminare ogni gate di autenticazione. L'app si apre direttamente su `/v2` con una schermata di selezione operatore obbligatoria. L'utente corrente è determinato esclusivamente dal selettore operatore nell'header.
+Perché non arrivo a `any non-disabled = 0`:
+1. `src/lib/supabaseUntyped.ts` usa ancora `(supabase as any).from(table)`. Finché esiste, tutto il layer RA (`useRADashboard`, `useRAJobs`, `useRAProspects`) continua a rigenerare cast e `any`.
+2. `src/hooks/useSupabaseQuery.ts` ha ancora `FilterFn`, `query as any`, `data as any as Row[]`. È un moltiplicatore centrale: non basta ripulire i consumer.
+3. In `src/data/partners.ts` e `src/data/partnerRelations.ts` esistono API pubbliche con `Promise<any[]>` e `select` dinamico. Se il contratto del DAL è `any[]`, i componenti a valle continueranno a castare.
+4. Alcune props UI entrano già come `Record<string, any>`: `PartnerDetailCompact`, `PartnerCard`, `UnifiedActionBar`, `ContactEnrichmentCard`, `ContactRecordFields`. Quindi il problema nasce prima del render.
+5. Alcuni residui sono boundary esterni non ancora incapsulati: Web Speech (`useContinuousSpeech`, `useAiVoice`), extension bridge (`useLinkedInExtensionBridge`, `TestDownload`), globals su `window` (`Operations`).
 
-## Impatto
+Perché non arrivo a `disabled = 0`:
+1. Ho trovato 27 file con `/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */`. Questo da solo rende impossibile target zero.
+2. Molti disable sono stati usati come tampone locale invece di chiudere la causa a monte: JSON Supabase, `select` dinamici, `window as any`, bridge payloads.
+3. La config lint spinge in quella direzione: `@typescript-eslint/no-explicit-any` è `warn`, ma `npm run lint` usa `--max-warnings 0`. Quindi ogni `any` rimasto o viene tipizzato davvero, o viene silenziato.
+4. Alcuni disable sono evitabili, ma solo dopo refactor di contratto; toglierli subito senza rifondare i tipi farebbe riesplodere lint o TypeScript.
 
-### File da modificare
+Conclusione onesta:
+- Non è che il target 0/0 sia “impossibile”.
+- È che il lavoro fatto finora ha corretto soprattutto build, tsc e struttura file, ma non ha ancora eliminato i 4 generatori che ricreano `any` in cascata:
+  - `src/lib/supabaseUntyped.ts`
+  - `src/hooks/useSupabaseQuery.ts`
+  - DAL con `select` dinamico / `Promise<any[]>`
+  - props UI `Record<string, any>`
+- Finché questi restano, i fix file-per-file abbassano il numero ma non lo azzerano.
 
-1. **`src/v2/ui/templates/AuthenticatedLayout.tsx`** (cuore del cambiamento)
-   - Rimuovere `useAuthV2()` e tutti i check `isAuthenticated`, `isLoading`, redirect a `/auth`
-   - Rimuovere il gate `sessionReady` — il layout si mostra sempre
-   - `backgroundEnabled` diventa `true` dopo 1.5s senza condizioni di sessione
-   - Rimuovere query onboarding che dipende da `auth.getUser()`
-   - La riga `if (!isAuthenticated) return null` e il loading spinner condizionale vengono eliminati
+Piano corretto per arrivare davvero a 0/0 o molto vicino:
+1. Chiudere i generatori centrali:
+   - sostituire `supabaseUntyped.ts` con wrapper generici o tipi RA locali;
+   - riscrivere `useSupabaseQuery.ts` senza `any`.
+2. Cambiare il contratto del DAL:
+   - rimuovere `Promise<any[]>`;
+   - usare funzioni generiche tipo `getPartnersByCountries<T>()` / `findPartnerContacts<T>()`.
+3. Tipizzare i boundary esterni:
+   - creare `src/types/web-speech.d.ts`;
+   - definire schema dei messaggi per extension bridge;
+   - eliminare `window as any`.
+4. Portare nella UI view-model veri:
+   - `PartnerWithRelations`
+   - `PartnerCardModel`
+   - `ContactEnrichmentData`
+   - `ContactRecordUpdates`
+5. Ripulire i test correttamente:
+   - togliere i 27 file-level disable;
+   - usare `unknown`, `Partial<T>`, `MockedFunction`, helper mock tipizzati;
+   - lasciare solo disable locali e motivati se davvero inevitabili.
+6. Solo alla fine rifare il conteggio e l’ultima passata sui residui.
 
-2. **`src/hooks/useOperators.ts`**
-   - Rimuovere `useAuth()` e la condizione `enabled: status === "authenticated"`
-   - Le query partono sempre (accesso pubblico)
-   - `useCurrentOperator` non può più basarsi su `user.id` — deve usare l'operatore selezionato dal contesto
+Priorità tecnica immediata:
+- Root blockers: `src/lib/supabaseUntyped.ts`, `src/hooks/useSupabaseQuery.ts`, `src/data/partners.ts`, `src/data/partnerRelations.ts`
+- Boundary blockers: `src/hooks/useContinuousSpeech.ts`, `src/hooks/useAiVoice.ts`, `src/hooks/useLinkedInExtensionBridge.ts`, `src/pages/Operations.tsx`
+- UI blockers: `src/components/partners/PartnerDetailCompact.tsx`, `src/components/partners/PartnerCard.tsx`, `src/components/partners/UnifiedActionBar.tsx`, `src/components/contacts/ContactEnrichmentCard.tsx`, `src/components/contact-drawer/ContactRecordFields.tsx`
+- Test blockers: `src/test/wca-app-api.test.ts` e gli altri file con disable di intero file
 
-3. **`src/contexts/ActiveOperatorContext.tsx`**
-   - Aggiungere stato `requiresSelection: boolean` — se nessun operatore è selezionato, mostra un overlay di selezione
-   - Rimuovere dipendenza da `useCurrentOperator` basato su auth
-
-4. **`src/providers/AuthProvider.tsx`** (`useAuth`)
-   - Forzare `status: "authenticated"` sempre, senza sottoscriversi a Supabase auth
-   - Oppure fornire un mock statico per non rompere i 47+ file che importano `useAuth()`
-
-5. **`src/components/auth/ProtectedRoute.tsx`**
-   - Rendere pass-through: ritorna sempre `<Outlet />` senza check
-
-6. **`src/App.tsx`**
-   - Rimuovere la route `/auth` (o redirect a `/v2`)
-   - Root `/` → `/v2` (già presente)
-
-7. **`src/pages/Auth.tsx`**
-   - Eliminare o svuotare (redirect immediato a `/v2`)
-
-8. **`src/v2/hooks/useAuthV2.ts`**
-   - Forzare `isAuthenticated: true`, `isLoading: false`, `isAdmin: true`, `roles: ["admin"]`
-   - Mantenere l'interfaccia per non rompere i consumatori
-   - Rimuovere tutta la logica di login/signup/signOut/whitelist
-
-9. **`src/v2/hooks/useRequireRole.ts`**
-   - Ritorna sempre `true` senza redirect
-
-10. **`src/components/system/ConnectionBanner.tsx`**
-    - Rimuovere redirect a `/auth` su SIGNED_OUT
-    - Heartbeat senza condizione di sessione
-
-11. **`src/components/header/OperatorSelector.tsx`**
-    - Rimuovere il gate `if (!currentOp?.is_admin) return null` — visibile sempre
-    - Rimuovere il gate `if (operators.length <= 1) return null`
-
-12. **`src/data/rpc.ts`**
-    - `rpcIsEmailAuthorized` e `rpcRecordUserLogin` diventano no-op (return true / void)
-
-### File da creare
-
-13. **`src/components/OperatorSelectionOverlay.tsx`**
-    - Overlay fullscreen modale che mostra la lista operatori
-    - L'utente deve selezionarne uno per procedere
-    - Si integra nel `ActiveOperatorProvider`
-
-### Dettagli Tecnici
-
-- Le RLS policies sulle tabelle Supabase che dipendono da `auth.uid()` dovranno essere bypassate. Dato che l'app non avrà più sessioni auth, le query falliranno a meno di usare la chiave anonima con policy permissive. Valuterò se servono migration per aprire le RLS o se le policy attuali sono già sufficientemente aperte.
-- I 47+ file che importano `useAuth()` non verranno toccati singolarmente — il mock a livello di provider garantisce compatibilità.
-
+Risposta breve alla tua domanda:
+- Non ho mancato il target per un ultimo dettaglio.
+- L’ho mancato perché la bonifica è stata fatta troppo dal bordo e non abbastanza dal nucleo.
+- Se vuoi davvero 0/0, il prossimo blocco deve partire dai generatori centrali sopra, non da altri cast sparsi.

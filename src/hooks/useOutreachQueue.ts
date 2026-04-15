@@ -31,10 +31,6 @@ interface QueueItem {
   created_by: string | null;
 }
 
-interface UseOutreachQueueOptions {
-  enabled?: boolean;
-}
-
 const CHANNEL_DELAYS: Record<string, number> = {
   whatsapp: 5000,
   linkedin: 10000,
@@ -48,8 +44,7 @@ function channelToActivityType(channel: string): ActivityType {
   return "linkedin_message";
 }
 
-export function useOutreachQueue(options: UseOutreachQueueOptions = {}) {
-  const { enabled = true } = options;
+export function useOutreachQueue() {
   const [pendingCount, setPendingCount] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -136,7 +131,7 @@ export function useOutreachQueue(options: UseOutreachQueueOptions = {}) {
   }, [wa, li, trackQueueItem]);
 
   const processQueue = useCallback(async () => {
-    if (!enabled || processingRef.current || pausedRef.current) return;
+    if (processingRef.current || pausedRef.current) return;
     processingRef.current = true;
     setProcessing(true);
     try {
@@ -152,24 +147,15 @@ export function useOutreachQueue(options: UseOutreachQueueOptions = {}) {
     } catch (err: unknown) {
       log.error("processQueue failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
     } finally { processingRef.current = false; setProcessing(false); }
-  }, [enabled, processItem]);
+  }, [processItem]);
 
   useEffect(() => {
-    if (!enabled) {
-      processingRef.current = false;
-      setProcessing(false);
-      setPendingCount(0);
-      return;
-    }
-
     const interval = setInterval(() => { if (!pausedRef.current) processQueue(); }, 5000);
     processQueue();
     return () => clearInterval(interval);
-  }, [enabled, processQueue]);
+  }, [processQueue]);
 
   useEffect(() => {
-    if (!enabled) return;
-
     const channel = supabase
       .channel("outreach-queue-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "outreach_queue" }, () => {
@@ -177,7 +163,7 @@ export function useOutreachQueue(options: UseOutreachQueueOptions = {}) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [enabled, processQueue]);
+  }, [processQueue]);
 
   return { pendingCount, processing, paused, setPaused };
 }

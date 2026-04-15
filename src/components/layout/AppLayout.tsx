@@ -20,7 +20,6 @@ import { toast } from "@/hooks/use-toast";
 import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useAuth } from "@/providers/AuthProvider";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions").then((m) => ({ default: m.TestExtensionsContent })));
@@ -40,27 +39,13 @@ export function AppLayout() {
   const [testExtOpen, setTestExtOpen] = useState(false);
   const [agentDashOpen, setAgentDashOpen] = useState(false);
   const [voiceActive, setVoiceActive] = useState(false);
-  const [backgroundReady, setBackgroundReady] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { status: authStatus } = useAuth();
   const deepSearch = useDeepSearchRunner();
-  const sessionReady = authStatus === "authenticated";
-  const backgroundEnabled = sessionReady && backgroundReady;
-  const outreachQueue = useOutreachQueue({ enabled: backgroundEnabled });
-  useJobHealthMonitor({ enabled: backgroundEnabled });
+  const outreachQueue = useOutreachQueue();
+  useJobHealthMonitor();
   useWcaSync();
-  const globalSync = useGlobalAutoSync({ enabled: backgroundEnabled });
-
-  useEffect(() => {
-    if (!sessionReady) {
-      setBackgroundReady(false);
-      return;
-    }
-
-    const timer = setTimeout(() => setBackgroundReady(true), 1500);
-    return () => clearTimeout(timer);
-  }, [sessionReady]);
+  const globalSync = useGlobalAutoSync();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
@@ -197,13 +182,11 @@ export function AppLayout() {
                       )}
 
                       <ActiveProcessIndicator />
-                      {backgroundEnabled ? (
-                        <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} isNightTime={globalSync.isNightTime} manualOverride={globalSync.manualOverride} onToggleNightPause={globalSync.toggleNightPause} resumeMinutes={globalSync.resumeMinutes} />
-                      ) : null}
+                      <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} isNightTime={globalSync.isNightTime} manualOverride={globalSync.manualOverride} onToggleNightPause={globalSync.toggleNightPause} resumeMinutes={globalSync.resumeMinutes} />
                       <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
                     </div>
                     <div className="flex items-center gap-0.5 sm:gap-1">
-                      {backgroundEnabled ? <OperatorSelector /> : null}
+                      <OperatorSelector />
                       <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
                       <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>

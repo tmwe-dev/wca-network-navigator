@@ -6,10 +6,6 @@ import { updateProspect } from "@/data/prospects";
 import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import { queryKeys } from "@/lib/queryKeys";
-import type { Database } from "@/integrations/supabase/types";
-
-type PartnerContactUpdate = Database["public"]["Tables"]["partner_contacts"]["Update"];
-type PartnerContactInsert = Database["public"]["Tables"]["partner_contacts"]["Insert"];
 
 export interface UnifiedRecord {
   sourceType: RecordSourceType;
@@ -155,24 +151,6 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
   });
 }
 
-/**
- * Field mapping: UI field names → partner_contacts column names.
- * Fields NOT in this map go to the partners table.
- */
-const CONTACT_FIELD_MAP: Record<string, string> = {
-  phone: "direct_phone",
-  email: "email",
-  mobile: "mobile",
-  position: "title",
-  contact_name: "name",
-  contact_alias: "contact_alias",
-};
-
-const PARTNER_ONLY_FIELDS = new Set([
-  "company_name", "city", "address", "website",
-  "lead_status", "profile_description",
-]);
-
 export function useUpdateContactRecord() {
   const qc = useQueryClient();
   return useMutation({
@@ -182,73 +160,7 @@ export function useUpdateContactRecord() {
       updates: Record<string, unknown>;
     }) => {
       if (sourceType === "partner") {
-        // Split updates into partner-table fields vs contact-table fields
-        const partnerUpdates: Record<string, unknown> = {};
-        const contactUpdateEntries: Array<[string, unknown]> = [];
-
-        for (const [key, value] of Object.entries(updates)) {
-          if (PARTNER_ONLY_FIELDS.has(key)) {
-            partnerUpdates[key] = value;
-          } else if (key in CONTACT_FIELD_MAP) {
-            contactUpdateEntries.push([CONTACT_FIELD_MAP[key], value]);
-          } else {
-            // Unknown fields default to partner table
-            partnerUpdates[key] = value;
-          }
-        }
-
-        // Update partners table if needed
-        if (Object.keys(partnerUpdates).length > 0) {
-          await updatePartner(sourceId, partnerUpdates);
-        }
-
-        // Update partner_contacts if needed
-        if (contactUpdateEntries.length > 0) {
-          // Build typed update object
-          const typedUpdate: PartnerContactUpdate = {};
-          for (const [col, val] of contactUpdateEntries) {
-            const v = (val as string | null) ?? null;
-            if (col === "direct_phone") typedUpdate.direct_phone = v;
-            else if (col === "email") typedUpdate.email = v;
-            else if (col === "mobile") typedUpdate.mobile = v;
-            else if (col === "title") typedUpdate.title = v;
-            else if (col === "name") typedUpdate.name = v ?? undefined;
-            else if (col === "contact_alias") typedUpdate.contact_alias = v;
-          }
-
-          // Find primary contact
-          const { data: contacts } = await supabase
-            .from("partner_contacts")
-            .select("id, is_primary")
-            .eq("partner_id", sourceId)
-            .order("is_primary", { ascending: false })
-            .limit(5);
-
-          const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
-
-          if (primary) {
-            const { error } = await supabase
-              .from("partner_contacts")
-              .update(typedUpdate)
-              .eq("id", primary.id);
-            if (error) throw error;
-          } else {
-            const insert: PartnerContactInsert = {
-              partner_id: sourceId,
-              is_primary: true,
-              name: typedUpdate.name || "Primary Contact",
-              direct_phone: typedUpdate.direct_phone,
-              email: typedUpdate.email,
-              mobile: typedUpdate.mobile,
-              title: typedUpdate.title,
-              contact_alias: typedUpdate.contact_alias,
-            };
-            const { error } = await supabase
-              .from("partner_contacts")
-              .insert(insert);
-            if (error) throw error;
-          }
-        }
+        await updatePartner(sourceId, updates);
       } else if (sourceType === "contact") {
         await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
@@ -259,9 +171,6 @@ export function useUpdateContactRecord() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.contacts.record(vars.sourceType, vars.sourceId) });
-      if (vars.sourceType === "partner") {
-        qc.invalidateQueries({ queryKey: queryKeys.partners.all });
-      }
     },
   });
 }

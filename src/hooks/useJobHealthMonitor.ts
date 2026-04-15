@@ -2,10 +2,6 @@ import { useEffect, useRef } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { toast } from "@/hooks/use-toast";
 
-interface UseJobHealthMonitorOptions {
-  enabled?: boolean;
-}
-
 /**
  * Proactive job health monitor.
  * Detects failed/stalled jobs and notifies the user automatically.
@@ -13,17 +9,14 @@ interface UseJobHealthMonitorOptions {
  *
  * 🤖 Claude Engine V8: non mostra toast per job già in pausa/falliti al mount iniziale.
  */
-export function useJobHealthMonitor(options: UseJobHealthMonitorOptions = {}) {
-  const { enabled = true } = options;
-  const { data: jobs = [] } = useDownloadJobs({ enabled });
+export function useJobHealthMonitor() {
+  const { data: jobs = [] } = useDownloadJobs();
   const notifiedRef = useRef<Set<string>>(new Set());
   const stallCheckRef = useRef<Map<string, { index: number; since: number }>>(new Map());
   const initialLoadRef = useRef(true);
   const prevStatusRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
-    if (!enabled) return;
-
     // Al primo render, registra lo stato attuale senza notificare
     if (initialLoadRef.current && jobs.length > 0) {
       initialLoadRef.current = false;
@@ -87,5 +80,5 @@ export function useJobHealthMonitor(options: UseJobHealthMonitorOptions = {}) {
 
       prevStatusRef.current.set(job.id, job.status);
     }
-  }, [enabled, jobs]);
+  }, [jobs]);
 }

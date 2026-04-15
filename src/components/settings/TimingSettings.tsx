@@ -1,8 +1,6 @@
-import { useState, useMemo } from "react";
-import { Clock, Mail, MessageCircle, Search, Bot, Save, RotateCcw, Shield } from "lucide-react";
+import { useState } from "react";
+import { Clock, Mail, MessageCircle, Search, Bot, Save, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { nextDelayMs, type SoftTimerConfig } from "@/lib/time/softTimer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -42,32 +40,6 @@ const SCHEDULE_FIELDS = [
   { key: "agent_work_days", label: "Giorni lavorativi", defaultValue: "1,2,3,4,5", unit: "1=Lun...7=Dom" },
 ];
 
-const WA_STEALTH_KEYS = [
-  { key: "wa_scan_enabled", defaultValue: "true" },
-  { key: "wa_scan_interval_sec", defaultValue: "120" },
-  { key: "wa_scan_top_chats", defaultValue: "8" },
-  { key: "wa_scan_max_deep_reads", defaultValue: "3" },
-  { key: "wa_scan_stagger_sec", defaultValue: "15" },
-  { key: "wa_scan_jitter_pct", defaultValue: "25" },
-  { key: "wa_scan_long_pause_pct", defaultValue: "10" },
-  { key: "wa_scan_quick_check_pct", defaultValue: "5" },
-  { key: "wa_scan_work_start_hour", defaultValue: "7" },
-  { key: "wa_scan_work_end_hour", defaultValue: "22" },
-];
-
-const LI_STEALTH_KEYS = [
-  { key: "li_scan_enabled", defaultValue: "true" },
-  { key: "li_scan_interval_sec", defaultValue: "14400" },
-  { key: "li_scan_top_threads", defaultValue: "10" },
-  { key: "li_scan_max_deep_reads", defaultValue: "2" },
-  { key: "li_scan_stagger_sec", defaultValue: "60" },
-  { key: "li_scan_jitter_pct", defaultValue: "30" },
-  { key: "li_scan_long_pause_pct", defaultValue: "15" },
-  { key: "li_scan_quick_check_pct", defaultValue: "3" },
-  { key: "li_scan_work_start_hour", defaultValue: "8" },
-  { key: "li_scan_work_end_hour", defaultValue: "20" },
-];
-
 export default function TimingSettings() {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
@@ -91,8 +63,6 @@ export default function TimingSettings() {
       const allFields = [
         ...TIMING_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
         ...SCHEDULE_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
-        ...WA_STEALTH_KEYS.map(k => ({ key: k.key, value: getValue(k.key, k.defaultValue) })),
-        ...LI_STEALTH_KEYS.map(k => ({ key: k.key, value: getValue(k.key, k.defaultValue) })),
       ];
       for (const f of allFields) {
         await updateSetting.mutateAsync({ key: f.key, value: f.value });
@@ -181,14 +151,6 @@ export default function TimingSettings() {
 
       <Separator />
 
-      {/* WhatsApp Stealth Section */}
-      <WhatsAppStealthSection getValue={getValue} handleChange={handleChange} />
-
-      <Separator />
-
-      {/* LinkedIn Stealth Section */}
-      <LinkedInStealthSection getValue={getValue} handleChange={handleChange} />
-
       {/* Approval mode */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
         <div>
@@ -209,269 +171,6 @@ export default function TimingSettings() {
         <Button onClick={handleReset} variant="outline" size="sm" className="gap-2">
           <RotateCcw className="w-3.5 h-3.5" /> Ripristina Default
         </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── WhatsApp Stealth Section ──
-
-interface StealthProps {
-  getValue: (key: string, def: string | number) => string;
-  handleChange: (key: string, val: string) => void;
-}
-
-function WhatsAppStealthSection({ getValue, handleChange }: StealthProps) {
-  const intervalSec = Number(getValue("wa_scan_interval_sec", "120"));
-  const jitterPct = Number(getValue("wa_scan_jitter_pct", "25"));
-  const longPausePct = Number(getValue("wa_scan_long_pause_pct", "10"));
-  const quickCheckPct = Number(getValue("wa_scan_quick_check_pct", "5"));
-  const normalPct = 100 - longPausePct - quickCheckPct;
-  const workStart = getValue("wa_scan_work_start_hour", "7");
-  const workEnd = getValue("wa_scan_work_end_hour", "22");
-  const enabled = getValue("wa_scan_enabled", "true") === "true";
-
-  // Estimate next delay for live preview
-  const estimatedCfg: SoftTimerConfig = useMemo(() => ({
-    baseIntervalSec: intervalSec,
-    jitterPct,
-    longPauseChancePct: longPausePct,
-    longPauseMinMult: 1.8,
-    longPauseMaxMult: 3.5,
-    quickCheckChancePct: quickCheckPct,
-    quickCheckMinMult: 0.5,
-    quickCheckMaxMult: 0.8,
-    antiRepeatToleranceMs: 1500,
-  }), [intervalSec, jitterPct, longPausePct, quickCheckPct]);
-
-  const sampleDelay = useMemo(() => nextDelayMs(estimatedCfg), [estimatedCfg]);
-  const estMin = Math.floor(sampleDelay.delayMs / 60000);
-  const estSec = Math.round((sampleDelay.delayMs % 60000) / 1000);
-
-  const sliders: { key: string; label: string; min: number; max: number; unit: string }[] = [
-    { key: "wa_scan_interval_sec", label: "Intervallo base", min: 60, max: 600, unit: "sec" },
-    { key: "wa_scan_top_chats", label: "Chat da scansionare", min: 3, max: 20, unit: "chat" },
-    { key: "wa_scan_max_deep_reads", label: "Max letture deep", min: 1, max: 10, unit: "chat" },
-    { key: "wa_scan_stagger_sec", label: "Stagger tra deep reads", min: 5, max: 60, unit: "sec" },
-    { key: "wa_scan_jitter_pct", label: "Jitter", min: 0, max: 50, unit: "%" },
-    { key: "wa_scan_long_pause_pct", label: "Prob. pausa lunga", min: 0, max: 30, unit: "%" },
-    { key: "wa_scan_quick_check_pct", label: "Prob. check rapido", min: 0, max: 20, unit: "%" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Shield className="w-4 h-4 text-primary" />
-        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">WhatsApp — Lettura Stealth</h4>
-      </div>
-      <p className="text-[10px] text-muted-foreground leading-relaxed">
-        Modalità stealth: intervalli variabili e pause notturne per simulare un pattern umano. Nessun ritmo regolare. Valori alti = più sicuro, più latenza.
-      </p>
-
-      {/* Enable switch */}
-      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-        <Label className="text-xs font-medium">Scansione stealth attiva</Label>
-        <Switch
-          checked={enabled}
-          onCheckedChange={(v) => handleChange("wa_scan_enabled", v ? "true" : "false")}
-        />
-      </div>
-
-      {/* Sliders */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sliders.map(s => {
-          const val = Number(getValue(s.key, WA_STEALTH_KEYS.find(k => k.key === s.key)?.defaultValue || "0"));
-          return (
-            <div key={s.key} className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-xs font-medium">{s.label}</Label>
-                <span className="text-xs font-mono text-muted-foreground">{val} {s.unit}</span>
-              </div>
-              <Slider
-                min={s.min}
-                max={s.max}
-                step={1}
-                value={[val]}
-                onValueChange={([v]) => handleChange(s.key, String(v))}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Work hours */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
-          <Label className="text-xs font-medium">Inizio lavoro (CET)</Label>
-          <Input
-            type="number"
-            min={0}
-            max={23}
-            value={workStart}
-            onChange={e => handleChange("wa_scan_work_start_hour", e.target.value)}
-            className="h-7 text-xs"
-          />
-        </div>
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
-          <Label className="text-xs font-medium">Fine lavoro (CET)</Label>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={workEnd}
-            onChange={e => handleChange("wa_scan_work_end_hour", e.target.value)}
-            className="h-7 text-xs"
-          />
-        </div>
-      </div>
-
-      {/* Live preview */}
-      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
-        <p className="text-xs font-medium text-primary">Anteprima distribuzione</p>
-        <p className="text-[10px] text-muted-foreground">
-          Prossima lettura stimata: tra ~{estMin}m {estSec}s ({sampleDelay.pattern})
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Distribuzione: {normalPct}% normale, {longPausePct}% pausa lunga, {quickCheckPct}% rapida
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Pausa notturna: dalle {workEnd}:00 alle {workStart}:00 (CET)
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── LinkedIn Stealth Section ──
-
-function LinkedInStealthSection({ getValue, handleChange }: StealthProps) {
-  const intervalSec = Number(getValue("li_scan_interval_sec", "14400"));
-  const jitterPct = Number(getValue("li_scan_jitter_pct", "30"));
-  const longPausePct = Number(getValue("li_scan_long_pause_pct", "15"));
-  const quickCheckPct = Number(getValue("li_scan_quick_check_pct", "3"));
-  const normalPct = 100 - longPausePct - quickCheckPct;
-  const workStart = getValue("li_scan_work_start_hour", "8");
-  const workEnd = getValue("li_scan_work_end_hour", "20");
-  const enabled = getValue("li_scan_enabled", "true") === "true";
-
-  const workHours = Number(workEnd) - Number(workStart);
-  const estimatedDaily = workHours > 0 ? Math.round((workHours * 3600) / intervalSec * 10) / 10 : 0;
-
-  const estimatedCfg: SoftTimerConfig = useMemo(() => ({
-    baseIntervalSec: intervalSec,
-    jitterPct,
-    longPauseChancePct: longPausePct,
-    longPauseMinMult: 1.5,
-    longPauseMaxMult: 3.0,
-    quickCheckChancePct: quickCheckPct,
-    quickCheckMinMult: 0.5,
-    quickCheckMaxMult: 0.8,
-    antiRepeatToleranceMs: 5000,
-  }), [intervalSec, jitterPct, longPausePct, quickCheckPct]);
-
-  const sampleDelay = useMemo(() => nextDelayMs(estimatedCfg), [estimatedCfg]);
-  const estHours = Math.floor(sampleDelay.delayMs / 3600000);
-  const estMin = Math.floor((sampleDelay.delayMs % 3600000) / 60000);
-
-  const formatInterval = (sec: number) => {
-    const h = Math.floor(sec / 3600);
-    const m = Math.round((sec % 3600) / 60);
-    return `${h}h ${m.toString().padStart(2, "0")}min`;
-  };
-
-  const sliders: { key: string; label: string; min: number; max: number; step?: number; unit: string; format?: (v: number) => string }[] = [
-    { key: "li_scan_interval_sec", label: "Intervallo base", min: 3600, max: 28800, step: 600, unit: "", format: formatInterval },
-    { key: "li_scan_top_threads", label: "Thread da scansionare", min: 5, max: 25, unit: "thread" },
-    { key: "li_scan_max_deep_reads", label: "Max letture deep", min: 1, max: 5, unit: "thread" },
-    { key: "li_scan_stagger_sec", label: "Stagger tra deep reads", min: 30, max: 180, unit: "sec" },
-    { key: "li_scan_jitter_pct", label: "Jitter", min: 0, max: 50, unit: "%" },
-    { key: "li_scan_long_pause_pct", label: "Prob. pausa lunga", min: 0, max: 30, unit: "%" },
-    { key: "li_scan_quick_check_pct", label: "Prob. check rapido", min: 0, max: 10, unit: "%" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Shield className="w-4 h-4 text-primary" />
-        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">LinkedIn — Lettura Stealth</h4>
-      </div>
-      <p className="text-[10px] text-muted-foreground leading-relaxed">
-        Modalità stealth LinkedIn: letture rare (4-6 al giorno) a orari umani. LinkedIn rileva scraping più facilmente di WhatsApp. Usa il pulsante "Leggi ora" per refresh manuale.
-      </p>
-
-      {/* Enable switch */}
-      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-        <Label className="text-xs font-medium">Scansione stealth LinkedIn attiva</Label>
-        <Switch
-          checked={enabled}
-          onCheckedChange={(v) => handleChange("li_scan_enabled", v ? "true" : "false")}
-        />
-      </div>
-
-      {/* Sliders */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sliders.map(s => {
-          const val = Number(getValue(s.key, LI_STEALTH_KEYS.find(k => k.key === s.key)?.defaultValue || "0"));
-          const displayVal = s.format ? s.format(val) : `${val} ${s.unit}`;
-          return (
-            <div key={s.key} className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-xs font-medium">{s.label}</Label>
-                <span className="text-xs font-mono text-muted-foreground">{displayVal}</span>
-              </div>
-              <Slider
-                min={s.min}
-                max={s.max}
-                step={s.step || 1}
-                value={[val]}
-                onValueChange={([v]) => handleChange(s.key, String(v))}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Work hours */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
-          <Label className="text-xs font-medium">Inizio lavoro (CET)</Label>
-          <Input
-            type="number"
-            min={0}
-            max={23}
-            value={workStart}
-            onChange={e => handleChange("li_scan_work_start_hour", e.target.value)}
-            className="h-7 text-xs"
-          />
-        </div>
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
-          <Label className="text-xs font-medium">Fine lavoro (CET)</Label>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={workEnd}
-            onChange={e => handleChange("li_scan_work_end_hour", e.target.value)}
-            className="h-7 text-xs"
-          />
-        </div>
-      </div>
-
-      {/* Live preview */}
-      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
-        <p className="text-xs font-medium text-primary">Anteprima distribuzione</p>
-        <p className="text-[10px] text-muted-foreground">
-          Prossima lettura: tra ~{estHours > 0 ? `${estHours}h ` : ""}{estMin}m ({sampleDelay.pattern})
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Letture stimate al giorno: {estimatedDaily}
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Distribuzione: {normalPct}% normale, {longPausePct}% pausa lunga, {quickCheckPct}% rapida
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Pausa notturna: dalle {workEnd}:00 alle {workStart}:00 (CET)
-        </p>
       </div>
     </div>
   );

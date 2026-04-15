@@ -25,11 +25,19 @@ export function useOperators() {
 }
 
 export function useCurrentOperator() {
-  // Auth removed — no "current user" operator. Return null.
   return useQuery({
     queryKey: queryKeys.operators.current,
-    queryFn: async () => null as OperatorRow | null,
-    staleTime: Infinity,
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("operators")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
 }
 

@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createLogger } from "@/lib/log";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session } from "@supabase/supabase-js";
 
 const log = createLogger("useWhatsAppExtensionBridge");
 
@@ -17,31 +15,12 @@ type WaExtensionResponse = {
 };
 
 export function useWhatsAppExtensionBridge() {
-  const [session, setSessionState] = useState<Session | null>(null);
-  const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
   const [isAvailable, setIsAvailable] = useState(false);
-
-  // Local auth listener
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!mounted) return;
-      setSessionState(s);
-      setStatus(s ? "authenticated" : "unauthenticated");
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_ev, s) => {
-      if (!mounted) return;
-      setSessionState(s);
-      setStatus(s ? "authenticated" : "unauthenticated");
-    });
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, []);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pendingRef = useRef<Map<string, (response: WaExtensionResponse) => void>>(new Map());
   const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
-  const lastSentTokenRef = useRef<string | null>(null);
   const sidebarChangedCbRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -51,12 +30,7 @@ export function useWhatsAppExtensionBridge() {
       if (!data || data.direction !== "from-extension-wa") return;
 
       if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-       if (data.action === "extensionDead") {
-         setIsAvailable(false);
-         configSentRef.current = false;
-         lastSentTokenRef.current = null;
-         return;
-       }
+      if (data.action === "extensionDead") { setIsAvailable(false); return; }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
       if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
 
@@ -78,13 +52,21 @@ export function useWhatsAppExtensionBridge() {
   }, []);
 
   // Send Supabase config to extension so it can call AI edge function
-  const sendConfig = useCallback(() => {
+  const sendConfig = useCallback(async () => {
+    if (configSentRef.current) return;
+    
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    if (!supabaseUrl || !anonKey || status === "loading") return;
+    
+    if (!supabaseUrl || !anonKey) return;
 
-    const authToken = status === "authenticated" ? session?.access_token || "" : "";
-    if (configSentRef.current && lastSentTokenRef.current === authToken) return;
+    // Get auth token if available
+    let authToken = "";
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      authToken = data.session?.access_token || "";
+    } catch (err) { console.warn("[WA Bridge] Failed to get auth session:", err); }
 
     const requestId = `wa_setConfig_${Date.now()}`;
     window.postMessage({
@@ -95,10 +77,9 @@ export function useWhatsAppExtensionBridge() {
       anonKey,
       authToken,
     }, window.location.origin);
-
-    lastSentTokenRef.current = authToken;
+    
     configSentRef.current = true;
-  }, [session?.access_token, status]);
+  }, []);
 
   useEffect(() => {
     const doPing = () => {
@@ -116,7 +97,7 @@ export function useWhatsAppExtensionBridge() {
 
   // Send config when extension becomes available
   useEffect(() => {
-    if (isAvailable) {
+    if (isAvailable && !configSentRef.current) {
       sendConfig();
     }
   }, [isAvailable, sendConfig]);
@@ -210,7 +191,6 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  // Reserved: not consumed by Soft Sync
   const onSidebarChanged = useCallback((cb: () => void) => {
     sidebarChangedCbRef.current = cb;
   }, []);

@@ -1,23 +1,49 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
 import { createLogger } from "@/lib/log";
 import { checkProfileConnection } from "@/data/profiles";
+import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("ConnectionBanner");
 
 /**
  * Shows a red banner when DB connection is lost.
- * Auth removed — no redirect, always polls.
+ * Redirects to /auth if auth expires mid-session.
+ * Only polls when a session is active.
  */
 export function ConnectionBanner() {
   const [dbLost, setDbLost] = useState(false);
+  const { status, event } = useAuth();
+  const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const hasSession = status === "authenticated";
 
+  // React to specific auth events
   useEffect(() => {
+    if (event === "TOKEN_REFRESHED") setDbLost(false);
+    if (event === "SIGNED_OUT") {
+      setDbLost(false);
+      navigate("/auth", { replace: true });
+    }
+  }, [event, navigate]);
+
+  // Heartbeat only when session is active
+  useEffect(() => {
+    if (!hasSession) {
+      clearInterval(intervalRef.current);
+      return;
+    }
+
     const heartbeat = async () => {
       try {
         const { error } = await checkProfileConnection();
         if (error) {
+          if (error.code === "PGRST301" || error.message?.includes("JWT")) {
+            setDbLost(false);
+            navigate("/auth", { replace: true });
+            return;
+          }
           setDbLost(true);
         } else {
           setDbLost(false);
@@ -30,7 +56,7 @@ export function ConnectionBanner() {
 
     intervalRef.current = setInterval(heartbeat, 30000);
     return () => clearInterval(intervalRef.current);
-  }, []);
+  }, [hasSession, navigate]);
 
   if (!dbLost) return null;
 

@@ -27,7 +27,6 @@ export default function AdminUsers() {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
 
-  // ── ALL hooks BEFORE any conditional return ──────────────────────
   const { data: myProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.operators.adminCheck,
     queryFn: async () => {
@@ -37,6 +36,13 @@ export default function AdminUsers() {
       return data;
     },
   });
+
+  if (profileLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (myProfile && !myProfile.is_admin) {
+    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
+  }
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: queryKeys.authorizedUsers.all,
@@ -97,14 +103,6 @@ export default function AdminUsers() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // ── Conditional renders AFTER all hooks ──────────────────────────
-  if (profileLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
-  }
-  if (myProfile && !myProfile.is_admin) {
-    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
-  }
-
   return (
     <div className="space-y-6">
       <Card>
@@ -118,6 +116,7 @@ export default function AdminUsers() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Add new user form */}
           <div className="flex gap-2">
             <Input
               placeholder="email@esempio.com"
@@ -143,6 +142,7 @@ export default function AdminUsers() {
             </Button>
           </div>
 
+          {/* Users table */}
           {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

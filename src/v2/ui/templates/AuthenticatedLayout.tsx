@@ -7,7 +7,9 @@ import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
-const OperatorSelectionOverlay = lazy(() => import("@/components/OperatorSelectionOverlay").then(m => ({ default: m.OperatorSelectionOverlay })));
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
@@ -52,12 +54,11 @@ const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav")
 const PWAInstallPrompt = lazy(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { profile } = useAuthV2();
+  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [backgroundReady, setBackgroundReady] = useState(false);
 
   useEffect(() => {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
@@ -66,10 +67,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setBackgroundReady(true), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Session readiness sourced from centralized AuthProvider
+  const { status: authStatus } = useAuth();
+  const sessionReady = authStatus === "authenticated";
+
+  useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
 
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
@@ -90,15 +92,32 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const deepSearch = useDeepSearchRunner();
 
   // Onboarding check
-  // Onboarding skipped — no auth
-  const onboardingDone = true;
-  const onboardingLoading = false;
+  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
+    queryKey: queryKeys.onboarding.completed,
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("key", "onboarding_completed")
+        .maybeSingle();
+      return data?.value === "true";
+    },
+    staleTime: Infinity,
+    enabled: isAuthenticated && sessionReady,
+  });
 
-  useJobHealthMonitor({ enabled: backgroundReady });
+  useJobHealthMonitor();
   useWcaSync();
-  const outreachQueue = useOutreachQueue({ enabled: backgroundReady });
-  const globalSync = useGlobalAutoSync({ enabled: backgroundReady });
+  const outreachQueue = useOutreachQueue();
+  const globalSync = useGlobalAutoSync();
   const wcaSession = useWcaSession();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) navigate("/v2/login", { replace: true });
+  }, [isLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -154,9 +173,28 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     if (t) clearTimeout(t);
   };
 
-  // No auth gate — always render
+  if (isLoading || !sessionReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
-  // Onboarding wizard removed — no auth
+  if (!isAuthenticated) return null;
+
+  // Show onboarding wizard if not completed
+  if (!onboardingLoading && onboardingDone === false) {
+    return (
+      <GlobalErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={null}>
+            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed })} />
+          </Suspense>
+        </QueryClientProvider>
+      </GlobalErrorBoundary>
+    );
+  }
 
   const wcaStatusColor = wcaSession.sessionActive === true ? "text-emerald-400" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
   const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
@@ -173,7 +211,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <SonnerToaster position="top-right" richColors closeButton />
                     <Toaster />
                     <LiveRegion message="" />
-                    <Suspense fallback={null}><OperatorSelectionOverlay /></Suspense>
 
                     <div className="flex h-screen bg-background">
                       {/* Skip navigation link for accessibility */}
@@ -200,7 +237,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             onWcaReconnect={() => wcaSession.ensureSession()}
                             isDark={isDark}
                             onToggleTheme={toggleTheme}
-                            onSignOut={() => {}}
+                            onSignOut={signOut}
                           />
                         </div>
                       </div>
@@ -235,7 +272,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                                 onWcaReconnect={() => wcaSession.ensureSession()}
                                 isDark={isDark}
                                 onToggleTheme={toggleTheme}
-                                onSignOut={() => {}}
+                                onSignOut={signOut}
                                 onMobileClose={() => setMobileOpen(false)}
                               />
                             </motion.div>

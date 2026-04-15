@@ -41,10 +41,6 @@ interface DirectoryCountRow {
   is_verified: boolean;
 }
 
-function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined): boolean {
-  return Boolean(error && (error.code === "PGRST002" || /schema cache/i.test(error.message ?? "")));
-}
-
 export async function rpcGetCountryStats(): Promise<CountryStatRow[]> {
   const { data, error } = await supabase.rpc("get_country_stats");
   if (error) throw error;
@@ -75,16 +71,14 @@ export async function rpcMatchContactsToWca() {
   return data;
 }
 
-export async function rpcIsEmailAuthorized(_email: string): Promise<boolean> {
-  return true;
+export async function rpcIsEmailAuthorized(email: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
+  if (error) throw error;
+  return data === true;
 }
 
-export async function rpcRecordUserLogin(_email: string): Promise<void> {
-  return;
-}
-
-export async function rpcGetUserRoles(_userId: string): Promise<string[]> {
-  return ["admin"];
+export async function rpcRecordUserLogin(email: string): Promise<void> {
+  await supabase.rpc("record_user_login", { p_email: email });
 }
 
 /**

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
-import { useOperators, type Operator } from "@/hooks/useOperators";
+import { useOperators, useCurrentOperator, type Operator } from "@/hooks/useOperators";
 
 type ActiveOperatorCtx = {
   operators: Operator[];
@@ -9,7 +9,6 @@ type ActiveOperatorCtx = {
   viewingAll: boolean;
   isImpersonating: boolean;
   setViewingAll: () => void;
-  requiresSelection: boolean;
 };
 
 const Ctx = createContext<ActiveOperatorCtx>({
@@ -20,15 +19,20 @@ const Ctx = createContext<ActiveOperatorCtx>({
   viewingAll: false,
   isImpersonating: false,
   setViewingAll: () => {},
-  requiresSelection: true,
 });
 
 export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
   const { data: operators = [], isLoading: loadingOps } = useOperators();
+  const { data: currentOp, isLoading: loadingCurrent } = useCurrentOperator();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [viewingAll, setViewingAllState] = useState(false);
 
-  // No auto-select — user must choose
+  // Default to current user's operator
+  useEffect(() => {
+    if (!activeId && currentOp?.id) {
+      setActiveId(currentOp.id);
+    }
+  }, [currentOp, activeId]);
 
   const handleSetActiveId = (id: string) => {
     setViewingAllState(false);
@@ -43,22 +47,20 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
   const activeOperator = viewingAll
     ? null
     : activeId
-      ? operators.find(o => o.id === activeId) || null
-      : null;
+      ? operators.find(o => o.id === activeId) || currentOp || null
+      : currentOp || null;
 
-  const requiresSelection = !loadingOps && !viewingAll && activeOperator === null;
+  const isImpersonating = !viewingAll && activeOperator != null && currentOp != null && activeOperator.id !== currentOp.id;
 
   const ctxValue = useMemo(() => ({
     operators,
     activeOperator,
     setActiveOperatorId: handleSetActiveId,
-    isLoading: loadingOps,
+    isLoading: loadingOps || loadingCurrent,
     viewingAll,
-    isImpersonating: false,
+    isImpersonating,
     setViewingAll: handleSetViewingAll,
-    requiresSelection,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [operators, activeOperator, loadingOps, viewingAll, requiresSelection]);
+  }), [operators, activeOperator, loadingOps, loadingCurrent, viewingAll, isImpersonating]);
 
   return (
     <Ctx.Provider value={ctxValue}>
