@@ -3,6 +3,10 @@
  * Receives goal + history, returns AI decision with tool_calls.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
+import { estimateTokens } from "../_shared/tokenBudget.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,6 +121,27 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Auth
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    let userId = "anonymous";
+    if (token) {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
+      );
+      const { data: { user } } = await sb.auth.getUser(token);
+      if (user) userId = user.id;
+    }
+
+    // Rate limit: 60 req/min
+    const rl = checkRateLimit(`agent-loop:${userId}`, { maxTokens: 60, refillRate: 1 });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
+
+    // Cost guardrail
+    const budget = await checkDailyBudget(userId, "ai", 500); // estimate ~500 tokens per step
+    if (!budget.allowed) return budgetExceededResponse(budget, corsHeaders);
+
     const { goal, history, sessionContext } = await req.json();
 
     if (!goal || typeof goal !== "string") {
@@ -222,6 +247,10 @@ Regole:
 
       return { name: fn.name as string, arguments: args, id: tc.id as string };
     }).filter(Boolean);
+
+    // Record usage
+    const responseTokens = estimateTokens(msg.content ?? "") + toolCalls.length * 50;
+    await recordUsage(userId, "ai", responseTokens).catch(() => {});
 
     return new Response(
       JSON.stringify({ message: msg.content ?? "", toolCalls }),

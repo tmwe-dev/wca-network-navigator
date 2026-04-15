@@ -1,4 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +19,23 @@ serve(async (req) => {
   }
 
   try {
+    // Auth
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    let userId = "anonymous";
+    if (token) {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
+      );
+      const { data: { user } } = await sb.auth.getUser(token);
+      if (user) userId = user.id;
+    }
+
+    // Rate limit: 60 req/min
+    const rl = checkRateLimit(`tts:${userId}`, { maxTokens: 60, refillRate: 1 });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
+
     const { text, voiceId } = await req.json();
     if (!text || typeof text !== "string") {
       return new Response(
@@ -32,6 +52,10 @@ serve(async (req) => {
     }
 
     const truncated = text.slice(0, 1500);
+
+    // Cost guardrail
+    const budget = await checkDailyBudget(userId, "tts", truncated.length);
+    if (!budget.allowed) return budgetExceededResponse(budget, corsHeaders);
 
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId ?? VOICE_ID_IT}?output_format=mp3_44100_128`,
@@ -63,6 +87,9 @@ serve(async (req) => {
         { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    // Record TTS usage
+    await recordUsage(userId, "tts", truncated.length).catch(() => {});
 
     const audio = await res.arrayBuffer();
     return new Response(audio, {
