@@ -41,6 +41,24 @@ interface DirectoryCountRow {
   is_verified: boolean;
 }
 
+interface AuthGateAuthorizedResponse {
+  authorized?: boolean;
+}
+
+interface AuthGateRolesResponse {
+  roles?: unknown[];
+}
+
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined): boolean {
+  return Boolean(error && (error.code === "PGRST002" || /schema cache/i.test(error.message ?? "")));
+}
+
+async function invokeAuthGate<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("auth-gate", { body });
+  if (error) throw error;
+  return (data ?? {}) as T;
+}
+
 export async function rpcGetCountryStats(): Promise<CountryStatRow[]> {
   const { data, error } = await supabase.rpc("get_country_stats");
   if (error) throw error;
@@ -72,24 +90,59 @@ export async function rpcMatchContactsToWca() {
 }
 
 export async function rpcIsEmailAuthorized(email: string): Promise<boolean> {
-  // Retry up to 3 times to handle transient PGRST002 / 503 errors
-  let lastError: unknown;
+  let lastError: { code?: string; message?: string } | null = null;
+
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data, error } = await supabase.rpc("is_email_authorized", { p_email: email });
     if (!error) return data === true;
-    // PGRST002 = schema cache reloading (503) — retry after short delay
-    if (error.code === "PGRST002" || error.message?.includes("schema cache")) {
+    if (isSchemaCacheError(error)) {
       lastError = error;
-      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
       continue;
     }
     throw error;
   }
-  throw lastError;
+
+  const response = await invokeAuthGate<AuthGateAuthorizedResponse>({
+    action: "is_email_authorized",
+    email,
+  });
+  if (response.authorized === true) return true;
+  if (response.authorized === false) return false;
+  throw lastError ?? new Error("Verifica whitelist non disponibile.");
 }
 
 export async function rpcRecordUserLogin(email: string): Promise<void> {
-  await supabase.rpc("record_user_login", { p_email: email });
+  const { error } = await supabase.rpc("record_user_login", { p_email: email });
+  if (!error) return;
+  if (isSchemaCacheError(error)) {
+    await invokeAuthGate<{ success?: boolean }>({ action: "record_user_login", email });
+    return;
+  }
+  throw error;
+}
+
+export async function rpcGetUserRoles(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+
+  if (!error) {
+    return (data ?? []).map((row) => row.role as string);
+  }
+
+  if (isSchemaCacheError(error)) {
+    const response = await invokeAuthGate<AuthGateRolesResponse>({
+      action: "get_user_roles",
+      userId,
+    });
+    return Array.isArray(response.roles)
+      ? response.roles.filter((role): role is string => typeof role === "string")
+      : [];
+  }
+
+  throw error;
 }
 
 /**

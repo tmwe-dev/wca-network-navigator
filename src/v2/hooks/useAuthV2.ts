@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
+import { rpcGetUserRoles, rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -110,13 +110,9 @@ async function loadProfile(authUser: User): Promise<UserProfile | null> {
 // ── Helper: load roles ───────────────────────────────────────────────
 
 async function loadRoles(userId: string): Promise<AppRole[]> {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
-
-  if (!data || data.length === 0) return ["user"];
-  return data.map((row) => row.role as AppRole);
+  const roles = await rpcGetUserRoles(userId);
+  if (!roles || roles.length === 0) return ["user"];
+  return roles as AppRole[];
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────
