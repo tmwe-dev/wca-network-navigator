@@ -3,7 +3,11 @@
  * These are different from Command single-action tools:
  * they operate at DOM/navigation level for browser automation.
  */
-import { navigateTool, readPageTool, clickTool, typeTextTool, readDomTool } from "./dom";
+import {
+  navigateTool, readPageTool, clickTool, typeTextTool, readDomTool,
+  waitForTool, scrollToTool, selectOptionTool, uploadFileTool,
+  submitFormTool, takeSnapshotTool, readTableTool,
+} from "./dom";
 import { listKbTool, readKbTool } from "./kb";
 import { scrapeUrlTool } from "./scrape";
 
@@ -55,6 +59,13 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
   clickTool,
   typeTextTool,
   readDomTool,
+  waitForTool,
+  scrollToTool,
+  selectOptionTool,
+  uploadFileTool,
+  submitFormTool,
+  takeSnapshotTool,
+  readTableTool,
   listKbTool,
   readKbTool,
   scrapeUrlTool,
