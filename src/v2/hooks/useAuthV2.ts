@@ -1,16 +1,13 @@
 /**
- * useAuthV2 — STEP 3: Auth hook completo
- *
+ * useAuthV2 — Auth hook for V2.
  * Login email/password, profilo, ruoli, whitelist.
- * Session state sourced from centralized AuthProvider.
+ * Session state sourced directly from supabase.auth.
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
 import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
-import type { User, Session } from "@supabase/supabase-js";
-import { useAuth } from "@/providers/AuthProvider";
+import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -36,7 +33,6 @@ export interface AuthState {
 
 interface AuthActions {
   readonly signInWithEmail: (email: string, password: string) => Promise<void>;
-  
   readonly signUp: (email: string, password: string, displayName: string) => Promise<void>;
   readonly signOut: () => Promise<void>;
   readonly resetPassword: (email: string) => Promise<void>;
@@ -91,7 +87,7 @@ async function loadProfile(authUser: User): Promise<UserProfile | null> {
     };
   }
 
-  // Auto-creazione profilo se mancante (utenti pre-trigger)
+  // Auto-creazione profilo se mancante
   const displayName = getDisplayName(authUser);
 
   const { error: insertErr } = await supabase
@@ -123,23 +119,12 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
   return data.map((row) => row.role as AppRole);
 }
 
-// ── Helper: check whitelist ──────────────────────────────────────────
-
-async function isEmailAuthorized(email: string): Promise<boolean> {
-  return rpcIsEmailAuthorized(normalizeEmail(email));
-}
-
-// ── Helper: record login ─────────────────────────────────────────────
-
-async function recordLogin(email: string): Promise<void> {
-  await rpcRecordUserLogin(normalizeEmail(email));
-}
-
 // ── Hook ─────────────────────────────────────────────────────────────
 
 export function useAuthV2(): UseAuthV2Return {
-  // Source session/user from centralized AuthProvider
-  const { session, user, status } = useAuth();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [authStatus, setAuthStatus] = useState<"loading" | "ready">("loading");
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<readonly AppRole[]>([]);
@@ -148,6 +133,32 @@ export function useAuthV2(): UseAuthV2Return {
 
   const isAuthenticated = user !== null && session !== null;
   const isAdmin = roles.includes("admin");
+
+  // ── Auth listener ────────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+
+    const sync = (s: Session | null) => {
+      if (!mounted) return;
+      setSession(s);
+      setUser(s?.user ?? null);
+      setAuthStatus("ready");
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, currentSession: Session | null) => {
+        sync(currentSession);
+      },
+    );
+
+    supabase.auth.getSession().then(({ data: { session: initial } }) => {
+      if (mounted && authStatus === "loading") sync(initial);
+    }).catch(() => {
+      if (mounted && authStatus === "loading") sync(null);
+    });
+
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load user data after auth ────────────────────────────────────
 
@@ -160,7 +171,7 @@ export function useAuthV2(): UseAuthV2Return {
     }
 
     try {
-      const authorized = await isEmailAuthorized(email);
+      const authorized = await rpcIsEmailAuthorized(normalizeEmail(email));
       if (!authorized) {
         await supabase.auth.signOut();
         setError("Email non autorizzata. Contatta l'amministratore.");
@@ -192,7 +203,7 @@ export function useAuthV2(): UseAuthV2Return {
     );
 
     try {
-      await recordLogin(email);
+      await rpcRecordUserLogin(normalizeEmail(email));
     } catch (err) {
       if (!isTransientBootstrapError(err)) {
         setError(err instanceof Error ? err.message : "Errore durante la registrazione del login.");
@@ -200,10 +211,10 @@ export function useAuthV2(): UseAuthV2Return {
     }
   }, []);
 
-  // ── React to session changes from AuthProvider ───────────────────
+  // ── React to session changes ─────────────────────────────────────
 
   useEffect(() => {
-    if (status === "loading") return;
+    if (authStatus === "loading") return;
 
     if (user) {
       setIsLoading(true);
@@ -213,7 +224,7 @@ export function useAuthV2(): UseAuthV2Return {
       setRoles([]);
       setIsLoading(false);
     }
-  }, [user, status, loadUserData]);
+  }, [user, authStatus, loadUserData]);
 
   // Fallback timer (5s max loading)
   useEffect(() => {
@@ -229,9 +240,9 @@ export function useAuthV2(): UseAuthV2Return {
     setError(null);
     setIsLoading(true);
 
-    const normalizedEmail = normalizeEmail(email);
+    const ne = normalizeEmail(email);
     try {
-      const authorized = await isEmailAuthorized(normalizedEmail);
+      const authorized = await rpcIsEmailAuthorized(ne);
       if (!authorized) {
         setError("Email non autorizzata. Contatta l'amministratore.");
         setIsLoading(false);
@@ -245,44 +256,34 @@ export function useAuthV2(): UseAuthV2Return {
 
     try {
       await supabase.auth.signOut({ scope: "local" });
-    } catch {
-      // Ignore stale local-session cleanup failures before a fresh login attempt
-    }
+    } catch { /* ignore */ }
 
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: ne, password });
     if (authError) {
       setError(authError.message);
       setIsLoading(false);
     }
   }, []);
 
-
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     setError(null);
     setIsLoading(true);
 
-    const normalizedEmail = normalizeEmail(email);
-
-    const authorized = await isEmailAuthorized(normalizedEmail);
+    const ne = normalizeEmail(email);
+    const authorized = await rpcIsEmailAuthorized(ne);
     if (!authorized) {
-      setError("Email non autorizzata. Contatta l'amministratore per essere aggiunto alla whitelist.");
+      setError("Email non autorizzata.");
       setIsLoading(false);
       return;
     }
 
     const { error: authError } = await supabase.auth.signUp({
-      email: normalizedEmail,
+      email: ne,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth`,
-        data: { display_name: displayName },
-      },
+      options: { data: { display_name: displayName } },
     });
 
-    if (authError) {
-      setError(authError.message);
-    }
-
+    if (authError) setError(authError.message);
     setIsLoading(false);
   }, []);
 
@@ -295,9 +296,7 @@ export function useAuthV2(): UseAuthV2Return {
 
   const resetPassword = useCallback(async (email: string) => {
     setError(null);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email));
     if (authError) setError(authError.message);
   }, []);
 
