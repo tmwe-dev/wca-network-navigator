@@ -173,7 +173,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     <SonnerToaster position="top-right" richColors closeButton />
                     <Toaster />
                     <LiveRegion message="" />
-                    <OperatorSelectionOverlay />
+                    <Suspense fallback={null}><OperatorSelectionOverlay /></Suspense>
 
                     <div className="flex h-screen bg-background">
                       {/* Skip navigation link for accessibility */}
