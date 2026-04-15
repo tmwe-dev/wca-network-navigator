@@ -14,10 +14,12 @@ import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FlowCanvas from "./command/canvas/FlowCanvas";
 import ComposerCanvas from "./command/canvas/ComposerCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
-import { resolveTool, TOOLS } from "./command/tools/registry";
+import { resolveTool, TOOLS, TOOL_METADATA } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { planExecution } from "@/v2/io/edge/aiAssistant";
+import { executePlan, type PlanExecutionState } from "./command/planRunner";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -300,6 +302,7 @@ const CommandPage = () => {
   const [execSteps, setExecSteps] = useState<ExecutionStep[]>([]);
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
   const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
+  const [planState, setPlanState] = useState<PlanExecutionState | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const governance = useGovernance(activeScenarioKey ?? undefined);
@@ -546,6 +549,16 @@ const CommandPage = () => {
   }, [addMessage]);
 
   const handleApprove = useCallback(async () => {
+    // Plan approval flow
+    if (planState?.status === "awaiting-approval") {
+      setFlowPhase("executing");
+      addMessage({ role: "assistant", content: "Piano approvato. Esecuzione in corso...", timestamp: ts(), agentName: "Automation" });
+      const updated: PlanExecutionState = { ...planState, status: "running" };
+      setPlanState(updated);
+      await runPlan(updated);
+      return;
+    }
+
     // Live tool approval flow
     if (pendingApproval) {
       const tool = TOOLS.find(t => t.id === pendingApproval.toolId);
@@ -625,8 +638,68 @@ const CommandPage = () => {
     setChainHighlight(undefined);
     setLiveResult(null);
     setPendingApproval(null);
+    setPlanState(null);
     toast("Azione annullata");
     addMessage({ role: "assistant", content: "Operazione annullata. Nessuna azione eseguita. Audit Action: cancellazione registrata.", timestamp: ts(), agentName: "Orchestratore" });
+  }, [addMessage]);
+
+  const runPlan = useCallback(async (state: PlanExecutionState) => {
+    const final = await executePlan(state, (s) => {
+      setPlanState(s);
+      setExecSteps(
+        state.steps.map((step, i) => ({
+          label: TOOLS.find((t) => t.id === step.toolId)?.label ?? step.toolId,
+          detail: step.reasoning,
+          status: (i + 1 < s.currentStep ? "done" : i + 1 === s.currentStep ? "running" : "pending") as ExecutionStep["status"],
+        })),
+      );
+      setExecProgress(Math.round((Object.keys(s.results).length / state.steps.length) * 100));
+    });
+
+    if (final.status === "done") {
+      const lastStep = final.steps[final.steps.length - 1];
+      const lastResult = final.results[lastStep.stepNumber];
+      if (lastResult) setLiveResult(lastResult);
+
+      // Step pills
+      for (const step of final.steps) {
+        const r = final.results[step.stepNumber];
+        const countLabel = r?.meta && "count" in r.meta ? ` · ${r.meta.count}` : "";
+        addMessage({
+          role: "assistant",
+          content: `🔧 Step ${step.stepNumber}/${final.steps.length} · ${step.toolId}${countLabel}`,
+          agentName: "Automation",
+          timestamp: ts(),
+        });
+      }
+
+      addMessage({
+        role: "assistant",
+        content: `✅ Piano completato: ${final.summary}`,
+        agentName: "Orchestratore",
+        timestamp: ts(),
+        meta: `${final.steps.length} step · plan-execution`,
+      });
+      setFlowPhase("done");
+      setExecProgress(100);
+      toast.success("Piano completato");
+
+      // Show last result as canvas
+      if (lastResult) {
+        if (lastResult.kind === "table") setCanvas("live-table");
+        else if (lastResult.kind === "card-grid") setCanvas("live-card-grid");
+        else if (lastResult.kind === "report") setCanvas("live-report");
+      }
+    } else if (final.status === "error") {
+      toast.error(final.error ?? "Errore esecuzione piano");
+      addMessage({
+        role: "assistant",
+        content: `❌ Piano fallito: ${final.error}`,
+        agentName: "Orchestratore",
+        timestamp: ts(),
+      });
+      setFlowPhase("idle");
+    }
   }, [addMessage]);
 
   const sendMessage = async (text?: string) => {
@@ -640,13 +713,86 @@ const CommandPage = () => {
     setVoiceSpeaking(false);
     setChainHighlight(undefined);
     setLiveResult(null);
+    setPlanState(null);
 
-    const scenarioKey = await detectScenario(content);
-    if (scenarioKey === null) {
-      // Live tool
-      await runLiveTool(content);
-    } else {
-      runFlow(scenarioKey);
+    // Multi-step detection
+    const isMultiStep = /\b(e poi|dopo|quindi|poi|inoltre|infine)\b/i.test(content);
+
+    if (!isMultiStep) {
+      const scenarioKey = await detectScenario(content);
+      if (scenarioKey === null) {
+        await runLiveTool(content);
+      } else {
+        runFlow(scenarioKey);
+      }
+      return;
+    }
+
+    // Multi-step → plan execution
+    setFlowPhase("thinking");
+    addMessage({ role: "assistant", content: "", timestamp: "", thinking: true });
+
+    try {
+      const planRes = await planExecution(content, TOOL_METADATA);
+
+      setMessages((prev) => prev.filter((m) => !m.thinking));
+
+      if (planRes._tag === "Err" || planRes.value.steps.length === 0) {
+        addMessage({
+          role: "assistant",
+          content: planRes._tag === "Ok" ? planRes.value.summary : "Non sono riuscito a pianificare questa azione.",
+          agentName: "Orchestratore",
+          timestamp: ts(),
+        });
+        setFlowPhase("idle");
+        return;
+      }
+
+      const plan = planRes.value;
+      const flowSteps: ExecutionStep[] = plan.steps.map((s) => ({
+        label: TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId,
+        detail: s.reasoning,
+        status: "pending" as const,
+      }));
+      setExecSteps(flowSteps);
+
+      addMessage({
+        role: "assistant",
+        content: `**Piano con ${plan.steps.length} step:** ${plan.summary}\n\n${plan.steps.map((s) => `${s.stepNumber}. **${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}** — ${s.reasoning}`).join("\n")}`,
+        agentName: "Orchestratore",
+        timestamp: ts(),
+        meta: `plan-execution · ${plan.steps.length} step`,
+      });
+
+      const requiresApproval = plan.steps.some((s) => {
+        const meta = TOOL_METADATA.find((t) => t.id === s.toolId);
+        return meta?.requiresApproval;
+      });
+
+      const newState: PlanExecutionState = {
+        steps: plan.steps,
+        summary: plan.summary,
+        results: {},
+        currentStep: 0,
+        status: requiresApproval ? "awaiting-approval" : "running",
+      };
+      setPlanState(newState);
+
+      if (requiresApproval) {
+        setFlowPhase("proposal");
+      } else {
+        setFlowPhase("executing");
+        await runPlan(newState);
+      }
+    } catch {
+      setMessages((prev) => prev.filter((m) => !m.thinking));
+      addMessage({
+        role: "assistant",
+        content: "Errore nella pianificazione. Riformula la richiesta.",
+        agentName: "Orchestratore",
+        timestamp: ts(),
+      });
+      setFlowPhase("idle");
     }
   };
 
@@ -821,7 +967,7 @@ const CommandPage = () => {
                   </AnimatePresence>
                 ))}
 
-                {activeScenario?.approval && (flowPhase === "proposal" || flowPhase === "approval") && (
+                {activeScenario?.approval && (flowPhase === "proposal" || flowPhase === "approval") && !planState && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
                     <ApprovalPanel
                       visible
@@ -832,6 +978,24 @@ const CommandPage = () => {
                       onApprove={handleApprove}
                       onModify={() => {}}
                       onCancel={handleCancel}
+                    />
+                  </motion.div>
+                )}
+
+                {planState?.status === "awaiting-approval" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                    <ApprovalPanel
+                      visible
+                      title="Conferma piano"
+                      description={planState.summary}
+                      details={planState.steps.map((s) => ({
+                        label: `Step ${s.stepNumber} · ${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}`,
+                        value: s.reasoning,
+                      }))}
+                      governance={{ role: governance.role, permission: "EXECUTE:PLAN", policy: governance.policy }}
+                      onApprove={handleApprove}
+                      onModify={() => {}}
+                      onCancel={() => { setPlanState(null); setFlowPhase("idle"); toast("Piano annullato"); }}
                     />
                   </motion.div>
                 )}
