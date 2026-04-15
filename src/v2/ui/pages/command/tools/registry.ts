@@ -4,6 +4,7 @@ import { followupBatchTool } from "./followupBatch";
 import { agentReportTool } from "./agentReport";
 import { campaignStatusTool } from "./campaignStatus";
 import { composeEmailTool } from "./composeEmail";
+import { searchKbTool } from "./searchKb";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -12,6 +13,7 @@ const TOOLS: readonly Tool[] = [
   agentReportTool,
   followupBatchTool,
   partnerSearchTool,
+  searchKbTool,
 ];
 
 /**
