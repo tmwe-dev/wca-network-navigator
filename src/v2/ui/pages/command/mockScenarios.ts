@@ -1,4 +1,7 @@
 import type { ExecutionStep } from "@/design-system/ExecutionFlow";
+import type { CardGridItem } from "./canvas/CardGridCanvas";
+import type { TimelineEvent, TimelineKpi } from "./canvas/TimelineCanvas";
+import type { FlowNode } from "./canvas/FlowCanvas";
 
 export interface CanvasRow {
   cells: string[];
@@ -22,9 +25,15 @@ export interface ResultPayload {
   kpis: { label: string; value: string }[];
 }
 
+export type CanvasType = "table" | "card-grid" | "timeline" | "flow";
+
 export interface MockScenario {
   key: string;
+  canvasType: CanvasType;
   canvasData: CanvasData | null;
+  cardGridData?: CardGridItem[];
+  timelineData?: { events: TimelineEvent[]; kpis: TimelineKpi[] };
+  flowData?: { nodes: FlowNode[]; title: string };
   approvalPayload: ApprovalPayload | null;
   executionSteps: ExecutionStep[];
   resultPayload: ResultPayload;
@@ -32,6 +41,7 @@ export interface MockScenario {
 
 const partnerSearch: MockScenario = {
   key: "partner-search",
+  canvasType: "table",
   canvasData: {
     title: "PARTNER · RICERCA",
     headers: ["Partner", "Paese", "Ultimo contatto", "Stato"],
@@ -46,8 +56,7 @@ const partnerSearch: MockScenario = {
   },
   approvalPayload: {
     title: "Vuoi lavorare su questi 6 partner?",
-    description:
-      "Ho trovato 6 partner spedizionieri in Germania con inattività superiore a 30 giorni. Posso preparare un piano di re-engagement personalizzato per ciascuno.",
+    description: "Ho trovato 6 partner spedizionieri in Germania con inattività superiore a 30 giorni. Posso preparare un piano di re-engagement personalizzato per ciascuno.",
     details: [
       { label: "Partner trovati", value: "6" },
       { label: "Inattività media", value: "60 giorni" },
@@ -74,28 +83,21 @@ const partnerSearch: MockScenario = {
 
 const followupBatch: MockScenario = {
   key: "followup-batch",
-  canvasData: {
-    title: "EMAIL · CODA FOLLOW-UP",
-    headers: ["Destinatario", "Oggetto", "Stato"],
-    rows: [
-      { cells: ["marco.chen@asiapacific.co", "Re: Partnership Q2", "Bozza pronta"] },
-      { cells: ["yuki.tanaka@tokyofreight.jp", "Aggiornamento servizi", "Bozza pronta"] },
-      { cells: ["li.wei@shanghailog.cn", "Proposta collaborazione", "Bozza pronta"] },
-      { cells: ["raj.patel@mumbaiexpress.in", "Follow-up meeting", "Bozza pronta"] },
-      { cells: ["kim.park@seoulcargo.kr", "Re: Quotazione", "Bozza pronta"] },
-      { cells: ["anna.wong@hkshipping.hk", "Nuove rotte disponibili", "Bozza pronta"] },
-      { cells: ["david.lee@sglogistics.sg", "Partnership update", "Bozza pronta"] },
-      { cells: ["maria.santos@manilafreight.ph", "Re: Contratto", "Bozza pronta"] },
-      { cells: ["tom.nguyen@hcmcargo.vn", "Opportunità Q2", "Bozza pronta"] },
-      { cells: ["sarah.brown@sydneylog.au", "Follow-up conferenza", "Bozza pronta"] },
-    ],
-  },
+  canvasType: "card-grid",
+  canvasData: null,
+  cardGridData: [
+    { name: "Marco Chen", company: "Asia Pacific Logistics Co.", lastContact: "42 giorni fa", action: "Email follow-up partnership Q2" },
+    { name: "Yuki Tanaka", company: "Tokyo Freight International", lastContact: "38 giorni fa", action: "Aggiornamento servizi rotte" },
+    { name: "Li Wei", company: "Shanghai Logistics Group", lastContact: "55 giorni fa", action: "Proposta nuova collaborazione" },
+    { name: "Raj Patel", company: "Mumbai Express Cargo", lastContact: "61 giorni fa", action: "Follow-up post-meeting" },
+    { name: "Kim Park", company: "Seoul Cargo Services", lastContact: "33 giorni fa", action: "Re-invio quotazione aggiornata" },
+    { name: "Anna Wong", company: "HK Shipping Ltd.", lastContact: "47 giorni fa", action: "Presentazione nuove rotte" },
+  ],
   approvalPayload: {
-    title: "Invio 10 email follow-up?",
-    description:
-      "Ho preparato 10 email personalizzate di follow-up per i contatti Asia Pacific. Ogni messaggio è stato adattato sulla base della conversation history e del contesto del partner.",
+    title: "Invio 6 email follow-up?",
+    description: "Ho preparato 6 email personalizzate di follow-up per i contatti Asia Pacific. Ogni messaggio è stato adattato sulla base della conversation history.",
     details: [
-      { label: "Email in coda", value: "10" },
+      { label: "Email in coda", value: "6" },
       { label: "Template base", value: "Follow-up Asia Q2" },
       { label: "Personalizzazione", value: "Per contatto" },
     ],
@@ -109,9 +111,9 @@ const followupBatch: MockScenario = {
     { label: "Registrazione nel log attività", status: "pending" as const },
   ],
   resultPayload: {
-    message: "10 email di follow-up inviate con successo ai contatti Asia Pacific.",
+    message: "6 email di follow-up inviate con successo ai contatti Asia Pacific.",
     kpis: [
-      { label: "Email inviate", value: "10" },
+      { label: "Email inviate", value: "6" },
       { label: "Tasso personalizzazione", value: "100%" },
       { label: "Tempo medio composizione", value: "1.3s" },
     ],
@@ -120,7 +122,25 @@ const followupBatch: MockScenario = {
 
 const agentReport: MockScenario = {
   key: "agent-report",
+  canvasType: "timeline",
   canvasData: null,
+  timelineData: {
+    kpis: [
+      { label: "Azioni approvate", value: "34" },
+      { label: "In attesa", value: "7" },
+      { label: "Rifiutate", value: "2" },
+    ],
+    events: [
+      { time: "09:14", agent: "Partner Scout", action: "Scan rete WCA completato — 12 nuovi partner rilevati", status: "success" },
+      { time: "09:45", agent: "Outreach Runner", action: "Batch email Europa inviato — 8 messaggi", status: "success" },
+      { time: "10:22", agent: "Follow-up Watcher", action: "3 risposte rilevate — analisi sentiment avviata", status: "info" },
+      { time: "11:00", agent: "Outreach Runner", action: "Invio batch Asia in attesa di approvazione", status: "pending" },
+      { time: "11:30", agent: "Partner Scout", action: "Anomalia: partner DX Express rimosso dalla directory", status: "warning" },
+      { time: "12:15", agent: "Follow-up Watcher", action: "Reminder automatico programmato per 5 contatti", status: "success" },
+      { time: "14:00", agent: "Partner Scout", action: "Deep search completato — 3 profili arricchiti", status: "success" },
+      { time: "15:30", agent: "Outreach Runner", action: "Campagna Francia completata — 100% delivery", status: "success" },
+    ],
+  },
   approvalPayload: null,
   executionSteps: [
     { label: "Raccolta log agenti", status: "pending" as const },
@@ -137,19 +157,65 @@ const agentReport: MockScenario = {
   },
 };
 
+const campaignPreview: MockScenario = {
+  key: "campaign-preview",
+  canvasType: "flow",
+  canvasData: null,
+  flowData: {
+    title: "Campagna re-engagement Francia Q2",
+    nodes: [
+      { label: "Trigger: partner inattivi >30gg", type: "trigger", detail: "Filtro: country_code=FR, last_interaction<30d" },
+      { label: "Selezione contatti primari", type: "condition", detail: "Max 1 contatto per partner · con email" },
+      { label: "Generazione email personalizzata", type: "action", detail: "Template: re-engagement-v2 · Lingua: FR" },
+      { label: "Quality check AI", type: "condition", detail: "Score minimo: 0.85 · Tone: professionale" },
+      { label: "Invio batch con throttling", type: "action", detail: "Max 20/ora · Retry: 2x · Tracking: attivo" },
+      { label: "Completamento + logging", type: "end", detail: "Audit trail + notifica manager" },
+    ],
+  },
+  approvalPayload: {
+    title: "Lanciare campagna Francia Q2?",
+    description: "Campagna di re-engagement automatica per 15 partner francesi inattivi. Il flusso include generazione AI, quality check e invio con throttling.",
+    details: [
+      { label: "Partner target", value: "15" },
+      { label: "Canale", value: "Email" },
+      { label: "Durata stimata", value: "~45 min" },
+    ],
+    governance: { role: "Commerciale", permission: "WRITE:CAMPAIGN", policy: "POLICY v1.0 · SOFT-SYNC" },
+  },
+  executionSteps: [
+    { label: "Caricamento target list", status: "pending" as const },
+    { label: "Generazione contenuti AI", status: "pending" as const },
+    { label: "Quality check batch", status: "pending" as const },
+    { label: "Invio email con throttling", status: "pending" as const },
+    { label: "Logging e audit trail", status: "pending" as const },
+  ],
+  resultPayload: {
+    message: "Campagna Francia Q2 completata. 15 email inviate, 0 bounce, audit trail registrato.",
+    kpis: [
+      { label: "Email inviate", value: "15" },
+      { label: "Delivery rate", value: "100%" },
+      { label: "Tempo totale", value: "38 min" },
+    ],
+  },
+};
+
 export const mockScenarios: Record<string, MockScenario> = {
   "partner-search": partnerSearch,
   "followup-batch": followupBatch,
   "agent-report": agentReport,
+  "campaign-preview": campaignPreview,
 };
 
 export function matchScenario(prompt: string): MockScenario {
   const lower = prompt.toLowerCase();
-  if (lower.includes("email") || lower.includes("follow-up") || lower.includes("followup")) {
+  if (lower.includes("email") || lower.includes("follow-up") || lower.includes("followup") || lower.includes("inattiv")) {
     return followupBatch;
   }
-  if (lower.includes("agent") || lower.includes("riepilogo")) {
+  if (lower.includes("agent") || lower.includes("riepilogo") || lower.includes("report") || lower.includes("performance")) {
     return agentReport;
+  }
+  if (lower.includes("campagna") || lower.includes("campaign") || lower.includes("lancia") || lower.includes("flusso")) {
+    return campaignPreview;
   }
   return partnerSearch;
 }
