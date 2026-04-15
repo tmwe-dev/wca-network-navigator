@@ -23,8 +23,7 @@ describe("Auth and routing legacy leak guardrails", () => {
     expect(commandPaletteSource).toContain('const isV2 = location.pathname.startsWith("/v2")');
   });
 
-  it("all /v1/* routes redirect to V2 via deprecation catch-all", () => {
-    expect(appSource).toContain('path="/v1/*"');
-    expect(appSource).toContain("V1DeprecationRedirect");
+  it("legacy mission-builder url redirects to V2", () => {
+    expect(appSource).toContain('<Route path="/v1/mission-builder" element={<Navigate to="/v2/missions" replace />} />');
   });
 });
