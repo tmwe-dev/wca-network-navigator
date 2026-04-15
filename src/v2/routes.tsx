@@ -136,6 +136,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
+          <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
