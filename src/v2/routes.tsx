@@ -68,7 +68,7 @@ export function V2Routes(): React.ReactElement {
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
         {/* Legacy redirects */}
-        <Route path="login" element={<Navigate to="/auth" replace />} />
+        <Route path="login" element={<Navigate to="/v2" replace />} />
 
         {/* Authenticated routes */}
         <Route element={<AuthenticatedLayout />}>

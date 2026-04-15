@@ -28,7 +28,7 @@ const TYPES = [
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export function CreateActivityDrawer({ open, onClose, onCreated }: Props): React.ReactElement | null {
-  const { session } = useAuthV2();
+  // Auth removed — no session
   const [title, setTitle] = useState("");
   const [type, setType] = useState("follow_up");
   const [priority, setPriority] = useState("medium");
@@ -46,7 +46,7 @@ export function CreateActivityDrawer({ open, onClose, onCreated }: Props): React
         description: description || null,
         source_id: crypto.randomUUID(),
         source_type: "manual",
-        user_id: session?.user?.id,
+        user_id: undefined,
       }]);
       if (error) throw error;
     },
