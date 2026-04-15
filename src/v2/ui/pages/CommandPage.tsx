@@ -545,7 +545,31 @@ const CommandPage = () => {
     }, 2200);
   }, [addMessage]);
 
-  const handleApprove = useCallback(() => {
+  const handleApprove = useCallback(async () => {
+    // Live tool approval flow
+    if (pendingApproval) {
+      const tool = TOOLS.find(t => t.id === pendingApproval.toolId);
+      if (!tool) return;
+      setFlowPhase("executing");
+      setCanvas(null);
+      setPendingApproval(null);
+      addMessage({ role: "assistant", content: "Esecuzione in corso...", timestamp: ts(), agentName: "Automation" });
+      try {
+        const result = await tool.execute(pendingApproval.prompt, { confirmed: true, payload: pendingApproval.payload });
+        if (result.kind === "result") {
+          toast.success(result.message);
+          addMessage({ role: "assistant", content: `✅ **${result.title}**\n${result.message}`, agentName: "Automation", timestamp: ts(), meta: result.meta?.sourceLabel });
+        }
+        setFlowPhase("done");
+        setLiveResult(null);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Errore";
+        toast.error(msg);
+        addMessage({ role: "assistant", content: `❌ Errore: ${msg}`, agentName: "Automation", timestamp: ts() });
+        setFlowPhase("idle");
+      }
+      return;
+    }
     if (!activeScenario) return;
     setFlowPhase("executing");
     setCanvas(null);
