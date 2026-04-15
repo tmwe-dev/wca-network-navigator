@@ -286,6 +286,11 @@ const CommandPage = () => {
     lang: "it-IT",
   });
 
+  // Stop TTS when user starts speaking
+  useEffect(() => {
+    if (voice.listening) tts.stop();
+  }, [voice.listening, tts]);
+
   useEffect(() => {
     if (voice.error) {
       toast.error(voice.error);
