@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef } from "react";
 import { matchScenario, type MockScenario } from "./mockScenarios";
+import { resolveTool } from "./tools/registry";
+import type { ToolResult } from "./tools/types";
 import type { ExecutionStep } from "@/design-system/ExecutionFlow";
 
-export type CommandPhase = "idle" | "thinking" | "proposal" | "executing" | "done";
+export type CommandPhase = "idle" | "thinking" | "proposal" | "executing" | "done" | "error";
 
 interface CommandFlowState {
   phase: CommandPhase;
@@ -10,6 +12,9 @@ interface CommandFlowState {
   executionSteps: ExecutionStep[];
   executionProgress: number;
   thinkingLabel: string;
+  toolResult: ToolResult | null;
+  isLive: boolean;
+  errorMessage: string | null;
 }
 
 const thinkingLabels = [
@@ -25,6 +30,9 @@ export function useCommandFlow() {
     executionSteps: [],
     executionProgress: 0,
     thinkingLabel: thinkingLabels[0],
+    toolResult: null,
+    isLive: false,
+    errorMessage: null,
   });
 
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -34,46 +42,125 @@ export function useCommandFlow() {
     timersRef.current = [];
   }, []);
 
-  const submit = useCallback((prompt: string) => {
-    clearTimers();
-    const scenario = matchScenario(prompt);
+  const runLiveTool = useCallback(async (prompt: string) => {
+    const tool = resolveTool(prompt);
+    if (!tool) return false;
 
-    // If agent-report: no approval, go thinking → executing → done
-    const skipApproval = scenario.approvalPayload === null;
+    const liveSteps: ExecutionStep[] = [
+      { label: "Interpretazione richiesta", status: "done" },
+      { label: "Query Supabase", status: "running" },
+      { label: "Rendering canvas", status: "pending" },
+    ];
 
     setState({
+      phase: "executing",
+      scenario: null,
+      executionSteps: liveSteps,
+      executionProgress: 33,
+      thinkingLabel: "Query in corso…",
+      toolResult: null,
+      isLive: true,
+      errorMessage: null,
+    });
+
+    try {
+      const result = await tool.execute(prompt);
+
+      // Step 2 done, step 3 running
+      setState((s) => ({
+        ...s,
+        executionSteps: [
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: "Query Supabase", status: "done" },
+          { label: "Rendering canvas", status: "running" },
+        ],
+        executionProgress: 66,
+      }));
+
+      // Small delay for rendering step
+      await new Promise((r) => setTimeout(r, 400));
+
+      setState((s) => ({
+        ...s,
+        phase: "done",
+        executionSteps: [
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: "Query Supabase", status: "done" },
+          { label: "Rendering canvas", status: "done" },
+        ],
+        executionProgress: 100,
+        toolResult: result,
+      }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Errore sconosciuto";
+      setState((s) => ({
+        ...s,
+        phase: "error",
+        errorMessage: msg,
+        executionSteps: [
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: "Query Supabase", status: "error", detail: "FAIL" },
+          { label: "Rendering canvas", status: "pending" },
+        ],
+        executionProgress: 33,
+      }));
+    }
+
+    return true;
+  }, []);
+
+  const submit = useCallback(async (prompt: string) => {
+    clearTimers();
+
+    // Phase 1: thinking
+    setState({
       phase: "thinking",
-      scenario,
+      scenario: null,
       executionSteps: [],
       executionProgress: 0,
       thinkingLabel: thinkingLabels[0],
+      toolResult: null,
+      isLive: false,
+      errorMessage: null,
     });
 
-    // Cycle thinking labels
     const t1 = setTimeout(() => {
       setState((s) => ({ ...s, thinkingLabel: thinkingLabels[1] }));
-    }, 900);
+    }, 400);
     timersRef.current.push(t1);
 
-    const t2 = setTimeout(() => {
-      setState((s) => ({ ...s, thinkingLabel: thinkingLabels[2] }));
-    }, 1800);
-    timersRef.current.push(t2);
+    // After short thinking, try live tool
+    await new Promise((r) => {
+      const t = setTimeout(r, 800);
+      timersRef.current.push(t);
+    });
+
+    const handled = await runLiveTool(prompt);
+    if (handled) return;
+
+    // Fall back to mock scenarios
+    const scenario = matchScenario(prompt);
+    const skipApproval = scenario.approvalPayload === null;
+
+    setState((s) => ({
+      ...s,
+      scenario,
+      thinkingLabel: thinkingLabels[2],
+    }));
 
     const t3 = setTimeout(() => {
       if (skipApproval) {
-        // Go directly to executing
-        const steps = scenario.executionSteps.map((s) => ({ ...s, status: "pending" as const }));
+        const steps = scenario.executionSteps.map((st) => ({ ...st, status: "pending" as const }));
         setState((s) => ({ ...s, phase: "executing", executionSteps: steps, executionProgress: 0 }));
-        runExecution(steps, scenario);
+        runMockExecution(steps);
       } else {
         setState((s) => ({ ...s, phase: "proposal" }));
       }
-    }, 2500);
+    }, 1200);
     timersRef.current.push(t3);
-  }, [clearTimers]);
+  }, [clearTimers, runLiveTool]);
 
-  const runExecution = useCallback((steps: ExecutionStep[], scenario: MockScenario) => {
+  const runMockExecution = useCallback((steps: ExecutionStep[]) => {
     let current = 0;
     const total = steps.length;
 
@@ -83,33 +170,23 @@ export function useCommandFlow() {
         return;
       }
 
-      // Set current to running
       setState((s) => {
         const updated = s.executionSteps.map((step, i) => {
           if (i < current) return { ...step, status: "done" as const };
           if (i === current) return { ...step, status: "running" as const };
           return { ...step, status: "pending" as const };
         });
-        return {
-          ...s,
-          executionSteps: updated,
-          executionProgress: Math.round(((current + 0.5) / total) * 100),
-        };
+        return { ...s, executionSteps: updated, executionProgress: Math.round(((current + 0.5) / total) * 100) };
       });
 
       const delay = 600 + Math.random() * 300;
       const t = setTimeout(() => {
-        // Mark current as done
         setState((s) => {
           const updated = s.executionSteps.map((step, i) => {
             if (i <= current) return { ...step, status: "done" as const };
             return step;
           });
-          return {
-            ...s,
-            executionSteps: updated,
-            executionProgress: Math.round(((current + 1) / total) * 100),
-          };
+          return { ...s, executionSteps: updated, executionProgress: Math.round(((current + 1) / total) * 100) };
         });
         current++;
         const t2 = setTimeout(tick, 200);
@@ -125,28 +202,22 @@ export function useCommandFlow() {
     if (!state.scenario || state.phase !== "proposal") return;
     const steps = state.scenario.executionSteps.map((s) => ({ ...s, status: "pending" as const }));
     setState((s) => ({ ...s, phase: "executing", executionSteps: steps, executionProgress: 0 }));
-    runExecution(steps, state.scenario);
-  }, [state.scenario, state.phase, runExecution]);
+    runMockExecution(steps);
+  }, [state.scenario, state.phase, runMockExecution]);
 
   const cancel = useCallback(() => {
     clearTimers();
     setState({
-      phase: "idle",
-      scenario: null,
-      executionSteps: [],
-      executionProgress: 0,
-      thinkingLabel: thinkingLabels[0],
+      phase: "idle", scenario: null, executionSteps: [], executionProgress: 0,
+      thinkingLabel: thinkingLabels[0], toolResult: null, isLive: false, errorMessage: null,
     });
   }, [clearTimers]);
 
   const reset = useCallback(() => {
     clearTimers();
     setState({
-      phase: "idle",
-      scenario: null,
-      executionSteps: [],
-      executionProgress: 0,
-      thinkingLabel: thinkingLabels[0],
+      phase: "idle", scenario: null, executionSteps: [], executionProgress: 0,
+      thinkingLabel: thinkingLabels[0], toolResult: null, isLive: false, errorMessage: null,
     });
   }, [clearTimers]);
 
@@ -156,6 +227,9 @@ export function useCommandFlow() {
     executionSteps: state.executionSteps,
     executionProgress: state.executionProgress,
     thinkingLabel: state.thinkingLabel,
+    toolResult: state.toolResult,
+    isLive: state.isLive,
+    errorMessage: state.errorMessage,
     submit,
     approve,
     cancel,
