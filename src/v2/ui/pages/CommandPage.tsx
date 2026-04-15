@@ -325,12 +325,15 @@ const CommandPage = () => {
     const isCardGrid = tool.id === "followup-batch";
     const isTimeline = tool.id === "agent-report";
     const isFlow = tool.id === "campaign-status";
-    const agentLabel = isFlow ? "Campaign Manager" : isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
-    const queryLabel = isFlow ? "Query Supabase · Campaign Jobs" : isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
+    const isComposer = tool.id === "compose-email";
+    const agentLabel = isComposer ? "Email Composer" : isFlow ? "Campaign Manager" : isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
+    const queryLabel = isComposer ? "Preparazione Composer" : isFlow ? "Query Supabase · Campaign Jobs" : isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
 
     addMessage({
       role: "assistant",
-      content: isFlow
+      content: isComposer
+        ? `Sto preparando il composer email...\n\nAnalisi del prompt per estrarre destinatario e oggetto.`
+        : isFlow
         ? `Sto analizzando lo stato delle campagne usando **Campaign Jobs**...\n\nAggregazione batch in corso.`
         : isTimeline
         ? `Sto aggregando le attività degli agenti negli ultimi 7 giorni usando **Agents + Activities**...\n\nReport in preparazione.`
@@ -339,7 +342,7 @@ const CommandPage = () => {
         : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
       agentName: agentLabel,
       timestamp: ts(),
-      meta: isFlow ? "campaign-mgr · campaign_jobs · 1 modulo" : isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
+      meta: isComposer ? "composer · generate-email + send-email · 2 edge fn" : isFlow ? "campaign-mgr · campaign_jobs · 1 modulo" : isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
       governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
     });
 
