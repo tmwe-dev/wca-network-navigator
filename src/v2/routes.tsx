@@ -82,6 +82,22 @@ function V2AuthGate(): React.ReactElement {
   return <AuthenticatedLayout />;
 }
 
+/** Auth gate without layout — for fullscreen pages like Command */
+function V2AuthGateRaw(): React.ReactElement {
+  const { status } = useAuth();
+  const location = useLocation();
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
+
+  if (status === "unauthenticated") {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  return <Outlet />;
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
