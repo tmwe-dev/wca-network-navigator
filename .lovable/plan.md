@@ -1,61 +1,58 @@
 
-Obiettivo: spiegare perché i target `any = 0` e `disabled = 0` non sono stati raggiunti e cosa va corretto davvero per arrivarci.
 
-Diagnosi reale emersa dall’audit statico:
-- Non restano “pochi residui”: esistono ancora generatori strutturali di `any`.
-- Il build/tsc oggi può essere verde, ma la type safety non è ancora chiusa ai confini del sistema: DAL dinamici, JSON liberi, API browser non tipizzate, test mocks.
+# Refactoring Autenticazione + Whitelist
 
-Perché non arrivo a `any non-disabled = 0`:
-1. `src/lib/supabaseUntyped.ts` usa ancora `(supabase as any).from(table)`. Finché esiste, tutto il layer RA (`useRADashboard`, `useRAJobs`, `useRAProspects`) continua a rigenerare cast e `any`.
-2. `src/hooks/useSupabaseQuery.ts` ha ancora `FilterFn`, `query as any`, `data as any as Row[]`. È un moltiplicatore centrale: non basta ripulire i consumer.
-3. In `src/data/partners.ts` e `src/data/partnerRelations.ts` esistono API pubbliche con `Promise<any[]>` e `select` dinamico. Se il contratto del DAL è `any[]`, i componenti a valle continueranno a castare.
-4. Alcune props UI entrano già come `Record<string, any>`: `PartnerDetailCompact`, `PartnerCard`, `UnifiedActionBar`, `ContactEnrichmentCard`, `ContactRecordFields`. Quindi il problema nasce prima del render.
-5. Alcuni residui sono boundary esterni non ancora incapsulati: Web Speech (`useContinuousSpeech`, `useAiVoice`), extension bridge (`useLinkedInExtensionBridge`, `TestDownload`), globals su `window` (`Operations`).
+## Problema principale (ADESSO)
 
-Perché non arrivo a `disabled = 0`:
-1. Ho trovato 27 file con `/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */`. Questo da solo rende impossibile target zero.
-2. Molti disable sono stati usati come tampone locale invece di chiudere la causa a monte: JSON Supabase, `select` dinamici, `window as any`, bridge payloads.
-3. La config lint spinge in quella direzione: `@typescript-eslint/no-explicit-any` è `warn`, ma `npm run lint` usa `--max-warnings 0`. Quindi ogni `any` rimasto o viene tipizzato davvero, o viene silenziato.
-4. Alcuni disable sono evitabili, ma solo dopo refactor di contratto; toglierli subito senza rifondare i tipi farebbe riesplodere lint o TypeScript.
+Il database Supabase sta restituendo **503 PGRST002** ("Could not query the database for the schema cache") su TUTTE le query. Questo significa che nessuna operazione funziona, inclusa la whitelist check (`rpc is_email_authorized`). Il problema e infrastrutturale, probabilmente causato da una migrazione recente che ha rotto lo schema cache di PostgREST.
 
-Conclusione onesta:
-- Non è che il target 0/0 sia “impossibile”.
-- È che il lavoro fatto finora ha corretto soprattutto build, tsc e struttura file, ma non ha ancora eliminato i 4 generatori che ricreano `any` in cascata:
-  - `src/lib/supabaseUntyped.ts`
-  - `src/hooks/useSupabaseQuery.ts`
-  - DAL con `select` dinamico / `Promise<any[]>`
-  - props UI `Record<string, any>`
-- Finché questi restano, i fix file-per-file abbassano il numero ma non lo azzerano.
+**Prima di qualsiasi refactoring del codice, il database deve tornare online.**
 
-Piano corretto per arrivare davvero a 0/0 o molto vicino:
-1. Chiudere i generatori centrali:
-   - sostituire `supabaseUntyped.ts` con wrapper generici o tipi RA locali;
-   - riscrivere `useSupabaseQuery.ts` senza `any`.
-2. Cambiare il contratto del DAL:
-   - rimuovere `Promise<any[]>`;
-   - usare funzioni generiche tipo `getPartnersByCountries<T>()` / `findPartnerContacts<T>()`.
-3. Tipizzare i boundary esterni:
-   - creare `src/types/web-speech.d.ts`;
-   - definire schema dei messaggi per extension bridge;
-   - eliminare `window as any`.
-4. Portare nella UI view-model veri:
-   - `PartnerWithRelations`
-   - `PartnerCardModel`
-   - `ContactEnrichmentData`
-   - `ContactRecordUpdates`
-5. Ripulire i test correttamente:
-   - togliere i 27 file-level disable;
-   - usare `unknown`, `Partial<T>`, `MockedFunction`, helper mock tipizzati;
-   - lasciare solo disable locali e motivati se davvero inevitabili.
-6. Solo alla fine rifare il conteggio e l’ultima passata sui residui.
+## Diagnosi del codice Auth
 
-Priorità tecnica immediata:
-- Root blockers: `src/lib/supabaseUntyped.ts`, `src/hooks/useSupabaseQuery.ts`, `src/data/partners.ts`, `src/data/partnerRelations.ts`
-- Boundary blockers: `src/hooks/useContinuousSpeech.ts`, `src/hooks/useAiVoice.ts`, `src/hooks/useLinkedInExtensionBridge.ts`, `src/pages/Operations.tsx`
-- UI blockers: `src/components/partners/PartnerDetailCompact.tsx`, `src/components/partners/PartnerCard.tsx`, `src/components/partners/UnifiedActionBar.tsx`, `src/components/contacts/ContactEnrichmentCard.tsx`, `src/components/contact-drawer/ContactRecordFields.tsx`
-- Test blockers: `src/test/wca-app-api.test.ts` e gli altri file con disable di intero file
+Ho ispezionato tutti i file critici. La struttura auth e in realta **gia ben fatta**:
 
-Risposta breve alla tua domanda:
-- Non ho mancato il target per un ultimo dettaglio.
-- L’ho mancato perché la bonifica è stata fatta troppo dal bordo e non abbastanza dal nucleo.
-- Se vuoi davvero 0/0, il prossimo blocco deve partire dai generatori centrali sopra, non da altri cast sparsi.
+| File | Stato | Note |
+|---|---|---|
+| `src/providers/AuthProvider.tsx` | OK | Provider centralizzato con `onAuthStateChange` + `getSession` bootstrap |
+| `src/components/auth/ProtectedRoute.tsx` | OK | Usa `useAuth()`, redirect a `/auth` se non autenticato |
+| `src/pages/Auth.tsx` | Funzionale ma migliorabile | Login/Signup con whitelist check via RPC, Google OAuth presente |
+| `src/data/rpc.ts` | OK | `rpcIsEmailAuthorized` e `rpcRecordUserLogin` ben implementati |
+| `src/App.tsx` | OK | Route pubbliche (`/auth`, `/reset-password`) e protette (`/v1/*`) corrette |
+
+## Piano di intervento
+
+### Step 1 -- Risolvere il 503 del database
+- Verificare se una migrazione recente ha causato il problema
+- Se necessario, creare una migrazione vuota o di "fix" per forzare il refresh dello schema cache di PostgREST
+- Verificare che le RPC `is_email_authorized` e `record_user_login` esistano ancora
+
+### Step 2 -- Pulizia Auth (miglioramenti, non riscrittura)
+Il codice auth funziona. I fix sono puntuali:
+
+1. **Rimuovere Google OAuth** dal form `/auth` (il pulsante "Continua con Google" e la dipendenza `lovable.auth.signInWithOAuth`) -- semplifica il flusso a solo email+password+whitelist
+2. **Aggiungere toggle visibilita password** ai campi password (come da memoria `auth/ui-auth-password-toggle-standard`)
+3. **Gestire il caso 503/errore RPC** nella `checkWhitelist` -- attualmente un errore di rete viene trattato come "non autorizzato" (ritorna `false`), il che blocca l'accesso anche se l'utente e nella whitelist. Fix: mostrare un toast di errore di connessione invece di "non autorizzato"
+4. **Unificare `/v2/login` con `/auth`** -- attualmente V2 ha una LoginPage separata che duplica logica. Redirect `/v2/login` a `/auth`
+
+### Step 3 -- Aggiornare memorie di progetto
+- Rimuovere la memoria `mem://auth/public-access-no-auth` (obsoleta, l'app usa auth reale)
+- Confermare `mem://auth/whitelist-email-auth-standard` come regola attiva
+
+## Dettagli tecnici
+
+### File da modificare:
+- `src/pages/Auth.tsx` -- rimuovere Google OAuth, aggiungere toggle password, migliorare error handling su RPC fallita
+- `src/v2/routes.tsx` -- redirect `/v2/login` a `/auth`
+- `src/v2/ui/pages/LoginPage.tsx` -- eliminare o convertire in redirect
+- Memoria: `mem://auth/public-access-no-auth` da eliminare, `mem://index.md` da aggiornare
+
+### File da NON toccare:
+- `src/providers/AuthProvider.tsx` -- gia corretto
+- `src/components/auth/ProtectedRoute.tsx` -- gia corretto
+- `src/data/rpc.ts` -- gia corretto
+
+### Rischi:
+- Se il database non torna online (503), nessun fix lato codice risolvera il login
+- La rimozione di Google OAuth e irreversibile senza ri-configurazione
+
