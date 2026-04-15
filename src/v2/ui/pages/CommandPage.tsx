@@ -18,6 +18,7 @@ import { resolveTool, TOOLS, TOOL_METADATA } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
 import { planExecution } from "@/v2/io/edge/aiAssistant";
 import { executePlan, type PlanExecutionState } from "./command/planRunner";
 
