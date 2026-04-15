@@ -59,6 +59,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [backgroundReady, setBackgroundReady] = useState(false);
 
   useEffect(() => {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
@@ -70,6 +71,17 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   // Session readiness sourced from centralized AuthProvider
   const { status: authStatus } = useAuth();
   const sessionReady = authStatus === "authenticated";
+  const backgroundEnabled = sessionReady && isAuthenticated && backgroundReady;
+
+  useEffect(() => {
+    if (!sessionReady || !isAuthenticated) {
+      setBackgroundReady(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setBackgroundReady(true), 1500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, sessionReady]);
 
   useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
 
@@ -109,10 +121,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     enabled: isAuthenticated && sessionReady,
   });
 
-  useJobHealthMonitor();
+  useJobHealthMonitor({ enabled: backgroundEnabled });
   useWcaSync();
-  const outreachQueue = useOutreachQueue();
-  const globalSync = useGlobalAutoSync();
+  const outreachQueue = useOutreachQueue({ enabled: backgroundEnabled });
+  const globalSync = useGlobalAutoSync({ enabled: backgroundEnabled });
   const wcaSession = useWcaSession();
 
   useEffect(() => {
