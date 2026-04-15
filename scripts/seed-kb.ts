@@ -1,5 +1,6 @@
 /**
  * seed-kb.ts — Reads all .md files from public/kb-source/ and upserts them into kb_entries.
+ * Now also reads index.json for authoritative metadata (title, tags, slug, category, priority).
  * Usage: npx tsx scripts/seed-kb.ts
  * Requires env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
@@ -18,6 +19,43 @@ if (!SUPABASE_URL || !SERVICE_ROLE) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+/* ─── Index.json metadata ─── */
+
+interface IndexEntry {
+  path: string;
+  slug: string;
+  title: string;
+  tags: string[];
+  category?: string;
+  priority?: number;
+}
+
+interface IndexFile {
+  version: number;
+  entries: IndexEntry[];
+}
+
+function loadIndex(): Map<string, IndexEntry> {
+  const indexPath = path.join(KB_DIR, "index.json");
+  const map = new Map<string, IndexEntry>();
+  if (!fs.existsSync(indexPath)) {
+    console.log("⚠️  index.json non trovato, uso fallback da frontmatter/path");
+    return map;
+  }
+  try {
+    const raw = JSON.parse(fs.readFileSync(indexPath, "utf-8")) as IndexFile;
+    for (const entry of raw.entries) {
+      map.set(entry.path, entry);
+    }
+    console.log(`📋 index.json caricato: ${map.size} voci`);
+  } catch (e) {
+    console.error("⚠️  Errore parsing index.json:", e);
+  }
+  return map;
+}
+
+/* ─── Helpers ─── */
+
 function categoryFromPath(filePath: string): string {
   const rel = path.relative(KB_DIR, filePath);
   const dir = path.dirname(rel);
@@ -32,7 +70,7 @@ function titleFromContent(content: string, fallback: string): string {
   return m ? m[1].trim() : fallback;
 }
 
-function extractTags(content: string): string[] {
+function extractFrontmatterTags(content: string): string[] {
   const tags: string[] = [];
   const tagLine = content.match(/^tags:\s*\[(.+)\]/m);
   if (tagLine) {
@@ -54,6 +92,8 @@ function walk(dir: string): string[] {
   });
 }
 
+/* ─── Seed ─── */
+
 async function seed() {
   const files = walk(KB_DIR);
   if (files.length === 0) {
@@ -62,16 +102,24 @@ async function seed() {
     process.exit(0);
   }
 
+  const index = loadIndex();
+
   console.log(`📚 Trovati ${files.length} file markdown in ${KB_DIR}`);
   let ok = 0;
   let fail = 0;
 
   for (const file of files) {
     const content = fs.readFileSync(file, "utf-8");
-    const sourcePath = "kb-source/" + path.relative(KB_DIR, file);
-    const category = categoryFromPath(file);
-    const title = titleFromContent(content, path.basename(file, ".md"));
-    const tags = extractTags(content);
+    const relPath = path.relative(KB_DIR, file);
+    const sourcePath = "kb-source/" + relPath;
+
+    // Lookup in index.json (match by relative path)
+    const meta = index.get(relPath);
+
+    const title = meta?.title ?? titleFromContent(content, path.basename(file, ".md"));
+    const tags = meta?.tags ?? extractFrontmatterTags(content);
+    const category = meta?.category ?? categoryFromPath(file);
+    const priority = meta?.priority ?? (category === "workflow" ? 10 : 5);
 
     const { error } = await supabase.from("kb_entries").upsert(
       {
@@ -80,7 +128,7 @@ async function seed() {
         category,
         source_path: sourcePath,
         tags,
-        priority: category === "workflow" ? 10 : 5,
+        priority,
         is_active: true,
       },
       { onConflict: "source_path" },
@@ -90,7 +138,7 @@ async function seed() {
       console.error(`  ✗ ${sourcePath}: ${error.message}`);
       fail++;
     } else {
-      console.log(`  ✓ ${sourcePath} → [${category}] ${title}`);
+      console.log(`  ✓ ${sourcePath} → [${category}] ${title} (tags: ${tags.join(", ") || "–"})`);
       ok++;
     }
   }
