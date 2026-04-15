@@ -405,11 +405,6 @@ export function useCommandSubmit(state: CommandStateApi) {
         meta: `plan-execution · ${plan.steps.length} step`,
       });
 
-      const requiresApproval = plan.steps.some((s) => {
-        const meta = TOOL_METADATA.find((t) => t.id === s.toolId);
-        return meta?.requiresApproval;
-      });
-
       const cappedSteps = plan.steps.slice(0, MAX_PLAN_STEPS);
       const newState: PlanExecutionState = {
         steps: cappedSteps,
@@ -421,12 +416,9 @@ export function useCommandSubmit(state: CommandStateApi) {
       };
       setPlanState(newState);
 
-      if (requiresApproval) {
-        setFlowPhase("proposal");
-      } else {
-        setFlowPhase("executing");
-        await runPlan(newState);
-      }
+      // Always start executing — per-step approval will pause when needed
+      setFlowPhase("executing");
+      await runPlan(newState);
     } catch {
       setMessages((prev) => prev.filter((m) => !m.thinking));
       addMessage({ role: "assistant", content: "Errore nella pianificazione. Riformula la richiesta.", agentName: "Orchestratore", timestamp: ts() });
