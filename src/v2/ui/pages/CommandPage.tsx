@@ -832,6 +832,26 @@ const CommandPage = () => {
                   )}
                 </div>
               )}
+              {canvas === "live-flow" && liveResult && liveResult.kind === "flow" && (
+                <div className="float-panel p-6 rounded-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                    <button onClick={() => { setCanvas(null); setLiveResult(null); }} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+                  </div>
+                  {liveResult.nodes.length <= 1 && liveResult.nodes[0]?.type === "end" ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-[12px] text-muted-foreground/60 font-light">Nessuna campagna in corso</p>
+                    </div>
+                  ) : (
+                    <FlowCanvas
+                      nodes={[...liveResult.nodes]}
+                      title={`${liveResult.meta?.count ?? 0} job totali`}
+                      badge="LIVE"
+                      sourceLabel={liveResult.meta?.sourceLabel}
+                    />
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
