@@ -14,7 +14,7 @@ export function useRequireAuth(): void {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/v2/login", { replace: true });
+      navigate("/auth", { replace: true });
     }
   }, [isAuthenticated, isLoading, navigate]);
 }
