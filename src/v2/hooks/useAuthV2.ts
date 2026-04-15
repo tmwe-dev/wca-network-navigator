@@ -50,6 +50,28 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function getDisplayName(authUser: User): string | null {
+  return authUser.user_metadata?.full_name
+    ?? authUser.user_metadata?.display_name
+    ?? authUser.user_metadata?.name
+    ?? authUser.email
+    ?? null;
+}
+
+function buildFallbackProfile(authUser: User): UserProfile {
+  return {
+    userId: authUser.id,
+    email: authUser.email ?? "",
+    displayName: getDisplayName(authUser),
+    avatarUrl: null,
+  };
+}
+
+function isTransientBootstrapError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /abort|lock broken|timeout|timed out|network|fetch|context deadline|retryable/i.test(message);
+}
+
 // ── Helper: load profile ─────────────────────────────────────────────
 
 async function loadProfile(authUser: User): Promise<UserProfile | null> {
@@ -63,18 +85,14 @@ async function loadProfile(authUser: User): Promise<UserProfile | null> {
   if (data) {
     return {
       userId,
-      email: "",
+      email: authUser.email ?? "",
       displayName: data.display_name,
       avatarUrl: null,
     };
   }
 
   // Auto-creazione profilo se mancante (utenti pre-trigger)
-  const displayName = authUser.user_metadata?.full_name
-    ?? authUser.user_metadata?.display_name
-    ?? authUser.user_metadata?.name
-    ?? authUser.email
-    ?? null;
+  const displayName = getDisplayName(authUser);
 
   const { error: insertErr } = await supabase
     .from("profiles")
@@ -87,7 +105,7 @@ async function loadProfile(authUser: User): Promise<UserProfile | null> {
 
   return {
     userId,
-    email: "",
+    email: authUser.email ?? "",
     displayName,
     avatarUrl: null,
   };
@@ -134,34 +152,51 @@ export function useAuthV2(): UseAuthV2Return {
   // ── Load user data after auth ────────────────────────────────────
 
   const loadUserData = useCallback(async (authUser: User) => {
-    try {
-      const email = authUser.email;
-      if (!email) {
-        await supabase.auth.signOut();
-        setError("Account senza email associata.");
-        return;
-      }
+    const email = authUser.email;
+    if (!email) {
+      await supabase.auth.signOut();
+      setError("Account senza email associata.");
+      return;
+    }
 
+    try {
       const authorized = await isEmailAuthorized(email);
       if (!authorized) {
         await supabase.auth.signOut();
         setError("Email non autorizzata. Contatta l'amministratore.");
         return;
       }
+    } catch (err) {
+      if (!isTransientBootstrapError(err)) {
+        await supabase.auth.signOut();
+        setError(err instanceof Error ? err.message : "Errore durante la verifica accesso.");
+        return;
+      }
+    }
 
-      const [userProfile, userRoles] = await Promise.all([
-        loadProfile(authUser),
-        loadRoles(authUser.id),
-      ]);
+    const fallbackProfile = buildFallbackProfile(authUser);
+    const [userProfileResult, userRolesResult] = await Promise.allSettled([
+      loadProfile(authUser),
+      loadRoles(authUser.id),
+    ]);
 
-      setProfile(userProfile);
-      setRoles(userRoles);
+    setProfile(
+      userProfileResult.status === "fulfilled"
+        ? userProfileResult.value ?? fallbackProfile
+        : fallbackProfile,
+    );
+    setRoles(
+      userRolesResult.status === "fulfilled" && userRolesResult.value.length > 0
+        ? userRolesResult.value
+        : ["user"],
+    );
+
+    try {
       await recordLogin(email);
     } catch (err) {
-      await supabase.auth.signOut();
-      setProfile(null);
-      setRoles([]);
-      setError(err instanceof Error ? err.message : "Errore durante il caricamento dell'utente.");
+      if (!isTransientBootstrapError(err)) {
+        setError(err instanceof Error ? err.message : "Errore durante la registrazione del login.");
+      }
     }
   }, []);
 
@@ -195,11 +230,23 @@ export function useAuthV2(): UseAuthV2Return {
     setIsLoading(true);
 
     const normalizedEmail = normalizeEmail(email);
-    const authorized = await isEmailAuthorized(normalizedEmail);
-    if (!authorized) {
-      setError("Email non autorizzata. Contatta l'amministratore.");
+    try {
+      const authorized = await isEmailAuthorized(normalizedEmail);
+      if (!authorized) {
+        setError("Email non autorizzata. Contatta l'amministratore.");
+        setIsLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verifica accesso non disponibile.");
       setIsLoading(false);
       return;
+    }
+
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Ignore stale local-session cleanup failures before a fresh login attempt
     }
 
     const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });

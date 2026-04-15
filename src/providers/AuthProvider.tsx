@@ -4,7 +4,7 @@
  * Every component/hook that needs auth state MUST use the useAuth() hook
  * exported from this module instead of calling supabase.auth directly.
  */
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -30,25 +30,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    const syncAuthState = (nextEvent: AuthChangeEvent | null, nextSession: Session | null) => {
+      if (!mounted) return;
+      initialised.current = true;
+      if (nextEvent) setEvent(nextEvent);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setStatus(nextSession ? "authenticated" : "unauthenticated");
+    };
+
     // Single listener for the entire app
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (authEvent, currentSession) => {
-        if (!mounted) return;
-        setEvent(authEvent);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setStatus(currentSession ? "authenticated" : "unauthenticated");
+        syncAuthState(authEvent, currentSession);
       },
     );
 
     // Bootstrap: read the existing session once
-    supabase.auth.getSession().then(({ data: { session: initial } }) => {
-      if (!mounted || initialised.current) return;
-      initialised.current = true;
-      setSession(initial);
-      setUser(initial?.user ?? null);
-      setStatus(initial ? "authenticated" : "unauthenticated");
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: initial } }) => {
+        if (!mounted || initialised.current) return;
+        syncAuthState(null, initial);
+      })
+      .catch(() => {
+        if (!mounted || initialised.current) return;
+        syncAuthState(null, null);
+      });
 
     return () => {
       mounted = false;
