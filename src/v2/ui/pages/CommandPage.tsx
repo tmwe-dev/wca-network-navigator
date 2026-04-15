@@ -638,6 +638,7 @@ const CommandPage = () => {
     setChainHighlight(undefined);
     setLiveResult(null);
     setPendingApproval(null);
+    setPlanState(null);
     toast("Azione annullata");
     addMessage({ role: "assistant", content: "Operazione annullata. Nessuna azione eseguita. Audit Action: cancellazione registrata.", timestamp: ts(), agentName: "Orchestratore" });
   }, [addMessage]);
