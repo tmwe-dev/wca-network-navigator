@@ -387,6 +387,75 @@ const CommandPage = () => {
 
     try {
       const result = await tool.execute(prompt);
+
+      // Handle approval kind — show ApprovalPanel instead of canvas
+      if (result.kind === "approval") {
+        setExecSteps([
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: queryLabel, status: "done", detail: "Approvazione richiesta" },
+          { label: "In attesa conferma utente", status: "running" },
+        ]);
+        setExecProgress(66);
+        setLiveResult(result);
+        setPendingApproval({ toolId: result.toolId, payload: result.pendingPayload, prompt });
+        setFlowPhase("proposal");
+        setCanvas("live-approval");
+        setShowTools(false);
+
+        addMessage({
+          role: "assistant",
+          content: `**${result.title}**\n${result.description}\n\nApprovazione richiesta prima dell'esecuzione.`,
+          agentName: agentLabel,
+          timestamp: ts(),
+          meta: `governance · ${result.governance.permission}`,
+          governance: `Ruolo: ${result.governance.role} · Permesso: ${result.governance.permission} · Policy: ${result.governance.policy}`,
+        });
+        return true;
+      }
+
+      // Handle result kind — toast + close
+      if (result.kind === "result") {
+        setExecSteps([
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: queryLabel, status: "done" },
+          { label: "Operazione completata", status: "done" },
+        ]);
+        setExecProgress(100);
+        setFlowPhase("done");
+        setShowTools(false);
+        toast.success(result.message);
+        addMessage({
+          role: "assistant",
+          content: `✅ **${result.title}**\n${result.message}`,
+          agentName: agentLabel,
+          timestamp: ts(),
+          meta: result.meta?.sourceLabel,
+        });
+        return true;
+      }
+
+      // Handle report kind
+      if (result.kind === "report") {
+        setExecSteps([
+          { label: "Interpretazione richiesta", status: "done" },
+          { label: queryLabel, status: "done", detail: `${result.sections.length} sezioni` },
+          { label: "Rendering report", status: "done" },
+        ]);
+        setExecProgress(100);
+        setLiveResult(result);
+        setFlowPhase("done");
+        setCanvas("live-report");
+        setShowTools(false);
+        addMessage({
+          role: "assistant",
+          content: `Report generato con **${result.sections.length} sezioni**.\n\nDati da: ${result.meta?.sourceLabel ?? "AI"}`,
+          agentName: agentLabel,
+          timestamp: ts(),
+          meta: result.meta?.sourceLabel,
+        });
+        return true;
+      }
+
       setExecSteps([
         { label: "Interpretazione richiesta", status: "done" },
         { label: queryLabel, status: "done", detail: `${result.meta?.count ?? 0} risultati` },
@@ -410,7 +479,7 @@ const CommandPage = () => {
         ? `${result.meta?.count ?? 0} attività negli ultimi 7gg`
         : isCardGrid
         ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
-        : `${result.meta?.count ?? 0} partner`;
+        : `${result.meta?.count ?? 0} risultati`;
 
       addMessage({
         role: "assistant",
@@ -426,6 +495,7 @@ const CommandPage = () => {
         { label: queryLabel, status: "error", detail: "FAIL" },
         { label: "Rendering canvas", status: "pending" },
       ]);
+      toast.error(msg);
       addMessage({
         role: "assistant",
         content: `Errore nella query: ${msg}`,
