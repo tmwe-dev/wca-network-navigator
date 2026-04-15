@@ -12,6 +12,18 @@ export interface CardItem {
   readonly suggestedAction: string;
 }
 
+export interface TimelineEventItem {
+  readonly time: string;
+  readonly agent: string;
+  readonly action: string;
+  readonly status: "success" | "pending" | "warning" | "info";
+}
+
+export interface TimelineKpiItem {
+  readonly label: string;
+  readonly value: string;
+}
+
 export interface ToolResultMeta {
   readonly count: number;
   readonly sourceLabel: string;
@@ -29,6 +41,13 @@ export type ToolResult =
       readonly kind: "card-grid";
       readonly title: string;
       readonly cards: readonly CardItem[];
+      readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "timeline";
+      readonly title: string;
+      readonly events: readonly TimelineEventItem[];
+      readonly kpis: readonly TimelineKpiItem[];
       readonly meta?: ToolResultMeta;
     };
 
