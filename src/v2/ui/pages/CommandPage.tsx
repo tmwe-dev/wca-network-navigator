@@ -14,7 +14,7 @@ import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FlowCanvas from "./command/canvas/FlowCanvas";
 import ComposerCanvas from "./command/canvas/ComposerCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
-import { resolveTool } from "./command/tools/registry";
+import { resolveTool, TOOLS } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
