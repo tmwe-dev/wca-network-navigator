@@ -9,6 +9,7 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/components/workspace/CanvasViews";
 import CardGridCanvas from "./command/canvas/CardGridCanvas";
+import TimelineCanvas from "./command/canvas/TimelineCanvas";
 import FloatingDock from "@/components/layout/FloatingDock";
 import { resolveTool } from "./command/tools/registry";
 import type { ToolResult } from "./command/tools/types";
@@ -29,7 +30,7 @@ interface Message {
   governance?: string;
 }
 
-type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | null;
+type CanvasType = "table" | "campaign" | "report" | "result" | "live-table" | "live-card-grid" | "live-timeline" | null;
 type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";
 type ToolPhase = "activating" | "active" | "done";
 
@@ -320,17 +321,20 @@ const CommandPage = () => {
     setChainHighlight(3);
 
     const isCardGrid = tool.id === "followup-batch";
-    const agentLabel = isCardGrid ? "Follow-up Watcher" : "Partner Scout";
-    const queryLabel = isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
+    const isTimeline = tool.id === "agent-report";
+    const agentLabel = isTimeline ? "Agent Monitor" : isCardGrid ? "Follow-up Watcher" : "Partner Scout";
+    const queryLabel = isTimeline ? "Query Supabase · Agents + Activities" : isCardGrid ? "Query Supabase · Search Contacts" : "Query Supabase · Search Partners";
 
     addMessage({
       role: "assistant",
-      content: isCardGrid
+      content: isTimeline
+        ? `Sto aggregando le attività degli agenti negli ultimi 7 giorni usando **Agents + Activities**...\n\nReport in preparazione.`
+        : isCardGrid
         ? `Sto cercando contatti inattivi nel database usando **Search Contacts**...\n\nFiltro: nessuna interazione negli ultimi 30 giorni.`
         : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
       agentName: agentLabel,
       timestamp: ts(),
-      meta: isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
+      meta: isTimeline ? "agent-monitor · agents+activities · 2 moduli" : isCardGrid ? "contact-db · search-contacts · 1 modulo" : "partner-mgmt · search-partners · 1 modulo",
       governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
     });
 
@@ -359,10 +363,12 @@ const CommandPage = () => {
 
       setFlowPhase("done");
       setChainHighlight(6);
-      setCanvas(isCardGrid ? "live-card-grid" : "live-table");
+      setCanvas(isTimeline ? "live-timeline" : isCardGrid ? "live-card-grid" : "live-table");
       setShowTools(false);
 
-      const countLabel = isCardGrid
+      const countLabel = isTimeline
+        ? `${result.meta?.count ?? 0} attività negli ultimi 7gg`
+        : isCardGrid
         ? `${result.kind === "card-grid" ? result.cards.length : 0} contatti inattivi`
         : `${result.meta?.count ?? 0} partner`;
 
