@@ -204,6 +204,80 @@ ${toolDescriptions}`;
       }
     }
 
+    // ═══ PLAN-EXECUTION MODE ═══
+    // Decomposes a complex prompt into a sequence of tool steps
+    if (mode === "plan-execution") {
+      const toolList = context?.tools || [];
+      const userPrompt = typeof context?.userPrompt === "string" ? context.userPrompt : 
+        (Array.isArray(messages) ? [...messages].reverse().find((m: Record<string, unknown>) => m?.role === "user")?.content as string ?? "" : "");
+      const history = Array.isArray(context?.history) ? context.history : [];
+
+      if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
+        return new Response(
+          JSON.stringify({ steps: [], summary: "Missing prompt or tools" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      const toolDescriptions = toolList
+        .map((t: Record<string, unknown>) => `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}" | requiresApproval: ${t.requiresApproval ?? false}`)
+        .join("\n");
+
+      const planSystemPrompt = `Sei un orchestratore. Dato il prompt utente, decomponi il task in una sequenza ordinata di tool da eseguire. Ogni step deve avere: stepNumber, toolId, reasoning, params (oggetto JSON con i parametri estratti dal prompt e dal contesto degli step precedenti). Se uno step dipende dall'output di uno precedente (es: "usa l'id del partner trovato al passo 1"), usa segnaposto {{step1.result.partnerId}}. Ritorna SOLO JSON valido nella forma: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "descrizione del piano in 1 frase" }. Se il task è eseguibile con UN solo tool, ritorna 1 step. Se il task non è eseguibile coi tool disponibili, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
+
+Tool disponibili:
+${toolDescriptions}`;
+
+      const planMessages: Record<string, unknown>[] = [
+        { role: "system", content: planSystemPrompt },
+        ...history.slice(-10).map((m: Record<string, unknown>) => ({ role: m.role, content: m.content })),
+        { role: "user", content: userPrompt },
+      ];
+
+      const planResponse = await fetch(provider.baseUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: provider.model,
+          messages: planMessages,
+          temperature: 0.1,
+          max_tokens: 1000,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!planResponse.ok) {
+        console.error("[plan-execution] AI call failed:", planResponse.status);
+        return new Response(
+          JSON.stringify({ steps: [], summary: "AI call failed" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      const planData = await planResponse.json();
+      const rawPlan = planData?.choices?.[0]?.message?.content ?? '{"steps":[],"summary":"No response"}';
+
+      try {
+        const parsed = JSON.parse(rawPlan);
+        if (!provider.isUserKey) await consumeCredits(supabase, userId, 2);
+        console.log(`[plan-execution] Plan generated: ${parsed.steps?.length ?? 0} steps — ${parsed.summary}`);
+        endMetrics(metrics, 200);
+        return new Response(
+          JSON.stringify({
+            steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+            summary: parsed.summary ?? "",
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      } catch {
+        endMetrics(metrics, 200);
+        return new Response(
+          JSON.stringify({ steps: [], summary: "Failed to parse plan" }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // ── Detect conversational mode ──
     const isConversational: boolean =
       mode === "conversational" ||
