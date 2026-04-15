@@ -83,20 +83,22 @@ async function saveTranscript(goal: string, transcript: AgentStep[]) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const messages = transcript.map((s) => ({
-      user_id: user.id,
-      role: "tool" as const,
+    // Save as a single summary message
+    const summary = {
+      conversation_id: crypto.randomUUID(),
+      role: "tool",
       content: JSON.stringify({
-        step: s.stepNumber,
-        tool: s.toolName,
-        args: s.args,
-        result: s.result,
+        type: "agent_transcript",
+        goal,
+        steps: transcript.map((s) => ({
+          step: s.stepNumber,
+          tool: s.toolName,
+          args: s.args,
+          success: s.result.success,
+        })),
       }),
-    }));
-
-    if (messages.length > 0) {
-      await supabase.from("command_messages").insert(messages);
-    }
+    };
+    await supabase.from("command_messages").insert(summary);
   } catch {
     // Non-critical — don't break the agent
   }

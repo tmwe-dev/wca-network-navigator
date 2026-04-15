@@ -19,10 +19,15 @@ export const scrapePartnerTool: Tool = {
   async execute(prompt: string, context?: ToolContext): Promise<ToolResult> {
     // If confirmed, apply the update
     if (context?.confirmed && context.payload) {
-      const { partnerId, ...updates } = context.payload as Record<string, string>;
+      const payload = context.payload as Record<string, string>;
+      const partnerId = payload.partnerId;
+      const updateData: Record<string, string> = {};
+      for (const [k, v] of Object.entries(payload)) {
+        if (k !== "partnerId") updateData[k] = v;
+      }
       const { error } = await supabase
         .from("partners")
-        .update(updates)
+        .update(updateData as unknown as Record<string, never>)
         .eq("id", partnerId);
 
       if (error) {
