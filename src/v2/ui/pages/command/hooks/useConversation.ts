@@ -18,7 +18,8 @@ import {
 } from "@/v2/io/supabase/mutations/conversations";
 
 export function useConversation() {
-  const { session } = useAuthV2();
+  const { user } = useAuthV2();
+  const userId = user?.id ?? null;
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
