@@ -20,6 +20,7 @@ import { toast } from "@/hooks/use-toast";
 import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions").then((m) => ({ default: m.TestExtensionsContent })));
@@ -71,7 +72,7 @@ export function AppLayout() {
       document.removeEventListener("keydown", down);
       window.removeEventListener("open-drawer", drawerHandler);
     };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -117,136 +118,138 @@ export function AppLayout() {
   };
 
   return (
-    <DeepSearchContext.Provider value={deepSearch}>
-      <MissionProvider>
-        <GlobalFiltersProvider>
-          <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)} onWheel={(e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }}>
-            <a
-              href="#main-content-v1"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
-            >
-              Vai al contenuto principale
-            </a>
-            <button
-              onClick={() => setFiltersOpen(true)}
-              onMouseEnter={() => handleEdgeEnter("left")}
-              onMouseLeave={() => handleEdgeLeave("left")}
-              className={cn(
-                "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
-                filtersOpen && "opacity-0 pointer-events-none"
-              )}
-              style={{
-                background: "hsl(var(--primary) / 0.25)",
-                backdropFilter: "blur(8px)",
-              }}
-              aria-label="Apri filtri"
-            >
-              <SlidersHorizontal className="w-4 h-4 text-primary" />
-            </button>
-            <button
-              onClick={() => setMissionOpen(true)}
-              onMouseEnter={() => handleEdgeEnter("right")}
-              onMouseLeave={() => handleEdgeLeave("right")}
-              className={cn(
-                "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
-                missionOpen && "opacity-0 pointer-events-none"
-              )}
-              style={{
-                background: "hsl(var(--primary) / 0.25)",
-                backdropFilter: "blur(8px)",
-              }}
-              aria-label="Apri Mission"
-            >
-              <Target className="w-4 h-4 text-primary" />
-            </button>
-            <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)} role="navigation" aria-label="Menu principale">
-              <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
-            </div>
+    <ActiveOperatorProvider>
+      <DeepSearchContext.Provider value={deepSearch}>
+        <MissionProvider>
+          <GlobalFiltersProvider>
+            <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)} onWheel={(e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }}>
+              <a
+                href="#main-content-v1"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+              >
+                Vai al contenuto principale
+              </a>
+              <button
+                onClick={() => setFiltersOpen(true)}
+                onMouseEnter={() => handleEdgeEnter("left")}
+                onMouseLeave={() => handleEdgeLeave("left")}
+                className={cn(
+                  "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                  filtersOpen && "opacity-0 pointer-events-none"
+                )}
+                style={{
+                  background: "hsl(var(--primary) / 0.25)",
+                  backdropFilter: "blur(8px)",
+                }}
+                aria-label="Apri filtri"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-primary" />
+              </button>
+              <button
+                onClick={() => setMissionOpen(true)}
+                onMouseEnter={() => handleEdgeEnter("right")}
+                onMouseLeave={() => handleEdgeLeave("right")}
+                className={cn(
+                  "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                  missionOpen && "opacity-0 pointer-events-none"
+                )}
+                style={{
+                  background: "hsl(var(--primary) / 0.25)",
+                  backdropFilter: "blur(8px)",
+                }}
+                aria-label="Apri Mission"
+              >
+                <Target className="w-4 h-4 text-primary" />
+              </button>
+              <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)} role="navigation" aria-label="Menu principale">
+                <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
+              </div>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md" role="banner">
-                <TooltipProvider>
-                  <div className="flex h-full items-center justify-between px-2 sm:px-4">
-                    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Menu"><Menu className="h-4 w-4" /></Button>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md" role="banner">
+                  <TooltipProvider>
+                    <div className="flex h-full items-center justify-between px-2 sm:px-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Menu"><Menu className="h-4 w-4" /></Button>
 
-                      {currentPath.startsWith("/v1/network") && (
-                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/crm")}>
-                          <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      )}
-                      {currentPath.startsWith("/v1/crm") && (
-                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/network")}>
-                          <Globe className="w-3.5 h-3.5" /> Network <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      )}
+                        {currentPath.startsWith("/v1/network") && (
+                          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/crm")}>
+                            <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        )}
+                        {currentPath.startsWith("/v1/crm") && (
+                          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/network")}>
+                            <Globe className="w-3.5 h-3.5" /> Network <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        )}
 
-                      <ActiveProcessIndicator />
-                      <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} isNightTime={globalSync.isNightTime} manualOverride={globalSync.manualOverride} onToggleNightPause={globalSync.toggleNightPause} resumeMinutes={globalSync.resumeMinutes} />
-                      <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
+                        <ActiveProcessIndicator />
+                        <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} isNightTime={globalSync.isNightTime} manualOverride={globalSync.manualOverride} onToggleNightPause={globalSync.toggleNightPause} resumeMinutes={globalSync.resumeMinutes} />
+                        <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
+                      </div>
+                      <div className="flex items-center gap-0.5 sm:gap-1">
+                        <OperatorSelector />
+                        <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="hidden md:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-destructive hover:text-destructive/80" : "text-foreground/70 hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
+                        <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-0.5 sm:gap-1">
-                      <OperatorSelector />
-                      <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="hidden md:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
-                      <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-destructive hover:text-destructive/80" : "text-foreground/70 hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
-                      <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
-                    </div>
-                  </div>
-                </TooltipProvider>
-              </header>
+                  </TooltipProvider>
+                </header>
 
-              <main id="main-content-v1" tabIndex={-1} role="main" className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
-                <Outlet />
-              </main>
-            </div>
+                <main id="main-content-v1" tabIndex={-1} role="main" className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
+                  <Outlet />
+                </main>
+              </div>
 
-            {commandOpen && (
-              <Suspense fallback={null}>
-                <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-              </Suspense>
-            )}
-            {missionOpen && (
-              <Suspense fallback={null}>
-                <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
-              </Suspense>
-            )}
-            {filtersOpen && (
-              <Suspense fallback={null}>
-                <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
-              </Suspense>
-            )}
-            {intelliflowOpen && (
-              <Suspense fallback={null}>
-                <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
-              </Suspense>
-            )}
-            {addContactOpen && (
-              <Suspense fallback={null}>
-                <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
-              </Suspense>
-            )}
-            <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
-              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>🧪 Test Estensioni</DialogTitle>
-                </DialogHeader>
-                <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
-                  <TestExtensionsContent />
+              {commandOpen && (
+                <Suspense fallback={null}>
+                  <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
                 </Suspense>
-              </DialogContent>
-            </Dialog>
-            {agentDashOpen && (
-              <Suspense fallback={null}>
-                <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
-              </Suspense>
-            )}
-          </div>
-          <ClaudeBadge />
-        </GlobalFiltersProvider>
-      </MissionProvider>
-    </DeepSearchContext.Provider>
+              )}
+              {missionOpen && (
+                <Suspense fallback={null}>
+                  <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+                </Suspense>
+              )}
+              {filtersOpen && (
+                <Suspense fallback={null}>
+                  <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
+                </Suspense>
+              )}
+              {intelliflowOpen && (
+                <Suspense fallback={null}>
+                  <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+                </Suspense>
+              )}
+              {addContactOpen && (
+                <Suspense fallback={null}>
+                  <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+                </Suspense>
+              )}
+              <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>🧪 Test Estensioni</DialogTitle>
+                  </DialogHeader>
+                  <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+                    <TestExtensionsContent />
+                  </Suspense>
+                </DialogContent>
+              </Dialog>
+              {agentDashOpen && (
+                <Suspense fallback={null}>
+                  <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
+                </Suspense>
+              )}
+            </div>
+            <ClaudeBadge />
+          </GlobalFiltersProvider>
+        </MissionProvider>
+      </DeepSearchContext.Provider>
+    </ActiveOperatorProvider>
   );
 }
