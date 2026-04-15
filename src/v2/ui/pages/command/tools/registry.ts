@@ -1,5 +1,8 @@
 import type { Tool } from "./types";
 import { scrapePartnerTool } from "./scrapePartner";
+import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
+import { browserFillFormTool } from "./browserFillForm";
+import { browserAutoCompleteTool } from "./browserAutoComplete";
 import { partnerSearchTool } from "./partnerSearch";
 import { followupBatchTool } from "./followupBatch";
 import { agentReportTool } from "./agentReport";
@@ -64,6 +67,10 @@ const TOOLS: readonly Tool[] = [
   enrichPartnerFromWebsiteTool,
   enrichProspectFromWebsiteTool,
   scrapePartnerTool,
+  // Browser-action tools (approval required)
+  browserNavigateAndExtractTool,
+  browserFillFormTool,
+  browserAutoCompleteTool,
 ];
 
 /* ─── Tool metadata for plan-execution ─── */
@@ -77,6 +84,8 @@ const ACTION_TOOL_IDS = new Set([
   "calculate-lead-scores", "deduplicate-contacts",
   "scrape-linkedin-profile", "scrape-company-website", "enrich-partner-from-web",
   "enrich-partner-from-website", "enrich-prospect-from-website",
+  "browser-navigate-extract", "browser-fill-form", "browser-auto-complete",
+  "scrape-partner-website",
 ]);
 
 export const TOOL_METADATA = TOOLS.map((t) => ({
