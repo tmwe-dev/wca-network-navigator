@@ -1,15 +1,6 @@
 /**
- * useAuthV2 — Auth hook for V2.
- * Login email/password, profilo, ruoli, whitelist.
- * Session state sourced directly from supabase.auth.
+ * useAuthV2 — Stubbed: auth removed, always returns authenticated admin.
  */
-
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { rpcGetUserRoles, rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
-import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
-
-// ── Types ────────────────────────────────────────────────────────────
 
 export type AppRole = "admin" | "moderator" | "user";
 
@@ -21,8 +12,8 @@ export interface UserProfile {
 }
 
 export interface AuthState {
-  readonly user: User | null;
-  readonly session: Session | null;
+  readonly user: null;
+  readonly session: null;
   readonly profile: UserProfile | null;
   readonly roles: readonly AppRole[];
   readonly isLoading: boolean;
@@ -42,272 +33,23 @@ interface AuthActions {
 
 export type UseAuthV2Return = AuthState & AuthActions;
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-function getDisplayName(authUser: User): string | null {
-  return authUser.user_metadata?.full_name
-    ?? authUser.user_metadata?.display_name
-    ?? authUser.user_metadata?.name
-    ?? authUser.email
-    ?? null;
-}
-
-function buildFallbackProfile(authUser: User): UserProfile {
-  return {
-    userId: authUser.id,
-    email: authUser.email ?? "",
-    displayName: getDisplayName(authUser),
-    avatarUrl: null,
-  };
-}
-
-function isTransientBootstrapError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /abort|lock broken|timeout|timed out|network|fetch|context deadline|retryable/i.test(message);
-}
-
-// ── Helper: load profile ─────────────────────────────────────────────
-
-async function loadProfile(authUser: User): Promise<UserProfile | null> {
-  const userId = authUser.id;
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, display_name, user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (data) {
-    return {
-      userId,
-      email: authUser.email ?? "",
-      displayName: data.display_name,
-      avatarUrl: null,
-    };
-  }
-
-  // Auto-creazione profilo se mancante
-  const displayName = getDisplayName(authUser);
-
-  const { error: insertErr } = await supabase
-    .from("profiles")
-    .insert({ user_id: userId, display_name: displayName });
-
-  if (insertErr) {
-    console.warn("[useAuthV2] Auto-create profilo fallito:", insertErr.message);
-    return null;
-  }
-
-  return {
-    userId,
-    email: authUser.email ?? "",
-    displayName,
-    avatarUrl: null,
-  };
-}
-
-// ── Helper: load roles ───────────────────────────────────────────────
-
-async function loadRoles(userId: string): Promise<AppRole[]> {
-  const roles = await rpcGetUserRoles(userId);
-  if (!roles || roles.length === 0) return ["user"];
-  return roles as AppRole[];
-}
-
-// ── Hook ─────────────────────────────────────────────────────────────
+const noop = async () => {};
 
 export function useAuthV2(): UseAuthV2Return {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [authStatus, setAuthStatus] = useState<"loading" | "ready">("loading");
-
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [roles, setRoles] = useState<readonly AppRole[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const isAuthenticated = user !== null && session !== null;
-  const isAdmin = roles.includes("admin");
-
-  // ── Auth listener ────────────────────────────────────────────────
-  useEffect(() => {
-    let mounted = true;
-
-    const sync = (s: Session | null) => {
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      setAuthStatus("ready");
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, currentSession: Session | null) => {
-        sync(currentSession);
-      },
-    );
-
-    supabase.auth.getSession().then(({ data: { session: initial } }) => {
-      if (mounted && authStatus === "loading") sync(initial);
-    }).catch(() => {
-      if (mounted && authStatus === "loading") sync(null);
-    });
-
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Load user data after auth ────────────────────────────────────
-
-  const loadUserData = useCallback(async (authUser: User) => {
-    const email = authUser.email;
-    if (!email) {
-      await supabase.auth.signOut();
-      setError("Account senza email associata.");
-      return;
-    }
-
-    try {
-      const authorized = await rpcIsEmailAuthorized(normalizeEmail(email));
-      if (!authorized) {
-        await supabase.auth.signOut();
-        setError("Email non autorizzata. Contatta l'amministratore.");
-        return;
-      }
-    } catch (err) {
-      if (!isTransientBootstrapError(err)) {
-        await supabase.auth.signOut();
-        setError(err instanceof Error ? err.message : "Errore durante la verifica accesso.");
-        return;
-      }
-    }
-
-    const fallbackProfile = buildFallbackProfile(authUser);
-    const [userProfileResult, userRolesResult] = await Promise.allSettled([
-      loadProfile(authUser),
-      loadRoles(authUser.id),
-    ]);
-
-    setProfile(
-      userProfileResult.status === "fulfilled"
-        ? userProfileResult.value ?? fallbackProfile
-        : fallbackProfile,
-    );
-    setRoles(
-      userRolesResult.status === "fulfilled" && userRolesResult.value.length > 0
-        ? userRolesResult.value
-        : ["user"],
-    );
-
-    try {
-      await rpcRecordUserLogin(normalizeEmail(email));
-    } catch (err) {
-      if (!isTransientBootstrapError(err)) {
-        setError(err instanceof Error ? err.message : "Errore durante la registrazione del login.");
-      }
-    }
-  }, []);
-
-  // ── React to session changes ─────────────────────────────────────
-
-  useEffect(() => {
-    if (authStatus === "loading") return;
-
-    if (user) {
-      setIsLoading(true);
-      loadUserData(user).finally(() => setIsLoading(false));
-    } else {
-      setProfile(null);
-      setRoles([]);
-      setIsLoading(false);
-    }
-  }, [user, authStatus, loadUserData]);
-
-  // Fallback timer (5s max loading)
-  useEffect(() => {
-    const fallbackTimer = setTimeout(() => {
-      if (isLoading) setIsLoading(false);
-    }, 5000);
-    return () => clearTimeout(fallbackTimer);
-  }, [isLoading]);
-
-  // ── Actions ──────────────────────────────────────────────────────
-
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    setError(null);
-    setIsLoading(true);
-
-    const ne = normalizeEmail(email);
-    try {
-      const authorized = await rpcIsEmailAuthorized(ne);
-      if (!authorized) {
-        setError("Email non autorizzata. Contatta l'amministratore.");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verifica accesso non disponibile.");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-    } catch { /* ignore */ }
-
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: ne, password });
-    if (authError) {
-      setError(authError.message);
-      setIsLoading(false);
-    }
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    setError(null);
-    setIsLoading(true);
-
-    const ne = normalizeEmail(email);
-    const authorized = await rpcIsEmailAuthorized(ne);
-    if (!authorized) {
-      setError("Email non autorizzata.");
-      setIsLoading(false);
-      return;
-    }
-
-    const { error: authError } = await supabase.auth.signUp({
-      email: ne,
-      password,
-      options: { data: { display_name: displayName } },
-    });
-
-    if (authError) setError(authError.message);
-    setIsLoading(false);
-  }, []);
-
-  const signOut = useCallback(async () => {
-    setError(null);
-    await supabase.auth.signOut();
-    setProfile(null);
-    setRoles([]);
-  }, []);
-
-  const resetPassword = useCallback(async (email: string) => {
-    setError(null);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email));
-    if (authError) setError(authError.message);
-  }, []);
-
-  const updatePassword = useCallback(async (newPassword: string) => {
-    setError(null);
-    const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-    if (authError) setError(authError.message);
-  }, []);
-
-  const clearError = useCallback(() => setError(null), []);
-
   return {
-    user, session, profile, roles,
-    isLoading, isAuthenticated, isAdmin, error,
-    signInWithEmail, signUp,
-    signOut, resetPassword, updatePassword, clearError,
+    user: null,
+    session: null,
+    profile: null,
+    roles: ["admin"],
+    isLoading: false,
+    isAuthenticated: true,
+    isAdmin: true,
+    error: null,
+    signInWithEmail: noop,
+    signUp: noop,
+    signOut: noop,
+    resetPassword: noop,
+    updatePassword: noop,
+    clearError: () => {},
   };
 }

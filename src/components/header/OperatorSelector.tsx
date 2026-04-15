@@ -1,5 +1,4 @@
 import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
-import { useCurrentOperator } from "@/hooks/useOperators";
 import {
   Select,
   SelectContent,
@@ -12,11 +11,9 @@ import { cn } from "@/lib/utils";
 
 export function OperatorSelector() {
   const { operators, activeOperator, setActiveOperatorId, viewingAll, isImpersonating, setViewingAll } = useActiveOperator();
-  const { data: currentOp } = useCurrentOperator();
 
-  // Only show for admins
-  if (!currentOp?.is_admin) return null;
-  if (operators.length <= 1) return null;
+  // Always visible, no admin gate
+  if (operators.length === 0) return null;
 
   const activeOps = operators.filter(o => o.is_active);
   const currentValue = viewingAll ? "__all__" : (activeOperator?.id || "");
@@ -39,7 +36,7 @@ export function OperatorSelector() {
           viewingAll && "border-primary/40 bg-primary/5"
         )}>
           <Shield className="w-3.5 h-3.5 shrink-0 text-primary" />
-          <SelectValue placeholder="Operatore..." />
+          <SelectValue placeholder="Seleziona operatore..." />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="__all__" className="text-xs">
