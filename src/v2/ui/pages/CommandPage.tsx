@@ -541,6 +541,7 @@ const CommandPage = () => {
             <Globe2 className="w-3 h-3" />
             <span className="text-[9px] font-semibold tracking-wider uppercase">{lang === "it" ? "IT" : "EN"}</span>
           </motion.button>
+        </div>
       </div>
 
       {/* Main */}
