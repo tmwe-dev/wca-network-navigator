@@ -498,7 +498,18 @@ const CommandPage = () => {
   };
 
   return (
-    <div className="dark h-screen flex flex-col overflow-hidden relative bg-background text-foreground">
+    <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
+      {/* Fixed back button */}
+      <motion.button
+        onClick={() => nav("/v2")}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] text-muted-foreground/80 hover:text-foreground hover:bg-white/5 transition-all backdrop-blur-md border border-white/[0.06]"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        <span>Dashboard</span>
+      </motion.button>
+
       {/* Ambient */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <motion.div
@@ -511,16 +522,7 @@ const CommandPage = () => {
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <motion.button
-            onClick={() => nav("/v2")}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
-            title="Torna alla dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </motion.button>
+        <div className="flex items-center gap-3 ml-28">
           <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/95" animate={{ opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 3, repeat: Infinity }} />
           <span className="text-[11px] text-muted-foreground/98 font-light tracking-wide">Sessione attiva</span>
           {flowPhase !== "idle" && flowPhase !== "done" && (
