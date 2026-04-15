@@ -36,7 +36,8 @@
     "validate": "npm run lint && npm run typecheck && npm run test",
     "debt:check": "node scripts/debt-budget.js",
     "audit:security": "npm audit --production --audit-level=high",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed:kb": "tsx scripts/seed-kb.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
