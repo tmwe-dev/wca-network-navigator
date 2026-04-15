@@ -28,20 +28,20 @@ export function useConversation() {
 
   // Load conversation list on mount
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!userId) return;
     fetchConversations(30).then((res) => {
       if (isOk(res)) setConversations(res.value);
     });
-  }, [session?.user?.id]);
+  }, [userId]);
 
   const ensureConversation = useCallback(
     async (firstUserPrompt?: string): Promise<string | null> => {
       if (conversationId) return conversationId;
-      if (!session?.user?.id) return null;
+      if (!userId) return null;
       const title = firstUserPrompt
         ? firstUserPrompt.slice(0, 60)
         : "Nuova conversazione";
-      const res = await createConversation(session?.session?.user?.id, title);
+      const res = await createConversation(session?.userId, title);
       if (!isOk(res)) return null;
       const newConv = res.value;
       setConversationId(newConv.id);
@@ -49,7 +49,7 @@ export function useConversation() {
       titleSetRef.current = false;
       return newConv.id;
     },
-    [conversationId, session?.user?.id],
+    [conversationId, userId],
   );
 
   const loadConversation = useCallback(async (id: string) => {
