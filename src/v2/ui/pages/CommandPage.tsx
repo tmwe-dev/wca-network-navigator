@@ -302,6 +302,7 @@ const CommandPage = () => {
   const [execSteps, setExecSteps] = useState<ExecutionStep[]>([]);
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
   const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
+  const [planState, setPlanState] = useState<PlanExecutionState | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const governance = useGovernance(activeScenarioKey ?? undefined);
