@@ -52,8 +52,8 @@ export const enrichPartnerFromWebTool: Tool = {
       throw new Error(pRes.error.message ?? "Partner non trovato");
     const partner = pRes.value;
 
-    const website =
-      (partner as Record<string, unknown>).website as string | undefined;
+    const partnerRec = partner as unknown as Record<string, unknown>;
+    const website = partnerRec.website as string | undefined;
     if (!website)
       throw new Error(
         "Partner senza sito web — impossibile fare scraping",
@@ -67,7 +67,6 @@ export const enrichPartnerFromWebTool: Tool = {
 
     // Step 3: build updates for missing fields
     const updates: Record<string, unknown> = {};
-    const partnerRec = partner as Record<string, unknown>;
     if (scraped.emails.length > 0 && !partnerRec.email)
       updates.email = scraped.emails[0];
     if (scraped.phones.length > 0 && !partnerRec.phone)

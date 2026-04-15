@@ -70,7 +70,7 @@ export const scrapeLinkedInProfileTool: Tool = {
       phone: profile.phone ?? null,
       location: profile.location || null,
       notes: profile.about ?? null,
-      raw_data: profile as unknown as Record<string, unknown>,
+      raw_data: JSON.parse(JSON.stringify(profile)),
     });
 
     if (card._tag === "Err")

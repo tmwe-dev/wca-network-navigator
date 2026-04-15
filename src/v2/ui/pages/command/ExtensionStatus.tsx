@@ -45,10 +45,10 @@ export function ExtensionStatus() {
       {active.map((ext) => (
         <span
           key={ext.target}
-          className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-green-400"
+          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary"
           title={`${ext.label} è attivo e pronto`}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           {ext.label}
         </span>
       ))}
