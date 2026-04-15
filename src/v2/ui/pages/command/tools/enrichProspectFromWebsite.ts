@@ -78,9 +78,10 @@ export const enrichProspectFromWebsiteTool: Tool = {
       updates.phone = scraped.phones[0];
 
     if (Object.keys(updates).length > 0) {
+      const typedUpdates = updates as { email?: string; phone?: string };
       const { error: upErr } = await supabase
         .from("prospects")
-        .update(updates)
+        .update(typedUpdates)
         .eq("id", prospectId);
       if (upErr) throw new Error(upErr.message ?? "Update prospect fallito");
     }
