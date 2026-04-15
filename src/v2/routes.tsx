@@ -54,6 +54,7 @@ const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default:
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
+const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -157,6 +158,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
+          <Route path="observability" element={guardedPage(ObservabilityPage, "Observability")} />
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
