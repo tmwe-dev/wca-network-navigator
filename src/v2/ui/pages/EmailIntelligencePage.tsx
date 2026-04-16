@@ -108,16 +108,16 @@ export function EmailIntelligencePage(): React.ReactElement {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="manual" className="flex-1 mt-4 overflow-hidden">
+        <TabsContent value="manual" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><ManualGroupingTab /></Suspense>
         </TabsContent>
-        <TabsContent value="ai-suggestions" className="flex-1 mt-4">
+        <TabsContent value="ai-suggestions" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><AISuggestionsTab /></Suspense>
         </TabsContent>
-        <TabsContent value="auto-classify" className="flex-1 mt-4">
+        <TabsContent value="auto-classify" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
         </TabsContent>
-        <TabsContent value="rules" className="flex-1 mt-4">
+        <TabsContent value="rules" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
         </TabsContent>
       </Tabs>
