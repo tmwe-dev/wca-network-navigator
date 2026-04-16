@@ -487,6 +487,7 @@ export const queryKeys = {
     partnersInfinite: (filters?: unknown) => ["v2", "partners-infinite", filters] as const,
     partnerDetail: (partnerId?: string) => ["v2", "partner", partnerId] as const,
     dashboard: ["v2", "dashboard", "metrics"] as const,
+    agentCapabilities: ["v2", "agent-capabilities"] as const,
   },
 
   // ── Misc / Uncategorized ──────────────────────────────
