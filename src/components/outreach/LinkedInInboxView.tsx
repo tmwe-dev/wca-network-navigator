@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  Linkedin, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
+  Linkedin, RefreshCw, Loader2, Search, Wifi, WifiOff,
   Send, X, PanelLeftClose, PanelLeftOpen, Download, Square,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,7 +36,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
   const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
-  const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
+  const { isReading, isAvailable, readNow } = useLinkedInSync();
   const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
 
   // Group messages by contact
@@ -141,9 +141,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
     }
   };
 
-  const nextSyncIn = lastSyncAt
-    ? Math.max(0, Math.round((lastSyncAt + 30 * 60 * 1000 - Date.now()) / 60000))
-    : null;
+  // No more auto-sync timer
 
   return (
     <div className="flex h-full bg-background overflow-hidden">
@@ -173,13 +171,9 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                 <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={readNow} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">
+                <Button size="sm" variant="outline" onClick={readNow} disabled={isReading} className="gap-1 h-7 text-[11px] px-2">
                   {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                   Leggi
-                </Button>
-                <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2">
-                  {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  {enabled ? "ON" : "OFF"}
                 </Button>
                 <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
                   {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
@@ -188,7 +182,6 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                 <Badge variant={isFireScrapeAvailable ? "default" : "secondary"} className="text-[9px] gap-0.5 h-5 px-1.5" title="FireScrape">
                   {isFireScrapeAvailable ? "🔥" : "⭕"} FS
                 </Badge>
-                {/* Backfill */}
                 {bfProgress.status === "running" || bfProgress.status === "paused" ? (
                   <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-7 text-[11px] px-2">
                     <Square className="w-3 h-3" /> Stop
@@ -198,12 +191,6 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                     <Download className="w-3 h-3" /> Backfill
                   </Button>
                 )}
-              </div>
-
-              {/* Sync info */}
-              {enabled && nextSyncIn !== null && (
-                <p className="text-[9px] text-muted-foreground">🔄 Prossimo sync tra ~{nextSyncIn} min</p>
-              )}
 
               {/* Backfill progress */}
               {(bfProgress.status === "running" || bfProgress.status === "paused") && (
