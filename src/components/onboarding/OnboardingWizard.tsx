@@ -39,13 +39,23 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     next();
   };
 
+  const markOnboardingComplete = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("user_id", user.id);
+    }
+  };
+
   const handleFinish = async () => {
     setSaving(true);
     try {
       for (const [provider, key] of Object.entries(apiKeys)) {
         if (key.trim()) await saveSetting(`ai_key_${provider}`, key.trim());
       }
-      await saveSetting("onboarding_completed", "true");
+      await markOnboardingComplete();
       toast.success("Configurazione completata!");
       onComplete();
     } catch {
@@ -58,7 +68,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const handleSkipToEnd = async () => {
     setSaving(true);
     try {
-      await saveSetting("onboarding_completed", "true");
+      await markOnboardingComplete();
       onComplete();
     } catch {
       toast.error("Errore");
