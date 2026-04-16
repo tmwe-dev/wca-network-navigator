@@ -98,6 +98,7 @@ export function useLinkedInBackfill() {
             const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
             const error = await insertChannelMessage({
               user_id: user.id,
+              operator_id: operatorId,
               channel: "linkedin",
               direction: msg.direction === "outbound" ? "outbound" : "inbound",
               from_address: msg.direction === "outbound" ? undefined : thread.name,
