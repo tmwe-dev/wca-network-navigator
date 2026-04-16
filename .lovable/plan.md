@@ -1,58 +1,93 @@
 
 
-# Refactoring Autenticazione + Whitelist
+# Analisi e Riprogettazione della Dashboard Home (DashboardPage)
 
-## Problema principale (ADESSO)
+## Situazione attuale
 
-Il database Supabase sta restituendo **503 PGRST002** ("Could not query the database for the schema cache") su TUTTE le query. Questo significa che nessuna operazione funziona, inclusa la whitelist check (`rpc is_email_authorized`). Il problema e infrastrutturale, probabilmente causato da una migrazione recente che ha rotto lo schema cache di PostgREST.
+La prima pagina (`/v2` → `SuperHome3D.tsx`) mostra:
 
-**Prima di qualsiasi refactoring del codice, il database deve tornare online.**
+1. **Briefing Operativo** — generato da un'edge function (`daily-briefing`) che chiama un LLM con 18 query parallele al DB. Le 3 tab (Effettuato / Da fare / Sospesi) contengono **testo libero generato dall'AI**, non dati strutturati.
 
-## Diagnosi del codice Auth
+2. **BriefingStatsBar** — 4 numeri:
+   - Totale contatti = `partners.count + imported_contacts.count`
+   - Nel circuito = `partners(lead_status=contacted) + imported_contacts(lead_status=contacted)`
+   - Da contattare = `partners(lead_status=new) + imported_contacts(lead_status=new)`
+   - Oggi = `agent_tasks` schedulati oggi
 
-Ho ispezionato tutti i file critici. La struttura auth e in realta **gia ben fatta**:
+3. **Team Agenti** — Solo nome, emoji, task attivi/completati oggi, ultimo task. Dati dal briefing (edge function).
 
-| File | Stato | Note |
-|---|---|---|
-| `src/providers/AuthProvider.tsx` | OK | Provider centralizzato con `onAuthStateChange` + `getSession` bootstrap |
-| `src/components/auth/ProtectedRoute.tsx` | OK | Usa `useAuth()`, redirect a `/auth` se non autenticato |
-| `src/pages/Auth.tsx` | Funzionale ma migliorabile | Login/Signup con whitelist check via RPC, Google OAuth presente |
-| `src/data/rpc.ts` | OK | `rpcIsEmailAuthorized` e `rpcRecordUserLogin` ben implementati |
-| `src/App.tsx` | OK | Route pubbliche (`/auth`, `/reset-password`) e protette (`/v1/*`) corrette |
+## Problemi identificati
 
-## Piano di intervento
+| Problema | Dettaglio |
+|----------|-----------|
+| **Dati non strutturati** | I tab "Effettuato/Da fare/Sospesi" sono testo AI — non numeri cliccabili e azionabili |
+| **Mancano metriche outreach** | Non si vedono: outreach creati, programmati, autorizzati, da autorizzare |
+| **Risposte al primo contatto** | Non tracciate nella dashboard |
+| **Agenti troppo generici** | Non si vede quante attività ha preparato ogni agente, quante in corso, quante in coda approvazione |
+| **Latenza** | Il briefing dipende da una chiamata LLM (5-25s) — i numeri "duri" non dovrebbero aspettare l'AI |
+| **18 query separate** | Tutte nella edge function. Le metriche strutturali dovrebbero essere query dirette dal client (come fa `useDashboardMetrics`) |
 
-### Step 1 -- Risolvere il 503 del database
-- Verificare se una migrazione recente ha causato il problema
-- Se necessario, creare una migrazione vuota o di "fix" per forzare il refresh dello schema cache di PostgREST
-- Verificare che le RPC `is_email_authorized` e `record_user_login` esistano ancora
+## Piano di riprogettazione
 
-### Step 2 -- Pulizia Auth (miglioramenti, non riscrittura)
-Il codice auth funziona. I fix sono puntuali:
+### STEP 1 — Nuova sezione "Metriche Operative" (query dirette, no AI)
 
-1. **Rimuovere Google OAuth** dal form `/auth` (il pulsante "Continua con Google" e la dipendenza `lovable.auth.signInWithOAuth`) -- semplifica il flusso a solo email+password+whitelist
-2. **Aggiungere toggle visibilita password** ai campi password (come da memoria `auth/ui-auth-password-toggle-standard`)
-3. **Gestire il caso 503/errore RPC** nella `checkWhitelist` -- attualmente un errore di rete viene trattato come "non autorizzato" (ritorna `false`), il che blocca l'accesso anche se l'utente e nella whitelist. Fix: mostrare un toast di errore di connessione invece di "non autorizzato"
-4. **Unificare `/v2/login` con `/auth`** -- attualmente V2 ha una LoginPage separata che duplica logica. Redirect `/v2/login` a `/auth`
+Creare un nuovo hook `useDashboardOperativeMetrics` che con query parallele `head: true` restituisce:
 
-### Step 3 -- Aggiornare memorie di progetto
-- Rimuovere la memoria `mem://auth/public-access-no-auth` (obsoleta, l'app usa auth reale)
-- Confermare `mem://auth/whitelist-email-auth-standard` come regola attiva
+```text
+┌─────────────────────────────────────────────────────┐
+│  CONTATTI                                           │
+│  Totale │ Da contattare │ Contattati │ Hanno risposto│
+├─────────────────────────────────────────────────────┤
+│  OUTREACH PIPELINE                                  │
+│  Creati │ Programmati │ Autorizzati │ Da autorizzare │
+├─────────────────────────────────────────────────────┤
+│  MESSAGGI                                           │
+│  Inviati oggi │ In attesa risposta │ Risposte ricevute│
+└─────────────────────────────────────────────────────┘
+```
 
-## Dettagli tecnici
+Fonte dati:
+- **Da contattare**: `partners(lead_status=new)` + `imported_contacts(lead_status=new)`
+- **Contattati**: `partners(lead_status=contacted)` + `imported_contacts(lead_status=contacted)`
+- **Hanno risposto**: `outreach_queue(status=replied).count` oppure `activities(response_received=true)`
+- **Creati**: `outreach_schedules(status in pending,approved,running).count`
+- **Programmati**: `outreach_schedules(status=pending).count`
+- **Autorizzati**: `mission_actions(status=approved).count`
+- **Da autorizzare**: `mission_actions(status=proposed).count`
+- **Inviati oggi**: `outreach_queue(status=sent, sent_at >= today).count`
+- **In attesa risposta**: `outreach_queue(status=sent).count` (senza reply)
+- **Risposte**: `outreach_queue(status=replied).count`
 
-### File da modificare:
-- `src/pages/Auth.tsx` -- rimuovere Google OAuth, aggiungere toggle password, migliorare error handling su RPC fallita
-- `src/v2/routes.tsx` -- redirect `/v2/login` a `/auth`
-- `src/v2/ui/pages/LoginPage.tsx` -- eliminare o convertire in redirect
-- Memoria: `mem://auth/public-access-no-auth` da eliminare, `mem://index.md` da aggiornare
+### STEP 2 — Team Agenti dinamico
 
-### File da NON toccare:
-- `src/providers/AuthProvider.tsx` -- gia corretto
-- `src/components/auth/ProtectedRoute.tsx` -- gia corretto
-- `src/data/rpc.ts` -- gia corretto
+Sostituire il pannello agenti attuale con una versione che mostra per ogni agente:
+- Task **preparati** (status = proposed)
+- Task **in corso** (status = running)
+- Task **in coda approvazione** (status = pending)
+- Task **completati oggi**
+- Barra progresso visuale
 
-### Rischi:
-- Se il database non torna online (503), nessun fix lato codice risolvera il login
-- La rimozione di Google OAuth e irreversibile senza ri-configurazione
+Query diretta dal client su `agent_tasks` raggruppata per `agent_id` e `status`.
+
+### STEP 3 — Briefing AI snellito
+
+Il briefing AI rimane ma diventa **secondario** — un card collassabile sotto le metriche strutturali. I numeri "duri" arrivano istantaneamente (query dirette), il briefing narrativo arriva dopo (quando l'LLM risponde).
+
+### STEP 4 — File da modificare
+
+| File | Azione |
+|------|--------|
+| `src/v2/io/supabase/queries/dashboard.ts` | Aggiungere `fetchOperativeMetrics()` con tutte le count query |
+| `src/v2/hooks/useDashboardOperativeMetrics.ts` | Nuovo hook React Query |
+| `src/components/home/OperativeMetricsGrid.tsx` | Nuovo componente griglia metriche |
+| `src/components/home/AgentStatusPanel.tsx` | Arricchire con breakdown per status task |
+| `src/pages/SuperHome3D.tsx` | Riorganizzare layout: Metriche → Agenti → Briefing AI (collassabile) |
+| `src/components/home/BriefingStatsBar.tsx` | Sostituito dalla nuova griglia, da rimuovere o mantenere dentro il briefing |
+
+### Benefici
+
+- **Dati istantanei**: le metriche arrivano in <500ms (count queries), non servono 25s di LLM
+- **Azionabili**: ogni numero è cliccabile e naviga alla sezione corrispondente
+- **Completi**: outreach pipeline, risposte, approvazioni — tutto visibile
+- **Agenti trasparenti**: si vede esattamente cosa fa ogni agente
 
