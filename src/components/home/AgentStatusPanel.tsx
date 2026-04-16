@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,10 +16,32 @@ interface Props {
 
 export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
   const navigate = useAppNavigate();
-  const [agents, setAgents] = useState(initialAgents);
+
+  // Deduplicate agents by name (keep the first occurrence)
+  const deduped = useMemo(() => {
+    const seen = new Map<string, AgentStatusItem>();
+    for (const a of initialAgents) {
+      const key = a.name.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, a);
+      } else {
+        // Merge stats into the first one
+        const existing = seen.get(key)!;
+        seen.set(key, {
+          ...existing,
+          activeTasks: existing.activeTasks + a.activeTasks,
+          completedToday: existing.completedToday + a.completedToday,
+          lastTask: a.lastTask ?? existing.lastTask,
+        });
+      }
+    }
+    return Array.from(seen.values());
+  }, [initialAgents]);
+
+  const [agents, setAgents] = useState(deduped);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => { setAgents(initialAgents); }, [initialAgents]);
+  useEffect(() => { setAgents(deduped); }, [deduped]);
 
   // Auto-select first agent
   useEffect(() => {
