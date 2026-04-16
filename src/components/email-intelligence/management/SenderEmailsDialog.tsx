@@ -2,23 +2,26 @@
  * SenderEmailsDialog — Shows emails from a specific sender in sequence
  */
 import { useState, useEffect, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Mail, Calendar, ArrowRight, ArrowLeft, User } from "lucide-react";
+import { Loader2, Mail, Calendar, ArrowRight, ArrowLeft, User, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import DOMPurify from "dompurify";
+import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
+import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
+import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 
 interface SenderEmail {
   id: string;
   subject: string | null;
-  body_text: string | null;
-  body_html: string | null;
   email_date: string | null;
   direction: string;
   from_address: string | null;
   to_address: string | null;
+  body_text?: string | null;
+  body_html?: string | null;
 }
 
 interface SenderEmailsDialogProps {
@@ -26,35 +29,6 @@ interface SenderEmailsDialogProps {
   onOpenChange: (open: boolean) => void;
   emailAddress: string;
   companyName: string;
-}
-
-/** Strip common email noise from plain text */
-function cleanPlainText(raw: string): string {
-  let text = raw;
-  // Remove base64 / encoded blocks
-  text = text.replace(/^[A-Za-z0-9+/=]{60,}$/gm, "");
-  // Remove MIME headers
-  text = text.replace(/^(Content-Type|Content-Transfer-Encoding|MIME-Version|X-\S+):.*$/gim, "");
-  // Remove boundary markers
-  text = text.replace(/^--[\w=+/.-]+--?$/gm, "");
-  // Collapse excessive blank lines
-  text = text.replace(/\n{4,}/g, "\n\n\n");
-  // Trim leading/trailing whitespace
-  return text.trim();
-}
-
-/** Sanitize HTML for safe rendering */
-function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [
-      "p", "br", "div", "span", "a", "b", "strong", "i", "em", "u",
-      "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6",
-      "table", "thead", "tbody", "tr", "td", "th",
-      "blockquote", "pre", "code", "hr", "img", "sup", "sub",
-    ],
-    ALLOWED_ATTR: ["href", "target", "rel", "src", "alt", "width", "height", "style", "class"],
-    ALLOW_DATA_ATTR: false,
-  });
 }
 
 export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyName }: SenderEmailsDialogProps) {
@@ -65,7 +39,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
   useEffect(() => {
     if (!open || !emailAddress) return;
     setSelectedIdx(0);
-    loadEmails();
+    void loadEmails();
   }, [open, emailAddress]);
 
   const fetchAllSenderEmails = async (): Promise<SenderEmail[]> => {
@@ -77,7 +51,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     while (!done) {
       const { data, error } = await supabase
         .from("channel_messages")
-        .select("id, subject, body_text, body_html, email_date, direction, from_address, to_address")
+        .select("id, subject, email_date, direction, from_address, to_address")
         .eq("channel", "email")
         .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
         .order("email_date", { ascending: false })
@@ -110,18 +84,52 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     }
   };
 
-  const current = emails[selectedIdx];
+  const current = emails[selectedIdx] ?? null;
+  const {
+    bodyHtml,
+    bodyText,
+    isLoading: isContentLoading,
+    isError: isContentError,
+  } = useEmailMessageContent(current?.id ?? null, {
+    bodyHtml: current?.body_html,
+    bodyText: current?.body_text,
+  });
 
-  const renderedBody = useMemo(() => {
-    if (!current) return null;
-    if (current.body_html) {
-      return { type: "html" as const, content: sanitizeHtml(current.body_html) };
-    }
-    if (current.body_text) {
-      return { type: "text" as const, content: cleanPlainText(current.body_text) };
-    }
-    return null;
-  }, [current]);
+  const normalizedContent = useMemo(
+    () => normalizeEmailContent({ bodyHtml, bodyText }),
+    [bodyHtml, bodyText],
+  );
+
+  const sanitizedHtml = useMemo(() => {
+    if (!normalizedContent.bodyHtml) return null;
+
+    return DOMPurify.sanitize(normalizedContent.bodyHtml, {
+      USE_PROFILES: { html: true },
+      ADD_TAGS: ["style", "center"],
+      ADD_ATTR: [
+        "target",
+        "style",
+        "class",
+        "bgcolor",
+        "background",
+        "align",
+        "valign",
+        "width",
+        "height",
+        "cellpadding",
+        "cellspacing",
+        "border",
+        "color",
+        "face",
+        "size",
+      ],
+      ALLOW_DATA_ATTR: true,
+      FORBID_TAGS: ["script", "form", "input", "textarea", "select", "button"],
+      FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus", "onblur"],
+    });
+  }, [normalizedContent.bodyHtml]);
+
+  const hasContent = Boolean(normalizedContent.bodyHtml || normalizedContent.bodyText);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,7 +150,6 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
           <p className="text-center py-12 text-muted-foreground text-sm">Nessuna email trovata</p>
         ) : (
           <div className="flex flex-1 gap-3 min-h-0">
-            {/* Email list sidebar */}
             <ScrollArea className="w-[220px] shrink-0 border rounded-md">
               <div className="p-1 space-y-0.5">
                 {emails.map((em, idx) => (
@@ -158,9 +165,9 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                   >
                     <div className="flex items-center gap-1.5 mb-0.5">
                       {em.direction === "inbound" ? (
-                        <ArrowLeft className="h-3 w-3 text-sky-400 shrink-0" />
+                        <ArrowLeft className="h-3 w-3 text-primary shrink-0" />
                       ) : (
-                        <ArrowRight className="h-3 w-3 text-emerald-400 shrink-0" />
+                        <ArrowRight className="h-3 w-3 text-primary shrink-0" />
                       )}
                       <span className="truncate font-medium leading-tight">
                         {em.subject || "(senza oggetto)"}
@@ -178,21 +185,14 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
               </div>
             </ScrollArea>
 
-            {/* Email detail */}
             {current && (
               <div className="flex-1 flex flex-col min-w-0 border rounded-md overflow-hidden">
-                {/* Header */}
                 <div className="px-4 py-3 border-b bg-muted/20 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    {current.direction === "inbound" ? (
-                      <Badge className="text-[10px] gap-1 bg-sky-500/15 text-sky-400 border-sky-500/20 hover:bg-sky-500/20">
-                        <ArrowLeft className="h-3 w-3" /> Ricevuta
-                      </Badge>
-                    ) : (
-                      <Badge className="text-[10px] gap-1 bg-emerald-500/15 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">
-                        <ArrowRight className="h-3 w-3" /> Inviata
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="text-[10px] gap-1 text-primary border-primary/20">
+                      {current.direction === "inbound" ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+                      {current.direction === "inbound" ? "Ricevuta" : "Inviata"}
+                    </Badge>
                     {current.email_date && (
                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -209,8 +209,8 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                   <h3 className="text-sm font-bold text-primary leading-snug">
                     {current.subject || "(senza oggetto)"}
                   </h3>
-                  <div className="flex items-center gap-3 text-[11px]">
-                    <span className="flex items-center gap-1 text-sky-400">
+                  <div className="flex items-center gap-3 text-[11px] flex-wrap">
+                    <span className="flex items-center gap-1 text-primary">
                       <User className="h-3 w-3" />
                       <span className="font-medium">Da:</span>
                       <span className="text-foreground/80">{current.from_address || "—"}</span>
@@ -223,22 +223,27 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                   </div>
                 </div>
 
-                {/* Body */}
-                <ScrollArea className="flex-1">
-                  <div className="p-4">
-                    {!renderedBody ? (
-                      <p className="text-sm text-muted-foreground italic">
-                        (contenuto non disponibile)
-                      </p>
-                    ) : renderedBody.type === "html" ? (
-                      <div
-                        className="email-body-render text-sm leading-relaxed text-foreground/90 max-w-none"
-                        dangerouslySetInnerHTML={{ __html: renderedBody.content }}
-                      />
-                    ) : (
-                      <div className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap font-sans">
-                        {renderedBody.content}
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="space-y-4 p-4">
+                    {isContentError && (
+                      <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                        <AlertCircle className="mr-1 inline h-3.5 w-3.5" />
+                        Contenuto caricato in modo parziale: sto mostrando la versione disponibile.
                       </div>
+                    )}
+
+                    {isContentLoading && !hasContent ? (
+                      <div className="flex h-40 items-center justify-center rounded-md border border-border bg-background">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : sanitizedHtml ? (
+                      <EmailHtmlFrame html={sanitizedHtml} mode="safe" blockRemote={false} />
+                    ) : normalizedContent.bodyText ? (
+                      <div className="rounded-md border border-border bg-background p-4 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                        {normalizedContent.bodyText}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">(contenuto non disponibile)</p>
                     )}
                   </div>
                 </ScrollArea>
