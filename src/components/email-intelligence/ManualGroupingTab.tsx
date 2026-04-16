@@ -332,7 +332,11 @@ export default function ManualGroupingTab() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className="text-xs">
-          {sortedSenders.length} da categorizzare su {senders.length + groups.reduce((s) => s, 0)} totali
+          {sortedSenders.length} da categorizzare su {senders.length} totali
+        </Badge>
+        <Badge variant="outline" className="text-xs gap-1">
+          <Mail className="h-3 w-3" />
+          {totalEmailCount.toLocaleString("it-IT")} email totali
         </Badge>
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
