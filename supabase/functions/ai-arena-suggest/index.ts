@@ -41,7 +41,7 @@ serve(async (req) => {
     // Build query for never-contacted partners
     let query = supabase
       .from("partners")
-      .select("id, company_name, company_alias, country_code, country_name, city, email, phone, rating, employee_count, profile_description")
+      .select("id, company_name, company_alias, country_code, country_name, city, email, phone, rating, enrichment_data, profile_description")
       .not("email", "is", null);
 
     if (focus === "italia") query = query.eq("country_code", "IT");
@@ -162,7 +162,7 @@ serve(async (req) => {
         email: contactEmail,
         phone: contact?.direct_phone || contact?.mobile || partner.phone,
         rating: partner.rating,
-        employee_count: partner.employee_count,
+        employee_count: (partner.enrichment_data as Record<string, unknown>)?.employee_count ?? null,
         detected_language: langInfo.language,
         language_label: languageLabel,
         target_language: targetLanguage,
