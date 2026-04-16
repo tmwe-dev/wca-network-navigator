@@ -235,8 +235,8 @@ export default function ManualGroupingTab() {
         toast.info("Tutti gli address sono già presenti");
       }
 
-      if (updatePromises.length > 0) {
-        toast.info(`${updatePromises.length} address aggiornati con conteggio corretto`);
+      if (staleUpdates.length > 0) {
+        toast.info(`${staleUpdates.length} address aggiornati con conteggio corretto`);
       }
 
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
