@@ -2,12 +2,11 @@
  * useGlobalAutoSync — Orchestratore sync globale.
  *
  * Night pause basata sulle impostazioni agent_work_start_hour / agent_work_end_hour (CET).
- * WhatsApp sync si attiva SOLO quando l'utente accende il toggle.
+ * WhatsApp e LinkedIn sync sono ora solo manuali (click utente).
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
-import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { supabase } from "@/integrations/supabase/client";
 
 function getCETHour(): number {
@@ -26,7 +25,6 @@ function isNightTimeCET(startHour: number, endHour: number): boolean {
 
 function minutesUntilResumeCET(startHour: number): number {
   const now = new Date();
-  // Build a "today at startHour CET" date
   const cetNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Rome" }));
   const resume = new Date(cetNow);
   resume.setHours(startHour, 0, 0, 0);
@@ -55,7 +53,6 @@ export function useGlobalAutoSync() {
           if (row.key === "agent_work_start_hour") workHoursRef.current.start = parseInt(row.value || "6", 10);
           if (row.key === "agent_work_end_hour") workHoursRef.current.end = parseInt(row.value || "24", 10);
         }
-        // Initial check
         const isNight = isNightTimeCET(workHoursRef.current.start, workHoursRef.current.end);
         setNightPause(isNight);
         setResumeMinutes(minutesUntilResumeCET(workHoursRef.current.start));
@@ -79,23 +76,8 @@ export function useGlobalAutoSync() {
     setManualOverride(prev => !prev);
   }, []);
 
-  // Email auto-sync
+  // Email auto-sync (still managed automatically)
   const emailSync = useEmailAutoSync({ paused: effectivePause });
-
-  // WhatsApp sync — toggle is managed by user, NOT auto-enabled
-  const waSync = useWhatsAppAdaptiveSync();
-
-  // Pause/resume WA sync based on night hours (only if user had it enabled)
-  const waWasEnabledRef = useRef(false);
-  useEffect(() => {
-    if (effectivePause && waSync.enabled) {
-      waWasEnabledRef.current = true;
-      waSync.setEnabled(false);
-    } else if (!effectivePause && waWasEnabledRef.current && !waSync.enabled) {
-      waSync.setEnabled(true);
-      waWasEnabledRef.current = false;
-    }
-  }, [effectivePause]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     nightPause: effectivePause,
@@ -104,6 +86,5 @@ export function useGlobalAutoSync() {
     toggleNightPause,
     resumeMinutes,
     emailSync,
-    waSync,
   };
 }
