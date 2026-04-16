@@ -132,19 +132,20 @@ export default function SuperHome3D() {
           />
         </section>
 
-        {/* Metrics bar (compact) */}
-        <OperativeMetricsGrid metrics={opMetrics} isLoading={opMetricsLoading} />
+        {/* Smart Actions */}
+        <SmartActions />
 
-        {/* Smart Actions + Agents side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <SmartActions />
-            <ActiveJobsWidget jobs={jobs} />
+        {/* Team Agenti with inline metrics */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-3 flex-wrap px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">👥 Team Agenti</span>
+            <OperativeMetricsGrid metrics={opMetrics} isLoading={opMetricsLoading} />
           </div>
-          <div className="lg:col-span-3">
-            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={agentBreakdowns} />
-          </div>
+          <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={agentBreakdowns} />
         </div>
+
+        {/* Active jobs */}
+        <ActiveJobsWidget jobs={jobs} />
 
         {/* Navigation cards */}
         <section className="grid grid-cols-4 gap-2">
