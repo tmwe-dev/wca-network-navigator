@@ -349,8 +349,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                     {/* Overlays */}
                     <Suspense fallback={null}><CommandPalette open={commandOpen} onOpenChange={setCommandOpen} /></Suspense>
-                    {missionOpen && <Suspense fallback={null}><MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} /></Suspense>}
-                    {filtersOpen && <Suspense fallback={null}><FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} /></Suspense>}
+                    <Suspense fallback={null}><MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} /></Suspense>
+                    <Suspense fallback={null}><FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} /></Suspense>
                     {intelliflowOpen && <Suspense fallback={null}><IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} /></Suspense>}
                     {addContactOpen && <Suspense fallback={null}><AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} /></Suspense>}
                     {agentDashOpen && <Suspense fallback={null}><AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} /></Suspense>}
