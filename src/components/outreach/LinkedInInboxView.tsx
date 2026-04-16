@@ -14,6 +14,7 @@ import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
+import { useBackfillState } from "@/hooks/useBackfillState";
 import { toast } from "sonner";
 import { sendLinkedIn as sendLinkedInUnified } from "@/lib/inbox/sendMessage";
 
@@ -38,6 +39,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
   const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
   const { isReading, isAvailable, readNow } = useLinkedInSync();
   const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
+  const { data: bfState } = useBackfillState("linkedin");
 
   // Group messages by contact
   const threads = useMemo(() => {
@@ -204,7 +206,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                     {bfProgress.pauseReason && (
                       <p className="text-yellow-600 dark:text-yellow-400">⚠ {bfProgress.pauseReason}</p>
                     )}
-                    <p>✓ {bfProgress.recoveredMessages} recuperati</p>
+                    <p>✓ {bfProgress.recoveredMessages} recuperati{bfProgress.duplicatesSkipped ? ` • ${bfProgress.duplicatesSkipped} dup` : ""}</p>
                     {bfProgress.lastError && (
                       <p className="text-red-400 truncate" title={bfProgress.lastError}>❌ {bfProgress.lastError}</p>
                     )}
@@ -213,6 +215,12 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
               )}
               {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
                 <p className="text-[9px] text-green-600">✓ {bfProgress.recoveredMessages} messaggi recuperati</p>
+              )}
+              {!(bfProgress.status === "running" || bfProgress.status === "paused") && bfState && bfState.totalChats > 0 && (
+                <p className="text-[9px] text-muted-foreground">
+                  Backfill: {bfState.completedChats}/{bfState.totalChats} thread completi
+                  {bfState.oldestMessageAt && ` • dal ${new Date(bfState.oldestMessageAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}`}
+                </p>
               )}
 
               <div className="relative">
