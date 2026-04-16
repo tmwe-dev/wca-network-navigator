@@ -386,9 +386,10 @@ export default function ManualGroupingTab() {
                   {searchQuery ? "Nessun risultato" : "Tutti i mittenti sono classificati ✅"}
                 </p>
               ) : (
-                sortedSenders.map((sender) => (
+                 sortedSenders.map((sender) => (
                   <SenderCard key={sender.email} sender={sender}
-                    onDragStart={handleDragStart} onDragEnd={handleDragEnd} />
+                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                    onViewEmails={(s) => setEmailPreviewSender(s)} />
                 ))
               )}
             </div>
