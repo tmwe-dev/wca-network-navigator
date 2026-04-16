@@ -314,6 +314,8 @@ export default function ManualGroupingTab() {
     }
   }, [filteredSenders, sortOption]);
 
+  const totalEmailCount = useMemo(() => senders.reduce((sum, s) => sum + s.emailCount, 0), [senders]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
