@@ -22,6 +22,7 @@ export type Database = {
           id: string
           open_rate_a: number | null
           open_rate_b: number | null
+          operator_id: string | null
           responses_a: number | null
           responses_b: number | null
           started_at: string | null
@@ -42,6 +43,7 @@ export type Database = {
           id?: string
           open_rate_a?: number | null
           open_rate_b?: number | null
+          operator_id?: string | null
           responses_a?: number | null
           responses_b?: number | null
           started_at?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           id?: string
           open_rate_a?: number | null
           open_rate_b?: number | null
+          operator_id?: string | null
           responses_a?: number | null
           responses_b?: number | null
           started_at?: string | null
@@ -75,7 +78,15 @@ export type Database = {
           variant_b?: Json
           winner?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ab_tests_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activities: {
         Row: {
@@ -93,6 +104,7 @@ export type Database = {
           executed_by_agent_id: string | null
           id: string
           message_id_external: string | null
+          operator_id: string | null
           partner_id: string | null
           priority: string
           response_channel_message_id: string | null
@@ -126,6 +138,7 @@ export type Database = {
           executed_by_agent_id?: string | null
           id?: string
           message_id_external?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           priority?: string
           response_channel_message_id?: string | null
@@ -159,6 +172,7 @@ export type Database = {
           executed_by_agent_id?: string | null
           id?: string
           message_id_external?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           priority?: string
           response_channel_message_id?: string | null
@@ -193,6 +207,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -221,6 +242,7 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           id: string
+          operator_id: string | null
           result: Json
           tool_name: string
           user_id: string
@@ -230,6 +252,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           result?: Json
           tool_name: string
           user_id: string
@@ -239,11 +262,20 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           result?: Json
           tool_name?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_action_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agent_knowledge_links: {
         Row: {
@@ -251,6 +283,7 @@ export type Database = {
           created_at: string
           id: string
           kb_entry_id: string
+          operator_id: string | null
           priority: number
           user_id: string
         }
@@ -259,6 +292,7 @@ export type Database = {
           created_at?: string
           id?: string
           kb_entry_id: string
+          operator_id?: string | null
           priority?: number
           user_id: string
         }
@@ -267,6 +301,7 @@ export type Database = {
           created_at?: string
           id?: string
           kb_entry_id?: string
+          operator_id?: string | null
           priority?: number
           user_id?: string
         }
@@ -283,6 +318,13 @@ export type Database = {
             columns: ["kb_entry_id"]
             isOneToOne: false
             referencedRelation: "kb_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_knowledge_links_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
         ]
@@ -385,6 +427,7 @@ export type Database = {
           id: string
           kb_filter: Json | null
           language: string
+          operator_id: string | null
           signature_template: string | null
           style_rules: string[] | null
           tone: string
@@ -401,6 +444,7 @@ export type Database = {
           id?: string
           kb_filter?: Json | null
           language?: string
+          operator_id?: string | null
           signature_template?: string | null
           style_rules?: string[] | null
           tone?: string
@@ -417,6 +461,7 @@ export type Database = {
           id?: string
           kb_filter?: Json | null
           language?: string
+          operator_id?: string | null
           signature_template?: string | null
           style_rules?: string[] | null
           tone?: string
@@ -433,6 +478,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_personas_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
         ]
       }
       agent_tasks: {
@@ -443,6 +495,7 @@ export type Database = {
           description: string
           execution_log: Json
           id: string
+          operator_id: string | null
           result_summary: string | null
           scheduled_at: string | null
           started_at: string | null
@@ -458,6 +511,7 @@ export type Database = {
           description?: string
           execution_log?: Json
           id?: string
+          operator_id?: string | null
           result_summary?: string | null
           scheduled_at?: string | null
           started_at?: string | null
@@ -473,6 +527,7 @@ export type Database = {
           description?: string
           execution_log?: Json
           id?: string
+          operator_id?: string | null
           result_summary?: string | null
           scheduled_at?: string | null
           started_at?: string | null
@@ -487,6 +542,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tasks_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
         ]
@@ -507,6 +569,7 @@ export type Database = {
           is_active: boolean
           knowledge_base: Json
           name: string
+          operator_id: string | null
           role: string
           schedule_config: Json
           signature_html: string | null
@@ -533,6 +596,7 @@ export type Database = {
           is_active?: boolean
           knowledge_base?: Json
           name: string
+          operator_id?: string | null
           role?: string
           schedule_config?: Json
           signature_html?: string | null
@@ -559,6 +623,7 @@ export type Database = {
           is_active?: boolean
           knowledge_base?: Json
           name?: string
+          operator_id?: string | null
           role?: string
           schedule_config?: Json
           signature_html?: string | null
@@ -570,13 +635,22 @@ export type Database = {
           user_id?: string
           voice_call_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agents_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_conversations: {
         Row: {
           created_at: string
           id: string
           messages: Json
+          operator_id: string | null
           page_context: string | null
           title: string
           updated_at: string
@@ -586,6 +660,7 @@ export type Database = {
           created_at?: string
           id?: string
           messages?: Json
+          operator_id?: string | null
           page_context?: string | null
           title?: string
           updated_at?: string
@@ -595,12 +670,21 @@ export type Database = {
           created_at?: string
           id?: string
           messages?: Json
+          operator_id?: string | null
           page_context?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_daily_plans: {
         Row: {
@@ -609,6 +693,7 @@ export type Database = {
           id: string
           notes: string | null
           objectives: Json
+          operator_id: string | null
           plan_date: string
           updated_at: string | null
           user_id: string
@@ -619,6 +704,7 @@ export type Database = {
           id?: string
           notes?: string | null
           objectives?: Json
+          operator_id?: string | null
           plan_date?: string
           updated_at?: string | null
           user_id: string
@@ -629,11 +715,20 @@ export type Database = {
           id?: string
           notes?: string | null
           objectives?: Json
+          operator_id?: string | null
           plan_date?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_daily_plans_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_decision_log: {
         Row: {
@@ -648,6 +743,7 @@ export type Database = {
           id: string
           input_context: Json | null
           model_used: string | null
+          operator_id: string | null
           partner_id: string | null
           tokens_used: number | null
           user_correction: string | null
@@ -667,6 +763,7 @@ export type Database = {
           id?: string
           input_context?: Json | null
           model_used?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           tokens_used?: number | null
           user_correction?: string | null
@@ -686,6 +783,7 @@ export type Database = {
           id?: string
           input_context?: Json | null
           model_used?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           tokens_used?: number | null
           user_correction?: string | null
@@ -694,6 +792,13 @@ export type Database = {
           was_auto_executed?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_decision_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_decision_log_partner_id_fkey"
             columns: ["partner_id"]
@@ -716,6 +821,7 @@ export type Database = {
           hook_original: string | null
           id: string
           length_delta_percent: number | null
+          operator_id: string | null
           persuasion_pattern: string | null
           significance: string | null
           tone_delta: string | null
@@ -733,6 +839,7 @@ export type Database = {
           hook_original?: string | null
           id?: string
           length_delta_percent?: number | null
+          operator_id?: string | null
           persuasion_pattern?: string | null
           significance?: string | null
           tone_delta?: string | null
@@ -750,12 +857,21 @@ export type Database = {
           hook_original?: string | null
           id?: string
           length_delta_percent?: number | null
+          operator_id?: string | null
           persuasion_pattern?: string | null
           significance?: string | null
           tone_delta?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_edit_patterns_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_lab_test_results: {
         Row: {
@@ -765,6 +881,7 @@ export type Database = {
           endpoint: string
           id: string
           issues: Json | null
+          operator_id: string | null
           output_body: string | null
           output_subject: string | null
           run_id: string
@@ -781,6 +898,7 @@ export type Database = {
           endpoint?: string
           id?: string
           issues?: Json | null
+          operator_id?: string | null
           output_body?: string | null
           output_subject?: string | null
           run_id: string
@@ -797,6 +915,7 @@ export type Database = {
           endpoint?: string
           id?: string
           issues?: Json | null
+          operator_id?: string | null
           output_body?: string | null
           output_subject?: string | null
           run_id?: string
@@ -807,6 +926,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_lab_test_results_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_lab_test_results_run_id_fkey"
             columns: ["run_id"]
@@ -822,6 +948,7 @@ export type Database = {
           fail_count: number
           id: string
           max_score: number
+          operator_id: string | null
           pass_count: number
           started_at: string
           summary: Json | null
@@ -834,6 +961,7 @@ export type Database = {
           fail_count?: number
           id?: string
           max_score?: number
+          operator_id?: string | null
           pass_count?: number
           started_at?: string
           summary?: Json | null
@@ -846,6 +974,7 @@ export type Database = {
           fail_count?: number
           id?: string
           max_score?: number
+          operator_id?: string | null
           pass_count?: number
           started_at?: string
           summary?: Json | null
@@ -853,7 +982,15 @@ export type Database = {
           user_id?: string
           warn_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_lab_test_runs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_memory: {
         Row: {
@@ -873,6 +1010,7 @@ export type Database = {
           last_accessed_at: string | null
           level: number
           memory_type: string
+          operator_id: string | null
           pending_promotion: boolean
           promoted_at: string | null
           source: string
@@ -896,6 +1034,7 @@ export type Database = {
           last_accessed_at?: string | null
           level?: number
           memory_type?: string
+          operator_id?: string | null
           pending_promotion?: boolean
           promoted_at?: string | null
           source?: string
@@ -919,13 +1058,22 @@ export type Database = {
           last_accessed_at?: string | null
           level?: number
           memory_type?: string
+          operator_id?: string | null
           pending_promotion?: boolean
           promoted_at?: string | null
           source?: string
           tags?: string[] | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_memory_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_pending_actions: {
         Row: {
@@ -939,6 +1087,7 @@ export type Database = {
           executed_at: string | null
           expires_at: string | null
           id: string
+          operator_id: string | null
           partner_id: string | null
           reasoning: string | null
           source: string | null
@@ -957,6 +1106,7 @@ export type Database = {
           executed_at?: string | null
           expires_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id?: string | null
           reasoning?: string | null
           source?: string | null
@@ -975,6 +1125,7 @@ export type Database = {
           executed_at?: string | null
           expires_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id?: string | null
           reasoning?: string | null
           source?: string | null
@@ -988,6 +1139,13 @@ export type Database = {
             columns: ["decision_log_id"]
             isOneToOne: false
             referencedRelation: "ai_decision_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_pending_actions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
           {
@@ -1006,6 +1164,7 @@ export type Database = {
           id: string
           last_used_at: string | null
           name: string
+          operator_id: string | null
           steps_template: Json
           tags: string[] | null
           use_count: number
@@ -1017,6 +1176,7 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name: string
+          operator_id?: string | null
           steps_template?: Json
           tags?: string[] | null
           use_count?: number
@@ -1028,12 +1188,21 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name?: string
+          operator_id?: string | null
           steps_template?: Json
           tags?: string[] | null
           use_count?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_plan_templates_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_request_log: {
         Row: {
@@ -1046,6 +1215,7 @@ export type Database = {
           latency_ms: number | null
           metadata: Json | null
           model: string | null
+          operator_id: string | null
           routed_to: string | null
           status: string | null
           total_tokens: number | null
@@ -1062,6 +1232,7 @@ export type Database = {
           latency_ms?: number | null
           metadata?: Json | null
           model?: string | null
+          operator_id?: string | null
           routed_to?: string | null
           status?: string | null
           total_tokens?: number | null
@@ -1078,13 +1249,22 @@ export type Database = {
           latency_ms?: number | null
           metadata?: Json | null
           model?: string | null
+          operator_id?: string | null
           routed_to?: string | null
           status?: string | null
           total_tokens?: number | null
           trace_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_request_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_session_briefings: {
         Row: {
@@ -1095,6 +1275,7 @@ export type Database = {
           expires_at: string | null
           id: string
           metadata: Json | null
+          operator_id: string | null
           user_id: string
         }
         Insert: {
@@ -1105,6 +1286,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           user_id: string
         }
         Update: {
@@ -1115,9 +1297,18 @@ export type Database = {
           expires_at?: string | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_session_briefings_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_work_plans: {
         Row: {
@@ -1127,6 +1318,7 @@ export type Database = {
           description: string | null
           id: string
           metadata: Json | null
+          operator_id: string | null
           source_template_id: string | null
           status: string
           steps: Json
@@ -1141,6 +1333,7 @@ export type Database = {
           description?: string | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           source_template_id?: string | null
           status?: string
           steps?: Json
@@ -1155,6 +1348,7 @@ export type Database = {
           description?: string | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           source_template_id?: string | null
           status?: string
           steps?: Json
@@ -1162,7 +1356,15 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_work_plans_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alert_config: {
         Row: {
@@ -1174,6 +1376,7 @@ export type Database = {
           enabled: boolean | null
           id: string
           last_alert_at: string | null
+          operator_id: string | null
           user_id: string
           webhook_url: string | null
         }
@@ -1186,6 +1389,7 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           last_alert_at?: string | null
+          operator_id?: string | null
           user_id: string
           webhook_url?: string | null
         }
@@ -1198,10 +1402,19 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           last_alert_at?: string | null
+          operator_id?: string | null
           user_id?: string
           webhook_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alert_config_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_error_logs: {
         Row: {
@@ -1214,6 +1427,7 @@ export type Database = {
           http_status: number | null
           id: string
           metadata: Json | null
+          operator_id: string | null
           page_url: string | null
           user_agent: string | null
           user_id: string | null
@@ -1228,6 +1442,7 @@ export type Database = {
           http_status?: number | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           page_url?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -1242,17 +1457,27 @@ export type Database = {
           http_status?: number | null
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           page_url?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_error_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_settings: {
         Row: {
           created_at: string
           id: string
           key: string
+          operator_id: string | null
           updated_at: string
           user_id: string
           value: string | null
@@ -1261,6 +1486,7 @@ export type Database = {
           created_at?: string
           id?: string
           key: string
+          operator_id?: string | null
           updated_at?: string
           user_id: string
           value?: string | null
@@ -1269,11 +1495,20 @@ export type Database = {
           created_at?: string
           id?: string
           key?: string
+          operator_id?: string | null
           updated_at?: string
           user_id?: string
           value?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       authorized_users: {
         Row: {
@@ -1434,6 +1669,7 @@ export type Database = {
           actions: Json
           created_at: string
           id: string
+          operator_id: string | null
           result: Json | null
           status: string
           target_url: string | null
@@ -1443,6 +1679,7 @@ export type Database = {
           actions?: Json
           created_at?: string
           id?: string
+          operator_id?: string | null
           result?: Json | null
           status?: string
           target_url?: string | null
@@ -1452,12 +1689,21 @@ export type Database = {
           actions?: Json
           created_at?: string
           id?: string
+          operator_id?: string | null
           result?: Json | null
           status?: string
           target_url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "browser_action_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_cards: {
         Row: {
@@ -1479,6 +1725,7 @@ export type Database = {
           mobile: string | null
           notes: string | null
           ocr_confidence: Json | null
+          operator_id: string | null
           phone: string | null
           photo_url: string | null
           position: string | null
@@ -1505,6 +1752,7 @@ export type Database = {
           mobile?: string | null
           notes?: string | null
           ocr_confidence?: Json | null
+          operator_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position?: string | null
@@ -1531,6 +1779,7 @@ export type Database = {
           mobile?: string | null
           notes?: string | null
           ocr_confidence?: Json | null
+          operator_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position?: string | null
@@ -1553,6 +1802,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_cards_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campaign_jobs: {
@@ -1569,6 +1825,7 @@ export type Database = {
           id: string
           job_type: Database["public"]["Enums"]["campaign_job_type"]
           notes: string | null
+          operator_id: string | null
           partner_id: string
           phone: string | null
           status: Database["public"]["Enums"]["campaign_job_status"]
@@ -1587,6 +1844,7 @@ export type Database = {
           id?: string
           job_type?: Database["public"]["Enums"]["campaign_job_type"]
           notes?: string | null
+          operator_id?: string | null
           partner_id: string
           phone?: string | null
           status?: Database["public"]["Enums"]["campaign_job_status"]
@@ -1605,6 +1863,7 @@ export type Database = {
           id?: string
           job_type?: Database["public"]["Enums"]["campaign_job_type"]
           notes?: string | null
+          operator_id?: string | null
           partner_id?: string
           phone?: string | null
           status?: Database["public"]["Enums"]["campaign_job_status"]
@@ -1616,6 +1875,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_jobs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
         ]
@@ -1745,6 +2011,7 @@ export type Database = {
           assigned_at: string
           id: string
           manager_id: string | null
+          operator_id: string | null
           source_id: string
           source_type: string
           user_id: string
@@ -1754,6 +2021,7 @@ export type Database = {
           assigned_at?: string
           id?: string
           manager_id?: string | null
+          operator_id?: string | null
           source_id: string
           source_type?: string
           user_id: string
@@ -1763,6 +2031,7 @@ export type Database = {
           assigned_at?: string
           id?: string
           manager_id?: string | null
+          operator_id?: string | null
           source_id?: string
           source_type?: string
           user_id?: string
@@ -1782,12 +2051,20 @@ export type Database = {
             referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_assignments_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cockpit_queue: {
         Row: {
           created_at: string
           id: string
+          operator_id: string | null
           partner_id: string | null
           source_id: string
           source_type: string
@@ -1797,6 +2074,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          operator_id?: string | null
           partner_id?: string | null
           source_id: string
           source_type: string
@@ -1806,19 +2084,29 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          operator_id?: string | null
           partner_id?: string | null
           source_id?: string
           source_type?: string
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cockpit_queue_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       command_conversations: {
         Row: {
           archived: boolean
           id: string
           last_message_at: string
+          operator_id: string | null
           started_at: string
           title: string | null
           user_id: string
@@ -1827,6 +2115,7 @@ export type Database = {
           archived?: boolean
           id?: string
           last_message_at?: string
+          operator_id?: string | null
           started_at?: string
           title?: string | null
           user_id: string
@@ -1835,11 +2124,20 @@ export type Database = {
           archived?: boolean
           id?: string
           last_message_at?: string
+          operator_id?: string | null
           started_at?: string
           title?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "command_conversations_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       command_messages: {
         Row: {
@@ -1890,6 +2188,7 @@ export type Database = {
           is_template: boolean | null
           kb_tags: string[] | null
           name: string
+          operator_id: string | null
           priority: number | null
           prompt_template: string | null
           suggested_actions: Json | null
@@ -1908,6 +2207,7 @@ export type Database = {
           is_template?: boolean | null
           kb_tags?: string[] | null
           name: string
+          operator_id?: string | null
           priority?: number | null
           prompt_template?: string | null
           suggested_actions?: Json | null
@@ -1926,6 +2226,7 @@ export type Database = {
           is_template?: boolean | null
           kb_tags?: string[] | null
           name?: string
+          operator_id?: string | null
           priority?: number | null
           prompt_template?: string | null
           suggested_actions?: Json | null
@@ -1934,7 +2235,15 @@ export type Database = {
           user_id?: string
           workflow_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commercial_playbooks_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commercial_workflows: {
         Row: {
@@ -1947,6 +2256,7 @@ export type Database = {
           is_active: boolean | null
           is_template: boolean | null
           name: string
+          operator_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1960,6 +2270,7 @@ export type Database = {
           is_active?: boolean | null
           is_template?: boolean | null
           name: string
+          operator_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1973,10 +2284,19 @@ export type Database = {
           is_active?: boolean | null
           is_template?: boolean | null
           name?: string
+          operator_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commercial_workflows_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contact_conversation_context: {
         Row: {
@@ -1990,6 +2310,7 @@ export type Database = {
           interaction_count: number | null
           last_exchanges: Json | null
           last_interaction_at: string | null
+          operator_id: string | null
           partner_id: string | null
           preferred_language: string | null
           response_rate: number | null
@@ -2007,6 +2328,7 @@ export type Database = {
           interaction_count?: number | null
           last_exchanges?: Json | null
           last_interaction_at?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           preferred_language?: string | null
           response_rate?: number | null
@@ -2024,6 +2346,7 @@ export type Database = {
           interaction_count?: number | null
           last_exchanges?: Json | null
           last_interaction_at?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           preferred_language?: string | null
           response_rate?: number | null
@@ -2031,6 +2354,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contact_conversation_context_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contact_conversation_context_partner_id_fkey"
             columns: ["partner_id"]
@@ -2088,6 +2418,7 @@ export type Database = {
           description: string | null
           id: string
           operation: string
+          operator_id: string | null
           user_id: string
         }
         Insert: {
@@ -2096,6 +2427,7 @@ export type Database = {
           description?: string | null
           id?: string
           operation: string
+          operator_id?: string | null
           user_id: string
         }
         Update: {
@@ -2104,9 +2436,18 @@ export type Database = {
           description?: string | null
           id?: string
           operation?: string
+          operator_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cron_runs: {
         Row: {
@@ -2145,6 +2486,7 @@ export type Database = {
           id: string
           members: Json
           network_name: string
+          operator_id: string | null
           scanned_at: string
           total_pages: number
           total_results: number
@@ -2158,6 +2500,7 @@ export type Database = {
           id?: string
           members?: Json
           network_name?: string
+          operator_id?: string | null
           scanned_at?: string
           total_pages?: number
           total_results?: number
@@ -2171,6 +2514,7 @@ export type Database = {
           id?: string
           members?: Json
           network_name?: string
+          operator_id?: string | null
           scanned_at?: string
           total_pages?: number
           total_results?: number
@@ -2178,7 +2522,15 @@ export type Database = {
           user_id?: string | null
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "directory_cache_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       download_job_events: {
         Row: {
@@ -2296,6 +2648,7 @@ export type Database = {
           last_processed_company: string | null
           last_processed_wca_id: number | null
           network_name: string
+          operator_id: string | null
           processed_ids: Json
           status: string
           terminal_log: Json
@@ -2321,6 +2674,7 @@ export type Database = {
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string
+          operator_id?: string | null
           processed_ids?: Json
           status?: string
           terminal_log?: Json
@@ -2346,6 +2700,7 @@ export type Database = {
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string
+          operator_id?: string | null
           processed_ids?: Json
           status?: string
           terminal_log?: Json
@@ -2354,7 +2709,15 @@ export type Database = {
           user_id?: string | null
           wca_ids?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "download_jobs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       download_queue: {
         Row: {
@@ -2366,6 +2729,7 @@ export type Database = {
           id_range_start: number | null
           last_processed_id: number | null
           network_name: string
+          operator_id: string | null
           priority: number
           status: Database["public"]["Enums"]["download_queue_status"]
           total_found: number
@@ -2382,6 +2746,7 @@ export type Database = {
           id_range_start?: number | null
           last_processed_id?: number | null
           network_name: string
+          operator_id?: string | null
           priority?: number
           status?: Database["public"]["Enums"]["download_queue_status"]
           total_found?: number
@@ -2398,6 +2763,7 @@ export type Database = {
           id_range_start?: number | null
           last_processed_id?: number | null
           network_name?: string
+          operator_id?: string | null
           priority?: number
           status?: Database["public"]["Enums"]["download_queue_status"]
           total_found?: number
@@ -2405,7 +2771,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "download_queue_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       edge_function_logs: {
         Row: {
@@ -2415,6 +2789,7 @@ export type Database = {
           function_name: string
           id: string
           metadata: Json | null
+          operator_id: string | null
           status_code: number
           success: boolean
           user_id: string | null
@@ -2426,6 +2801,7 @@ export type Database = {
           function_name: string
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           status_code: number
           success?: boolean
           user_id?: string | null
@@ -2437,11 +2813,20 @@ export type Database = {
           function_name?: string
           id?: string
           metadata?: Json | null
+          operator_id?: string | null
           status_code?: number
           success?: boolean
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "edge_function_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_address_rules: {
         Row: {
@@ -2472,6 +2857,7 @@ export type Database = {
           last_email_at: string | null
           last_interaction_at: string | null
           notes: string | null
+          operator_id: string | null
           preferred_channel: string | null
           prompt_id: string | null
           success_rate: number | null
@@ -2509,6 +2895,7 @@ export type Database = {
           last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
+          operator_id?: string | null
           preferred_channel?: string | null
           prompt_id?: string | null
           success_rate?: number | null
@@ -2546,6 +2933,7 @@ export type Database = {
           last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
+          operator_id?: string | null
           preferred_channel?: string | null
           prompt_id?: string | null
           success_rate?: number | null
@@ -2571,6 +2959,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_address_rules_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "email_address_rules_prompt_id_fkey"
             columns: ["prompt_id"]
             isOneToOne: false
@@ -2588,6 +2983,7 @@ export type Database = {
           id: string
           is_inline: boolean | null
           message_id: string
+          operator_id: string | null
           size_bytes: number | null
           storage_path: string
           user_id: string
@@ -2600,6 +2996,7 @@ export type Database = {
           id?: string
           is_inline?: boolean | null
           message_id: string
+          operator_id?: string | null
           size_bytes?: number | null
           storage_path: string
           user_id: string
@@ -2612,6 +3009,7 @@ export type Database = {
           id?: string
           is_inline?: boolean | null
           message_id?: string
+          operator_id?: string | null
           size_bytes?: number | null
           storage_path?: string
           user_id?: string
@@ -2622,6 +3020,13 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "channel_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_attachments_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
         ]
@@ -2636,6 +3041,7 @@ export type Database = {
           idempotency_key: string
           open_count: number | null
           opened_at: string | null
+          operator_id: string | null
           partner_id: string
           position: number
           recipient_email: string
@@ -2656,6 +3062,7 @@ export type Database = {
           idempotency_key?: string
           open_count?: number | null
           opened_at?: string | null
+          operator_id?: string | null
           partner_id: string
           position?: number
           recipient_email: string
@@ -2676,6 +3083,7 @@ export type Database = {
           idempotency_key?: string
           open_count?: number | null
           opened_at?: string | null
+          operator_id?: string | null
           partner_id?: string
           position?: number
           recipient_email?: string
@@ -2695,6 +3103,13 @@ export type Database = {
             referencedRelation: "email_drafts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_campaign_queue_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
         ]
       }
       email_classifications: {
@@ -2712,6 +3127,7 @@ export type Database = {
           email_address: string
           id: string
           keywords: string[] | null
+          operator_id: string | null
           partner_id: string | null
           reasoning: string | null
           sentiment: string | null
@@ -2734,6 +3150,7 @@ export type Database = {
           email_address: string
           id?: string
           keywords?: string[] | null
+          operator_id?: string | null
           partner_id?: string | null
           reasoning?: string | null
           sentiment?: string | null
@@ -2756,6 +3173,7 @@ export type Database = {
           email_address?: string
           id?: string
           keywords?: string[] | null
+          operator_id?: string | null
           partner_id?: string | null
           reasoning?: string | null
           sentiment?: string | null
@@ -2765,6 +3183,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_classifications_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_classifications_partner_id_fkey"
             columns: ["partner_id"]
@@ -2782,6 +3207,7 @@ export type Database = {
           html_body: string | null
           id: string
           link_urls: Json | null
+          operator_id: string | null
           queue_completed_at: string | null
           queue_delay_seconds: number
           queue_started_at: string | null
@@ -2802,6 +3228,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           link_urls?: Json | null
+          operator_id?: string | null
           queue_completed_at?: string | null
           queue_delay_seconds?: number
           queue_started_at?: string | null
@@ -2822,6 +3249,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           link_urls?: Json | null
+          operator_id?: string | null
           queue_completed_at?: string | null
           queue_delay_seconds?: number
           queue_started_at?: string | null
@@ -2835,7 +3263,15 @@ export type Database = {
           total_count?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_drafts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_prompts: {
         Row: {
@@ -2843,6 +3279,7 @@ export type Database = {
           id: string
           instructions: string
           is_active: boolean
+          operator_id: string | null
           priority: number
           scope: string
           scope_value: string | null
@@ -2855,6 +3292,7 @@ export type Database = {
           id?: string
           instructions?: string
           is_active?: boolean
+          operator_id?: string | null
           priority?: number
           scope?: string
           scope_value?: string | null
@@ -2867,6 +3305,7 @@ export type Database = {
           id?: string
           instructions?: string
           is_active?: boolean
+          operator_id?: string | null
           priority?: number
           scope?: string
           scope_value?: string | null
@@ -2874,7 +3313,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_prompts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_sender_groups: {
         Row: {
@@ -2887,6 +3334,7 @@ export type Database = {
           id: string
           is_default: boolean | null
           nome_gruppo: string
+          operator_id: string | null
           sort_order: number
           updated_at: string
           user_id: string
@@ -2901,6 +3349,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           nome_gruppo: string
+          operator_id?: string | null
           sort_order?: number
           updated_at?: string
           user_id: string
@@ -2915,11 +3364,20 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           nome_gruppo?: string
+          operator_id?: string | null
           sort_order?: number
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_sender_groups_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_sync_jobs: {
         Row: {
@@ -2930,6 +3388,7 @@ export type Database = {
           error_message: string | null
           id: string
           last_batch_at: string | null
+          operator_id: string | null
           skipped_count: number
           started_at: string
           status: string
@@ -2945,6 +3404,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           last_batch_at?: string | null
+          operator_id?: string | null
           skipped_count?: number
           started_at?: string
           status?: string
@@ -2960,6 +3420,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           last_batch_at?: string | null
+          operator_id?: string | null
           skipped_count?: number
           started_at?: string
           status?: string
@@ -2967,7 +3428,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_sync_jobs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_sync_state: {
         Row: {
@@ -2977,6 +3446,7 @@ export type Database = {
           imap_user: string
           last_sync_at: string | null
           last_uid: number
+          operator_id: string | null
           stored_uidvalidity: number | null
           updated_at: string
           user_id: string
@@ -2988,6 +3458,7 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          operator_id?: string | null
           stored_uidvalidity?: number | null
           updated_at?: string
           user_id: string
@@ -2999,11 +3470,20 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          operator_id?: string | null
           stored_uidvalidity?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_sync_state_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_templates: {
         Row: {
@@ -3015,6 +3495,7 @@ export type Database = {
           file_url: string
           id: string
           name: string
+          operator_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -3027,6 +3508,7 @@ export type Database = {
           file_url: string
           id?: string
           name: string
+          operator_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -3039,10 +3521,19 @@ export type Database = {
           file_url?: string
           id?: string
           name?: string
+          operator_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extension_dispatch_queue: {
         Row: {
@@ -3056,6 +3547,7 @@ export type Database = {
           max_retries: number
           message_text: string
           mission_id: string | null
+          operator_id: string | null
           outreach_queue_id: string | null
           partner_id: string | null
           recipient: string
@@ -3075,6 +3567,7 @@ export type Database = {
           max_retries?: number
           message_text: string
           mission_id?: string | null
+          operator_id?: string | null
           outreach_queue_id?: string | null
           partner_id?: string | null
           recipient: string
@@ -3094,6 +3587,7 @@ export type Database = {
           max_retries?: number
           message_text?: string
           mission_id?: string | null
+          operator_id?: string | null
           outreach_queue_id?: string | null
           partner_id?: string | null
           recipient?: string
@@ -3102,7 +3596,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "extension_dispatch_queue_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       impersonation_log: {
         Row: {
@@ -3208,6 +3710,7 @@ export type Database = {
           id: string
           imported_rows: number
           normalization_method: string
+          operator_id: string | null
           processing_batch: number
           status: string
           total_batches: number
@@ -3225,6 +3728,7 @@ export type Database = {
           id?: string
           imported_rows?: number
           normalization_method?: string
+          operator_id?: string | null
           processing_batch?: number
           status?: string
           total_batches?: number
@@ -3242,13 +3746,22 @@ export type Database = {
           id?: string
           imported_rows?: number
           normalization_method?: string
+          operator_id?: string | null
           processing_batch?: number
           status?: string
           total_batches?: number
           total_rows?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "import_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       imported_contacts: {
         Row: {
@@ -3277,6 +3790,7 @@ export type Database = {
           mobile: string | null
           name: string | null
           note: string | null
+          operator_id: string | null
           origin: string | null
           phone: string | null
           position: string | null
@@ -3313,6 +3827,7 @@ export type Database = {
           mobile?: string | null
           name?: string | null
           note?: string | null
+          operator_id?: string | null
           origin?: string | null
           phone?: string | null
           position?: string | null
@@ -3349,6 +3864,7 @@ export type Database = {
           mobile?: string | null
           name?: string | null
           note?: string | null
+          operator_id?: string | null
           origin?: string | null
           phone?: string | null
           position?: string | null
@@ -3368,6 +3884,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "imported_contacts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "imported_contacts_wca_partner_id_fkey"
             columns: ["wca_partner_id"]
             isOneToOne: false
@@ -3384,6 +3907,7 @@ export type Database = {
           interaction_date: string | null
           interaction_type: Database["public"]["Enums"]["interaction_type"]
           notes: string | null
+          operator_id: string | null
           partner_id: string
           subject: string
           user_id: string | null
@@ -3395,6 +3919,7 @@ export type Database = {
           interaction_date?: string | null
           interaction_type: Database["public"]["Enums"]["interaction_type"]
           notes?: string | null
+          operator_id?: string | null
           partner_id: string
           subject: string
           user_id?: string | null
@@ -3406,11 +3931,19 @@ export type Database = {
           interaction_date?: string | null
           interaction_type?: Database["public"]["Enums"]["interaction_type"]
           notes?: string | null
+          operator_id?: string | null
           partner_id?: string
           subject?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "interactions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "interactions_partner_id_fkey"
             columns: ["partner_id"]
@@ -3433,6 +3966,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_accessed_at: string | null
+          operator_id: string | null
           priority: number
           sort_order: number
           source_path: string | null
@@ -3453,6 +3987,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_accessed_at?: string | null
+          operator_id?: string | null
           priority?: number
           sort_order?: number
           source_path?: string | null
@@ -3473,6 +4008,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_accessed_at?: string | null
+          operator_id?: string | null
           priority?: number
           sort_order?: number
           source_path?: string | null
@@ -3481,7 +4017,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kb_entries_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       linkedin_flow_items: {
         Row: {
@@ -3553,6 +4097,7 @@ export type Database = {
           delay_seconds: number
           error_count: number
           id: string
+          operator_id: string | null
           processed_count: number
           status: string
           success_count: number
@@ -3567,6 +4112,7 @@ export type Database = {
           delay_seconds?: number
           error_count?: number
           id?: string
+          operator_id?: string | null
           processed_count?: number
           status?: string
           success_count?: number
@@ -3581,6 +4127,7 @@ export type Database = {
           delay_seconds?: number
           error_count?: number
           id?: string
+          operator_id?: string | null
           processed_count?: number
           status?: string
           success_count?: number
@@ -3588,7 +4135,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_flow_jobs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mission_actions: {
         Row: {
@@ -3606,6 +4161,7 @@ export type Database = {
           metadata: Json | null
           mission_id: string
           next_retry_at: string | null
+          operator_id: string | null
           parent_action_id: string | null
           position: number
           recovery_log: Json | null
@@ -3634,6 +4190,7 @@ export type Database = {
           metadata?: Json | null
           mission_id: string
           next_retry_at?: string | null
+          operator_id?: string | null
           parent_action_id?: string | null
           position?: number
           recovery_log?: Json | null
@@ -3662,6 +4219,7 @@ export type Database = {
           metadata?: Json | null
           mission_id?: string
           next_retry_at?: string | null
+          operator_id?: string | null
           parent_action_id?: string | null
           position?: number
           recovery_log?: Json | null
@@ -3676,6 +4234,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mission_actions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mission_actions_parent_action_id_fkey"
             columns: ["parent_action_id"]
@@ -3693,6 +4258,7 @@ export type Database = {
           id: string
           max_per_day: number
           max_per_hour: number
+          operator_id: string | null
           retry_backoff_minutes: number
           retry_max: number
           user_id: string
@@ -3704,6 +4270,7 @@ export type Database = {
           id?: string
           max_per_day?: number
           max_per_hour?: number
+          operator_id?: string | null
           retry_backoff_minutes?: number
           retry_max?: number
           user_id: string
@@ -3715,11 +4282,20 @@ export type Database = {
           id?: string
           max_per_day?: number
           max_per_hour?: number
+          operator_id?: string | null
           retry_backoff_minutes?: number
           retry_max?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mission_slot_config_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       network_configs: {
         Row: {
@@ -3731,6 +4307,7 @@ export type Database = {
           is_member: boolean
           network_name: string
           notes: string | null
+          operator_id: string | null
           sample_tested_at: string | null
           updated_at: string
           user_id: string | null
@@ -3744,6 +4321,7 @@ export type Database = {
           is_member?: boolean
           network_name: string
           notes?: string | null
+          operator_id?: string | null
           sample_tested_at?: string | null
           updated_at?: string
           user_id?: string | null
@@ -3757,11 +4335,20 @@ export type Database = {
           is_member?: boolean
           network_name?: string
           notes?: string | null
+          operator_id?: string | null
           sample_tested_at?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "network_configs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operative_prompts: {
         Row: {
@@ -3773,6 +4360,7 @@ export type Database = {
           is_active: boolean
           name: string
           objective: string
+          operator_id: string | null
           priority: number
           procedure: string
           tags: string[]
@@ -3788,6 +4376,7 @@ export type Database = {
           is_active?: boolean
           name: string
           objective?: string
+          operator_id?: string | null
           priority?: number
           procedure?: string
           tags?: string[]
@@ -3803,13 +4392,22 @@ export type Database = {
           is_active?: boolean
           name?: string
           objective?: string
+          operator_id?: string | null
           priority?: number
           procedure?: string
           tags?: string[]
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operative_prompts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operators: {
         Row: {
@@ -3972,6 +4570,7 @@ export type Database = {
           id: string
           idempotency_key: string | null
           metadata: Json | null
+          operator_id: string | null
           plan_json: Json | null
           plan_status: string | null
           processed_contacts: number
@@ -3995,6 +4594,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           metadata?: Json | null
+          operator_id?: string | null
           plan_json?: Json | null
           plan_status?: string | null
           processed_contacts?: number
@@ -4018,6 +4618,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           metadata?: Json | null
+          operator_id?: string | null
           plan_json?: Json | null
           plan_status?: string | null
           processed_contacts?: number
@@ -4030,7 +4631,15 @@ export type Database = {
           user_id?: string
           work_plan_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "outreach_missions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outreach_queue: {
         Row: {
@@ -4043,6 +4652,7 @@ export type Database = {
           id: string
           last_error: string | null
           max_attempts: number
+          operator_id: string | null
           partner_id: string | null
           priority: number
           processed_at: string | null
@@ -4066,6 +4676,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           max_attempts?: number
+          operator_id?: string | null
           partner_id?: string | null
           priority?: number
           processed_at?: string | null
@@ -4089,6 +4700,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           max_attempts?: number
+          operator_id?: string | null
           partner_id?: string | null
           priority?: number
           processed_at?: string | null
@@ -4102,7 +4714,15 @@ export type Database = {
           subject?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "outreach_queue_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outreach_schedules: {
         Row: {
@@ -4114,6 +4734,7 @@ export type Database = {
           last_error: string | null
           max_attempts: number
           mission_id: string
+          operator_id: string | null
           result: Json | null
           run_at: string
           scheduled_for_followup_step: number | null
@@ -4130,6 +4751,7 @@ export type Database = {
           last_error?: string | null
           max_attempts?: number
           mission_id: string
+          operator_id?: string | null
           result?: Json | null
           run_at?: string
           scheduled_for_followup_step?: number | null
@@ -4146,6 +4768,7 @@ export type Database = {
           last_error?: string | null
           max_attempts?: number
           mission_id?: string
+          operator_id?: string | null
           result?: Json | null
           run_at?: string
           scheduled_for_followup_step?: number | null
@@ -4161,6 +4784,13 @@ export type Database = {
             referencedRelation: "outreach_missions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "outreach_schedules_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
         ]
       }
       outreach_timing_templates: {
@@ -4172,6 +4802,7 @@ export type Database = {
           id: string
           is_system: boolean | null
           max_attempts: number | null
+          operator_id: string | null
           preferred_language: string | null
           sequence: Json
           source_type: string
@@ -4188,6 +4819,7 @@ export type Database = {
           id?: string
           is_system?: boolean | null
           max_attempts?: number | null
+          operator_id?: string | null
           preferred_language?: string | null
           sequence?: Json
           source_type: string
@@ -4204,6 +4836,7 @@ export type Database = {
           id?: string
           is_system?: boolean | null
           max_attempts?: number | null
+          operator_id?: string | null
           preferred_language?: string | null
           sequence?: Json
           source_type?: string
@@ -4212,13 +4845,22 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "outreach_timing_templates_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_certifications: {
         Row: {
           certification: Database["public"]["Enums"]["certification_type"]
           created_at: string | null
           id: string
+          operator_id: string | null
           partner_id: string
           user_id: string | null
         }
@@ -4226,6 +4868,7 @@ export type Database = {
           certification: Database["public"]["Enums"]["certification_type"]
           created_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id: string
           user_id?: string | null
         }
@@ -4233,10 +4876,18 @@ export type Database = {
           certification?: Database["public"]["Enums"]["certification_type"]
           created_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_certifications_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_certifications_partner_id_fkey"
             columns: ["partner_id"]
@@ -4256,6 +4907,7 @@ export type Database = {
           is_primary: boolean | null
           mobile: string | null
           name: string
+          operator_id: string | null
           partner_id: string
           title: string | null
           user_id: string | null
@@ -4269,6 +4921,7 @@ export type Database = {
           is_primary?: boolean | null
           mobile?: string | null
           name: string
+          operator_id?: string | null
           partner_id: string
           title?: string | null
           user_id?: string | null
@@ -4282,11 +4935,19 @@ export type Database = {
           is_primary?: boolean | null
           mobile?: string | null
           name?: string
+          operator_id?: string | null
           partner_id?: string
           title?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_contacts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_contacts_partner_id_fkey"
             columns: ["partner_id"]
@@ -4303,6 +4964,7 @@ export type Database = {
           id: string
           network_id: string | null
           network_name: string
+          operator_id: string | null
           partner_id: string
           user_id: string | null
         }
@@ -4312,6 +4974,7 @@ export type Database = {
           id?: string
           network_id?: string | null
           network_name: string
+          operator_id?: string | null
           partner_id: string
           user_id?: string | null
         }
@@ -4321,10 +4984,18 @@ export type Database = {
           id?: string
           network_id?: string | null
           network_name?: string
+          operator_id?: string | null
           partner_id?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_networks_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_networks_partner_id_fkey"
             columns: ["partner_id"]
@@ -4338,6 +5009,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          operator_id: string | null
           partner_id: string
           service_category: Database["public"]["Enums"]["service_category"]
           user_id: string | null
@@ -4345,6 +5017,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id: string
           service_category: Database["public"]["Enums"]["service_category"]
           user_id?: string | null
@@ -4352,11 +5025,19 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          operator_id?: string | null
           partner_id?: string
           service_category?: Database["public"]["Enums"]["service_category"]
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_services_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_services_partner_id_fkey"
             columns: ["partner_id"]
@@ -4371,6 +5052,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           id: string
+          operator_id: string | null
           partner_id: string
           platform: Database["public"]["Enums"]["social_platform"]
           url: string
@@ -4380,6 +5062,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           partner_id: string
           platform: Database["public"]["Enums"]["social_platform"]
           url: string
@@ -4389,6 +5072,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           partner_id?: string
           platform?: Database["public"]["Enums"]["social_platform"]
           url?: string
@@ -4400,6 +5084,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "partner_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_social_links_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
           {
@@ -4419,6 +5110,7 @@ export type Database = {
           current_gate: number | null
           id: string
           notes: string | null
+          operator_id: string | null
           partner_id: string | null
           started_at: string | null
           status: string | null
@@ -4433,6 +5125,7 @@ export type Database = {
           current_gate?: number | null
           id?: string
           notes?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           started_at?: string | null
           status?: string | null
@@ -4447,6 +5140,7 @@ export type Database = {
           current_gate?: number | null
           id?: string
           notes?: string | null
+          operator_id?: string | null
           partner_id?: string | null
           started_at?: string | null
           status?: string | null
@@ -4455,6 +5149,13 @@ export type Database = {
           workflow_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_workflow_state_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_workflow_state_partner_id_fkey"
             columns: ["partner_id"]
@@ -4500,6 +5201,7 @@ export type Database = {
           membership_expires: string | null
           mobile: string | null
           office_type: Database["public"]["Enums"]["office_type"] | null
+          operator_id: string | null
           partner_type: Database["public"]["Enums"]["partner_type"] | null
           phone: string | null
           profile_description: string | null
@@ -4540,6 +5242,7 @@ export type Database = {
           membership_expires?: string | null
           mobile?: string | null
           office_type?: Database["public"]["Enums"]["office_type"] | null
+          operator_id?: string | null
           partner_type?: Database["public"]["Enums"]["partner_type"] | null
           phone?: string | null
           profile_description?: string | null
@@ -4580,6 +5283,7 @@ export type Database = {
           membership_expires?: string | null
           mobile?: string | null
           office_type?: Database["public"]["Enums"]["office_type"] | null
+          operator_id?: string | null
           partner_type?: Database["public"]["Enums"]["partner_type"] | null
           phone?: string | null
           profile_description?: string | null
@@ -4592,7 +5296,15 @@ export type Database = {
           wca_id?: number | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partners_no_contacts: {
         Row: {
@@ -4683,6 +5395,7 @@ export type Database = {
           id: string
           linkedin_url: string | null
           name: string
+          operator_id: string | null
           phone: string | null
           prospect_id: string
           role: string | null
@@ -4695,6 +5408,7 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           name: string
+          operator_id?: string | null
           phone?: string | null
           prospect_id: string
           role?: string | null
@@ -4707,12 +5421,20 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           name?: string
+          operator_id?: string | null
           phone?: string | null
           prospect_id?: string
           role?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "prospect_contacts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "prospect_contacts_prospect_id_fkey"
             columns: ["prospect_id"]
@@ -4729,6 +5451,7 @@ export type Database = {
           description: string | null
           id: string
           interaction_type: string
+          operator_id: string | null
           outcome: string | null
           prospect_id: string
           title: string
@@ -4740,6 +5463,7 @@ export type Database = {
           description?: string | null
           id?: string
           interaction_type: string
+          operator_id?: string | null
           outcome?: string | null
           prospect_id: string
           title: string
@@ -4751,12 +5475,20 @@ export type Database = {
           description?: string | null
           id?: string
           interaction_type?: string
+          operator_id?: string | null
           outcome?: string | null
           prospect_id?: string
           title?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "prospect_interactions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "prospect_interactions_prospect_id_fkey"
             columns: ["prospect_id"]
@@ -4771,6 +5503,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           id: string
+          operator_id: string | null
           platform: string
           prospect_id: string
           url: string
@@ -4780,6 +5513,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           platform: string
           prospect_id: string
           url: string
@@ -4789,6 +5523,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           id?: string
+          operator_id?: string | null
           platform?: string
           prospect_id?: string
           url?: string
@@ -4800,6 +5535,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_social_links_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
           {
@@ -4834,6 +5576,7 @@ export type Database = {
           interaction_count: number
           last_interaction_at: string | null
           lead_status: string
+          operator_id: string | null
           partita_iva: string | null
           pec: string | null
           phone: string | null
@@ -4869,6 +5612,7 @@ export type Database = {
           interaction_count?: number
           last_interaction_at?: string | null
           lead_status?: string
+          operator_id?: string | null
           partita_iva?: string | null
           pec?: string | null
           phone?: string | null
@@ -4904,6 +5648,7 @@ export type Database = {
           interaction_count?: number
           last_interaction_at?: string | null
           lead_status?: string
+          operator_id?: string | null
           partita_iva?: string | null
           pec?: string | null
           phone?: string | null
@@ -4917,7 +5662,15 @@ export type Database = {
           utile?: number | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "prospects_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reminders: {
         Row: {
@@ -4925,6 +5678,7 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          operator_id: string | null
           partner_id: string
           priority: Database["public"]["Enums"]["reminder_priority"] | null
           status: Database["public"]["Enums"]["reminder_status"] | null
@@ -4937,6 +5691,7 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          operator_id?: string | null
           partner_id: string
           priority?: Database["public"]["Enums"]["reminder_priority"] | null
           status?: Database["public"]["Enums"]["reminder_status"] | null
@@ -4949,6 +5704,7 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          operator_id?: string | null
           partner_id?: string
           priority?: Database["public"]["Enums"]["reminder_priority"] | null
           status?: Database["public"]["Enums"]["reminder_status"] | null
@@ -4957,6 +5713,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reminders_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reminders_partner_id_fkey"
             columns: ["partner_id"]
@@ -5027,6 +5790,7 @@ export type Database = {
           id: string
           latency_ms: number | null
           metadata: Json | null
+          operator_id: string | null
           status: string | null
           trace_id: string | null
           user_id: string | null
@@ -5041,6 +5805,7 @@ export type Database = {
           id?: string
           latency_ms?: number | null
           metadata?: Json | null
+          operator_id?: string | null
           status?: string | null
           trace_id?: string | null
           user_id?: string | null
@@ -5055,11 +5820,20 @@ export type Database = {
           id?: string
           latency_ms?: number | null
           metadata?: Json | null
+          operator_id?: string | null
           status?: string | null
           trace_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "request_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       response_patterns: {
         Row: {
@@ -5075,6 +5849,7 @@ export type Database = {
           id: string
           language: string | null
           last_success_at: string | null
+          operator_id: string | null
           pattern_confidence: number | null
           response_rate: number | null
           sector: string | null
@@ -5098,6 +5873,7 @@ export type Database = {
           id?: string
           language?: string | null
           last_success_at?: string | null
+          operator_id?: string | null
           pattern_confidence?: number | null
           response_rate?: number | null
           sector?: string | null
@@ -5121,6 +5897,7 @@ export type Database = {
           id?: string
           language?: string | null
           last_success_at?: string | null
+          operator_id?: string | null
           pattern_confidence?: number | null
           response_rate?: number | null
           sector?: string | null
@@ -5131,7 +5908,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "response_patterns_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scrape_cache: {
         Row: {
@@ -5169,6 +5954,7 @@ export type Database = {
           id: string
           ip_address: string | null
           metadata: Json | null
+          operator_id: string | null
           partner_id: string | null
           session_id: string | null
           target_id: string | null
@@ -5190,6 +5976,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          operator_id?: string | null
           partner_id?: string | null
           session_id?: string | null
           target_id?: string | null
@@ -5211,6 +5998,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          operator_id?: string | null
           partner_id?: string | null
           session_id?: string | null
           target_id?: string | null
@@ -5224,6 +6012,13 @@ export type Database = {
             columns: ["ai_decision_log_id"]
             isOneToOne: false
             referencedRelation: "ai_decision_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_audit_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
           {
@@ -5268,6 +6063,7 @@ export type Database = {
           ai_tokens_used: number
           created_at: string
           id: string
+          operator_id: string | null
           tts_char_cap: number
           tts_chars_used: number
           updated_at: string
@@ -5279,6 +6075,7 @@ export type Database = {
           ai_tokens_used?: number
           created_at?: string
           id?: string
+          operator_id?: string | null
           tts_char_cap?: number
           tts_chars_used?: number
           updated_at?: string
@@ -5290,13 +6087,22 @@ export type Database = {
           ai_tokens_used?: number
           created_at?: string
           id?: string
+          operator_id?: string | null
           tts_char_cap?: number
           tts_chars_used?: number
           updated_at?: string
           usage_date?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "usage_daily_budget_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_metering: {
         Row: {
@@ -5448,6 +6254,7 @@ export type Database = {
           ended_at: string | null
           external_call_id: string | null
           id: string
+          operator_id: string | null
           outcome: string | null
           partner_id: string | null
           status: string | null
@@ -5464,6 +6271,7 @@ export type Database = {
           ended_at?: string | null
           external_call_id?: string | null
           id?: string
+          operator_id?: string | null
           outcome?: string | null
           partner_id?: string | null
           status?: string | null
@@ -5480,6 +6288,7 @@ export type Database = {
           ended_at?: string | null
           external_call_id?: string | null
           id?: string
+          operator_id?: string | null
           outcome?: string | null
           partner_id?: string | null
           status?: string | null
@@ -5487,7 +6296,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "voice_call_sessions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_documents: {
         Row: {
@@ -5497,6 +6314,7 @@ export type Database = {
           file_size: number
           file_url: string
           id: string
+          operator_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -5506,6 +6324,7 @@ export type Database = {
           file_size?: number
           file_url: string
           id?: string
+          operator_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -5515,9 +6334,18 @@ export type Database = {
           file_size?: number
           file_url?: string
           id?: string
+          operator_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspace_documents_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_presets: {
         Row: {
@@ -5527,6 +6355,7 @@ export type Database = {
           goal: string | null
           id: string
           name: string
+          operator_id: string | null
           reference_links: Json | null
           updated_at: string | null
           user_id: string
@@ -5538,6 +6367,7 @@ export type Database = {
           goal?: string | null
           id?: string
           name: string
+          operator_id?: string | null
           reference_links?: Json | null
           updated_at?: string | null
           user_id: string
@@ -5549,11 +6379,20 @@ export type Database = {
           goal?: string | null
           id?: string
           name?: string
+          operator_id?: string | null
           reference_links?: Json | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspace_presets_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -5604,6 +6443,7 @@ export type Database = {
           last_error: string | null
           max_attempts: number
           mission_id: string
+          operator_id: string | null
           result: Json | null
           run_at: string
           scheduled_for_followup_step: number | null
