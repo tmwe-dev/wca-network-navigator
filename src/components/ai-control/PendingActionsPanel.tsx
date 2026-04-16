@@ -104,8 +104,8 @@ export function PendingActionsPanel() {
         } catch (e) { console.warn("pending-action-executor invocation failed:", e); }
       }
     },
-    onSuccess: () => { toast.success("Azione approvata ed eseguita"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
-    onError: () => toast.error("Errore nell'approvazione"),
+    onSuccess: () => { toast.success("Azione approvata — esecuzione avviata"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
+    onError: (err: Error) => toast.error(`Errore nell'approvazione: ${err.message}`),
   });
 
   const rejectMutation = useMutation({
