@@ -148,8 +148,12 @@ export const queryKeys = {
 
   // ── Channel Messages ──────────────────────────────────
   channelMessages: {
+    root: ["channel-messages"] as const,
     all: ["channel-messages"] as const,
-    unread: ["channel-messages-unread"] as const,
+    list: (channel?: string, search?: string, page?: number, operatorId?: string) =>
+      ["channel-messages", channel ?? "all", search ?? "", page ?? 0, operatorId ?? "self"] as const,
+    unread: (channel?: string, operatorId?: string) =>
+      ["channel-messages-unread", channel ?? "all", operatorId ?? "self"] as const,
     unreadCounts: ["unread-counts"] as const,
   },
 

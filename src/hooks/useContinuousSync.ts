@@ -38,8 +38,8 @@ export function useContinuousSync() {
 
       // On done/error: full refresh
       if (p.status === "done" || p.status === "error") {
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
         queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
       }
     });

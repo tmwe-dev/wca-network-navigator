@@ -44,7 +44,7 @@ export function useMessageAttachments(messageId: string | null) {
 
 export function useUnreadCount(channel?: string) {
   return useQuery({
-    queryKey: queryKeys.channelMessages.unread,
+    queryKey: queryKeys.channelMessages.unread(channel),
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -123,8 +123,8 @@ export function useMarkAsRead() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+      queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
     },
   });
 }
