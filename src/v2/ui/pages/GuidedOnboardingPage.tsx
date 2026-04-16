@@ -63,17 +63,21 @@ export function GuidedOnboardingPage(): React.ReactElement {
     if (current > 0) setCurrent(current - 1);
   };
 
+  const markOnboardingComplete = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("user_id", user.id);
+    }
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
+  };
+
   const finishOnboarding = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("app_settings").upsert(
-          { user_id: user.id, key: "onboarding_completed", value: "true" },
-          { onConflict: "user_id,key" }
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
+      await markOnboardingComplete();
       toast.success("Onboarding completato! Benvenuto in WCA Network Navigator.");
       navigate("/v2");
     } catch {
@@ -86,14 +90,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
   const skipAll = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("app_settings").upsert(
-          { user_id: user.id, key: "onboarding_completed", value: "true" },
-          { onConflict: "user_id,key" }
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
+      await markOnboardingComplete();
       navigate("/v2");
     } catch {
       toast.error("Errore");
