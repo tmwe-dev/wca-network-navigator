@@ -37,8 +37,7 @@ export const DB_TABLES = [
 
 export const EDGE_FUNCTIONS = [
   "ai-assistant", "analyze-import-structure", "analyze-partner",
-  "buy-credits", "check-subscription", "consume-credits",
-  "create-checkout", "customer-portal",
+  "consume-credits",
   "deduplicate-partners", "deep-search-contact", "deep-search-partner",
   "enrich-partner-website", "generate-aliases", "generate-email",
   "get-linkedin-credentials", "get-ra-credentials", "get-wca-credentials",
@@ -47,7 +46,7 @@ export const EDGE_FUNCTIONS = [
   "save-linkedin-cookie", "save-ra-cookie", "save-ra-prospects",
   "save-wca-contacts", "save-wca-cookie",
   "scrape-wca-blacklist", "scrape-wca-directory", "scrape-wca-partners",
-  "send-email", "stripe-webhook", "unified-assistant", "wca-auto-login",
+  "send-email", "unified-assistant", "wca-auto-login",
 ] as const;
 
 export const RPC_FUNCTIONS = [

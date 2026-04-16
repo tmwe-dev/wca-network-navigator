@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Crown, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
@@ -48,7 +47,6 @@ export default function Settings() {
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "enrichment", label: "Arricchimento", icon: Image },
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
-    { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "timing", label: "Timing & Schedule", icon: Clock },
@@ -100,11 +98,6 @@ export default function Settings() {
             {tab === "ai-prompt" && (
               <div className="float-panel p-5">
                 <AICommandCenter />
-              </div>
-            )}
-            {tab === "abbonamento" && (
-              <div className="float-panel p-5">
-                <SubscriptionPanel />
               </div>
             )}
             {tab === "operatori" && <OperatorsSettings />}
