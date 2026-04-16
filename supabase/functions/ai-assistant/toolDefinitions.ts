@@ -1085,4 +1085,105 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  // ━━━ NEW: Missing parity tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "create_contact",
+      description: "Create a new contact in the CRM (imported_contacts). Automatically triggers WCA partner matching if email or company_name is provided.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Contact full name" },
+          email: { type: "string", description: "Email address" },
+          company_name: { type: "string", description: "Company name" },
+          phone: { type: "string", description: "Phone number" },
+          mobile: { type: "string", description: "Mobile number" },
+          position: { type: "string", description: "Job title / position" },
+          city: { type: "string", description: "City" },
+          country: { type: "string", description: "Country name or code" },
+          origin: { type: "string", description: "Lead origin / source" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"], description: "Lead status (default: new)" },
+          note: { type: "string", description: "Optional note about the contact" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_campaign",
+      description: "Create an outreach mission (campaign) in draft status. Configure target filters, channel, and AI prompt for email generation.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Campaign title" },
+          channel: { type: "string", enum: ["email", "whatsapp", "linkedin"], description: "Primary channel (default: email)" },
+          target_filters: { type: "object", description: "Filters to select recipients: country_code, lead_status, has_email, etc." },
+          ai_prompt: { type: "string", description: "AI prompt for generating outreach messages" },
+          template_id: { type: "string", description: "Optional template ID for message generation" },
+        },
+        required: ["title"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "schedule_email",
+      description: "Queue a scheduled email in the outreach queue. The email will be sent at the specified time.",
+      parameters: {
+        type: "object",
+        properties: {
+          to_email: { type: "string", description: "Recipient email address" },
+          to_name: { type: "string", description: "Recipient name" },
+          subject: { type: "string", description: "Email subject" },
+          html_body: { type: "string", description: "Email HTML body" },
+          partner_id: { type: "string", description: "Optional partner UUID for tracking" },
+          scheduled_at: { type: "string", description: "ISO 8601 datetime for sending (e.g. 2026-04-17T09:00:00Z)" },
+        },
+        required: ["to_email", "subject", "html_body"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_agent_prompt",
+      description: "Update an AI agent's system prompt. Can replace the entire prompt or append additional instructions.",
+      parameters: {
+        type: "object",
+        properties: {
+          agent_name: { type: "string", description: "Agent name to find" },
+          agent_id: { type: "string", description: "Agent UUID (if known)" },
+          replace_prompt: { type: "string", description: "Full replacement system prompt" },
+          prompt_addition: { type: "string", description: "Text to append to the existing prompt" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_agent_kb_entry",
+      description: "Add a knowledge base entry linked to an AI agent. The entry becomes part of the agent's context for future interactions.",
+      parameters: {
+        type: "object",
+        properties: {
+          agent_name: { type: "string", description: "Agent name to find" },
+          agent_id: { type: "string", description: "Agent UUID (if known)" },
+          title: { type: "string", description: "KB entry title" },
+          content: { type: "string", description: "KB entry content" },
+          category: { type: "string", description: "Category (default: agent_custom)" },
+          tags: { type: "array", items: { type: "string" }, description: "Tags for retrieval" },
+        },
+        required: ["title", "content"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];

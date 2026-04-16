@@ -407,6 +407,115 @@ export async function executeTool(
       return { success: true, message: `Azione ${actionId} rifiutata.` };
     }
 
+    // ━━━ NEW: Parity tools ━━━
+    case "create_contact": {
+      if (!userId) return { error: "Auth required" };
+      const insertPayload: Record<string, unknown> = { user_id: userId, lead_status: String(args.lead_status || "new"), row_number: 0 };
+      for (const f of ["name", "email", "company_name", "phone", "mobile", "position", "city", "country", "origin", "note"]) {
+        if (args[f]) insertPayload[f] = String(args[f]);
+      }
+      // Need an import_log_id — create a virtual one
+      const { data: logRow, error: logErr } = await supabase.from("import_logs").insert({ user_id: userId, file_name: "ai-assistant", total_rows: 1, imported_rows: 1, status: "completed" }).select("id").single();
+      if (logErr) return { error: `Import log creation failed: ${logErr.message}` };
+      insertPayload.import_log_id = (logRow as Record<string, unknown>).id;
+      const { data, error } = await supabase.from("imported_contacts").insert(insertPayload).select("id, name, email, company_name, lead_status").single();
+      if (error) return { error: error.message };
+      return { success: true, contact: data, message: `Contatto creato: ${args.name || args.email || "N/A"}` };
+    }
+
+    case "create_campaign": {
+      if (!userId) return { error: "Auth required" };
+      const channel = String(args.channel || "email");
+      const { data, error } = await supabase.from("outreach_missions").insert({
+        user_id: userId,
+        title: String(args.title || "Nuova campagna"),
+        channel,
+        status: "draft",
+        target_filters: args.target_filters || {},
+        ai_prompt: args.ai_prompt ? String(args.ai_prompt) : null,
+        template_id: args.template_id ? String(args.template_id) : null,
+      }).select("id, title, channel, status").single();
+      if (error) return { error: error.message };
+      return { success: true, mission: data, message: `Campagna "${args.title}" creata in stato draft.` };
+    }
+
+    case "schedule_email": {
+      if (!userId) return { error: "Auth required" };
+      const toEmail = String(args.to_email || "");
+      if (!toEmail) return { error: "to_email è obbligatorio" };
+      const scheduledAt = args.scheduled_at ? String(args.scheduled_at) : new Date(Date.now() + 3600_000).toISOString();
+      const { data, error } = await supabase.from("outreach_queue").insert({
+        user_id: userId,
+        channel: "email",
+        recipient_email: toEmail,
+        recipient_name: args.to_name ? String(args.to_name) : null,
+        subject: String(args.subject || ""),
+        body: String(args.html_body || ""),
+        status: "pending",
+        priority: 5,
+        scheduled_at: scheduledAt,
+        partner_id: args.partner_id ? String(args.partner_id) : null,
+      }).select("id, recipient_email, subject, scheduled_at, status").single();
+      if (error) return { error: error.message };
+      return { success: true, queued: data, message: `Email programmata per ${toEmail} alle ${scheduledAt}` };
+    }
+
+    case "update_agent_prompt": {
+      if (!userId) return { error: "Auth required" };
+      let agentId = args.agent_id ? String(args.agent_id) : null;
+      if (!agentId && args.agent_name) {
+        const { data: found } = await supabase.from("agents").select("id").eq("user_id", userId).ilike("name", `%${escapeLike(String(args.agent_name))}%`).limit(1).single();
+        if (found) agentId = (found as Record<string, unknown>).id as string;
+      }
+      if (!agentId) return { error: "Agente non trovato" };
+      let newPrompt: string;
+      if (args.replace_prompt) {
+        newPrompt = String(args.replace_prompt);
+      } else if (args.prompt_addition) {
+        const { data: current } = await supabase.from("agents").select("system_prompt").eq("id", agentId).single();
+        newPrompt = ((current as Record<string, unknown>)?.system_prompt || "") + "\n\n" + String(args.prompt_addition);
+      } else {
+        return { error: "Specifica replace_prompt o prompt_addition" };
+      }
+      const { error } = await supabase.from("agents").update({ system_prompt: newPrompt, updated_at: new Date().toISOString() }).eq("id", agentId);
+      if (error) return { error: error.message };
+      return { success: true, agent_id: agentId, prompt_length: newPrompt.length, message: "Prompt agente aggiornato." };
+    }
+
+    case "add_agent_kb_entry": {
+      if (!userId) return { error: "Auth required" };
+      let agentId = args.agent_id ? String(args.agent_id) : null;
+      if (!agentId && args.agent_name) {
+        const { data: found } = await supabase.from("agents").select("id").eq("user_id", userId).ilike("name", `%${escapeLike(String(args.agent_name))}%`).limit(1).single();
+        if (found) agentId = (found as Record<string, unknown>).id as string;
+      }
+      if (!agentId) return { error: "Agente non trovato" };
+      const category = String(args.category || "agent_custom");
+      const tags = Array.isArray(args.tags) ? args.tags.map(String) : ["agent"];
+      // Create KB entry
+      const { data: kbEntry, error: kbErr } = await supabase.from("kb_entries").insert({
+        user_id: userId,
+        title: String(args.title),
+        content: String(args.content),
+        category,
+        chapter: "agent",
+        tags,
+        priority: 5,
+        sort_order: 0,
+        is_active: true,
+      }).select("id, title").single();
+      if (kbErr) return { error: kbErr.message };
+      // Link to agent
+      const { error: linkErr } = await supabase.from("agent_knowledge_links").insert({
+        agent_id: agentId,
+        kb_entry_id: (kbEntry as Record<string, unknown>).id,
+        user_id: userId,
+        priority: 5,
+      });
+      if (linkErr) return { error: linkErr.message };
+      return { success: true, kb_entry: kbEntry, agent_id: agentId, message: `KB entry "${args.title}" aggiunta all'agente.` };
+    }
+
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
