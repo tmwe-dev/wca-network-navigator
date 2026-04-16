@@ -59,19 +59,19 @@ export const agentDots = [
 ];
 
 export const quickPrompts = [
-  "Mostra i partner WCA attivi in Europa",
-  "Scrivi email a partner per proposta collaborazione",
-  "Report executive partner Asia cross-source",
-  "Prepara follow-up per clienti inattivi >30gg",
-  "Componi email di primo contatto per nuovo lead",
-  "Leggi ad alta voce il riepilogo prima della conferma",
-  "Mostra stato campagne attive",
-  "Salva questo flusso come template operativo",
+  "Prepara follow-up per clienti inattivi >30 giorni",
+  "Verifica email e comunicazioni da autorizzare",
+  "Genera report executive con analisi performance",
+  "Mostra stato campagne attive e prossime scadenze",
+  "Controlla la coda outreach e bozze in attesa",
+  "Analizza risposte ricevute e suggerisci azioni",
+  "Verifica partner senza contatti aggiornati",
+  "Riepilogo attività agenti nelle ultime 24h",
 ];
 
 export const capabilities = [
-  "Source Unification", "Search Partners", "Parse Cards", "Create Draft",
-  "Send Batch", "Read Aloud", "Audit Action",
+  "Follow-up Automatici", "Verifica Comunicazioni", "Report Executive",
+  "Gestione Campagne", "Analisi Risposte", "Audit & Governance",
 ];
 
 /* ─── Scenarios ─── */
