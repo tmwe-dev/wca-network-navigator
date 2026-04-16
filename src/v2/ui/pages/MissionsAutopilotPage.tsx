@@ -49,10 +49,10 @@ interface MissionEvent {
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   active: "bg-primary/20 text-primary",
-  paused: "bg-yellow-500/20 text-yellow-400",
-  completed: "bg-green-500/20 text-green-400",
+  paused: "bg-accent text-accent-foreground",
+  completed: "bg-primary/30 text-primary",
   failed: "bg-destructive/20 text-destructive",
-  budget_exhausted: "bg-orange-500/20 text-orange-400",
+  budget_exhausted: "bg-destructive/10 text-destructive",
 };
 
 const GOAL_TYPES = [
