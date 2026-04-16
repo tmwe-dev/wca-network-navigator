@@ -84,6 +84,19 @@ export function useWhatsAppBackfill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
+      // Resolve operator_id
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const operatorId = opRow?.id ?? null;
+      if (!operatorId) {
+        console.warn("[useWhatsAppBackfill] No operator found for user, aborting");
+        toast.error("Nessun operatore associato");
+        return;
+      }
+
       // ── PHASE 1: Discovery ──
       const sidebarResult = await bridge.readUnread();
       if (!sidebarResult.success || !sidebarResult.messages?.length) {
@@ -199,6 +212,7 @@ export function useWhatsAppBackfill() {
             .from("channel_messages")
             .upsert({
               user_id: user.id,
+              operator_id: operatorId,
               channel: "whatsapp",
               direction: finalDirection,
               from_address: finalDirection === "outbound" ? undefined : contact,

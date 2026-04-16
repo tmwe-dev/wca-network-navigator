@@ -6543,6 +6543,10 @@ export type Database = {
         }[]
       }
       get_effective_operator_ids: { Args: never; Returns: string[] }
+      get_operator_id_by_identifier: {
+        Args: { p_channel: string; p_identifier: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

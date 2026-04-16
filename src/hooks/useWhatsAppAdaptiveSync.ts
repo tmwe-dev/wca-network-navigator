@@ -95,6 +95,18 @@ export function useWhatsAppAdaptiveSync() {
 
   // ── Save messages to DB ──
   const saveMessages = useCallback(async (messages: WhatsAppSidebarMessage[], sessionUserId: string) => {
+    // Resolve operator_id for this user
+    const { data: opRow } = await supabase
+      .from("operators")
+      .select("id")
+      .eq("user_id", sessionUserId)
+      .maybeSingle();
+    const operatorId = opRow?.id ?? null;
+    if (!operatorId) {
+      console.warn("[useWhatsAppAdaptiveSync] No operator found for user, skipping save");
+      return { newCount: 0 };
+    }
+
     let newCount = 0;
     for (const msg of messages) {
       const contact = String(msg.contact || msg.from || "").trim();
@@ -110,6 +122,7 @@ export function useWhatsAppAdaptiveSync() {
       const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
       const row = {
         user_id: sessionUserId,
+        operator_id: operatorId,
         channel: "whatsapp",
         direction: finalDirection,
         from_address: finalDirection === "outbound" ? undefined : contact,

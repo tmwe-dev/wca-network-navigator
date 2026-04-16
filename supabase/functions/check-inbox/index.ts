@@ -473,10 +473,22 @@ Deno.serve(async (req) => {
         /* ─── Phase 5: Match sender ─── */
         const match = await matchSender(supabase, fromAddr);
 
+        /* ─── Phase 5b: Resolve operator_id ─── */
+        const { data: opRow } = await supabase
+          .from("operators")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const operatorId = opRow?.id ?? null;
+        if (!operatorId) {
+          console.warn(`[check-inbox] UID ${uid}: no operator found for user ${userId}, skipping insert`);
+          continue;
+        }
+
         /* ─── Phase 6: Save ─── */
         const threadId = computeThreadId(messageId, inReplyTo, referencesHeader);
         const result = await saveMessageToDb(supabase, {
-          userId, uid, uidvalidity, messageId, threadId, fromAddr, toAddr, ccAddresses, bccAddresses,
+          userId, operatorId, uid, uidvalidity, messageId, threadId, fromAddr, toAddr, ccAddresses, bccAddresses,
           subject, date, bodyText, bodyHtml, imapFlags, internalDate, rawStoragePath, rawHash,
           rfc822Size, referencesHeader, inReplyTo, parseWarnings, senderName, match, attachmentRecords,
         });
