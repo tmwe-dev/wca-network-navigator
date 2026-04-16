@@ -217,8 +217,8 @@ export function useWhatsAppAdaptiveSync() {
 
       if (newCount > 0) {
         lastNewMsgAt.current = Date.now();
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread });
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
 
         if (levelRef.current === 0) {
           escalate(3);
