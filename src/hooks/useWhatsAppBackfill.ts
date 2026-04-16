@@ -194,7 +194,7 @@ export function useWhatsAppBackfill() {
             if (!foundAnchor) {
               const backfillResult = await bridge.backfillChat(
                 chat.name,
-                chat.lastMessage || null,
+                chat.lastMessage || "",
                 MAX_SCROLLS_PER_CHAT
               );
               if (backfillResult.success && backfillResult.messages?.length) {
@@ -203,7 +203,7 @@ export function useWhatsAppBackfill() {
             }
           } else if (!chat.cursorOldestId) {
             // No cursor yet — do initial deep scroll
-            const backfillResult = await bridge.backfillChat(chat.name, null, MAX_SCROLLS_PER_CHAT);
+            const backfillResult = await bridge.backfillChat(chat.name, "", MAX_SCROLLS_PER_CHAT);
             if (backfillResult.success && backfillResult.messages?.length) {
               messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
             }
