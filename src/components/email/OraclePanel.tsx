@@ -127,7 +127,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-5 h-5" />
+        <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-[50px] h-[50px] rounded-lg" />
         <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
       </div>
 
@@ -140,10 +140,10 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             onChange={(e) => setCustomGoal(e.target.value)}
             placeholder="Descrivi l'obiettivo della email..."
             className={cn(
-              "text-xs min-h-[80px] max-h-[120px] resize-none pr-8",
+              "text-xs min-h-[160px] max-h-[240px] resize-none pr-8",
               speech.listening && "ring-1 ring-red-400/50"
             )}
-            rows={3}
+            rows={6}
           />
           {speech.hasSpeechAPI && (
             <button
