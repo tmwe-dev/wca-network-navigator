@@ -139,14 +139,14 @@ export default function ManualGroupingTab() {
 
   /** Fetch ALL rows from a query, paginating in chunks of 1000 to bypass Supabase default limit */
   const fetchAllRows = async <T,>(
-    buildQuery: (from: number, to: number) => ReturnType<typeof supabase.from<"channel_messages">["select"]>,
+    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
   ): Promise<T[]> => {
     const PAGE = 1000;
     const all: T[] = [];
     let offset = 0;
     let done = false;
     while (!done) {
-      const { data, error } = await buildQuery(offset, offset + PAGE - 1) as { data: T[] | null; error: unknown };
+      const { data, error } = await buildQuery(offset, offset + PAGE - 1);
       if (error) throw error;
       const batch = data ?? [];
       all.push(...batch);
