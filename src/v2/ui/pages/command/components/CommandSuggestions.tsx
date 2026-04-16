@@ -13,10 +13,10 @@ interface Props {
 }
 
 const staticFallbacks = [
-  "Mostra i partner WCA attivi in Europa",
-  "Prepara follow-up per clienti inattivi >30gg",
-  "Report executive partner Asia",
-  "Mostra stato campagne attive",
+  "Prepara follow-up per clienti inattivi >30 giorni",
+  "Verifica email e comunicazioni da autorizzare",
+  "Genera report executive con analisi performance",
+  "Mostra stato campagne attive e prossime scadenze",
 ];
 
 function suggestionToPrompt(s: { id: string; label: string }): string {
