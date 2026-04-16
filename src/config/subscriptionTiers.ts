@@ -58,6 +58,27 @@ export const SUBSCRIPTION_TIERS = {
       email_templates: Infinity,
     },
   },
+  enterprise: {
+    name: "Enterprise",
+    product_id: null,
+    price_id: null,
+    price: 199,
+    features: [
+      "Tutto del piano Max",
+      "Multi-workspace isolati",
+      "Dominio custom + branding",
+      "SSO & RBAC avanzato",
+      "Metering missioni e token",
+      "SLA dedicato",
+      "DPA GDPR incluso",
+    ],
+    limits: {
+      partners: Infinity,
+      campaigns_per_month: Infinity,
+      ai_credits_included: 5000,
+      email_templates: Infinity,
+    },
+  },
 } as const;
 
 export type SubscriptionTier = keyof typeof SUBSCRIPTION_TIERS;
