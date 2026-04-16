@@ -335,8 +335,16 @@ export function useWhatsAppAdaptiveSync() {
 
   // ── Manual read now ──
   const readNow = useCallback(async () => {
+    if (!isAvailable) {
+      toast.error("Estensione WhatsApp non rilevata. Verifica che sia installata e la pagina ricaricata.");
+      return;
+    }
+    if (!isAuthenticated) {
+      toast.error("WhatsApp Web non autenticato. Apri web.whatsapp.com e scansiona il QR code.");
+      return;
+    }
     await sidebarScan();
-  }, [sidebarScan]);
+  }, [sidebarScan, isAvailable, isAuthenticated]);
 
   const toggle = useCallback(() => setEnabled(prev => !prev), []);
 
