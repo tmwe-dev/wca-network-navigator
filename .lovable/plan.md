@@ -1,58 +1,61 @@
 
 
-# Implementazione Tool Mancanti nel Backend ai-assistant
+# Report Visuale Capacità Agenti AI
 
-## Situazione attuale
+## Obiettivo
+Creare una nuova pagina `/v2/agent-capabilities` con un report visuale che mostri per ogni agente: tool assegnati, tool effettivamente usati (da agent_tasks), e gap operativi rispetto al set completo di 68 tool backend.
 
-L'edge function `ai-assistant` ha **48+ tool** ma mancano 5 tool critici che esistono già nel modulo `agent-execute/toolHandlers.ts` ma non sono esposti nell'assistente principale:
+## Architettura
 
-| Tool | Esiste in agent-execute? | Esiste in ai-assistant? |
-|------|--------------------------|------------------------|
-| `create_contact` | ✅ (platformTools) | ❌ |
-| `create_campaign` | ❌ nessuna parte | ❌ |
-| `schedule_email` | Parziale (outreach_queue insert) | ❌ |
-| `update_agent_prompt` | ✅ toolHandlers.ts:586 | ❌ |
-| `add_agent_kb_entry` | ✅ toolHandlers.ts:598 | ❌ |
+### 1. Nuova pagina: `src/v2/ui/pages/AgentCapabilitiesPage.tsx`
+Componente principale con:
+- **Header** con titolo "Capacità Agenti AI" e contatori riassuntivi (totale tool backend, agenti attivi)
+- **Griglia agenti** con tabs orizzontali (stesso pattern di AgentStatusPanel) per selezionare l'agente
+- **Dettaglio agente selezionato** con 3 sezioni:
 
-## Piano di implementazione
+```text
+┌─────────────────────────────────────────────────┐
+│  [Tab Luca] [Tab Marco] [Tab Robin] [Tab ...]   │
+├─────────────────────────────────────────────────┤
+│  🧠 Luca · Director                             │
+│                                                  │
+│  ✅ Tool Assegnati (14/68)  ████████░░░░  21%    │
+│  ─────────────────────────────                   │
+│  search_partners  get_partner_detail  ...        │
+│                                                  │
+│  📊 Utilizzo (da agent_tasks)                    │
+│  screening: 59 task · analysis: 3 task           │
+│                                                  │
+│  ⚠️ Gap Operativi (54 tool mancanti)             │
+│  create_campaign · schedule_email · ...          │
+│  Categorie mancanti: Outreach, Download, ...     │
+└─────────────────────────────────────────────────┘
+```
 
-### 1. Aggiungere tool definitions (toolDefinitions.ts)
+### 2. Hook: `src/v2/hooks/useAgentCapabilities.ts`
+- Query `agents` per `assigned_tools` e `stats`
+- Query `agent_tasks` aggregata per agente (count per task_type e status)
+- Calcolo gap confrontando `assigned_tools` vs lista completa `ALL_OPERATIONAL_TOOLS + MANAGEMENT_TOOLS + STRATEGIC_TOOLS`
+- Categorizzazione tool mancanti per area (Partner, Network, Outreach, CRM, etc.)
 
-5 nuove definizioni nella sezione appropriata:
+### 3. Rotta
+Aggiungere in `src/v2/routes.tsx`:
+- Lazy import `AgentCapabilitiesPage`
+- Route `agent-capabilities` sotto authenticated layout
 
-- **`create_contact`**: Crea un contatto in `imported_contacts`. Params: `name`, `email`, `company_name`, `phone`, `mobile`, `country`, `origin`, `lead_status`, `notes`.
-- **`create_campaign`**: Crea una missione outreach in `outreach_missions`. Params: `title`, `channel` (email/whatsapp/linkedin), `target_filters` (country, lead_status, etc.), `ai_prompt`, `template_id`.
-- **`schedule_email`**: Accoda un'email programmata in `outreach_queue` con `scheduled_at`. Params: `to_email`, `to_name`, `subject`, `html_body`, `partner_id`, `scheduled_at`.
-- **`update_agent_prompt`**: Modifica il system_prompt di un agente. Params: `agent_name`, `replace_prompt`, `prompt_addition`.
-- **`add_agent_kb_entry`**: Aggiunge una voce alla KB di un agente. Params: `agent_name`, `title`, `content`.
-
-### 2. Aggiungere executor inline (toolExecutors.ts)
-
-Implementazione diretta nel dispatcher `executeTool`, usando il pattern già presente nel file. La logica per `update_agent_prompt` e `add_agent_kb_entry` viene portata da `agent-execute/toolHandlers.ts` (copia adattata, ~15 righe ciascuno).
-
-Per `create_contact`:
-- Insert in `imported_contacts` con user_id
-- Trigger automatico di match WCA se email/company presenti
-
-Per `create_campaign`:
-- Insert in `outreach_missions` con status `draft`
-- Restituisce mission_id per successive operazioni
-
-Per `schedule_email`:
-- Insert in `outreach_queue` con status `pending` e `scheduled_at`
-- Collegamento opzionale a partner_id per tracking
-
-### 3. File modificati
+### File modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/ai-assistant/toolDefinitions.ts` | +5 tool definitions (~120 righe) |
-| `supabase/functions/ai-assistant/toolExecutors.ts` | +5 case nel switch dispatcher (~80 righe) |
+| `src/v2/ui/pages/AgentCapabilitiesPage.tsx` | Nuovo — pagina report |
+| `src/v2/hooks/useAgentCapabilities.ts` | Nuovo — hook dati |
+| `src/v2/routes.tsx` | +3 righe per rotta |
+| `src/lib/queryKeys.ts` | +1 chiave per agents.capabilities |
 
 ### Dettagli tecnici
-
-- Tutti i 5 tool richiedono `userId` (autenticazione obbligatoria)
-- `create_campaign` e `schedule_email` richiedono anche `authHeader` per eventuali sotto-invocazioni
-- Nessuna migrazione DB necessaria: tutte le tabelle target (`imported_contacts`, `outreach_missions`, `outreach_queue`, `agents`) esistono già
-- Deployment automatico dopo le modifiche
+- I 68 tool backend sono quelli estratti da `toolDefinitions.ts` (già censiti)
+- Le categorie tool (Partner, Network, Ricerca, CRM, Outreach, Agenda, Sistema, Management, Strategic) derivano da `roles.ts`
+- Progress bar colorata: <30% rosso, 30-60% giallo, >60% verde
+- Badge per ruolo agente con colore dal `AGENT_ROLES` esistente
+- Nessuna migrazione DB necessaria — tutto read-only su tabelle esistenti
 
