@@ -1,82 +1,53 @@
 
 
-# Rimozione Automazioni WhatsApp e LinkedIn — Solo Click Manuale
+# Piano: Nome intelligente dei mittenti in Email Intelligence
 
-## Situazione attuale
+## Problema
+Attualmente il nome visualizzato sulle card dei mittenti usa la parte locale dell'email (es. "notifications" da notifications@vercel.com) o il primo segmento del dominio. Il risultato è poco leggibile e non rappresentativo.
 
-- **WhatsApp**: `useWhatsAppAdaptiveSync` ha polling automatico con sequenza irregolare (5,8,4,12,17,3,4,34 min), MutationObserver push, auto-backfill su riconnessione, toggle ON/OFF, livelli di attenzione
-- **LinkedIn**: `useLinkedInSync` ha auto-sync ogni 30 min con jitter, toggle ON/OFF
-- **GlobalAutoSync**: orchestratore che gestisce pausa notturna e auto-resume per WA
+## Logica richiesta
+- **Email aziendali** (dominio non personale): usare il nome del dominio pulito e capitalizzato
+  - `notifications@vercel.com` → **Vercel**
+  - `broadcast@wcabroadcast.com` → **WCA Broadcast** (split su camelCase/separatori)
+  - `marketing@everest.com` → **Everest**
+  - `newsletters-noreply@linkedin.com` → **LinkedIn**
+  - `sara.triassi@tmwi.com` → **Sara Triassi · TMWI** (nome riconosciuto + azienda)
+- **Email personali** (gmail, yahoo, hotmail, outlook, etc.): usare la parte locale come nome
+  - `john.smith@gmail.com` → **John Smith**
 
-## Obiettivo
+## Modifiche
 
-Download WA e LI avviene **solo su click** del pulsante "Leggi". Nessun timer, nessun polling, nessun auto-resume.
+### 1. Nuova utility `src/lib/senderDisplayName.ts`
+Funzione pura `deriveSenderDisplayName(email: string): string` con questa logica:
+- Estrai `localPart` e `domain`
+- Lista di domini personali noti: gmail, yahoo, hotmail, outlook, live, icloud, aol, protonmail, etc.
+- Se dominio personale: formatta `localPart` sostituendo `.` e `_` con spazi, capitalizza ogni parola
+- Se dominio aziendale:
+  - Prendi il nome base del dominio (senza TLD): `vercel.com` → `vercel`, `wcabroadcast.com` → `wcabroadcast`
+  - Split intelligente su camelCase, trattini, underscore: `wcabroadcast` → `wca broadcast`
+  - Mappa di override per brand noti: `linkedin` → `LinkedIn`, `tmwe` → `TMWE`, `tmwi` → `TMWI`
+  - Se `localPart` sembra un nome di persona (contiene `.` o `_` tra due parole, nessuna keyword di ruolo): mostra `"Nome Cognome · Azienda"`
+  - Altrimenti: solo nome azienda capitalizzato
 
----
+### 2. Applicazione nei 3 punti di costruzione `companyName`
 
-## Fase 1 — Semplificare `useWhatsAppAdaptiveSync`
+**`ManualGroupingTab.tsx` riga 129** (lettura da DB):
+```
+companyName: r.company_name || deriveSenderDisplayName(r.email_address)
+```
 
-**Rimuovere:**
-- Costante `POLLING_INTERVALS_MIN` e tutta la logica polling (righe 266-298)
-- MutationObserver push (righe 300-309)
-- Auto-backfill su riconnessione (righe 319-328)
-- Check ore lavorative nel tick (non serve più, il click è sempre possibile)
-- `pollIndexRef`, `timerRef` per polling
-- Stati `enabled`/`toggle`/`setEnabled` (non c'è più nulla da attivare/disattivare)
-- `AttentionLevel` e livelli 0/3/6
+**`ManualGroupingTab.tsx` riga 243** (populateAddressRules — INSERT nuove regole):
+Aggiungere `company_name: deriveSenderDisplayName(addr)` e `display_name` nel payload INSERT.
 
-**Mantenere:**
-- `sidebarScan()` — la logica core di lettura e salvataggio
-- `threadScan()` — per scansione chat focalizzata
-- `readNow()` — il punto di ingresso per il click manuale
-- `saveMessages()` — persistenza su DB
-- `isReading`, `isAvailable`, `isAuthenticated` — feedback UI
-- `focusedChat`/`focusOn` — gestione chat attiva
+**`SenderManagementTab.tsx` riga 121** (costruzione in-memory):
+```
+companyName: deriveSenderDisplayName(email)
+```
 
-L'hook esporrà essenzialmente: `{ readNow, isReading, isAvailable, isAuthenticated, focusedChat, focusOn }`
+### 3. File toccati
+- `src/lib/senderDisplayName.ts` (nuovo)
+- `src/components/email-intelligence/ManualGroupingTab.tsx` (2 righe)
+- `src/components/email-intelligence/SenderManagementTab.tsx` (1 riga)
 
-## Fase 2 — Semplificare `useLinkedInSync`
-
-**Rimuovere:**
-- `SYNC_INTERVAL`, `jitter`, `timerRef`, `enabledRef`
-- `doAutoSync`, `scheduleNext`
-- `enabled`, `toggle`
-
-**Mantenere:**
-- `performSync()` — logica core
-- `readNow()` — click manuale
-- `isReading`, `isAvailable`, `lastSyncAt`
-
-## Fase 3 — Pulire `useGlobalAutoSync`
-
-- Rimuovere import e istanza di `useWhatsAppAdaptiveSync`
-- Rimuovere logica pausa/resume WA notturna (`waWasEnabledRef`, effect correlato)
-- Rimuovere `waSync` dal return
-
-## Fase 4 — Aggiornare UI
-
-- **`WhatsAppToolbar`**: rimuovere pulsante ON/OFF e badge livello (L0/L3/L6). Tenere solo "Leggi" e "Backfill"
-- **`InArrivoTab`**: rimuovere `waSync.toggle`, `waSync.enabled`, `waSync.level`, auto-backfill su riconnessione. Passare solo `readNow`/`isReading`/`isAvailable`/`isAuthenticated`
-- **`LinkedInInboxView`**: rimuovere toggle ON/OFF dalla toolbar LinkedIn
-- **`WhatsAppInboxView`**: rimuovere `ownSync` fallback a `useWhatsAppAdaptiveSync` (non serve più auto-sync interno)
-
-## Fase 5 — Aggiornare memoria
-
-Aggiornare `mem://tech/communication/whatsapp-stealth-sync` e `mem://tech/communication/linkedin-stealth-sync` per riflettere il cambio a solo-click-manuale.
-
----
-
-## Riepilogo impatto
-
-| File | Azione |
-|------|--------|
-| `useWhatsAppAdaptiveSync.ts` | Rimuovere polling, livelli, toggle |
-| `useLinkedInSync.ts` | Rimuovere timer auto-sync, toggle |
-| `useGlobalAutoSync.ts` | Rimuovere gestione WA |
-| `WhatsAppToolbar.tsx` | Rimuovere ON/OFF e badge livello |
-| `InArrivoTab.tsx` | Semplificare props WA |
-| `LinkedInInboxView.tsx` | Rimuovere toggle |
-| `WhatsAppInboxView.tsx` | Rimuovere fallback sync |
-
-Rischio basso: nessuna modifica DB, nessuna modifica RLS, solo semplificazione codice frontend.
+Zero modifiche al database. La funzione `deriveSenderDisplayName` è pura e testabile.
 
