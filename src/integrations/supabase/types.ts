@@ -215,6 +215,226 @@ export type Database = {
           },
         ]
       }
+      agent_action_log: {
+        Row: {
+          args: Json
+          conversation_id: string | null
+          created_at: string
+          id: string
+          result: Json
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          args?: Json
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          result?: Json
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          args?: Json
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          result?: Json
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_knowledge_links: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          kb_entry_id: string
+          priority: number
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          kb_entry_id: string
+          priority?: number
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          kb_entry_id?: string
+          priority?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_knowledge_links_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_knowledge_links_kb_entry_id_fkey"
+            columns: ["kb_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kb_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_mission_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          mission_id: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          mission_id: string
+          payload?: Json
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          mission_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_mission_events_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "agent_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_missions: {
+        Row: {
+          agent_id: string
+          approval_only_for: string[]
+          autopilot: boolean
+          budget: Json
+          budget_consumed: Json
+          completed_at: string | null
+          created_at: string
+          goal_description: string | null
+          goal_type: string
+          id: string
+          kpi_current: Json
+          kpi_target: Json
+          owner_user_id: string
+          started_at: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          agent_id: string
+          approval_only_for?: string[]
+          autopilot?: boolean
+          budget?: Json
+          budget_consumed?: Json
+          completed_at?: string | null
+          created_at?: string
+          goal_description?: string | null
+          goal_type?: string
+          id?: string
+          kpi_current?: Json
+          kpi_target?: Json
+          owner_user_id: string
+          started_at?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          agent_id?: string
+          approval_only_for?: string[]
+          autopilot?: boolean
+          budget?: Json
+          budget_consumed?: Json
+          completed_at?: string | null
+          created_at?: string
+          goal_description?: string | null
+          goal_type?: string
+          id?: string
+          kpi_current?: Json
+          kpi_target?: Json
+          owner_user_id?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      agent_personas: {
+        Row: {
+          agent_id: string
+          created_at: string
+          custom_tone_prompt: string | null
+          example_messages: Json | null
+          id: string
+          kb_filter: Json | null
+          language: string
+          signature_template: string | null
+          style_rules: string[] | null
+          tone: string
+          updated_at: string
+          user_id: string
+          vocabulary_do: string[] | null
+          vocabulary_dont: string[] | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          custom_tone_prompt?: string | null
+          example_messages?: Json | null
+          id?: string
+          kb_filter?: Json | null
+          language?: string
+          signature_template?: string | null
+          style_rules?: string[] | null
+          tone?: string
+          updated_at?: string
+          user_id: string
+          vocabulary_do?: string[] | null
+          vocabulary_dont?: string[] | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          custom_tone_prompt?: string | null
+          example_messages?: Json | null
+          id?: string
+          kb_filter?: Json | null
+          language?: string
+          signature_template?: string | null
+          style_rules?: string[] | null
+          tone?: string
+          updated_at?: string
+          user_id?: string
+          vocabulary_do?: string[] | null
+          vocabulary_dont?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_personas_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_tasks: {
         Row: {
           agent_id: string
@@ -1209,6 +1429,36 @@ export type Database = {
           },
         ]
       }
+      browser_action_log: {
+        Row: {
+          actions: Json
+          created_at: string
+          id: string
+          result: Json | null
+          status: string
+          target_url: string | null
+          user_id: string
+        }
+        Insert: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          result?: Json | null
+          status?: string
+          target_url?: string | null
+          user_id: string
+        }
+        Update: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          result?: Json | null
+          status?: string
+          target_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       business_cards: {
         Row: {
           company_name: string | null
@@ -1855,6 +2105,36 @@ export type Database = {
           id?: string
           operation?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      cron_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          result: string | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          result?: string | null
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          result?: string | null
+          started_at?: string
         }
         Relationships: []
       }
@@ -2764,6 +3044,66 @@ export type Database = {
         }
         Relationships: []
       }
+      extension_dispatch_queue: {
+        Row: {
+          channel: string
+          contact_id: string | null
+          created_at: string
+          delivered_at: string | null
+          dispatched_at: string | null
+          error: string | null
+          id: string
+          max_retries: number
+          message_text: string
+          mission_id: string | null
+          outreach_queue_id: string | null
+          partner_id: string | null
+          recipient: string
+          retry_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          dispatched_at?: string | null
+          error?: string | null
+          id?: string
+          max_retries?: number
+          message_text: string
+          mission_id?: string | null
+          outreach_queue_id?: string | null
+          partner_id?: string | null
+          recipient: string
+          retry_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          dispatched_at?: string | null
+          error?: string | null
+          id?: string
+          max_retries?: number
+          message_text?: string
+          mission_id?: string | null
+          outreach_queue_id?: string | null
+          partner_id?: string | null
+          recipient?: string
+          retry_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       import_errors: {
         Row: {
           ai_suggestions: Json | null
@@ -3501,6 +3841,83 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          branding: Json | null
+          created_at: string
+          custom_domain: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          plan: string
+          slug: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          plan?: string
+          slug: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          plan?: string
+          slug?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       outreach_missions: {
         Row: {
           agent_assignments: Json | null
@@ -3591,6 +4008,8 @@ export type Database = {
           recipient_linkedin_url: string | null
           recipient_name: string | null
           recipient_phone: string | null
+          replied_at: string | null
+          reply_message_id: string | null
           status: string
           subject: string | null
           user_id: string
@@ -3612,6 +4031,8 @@ export type Database = {
           recipient_linkedin_url?: string | null
           recipient_name?: string | null
           recipient_phone?: string | null
+          replied_at?: string | null
+          reply_message_id?: string | null
           status?: string
           subject?: string | null
           user_id: string
@@ -3633,11 +4054,72 @@ export type Database = {
           recipient_linkedin_url?: string | null
           recipient_name?: string | null
           recipient_phone?: string | null
+          replied_at?: string | null
+          reply_message_id?: string | null
           status?: string
           subject?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      outreach_schedules: {
+        Row: {
+          action: string
+          attempt: number
+          contact_id: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          mission_id: string
+          result: Json | null
+          run_at: string
+          scheduled_for_followup_step: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          attempt?: number
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          mission_id: string
+          result?: Json | null
+          run_at?: string
+          scheduled_for_followup_step?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          attempt?: number
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          mission_id?: string
+          result?: Json | null
+          run_at?: string
+          scheduled_for_followup_step?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_schedules_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_missions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outreach_timing_templates: {
         Row: {
@@ -4442,6 +4924,56 @@ export type Database = {
           },
         ]
       }
+      reply_classifications: {
+        Row: {
+          channel: string
+          classification: string
+          confidence: number
+          created_at: string
+          id: string
+          intent: string | null
+          message_id: string
+          model: string | null
+          reasoning: string | null
+          sentiment: string | null
+          urgency: string | null
+        }
+        Insert: {
+          channel?: string
+          classification: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          intent?: string | null
+          message_id: string
+          model?: string | null
+          reasoning?: string | null
+          sentiment?: string | null
+          urgency?: string | null
+        }
+        Update: {
+          channel?: string
+          classification?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          intent?: string | null
+          message_id?: string
+          model?: string | null
+          reasoning?: string | null
+          sentiment?: string | null
+          urgency?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_classifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "channel_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_logs: {
         Row: {
           channel: string | null
@@ -4559,6 +5091,27 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_cache: {
+        Row: {
+          mode: string
+          payload: Json
+          scraped_at: string
+          url: string
+        }
+        Insert: {
+          mode?: string
+          payload?: Json
+          scraped_at?: string
+          url: string
+        }
+        Update: {
+          mode?: string
+          payload?: Json
+          scraped_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       supervisor_audit_log: {
         Row: {
           action_category: string
@@ -4666,6 +5219,80 @@ export type Database = {
           role?: string | null
         }
         Relationships: []
+      }
+      usage_daily_budget: {
+        Row: {
+          ai_token_cap: number
+          ai_tokens_used: number
+          created_at: string
+          id: string
+          tts_char_cap: number
+          tts_chars_used: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          ai_token_cap?: number
+          ai_tokens_used?: number
+          created_at?: string
+          id?: string
+          tts_char_cap?: number
+          tts_chars_used?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          ai_token_cap?: number
+          ai_tokens_used?: number
+          created_at?: string
+          id?: string
+          tts_char_cap?: number
+          tts_chars_used?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      usage_metering: {
+        Row: {
+          id: string
+          missions_count: number
+          month: string
+          organization_id: string
+          tokens_used: number
+          tts_chars_used: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          missions_count?: number
+          month: string
+          organization_id: string
+          tokens_used?: number
+          tts_chars_used?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          missions_count?: number
+          month?: string
+          organization_id?: string
+          tokens_used?: number
+          tts_chars_used?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_metering_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_api_keys: {
         Row: {
@@ -4914,6 +5541,7 @@ export type Database = {
       }
     }
     Functions: {
+      _cron_invoke_edge_sql: { Args: { fn_name: string }; Returns: string }
       acquire_mission_slot: {
         Args: {
           p_channel: string
@@ -4923,6 +5551,35 @@ export type Database = {
         }
         Returns: string
       }
+      acquire_outreach_batch: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          attempt: number
+          contact_id: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          mission_id: string
+          result: Json | null
+          run_at: string
+          scheduled_for_followup_step: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "outreach_schedules"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      check_channel_rate_limit: {
+        Args: { _channel: string; _user_id: string }
+        Returns: Json
+      }
       check_domain_group_pattern: {
         Args: { p_domain: string; p_min_count?: number; p_user_id: string }
         Returns: {
@@ -4931,6 +5588,17 @@ export type Database = {
           group_name: string
         }[]
       }
+      cron_job_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          jobname: string
+          last_run: string
+          last_status: string
+          schedule: string
+        }[]
+      }
+      cron_service_headers: { Args: never; Returns: Json }
       decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
       deduct_credits: {
         Args: {
@@ -5016,6 +5684,14 @@ export type Database = {
       }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
+      is_org_admin: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
       link_response_to_activity: {
         Args: {
           p_activity_id: string
