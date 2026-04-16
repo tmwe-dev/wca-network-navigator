@@ -62,7 +62,7 @@ export function useSmartSuggestions() {
           icon: "🤖",
           label: `${proposed} task agente da confermare`,
           description: "Approva o modifica i task proposti dagli agenti",
-          route: "/v2/agents",
+          route: "/v2/agent-tasks",
           count: proposed,
           priority: 95,
         });
