@@ -245,7 +245,7 @@ function MissionCard({
           </div>
           <Progress value={budgetProgress} className="h-2" />
           {budgetProgress > 80 && (
-            <div className="flex items-center gap-1 text-xs text-orange-400 mt-1">
+            <div className="flex items-center gap-1 text-xs text-destructive mt-1">
               <AlertTriangle className="h-3 w-3" /> Budget quasi esaurito
             </div>
           )}
