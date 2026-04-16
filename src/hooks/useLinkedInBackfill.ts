@@ -56,6 +56,19 @@ export function useLinkedInBackfill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
+      // Resolve operator_id
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const operatorId = opRow?.id ?? null;
+      if (!operatorId) {
+        console.warn("[useLinkedInBackfill] No operator found, aborting");
+        toast.error("Nessun operatore associato");
+        return;
+      }
+
       // Read inbox threads
       setProgress(p => ({ ...p, currentThread: "Lettura inbox..." }));
       const inboxResult = await readInbox();

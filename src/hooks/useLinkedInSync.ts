@@ -38,6 +38,19 @@ export function useLinkedInSync() {
         return;
       }
 
+      // Resolve operator_id
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const operatorId = opRow?.id ?? null;
+      if (!operatorId) {
+        log.warn("No operator found for user, skipping sync");
+        toast.error("Nessun operatore associato");
+        return;
+      }
+
       const result = await readInbox();
       log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
 
@@ -58,6 +71,7 @@ export function useLinkedInSync() {
         const extId = buildExternalId(thread.name, new Date().toISOString(), thread.lastMessage);
         const error = await insertChannelMessage({
           user_id: user.id,
+          operator_id: operatorId,
           channel: "linkedin",
           direction: "inbound",
           from_address: thread.name,
