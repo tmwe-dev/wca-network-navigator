@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
-    const { channel, direction, from_address, to_address, body_text, partner_id, contact_id, dispatch_id } = body;
+    const { channel, direction, from_address, to_address, body_text, body_html, subject, partner_id, contact_id, dispatch_id, message_id_external } = body;
 
     if (!channel || !direction) {
       return new Response(JSON.stringify({ error: "channel and direction required" }), {
@@ -61,21 +61,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert into channel_messages
-    const { data: msg, error: insertErr } = await supabase
-      .from("channel_messages")
-      .insert({
-        user_id: user.id,
-        operator_id,
-        channel,
-        direction,
-        from_address: from_address || null,
-        to_address: to_address || null,
-        body_text: body_text || null,
-        partner_id: partner_id || null,
-      })
-      .select("id")
-      .single();
+    // Upsert into channel_messages (dedup via user_id + message_id_external)
+    const row: Record<string, unknown> = {
+      user_id: user.id,
+      operator_id,
+      channel,
+      direction,
+      from_address: from_address || null,
+      to_address: to_address || null,
+      body_text: body_text || null,
+      partner_id: partner_id || null,
+    };
+    if (message_id_external) row.message_id_external = message_id_external;
+    if (body_html) row.body_html = body_html;
+    if (subject) row.subject = subject;
+
+    const { data: msg, error: insertErr } = message_id_external
+      ? await supabase
+          .from("channel_messages")
+          .upsert([row], { onConflict: "user_id,message_id_external", ignoreDuplicates: true })
+          .select("id")
+          .maybeSingle()
+      : await supabase
+          .from("channel_messages")
+          .insert(row)
+          .select("id")
+          .single();
 
     if (insertErr) {
       console.error("[receive-channel-message] Insert error:", insertErr);
