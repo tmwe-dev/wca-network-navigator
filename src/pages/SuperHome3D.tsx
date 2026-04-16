@@ -7,6 +7,7 @@ import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { OperativeMetricsGrid } from "@/components/home/OperativeMetricsGrid";
+import { SmartActions } from "@/components/home/SmartActions";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
@@ -43,10 +44,10 @@ function formatCompact(value: number) {
 }
 
 const NAV_CARDS = [
-  { key: "outreach", title: "Outreach", description: "Cockpit AI, workspace e invio email", route: "/v2/outreach", icon: Radar },
-  { key: "network", title: "Network", description: "Rubrica partner e download directory", route: "/v2/network", icon: Network },
-  { key: "crm", title: "CRM", description: "Prospect, contatti e opportunità", route: "/v2/crm", icon: Users },
-  { key: "agenda", title: "Agenda", description: "Attività, scadenze e follow-up", route: "/v2/agenda", icon: CalendarCheck },
+  { key: "outreach", title: "Outreach", description: "Cockpit AI e invio email", route: "/v2/outreach", icon: Radar },
+  { key: "network", title: "Network", description: "Partner e directory", route: "/v2/network", icon: Network },
+  { key: "crm", title: "CRM", description: "Prospect e contatti", route: "/v2/crm", icon: Users },
+  { key: "agenda", title: "Agenda", description: "Attività e follow-up", route: "/v2/agenda", icon: CalendarCheck },
 ] as const;
 
 export default function SuperHome3D() {
@@ -71,11 +72,8 @@ export default function SuperHome3D() {
   const { contacts = [] } = useCockpitContacts();
   const { data: partnerCount = 0 } = useCount("partners");
   const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
-
-  // NEW: Operative metrics (instant)
   const { data: opMetrics, isLoading: opMetricsLoading } = useDashboardOperativeMetrics();
 
-  // NEW: Agent task breakdowns
   const { data: agentBreakdowns } = useQuery({
     queryKey: ["v2", "agent-task-breakdowns"],
     queryFn: async () => {
@@ -98,10 +96,10 @@ export default function SuperHome3D() {
 
   const statForCard = (key: string) => {
     switch (key) {
-      case "outreach": return `${formatCompact(readyContacts)} contatti pronti`;
+      case "outreach": return `${formatCompact(readyContacts)} pronti`;
       case "network": return `${formatCompact(partnerCount)} partner`;
       case "crm": return `${formatCompact(prospectStats?.total ?? 0)} prospect`;
-      case "agenda": return `${formatCompact(openActivities)} attività aperte`;
+      case "agenda": return `${formatCompact(openActivities)} aperte`;
       default: return "";
     }
   };
@@ -110,7 +108,6 @@ export default function SuperHome3D() {
     setActionPrompt(action.prompt);
   }, []);
 
-  // Redirect to onboarding if not set up
   if (!setupLoading && hasSetup === false) {
     navigate("/onboarding", { replace: true });
     return null;
@@ -119,7 +116,7 @@ export default function SuperHome3D() {
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
       <ScrollArea className="h-full">
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 sm:px-6">
 
         {/* Greeting + AI Prompt */}
         <section className="space-y-3">
@@ -135,25 +132,47 @@ export default function SuperHome3D() {
           />
         </section>
 
-        {/* STEP 1: Operative Metrics Grid (instant) */}
+        {/* Metrics bar (compact) */}
         <OperativeMetricsGrid metrics={opMetrics} isLoading={opMetricsLoading} />
 
-        {/* STEP 2: Team Agenti (with breakdown) + Active Jobs */}
+        {/* Smart Actions + Agents side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-2 space-y-4">
+            <SmartActions />
+            <ActiveJobsWidget jobs={jobs} />
+          </div>
           <div className="lg:col-span-3">
             <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={agentBreakdowns} />
           </div>
-          <div className="lg:col-span-2">
-            <ActiveJobsWidget jobs={jobs} />
-          </div>
         </div>
 
-        {/* STEP 3: AI Briefing (collapsible, secondary) */}
+        {/* Navigation cards */}
+        <section className="grid grid-cols-4 gap-2">
+          {NAV_CARDS.map((card) => (
+            <button
+              key={card.key}
+              onClick={() => navigate(card.route)}
+              className="glass-panel group flex flex-col justify-between rounded-xl border border-border/60 p-3 text-left transition-all hover:border-primary/40 min-h-[90px]"
+            >
+              <div className="flex items-center justify-between">
+                <card.icon className="h-4 w-4 text-foreground/80" />
+                <ArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+              </div>
+              <div className="mt-2">
+                <div className="text-xs font-semibold text-foreground">{card.title}</div>
+                <div className="text-[10px] text-muted-foreground">{card.description}</div>
+              </div>
+              <div className="mt-1 text-[10px] font-medium text-primary/80">{statForCard(card.key)}</div>
+            </button>
+          ))}
+        </section>
+
+        {/* AI Briefing (collapsible) */}
         <Collapsible open={briefingOpen} onOpenChange={setBriefingOpen}>
-          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronDown className={cn("h-4 w-4 transition-transform", briefingOpen && "rotate-180")} />
-            Briefing AI Narrativo
-            {briefingLoading && <span className="text-[10px] text-muted-foreground/60 ml-2">Caricamento…</span>}
+          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-1 py-1.5 text-xs font-medium text-muted-foreground/60 hover:text-foreground transition-colors">
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", briefingOpen && "rotate-180")} />
+            Briefing AI
+            {briefingLoading && <span className="text-[10px] ml-1">caricamento…</span>}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <OperativeBriefing
@@ -174,37 +193,9 @@ export default function SuperHome3D() {
         <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
           <DashboardCharts />
         </Suspense>
-
-        {/* Response Rate */}
         <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
           <ResponseRateCard />
         </Suspense>
-
-        {/* Navigation cards */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {NAV_CARDS.map((card) => (
-            <button
-              key={card.key}
-              onClick={() => navigate(card.route)}
-              className={cn(
-                "glass-panel group flex flex-col justify-between rounded-xl border border-border/60 p-4 text-left transition-all hover:border-primary/40 hover:shadow-[0_0_20px_hsl(var(--primary)/0.1)]",
-                "min-h-[130px]"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg border border-border/60 bg-muted/40 p-2">
-                  <card.icon className="h-4 w-4 text-foreground/80" />
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="text-sm font-semibold text-foreground">{card.title}</div>
-                <div className="text-[11px] leading-snug text-muted-foreground">{card.description}</div>
-              </div>
-              <div className="mt-2 text-xs font-medium text-primary/80">{statForCard(card.key)}</div>
-            </button>
-          ))}
-        </section>
 
       </div>
       </ScrollArea>
