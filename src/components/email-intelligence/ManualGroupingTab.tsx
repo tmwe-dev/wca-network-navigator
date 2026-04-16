@@ -6,12 +6,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2, Plus, Search, ArrowUpDown, Filter } from "lucide-react";
+import { RefreshCw, Loader2, Plus, Search, ArrowUpDown, Filter, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
+import { SenderEmailsDialog } from "./management/SenderEmailsDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { EmailSenderGroup, SenderAnalysis, SortOption } from "@/types/email-management";
@@ -39,6 +40,7 @@ export default function ManualGroupingTab() {
   const [volumeFilter, setVolumeFilter] = useState("all");
   const [activeDrag, setActiveDrag] = useState<SenderAnalysis | null>(null);
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+  const [emailPreviewSender, setEmailPreviewSender] = useState<SenderAnalysis | null>(null);
 
   useEffect(() => {
     if (!activeDrag) return;
@@ -312,6 +314,8 @@ export default function ManualGroupingTab() {
     }
   }, [filteredSenders, sortOption]);
 
+  const totalEmailCount = useMemo(() => senders.reduce((sum, s) => sum + s.emailCount, 0), [senders]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -328,7 +332,11 @@ export default function ManualGroupingTab() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className="text-xs">
-          {sortedSenders.length} da categorizzare su {senders.length + groups.reduce((s) => s, 0)} totali
+          {sortedSenders.length} da categorizzare su {senders.length} totali
+        </Badge>
+        <Badge variant="outline" className="text-xs gap-1">
+          <Mail className="h-3 w-3" />
+          {totalEmailCount.toLocaleString("it-IT")} email totali
         </Badge>
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -378,9 +386,10 @@ export default function ManualGroupingTab() {
                   {searchQuery ? "Nessun risultato" : "Tutti i mittenti sono classificati ✅"}
                 </p>
               ) : (
-                sortedSenders.map((sender) => (
+                 sortedSenders.map((sender) => (
                   <SenderCard key={sender.email} sender={sender}
-                    onDragStart={handleDragStart} onDragEnd={handleDragEnd} />
+                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                    onViewEmails={(s) => setEmailPreviewSender(s)} />
                 ))
               )}
             </div>
@@ -408,6 +417,13 @@ export default function ManualGroupingTab() {
 
       <CreateCategoryDialog open={showCreateDialog} onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateCategory} existingNames={groups.map((g) => g.nome_gruppo)} />
+
+      <SenderEmailsDialog
+        open={!!emailPreviewSender}
+        onOpenChange={(open) => { if (!open) setEmailPreviewSender(null); }}
+        emailAddress={emailPreviewSender?.email || ""}
+        companyName={emailPreviewSender?.companyName || ""}
+      />
     </div>
   );
 }
