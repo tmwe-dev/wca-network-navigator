@@ -142,6 +142,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
           <Route path="agent-capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
+          <Route path="agent-tasks" element={guardedPage(AgentTasksPage, "AgentTasks")} />
           <Route path="cockpit" element={guardedPage(CockpitPage, "Cockpit")} />
           <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
