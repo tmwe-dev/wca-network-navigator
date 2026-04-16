@@ -191,6 +191,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                     <Download className="w-3 h-3" /> Backfill
                   </Button>
                 )}
+              </div>
 
               {/* Backfill progress */}
               {(bfProgress.status === "running" || bfProgress.status === "paused") && (
