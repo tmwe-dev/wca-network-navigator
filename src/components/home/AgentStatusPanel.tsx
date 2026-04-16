@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { ChevronRight } from "lucide-react";
 import type { AgentStatusItem } from "@/hooks/useDailyBriefing";
 import type { AgentTaskBreakdown } from "@/v2/io/supabase/queries/dashboard";
 
@@ -16,8 +17,16 @@ interface Props {
 export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
   const navigate = useAppNavigate();
   const [agents, setAgents] = useState(initialAgents);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => { setAgents(initialAgents); }, [initialAgents]);
+
+  // Auto-select first agent
+  useEffect(() => {
+    if (initialAgents.length > 0 && !selectedId) {
+      setSelectedId(initialAgents[0].id);
+    }
+  }, [initialAgents, selectedId]);
 
   useEffect(() => {
     if (!initialAgents || initialAgents.length === 0) return;
@@ -54,100 +63,118 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
 
   if (!agents || agents.length === 0) return null;
 
+  const selected = agents.find(a => a.id === selectedId) ?? agents[0];
+  const bd = breakdowns?.find(b => b.agentId === selected.id);
+  const avatarSrc = resolveAgentAvatar(selected.name, selected.emoji);
+  const isWorking = (bd?.running ?? selected.activeTasks) > 0;
+  const completed = bd?.completedToday ?? selected.completedToday;
+
   return (
-    <section className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl p-4 space-y-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        👥 Team Agenti
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <section className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl overflow-hidden">
+      {/* Horizontal agent tabs */}
+      <div className="flex border-b border-border/40 overflow-x-auto scrollbar-hide">
         {agents.map((agent) => {
-          const bd = breakdowns?.find(b => b.agentId === agent.id);
-          const isWorking = (bd?.running ?? agent.activeTasks) > 0;
-          const avatarSrc = resolveAgentAvatar(agent.name, agent.emoji);
-          const totalActive = bd ? bd.proposed + bd.running + bd.pending : agent.activeTasks;
-          const completed = bd?.completedToday ?? agent.completedToday;
+          const isActive = agent.id === selectedId;
+          const agentAvatar = resolveAgentAvatar(agent.name, agent.emoji);
+          const agentBd = breakdowns?.find(b => b.agentId === agent.id);
+          const working = (agentBd?.running ?? agent.activeTasks) > 0;
 
           return (
             <button
               key={agent.id}
-              onClick={() => navigate(`/agent-chat?agent=${agent.id}`)}
+              onClick={() => setSelectedId(agent.id)}
               className={cn(
-                "flex flex-col gap-1.5 rounded-xl border p-3 text-left transition-all hover:scale-[1.02]",
-                isWorking
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-border/50 bg-muted/20 hover:bg-muted/30"
+                "flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all whitespace-nowrap border-b-2 -mb-px",
+                isActive
+                  ? "border-primary text-foreground bg-primary/5"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
               )}
             >
-              {/* Header: avatar + name */}
-              <div className="flex items-center gap-2">
-                {avatarSrc ? (
-                  <Avatar className="h-7 w-7">
-                    <AvatarImage src={avatarSrc} alt={agent.name} />
-                    <AvatarFallback className="text-xs">{agent.emoji}</AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <span className="text-lg leading-none">{agent.emoji}</span>
-                )}
-                <span className="text-xs font-semibold text-foreground truncate">{agent.name}</span>
-                {isWorking && (
-                  <span className="ml-auto flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-                )}
-              </div>
-
-              {/* Task breakdown */}
-              {bd ? (
-                <div className="grid grid-cols-4 gap-1 pl-1">
-                  <TaskBadge label="Preparati" count={bd.proposed} color="text-amber-500" />
-                  <TaskBadge label="In corso" count={bd.running} color="text-blue-500" />
-                  <TaskBadge label="In coda" count={bd.pending} color="text-orange-500" />
-                  <TaskBadge label="Completati" count={completed} color="text-emerald-500" />
-                </div>
+              {agentAvatar ? (
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={agentAvatar} alt={agent.name} />
+                  <AvatarFallback className="text-[8px]">{agent.emoji}</AvatarFallback>
+                </Avatar>
               ) : (
-                <>
-                  {isWorking ? (
-                    <div className="text-[10px] text-primary/80 truncate pl-7">
-                      {totalActive} task attivi
-                    </div>
-                  ) : completed > 0 ? (
-                    <div className="text-[10px] text-muted-foreground/70 truncate pl-7">
-                      ✓ {completed} completati oggi
-                    </div>
-                  ) : (
-                    <div className="text-[10px] text-muted-foreground/50 pl-7">Idle</div>
-                  )}
-                </>
+                <span className="text-sm">{agent.emoji}</span>
               )}
-
-              {/* Progress bar when breakdown available */}
-              {bd && totalActive > 0 && (
-                <div className="w-full h-1 rounded-full bg-muted/40 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary/60 transition-all"
-                    style={{ width: `${Math.min(100, (completed / (totalActive + completed)) * 100)}%` }}
-                  />
-                </div>
-              )}
-
-              {agent.lastTask && (
-                <div className="text-[10px] text-muted-foreground/60 truncate pl-1 italic">
-                  {agent.lastTask}
-                </div>
-              )}
+              <span>{agent.name}</span>
+              {working && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
             </button>
           );
         })}
+      </div>
+
+      {/* Selected agent detail */}
+      <div className="p-4">
+        <div className="flex items-start gap-4">
+          {/* Large avatar + name */}
+          <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+            {avatarSrc ? (
+              <Avatar className="h-16 w-16 ring-2 ring-border/30">
+                <AvatarImage src={avatarSrc} alt={selected.name} />
+                <AvatarFallback className="text-xl">{selected.emoji}</AvatarFallback>
+              </Avatar>
+            ) : (
+              <span className="text-5xl">{selected.emoji}</span>
+            )}
+            <span className="text-xs font-semibold text-foreground">{selected.name}</span>
+            {isWorking && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                Attivo
+              </span>
+            )}
+          </div>
+
+          {/* Right side: primary metric + secondary row */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Primary metric: completati */}
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-3xl font-bold leading-none", completed > 0 ? "text-emerald-500" : "text-muted-foreground/40")}>
+                {completed}
+              </span>
+              <span className="text-xs text-muted-foreground">completati oggi</span>
+            </div>
+
+            {/* Secondary metrics */}
+            {bd ? (
+              <div className="flex gap-4">
+                <MetricPill label="Preparati" count={bd.proposed} color="text-amber-500" />
+                <MetricPill label="In corso" count={bd.running} color="text-blue-500" />
+                <MetricPill label="In coda" count={bd.pending} color="text-orange-500" />
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground/60">
+                {selected.activeTasks > 0 ? `${selected.activeTasks} task attivi` : "Nessun task attivo"}
+              </div>
+            )}
+
+            {/* Last task */}
+            {selected.lastTask && (
+              <div className="text-[10px] text-muted-foreground/60 truncate italic">
+                Ultimo: {selected.lastTask}
+              </div>
+            )}
+
+            {/* Navigate to agent */}
+            <button
+              onClick={() => navigate(`/agent-chat?agent=${selected.id}`)}
+              className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors mt-1"
+            >
+              Vai all'agente <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function TaskBadge({ label, count, color }: { label: string; count: number; color: string }) {
+function MetricPill({ label, count, color }: { label: string; count: number; color: string }) {
   return (
-    <div className="text-center">
-      <div className={cn("text-sm font-bold leading-none", count > 0 ? color : "text-muted-foreground/40")}>
-        {count}
-      </div>
-      <div className="text-[8px] text-muted-foreground/60 mt-0.5 truncate">{label}</div>
+    <div className="flex items-baseline gap-1">
+      <span className={cn("text-sm font-bold", count > 0 ? color : "text-muted-foreground/40")}>{count}</span>
+      <span className="text-[10px] text-muted-foreground/60">{label}</span>
     </div>
   );
 }
