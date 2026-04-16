@@ -31,19 +31,4 @@ if (isPreviewHost || isInIframe) {
 installRemoteSink();
 installGlobalErrorCatchers();
 
-// Block horizontal trackpad swipe navigation globally
-document.addEventListener("wheel", (e) => {
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-    e.preventDefault();
-  }
-}, { passive: false });
-
-// Block browser back/forward gestures via popstate override
-window.addEventListener("popstate", (e) => {
-  // Only block if triggered by gesture (no explicit programmatic navigation marker)
-  if (!(e.state && e.state.__programmatic)) {
-    // Allow React Router navigations but block gesture-based ones
-  }
-});
-
 createRoot(document.getElementById("root")!).render(<App />);

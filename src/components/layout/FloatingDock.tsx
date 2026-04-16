@@ -23,8 +23,7 @@ const FloatingDock = () => {
       initial={{ x: -60, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 30 }}
-      className="fixed left-3 z-50"
-      style={{ top: "50%", transform: "translateY(-50%)" }}
+      className="fixed left-3 top-1/2 -translate-y-1/2 z-50"
     >
       <div className="float-panel flex flex-col items-center gap-0.5 px-1.5 py-2">
         {items.map((item) => {
