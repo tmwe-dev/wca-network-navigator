@@ -3104,6 +3104,48 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_log: {
+        Row: {
+          action: string
+          actor_operator_id: string | null
+          actor_user_id: string
+          created_at: string
+          id: string
+          target_operator_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_operator_id?: string | null
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          target_operator_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_operator_id?: string | null
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          target_operator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_log_actor_operator_id_fkey"
+            columns: ["actor_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impersonation_log_target_operator_id_fkey"
+            columns: ["target_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_errors: {
         Row: {
           ai_suggestions: Json | null
@@ -5613,6 +5655,7 @@ export type Database = {
         }[]
       }
       encrypt_wca_password: { Args: { p_password: string }; Returns: string }
+      get_active_operator_id: { Args: never; Returns: string }
       get_contact_filter_options: {
         Args: never
         Returns: {
@@ -5650,6 +5693,7 @@ export type Database = {
           without_profile: number
         }[]
       }
+      get_current_operator_id: { Args: never; Returns: string }
       get_directory_counts: {
         Args: never
         Returns: {
@@ -5658,6 +5702,7 @@ export type Database = {
           member_count: number
         }[]
       }
+      get_effective_operator_ids: { Args: never; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
