@@ -76,7 +76,6 @@ export default function ManualGroupingTab() {
     const { data } = await supabase
       .from("email_sender_groups")
       .select("*")
-      .eq("user_id", user.id)
       .order("sort_order", { ascending: true });
     setGroups((data || []) as EmailSenderGroup[]);
   };
@@ -91,7 +90,6 @@ export default function ManualGroupingTab() {
       const { data: groupsData } = await supabase
         .from("email_sender_groups")
         .select("*")
-        .eq("user_id", user.id)
         .order("sort_order", { ascending: true });
 
       const loadedGroups = (groupsData || []) as EmailSenderGroup[];
@@ -110,7 +108,7 @@ export default function ManualGroupingTab() {
         setGroups(loadedGroups);
       }
 
-      // Load ALL uncategorized address rules with pagination
+      // Load all visible uncategorized address rules with pagination
       const rules = await fetchAllRows<{
         id: string; email_address: string; display_name: string | null;
         email_count: number | null; last_email_at: string | null;
@@ -120,7 +118,6 @@ export default function ManualGroupingTab() {
           supabase
             .from("email_address_rules")
             .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
-            .eq("user_id", user.id)
             .is("group_id", null)
             .order("email_count", { ascending: false })
             .range(from, to),
@@ -170,15 +167,16 @@ export default function ManualGroupingTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get ALL inbound senders with pagination
+      // Get all visible inbound email senders with pagination
       const messages = await fetchAllRows<{ from_address: string | null }>(
         (from, to) =>
           supabase
             .from("channel_messages")
             .select("from_address")
-            .eq("user_id", user.id)
+            .eq("channel", "email")
             .eq("direction", "inbound")
             .not("from_address", "is", null)
+            .order("id", { ascending: true })
             .range(from, to),
       );
 
@@ -190,36 +188,51 @@ export default function ManualGroupingTab() {
         addressMap.set(key, (addressMap.get(key) || 0) + 1);
       }
 
-      // Check ALL existing rules with pagination
-      const existing = await fetchAllRows<{ email_address: string }>(
+      // Check all visible existing rules with pagination
+      const existing = await fetchAllRows<{
+        id: string;
+        email_address: string;
+        email_count: number | null;
+      }>(
         (from, to) =>
           supabase
             .from("email_address_rules")
-            .select("email_address")
-            .eq("user_id", user.id)
+            .select("id, email_address, email_count")
+            .order("id", { ascending: true })
             .range(from, to),
       );
-      const existingSet = new Set(existing.map((r) => r.email_address.toLowerCase()));
+      const existingByAddress = new Map<string, Array<{ id: string; email_count: number | null }>>();
+      for (const rule of existing) {
+        const key = rule.email_address.toLowerCase();
+        const matches = existingByAddress.get(key) || [];
+        matches.push({ id: rule.id, email_count: rule.email_count });
+        existingByAddress.set(key, matches);
+      }
+      const existingSet = new Set(existingByAddress.keys());
 
-      // Also update email_count for existing rules that have stale counts
-      const staleUpdates: Array<{ addr: string; count: number }> = [];
+      // Update email_count for any visible rule with stale counts
+      const staleUpdates: Array<{ id: string; count: number }> = [];
       for (const [addr, count] of addressMap.entries()) {
-        if (existingSet.has(addr)) {
-          staleUpdates.push({ addr, count });
+        const matchingRules = existingByAddress.get(addr);
+        if (!matchingRules) continue;
+        for (const rule of matchingRules) {
+          if ((rule.email_count ?? 0) !== count) {
+            staleUpdates.push({ id: rule.id, count });
+          }
         }
       }
+
       if (staleUpdates.length > 0) {
         for (let i = 0; i < staleUpdates.length; i += 20) {
           const batch = staleUpdates.slice(i, i + 20);
           await Promise.all(
-            batch.map(({ addr, count }) =>
-              supabase
+            batch.map(async ({ id, count }) => {
+              const { error } = await supabase
                 .from("email_address_rules")
                 .update({ email_count: count })
-                .eq("user_id", user.id)
-                .eq("email_address", addr)
-                .then()
-            ),
+                .eq("id", id);
+              if (error) throw error;
+            }),
           );
         }
       }
@@ -236,7 +249,10 @@ export default function ManualGroupingTab() {
 
       if (newRules.length > 0) {
         for (let i = 0; i < newRules.length; i += 100) {
-          await supabase.from("email_address_rules").insert(newRules.slice(i, i + 100));
+          const { error } = await supabase
+            .from("email_address_rules")
+            .upsert(newRules.slice(i, i + 100), { onConflict: "user_id,email_address" });
+          if (error) throw error;
         }
         toast.success(`${newRules.length} nuovi address aggiunti`);
       } else {
@@ -247,7 +263,11 @@ export default function ManualGroupingTab() {
         toast.info(`${staleUpdates.length} address aggiornati con conteggio corretto`);
       }
 
-      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount }),
+        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount }),
+        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.activeRules }),
+      ]);
       await loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Errore popolamento");
