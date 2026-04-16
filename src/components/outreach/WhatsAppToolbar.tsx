@@ -45,17 +45,16 @@ export function WhatsAppToolbar({
       ? { variant: "outline" as const, label: "Sessione", color: "border-yellow-500 text-yellow-600 bg-yellow-500/10" }
       : { variant: "default" as const, label: "On", color: "" };
 
-  const canAct = isAvailable && isAuthenticated;
   const isBfActive = bfProgress.status === "running" || bfProgress.status === "paused";
 
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-1">
-        <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading || !canAct} className="gap-1 h-6 text-[10px] px-1.5">
+        <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading} className="gap-1 h-6 text-[10px] px-1.5">
           {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Leggi
         </Button>
-        <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5">
+        <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} className="gap-1 h-6 text-[10px] px-1.5">
           {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
           {enabled ? "ON" : "OFF"}
         </Button>
@@ -64,7 +63,7 @@ export function WhatsAppToolbar({
             <Square className="w-3 h-3" /> Stop
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={startBackfill} disabled={!canAct} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi persi">
+          <Button size="sm" variant="outline" onClick={startBackfill} className="gap-1 h-6 text-[10px] px-1.5" title="Recupera messaggi persi">
             <Download className="w-3 h-3" /> Backfill
           </Button>
         )}
