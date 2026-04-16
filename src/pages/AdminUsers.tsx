@@ -37,14 +37,10 @@ export default function AdminUsers() {
     },
   });
 
-  if (profileLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
-  }
-  if (myProfile && !myProfile.is_admin) {
-    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
-  }
+  const isAdmin = myProfile?.is_admin ?? false;
 
   const { data: users = [], isLoading } = useQuery({
+    enabled: isAdmin,
     queryKey: queryKeys.authorizedUsers.all,
     queryFn: async () => {
       const { data, error } = await supabase
