@@ -46,3 +46,166 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchDashboardCounts"));
   }
 }
+
+/* ── Operative Metrics ─────────────────────────────────── */
+
+export interface OperativeMetrics {
+  readonly contacts: {
+    readonly total: number;
+    readonly toContact: number;
+    readonly contacted: number;
+    readonly replied: number;
+  };
+  readonly outreach: {
+    readonly created: number;
+    readonly scheduled: number;
+    readonly authorized: number;
+    readonly pendingApproval: number;
+  };
+  readonly messages: {
+    readonly sentToday: number;
+    readonly awaitingReply: number;
+    readonly repliesReceived: number;
+  };
+}
+
+export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, AppError>> {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayISO = todayStart.toISOString();
+
+    const [
+      // Contacts
+      totalPartnersRes,
+      totalContactsRes,
+      newPartnersRes,
+      newContactsRes,
+      contactedPartnersRes,
+      contactedContactsRes,
+      repliedRes,
+      // Outreach pipeline
+      schedulesAllRes,
+      schedulesPendingRes,
+      actionsApprovedRes,
+      actionsProposedRes,
+      // Messages
+      sentTodayRes,
+      awaitingRes,
+      repliesReceivedRes,
+    ] = await Promise.all([
+      // Contacts totals
+      supabase.from("partners").select("id", { count: "exact", head: true }),
+      supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
+      // To contact (new)
+      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
+      supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
+      // Contacted
+      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "contacted"),
+      supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "contacted"),
+      // Replied (activities with response)
+      supabase.from("activities").select("id", { count: "exact", head: true }).eq("response_received", true),
+      // Outreach schedules (all active)
+      supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).in("status", ["pending", "approved", "running"]),
+      // Scheduled (pending)
+      supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      // Authorized
+      supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "approved"),
+      // Pending approval
+      supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "proposed"),
+      // Sent today
+      supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "sent").gte("processed_at", todayISO),
+      // Awaiting reply (sent, no reply)
+      supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
+      // Replies received
+      supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "replied"),
+    ]);
+
+    const allRes = [
+      totalPartnersRes, totalContactsRes, newPartnersRes, newContactsRes,
+      contactedPartnersRes, contactedContactsRes, repliedRes,
+      schedulesAllRes, schedulesPendingRes, actionsApprovedRes, actionsProposedRes,
+      sentTodayRes, awaitingRes, repliesReceivedRes,
+    ];
+    const firstErr = allRes.find((r) => r.error);
+    if (firstErr?.error) {
+      return err(ioError("DATABASE_ERROR", firstErr.error.message, { table: "operative_metrics" }, "fetchOperativeMetrics"));
+    }
+
+    return ok({
+      contacts: {
+        total: (totalPartnersRes.count ?? 0) + (totalContactsRes.count ?? 0),
+        toContact: (newPartnersRes.count ?? 0) + (newContactsRes.count ?? 0),
+        contacted: (contactedPartnersRes.count ?? 0) + (contactedContactsRes.count ?? 0),
+        replied: repliedRes.count ?? 0,
+      },
+      outreach: {
+        created: schedulesAllRes.count ?? 0,
+        scheduled: schedulesPendingRes.count ?? 0,
+        authorized: actionsApprovedRes.count ?? 0,
+        pendingApproval: actionsProposedRes.count ?? 0,
+      },
+      messages: {
+        sentToday: sentTodayRes.count ?? 0,
+        awaitingReply: awaitingRes.count ?? 0,
+        repliesReceived: repliesReceivedRes.count ?? 0,
+      },
+    });
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchOperativeMetrics"));
+  }
+}
+
+/* ── Agent Task Breakdown ──────────────────────────────── */
+
+export interface AgentTaskBreakdown {
+  readonly agentId: string;
+  readonly proposed: number;
+  readonly running: number;
+  readonly pending: number;
+  readonly completedToday: number;
+}
+
+export async function fetchAgentTaskBreakdowns(): Promise<Result<AgentTaskBreakdown[], AppError>> {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data: agents, error: agentsErr } = await supabase
+      .from("agents")
+      .select("id")
+      .eq("is_active", true);
+
+    if (agentsErr) {
+      return err(ioError("DATABASE_ERROR", agentsErr.message, { table: "agents" }, "fetchAgentTaskBreakdowns"));
+    }
+
+    if (!agents || agents.length === 0) return ok([]);
+
+    const { data: tasks, error: tasksErr } = await supabase
+      .from("agent_tasks")
+      .select("agent_id, status, completed_at")
+      .in("agent_id", agents.map(a => a.id));
+
+    if (tasksErr) {
+      return err(ioError("DATABASE_ERROR", tasksErr.message, { table: "agent_tasks" }, "fetchAgentTaskBreakdowns"));
+    }
+
+    const breakdowns: AgentTaskBreakdown[] = agents.map(agent => {
+      const agentTasks = (tasks ?? []).filter(t => t.agent_id === agent.id);
+      return {
+        agentId: agent.id,
+        proposed: agentTasks.filter(t => t.status === "proposed").length,
+        running: agentTasks.filter(t => t.status === "running").length,
+        pending: agentTasks.filter(t => t.status === "pending").length,
+        completedToday: agentTasks.filter(t =>
+          t.status === "completed" && t.completed_at && t.completed_at >= todayStart.toISOString()
+        ).length,
+      };
+    });
+
+    return ok(breakdowns);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchAgentTaskBreakdowns"));
+  }
+}
