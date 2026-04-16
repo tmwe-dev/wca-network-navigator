@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useBackfillState } from "@/hooks/useBackfillState";
 
 export type WhatsAppToolbarProps = {
   isReading: boolean;
@@ -15,7 +16,9 @@ export type WhatsAppToolbarProps = {
     currentChat: string | null;
     chatsProcessed: number;
     chatsTotal: number;
+    chatsCompleted?: number;
     recoveredMessages: number;
+    duplicatesSkipped?: number;
     lastError: string | null;
   };
   startBackfill: () => void;
@@ -26,6 +29,8 @@ export function WhatsAppToolbar({
   isReading, isAvailable, isAuthenticated, readNow,
   bfProgress, startBackfill, stopBackfill,
 }: WhatsAppToolbarProps) {
+  const { data: bfState } = useBackfillState("whatsapp");
+
   const badgeState = !isAvailable
     ? { variant: "destructive" as const, label: "Ext Off", color: "" }
     : !isAuthenticated
@@ -33,6 +38,10 @@ export function WhatsAppToolbar({
       : { variant: "default" as const, label: "On", color: "" };
 
   const isBfActive = bfProgress.status === "running" || bfProgress.status === "paused";
+
+  const oldestDate = bfState?.oldestMessageAt
+    ? new Date(bfState.oldestMessageAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })
+    : null;
 
   return (
     <div className="flex flex-col">
@@ -64,6 +73,7 @@ export function WhatsAppToolbar({
                 {bfProgress.status === "paused" ? "⏸ " : "▶ "}
                 {bfProgress.currentChat ? `${bfProgress.currentChat} ` : ""}
                 {bfProgress.chatsProcessed}/{bfProgress.chatsTotal} • {bfProgress.recoveredMessages} nuovi
+                {bfProgress.duplicatesSkipped ? ` • ${bfProgress.duplicatesSkipped} dup` : ""}
               </>
             )}
           </span>
@@ -71,6 +81,12 @@ export function WhatsAppToolbar({
       )}
       {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
         <span className="text-[9px] text-green-600 mt-0.5">✓ {bfProgress.recoveredMessages} recuperati da {bfProgress.chatsTotal} chat</span>
+      )}
+      {!isBfActive && bfState && bfState.totalChats > 0 && (
+        <span className="text-[9px] text-muted-foreground mt-0.5">
+          Backfill: {bfState.completedChats}/{bfState.totalChats} chat complete
+          {oldestDate && ` • dal ${oldestDate}`}
+        </span>
       )}
     </div>
   );
