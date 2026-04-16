@@ -232,7 +232,11 @@ export function useAuthV2(): UseAuthV2Return {
       await supabase.auth.signOut({ scope: "local" });
     } catch {
       // Network error — clear local session anyway
-      clearSupabaseAuthStorage();
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch { /* ignore */ }
     }
     setProfile(null);
     setRoles([]);
