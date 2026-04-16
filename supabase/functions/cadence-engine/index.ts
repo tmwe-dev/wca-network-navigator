@@ -344,7 +344,7 @@ function mapActionType(type: string): string {
     email: "send_email",
     phone: "create_task",
     whatsapp: "send_whatsapp",
-    linkedin: "change_channel",
+    linkedin: "linkedin_message",
   };
   return map[type] || "send_email";
 }
