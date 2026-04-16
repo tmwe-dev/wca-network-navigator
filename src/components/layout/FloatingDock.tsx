@@ -1,14 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MessageSquare, Sparkles, Layers, Zap, Shield, Settings, Cpu, Plug, Box } from "lucide-react";
+import { Home, MessageSquare, Sparkles, Mail, MessageCircle, Linkedin, Layers, Zap, Shield, Settings } from "lucide-react";
 
 const items = [
   { to: "/v2", icon: Home, label: "Home" },
   { to: "/v2/command", icon: MessageSquare, label: "Command" },
   { to: "/v2/agents", icon: Sparkles, label: "Agenti" },
-  { to: "/v2/engine", icon: Cpu, label: "Engine" },
-  { to: "/v2/architecture", icon: Box, label: "Architettura" },
-  { to: "/v2/connections", icon: Plug, label: "Connessioni" },
+  { to: "/v2/inreach", icon: Mail, label: "Email" },
+  { to: "/v2/outreach", icon: MessageCircle, label: "Comunicazioni" },
+  { to: "/v2/contacts", icon: Linkedin, label: "Contatti" },
   { to: "/v2/templates", icon: Layers, label: "Template" },
   { to: "/v2/automations", icon: Zap, label: "Automazioni" },
   { to: "/v2/audit", icon: Shield, label: "Audit" },
