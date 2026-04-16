@@ -1,21 +1,25 @@
 import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Radar, Network, Users, CalendarCheck } from "lucide-react";
+import { ArrowRight, Radar, Network, Users, CalendarCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
+import { OperativeMetricsGrid } from "@/components/home/OperativeMetricsGrid";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
+import { useDashboardOperativeMetrics } from "@/v2/hooks/useDashboardOperativeMetrics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
 import { Suspense, lazy } from "react";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchAgentTaskBreakdowns } from "@/v2/io/supabase/queries/dashboard";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
@@ -68,7 +72,23 @@ export default function SuperHome3D() {
   const { data: partnerCount = 0 } = useCount("partners");
   const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
 
+  // NEW: Operative metrics (instant)
+  const { data: opMetrics, isLoading: opMetricsLoading } = useDashboardOperativeMetrics();
+
+  // NEW: Agent task breakdowns
+  const { data: agentBreakdowns } = useQuery({
+    queryKey: ["v2", "agent-task-breakdowns"],
+    queryFn: async () => {
+      const result = await fetchAgentTaskBreakdowns();
+      if (result._tag === "Err") return [];
+      return result.value;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
   const [actionPrompt, setActionPrompt] = useState<string | null>(null);
+  const [briefingOpen, setBriefingOpen] = useState(false);
 
   const readyContacts = useMemo(() => contacts.filter((c) => Boolean(c.email)).length, [contacts]);
   const openActivities = useMemo(() => activities.filter((a) => !["completed", "cancelled"].includes(a.status)).length, [activities]);
@@ -85,14 +105,6 @@ export default function SuperHome3D() {
       default: return "";
     }
   };
-
-  const _signals = useMemo(() => {
-    const s: { label: string; value: string }[] = [];
-    if (activeJobs > 0) s.push({ label: "Job download attivi", value: String(activeJobs) });
-    if (readyContacts > 0) s.push({ label: "Contatti pronti all'outreach", value: formatCompact(readyContacts) });
-    if (openActivities > 0) s.push({ label: "Attività aperte", value: formatCompact(openActivities) });
-    return s;
-  }, [activeJobs, readyContacts, openActivities]);
 
   const handleBriefingAction = useCallback((action: BriefingAction) => {
     setActionPrompt(action.prompt);
@@ -123,9 +135,27 @@ export default function SuperHome3D() {
           />
         </section>
 
-        {/* Command Center: Briefing + Agents side by side on desktop */}
+        {/* STEP 1: Operative Metrics Grid (instant) */}
+        <OperativeMetricsGrid metrics={opMetrics} isLoading={opMetricsLoading} />
+
+        {/* STEP 2: Team Agenti (with breakdown) + Active Jobs */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3">
+            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={agentBreakdowns} />
+          </div>
+          <div className="lg:col-span-2">
+            <ActiveJobsWidget jobs={jobs} />
+          </div>
+        </div>
+
+        {/* STEP 3: AI Briefing (collapsible, secondary) */}
+        <Collapsible open={briefingOpen} onOpenChange={setBriefingOpen}>
+          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronDown className={cn("h-4 w-4 transition-transform", briefingOpen && "rotate-180")} />
+            Briefing AI Narrativo
+            {briefingLoading && <span className="text-[10px] text-muted-foreground/60 ml-2">Caricamento…</span>}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
             <OperativeBriefing
               completed={briefing?.completed}
               todo={briefing?.todo}
@@ -137,14 +167,8 @@ export default function SuperHome3D() {
               onRefresh={() => qc.invalidateQueries({ queryKey: queryKeys.dailyBriefing.all })}
               onAction={handleBriefingAction}
             />
-          </div>
-          <div className="lg:col-span-2">
-            <AgentStatusPanel agents={briefing?.agentStatus ?? []} />
-          </div>
-        </div>
-
-        {/* Active downloads */}
-        <ActiveJobsWidget jobs={jobs} />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Charts */}
         <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>

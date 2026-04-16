@@ -6,12 +6,14 @@ import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import type { AgentStatusItem } from "@/hooks/useDailyBriefing";
+import type { AgentTaskBreakdown } from "@/v2/io/supabase/queries/dashboard";
 
 interface Props {
   agents: AgentStatusItem[];
+  breakdowns?: AgentTaskBreakdown[];
 }
 
-export function AgentStatusPanel({ agents: initialAgents }: Props) {
+export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
   const navigate = useAppNavigate();
   const [agents, setAgents] = useState(initialAgents);
 
@@ -57,21 +59,26 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
       <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         👥 Team Agenti
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {agents.map((agent) => {
-          const isWorking = agent.activeTasks > 0;
+          const bd = breakdowns?.find(b => b.agentId === agent.id);
+          const isWorking = (bd?.running ?? agent.activeTasks) > 0;
           const avatarSrc = resolveAgentAvatar(agent.name, agent.emoji);
+          const totalActive = bd ? bd.proposed + bd.running + bd.pending : agent.activeTasks;
+          const completed = bd?.completedToday ?? agent.completedToday;
+
           return (
             <button
               key={agent.id}
               onClick={() => navigate(`/agent-chat?agent=${agent.id}`)}
               className={cn(
-                "flex flex-col gap-1 rounded-xl border p-3 text-left transition-all hover:scale-[1.02]",
+                "flex flex-col gap-1.5 rounded-xl border p-3 text-left transition-all hover:scale-[1.02]",
                 isWorking
                   ? "border-primary/40 bg-primary/5"
                   : "border-border/50 bg-muted/20 hover:bg-muted/30"
               )}
             >
+              {/* Header: avatar + name */}
               <div className="flex items-center gap-2">
                 {avatarSrc ? (
                   <Avatar className="h-7 w-7">
@@ -87,20 +94,42 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
                 )}
               </div>
 
-              {isWorking ? (
-                <div className="text-[10px] text-primary/80 truncate pl-7">
-                  {agent.activeTasks} task attivi
-                </div>
-              ) : agent.completedToday > 0 ? (
-                <div className="text-[10px] text-muted-foreground/70 truncate pl-7">
-                  ✓ {agent.completedToday} completati oggi
+              {/* Task breakdown */}
+              {bd ? (
+                <div className="grid grid-cols-4 gap-1 pl-1">
+                  <TaskBadge label="Preparati" count={bd.proposed} color="text-amber-500" />
+                  <TaskBadge label="In corso" count={bd.running} color="text-blue-500" />
+                  <TaskBadge label="In coda" count={bd.pending} color="text-orange-500" />
+                  <TaskBadge label="Completati" count={completed} color="text-emerald-500" />
                 </div>
               ) : (
-                <div className="text-[10px] text-muted-foreground/50 pl-7">Idle</div>
+                <>
+                  {isWorking ? (
+                    <div className="text-[10px] text-primary/80 truncate pl-7">
+                      {totalActive} task attivi
+                    </div>
+                  ) : completed > 0 ? (
+                    <div className="text-[10px] text-muted-foreground/70 truncate pl-7">
+                      ✓ {completed} completati oggi
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-muted-foreground/50 pl-7">Idle</div>
+                  )}
+                </>
+              )}
+
+              {/* Progress bar when breakdown available */}
+              {bd && totalActive > 0 && (
+                <div className="w-full h-1 rounded-full bg-muted/40 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary/60 transition-all"
+                    style={{ width: `${Math.min(100, (completed / (totalActive + completed)) * 100)}%` }}
+                  />
+                </div>
               )}
 
               {agent.lastTask && (
-                <div className="text-[10px] text-muted-foreground/60 truncate pl-7 italic">
+                <div className="text-[10px] text-muted-foreground/60 truncate pl-1 italic">
                   {agent.lastTask}
                 </div>
               )}
@@ -109,5 +138,16 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
         })}
       </div>
     </section>
+  );
+}
+
+function TaskBadge({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className="text-center">
+      <div className={cn("text-sm font-bold leading-none", count > 0 ? color : "text-muted-foreground/40")}>
+        {count}
+      </div>
+      <div className="text-[8px] text-muted-foreground/60 mt-0.5 truncate">{label}</div>
+    </div>
   );
 }
