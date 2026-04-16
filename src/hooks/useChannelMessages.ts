@@ -83,7 +83,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: queryKeys.channelMessages.all,
+    queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId),
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -126,8 +126,8 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
       }, (payload) => {
         const newRow = payload.new as ChannelMessage;
         // Vol. II §10.1: dedup per id E per message_id_external (UID race-safe)
-        const baseKey = ["channel-messages", channel, searchQuery, 0];
-        queryClient.setQueryData<ChannelMessage[]>(baseKey, (old) => {
+        const baseKey = queryKeys.channelMessages.list(channel, searchQuery, 0, undefined);
+        queryClient.setQueryData<ChannelMessage[]>([...baseKey], (old) => {
           if (!old) return old;
           // dedup by id
           if (old.some(m => m.id === newRow.id)) return old;
