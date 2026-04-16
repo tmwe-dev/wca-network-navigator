@@ -62,26 +62,17 @@ export default function Auth() {
     return `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`;
   }, [location.state]);
 
-  // React to auth events from centralized provider
+  // If a valid session already exists, never re-check whitelist here.
+  // Whitelist is enforced only before sign-in/sign-up.
   useEffect(() => {
-    if (!session?.user?.email) return;
-    if (event !== "SIGNED_IN" && event !== "INITIAL_SESSION") return;
+    const sessionEmail = session?.user?.email;
+    if (!sessionEmail) return;
 
-    (async () => {
-      try {
-        const allowed = await checkWhitelist(session.user.email!);
-        if (!allowed) {
-          toast.error("Accesso non autorizzato. Contatta l'amministratore.");
-          await supabase.auth.signOut();
-          return;
-        }
-        if (event === "SIGNED_IN") await recordLogin(session.user.email!);
-        navigate(redirectTo, { replace: true });
-      } catch (err) {
-        log.error("whitelist check failed on session", { error: err instanceof Error ? err.message : String(err) });
-        toast.error("Errore di connessione al server. Riprova tra qualche istante.");
-      }
-    })();
+    if (event === "SIGNED_IN") {
+      void recordLogin(sessionEmail);
+    }
+
+    navigate(redirectTo, { replace: true });
   }, [session, event, navigate, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
