@@ -79,7 +79,6 @@ export function PendingActionsPanel() {
       if (action?.action_type === "prompt_refinement" && action.suggested_content) {
         try {
           const suggestions = JSON.parse(action.suggested_content);
-          // Find agent from reasoning or via pending action context
           const { data: agents } = await supabase.from("agents").select("id, system_prompt").eq("user_id", (await supabase.auth.getUser()).data.user?.id || "").eq("is_active", true);
           if (agents?.length) {
             const agent = agents[0];
@@ -95,8 +94,17 @@ export function PendingActionsPanel() {
           }
         } catch (e) { console.warn("prompt refinement apply failed:", e); }
       }
+      // Execute the approved action via pending-action-executor
+      if (action?.action_type !== "prompt_refinement") {
+        try {
+          const { error: execError } = await supabase.functions.invoke("pending-action-executor", {
+            body: { pending_action_id: id },
+          });
+          if (execError) console.error("Execution failed:", execError);
+        } catch (e) { console.warn("pending-action-executor invocation failed:", e); }
+      }
     },
-    onSuccess: () => { toast.success("Azione approvata"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
+    onSuccess: () => { toast.success("Azione approvata ed eseguita"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
     onError: () => toast.error("Errore nell'approvazione"),
   });
 
