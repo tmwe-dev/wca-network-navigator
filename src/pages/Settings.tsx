@@ -48,7 +48,6 @@ export default function Settings() {
     { value: "enrichment", label: "Arricchimento", icon: Image },
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "operatori", label: "Operatori", icon: Users },
-    { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "timing", label: "Timing & Schedule", icon: Clock },
   ];
