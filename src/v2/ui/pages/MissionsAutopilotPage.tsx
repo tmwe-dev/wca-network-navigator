@@ -116,7 +116,7 @@ export function MissionsPage() {
       const { data: userData } = await supabase.auth.getUser();
       const { error } = await untypedFrom("agent_missions").insert({
         ...mission,
-        owner_user_id: userData.user?.id,
+        user_id: userData.user?.id,
       });
       if (error) throw error;
     },
@@ -301,7 +301,7 @@ function MissionWizard({
   const { data: agents = [] } = useQuery({
     queryKey: ["agents-for-mission"],
     queryFn: async () => {
-      const { data } = await untypedFrom("ai_agents").select("id, name").limit(50);
+      const { data } = await untypedFrom("agents").select("id, name").limit(50);
       return data ?? [];
     },
   });
