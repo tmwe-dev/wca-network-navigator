@@ -126,7 +126,7 @@ export default function ManualGroupingTab() {
       const senderList: SenderAnalysis[] = rules.map((r) => ({
         email: r.email_address,
         domain: r.domain || r.email_address.split("@")[1] || "",
-        companyName: r.company_name || r.display_name || r.email_address.split("@")[0],
+        companyName: r.company_name || r.display_name || deriveSenderDisplayName(r.email_address),
         emailCount: r.email_count ?? 0,
         firstSeen: "",
         lastSeen: r.last_email_at || "",
@@ -246,6 +246,7 @@ export default function ManualGroupingTab() {
           domain: addr.split("@")[1],
           email_count: count,
           is_active: true,
+          company_name: deriveSenderDisplayName(addr),
         }));
 
       if (newRules.length > 0) {
