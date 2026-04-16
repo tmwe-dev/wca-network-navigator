@@ -268,6 +268,59 @@ serve(async (req) => {
 
     } catch (e) { console.error("Context injection error:", e); }
 
+    // ━━━ Learning Loop: inject past decisions + corrections ━━━
+    let learningBlock = "";
+    try {
+      const { data: decisions } = await supabase
+        .from("ai_decision_log")
+        .select("decision_type, context, outcome, user_correction, created_at")
+        .eq("agent_id", agent_id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (decisions?.length) {
+        learningBlock += "\n\n--- APPRENDIMENTO DA DECISIONI PASSATE ---\n";
+        for (const d of decisions) {
+          const date = new Date(d.created_at).toLocaleDateString("it-IT");
+          learningBlock += `[${date}] ${d.decision_type}: `;
+          if (d.user_correction) {
+            learningBlock += `⚠️ CORRETTO: "${d.user_correction}" (originale: ${JSON.stringify(d.context).substring(0, 150)})\n`;
+          } else if (d.outcome) {
+            learningBlock += `✅ ${d.outcome}\n`;
+          } else {
+            learningBlock += `${JSON.stringify(d.context).substring(0, 200)}\n`;
+          }
+        }
+        learningBlock += "IMPORTANTE: Evita di ripetere errori corretti dall'utente. Adatta il tuo approccio in base ai feedback.\n";
+      }
+    } catch (_) { /* ai_decision_log may not exist */ }
+
+    // ━━━ Mission Context (if running within autopilot) ━━━
+    let missionBlock = "";
+    try {
+      const missionId = body.mission_id;
+      if (missionId) {
+        const { data: mission } = await supabase
+          .from("agent_missions")
+          .select("title, goal_description, goal_type, kpi_target, kpi_current, budget, budget_consumed, approval_only_for")
+          .eq("id", missionId)
+          .maybeSingle();
+        if (mission) {
+          const kpiTarget = mission.kpi_target as Record<string, number>;
+          const kpiCurrent = mission.kpi_current as Record<string, number>;
+          const approvalFor = (mission.approval_only_for || []) as string[];
+          missionBlock += `\n\n--- MISSIONE ATTIVA ---\n`;
+          missionBlock += `Titolo: ${mission.title}\n`;
+          missionBlock += `Obiettivo: ${mission.goal_description}\n`;
+          missionBlock += `KPI Target: ${JSON.stringify(kpiTarget)}\n`;
+          missionBlock += `KPI Attuale: ${JSON.stringify(kpiCurrent)}\n`;
+          missionBlock += `Budget: ${mission.budget_consumed}/${mission.budget} azioni\n`;
+          if (approvalFor.length) {
+            missionBlock += `⚠️ RICHIEDI APPROVAZIONE per: ${approvalFor.join(", ")} — usa ai_pending_actions con status 'pending'\n`;
+          }
+        }
+      }
+    } catch (_) { /* mission may not exist */ }
+
     // ━━━ Load Agent Persona ━━━
     let persona: Record<string, unknown> | null = null;
     try {
@@ -330,6 +383,8 @@ serve(async (req) => {
     }
 
     systemPrompt += contextBlock;
+    systemPrompt += learningBlock;
+    systemPrompt += missionBlock;
     systemPrompt += `\n\nACCESSO SISTEMA:
 - Hai accesso COMPLETO a: tutti i tool operativi, KB globale, prompt operativi, team roster, storico attività dei colleghi, i tuoi clienti assegnati.
 - Consulta la KB e i prompt operativi prima di agire.
