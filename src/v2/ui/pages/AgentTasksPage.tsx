@@ -10,7 +10,7 @@ import { Check, X, Clock, Bot, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { queryKeys } from "@/lib/queryKeys";
+
 
 interface AgentTask {
   id: string;
@@ -132,7 +132,7 @@ export function AgentTasksPage() {
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["v2", "agent-tasks-pending"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.smartSuggestions });
+      queryClient.invalidateQueries({ queryKey: ["v2", "smart-suggestions"] });
       toast.success(status === "running" ? "Task approvato" : "Task rifiutato");
     },
     onError: () => toast.error("Errore nell'aggiornamento del task"),
