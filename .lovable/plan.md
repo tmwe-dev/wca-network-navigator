@@ -1,76 +1,82 @@
 
 
-# Fix Strutturale Comunicazioni InReach — Piano Chirurgico in 4 Fasi
+# Rimozione Automazioni WhatsApp e LinkedIn — Solo Click Manuale
 
-## Diagnosi confermata
+## Situazione attuale
 
-La tabella `channel_messages` contiene dati correttamente separati per `user_id` e `channel`. Le RLS sono corrette (ogni utente vede solo i suoi; admin vede tutti). Il problema è **interamente nel frontend**: le query keys sono statiche e quindi React Query sovrascrive i dati tra canali e tra utenti.
+- **WhatsApp**: `useWhatsAppAdaptiveSync` ha polling automatico con sequenza irregolare (5,8,4,12,17,3,4,34 min), MutationObserver push, auto-backfill su riconnessione, toggle ON/OFF, livelli di attenzione
+- **LinkedIn**: `useLinkedInSync` ha auto-sync ogni 30 min con jitter, toggle ON/OFF
+- **GlobalAutoSync**: orchestratore che gestisce pausa notturna e auto-resume per WA
 
-**Dati reali:**
-- Luca (admin): 1754 email, 7 WA
-- 3 altri utenti: 1264-4269 email ciascuno, alcuni con WA
-- 0 messaggi LinkedIn per tutti
+## Obiettivo
 
----
-
-## Fase 1 — Query Keys parametriche
-
-**File:** `src/lib/queryKeys.ts`
-
-Trasformare la sezione `channelMessages` da costanti a funzioni:
-```
-channelMessages: {
-  root: ["channel-messages"] as const,
-  list: (channel?: string, search?: string, page?: number, operatorId?: string) =>
-    ["channel-messages", channel ?? "all", search ?? "", page ?? 0, operatorId ?? "self"] as const,
-  unread: (channel?: string, operatorId?: string) =>
-    ["channel-messages-unread", channel ?? "all", operatorId ?? "self"] as const,
-  unreadCounts: ["unread-counts"] as const,
-}
-```
+Download WA e LI avviene **solo su click** del pulsante "Leggi". Nessun timer, nessun polling, nessun auto-resume.
 
 ---
 
-## Fase 2 — Fix `useChannelMessages` hook
+## Fase 1 — Semplificare `useWhatsAppAdaptiveSync`
 
-**File:** `src/hooks/useChannelMessages.ts`
+**Rimuovere:**
+- Costante `POLLING_INTERVALS_MIN` e tutta la logica polling (righe 266-298)
+- MutationObserver push (righe 300-309)
+- Auto-backfill su riconnessione (righe 319-328)
+- Check ore lavorative nel tick (non serve più, il click è sempre possibile)
+- `pollIndexRef`, `timerRef` per polling
+- Stati `enabled`/`toggle`/`setEnabled` (non c'è più nulla da attivare/disattivare)
+- `AttentionLevel` e livelli 0/3/6
 
-- Usare `queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId)` come queryKey
-- Allineare il listener realtime: `setQueryData` deve scrivere sulla stessa key parametrica
-- Invalidare con `queryKeys.channelMessages.root` per refetch globale
+**Mantenere:**
+- `sidebarScan()` — la logica core di lettura e salvataggio
+- `threadScan()` — per scansione chat focalizzata
+- `readNow()` — il punto di ingresso per il click manuale
+- `saveMessages()` — persistenza su DB
+- `isReading`, `isAvailable`, `isAuthenticated` — feedback UI
+- `focusedChat`/`focusOn` — gestione chat attiva
+
+L'hook esporrà essenzialmente: `{ readNow, isReading, isAvailable, isAuthenticated, focusedChat, focusOn }`
+
+## Fase 2 — Semplificare `useLinkedInSync`
+
+**Rimuovere:**
+- `SYNC_INTERVAL`, `jitter`, `timerRef`, `enabledRef`
+- `doAutoSync`, `scheduleNext`
+- `enabled`, `toggle`
+
+**Mantenere:**
+- `performSync()` — logica core
+- `readNow()` — click manuale
+- `isReading`, `isAvailable`, `lastSyncAt`
+
+## Fase 3 — Pulire `useGlobalAutoSync`
+
+- Rimuovere import e istanza di `useWhatsAppAdaptiveSync`
+- Rimuovere logica pausa/resume WA notturna (`waWasEnabledRef`, effect correlato)
+- Rimuovere `waSync` dal return
+
+## Fase 4 — Aggiornare UI
+
+- **`WhatsAppToolbar`**: rimuovere pulsante ON/OFF e badge livello (L0/L3/L6). Tenere solo "Leggi" e "Backfill"
+- **`InArrivoTab`**: rimuovere `waSync.toggle`, `waSync.enabled`, `waSync.level`, auto-backfill su riconnessione. Passare solo `readNow`/`isReading`/`isAvailable`/`isAuthenticated`
+- **`LinkedInInboxView`**: rimuovere toggle ON/OFF dalla toolbar LinkedIn
+- **`WhatsAppInboxView`**: rimuovere `ownSync` fallback a `useWhatsAppAdaptiveSync` (non serve più auto-sync interno)
+
+## Fase 5 — Aggiornare memoria
+
+Aggiornare `mem://tech/communication/whatsapp-stealth-sync` e `mem://tech/communication/linkedin-stealth-sync` per riflettere il cambio a solo-click-manuale.
 
 ---
 
-## Fase 3 — Fix `useUnreadCount` e `useMarkAsRead`
+## Riepilogo impatto
 
-**File:** `src/hooks/useEmailActions.ts`
+| File | Azione |
+|------|--------|
+| `useWhatsAppAdaptiveSync.ts` | Rimuovere polling, livelli, toggle |
+| `useLinkedInSync.ts` | Rimuovere timer auto-sync, toggle |
+| `useGlobalAutoSync.ts` | Rimuovere gestione WA |
+| `WhatsAppToolbar.tsx` | Rimuovere ON/OFF e badge livello |
+| `InArrivoTab.tsx` | Semplificare props WA |
+| `LinkedInInboxView.tsx` | Rimuovere toggle |
+| `WhatsAppInboxView.tsx` | Rimuovere fallback sync |
 
-- `useUnreadCount`: usare `queryKeys.channelMessages.unread(channel)` come queryKey (parametrica per canale)
-- `useMarkAsRead.onSuccess`: invalidare `queryKeys.channelMessages.root` (prefisso) per invalidare tutte le varianti
-
----
-
-## Fase 4 — Verificare che i consumatori passino i parametri corretti
-
-**File:** `src/components/outreach/EmailInboxView.tsx` — già passa `"email"` e `operatorUserId` ✓
-**File:** `src/components/outreach/WhatsAppInboxView.tsx` — già passa `"whatsapp"` e `operatorUserId` ✓
-**File:** `src/components/outreach/LinkedInInboxView.tsx` — già passa `"linkedin"` e `operatorUserId` ✓
-**File:** `src/components/outreach/InArrivoTab.tsx` — `useUnreadCount` va aggiornata per passare il canale corretto (già lo fa, ma la key deve distinguerli)
-
-Nessun altro file richiede modifiche. I componenti view già passano i parametri corretti, è solo il layer di caching che li ignora.
-
----
-
-## Risultato atteso
-
-| Prima | Dopo |
-|-------|------|
-| Email e WA mescolati nella stessa cache | Ogni tab (Email/WA/LI) ha cache indipendente |
-| Cambio operatore non triggera refetch | Nuova queryKey → refetch automatico |
-| Unread badge identico per tutti i canali | Badge separato per canale |
-| Realtime non aggiorna nulla | Realtime scrive sulla key corretta |
-
-## Rischio
-
-Basso. Le modifiche sono limitate a 3 file, tutte nel layer di query/cache. Nessuna modifica a componenti UI, nessuna migrazione DB, nessuna modifica RLS.
+Rischio basso: nessuna modifica DB, nessuna modifica RLS, solo semplificazione codice frontend.
 
