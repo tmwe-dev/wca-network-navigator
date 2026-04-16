@@ -1,13 +1,12 @@
 /**
- * LinkedIn Backfill - Ultra Conservative
- * Max 1 thread per session, 6x delays vs WhatsApp.
+ * LinkedIn Backfill — Cursor-based, resumable.
+ * Ultra conservative: 1 thread per session, 6x delays vs WhatsApp.
  */
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
-import { insertChannelMessage } from "@/data/channelMessages";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 
@@ -15,6 +14,7 @@ type BackfillProgress = {
   status: BackfillStatus;
   currentThread: string | null;
   recoveredMessages: number;
+  duplicatesSkipped: number;
   errors: number;
   pauseReason: string | null;
   pauseEndsAt: number | null;
@@ -22,13 +22,11 @@ type BackfillProgress = {
 };
 
 const INITIAL: BackfillProgress = {
-  status: "idle", currentThread: null, recoveredMessages: 0, errors: 0,
-  pauseReason: null, pauseEndsAt: null, lastError: null,
+  status: "idle", currentThread: null, recoveredMessages: 0, duplicatesSkipped: 0,
+  errors: 0, pauseReason: null, pauseEndsAt: null, lastError: null,
 };
 
-// Ultra-conservative: 1 thread, long delays
-const _MAX_THREADS_PER_SESSION = 1;
-const DELAY_BETWEEN_ACTIONS_MS = 18_000; // 18s between actions (6x WA's ~3s)
+const DELAY_BETWEEN_ACTIONS_MS = 18_000;
 
 function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
   return new Promise((resolve) => {
@@ -45,10 +43,12 @@ function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
   const abortRef = useRef(false);
+  const runningRef = useRef(false);
   const { isAvailable: _isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
 
   const startBackfill = useCallback(async () => {
-    if (progress.status === "running") return;
+    if (runningRef.current) return;
+    runningRef.current = true;
     abortRef.current = false;
     setProgress({ ...INITIAL, status: "running" });
 
@@ -56,7 +56,6 @@ export function useLinkedInBackfill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Non autenticato"); return; }
 
-      // Resolve operator_id
       const { data: opRow } = await supabase
         .from("operators")
         .select("id")
@@ -64,7 +63,6 @@ export function useLinkedInBackfill() {
         .maybeSingle();
       const operatorId = opRow?.id ?? null;
       if (!operatorId) {
-        console.warn("[useLinkedInBackfill] No operator found, aborting");
         toast.error("Nessun operatore associato");
         return;
       }
@@ -78,9 +76,30 @@ export function useLinkedInBackfill() {
         return;
       }
 
-      // Only process first thread (ultra-conservative)
-      const thread = inboxResult.threads[0];
-      setProgress(p => ({ ...p, currentThread: thread.name }));
+      // Find first thread not yet completed
+      let threadToProcess: (typeof inboxResult.threads)[0] | null = null;
+      for (const thread of inboxResult.threads) {
+        if (!thread.threadUrl) continue;
+        const chatId = thread.threadUrl.toLowerCase();
+        const { data: cursor } = await supabase
+          .from("channel_backfill_state")
+          .select("reached_beginning")
+          .eq("channel", "linkedin")
+          .eq("external_chat_id", chatId)
+          .maybeSingle();
+        if (!cursor?.reached_beginning) {
+          threadToProcess = thread;
+          break;
+        }
+      }
+
+      if (!threadToProcess) {
+        toast.success("Tutti i thread LinkedIn sono completi ✅");
+        setProgress(p => ({ ...p, status: "done" }));
+        return;
+      }
+
+      setProgress(p => ({ ...p, currentThread: threadToProcess!.name }));
 
       // Wait before reading thread details
       const aborted = await sleepAbortable(DELAY_BETWEEN_ACTIONS_MS, abortRef);
@@ -89,38 +108,78 @@ export function useLinkedInBackfill() {
         return;
       }
 
+      const chatId = threadToProcess.threadUrl!.toLowerCase();
+
+      // Load cursor
+      const { data: cursor } = await supabase
+        .from("channel_backfill_state")
+        .select("oldest_message_external_id, oldest_message_at, messages_imported")
+        .eq("channel", "linkedin")
+        .eq("external_chat_id", chatId)
+        .maybeSingle();
+
       // Read thread messages
-      if (thread.threadUrl) {
-        const threadResult = await readThread(thread.threadUrl);
-        if (threadResult.success && threadResult.messages?.length) {
-          let saved = 0;
-          for (const msg of threadResult.messages) {
-            const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
-            const error = await insertChannelMessage({
+      const threadResult = await readThread(threadToProcess.threadUrl!);
+      let saved = 0;
+      let dupes = 0;
+      let oldestAt: string | null = null;
+      let oldestExtId: string | null = null;
+      let newestAt: string | null = null;
+      let newestExtId: string | null = null;
+
+      if (threadResult.success && threadResult.messages?.length) {
+        for (const msg of threadResult.messages) {
+          const extId = buildDeterministicId("li", threadToProcess.name || "", msg.text || "", msg.timestamp);
+          const timestamp = msg.timestamp || new Date().toISOString();
+
+          if (!oldestAt || timestamp < oldestAt) { oldestAt = timestamp; oldestExtId = extId; }
+          if (!newestAt || timestamp > newestAt) { newestAt = timestamp; newestExtId = extId; }
+
+          const { error, status } = await supabase
+            .from("channel_messages")
+            .upsert({
               user_id: user.id,
               operator_id: operatorId,
               channel: "linkedin",
               direction: msg.direction === "outbound" ? "outbound" : "inbound",
-              from_address: msg.direction === "outbound" ? undefined : thread.name,
-              to_address: msg.direction === "outbound" ? thread.name : undefined,
+              from_address: msg.direction === "outbound" ? undefined : threadToProcess.name,
+              to_address: msg.direction === "outbound" ? threadToProcess.name : undefined,
               body_text: msg.text,
               message_id_external: extId,
-            }).then(() => null).catch(e => e);
-            if (!error) saved++;
-          }
-          setProgress(p => ({ ...p, recoveredMessages: saved }));
-        } else {
-          setProgress(p => ({ ...p, lastError: threadResult.error || "Nessun messaggio trovato" }));
+              thread_id: threadToProcess.threadUrl || null,
+            } as never, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+
+          if (!error && status === 201) saved++;
+          else dupes++;
         }
       }
 
-      setProgress(p => ({ ...p, status: "done", currentThread: null }));
-      toast.success(`Backfill LinkedIn completato`);
+      const reachedBeginning = !threadResult.messages?.length;
+
+      // Update cursor
+      await supabase.from("channel_backfill_state").upsert({
+        operator_id: operatorId,
+        channel: "linkedin",
+        external_chat_id: chatId,
+        chat_display_name: threadToProcess.name,
+        ...(oldestExtId ? { oldest_message_external_id: oldestExtId, oldest_message_at: oldestAt } : {}),
+        ...(newestExtId ? { newest_message_external_id: newestExtId, newest_message_at: newestAt } : {}),
+        messages_imported: (cursor?.messages_imported ?? 0) + saved,
+        reached_beginning: reachedBeginning,
+        last_attempt_at: new Date().toISOString(),
+        last_attempt_status: "ok",
+        last_error: null,
+      } as never, { onConflict: "operator_id,channel,external_chat_id" });
+
+      setProgress(p => ({ ...p, status: "done", currentThread: null, recoveredMessages: saved, duplicatesSkipped: dupes }));
+      toast.success(`Backfill LinkedIn: ${saved} messaggi salvati${dupes > 0 ? `, ${dupes} duplicati` : ""}`);
     } catch (err: unknown) {
       setProgress(p => ({ ...p, status: "error", lastError: err instanceof Error ? err.message : String(err) }));
       toast.error(`Errore: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      runningRef.current = false;
     }
-  }, [progress.status, readInbox, readThread]);
+  }, [readInbox, readThread]);
 
   const stopBackfill = useCallback(() => {
     abortRef.current = true;
