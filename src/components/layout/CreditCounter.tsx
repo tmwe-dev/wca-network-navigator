@@ -1,22 +1,14 @@
 import { Coins, TrendingDown } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
-import { useSubscription } from "@/hooks/useSubscription";
-import { SUBSCRIPTION_TIERS } from "@/config/subscriptionTiers";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export function CreditCounter() {
   const { balance, totalConsumed, loading } = useCredits();
-  const { tier } = useSubscription();
-
-  const tierConfig = SUBSCRIPTION_TIERS[tier];
-  const monthlyAllocation = tierConfig.limits.ai_credits_included;
 
   if (loading) return null;
 
-  // Estimate cost: ~1 credit ≈ €0.01 (rough avg across providers)
   const estimatedCost = (totalConsumed * 0.01).toFixed(2);
-
   const isLow = balance <= 50 && balance > 0;
   const isEmpty = balance <= 0;
 
@@ -48,12 +40,9 @@ export function CreditCounter() {
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-xs">
         <div className="space-y-1 text-xs">
-          <p className="font-semibold">Crediti AI — Piano {tierConfig.name}</p>
+          <p className="font-semibold">Crediti AI</p>
           <p>Saldo: <strong>{balance.toLocaleString()}</strong> crediti</p>
           <p>Consumati questo mese: <strong>{totalConsumed.toLocaleString()}</strong> (~€{estimatedCost})</p>
-          {monthlyAllocation > 0 && (
-            <p>Ricarica mensile: {monthlyAllocation.toLocaleString()} crediti</p>
-          )}
           <p className="text-muted-foreground pt-1">I crediti extra non utilizzati si azzerano a fine mese.</p>
         </div>
       </TooltipContent>
