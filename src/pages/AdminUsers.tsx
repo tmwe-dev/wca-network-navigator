@@ -99,6 +99,13 @@ export default function AdminUsers() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (profileLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!isAdmin) {
+    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
+  }
+
   return (
     <div className="space-y-6">
       <Card>
