@@ -110,15 +110,23 @@ export default function ManualGroupingTab() {
         setGroups(loadedGroups);
       }
 
-      // Load uncategorized address rules
-      const { data: rules } = await supabase
-        .from("email_address_rules")
-        .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
-        .eq("user_id", user.id)
-        .is("group_id", null)
-        .order("email_count", { ascending: false });
+      // Load ALL uncategorized address rules with pagination
+      const rules = await fetchAllRows<{
+        id: string; email_address: string; display_name: string | null;
+        email_count: number | null; last_email_at: string | null;
+        domain: string | null; company_name: string | null;
+      }>(
+        (from, to) =>
+          supabase
+            .from("email_address_rules")
+            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
+            .eq("user_id", user.id)
+            .is("group_id", null)
+            .order("email_count", { ascending: false })
+            .range(from, to),
+      );
 
-      const senderList: SenderAnalysis[] = (rules || []).map((r) => ({
+      const senderList: SenderAnalysis[] = rules.map((r) => ({
         email: r.email_address,
         domain: r.domain || r.email_address.split("@")[1] || "",
         companyName: r.company_name || r.display_name || r.email_address.split("@")[0],
@@ -137,34 +145,84 @@ export default function ManualGroupingTab() {
     }
   };
 
+  /** Fetch ALL rows from a query, paginating in chunks of 1000 to bypass Supabase default limit */
+  const fetchAllRows = async <T,>(
+    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  ): Promise<T[]> => {
+    const PAGE = 1000;
+    const all: T[] = [];
+    let offset = 0;
+    let done = false;
+    while (!done) {
+      const { data, error } = await buildQuery(offset, offset + PAGE - 1);
+      if (error) throw error;
+      const batch = data ?? [];
+      all.push(...batch);
+      if (batch.length < PAGE) done = true;
+      else offset += PAGE;
+    }
+    return all;
+  };
+
   const populateAddressRules = async () => {
     setIsPopulating(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get all inbound senders from channel_messages
-      const { data: messages } = await supabase
-        .from("channel_messages")
-        .select("from_address")
-        .eq("user_id", user.id)
-        .eq("direction", "inbound")
-        .not("from_address", "is", null);
+      // Get ALL inbound senders with pagination
+      const messages = await fetchAllRows<{ from_address: string | null }>(
+        (from, to) =>
+          supabase
+            .from("channel_messages")
+            .select("from_address")
+            .eq("user_id", user.id)
+            .eq("direction", "inbound")
+            .not("from_address", "is", null)
+            .range(from, to),
+      );
 
       // Count per address
       const addressMap = new Map<string, number>();
-      for (const msg of messages || []) {
+      for (const msg of messages) {
         const key = (msg.from_address || "").toLowerCase().trim();
         if (!key || !key.includes("@")) continue;
         addressMap.set(key, (addressMap.get(key) || 0) + 1);
       }
 
-      // Check existing
-      const { data: existing } = await supabase
-        .from("email_address_rules")
-        .select("email_address")
-        .eq("user_id", user.id);
-      const existingSet = new Set((existing || []).map((r) => r.email_address.toLowerCase()));
+      // Check ALL existing rules with pagination
+      const existing = await fetchAllRows<{ email_address: string }>(
+        (from, to) =>
+          supabase
+            .from("email_address_rules")
+            .select("email_address")
+            .eq("user_id", user.id)
+            .range(from, to),
+      );
+      const existingSet = new Set(existing.map((r) => r.email_address.toLowerCase()));
+
+      // Also update email_count for existing rules that have stale counts
+      const staleUpdates: Array<{ addr: string; count: number }> = [];
+      for (const [addr, count] of addressMap.entries()) {
+        if (existingSet.has(addr)) {
+          staleUpdates.push({ addr, count });
+        }
+      }
+      if (staleUpdates.length > 0) {
+        for (let i = 0; i < staleUpdates.length; i += 20) {
+          const batch = staleUpdates.slice(i, i + 20);
+          await Promise.all(
+            batch.map(({ addr, count }) =>
+              supabase
+                .from("email_address_rules")
+                .update({ email_count: count })
+                .eq("user_id", user.id)
+                .eq("email_address", addr)
+                .then()
+            ),
+          );
+        }
+      }
 
       const newRules = [...addressMap.entries()]
         .filter(([addr]) => !existingSet.has(addr))
@@ -177,13 +235,16 @@ export default function ManualGroupingTab() {
         }));
 
       if (newRules.length > 0) {
-        // Insert in batches of 100
         for (let i = 0; i < newRules.length; i += 100) {
           await supabase.from("email_address_rules").insert(newRules.slice(i, i + 100));
         }
         toast.success(`${newRules.length} nuovi address aggiunti`);
       } else {
         toast.info("Tutti gli address sono già presenti");
+      }
+
+      if (staleUpdates.length > 0) {
+        toast.info(`${staleUpdates.length} address aggiornati con conteggio corretto`);
       }
 
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
