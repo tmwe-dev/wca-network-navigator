@@ -268,8 +268,67 @@ serve(async (req) => {
 
     } catch (e) { console.error("Context injection error:", e); }
 
-    // Build system prompt
+    // ━━━ Load Agent Persona ━━━
+    let persona: Record<string, unknown> | null = null;
+    try {
+      const { data: p } = await supabase
+        .from("agent_personas")
+        .select("*")
+        .eq("agent_id", agent_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      persona = p;
+    } catch (_) { /* table may not exist yet */ }
+
+    // ━━━ Load persona-filtered KB ━━━
+    let personaKbEntries: Array<{ title: string; content: string; chapter?: string; category?: string }> = [];
+    if (persona) {
+      try {
+        const { data: kbLinks } = await supabase
+          .from("agent_knowledge_links")
+          .select("kb_entry_id, priority")
+          .eq("agent_id", agent_id)
+          .eq("user_id", userId)
+          .order("priority", { ascending: false });
+        if (kbLinks?.length) {
+          const kbIds = kbLinks.map((l: { kb_entry_id: string }) => l.kb_entry_id);
+          const { data: entries } = await supabase
+            .from("kb_entries")
+            .select("title, content, chapter, category")
+            .in("id", kbIds)
+            .eq("is_active", true);
+          if (entries) personaKbEntries = entries;
+        }
+      } catch (_) { /* table may not exist yet */ }
+    }
+
+    // ━━━ Build system prompt with persona ━━━
     let systemPrompt = agent.system_prompt || "Sei un agente AI.";
+
+    if (persona) {
+      const tone = persona.tone as string || "professional";
+      const lang = persona.language as string || "it";
+      const styleRules = persona.style_rules as string[] || [];
+      const vocDo = persona.vocabulary_do as string[] || [];
+      const vocDont = persona.vocabulary_dont as string[] || [];
+      const examples = persona.example_messages as Array<{ role: string; content: string }> || [];
+      const signature = persona.signature_template as string || "";
+
+      systemPrompt += `\n\n--- PERSONA ---`;
+      systemPrompt += `\nTONO: ${tone}`;
+      systemPrompt += `\nLINGUA: ${lang}`;
+      if (styleRules.length) systemPrompt += `\nSTILE:\n${styleRules.map(r => `- ${r}`).join("\n")}`;
+      if (vocDo.length) systemPrompt += `\nUSA SEMPRE: ${vocDo.join(", ")}`;
+      if (vocDont.length) systemPrompt += `\nEVITA SEMPRE: ${vocDont.join(", ")}`;
+      if (examples.length) {
+        systemPrompt += `\nESEMPI MESSAGGI:`;
+        for (const ex of examples.slice(0, 5)) {
+          systemPrompt += `\n[${ex.role}]: ${ex.content}`;
+        }
+      }
+      if (signature) systemPrompt += `\nFIRMA: ${signature}`;
+    }
+
     systemPrompt += contextBlock;
     systemPrompt += `\n\nACCESSO SISTEMA:
 - Hai accesso COMPLETO a: tutti i tool operativi, KB globale, prompt operativi, team roster, storico attività dei colleghi, i tuoi clienti assegnati.
@@ -280,6 +339,13 @@ serve(async (req) => {
 - Le regole commerciali e di governance sono nella Knowledge Base e nei Prompt Operativi — seguile.
 
 Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.`;
+
+    // Persona-filtered KB (priorità su globale per questo agente)
+    if (personaKbEntries.length) {
+      systemPrompt += "\n\n--- KNOWLEDGE BASE (AGENTE) ---\n";
+      for (const k of personaKbEntries) systemPrompt += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
+    }
+
     const kb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
     if (kb?.length) {
       systemPrompt += "\n\n--- KNOWLEDGE BASE ---\n";
