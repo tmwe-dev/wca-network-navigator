@@ -105,3 +105,6 @@ verify_jwt = false
 
 [functions.analyze-email-edit]
 verify_jwt = false
+
+[functions.pending-action-executor]
+verify_jwt = false
