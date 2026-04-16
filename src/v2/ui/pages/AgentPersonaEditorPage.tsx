@@ -196,7 +196,7 @@ export function AgentPersonaEditorPage() {
             <CardHeader className="py-3"><CardTitle className="text-sm">Vocabolario</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label className="text-green-500">✅ Usa sempre</Label>
+                <Label className="text-accent-foreground">✅ Usa sempre</Label>
                 <div className="flex gap-2 mt-1">
                   <Input value={newVocDo} onChange={e => setNewVocDo(e.target.value)} placeholder="Es: partnership, collaborazione"
                     onKeyDown={e => e.key === "Enter" && addToList(vocDo, setVocDo, newVocDo, setNewVocDo)} />
@@ -206,14 +206,14 @@ export function AgentPersonaEditorPage() {
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {vocDo.map((v, i) => (
-                    <Badge key={i} className="bg-green-500/10 text-green-400 gap-1">
+                    <Badge key={i} variant="secondary" className="gap-1">
                       {v} <X className="h-3 w-3 cursor-pointer" onClick={() => removeFromList(vocDo, setVocDo, i)} />
                     </Badge>
                   ))}
                 </div>
               </div>
               <div>
-                <Label className="text-red-500">❌ Evita sempre</Label>
+                <Label className="text-destructive">❌ Evita sempre</Label>
                 <div className="flex gap-2 mt-1">
                   <Input value={newVocDont} onChange={e => setNewVocDont(e.target.value)} placeholder="Es: SPAM, urgente!!!"
                     onKeyDown={e => e.key === "Enter" && addToList(vocDont, setVocDont, newVocDont, setNewVocDont)} />
@@ -223,7 +223,7 @@ export function AgentPersonaEditorPage() {
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {vocDont.map((v, i) => (
-                    <Badge key={i} className="bg-red-500/10 text-red-400 gap-1">
+                    <Badge key={i} variant="destructive" className="gap-1">
                       {v} <X className="h-3 w-3 cursor-pointer" onClick={() => removeFromList(vocDont, setVocDont, i)} />
                     </Badge>
                   ))}
