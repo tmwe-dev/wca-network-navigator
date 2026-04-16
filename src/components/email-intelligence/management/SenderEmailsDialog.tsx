@@ -37,19 +37,41 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     loadEmails();
   }, [open, emailAddress]);
 
+  const fetchAllSenderEmails = async (): Promise<SenderEmail[]> => {
+    const PAGE_SIZE = 1000;
+    const allEmails: SenderEmail[] = [];
+    let from = 0;
+    let done = false;
+
+    while (!done) {
+      const { data, error } = await supabase
+        .from("channel_messages")
+        .select("id, subject, body_text, email_date, direction, from_address, to_address")
+        .eq("channel", "email")
+        .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
+        .order("email_date", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const batch = (data as SenderEmail[]) || [];
+      allEmails.push(...batch);
+
+      if (batch.length < PAGE_SIZE) done = true;
+      else from += PAGE_SIZE;
+    }
+
+    return allEmails;
+  };
+
   const loadEmails = async () => {
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from("channel_messages")
-        .select("id, subject, body_text, email_date, direction, from_address, to_address")
-        .eq("user_id", user.id)
-        .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
-        .order("email_date", { ascending: false })
-        .limit(50);
-      setEmails((data as SenderEmail[]) || []);
+      const data = await fetchAllSenderEmails();
+      setEmails(data);
     } catch {
       setEmails([]);
     } finally {
