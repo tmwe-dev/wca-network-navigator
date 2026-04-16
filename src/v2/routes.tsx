@@ -55,6 +55,7 @@ const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashb
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
+const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
@@ -172,6 +173,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
           <Route path="observability" element={guardedPage(ObservabilityPage, "Observability")} />
+          <Route path="autopilot-missions" element={guardedPage(MissionsAutopilotPage, "AutopilotMissions")} />
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
