@@ -1,12 +1,10 @@
 /**
  * WhatsAppInboxView — orchestratore sottile per la vista inbox WhatsApp.
- * Compone WhatsAppChatList + WhatsAppChatThread (Documento 2 §2.4 "un solo scopo").
  */
 import { useState, useMemo, useCallback } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead } from "@/hooks/useChannelMessages";
-import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { WhatsAppChatList } from "./WhatsAppChatList";
 import { WhatsAppChatThread } from "./WhatsAppChatThread";
@@ -14,12 +12,12 @@ import { isSidebarGhostMessage } from "./whatsappTypes";
 import type { ChatThread } from "./whatsappTypes";
 
 type WhatsAppInboxViewProps = {
-  syncState?: { enabled: boolean; focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
+  syncState?: { focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
   backfillState?: unknown;
   operatorUserId?: string;
 };
 
-export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxViewProps = {}) {
+export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxViewProps) {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
@@ -27,9 +25,8 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
   const markAsRead = useMarkAsRead();
   const { sendWhatsApp } = useWhatsAppExtensionBridge();
 
-  const ownSync = useWhatsAppAdaptiveSync();
-  const sync = syncState || ownSync;
-  const { enabled, focusedChat, focusOn } = sync;
+  const focusedChat = syncState?.focusedChat ?? null;
+  const focusOn = syncState?.focusOn ?? (() => {});
 
   const threads = useMemo(() => {
     const visibleMessages = messages.filter(msg => !isSidebarGhostMessage(msg));
@@ -81,12 +78,11 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
         activeTab={activeTab}
         openTabs={openTabs}
         focusedChat={focusedChat}
-        syncEnabled={enabled}
+        syncEnabled={false}
         onOpenChat={openChat}
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
-        {/* Horizontal tabs */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
             {openTabs.map(contact => {
@@ -120,7 +116,7 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
           <WhatsAppChatThread
             thread={activeThread}
             focusedChat={focusedChat}
-            syncEnabled={enabled}
+            syncEnabled={false}
             sendWhatsApp={sendWhatsApp}
           />
         ) : (
