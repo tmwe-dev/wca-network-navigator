@@ -40,6 +40,7 @@ export default function ManualGroupingTab() {
   const [volumeFilter, setVolumeFilter] = useState("all");
   const [activeDrag, setActiveDrag] = useState<SenderAnalysis | null>(null);
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+  const [emailPreviewSender, setEmailPreviewSender] = useState<SenderAnalysis | null>(null);
 
   useEffect(() => {
     if (!activeDrag) return;
