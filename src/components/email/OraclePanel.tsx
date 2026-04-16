@@ -127,7 +127,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-[50px] h-[50px] rounded-lg" />
+        <OptimizedImage src={albertTalkGif} alt="Oracolo" className="w-[100px] h-[100px] rounded-xl" />
         <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
       </div>
 
