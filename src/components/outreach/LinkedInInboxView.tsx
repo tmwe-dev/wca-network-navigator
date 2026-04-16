@@ -387,7 +387,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
               <Linkedin className="w-12 h-12 mx-auto opacity-30" />
               <p className="text-sm">Seleziona una conversazione</p>
               <p className="text-xs">Le chat LinkedIn appariranno come tabs in alto</p>
-              {enabled && <p className="text-[10px]">🔄 Sync automatico ogni 30 minuti</p>}
+              <p className="text-[10px]">Clicca "Leggi" per scaricare i messaggi</p>
             </div>
           </div>
         )}
