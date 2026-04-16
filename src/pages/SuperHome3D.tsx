@@ -8,36 +8,17 @@ import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { OperativeMetricsGrid } from "@/components/home/OperativeMetricsGrid";
 import { SmartActions } from "@/components/home/SmartActions";
-import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { useProspectStats } from "@/hooks/useProspectStats";
-import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
-import { useDashboardOperativeMetrics } from "@/v2/hooks/useDashboardOperativeMetrics";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useDashboardData } from "@/v2/hooks/useDashboardData";
+import { useQueryClient } from "@tanstack/react-query";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
 import { Suspense, lazy } from "react";
 import { queryKeys } from "@/lib/queryKeys";
-import { fetchAgentTaskBreakdowns } from "@/v2/io/supabase/queries/dashboard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
-
-function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
-  return useQuery({
-    queryKey: queryKeys.superHome.count,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from(table)
-        .select("*", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
-    },
-    staleTime: 60_000,
-  });
-}
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 1 }).format(value);
@@ -54,52 +35,28 @@ export default function SuperHome3D() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const { data: hasSetup, isLoading: setupLoading } = useQuery({
-    queryKey: queryKeys.onboarding.check,
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return true;
-      const { data } = await supabase.from("app_settings")
-        .select("value").eq("key", "ai_company_name").eq("user_id", user.id).maybeSingle();
-      return !!data?.value;
-    },
-    staleTime: 5 * 60_000,
-  });
+  // Single consolidated query for all dashboard data
+  const { data: dashData, isLoading: dashLoading } = useDashboardData();
 
-  const { data: activities = [] } = useAllActivities();
   const { data: jobs = [] } = useDownloadJobs();
-  const { data: prospectStats } = useProspectStats();
-  const { contacts = [] } = useCockpitContacts();
-  const { data: partnerCount = 0 } = useCount("partners");
-  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
-  const { data: opMetrics, isLoading: opMetricsLoading } = useDashboardOperativeMetrics();
 
-  const { data: agentBreakdowns } = useQuery({
-    queryKey: ["v2", "agent-task-breakdowns"],
-    queryFn: async () => {
-      const result = await fetchAgentTaskBreakdowns();
-      if (result._tag === "Err") return [];
-      return result.value;
-    },
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-  });
+  // Briefing deferred — only fetch when user opens the section
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
+  // Note: useDailyBriefing has staleTime=15min so it won't refetch if already cached
 
   const [actionPrompt, setActionPrompt] = useState<string | null>(null);
-  const [briefingOpen, setBriefingOpen] = useState(false);
 
-  const readyContacts = useMemo(() => contacts.filter((c) => Boolean(c.email)).length, [contacts]);
-  const openActivities = useMemo(() => activities.filter((a) => !["completed", "cancelled"].includes(a.status)).length, [activities]);
   const activeJobs = useMemo(() => jobs.filter((j) => ["pending", "running"].includes(j.status)).length, [jobs]);
 
   const greeting = new Date().getHours() < 13 ? "Buongiorno" : "Buonasera";
 
   const statForCard = (key: string) => {
     switch (key) {
-      case "outreach": return `${formatCompact(readyContacts)} pronti`;
-      case "network": return `${formatCompact(partnerCount)} partner`;
-      case "crm": return `${formatCompact(prospectStats?.total ?? 0)} prospect`;
-      case "agenda": return `${formatCompact(openActivities)} aperte`;
+      case "outreach": return `${formatCompact(dashData?.readyContactsCount ?? 0)} pronti`;
+      case "network": return `${formatCompact(dashData?.partnerCount ?? 0)} partner`;
+      case "crm": return `${formatCompact(dashData?.prospectTotal ?? 0)} prospect`;
+      case "agenda": return `${formatCompact(dashData?.openActivitiesCount ?? 0)} aperte`;
       default: return "";
     }
   };
@@ -107,11 +64,6 @@ export default function SuperHome3D() {
   const handleBriefingAction = useCallback((action: BriefingAction) => {
     setActionPrompt(action.prompt);
   }, []);
-
-  if (!setupLoading && hasSetup === false) {
-    navigate("/onboarding", { replace: true });
-    return null;
-  }
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
@@ -124,7 +76,7 @@ export default function SuperHome3D() {
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
           <HomeAIPrompt
-            systemStats={{ activeJobs, pendingActivities: openActivities, totalPartners: partnerCount }}
+            systemStats={{ activeJobs, pendingActivities: dashData?.openActivitiesCount ?? 0, totalPartners: dashData?.partnerCount ?? 0 }}
             briefingActions={briefing?.actions}
             agents={briefing?.agentStatus}
             externalPrompt={actionPrompt}
@@ -139,9 +91,9 @@ export default function SuperHome3D() {
         <div className="space-y-1">
           <div className="flex items-center gap-3 flex-wrap px-1">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">👥 Team Agenti</span>
-            <OperativeMetricsGrid metrics={opMetrics} isLoading={opMetricsLoading} />
+            <OperativeMetricsGrid metrics={dashData?.operativeMetrics ?? undefined} isLoading={dashLoading} />
           </div>
-          <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={agentBreakdowns} />
+          <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
         </div>
 
         {/* Active jobs */}
