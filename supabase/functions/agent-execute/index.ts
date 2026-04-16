@@ -383,6 +383,8 @@ serve(async (req) => {
     }
 
     systemPrompt += contextBlock;
+    systemPrompt += learningBlock;
+    systemPrompt += missionBlock;
     systemPrompt += `\n\nACCESSO SISTEMA:
 - Hai accesso COMPLETO a: tutti i tool operativi, KB globale, prompt operativi, team roster, storico attività dei colleghi, i tuoi clienti assegnati.
 - Consulta la KB e i prompt operativi prima di agire.
