@@ -78,21 +78,21 @@ export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onVi
               </div>
             )}
 
-            {/* Flag */}
-            {flag && (
-              <span className="text-base flex-shrink-0" title={sender.domain}>
-                {flag}
-              </span>
-            )}
-
             {/* Name + email */}
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm truncate">{sender.companyName}</div>
               <div className="text-[11px] text-muted-foreground truncate">{sender.email}</div>
             </div>
 
-            {/* Email count */}
-            <span className="text-lg font-bold text-primary flex-shrink-0">{sender.emailCount}</span>
+            {/* Email count + flag column */}
+            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+              <span className="text-lg font-bold text-primary">{sender.emailCount}</span>
+              {flag && (
+                <span className="text-xl leading-none" title={sender.domain}>
+                  {flag}
+                </span>
+              )}
+            </div>
 
             {/* View emails button */}
             {onViewEmails && (
