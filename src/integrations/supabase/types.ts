@@ -1886,6 +1886,71 @@ export type Database = {
           },
         ]
       }
+      channel_backfill_state: {
+        Row: {
+          channel: string
+          chat_display_name: string | null
+          created_at: string
+          external_chat_id: string
+          id: string
+          last_attempt_at: string | null
+          last_attempt_status: string | null
+          last_error: string | null
+          messages_imported: number
+          newest_message_at: string | null
+          newest_message_external_id: string | null
+          oldest_message_at: string | null
+          oldest_message_external_id: string | null
+          operator_id: string
+          reached_beginning: boolean
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          chat_display_name?: string | null
+          created_at?: string
+          external_chat_id: string
+          id?: string
+          last_attempt_at?: string | null
+          last_attempt_status?: string | null
+          last_error?: string | null
+          messages_imported?: number
+          newest_message_at?: string | null
+          newest_message_external_id?: string | null
+          oldest_message_at?: string | null
+          oldest_message_external_id?: string | null
+          operator_id: string
+          reached_beginning?: boolean
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          chat_display_name?: string | null
+          created_at?: string
+          external_chat_id?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_attempt_status?: string | null
+          last_error?: string | null
+          messages_imported?: number
+          newest_message_at?: string | null
+          newest_message_external_id?: string | null
+          oldest_message_at?: string | null
+          oldest_message_external_id?: string | null
+          operator_id?: string
+          reached_beginning?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_backfill_state_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_messages: {
         Row: {
           bcc_addresses: string | null
