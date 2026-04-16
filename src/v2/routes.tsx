@@ -61,6 +61,7 @@ const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
 const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
+const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -139,6 +140,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
           <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
+          <Route path="agent-capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
           <Route path="cockpit" element={guardedPage(CockpitPage, "Cockpit")} />
           <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
