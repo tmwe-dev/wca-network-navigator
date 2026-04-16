@@ -1,93 +1,58 @@
 
 
-# Analisi e Riprogettazione della Dashboard Home (DashboardPage)
+# Implementazione Tool Mancanti nel Backend ai-assistant
 
 ## Situazione attuale
 
-La prima pagina (`/v2` → `SuperHome3D.tsx`) mostra:
+L'edge function `ai-assistant` ha **48+ tool** ma mancano 5 tool critici che esistono già nel modulo `agent-execute/toolHandlers.ts` ma non sono esposti nell'assistente principale:
 
-1. **Briefing Operativo** — generato da un'edge function (`daily-briefing`) che chiama un LLM con 18 query parallele al DB. Le 3 tab (Effettuato / Da fare / Sospesi) contengono **testo libero generato dall'AI**, non dati strutturati.
+| Tool | Esiste in agent-execute? | Esiste in ai-assistant? |
+|------|--------------------------|------------------------|
+| `create_contact` | ✅ (platformTools) | ❌ |
+| `create_campaign` | ❌ nessuna parte | ❌ |
+| `schedule_email` | Parziale (outreach_queue insert) | ❌ |
+| `update_agent_prompt` | ✅ toolHandlers.ts:586 | ❌ |
+| `add_agent_kb_entry` | ✅ toolHandlers.ts:598 | ❌ |
 
-2. **BriefingStatsBar** — 4 numeri:
-   - Totale contatti = `partners.count + imported_contacts.count`
-   - Nel circuito = `partners(lead_status=contacted) + imported_contacts(lead_status=contacted)`
-   - Da contattare = `partners(lead_status=new) + imported_contacts(lead_status=new)`
-   - Oggi = `agent_tasks` schedulati oggi
+## Piano di implementazione
 
-3. **Team Agenti** — Solo nome, emoji, task attivi/completati oggi, ultimo task. Dati dal briefing (edge function).
+### 1. Aggiungere tool definitions (toolDefinitions.ts)
 
-## Problemi identificati
+5 nuove definizioni nella sezione appropriata:
 
-| Problema | Dettaglio |
-|----------|-----------|
-| **Dati non strutturati** | I tab "Effettuato/Da fare/Sospesi" sono testo AI — non numeri cliccabili e azionabili |
-| **Mancano metriche outreach** | Non si vedono: outreach creati, programmati, autorizzati, da autorizzare |
-| **Risposte al primo contatto** | Non tracciate nella dashboard |
-| **Agenti troppo generici** | Non si vede quante attività ha preparato ogni agente, quante in corso, quante in coda approvazione |
-| **Latenza** | Il briefing dipende da una chiamata LLM (5-25s) — i numeri "duri" non dovrebbero aspettare l'AI |
-| **18 query separate** | Tutte nella edge function. Le metriche strutturali dovrebbero essere query dirette dal client (come fa `useDashboardMetrics`) |
+- **`create_contact`**: Crea un contatto in `imported_contacts`. Params: `name`, `email`, `company_name`, `phone`, `mobile`, `country`, `origin`, `lead_status`, `notes`.
+- **`create_campaign`**: Crea una missione outreach in `outreach_missions`. Params: `title`, `channel` (email/whatsapp/linkedin), `target_filters` (country, lead_status, etc.), `ai_prompt`, `template_id`.
+- **`schedule_email`**: Accoda un'email programmata in `outreach_queue` con `scheduled_at`. Params: `to_email`, `to_name`, `subject`, `html_body`, `partner_id`, `scheduled_at`.
+- **`update_agent_prompt`**: Modifica il system_prompt di un agente. Params: `agent_name`, `replace_prompt`, `prompt_addition`.
+- **`add_agent_kb_entry`**: Aggiunge una voce alla KB di un agente. Params: `agent_name`, `title`, `content`.
 
-## Piano di riprogettazione
+### 2. Aggiungere executor inline (toolExecutors.ts)
 
-### STEP 1 — Nuova sezione "Metriche Operative" (query dirette, no AI)
+Implementazione diretta nel dispatcher `executeTool`, usando il pattern già presente nel file. La logica per `update_agent_prompt` e `add_agent_kb_entry` viene portata da `agent-execute/toolHandlers.ts` (copia adattata, ~15 righe ciascuno).
 
-Creare un nuovo hook `useDashboardOperativeMetrics` che con query parallele `head: true` restituisce:
+Per `create_contact`:
+- Insert in `imported_contacts` con user_id
+- Trigger automatico di match WCA se email/company presenti
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  CONTATTI                                           │
-│  Totale │ Da contattare │ Contattati │ Hanno risposto│
-├─────────────────────────────────────────────────────┤
-│  OUTREACH PIPELINE                                  │
-│  Creati │ Programmati │ Autorizzati │ Da autorizzare │
-├─────────────────────────────────────────────────────┤
-│  MESSAGGI                                           │
-│  Inviati oggi │ In attesa risposta │ Risposte ricevute│
-└─────────────────────────────────────────────────────┘
-```
+Per `create_campaign`:
+- Insert in `outreach_missions` con status `draft`
+- Restituisce mission_id per successive operazioni
 
-Fonte dati:
-- **Da contattare**: `partners(lead_status=new)` + `imported_contacts(lead_status=new)`
-- **Contattati**: `partners(lead_status=contacted)` + `imported_contacts(lead_status=contacted)`
-- **Hanno risposto**: `outreach_queue(status=replied).count` oppure `activities(response_received=true)`
-- **Creati**: `outreach_schedules(status in pending,approved,running).count`
-- **Programmati**: `outreach_schedules(status=pending).count`
-- **Autorizzati**: `mission_actions(status=approved).count`
-- **Da autorizzare**: `mission_actions(status=proposed).count`
-- **Inviati oggi**: `outreach_queue(status=sent, sent_at >= today).count`
-- **In attesa risposta**: `outreach_queue(status=sent).count` (senza reply)
-- **Risposte**: `outreach_queue(status=replied).count`
+Per `schedule_email`:
+- Insert in `outreach_queue` con status `pending` e `scheduled_at`
+- Collegamento opzionale a partner_id per tracking
 
-### STEP 2 — Team Agenti dinamico
+### 3. File modificati
 
-Sostituire il pannello agenti attuale con una versione che mostra per ogni agente:
-- Task **preparati** (status = proposed)
-- Task **in corso** (status = running)
-- Task **in coda approvazione** (status = pending)
-- Task **completati oggi**
-- Barra progresso visuale
+| File | Modifica |
+|------|----------|
+| `supabase/functions/ai-assistant/toolDefinitions.ts` | +5 tool definitions (~120 righe) |
+| `supabase/functions/ai-assistant/toolExecutors.ts` | +5 case nel switch dispatcher (~80 righe) |
 
-Query diretta dal client su `agent_tasks` raggruppata per `agent_id` e `status`.
+### Dettagli tecnici
 
-### STEP 3 — Briefing AI snellito
-
-Il briefing AI rimane ma diventa **secondario** — un card collassabile sotto le metriche strutturali. I numeri "duri" arrivano istantaneamente (query dirette), il briefing narrativo arriva dopo (quando l'LLM risponde).
-
-### STEP 4 — File da modificare
-
-| File | Azione |
-|------|--------|
-| `src/v2/io/supabase/queries/dashboard.ts` | Aggiungere `fetchOperativeMetrics()` con tutte le count query |
-| `src/v2/hooks/useDashboardOperativeMetrics.ts` | Nuovo hook React Query |
-| `src/components/home/OperativeMetricsGrid.tsx` | Nuovo componente griglia metriche |
-| `src/components/home/AgentStatusPanel.tsx` | Arricchire con breakdown per status task |
-| `src/pages/SuperHome3D.tsx` | Riorganizzare layout: Metriche → Agenti → Briefing AI (collassabile) |
-| `src/components/home/BriefingStatsBar.tsx` | Sostituito dalla nuova griglia, da rimuovere o mantenere dentro il briefing |
-
-### Benefici
-
-- **Dati istantanei**: le metriche arrivano in <500ms (count queries), non servono 25s di LLM
-- **Azionabili**: ogni numero è cliccabile e naviga alla sezione corrispondente
-- **Completi**: outreach pipeline, risposte, approvazioni — tutto visibile
-- **Agenti trasparenti**: si vede esattamente cosa fa ogni agente
+- Tutti i 5 tool richiedono `userId` (autenticazione obbligatoria)
+- `create_campaign` e `schedule_email` richiedono anche `authHeader` per eventuali sotto-invocazioni
+- Nessuna migrazione DB necessaria: tutte le tabelle target (`imported_contacts`, `outreach_missions`, `outreach_queue`, `agents`) esistono già
+- Deployment automatico dopo le modifiche
 
