@@ -55,7 +55,7 @@ async function fetchDashboardData(): Promise<DashboardData> {
     // Ready contacts (cockpit replacement — just count contacts with email)
     supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "ready"),
     // Open activities count (replaces useAllActivities)
-    supabase.from("activities").select("id", { count: "exact", head: true }).in("status", ["pending", "in_progress", "scheduled"]),
+    supabase.from("activities").select("id", { count: "exact", head: true }).in("status", ["pending", "in_progress"]),
     // Prospect total
     supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
     // Smart suggestions counts
