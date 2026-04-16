@@ -194,22 +194,25 @@ export default function ManualGroupingTab() {
       const existingSet = new Set(existing.map((r) => r.email_address.toLowerCase()));
 
       // Also update email_count for existing rules that have stale counts
-      const updatePromises: Promise<unknown>[] = [];
+      const staleUpdates: Array<{ addr: string; count: number }> = [];
       for (const [addr, count] of addressMap.entries()) {
         if (existingSet.has(addr)) {
-          updatePromises.push(
-            supabase
-              .from("email_address_rules")
-              .update({ email_count: count })
-              .eq("user_id", user.id)
-              .eq("email_address", addr),
-          );
+          staleUpdates.push({ addr, count });
         }
       }
-      if (updatePromises.length > 0) {
-        // Batch updates in groups of 20 to avoid overwhelming
-        for (let i = 0; i < updatePromises.length; i += 20) {
-          await Promise.all(updatePromises.slice(i, i + 20));
+      if (staleUpdates.length > 0) {
+        for (let i = 0; i < staleUpdates.length; i += 20) {
+          const batch = staleUpdates.slice(i, i + 20);
+          await Promise.all(
+            batch.map(({ addr, count }) =>
+              supabase
+                .from("email_address_rules")
+                .update({ email_count: count })
+                .eq("user_id", user.id)
+                .eq("email_address", addr)
+                .then()
+            ),
+          );
         }
       }
 
