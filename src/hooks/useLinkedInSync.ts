@@ -69,7 +69,7 @@ export function useLinkedInSync() {
       for (const thread of result.threads) {
         if (!thread.lastMessage || !thread.name) continue;
         const extId = buildExternalId(thread.name, new Date().toISOString(), thread.lastMessage);
-        const error = await insertChannelMessage({
+        const result2 = await insertChannelMessage({
           user_id: user.id,
           operator_id: operatorId,
           channel: "linkedin",
@@ -78,10 +78,9 @@ export function useLinkedInSync() {
           body_text: thread.lastMessage,
           message_id_external: extId,
           thread_id: thread.threadUrl || null,
-        }).then(() => null).catch(e => e);
-        if (!error) newMsgs++;
-        else if (error.code === "23505") dupes++;
-        else log.warn("insert error", { message: error.message });
+        });
+        if (result2.inserted) newMsgs++;
+        else dupes++;
       }
 
       if (newMsgs > 0) {
