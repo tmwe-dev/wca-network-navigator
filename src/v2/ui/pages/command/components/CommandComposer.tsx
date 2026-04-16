@@ -26,7 +26,7 @@ export default function CommandComposer({
   missionMode, onToggleMissionMode,
 }: Props) {
   return (
-    <div className="px-8 pb-20 pt-2">
+    <div className="px-8 pb-8 pt-2 pl-16">
       <div className="max-w-xl mx-auto">
         <motion.div
           animate={{ boxShadow: inputFocused ? "0 0 0 1px hsl(210 100% 66% / 0.24), 0 0 60px hsl(210 100% 66% / 0.12)" : "0 0 0 1px hsl(0 0% 100% / 0.1)" }}
