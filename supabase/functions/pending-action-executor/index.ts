@@ -44,11 +44,21 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("pending-action-executor");
 
   try {
-    const auth = await requireAuth(req, corsH);
-    if (isAuthError(auth)) return auth;
-    metrics.userId = auth.userId;
+    // Support both authenticated user calls and service-role trigger calls
+    const body = await req.json();
+    const pending_action_id = body.pending_action_id ?? body.action_id;
 
-    const { pending_action_id } = await req.json();
+    // Try auth but allow service-role (trigger) calls through
+    const auth = await requireAuth(req, corsH);
+    if (isAuthError(auth)) {
+      // Check if this is a service-role call (from DB trigger)
+      const authHeader = req.headers.get("authorization") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (!authHeader.includes(serviceKey)) return auth;
+    } else {
+      metrics.userId = auth.userId;
+    }
+
     if (!pending_action_id) {
       endMetrics(metrics, false, 400);
       return new Response(JSON.stringify({ error: "Missing pending_action_id" }), { status: 400, headers });
@@ -90,7 +100,7 @@ Deno.serve(async (req) => {
     await supabase.from("ai_pending_actions").update({
       status: result.success ? "executed" : "failed",
       executed_at: new Date().toISOString(),
-      execution_result: result,
+      execution_log: result,
     }).eq("id", pending_action_id);
 
     // Audit log
