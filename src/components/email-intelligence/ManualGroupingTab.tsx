@@ -167,7 +167,7 @@ export default function ManualGroupingTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get all visible inbound email senders with pagination
+      // Get only THIS user's inbound email senders with pagination
       const messages = await fetchAllRows<{ from_address: string | null }>(
         (from, to) =>
           supabase
@@ -175,6 +175,7 @@ export default function ManualGroupingTab() {
             .select("from_address")
             .eq("channel", "email")
             .eq("direction", "inbound")
+            .eq("user_id", user.id)
             .not("from_address", "is", null)
             .order("id", { ascending: true })
             .range(from, to),
