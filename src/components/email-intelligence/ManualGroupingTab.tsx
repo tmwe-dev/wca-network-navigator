@@ -417,6 +417,13 @@ export default function ManualGroupingTab() {
 
       <CreateCategoryDialog open={showCreateDialog} onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateCategory} existingNames={groups.map((g) => g.nome_gruppo)} />
+
+      <SenderEmailsDialog
+        open={!!emailPreviewSender}
+        onOpenChange={(open) => { if (!open) setEmailPreviewSender(null); }}
+        emailAddress={emailPreviewSender?.email || ""}
+        companyName={emailPreviewSender?.companyName || ""}
+      />
     </div>
   );
 }
