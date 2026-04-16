@@ -371,9 +371,9 @@ export default function ManualGroupingTab() {
       </div>
 
       {/* Main layout */}
-      <div className="flex flex-1 gap-4 min-h-0">
+      <div className="flex flex-1 gap-4 min-h-0 overflow-hidden">
         {/* Sender list */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg">
+        <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30">
             <span className="text-xs font-medium text-muted-foreground">
               Non classificati ({sortedSenders.length})
@@ -397,11 +397,11 @@ export default function ManualGroupingTab() {
         </div>
 
         {/* Groups grid */}
-        <div className="flex-1 min-w-0">
-          <div className="px-3 py-2 border-b bg-muted/30 rounded-t-lg border border-b-0">
+        <div className="flex-1 min-w-0 flex flex-col border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 border-b bg-muted/30">
             <span className="text-xs font-medium text-muted-foreground">Gruppi ({groups.length})</span>
           </div>
-          <ScrollArea className="border rounded-b-lg" style={{ height: "calc(100% - 36px)" }}>
+          <ScrollArea className="flex-1">
             <div className="p-4 flex flex-wrap gap-4">
               {groups.map((group) => (
                 <GroupDropZone key={group.id} group={group} onRefresh={loadData}
