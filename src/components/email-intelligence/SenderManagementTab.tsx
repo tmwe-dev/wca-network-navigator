@@ -3,6 +3,7 @@
  * Drag-and-drop sender classification with groups grid.
  */
 import { useState, useEffect, useMemo } from 'react';
+import { deriveSenderDisplayName } from '@/lib/senderDisplayName';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Loader2, Plus, Search, ArrowUpDown } from 'lucide-react';
@@ -118,7 +119,7 @@ export function SenderManagementTab() {
         } else {
           senderMap.set(email, {
             email, domain,
-            companyName: domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1),
+            companyName: deriveSenderDisplayName(email),
             emailCount: 1,
             firstSeen: msg.created_at, lastSeen: msg.created_at,
             isClassified: false,
