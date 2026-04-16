@@ -72,8 +72,7 @@ export function MissionsPage() {
   const { data: missions = [], isLoading } = useQuery({
     queryKey: ["agent-missions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agent_missions")
+      const { data, error } = await untypedFrom("agent_missions")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -86,8 +85,7 @@ export function MissionsPage() {
     queryKey: ["agent-mission-events", selectedMission],
     queryFn: async () => {
       if (!selectedMission) return [];
-      const { data, error } = await supabase
-        .from("agent_mission_events")
+      const { data, error } = await untypedFrom("agent_mission_events")
         .select("*")
         .eq("mission_id", selectedMission)
         .order("created_at", { ascending: false })
@@ -103,7 +101,7 @@ export function MissionsPage() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const updates: Record<string, unknown> = { status };
       if (status === "active") updates.started_at = new Date().toISOString();
-      const { error } = await supabase.from("agent_missions").update(updates).eq("id", id);
+      const { error } = await untypedFrom("agent_missions").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -116,7 +114,7 @@ export function MissionsPage() {
   const createMut = useMutation({
     mutationFn: async (mission: Partial<AgentMission>) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase.from("agent_missions").insert({
+      const { error } = await untypedFrom("agent_missions").insert({
         ...mission,
         owner_user_id: userData.user?.id,
       });
@@ -303,7 +301,7 @@ function MissionWizard({
   const { data: agents = [] } = useQuery({
     queryKey: ["agents-for-mission"],
     queryFn: async () => {
-      const { data } = await supabase.from("ai_agents").select("id, name").limit(50);
+      const { data } = await untypedFrom("ai_agents").select("id, name").limit(50);
       return data ?? [];
     },
   });
