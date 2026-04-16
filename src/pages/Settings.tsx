@@ -101,7 +101,6 @@ export default function Settings() {
               </div>
             )}
             {tab === "operatori" && <OperatorsSettings />}
-            {tab === "operatori" && <OperatorsSettings />}
             {tab === "utenti" && <AdminUsers />}
             {tab === "enrichment" && <EnrichmentSettings />}
             {tab === "memoria-ai" && (
