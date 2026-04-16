@@ -228,9 +228,19 @@ export function useAuthV2(): UseAuthV2Return {
 
   const signOut = useCallback(async () => {
     setError(null);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Network error — clear local session anyway
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch { /* ignore */ }
+    }
     setProfile(null);
     setRoles([]);
+    window.location.href = "/auth";
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
