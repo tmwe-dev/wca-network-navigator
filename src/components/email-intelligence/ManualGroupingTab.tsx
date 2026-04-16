@@ -3,6 +3,7 @@
  * Tab 1 of Email Intelligence flow
  */
 import { useState, useEffect, useMemo } from "react";
+import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

@@ -3,6 +3,7 @@
  * Drag-and-drop sender classification with groups grid.
  */
 import { useState, useEffect, useMemo } from 'react';
+import { deriveSenderDisplayName } from '@/lib/senderDisplayName';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Loader2, Plus, Search, ArrowUpDown } from 'lucide-react';
