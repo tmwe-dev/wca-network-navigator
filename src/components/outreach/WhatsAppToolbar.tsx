@@ -45,7 +45,6 @@ export function WhatsAppToolbar({
       ? { variant: "outline" as const, label: "Sessione", color: "border-yellow-500 text-yellow-600 bg-yellow-500/10" }
       : { variant: "default" as const, label: "On", color: "" };
 
-  const canAct = isAvailable && isAuthenticated;
   const isBfActive = bfProgress.status === "running" || bfProgress.status === "paused";
 
   return (
