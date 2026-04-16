@@ -95,12 +95,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
     queryKey: queryKeys.onboarding.completed,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return true;
+      // Use getSession() (local, 0ms) instead of getUser() (network, ~200ms)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return true;
       const { data } = await supabase
         .from("profiles")
         .select("onboarding_completed")
-        .eq("user_id", user.id)
+        .eq("user_id", session.user.id)
         .maybeSingle();
       // If no profile row or null, treat as completed (existing user safety)
       return data?.onboarding_completed !== false;
