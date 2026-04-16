@@ -47,11 +47,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve operator_id for this user
+    const { data: opRow } = await supabase
+      .from("operators")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const operator_id = opRow?.id ?? null;
+    if (!operator_id) {
+      console.warn(`[receive-channel-message] No operator found for user ${user.id}, skipping insert`);
+      return new Response(JSON.stringify({ error: "no_operator", detail: "User has no active operator" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Insert into channel_messages
     const { data: msg, error: insertErr } = await supabase
       .from("channel_messages")
       .insert({
         user_id: user.id,
+        operator_id,
         channel,
         direction,
         from_address: from_address || null,

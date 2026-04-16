@@ -199,6 +199,7 @@ export function useWhatsAppBackfill() {
             .from("channel_messages")
             .upsert({
               user_id: user.id,
+              operator_id: operatorId,
               channel: "whatsapp",
               direction: finalDirection,
               from_address: finalDirection === "outbound" ? undefined : contact,
