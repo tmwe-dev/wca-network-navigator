@@ -127,9 +127,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="guided-onboarding" element={guardedPage(GuidedOnboardingPage, "GuidedOnboarding")} />
         </Route>
-        <Route element={<V2AuthGateRaw />}>
-          <Route path="command" element={guardedPage(CommandPage, "Command")} />
-        </Route>
 
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>

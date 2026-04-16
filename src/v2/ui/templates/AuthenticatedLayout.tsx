@@ -91,19 +91,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   const deepSearch = useDeepSearchRunner();
 
-  // Onboarding check
+  // Onboarding check — source of truth is profiles.onboarding_completed
   const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
     queryKey: queryKeys.onboarding.completed,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return true;
       const { data } = await supabase
-        .from("app_settings")
-        .select("value")
+        .from("profiles")
+        .select("onboarding_completed")
         .eq("user_id", user.id)
-        .eq("key", "onboarding_completed")
         .maybeSingle();
-      return data?.value === "true";
+      // If no profile row or null, treat as completed (existing user safety)
+      return data?.onboarding_completed !== false;
     },
     staleTime: Infinity,
     enabled: isAuthenticated && sessionReady,
