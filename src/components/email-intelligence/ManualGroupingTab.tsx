@@ -110,15 +110,23 @@ export default function ManualGroupingTab() {
         setGroups(loadedGroups);
       }
 
-      // Load uncategorized address rules
-      const { data: rules } = await supabase
-        .from("email_address_rules")
-        .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
-        .eq("user_id", user.id)
-        .is("group_id", null)
-        .order("email_count", { ascending: false });
+      // Load ALL uncategorized address rules with pagination
+      const rules = await fetchAllRows<{
+        id: string; email_address: string; display_name: string | null;
+        email_count: number | null; last_email_at: string | null;
+        domain: string | null; company_name: string | null;
+      }>(
+        (from, to) =>
+          supabase
+            .from("email_address_rules")
+            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
+            .eq("user_id", user.id)
+            .is("group_id", null)
+            .order("email_count", { ascending: false })
+            .range(from, to),
+      );
 
-      const senderList: SenderAnalysis[] = (rules || []).map((r) => ({
+      const senderList: SenderAnalysis[] = rules.map((r) => ({
         email: r.email_address,
         domain: r.domain || r.email_address.split("@")[1] || "",
         companyName: r.company_name || r.display_name || r.email_address.split("@")[0],
