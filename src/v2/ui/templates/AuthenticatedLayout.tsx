@@ -29,13 +29,8 @@ import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRun
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
 
-import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
-import { useWcaSync } from "@/hooks/useWcaSync";
-import { useOutreachQueue } from "@/hooks/useOutreachQueue";
-import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { useWcaSession } from "@/hooks/useWcaSession";
-import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
-import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
+import { BackgroundServices } from "./BackgroundServices";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
