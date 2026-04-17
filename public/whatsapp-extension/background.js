@@ -1,9 +1,9 @@
-// ══════════════════════════════════════════════
-// WhatsApp Extension v5.0 — Modular Architecture
-// background.js = Message Router only (no business logic)
-// Modules: config.js, tab-manager.js, discovery.js,
-//          ai-extract.js, actions.js
-// ══════════════════════════════════════════════
+// ==================================================
+// WhatsApp Extension v5.4.0 — Modular Architecture
+// background.js = Message Router only
+// Modules: config, tab-manager, discovery,
+//          ai-bridge, ai-extract, actions
+// ==================================================
 
 try {
   importScripts(
@@ -12,21 +12,44 @@ try {
     "discovery.js",
     "ai-bridge.js",
     "ai-extract.js",
-    "optimus-client.js",
     "actions.js"
   );
 } catch (e) {
   console.error("[WA-EXT] Module import failed:", e);
 }
 
+// ── Module load check ──
+var _modulesLoaded = !!(
+  typeof Config !== "undefined" &&
+  typeof TabManager !== "undefined" &&
+  typeof Discovery !== "undefined" &&
+  typeof AiBridge !== "undefined" &&
+  typeof AiExtract !== "undefined" &&
+  typeof Actions !== "undefined"
+);
+
+if (!_modulesLoaded) {
+  console.error("[WA-EXT] One or more modules failed to load. Config:", typeof Config,
+    "TabManager:", typeof TabManager, "Discovery:", typeof Discovery,
+    "AiBridge:", typeof AiBridge, "AiExtract:", typeof AiExtract, "Actions:", typeof Actions);
+}
+
 // ── Action registry ──
-const ACTION_HANDLERS = {
+var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "5.3.2" });
+    sendResponse({
+      success: true,
+      version: "5.4.0",
+      modulesLoaded: _modulesLoaded,
+    });
     return false;
   },
 
   setConfig: function (msg, sendResponse) {
+    if (typeof Config === "undefined") {
+      sendResponse({ success: false, error: "Config module not loaded" });
+      return false;
+    }
     Config.save(msg.supabaseUrl, msg.anonKey, msg.authToken).then(function () {
       sendResponse({ success: true });
     });
@@ -104,9 +127,25 @@ const ACTION_HANDLERS = {
 
 // ── Single message listener ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  if (!message || message.source !== "wa-content-bridge") return false;
+  if (!message) return false;
 
-  const handler = ACTION_HANDLERS[message.action];
+  // Handle AI bridge responses from content script
+  if (message.source === "wa-content-bridge" && message.type === "ai-bridge-response") {
+    if (typeof AiBridge !== "undefined") {
+      AiBridge.handleResponse(message);
+    }
+    return false;
+  }
+
+  // Handle normal actions from content script
+  if (message.source !== "wa-content-bridge") return false;
+
+  if (!_modulesLoaded) {
+    sendResponse({ success: false, error: "Extension modules not loaded — reinstall extension", errorCode: "ERR_MODULES" });
+    return false;
+  }
+
+  var handler = ACTION_HANDLERS[message.action];
   if (handler) return handler(message, sendResponse);
 
   sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, "Azione sconosciuta: " + message.action));
@@ -115,20 +154,26 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[WhatsApp Extension v5.0] Installed — Modular Architecture");
-  await Config.load();
-  AiExtract.loadSchema().catch(function () {});
-  TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+  console.log("[WhatsApp Extension v5.4.0] Installed — Modular Architecture");
+  if (typeof Config !== "undefined") {
+    await Config.load();
+    if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
+    if (typeof TabManager !== "undefined") TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+  }
 });
 
 chrome.runtime.onStartup.addListener(async function () {
-  await Config.load();
-  AiExtract.loadSchema().catch(function () {});
-  TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+  if (typeof Config !== "undefined") {
+    await Config.load();
+    if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
+    if (typeof TabManager !== "undefined") TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+  }
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  if (changeInfo.status === "complete" && tab.url && Config.isAppUrl(tab.url)) {
-    TabManager.injectBridgeIntoTab(tabId).catch(function () {});
+  if (typeof Config !== "undefined" && typeof TabManager !== "undefined") {
+    if (changeInfo.status === "complete" && tab.url && Config.isAppUrl(tab.url)) {
+      TabManager.injectBridgeIntoTab(tabId).catch(function () {});
+    }
   }
 });

@@ -1,58 +1,34 @@
-// ══════════════════════════════════════════════
-// WhatsApp Extension v5.0 — Content Script Bridge
-// Hardened: payload validation, action whitelist,
-// adaptive heartbeat with exponential backoff,
-// structured error codes
-// ══════════════════════════════════════════════
+// ==================================================
+// WhatsApp Extension v5.4 — Content Script Bridge
+// Hardened: reinject cleanup, AI bridge relay,
+// payload validation, adaptive heartbeat
+// ==================================================
 
 (function () {
+  // ── Cleanup from previous injection ──
+  if (globalThis.__WA_MSG_LISTENER__) {
+    window.removeEventListener("message", globalThis.__WA_MSG_LISTENER__);
+  }
   if (globalThis.__WA_HEARTBEAT_TIMER__) {
     clearTimeout(globalThis.__WA_HEARTBEAT_TIMER__);
     globalThis.__WA_HEARTBEAT_TIMER__ = null;
   }
-  if (globalThis.__WA_MSG_LISTENER__) {
-    window.removeEventListener("message", globalThis.__WA_MSG_LISTENER__);
-  }
-  if (globalThis.__WA_OPTIMUS_REQUEST_LISTENER__) {
-    try { chrome.runtime.onMessage.removeListener(globalThis.__WA_OPTIMUS_REQUEST_LISTENER__); } catch (_) {}
+  if (globalThis.__WA_AI_BRIDGE_LISTENER__) {
+    chrome.runtime.onMessage.removeListener(globalThis.__WA_AI_BRIDGE_LISTENER__);
   }
 
-  const BASE_HEARTBEAT_MS = 8000;
-  const MAX_HEARTBEAT_MS = 30000;
-  let currentHeartbeat = BASE_HEARTBEAT_MS;
-  let alive = false;
-  let heartbeatTimer = null;
+  var BASE_HEARTBEAT_MS = 8000;
+  var MAX_HEARTBEAT_MS = 30000;
+  var currentHeartbeat = BASE_HEARTBEAT_MS;
+  var alive = false;
 
-  // ── Allowed actions whitelist ──
-  const ALLOWED_ACTIONS = [
+  var ALLOWED_ACTIONS = [
     "ping", "setConfig", "verifySession", "sendWhatsApp",
     "readUnread", "learnDom", "diagnosticDom", "readThread",
     "backfillChat",
   ];
 
-  const MAX_STRING_LENGTH = 5000;
-
-  // Actions that require a fully rendered DOM (background tabs throttle rendering)
-  const VISIBILITY_REQUIRED_ACTIONS = ["readUnread", "readThread", "backfillChat", "diagnosticDom", "learnDom"];
-
-  function waitForVisible(timeoutMs) {
-    if (document.visibilityState === "visible") return Promise.resolve(true);
-    return new Promise(function (resolve) {
-      const timer = setTimeout(function () {
-        document.removeEventListener("visibilitychange", onChange);
-        resolve(false);
-      }, timeoutMs || 3000);
-      function onChange() {
-        if (document.visibilityState === "visible") {
-          clearTimeout(timer);
-          document.removeEventListener("visibilitychange", onChange);
-          // 1s extra to let the renderer paint
-          setTimeout(function () { resolve(true); }, 1000);
-        }
-      }
-      document.addEventListener("visibilitychange", onChange);
-    });
-  }
+  var MAX_STRING_LENGTH = 5000;
 
   function isExtensionAlive() {
     try {
@@ -76,14 +52,13 @@
     });
   }
 
-  // ── Payload validation ──
   function validatePayload(data) {
     if (!data || typeof data !== "object") return "Invalid payload";
     if (!data.action || typeof data.action !== "string") return "Missing action";
     if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
-    const stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
-    for (let i = 0; i < stringFields.length; i++) {
-      const field = stringFields[i];
+    var stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+    for (var i = 0; i < stringFields.length; i++) {
+      var field = stringFields[i];
       if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {
         return "Field " + field + " exceeds max length";
       }
@@ -91,8 +66,8 @@
     return null;
   }
 
-  async function relayMessage(data) {
-    const validationError = validatePayload(data);
+  function relayMessage(data) {
+    var validationError = validatePayload(data);
     if (validationError) {
       failResponse(data, validationError, "ERR_VALIDATION");
       return;
@@ -106,26 +81,12 @@
       return;
     }
 
-    // Gate: actions that read DOM require the tab to be visible
-    if (VISIBILITY_REQUIRED_ACTIONS.indexOf(data.action) !== -1) {
-      const visible = await waitForVisible(3000);
-      if (!visible) {
-        failResponse(data, "La tab di WhatsApp Web deve essere visibile per leggere i messaggi", "TAB_NOT_VISIBLE");
-        return;
-      }
-    }
-
     try {
-      const msg = { source: "wa-content-bridge", action: data.action };
-      if (data.phone) msg.phone = data.phone;
-      if (data.text) msg.text = data.text;
-      if (data.contact) msg.contact = data.contact;
-      if (data.maxMessages) msg.maxMessages = data.maxMessages;
-      if (data.maxScrolls) msg.maxScrolls = data.maxScrolls;
-      if (data.lastKnownText) msg.lastKnownText = data.lastKnownText;
-      if (data.supabaseUrl) msg.supabaseUrl = data.supabaseUrl;
-      if (data.anonKey) msg.anonKey = data.anonKey;
-      if (data.authToken) msg.authToken = data.authToken;
+      var msg = { source: "wa-content-bridge", action: data.action };
+      var fields = ["phone", "text", "contact", "maxMessages", "maxScrolls", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+      for (var i = 0; i < fields.length; i++) {
+        if (data[fields[i]] !== undefined) msg[fields[i]] = data[fields[i]];
+      }
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
@@ -158,11 +119,57 @@
     }
   }
 
-  // ── Adaptive heartbeat with exponential backoff ──
+  // ── AI Bridge relay: background → webapp → background ──
+  // Background sends ai-bridge-request to this content script,
+  // we relay it to the webapp page via postMessage,
+  // and relay the response back to background.
+  globalThis.__WA_AI_BRIDGE_LISTENER__ = function (message, sender, sendResponse) {
+    if (!message || message.source !== "wa-background-bridge" || message.type !== "ai-bridge-request") {
+      return false;
+    }
+
+    var requestId = message.requestId;
+
+    // Listen for the webapp's response (one-shot)
+    function onWebappResponse(event) {
+      if (event.source !== window) return;
+      var d = event.data;
+      if (!d || d.direction !== "from-webapp-ai-bridge-response" || d.requestId !== requestId) return;
+      window.removeEventListener("message", onWebappResponse);
+      // Relay back to background
+      try {
+        chrome.runtime.sendMessage({
+          source: "wa-content-bridge",
+          type: "ai-bridge-response",
+          requestId: requestId,
+          data: d.result || null,
+        });
+      } catch (_) {}
+    }
+    window.addEventListener("message", onWebappResponse);
+
+    // Set a timeout to clean up
+    setTimeout(function () {
+      window.removeEventListener("message", onWebappResponse);
+    }, 35000);
+
+    // Forward request to webapp
+    post({
+      direction: "from-extension-ai-bridge-request",
+      requestId: requestId,
+      functionName: message.functionName,
+      payload: message.payload,
+    });
+
+    return false; // async response handled via separate message
+  };
+  chrome.runtime.onMessage.addListener(globalThis.__WA_AI_BRIDGE_LISTENER__);
+
+  // ── Adaptive heartbeat ──
   function scheduleHeartbeat() {
-    if (heartbeatTimer) clearTimeout(heartbeatTimer);
-    heartbeatTimer = setTimeout(function () {
-      const nowAlive = isExtensionAlive();
+    globalThis.__WA_HEARTBEAT_TIMER__ = setTimeout(function () {
+      globalThis.__WA_HEARTBEAT_TIMER__ = null;
+      var nowAlive = isExtensionAlive();
       if (nowAlive && !alive) {
         alive = true;
         currentHeartbeat = BASE_HEARTBEAT_MS;
@@ -176,123 +183,17 @@
       }
       scheduleHeartbeat();
     }, currentHeartbeat);
-    globalThis.__WA_HEARTBEAT_TIMER__ = heartbeatTimer;
   }
 
-  // ── Remove previous listener if re-injected ──
-  if (globalThis.__WA_MSG_LISTENER__) {
-    window.removeEventListener("message", globalThis.__WA_MSG_LISTENER__);
-  }
-
+  // ── Message listener from webapp ──
   globalThis.__WA_MSG_LISTENER__ = function (event) {
     if (event.source !== window) return;
-    const data = event.data;
-    if (!data) return;
-
-    // Optimus response from webapp → forward to background as runtime message
-    if (data.direction === "from-webapp-optimus-response") {
-      if (!isExtensionAlive()) return;
-      try {
-        chrome.runtime.sendMessage({
-          source: "wca-optimus-response",
-          requestId: data.requestId,
-          payload: data.payload,
-        });
-      } catch (_) { /* extension dead */ }
-      return;
-    }
-
-    if (data.direction !== "from-webapp-wa") return;
+    var data = event.data;
+    if (!data || data.direction !== "from-webapp-wa") return;
     relayMessage(data);
   };
 
   window.addEventListener("message", globalThis.__WA_MSG_LISTENER__);
-
-  if (globalThis.__WA_OPTIMUS_REQUEST_LISTENER__) {
-    chrome.runtime.onMessage.removeListener(globalThis.__WA_OPTIMUS_REQUEST_LISTENER__);
-  }
-
-  globalThis.__WA_OPTIMUS_REQUEST_LISTENER__ = function (msg, sender, sendResponse) {
-    // ── AI Bridge: background → webapp via postMessage ──
-    if (msg && msg.action === "aiBridgeRequest") {
-      const reqId = msg.requestId;
-      const responseDirection = msg.responseDirection;
-
-      window.postMessage({
-        direction: msg.direction,
-        requestId: reqId,
-        payload: msg.payload || {},
-      }, "*");
-
-      var finishedAi = false;
-      var timerAi = setTimeout(function () {
-        if (finishedAi) return;
-        finishedAi = true;
-        window.removeEventListener("message", aiHandler);
-        // Forward fallback to background
-        try {
-          chrome.runtime.sendMessage({
-            source: "wa-ai-bridge-response",
-            requestId: reqId,
-            payload: { success: false, error: "WEBAPP_TIMEOUT" },
-          });
-        } catch (_) {}
-        sendResponse({ ok: true });
-      }, 14000);
-
-      function aiHandler(event) {
-        if (event.source !== window) return;
-        const d = event.data;
-        if (!d || d.direction !== responseDirection) return;
-        if (d.requestId && d.requestId !== reqId) return;
-        if (finishedAi) return;
-        finishedAi = true;
-        clearTimeout(timerAi);
-        window.removeEventListener("message", aiHandler);
-        try {
-          chrome.runtime.sendMessage({
-            source: "wa-ai-bridge-response",
-            requestId: reqId,
-            payload: d.payload || { success: false, error: "EMPTY" },
-          });
-        } catch (_) {}
-        sendResponse({ ok: true });
-      }
-
-      window.addEventListener("message", aiHandler);
-      return true;
-    }
-
-    if (!msg || msg.action !== "optimusRequest") return false;
-
-    window.postMessage({
-      direction: "from-extension-optimus-request",
-      payload: msg.payload,
-    }, "*");
-
-    var finished = false;
-    var timer = setTimeout(function () {
-      if (finished) return;
-      finished = true;
-      window.removeEventListener("message", handler);
-      sendResponse({ success: false, error: "OPTIMUS_TIMEOUT" });
-    }, 15000);
-
-    function handler(event) {
-      if (event.source !== window) return;
-      if (!event.data || event.data.direction !== "from-webapp-optimus-response") return;
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      window.removeEventListener("message", handler);
-      sendResponse(event.data.payload);
-    }
-
-    window.addEventListener("message", handler);
-    return true;
-  };
-
-  chrome.runtime.onMessage.addListener(globalThis.__WA_OPTIMUS_REQUEST_LISTENER__);
   globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = true;
 
   post({ direction: "from-extension-wa", action: "contentScriptReady" });
