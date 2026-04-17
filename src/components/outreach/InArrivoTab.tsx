@@ -5,6 +5,11 @@ import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
 import { EmailToolbar } from "@/components/outreach/EmailToolbar";
+import { OptimusBadge } from "@/components/outreach/OptimusBadge";
+
+function LinkedInOptimusBadge() {
+  return <OptimusBadge channel="linkedin" pageType="messaging" />;
+}
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
@@ -123,6 +128,11 @@ export function InArrivoTab() {
               startBackfill={waBackfill.startBackfill}
               stopBackfill={waBackfill.stopBackfill}
             />
+          )}
+          {channel === "linkedin" && (
+            <div className="flex items-center gap-1">
+              <LinkedInOptimusBadge />
+            </div>
           )}
         </div>
       </div>
