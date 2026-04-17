@@ -29,6 +29,22 @@ export function LinkedInTest() {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
+  // Stream Optimus events into the LinkedIn terminal
+  useEffect(() => {
+    return subscribeOptimusEvents((e) => {
+      if (e.channel !== "linkedin") return;
+      if (e.kind === "cache-hit") {
+        log(`🤖 Optimus: piano cache (v${e.planVersion}) · ${e.pageType}`, "ok");
+      } else if (e.kind === "ai-fresh") {
+        log(`🤖 Optimus: nuovo piano AI generato in ${e.latencyMs}ms · confidence ${(e.confidence * 100).toFixed(0)}% · v${e.planVersion}`, "info");
+      } else if (e.kind === "stale") {
+        log(`⚠️ Optimus: AI non risponde, uso ultimo piano cache (stale) · ${e.pageType}`, "warn");
+      } else if (e.kind === "error") {
+        log(`❌ Optimus: ${e.error}`, "error");
+      }
+    });
+  }, [log]);
+
   const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
 
   const runWithCooldown = useCallback(async (fn: () => Promise<void>) => {
