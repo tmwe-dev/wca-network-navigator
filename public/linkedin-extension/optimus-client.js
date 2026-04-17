@@ -1,0 +1,253 @@
+// ══════════════════════════════════════════════
+// Optimus Client — WhatsApp Extension
+// Background-side helpers: dom-hash, plan request via webapp bridge,
+// page-injectable simplifyDom + executePlan.
+// ══════════════════════════════════════════════
+
+const Optimus = (function () {
+
+  // ── Page-context: simplify a subtree to compact HTML ──
+  // Designed to be injected via chrome.scripting.executeScript,
+  // so it cannot reference outer-scope variables.
+  function _pageSimplifyAndHash(rootSelector, fallbackUseBody, maxDepth, maxLength) {
+    function pickRoot() {
+      if (rootSelector) {
+        const el = document.querySelector(rootSelector);
+        if (el) return el;
+      }
+      return fallbackUseBody ? document.body : null;
+    }
+
+    const STRIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "PATH", "CANVAS", "VIDEO", "AUDIO", "IFRAME"]);
+    const KEEP_ATTRS = new Set(["role", "aria-label", "aria-labelledby", "data-testid", "data-tab", "data-id", "title", "tabindex", "href", "alt"]);
+    const DROP_ATTR_PREFIX = ["x", "x1", "x2", "_ngcontent", "_nghost"];
+
+    function isDroppedAttr(name) {
+      const ln = name.toLowerCase();
+      if (KEEP_ATTRS.has(ln)) return false;
+      if (ln.startsWith("aria-")) return false;
+      if (ln.startsWith("data-")) return false;
+      for (const p of DROP_ATTR_PREFIX) if (ln.startsWith(p)) return true;
+      return ["style", "src", "srcset", "loading", "decoding", "crossorigin"].indexOf(ln) !== -1;
+    }
+
+    function classFilter(cls) {
+      if (!cls) return "";
+      return String(cls).split(/\s+/).filter(function (c) {
+        if (!c) return false;
+        // Drop offuscated short classes like x1n2onr6
+        if (/^x[a-z0-9]{4,}$/.test(c)) return false;
+        if (/^_[A-Za-z0-9]{4,}$/.test(c)) return false;
+        if (c.length > 30) return false;
+        return true;
+      }).slice(0, 4).join(" ");
+    }
+
+    function simplifyNode(node, depth) {
+      if (depth > maxDepth) return "";
+      if (node.nodeType === 3) {
+        const t = (node.textContent || "").replace(/\s+/g, " ").trim();
+        if (!t) return "";
+        return t.length > 100 ? (t.slice(0, 100) + "…") : t;
+      }
+      if (node.nodeType !== 1) return "";
+      if (STRIP_TAGS.has(node.tagName)) return "";
+
+      const tag = node.tagName.toLowerCase();
+      const attrs = [];
+      for (const a of Array.from(node.attributes || [])) {
+        if (a.name === "class") {
+          const cf = classFilter(a.value);
+          if (cf) attrs.push('class="' + cf + '"');
+          continue;
+        }
+        if (isDroppedAttr(a.name)) continue;
+        let v = (a.value || "").slice(0, 80);
+        v = v.replace(/"/g, "'");
+        attrs.push(a.name + '="' + v + '"');
+      }
+      const open = "<" + tag + (attrs.length ? " " + attrs.join(" ") : "") + ">";
+      let inner = "";
+      const kids = node.childNodes;
+      for (let i = 0; i < kids.length; i++) {
+        inner += simplifyNode(kids[i], depth + 1);
+        if (inner.length > maxLength) break;
+      }
+      return open + inner + "</" + tag + ">";
+    }
+
+    // SHA-256 via SubtleCrypto (page context has it)
+    async function sha256Hex(str) {
+      const buf = new TextEncoder().encode(str);
+      const hash = await crypto.subtle.digest("SHA-256", buf);
+      return Array.from(new Uint8Array(hash)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+
+    // Structural-only fingerprint (drops text values)
+    function structuralOnly(html) {
+      return html
+        .replace(/>[^<]+</g, "><")
+        .replace(/="[^"]*"/g, '=""');
+    }
+
+    return new Promise(async function (resolve) {
+      const root = pickRoot();
+      if (!root) { resolve({ ok: false, error: "root_not_found" }); return; }
+      let snapshot = simplifyNode(root, 0);
+      if (snapshot.length > maxLength) snapshot = snapshot.slice(0, maxLength) + "<!--truncated-->";
+      const structural = structuralOnly(snapshot);
+      const hash = await sha256Hex(structural);
+      resolve({ ok: true, snapshot: snapshot, hash: hash, size: snapshot.length });
+    });
+  }
+
+  // Inject simplify+hash and return result
+  async function snapshotPage(tabId, rootSelector, maxDepth, maxLength) {
+    const r = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: _pageSimplifyAndHash,
+      args: [rootSelector || null, true, maxDepth || 6, maxLength || 3000],
+    });
+    return r && r[0] && r[0].result ? r[0].result : { ok: false, error: "no_result" };
+  }
+
+  // ── Request plan via webapp bridge ──
+  async function _findAppTab() {
+    const tabs = await chrome.tabs.query({ url: ["*://*.lovable.app/*", "*://*.lovableproject.com/*", "http://localhost/*"] });
+    return tabs && tabs.length > 0 ? tabs[0] : null;
+  }
+
+  async function getPlan(params) {
+    const appTab = await _findAppTab();
+    if (!appTab) {
+      return { success: false, error: "webapp_tab_not_found", code: "NO_APP_TAB" };
+    }
+
+    const requestId = "optimus_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+    const timeoutMs = 18000;
+
+    return new Promise(async function (resolve) {
+      let resolved = false;
+      const timer = setTimeout(function () {
+        if (resolved) return;
+        resolved = true;
+        chrome.runtime.onMessage.removeListener(handler);
+        resolve({ success: false, error: "timeout", code: "PLAN_TIMEOUT" });
+      }, timeoutMs);
+
+      function handler(message) {
+        if (!message || message.source !== "wca-optimus-response") return;
+        if (message.requestId !== requestId) return;
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timer);
+        chrome.runtime.onMessage.removeListener(handler);
+        resolve(message.payload || { success: false, error: "empty_response" });
+      }
+      chrome.runtime.onMessage.addListener(handler);
+
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: appTab.id },
+          func: function (req) {
+            window.postMessage({
+              direction: "from-extension-optimus-request",
+              requestId: req.requestId,
+              channel: req.channel,
+              pageType: req.pageType,
+              snapshot: req.snapshot,
+              hash: req.hash,
+              previousPlanFailed: !!req.previousPlanFailed,
+              failureContext: req.failureContext || null,
+            }, window.location.origin);
+          },
+          args: [{
+            requestId: requestId,
+            channel: params.channel,
+            pageType: params.pageType,
+            snapshot: params.snapshot,
+            hash: params.hash,
+            previousPlanFailed: params.previousPlanFailed,
+            failureContext: params.failureContext,
+          }],
+        });
+      } catch (e) {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timer);
+        chrome.runtime.onMessage.removeListener(handler);
+        resolve({ success: false, error: "dispatch_failed: " + (e && e.message ? e.message : String(e)), code: "DISPATCH_FAILED" });
+      }
+    });
+  }
+
+  // ── Page-context: execute an extraction plan against a root ──
+  function _pageExecutePlan(rootSelector, fallbackBody, plan) {
+    function trySel(root, sel) {
+      if (!sel) return null;
+      try { return root.querySelector(sel); } catch (_) { return null; }
+    }
+    function tryAll(root, sel) {
+      if (!sel) return [];
+      try { return Array.from(root.querySelectorAll(sel)); } catch (_) { return []; }
+    }
+    function pickFirst(root, primary, fallback) {
+      const a = trySel(root, primary);
+      if (a) return a;
+      return trySel(root, fallback);
+    }
+    function getText(el) {
+      if (!el) return "";
+      return (el.getAttribute("title") || el.getAttribute("aria-label") || el.textContent || "").trim();
+    }
+
+    let root = null;
+    if (rootSelector) root = document.querySelector(rootSelector);
+    if (!root && fallbackBody) root = document.body;
+    if (!root) return { success: false, error: "root_not_found", items: [] };
+
+    const sels = (plan && plan.selectors) || {};
+    const containerSel = sels.container || {};
+    const itemSel = sels.thread_item || sels.message_bubble || {};
+    const containerEl = pickFirst(root, containerSel.primary, containerSel.fallback) || root;
+
+    let itemEls = tryAll(containerEl, itemSel.primary);
+    if (itemEls.length === 0) itemEls = tryAll(containerEl, itemSel.fallback);
+
+    const fieldKeys = Object.keys(sels).filter(function (k) { return k !== "container" && k !== "thread_item" && k !== "message_bubble"; });
+
+    const items = [];
+    let dropped = 0;
+    for (const itemEl of itemEls) {
+      const obj = {};
+      let foundFields = 0;
+      for (const k of fieldKeys) {
+        const f = sels[k] || {};
+        const el = pickFirst(itemEl, f.primary, f.fallback);
+        if (el) {
+          obj[k] = getText(el);
+          if (obj[k]) foundFields++;
+        }
+      }
+      const required = Math.max(1, Math.ceil(fieldKeys.length * 0.5));
+      if (foundFields < required) { dropped++; continue; }
+      items.push(obj);
+    }
+    return { success: true, items: items, dropped: dropped, candidates: itemEls.length };
+  }
+
+  async function executePlanInTab(tabId, rootSelector, plan) {
+    const r = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: _pageExecutePlan,
+      args: [rootSelector || null, true, plan],
+    });
+    return r && r[0] && r[0].result ? r[0].result : { success: false, items: [], error: "no_result" };
+  }
+
+  return {
+    snapshotPage: snapshotPage,
+    getPlan: getPlan,
+    executePlanInTab: executePlanInTab,
+  };
+})();

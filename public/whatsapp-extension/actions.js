@@ -329,11 +329,91 @@ const Actions = (function () {
     return results && results[0] ? results[0].result : { success: false, error: "No result" };
   }
 
+  // ── Optimus-first: try AI extraction plan, fallback to legacy on 503 ──
+  async function tryOptimusReadUnread(tabId, previousFailed, failureContext) {
+    // 1. snapshot the sidebar
+    const sidebarSelector = '[data-tab="3"], #pane-side, [role="grid"]';
+    const snap = await Optimus.snapshotPage(tabId, sidebarSelector, 6, 3000);
+    if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
+
+    // 2. ask plan via webapp bridge
+    const planRes = await Optimus.getPlan({
+      channel: "whatsapp",
+      pageType: "sidebar",
+      snapshot: snap.snapshot,
+      hash: snap.hash,
+      previousPlanFailed: !!previousFailed,
+      failureContext: failureContext || null,
+    });
+
+    if (!planRes || !planRes.success) {
+      const code = planRes && planRes.code;
+      // 503 / NO_APP_TAB / TIMEOUT → fall back to legacy
+      return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    }
+
+    // 3. execute plan against the page
+    const execRes = await Optimus.executePlanInTab(tabId, sidebarSelector, planRes.plan || planRes);
+    if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
+
+    return {
+      success: true,
+      cached: !!planRes.cached,
+      planVersion: planRes.plan_version || 0,
+      confidence: planRes.confidence || 0,
+      latencyMs: planRes.ai_latency_ms || 0,
+      items: execRes.items || [],
+      candidates: execRes.candidates || 0,
+      dropped: execRes.dropped || 0,
+    };
+  }
+
   async function executeReadUnreadFlow(tabId) {
     const discovery = await Discovery.waitForRenderableWaUi(tabId, 4, [700, 1100, 1600]);
     if (discovery && discovery.hasQR) return { success: false, error: "WhatsApp Web non connesso - scansiona il QR code" };
 
-    // Try AI first
+    // ── Optimus first ──
+    let optimus = await tryOptimusReadUnread(tabId, false, null);
+    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
+      // retry with fresh plan
+      optimus = await tryOptimusReadUnread(
+        tabId, true,
+        "Cached plan returned 0 items from sidebar"
+      );
+    }
+
+    if (optimus.success) {
+      const messages = optimus.items.map(function (it) {
+        return {
+          contact: it.contact_name || it.thread_name || "Sconosciuto",
+          lastMessage: it.last_message || "",
+          time: it.timestamp || new Date().toISOString(),
+          unreadCount: it.unread_indicator ? (parseInt(it.unread_indicator, 10) || 1) : 0,
+        };
+      });
+      return {
+        success: true,
+        messages: messages,
+        scanned: optimus.candidates,
+        method: optimus.cached ? "optimus-cache" : "optimus-ai",
+        optimus: {
+          cached: optimus.cached,
+          planVersion: optimus.planVersion,
+          confidence: optimus.confidence,
+          latencyMs: optimus.latencyMs,
+          dropped: optimus.dropped,
+        },
+        diagnostic: Discovery.compactDiscovery(discovery),
+      };
+    }
+
+    // ── Legacy fallback (only if Optimus is unavailable, e.g. 503/no-app-tab) ──
+    if (!optimus.optimusUnavailable) {
+      // Optimus reachable but failed structurally — keep the failure
+      return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error" };
+    }
+
+    // Try legacy AI extraction first
     if (Config.hasConfig()) {
       const sidebarHtml = await AiExtract.grabSidebarHtml(tabId);
       if (sidebarHtml && sidebarHtml.length > 100) {
@@ -344,32 +424,18 @@ const Actions = (function () {
             messages: aiResult.items.map(function (item) {
               return { contact: item.contact || "Sconosciuto", lastMessage: item.lastMessage || "", time: item.time || new Date().toISOString(), unreadCount: item.unreadCount || 1 };
             }),
-            scanned: 0, method: "ai", diagnostic: Discovery.compactDiscovery(discovery),
+            scanned: 0, method: "legacy-ai", diagnostic: Discovery.compactDiscovery(discovery),
           };
         }
       }
     }
 
-    // DOM fallback
+    // Final fallback: hardcoded DOM strategies (S1-S5)
     const domResult = await readUnreadDOM(tabId);
     if (domResult) {
-      domResult.method = domResult.method || "dom";
+      domResult.method = "legacy-dom:" + (domResult.method || "unknown");
       domResult.diagnostic = Discovery.compactDiscovery(discovery);
     }
-
-    // If DOM found 0, try learning then retry
-    if (domResult && domResult.messages && domResult.messages.length === 0 && Config.hasConfig()) {
-      const learnResult = await AiExtract.learnDomSelectors(tabId);
-      if (learnResult && learnResult.success) {
-        const retryResult = await readUnreadDOM(tabId);
-        if (retryResult) {
-          retryResult.method = "dom-after-learn";
-          retryResult.diagnostic = Discovery.compactDiscovery(discovery);
-        }
-        return retryResult;
-      }
-    }
-
     return domResult;
   }
 
