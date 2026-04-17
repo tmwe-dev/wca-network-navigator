@@ -1,102 +1,103 @@
-// ══════════════════════════════════════════════
-// WhatsApp Extension — AI Bridge Client
-// Permette al background di richiedere chiamate
-// edge-function alla webapp via content script,
-// evitando il blocco CORS chrome-extension://.
-// ══════════════════════════════════════════════
+// ==================================================
+// WhatsApp Extension v5.4 — AI Bridge Module
+// Routes all Supabase edge function calls through
+// the webapp bridge to avoid CORS issues.
+// Extension (chrome-extension://) cannot call Supabase
+// directly — only the webapp (https://*.lovable.app)
+// can.
+// ==================================================
 
 var AiBridge = globalThis.AiBridge || (function () {
-  const REQUEST_TIMEOUT_MS = 15000;
-  let _seq = 0;
-  const _pending = new Map(); // requestId → { resolve, timer }
 
-  function nextId() {
-    _seq = (_seq + 1) >>> 0;
-    return "wa-bridge-" + Date.now().toString(36) + "-" + _seq.toString(36);
+  let _pendingRequests = {};
+  let _requestCounter = 0;
+
+  // Generate unique request ID
+  function generateId() {
+    _requestCounter++;
+    return "aib_" + Date.now() + "_" + _requestCounter;
   }
 
-  // ── Trova una tab webapp (lovable.app / lovableproject.com / localhost) ──
-  async function findWebappTab() {
+  // Send a request to the webapp via the content script bridge
+  // The webapp will call the Supabase edge function and return the result
+  async function callViaWebapp(functionName, payload, timeoutMs) {
+    const timeout = timeoutMs || 30000;
+    const requestId = generateId();
+
+    // Find a tab running our webapp to relay through
+    let appTab = null;
     try {
       const tabs = await chrome.tabs.query({});
-      for (const t of tabs) {
-        if (!t.url) continue;
+      for (let i = 0; i < tabs.length; i++) {
+        const url = tabs[i].url || "";
         if (
-          /https:\/\/[^/]+\.lovable\.app\//i.test(t.url) ||
-          /https:\/\/[^/]+\.lovableproject\.com\//i.test(t.url) ||
-          /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(t.url)
+          url.match(/lovable\.app/i) ||
+          url.match(/lovableproject\.com/i) ||
+          url.match(/localhost/i) ||
+          url.match(/127\.0\.0\.1/i)
         ) {
-          return t;
+          appTab = tabs[i];
+          break;
         }
       }
-    } catch (_) {}
-    return null;
-  }
+    } catch (e) {
+      console.error("[AiBridge] Tab query failed:", e);
+    }
 
-  // ── Send a generic request via the webapp bridge ──
-  // direction = "from-extension-ai-request" | "from-extension-li-cookie-request" | "from-extension-li-creds-request"
-  // responseDirection = direction-of-webapp-response
-  async function sendRequest(direction, responseDirection, payload) {
-    const tab = await findWebappTab();
-    if (!tab) {
-      return {
-        success: false,
-        error: "Apri il Cockpit (lovable.app) per autorizzare le chiamate AI",
-        code: "NO_WEBAPP_TAB",
+    if (!appTab) {
+      console.warn("[AiBridge] No webapp tab found for bridge relay");
+      return null;
+    }
+
+    return new Promise(function (resolve) {
+      var timer = setTimeout(function () {
+        delete _pendingRequests[requestId];
+        console.warn("[AiBridge] Request timed out:", functionName);
+        resolve(null);
+      }, timeout);
+
+      _pendingRequests[requestId] = function (response) {
+        clearTimeout(timer);
+        delete _pendingRequests[requestId];
+        resolve(response);
       };
-    }
 
-    const requestId = nextId();
-    const promise = new Promise(function (resolve) {
-      const timer = setTimeout(function () {
-        _pending.delete(requestId);
-        resolve({ success: false, error: "BRIDGE_TIMEOUT", code: "TIMEOUT" });
-      }, REQUEST_TIMEOUT_MS);
-      _pending.set(requestId, { resolve: resolve, timer: timer });
-    });
-
-    try {
-      await chrome.tabs.sendMessage(tab.id, {
-        action: "aiBridgeRequest",
-        direction: direction,
-        responseDirection: responseDirection,
+      // Send to content script in the webapp tab
+      chrome.tabs.sendMessage(appTab.id, {
+        source: "wa-background-bridge",
+        type: "ai-bridge-request",
         requestId: requestId,
-        payload: payload || {},
+        functionName: functionName,
+        payload: payload,
+      }).catch(function (e) {
+        clearTimeout(timer);
+        delete _pendingRequests[requestId];
+        console.warn("[AiBridge] sendMessage failed:", e);
+        resolve(null);
       });
-    } catch (err) {
-      const entry = _pending.get(requestId);
-      if (entry) {
-        clearTimeout(entry.timer);
-        _pending.delete(requestId);
-      }
-      return { success: false, error: err.message, code: "TAB_SEND_FAILED" };
-    }
-
-    return promise;
+    });
   }
 
-  // ── Listener per le risposte forwardate dal content script ──
-  chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
-    if (!msg || msg.source !== "wa-ai-bridge-response") return false;
-    const entry = _pending.get(msg.requestId);
-    if (!entry) return false;
-    clearTimeout(entry.timer);
-    _pending.delete(msg.requestId);
-    entry.resolve(msg.payload || { success: false, error: "EMPTY_RESPONSE" });
+  // Handle response from webapp (called by background.js message listener)
+  function handleResponse(message) {
+    if (!message || message.type !== "ai-bridge-response") return false;
+    var requestId = message.requestId;
+    if (requestId && _pendingRequests[requestId]) {
+      _pendingRequests[requestId](message.data || null);
+      return true;
+    }
     return false;
-  });
+  }
 
-  function aiExtractRequest(payload) {
-    return sendRequest(
-      "from-extension-ai-request",
-      "from-webapp-ai-response",
-      payload,
-    );
+  // Convenience: call whatsapp-ai-extract edge function via webapp
+  async function callAiExtract(html, mode) {
+    return await callViaWebapp("whatsapp-ai-extract", { html: html, mode: mode }, 30000);
   }
 
   return {
-    aiExtractRequest: aiExtractRequest,
-    sendRequest: sendRequest,
+    callViaWebapp: callViaWebapp,
+    handleResponse: handleResponse,
+    callAiExtract: callAiExtract,
   };
 })();
 globalThis.AiBridge = AiBridge;

@@ -66,24 +66,16 @@ var AiExtract = globalThis.AiExtract || (function () {
     }
   }
 
-  // ── Call AI edge function VIA BRIDGE (no direct fetch — CORS blocks chrome-extension://)
-  // Background → AiBridge → content script → webapp → edge function → ritorno via postMessage
+  // Call AI edge function via webapp bridge (CORS-safe)
   async function callAiExtract(html, mode) {
+    if (!Config.hasConfig()) return null;
     try {
-      if (typeof AiBridge === "undefined" || !AiBridge.aiExtractRequest) {
-        console.warn("[WA AI] AiBridge non disponibile — impossibile invocare edge function");
+      var result = await AiBridge.callAiExtract(html, mode);
+      if (!result) {
+        console.warn("[WA AI] Bridge returned null");
         return null;
       }
-      const result = await AiBridge.aiExtractRequest({
-        channel: "whatsapp",
-        mode: mode,
-        html: html,
-      });
-      if (!result || result.success === false) {
-        console.warn("[WA AI] Bridge AI error:", result && result.error);
-        return null;
-      }
-      return result.data || null;
+      return result;
     } catch (e) {
       console.warn("[WA AI] Bridge call failed:", e.message);
       return null;
