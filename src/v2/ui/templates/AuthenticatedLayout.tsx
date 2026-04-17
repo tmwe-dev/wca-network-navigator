@@ -73,7 +73,15 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const { status: authStatus } = useAuth();
   const sessionReady = authStatus === "authenticated";
 
-  useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
+  // ⚡ Perf: invalidate cache only on sign-in transition (not on every sessionReady toggle).
+  // Old behavior re-fetched ~30 queries on every navigation.
+  const prevSessionReady = useRef(false);
+  useEffect(() => {
+    if (sessionReady && !prevSessionReady.current) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
+    }
+    prevSessionReady.current = sessionReady;
+  }, [sessionReady]);
 
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
@@ -333,18 +341,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           globalSync={globalSync}
                         />
                         <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={location.pathname}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.15 }}
-                              className="h-full"
-                            >
-                              <Outlet />
-                            </motion.div>
-                          </AnimatePresence>
+                          {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
+                          <div className="h-full animate-in fade-in duration-150">
+                            <Outlet />
+                          </div>
                         </main>
                         <Suspense fallback={null}><MobileBottomNav /></Suspense>
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
