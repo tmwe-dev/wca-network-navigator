@@ -3,7 +3,7 @@
 // Constants, error codes, config persistence
 // ══════════════════════════════════════════════
 
-const Config = (function () {
+var Config = globalThis.Config || (function () {
   const WA_BASE = "https://web.whatsapp.com";
 
   const APP_URL_PATTERNS = [
@@ -87,3 +87,4 @@ const Config = (function () {
     errorResponse: errorResponse,
   };
 })();
+globalThis.Config = Config;

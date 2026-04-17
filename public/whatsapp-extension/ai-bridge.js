@@ -5,7 +5,7 @@
 // evitando il blocco CORS chrome-extension://.
 // ══════════════════════════════════════════════
 
-const AiBridge = (function () {
+var AiBridge = globalThis.AiBridge || (function () {
   const REQUEST_TIMEOUT_MS = 15000;
   let _seq = 0;
   const _pending = new Map(); // requestId → { resolve, timer }
@@ -99,3 +99,4 @@ const AiBridge = (function () {
     sendRequest: sendRequest,
   };
 })();
+globalThis.AiBridge = AiBridge;

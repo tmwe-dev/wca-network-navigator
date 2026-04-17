@@ -1,4 +1,6 @@
-var OptimusClient = (function() {
+// ⚡ Idempotent: service worker MV3 può rieseguire importScripts su wake-up.
+// Usare `var` + guard evita "Identifier has already been declared".
+var OptimusClient = globalThis.OptimusClient || (function () {
   var _pendingResolve = null;
   var _pendingTimeout = null;
 
@@ -65,6 +67,7 @@ var OptimusClient = (function() {
   return { requestPlan: requestPlan, executePlan: executePlan,
            simplifyDom: simplifyDom, computeHash: computeHash };
 })();
+globalThis.OptimusClient = OptimusClient;
 
 // ══════════════════════════════════════════════
 // Optimus Client — WhatsApp Extension
@@ -72,7 +75,7 @@ var OptimusClient = (function() {
 // page-injectable simplifyDom + executePlan.
 // ══════════════════════════════════════════════
 
-const Optimus = (function () {
+var Optimus = globalThis.Optimus || (function () {
 
   // ── Page-context: simplify a subtree to compact HTML ──
   // Designed to be injected via chrome.scripting.executeScript,
@@ -319,3 +322,4 @@ const Optimus = (function () {
     executePlanInTab: executePlanInTab,
   };
 })();
+globalThis.Optimus = Optimus;
