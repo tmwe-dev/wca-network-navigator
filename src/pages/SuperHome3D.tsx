@@ -87,15 +87,21 @@ export default function SuperHome3D() {
         </section>
 
         {/* Smart Actions */}
-        <SmartActions />
+        <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+          <SmartActions />
+        </Suspense>
 
         {/* Team Agenti with inline metrics */}
         <div className="space-y-1">
           <div className="flex items-center gap-3 flex-wrap px-1">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">👥 Team Agenti</span>
-            <OperativeMetricsGrid metrics={dashData?.operativeMetrics ?? undefined} isLoading={dashLoading} />
+            <Suspense fallback={<Skeleton className="h-5 w-64" />}>
+              <OperativeMetricsGrid metrics={dashData?.operativeMetrics ?? undefined} isLoading={dashLoading} />
+            </Suspense>
           </div>
-          <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
+          </Suspense>
         </div>
 
         {/* Active jobs */}
