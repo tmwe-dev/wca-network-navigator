@@ -1,0 +1,101 @@
+// ══════════════════════════════════════════════
+// WhatsApp Extension — AI Bridge Client
+// Permette al background di richiedere chiamate
+// edge-function alla webapp via content script,
+// evitando il blocco CORS chrome-extension://.
+// ══════════════════════════════════════════════
+
+const AiBridge = (function () {
+  const REQUEST_TIMEOUT_MS = 15000;
+  let _seq = 0;
+  const _pending = new Map(); // requestId → { resolve, timer }
+
+  function nextId() {
+    _seq = (_seq + 1) >>> 0;
+    return "wa-bridge-" + Date.now().toString(36) + "-" + _seq.toString(36);
+  }
+
+  // ── Trova una tab webapp (lovable.app / lovableproject.com / localhost) ──
+  async function findWebappTab() {
+    try {
+      const tabs = await chrome.tabs.query({});
+      for (const t of tabs) {
+        if (!t.url) continue;
+        if (
+          /https:\/\/[^/]+\.lovable\.app\//i.test(t.url) ||
+          /https:\/\/[^/]+\.lovableproject\.com\//i.test(t.url) ||
+          /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(t.url)
+        ) {
+          return t;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ── Send a generic request via the webapp bridge ──
+  // direction = "from-extension-ai-request" | "from-extension-li-cookie-request" | "from-extension-li-creds-request"
+  // responseDirection = direction-of-webapp-response
+  async function sendRequest(direction, responseDirection, payload) {
+    const tab = await findWebappTab();
+    if (!tab) {
+      return {
+        success: false,
+        error: "Apri il Cockpit (lovable.app) per autorizzare le chiamate AI",
+        code: "NO_WEBAPP_TAB",
+      };
+    }
+
+    const requestId = nextId();
+    const promise = new Promise(function (resolve) {
+      const timer = setTimeout(function () {
+        _pending.delete(requestId);
+        resolve({ success: false, error: "BRIDGE_TIMEOUT", code: "TIMEOUT" });
+      }, REQUEST_TIMEOUT_MS);
+      _pending.set(requestId, { resolve: resolve, timer: timer });
+    });
+
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        action: "aiBridgeRequest",
+        direction: direction,
+        responseDirection: responseDirection,
+        requestId: requestId,
+        payload: payload || {},
+      });
+    } catch (err) {
+      const entry = _pending.get(requestId);
+      if (entry) {
+        clearTimeout(entry.timer);
+        _pending.delete(requestId);
+      }
+      return { success: false, error: err.message, code: "TAB_SEND_FAILED" };
+    }
+
+    return promise;
+  }
+
+  // ── Listener per le risposte forwardate dal content script ──
+  chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+    if (!msg || msg.source !== "wa-ai-bridge-response") return false;
+    const entry = _pending.get(msg.requestId);
+    if (!entry) return false;
+    clearTimeout(entry.timer);
+    _pending.delete(msg.requestId);
+    entry.resolve(msg.payload || { success: false, error: "EMPTY_RESPONSE" });
+    return false;
+  });
+
+  function aiExtractRequest(payload) {
+    return sendRequest(
+      "from-extension-ai-request",
+      "from-webapp-ai-response",
+      payload,
+    );
+  }
+
+  return {
+    aiExtractRequest: aiExtractRequest,
+    sendRequest: sendRequest,
+  };
+})();
