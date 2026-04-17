@@ -10,17 +10,19 @@ import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing"
 import { useDashboardData } from "@/v2/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
+import { lazyRetry } from "@/lib/lazyRetry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryKeys } from "@/lib/queryKeys";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // ⚡ Perf: lazy-load widget pesanti per alleggerire il bundle iniziale della Dashboard.
-const SmartActions = lazy(() => import("@/components/home/SmartActions").then(m => ({ default: m.SmartActions })));
-const OperativeMetricsGrid = lazy(() => import("@/components/home/OperativeMetricsGrid").then(m => ({ default: m.OperativeMetricsGrid })));
-const AgentStatusPanel = lazy(() => import("@/components/home/AgentStatusPanel").then(m => ({ default: m.AgentStatusPanel })));
-const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
-const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
+// lazyRetry → resilient ai fallimenti intermittenti del proxy Preview di Lovable.
+const SmartActions = lazyRetry(() => import("@/components/home/SmartActions").then(m => ({ default: m.SmartActions })));
+const OperativeMetricsGrid = lazyRetry(() => import("@/components/home/OperativeMetricsGrid").then(m => ({ default: m.OperativeMetricsGrid })));
+const AgentStatusPanel = lazyRetry(() => import("@/components/home/AgentStatusPanel").then(m => ({ default: m.AgentStatusPanel })));
+const DashboardCharts = lazyRetry(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
+const ResponseRateCard = lazyRetry(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 1 }).format(value);

@@ -3,7 +3,8 @@
  * Provides ALL providers, background hooks, and global overlays
  */
 import * as React from "react";
-import { useEffect, useState, lazy, Suspense, useRef } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
@@ -38,18 +39,18 @@ import { LayoutHeader } from "./LayoutHeader";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 
-const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
-const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
-const FiltersDrawer = lazy(() => import("@/components/global/filters-drawer").then(m => ({ default: m.FiltersDrawer })));
-const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
-const CommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
-const GlobalVoiceFAB = lazy(() => import("@/components/voice/GlobalVoiceFAB"));
-const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
-const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
-const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions"));
-const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
-const MobileBottomNav = lazy(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
-const PWAInstallPrompt = lazy(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
+const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
+const FiltersDrawer = lazyRetry(() => import("@/components/global/filters-drawer").then(m => ({ default: m.FiltersDrawer })));
+const IntelliFlowOverlay = lazyRetry(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
+const GlobalVoiceFAB = lazyRetry(() => import("@/components/voice/GlobalVoiceFAB"));
+const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
+const AgentOperationsDashboard = lazyRetry(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
+const TestExtensionsContent = lazyRetry(() => import("@/pages/TestExtensions"));
+const OnboardingWizard = lazyRetry(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
+const MobileBottomNav = lazyRetry(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
+const PWAInstallPrompt = lazyRetry(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
