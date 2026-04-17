@@ -11,6 +11,7 @@ import {
 } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
 
 const log = createLogger("ChannelsTab");
 
@@ -37,28 +38,27 @@ export function ChannelsTab({
           <p className="text-sm text-muted-foreground">Stato delle connessioni per l'invio automatico.</p>
         </div>
         <Button onClick={onConnectAll} disabled={connectingAll} size="sm" className="gap-1.5">
-          {connectingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+          {connectingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           Connetti Tutto
         </Button>
       </div>
 
-      {/* WhatsApp */}
       <Card>
-        <CardContent className="pt-5 space-y-3">
+        <CardContent className="space-y-3 pt-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <MessageCircle className="w-5 h-5 text-emerald-600" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">WhatsApp</p>
+                <p className="text-sm font-medium">WhatsApp</p>
                 <p className="text-xs text-muted-foreground">Invio messaggi via estensione Chrome</p>
               </div>
             </div>
-            <Badge variant={waConnected ? "default" : "secondary"} className={waConnected ? "bg-emerald-600 text-white" : ""}>
+            <Badge variant={waConnected ? "default" : "secondary"}>
               {waConnected
-                ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</>
-                : <><WifiOff className="w-3 h-3 mr-1" /> Non rilevato</>}
+                ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Connesso</>
+                : <><WifiOff className="mr-1 h-3 w-3" /> Non rilevato</>}
             </Badge>
           </div>
           {waConnected && (
@@ -66,15 +66,15 @@ export function ChannelsTab({
               const res = await waExt.verifySession();
               toast[res.success ? "success" : "error"](res.success ? "Sessione WhatsApp verificata!" : "Sessione WhatsApp non attiva");
             }}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Verifica Sessione
             </Button>
           )}
           {!waConnected && (
             <details className="group">
-              <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
-              <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="mt-2 space-y-2 rounded-lg border border-border bg-muted/50 p-3">
                 <Button variant="outline" size="sm" onClick={async () => {
                   try {
                     await downloadWhatsAppExtensionZip();
@@ -84,11 +84,12 @@ export function ChannelsTab({
                     toast.error("File non disponibile");
                   }
                 }}>
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica Estensione
                 </Button>
-                <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
+                <ExtensionDownloadCatalog channel="whatsapp" />
+                <ol className="list-inside list-decimal space-y-0.5 text-[11px] text-muted-foreground">
                   <li>Decomprimi il file ZIP</li>
-                  <li>Apri <code className="font-mono bg-muted px-1 rounded">chrome://extensions</code></li>
+                  <li>Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code></li>
                   <li>Attiva <strong>Modalità sviluppatore</strong></li>
                   <li>Clicca <strong>Carica estensione non pacchettizzata</strong></li>
                 </ol>
@@ -98,25 +99,24 @@ export function ChannelsTab({
         </CardContent>
       </Card>
 
-      {/* LinkedIn */}
       <Card>
-        <CardContent className="pt-5 space-y-3">
+        <CardContent className="space-y-3 pt-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#0A66C2]/10">
-                <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Linkedin className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">LinkedIn</p>
+                <p className="text-sm font-medium">LinkedIn</p>
                 <p className="text-xs text-muted-foreground">
                   {liHasCreds ? "Credenziali configurate" : "Configura nel tab LinkedIn"}
                 </p>
               </div>
             </div>
-            <Badge variant={liConnected ? "default" : "secondary"} className={liConnected ? "bg-emerald-600 text-white" : ""}>
+            <Badge variant={liConnected ? "default" : "secondary"}>
               {liConnected
-                ? <><CheckCircle2 className="w-3 h-3 mr-1" /> {liExtAvailable ? "Connesso" : "Configurato"}</>
-                : <><WifiOff className="w-3 h-3 mr-1" /> Non configurato</>}
+                ? <><CheckCircle2 className="mr-1 h-3 w-3" /> {liExtAvailable ? "Connesso" : "Configurato"}</>
+                : <><WifiOff className="mr-1 h-3 w-3" /> Non configurato</>}
             </Badge>
           </div>
           {liExtAvailable && (
@@ -124,46 +124,47 @@ export function ChannelsTab({
               const res = await liExt.verifySession();
               toast[res.success ? "success" : "error"](res.success ? "Sessione LinkedIn verificata!" : "Sessione LinkedIn non attiva");
             }}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Verifica Sessione
             </Button>
           )}
           {!liExtAvailable && !liHasCreds && (
             <details className="group">
-              <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
-              <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="mt-2 space-y-2 rounded-lg border border-border bg-muted/50 p-3">
                 <Button variant="outline" size="sm" onClick={async () => {
                   try {
                     await downloadLinkedInExtensionZip();
+                    toast.success("LinkedIn extension scaricata!");
                   } catch (e) {
                     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
                     toast.error("File non disponibile");
                   }
                 }}>
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica Estensione
                 </Button>
+                <ExtensionDownloadCatalog channel="linkedin" />
               </div>
             </details>
           )}
         </CardContent>
       </Card>
 
-      {/* AI Agent */}
       <Card>
         <CardContent className="pt-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Bot className="w-5 h-5 text-primary" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Bot className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">AI Agent</p>
+                <p className="text-sm font-medium">AI Agent</p>
                 <p className="text-xs text-muted-foreground">Engine di generazione outreach e analisi</p>
               </div>
             </div>
-            <Badge className="bg-emerald-600 text-white">
-              <CheckCircle2 className="w-3 h-3 mr-1" /> Attivo
+            <Badge>
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Attivo
             </Badge>
           </div>
         </CardContent>

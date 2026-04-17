@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { downloadLinkedInExtensionZip } from "@/lib/whatsappExtensionZip";
+import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
 
 const log = createLogger("LinkedInTab");
 
@@ -37,19 +38,19 @@ export function LinkedInTab({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+          <Linkedin className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">LinkedIn</h2>
         </div>
-        <Badge variant={liHasCreds ? "default" : "secondary"} className={liHasCreds ? "bg-primary text-primary-foreground" : ""}>
-          {liHasCreds ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+        <Badge variant={liHasCreds ? "default" : "secondary"}>
+          {liHasCreds ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Configurato</> : "Non configurato"}
         </Badge>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#0A66C2]/10">
-              <Mail className="w-5 h-5 text-[#0A66C2]" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Mail className="h-5 w-5 text-primary" />
             </div>
             <div>
               <CardTitle className="text-base">Credenziali LinkedIn</CardTitle>
@@ -67,7 +68,7 @@ export function LinkedInTab({
             <div className="relative">
               <Input type={showLiPass ? "text" : "password"} value={liPass} onChange={(e) => setLiPass(e.target.value)} placeholder="••••••••" className="pr-10" />
               <button type="button" onClick={() => setShowLiPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showLiPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showLiPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -83,30 +84,32 @@ export function LinkedInTab({
             }}
             disabled={savingLiCreds || !liEmail.trim() || !liPass.trim()}
           >
-            {savingLiCreds ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {savingLiCreds ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Salva Credenziali LinkedIn
           </Button>
         </CardContent>
       </Card>
 
       <details className="group">
-        <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
           ⚙️ Avanzate (estensione Chrome, cookie li_at manuale)
         </summary>
         <div className="mt-3 space-y-3">
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <Button className="w-full" size="sm" variant="outline" onClick={async () => {
                 try {
                   await downloadLinkedInExtensionZip();
+                  toast.success("LinkedIn extension scaricata!");
                 } catch (e) {
                   log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
                   toast.error("File non disponibile");
                 }
               }}>
-                <Download className="w-4 h-4 mr-2" /> Scarica Estensione LinkedIn
+                <Download className="mr-2 h-4 w-4" /> Scarica Estensione LinkedIn
               </Button>
-              <p className="text-[11px] text-muted-foreground text-center">
+              <ExtensionDownloadCatalog channel="linkedin" />
+              <p className="text-center text-[11px] text-muted-foreground">
                 Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione
               </p>
             </CardContent>
@@ -115,8 +118,8 @@ export function LinkedInTab({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#0A66C2]/10">
-                  <KeyRound className="w-5 h-5 text-[#0A66C2]" />
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <KeyRound className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-base">Cookie di Sessione (li_at)</CardTitle>
@@ -136,7 +139,7 @@ export function LinkedInTab({
                     className="pr-10 font-mono text-xs"
                   />
                   <button type="button" onClick={() => setShowLiAt((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {showLiAt ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showLiAt ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -152,7 +155,7 @@ export function LinkedInTab({
                 }}
                 disabled={savingLi || !liAtCookie.trim()}
               >
-                {savingLi ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                {savingLi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Salva Cookie LinkedIn
               </Button>
             </CardContent>
