@@ -5,18 +5,20 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
-import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
-import { OperativeMetricsGrid } from "@/components/home/OperativeMetricsGrid";
-import { SmartActions } from "@/components/home/SmartActions";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
 import { useDashboardData } from "@/v2/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
 import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
 import { Suspense, lazy } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { queryKeys } from "@/lib/queryKeys";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+// ⚡ Perf: lazy-load widget pesanti per alleggerire il bundle iniziale della Dashboard.
+const SmartActions = lazy(() => import("@/components/home/SmartActions").then(m => ({ default: m.SmartActions })));
+const OperativeMetricsGrid = lazy(() => import("@/components/home/OperativeMetricsGrid").then(m => ({ default: m.OperativeMetricsGrid })));
+const AgentStatusPanel = lazy(() => import("@/components/home/AgentStatusPanel").then(m => ({ default: m.AgentStatusPanel })));
 const DashboardCharts = lazy(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazy(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 
@@ -85,15 +87,21 @@ export default function SuperHome3D() {
         </section>
 
         {/* Smart Actions */}
-        <SmartActions />
+        <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+          <SmartActions />
+        </Suspense>
 
         {/* Team Agenti with inline metrics */}
         <div className="space-y-1">
           <div className="flex items-center gap-3 flex-wrap px-1">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">👥 Team Agenti</span>
-            <OperativeMetricsGrid metrics={dashData?.operativeMetrics ?? undefined} isLoading={dashLoading} />
+            <Suspense fallback={<Skeleton className="h-5 w-64" />}>
+              <OperativeMetricsGrid metrics={dashData?.operativeMetrics ?? undefined} isLoading={dashLoading} />
+            </Suspense>
           </div>
-          <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
+          </Suspense>
         </div>
 
         {/* Active jobs */}
