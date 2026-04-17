@@ -111,6 +111,23 @@ const TabManager = (function () {
     return _liTabId;
   }
 
+  // ── Ensure tab is active+focused so DOM rendering resumes (no restore) ──
+  async function ensureTabVisibleAndWait(tabId, postActivateMs) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab) return false;
+      let activated = false;
+      if (!tab.active) {
+        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (_) {}
+      }
+      if (typeof tab.windowId === "number") {
+        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
+      }
+      if (activated) await sleep(postActivateMs || 1200);
+      return true;
+    } catch (_) { return false; }
+  }
+
   // ── Operation Queue with dual lanes ──
   let _sessionQueue = Promise.resolve();
   let _actionQueue = Promise.resolve();
@@ -136,6 +153,7 @@ const TabManager = (function () {
     waitForLoad: waitForLoad,
     getLinkedInTab: getLinkedInTab,
     getTabId: getTabId,
+    ensureTabVisibleAndWait: ensureTabVisibleAndWait,
     enqueueSession: enqueueSession,
     enqueueAction: enqueueAction,
     enqueue: enqueue,

@@ -76,31 +76,28 @@ const TabManager = (function () {
     } catch (_) { return null; }
   }
 
-  // ── Temporary tab activation for background hydration ──
-  async function activateTabTemporarily(tabId) {
+  // ── Ensure tab is active+focused so DOM rendering resumes (no restore) ──
+  async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
-      const previous = await getLastFocusedActiveTab();
-      if (!previous || previous.id !== tabId) {
-        await chrome.tabs.update(tabId, { active: true });
-        await sleep(900);
-        return previous && typeof previous.id === "number" ? { tabId: previous.id } : null;
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab) return false;
+      let activated = false;
+      if (!tab.active) {
+        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (_) {}
       }
-    } catch (_) {}
-    return null;
+      // Bring the tab's window to the front too
+      if (typeof tab.windowId === "number") {
+        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
+      }
+      if (activated) await sleep(postActivateMs || 1200);
+      return true;
+    } catch (_) { return false; }
   }
 
-  async function restoreTabContext(ctx) {
-    if (!ctx || typeof ctx.tabId !== "number") return;
-    try { await chrome.tabs.update(ctx.tabId, { active: true }); } catch (_) {}
-  }
-
+  // Backward-compat shim: still exposed but no longer restores previous tab.
   async function withTemporarilyVisibleTab(tabId, fn) {
-    const restoreCtx = await activateTabTemporarily(tabId);
-    try {
-      return await fn();
-    } finally {
-      await restoreTabContext(restoreCtx);
-    }
+    await ensureTabVisibleAndWait(tabId);
+    return await fn();
   }
 
   // ── Get or create WA tab ──
@@ -163,6 +160,7 @@ const TabManager = (function () {
     waitForLoad: waitForLoad,
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
+    ensureTabVisibleAndWait: ensureTabVisibleAndWait,
     withTemporarilyVisibleTab: withTemporarilyVisibleTab,
     injectBridgeIntoTab: injectBridgeIntoTab,
     syncBridgeAcrossOpenTabs: syncBridgeAcrossOpenTabs,
