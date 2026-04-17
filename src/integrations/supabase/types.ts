@@ -1988,7 +1988,9 @@ export type Database = {
           deleted_by: string | null
           direction: string
           email_date: string | null
+          folder: string | null
           from_address: string | null
+          hidden_by_rule: boolean | null
           id: string
           imap_flags: string | null
           imap_uid: number | null
@@ -2026,7 +2028,9 @@ export type Database = {
           deleted_by?: string | null
           direction: string
           email_date?: string | null
+          folder?: string | null
           from_address?: string | null
+          hidden_by_rule?: boolean | null
           id?: string
           imap_flags?: string | null
           imap_uid?: number | null
@@ -2064,7 +2068,9 @@ export type Database = {
           deleted_by?: string | null
           direction?: string
           email_date?: string | null
+          folder?: string | null
           from_address?: string | null
+          hidden_by_rule?: boolean | null
           id?: string
           imap_flags?: string | null
           imap_uid?: number | null
@@ -2925,10 +2931,12 @@ export type Database = {
       }
       email_address_rules: {
         Row: {
+          address: string | null
           ai_confidence_threshold: number | null
           ai_suggested_group: string | null
           ai_suggestion_accepted: boolean | null
           ai_suggestion_confidence: number | null
+          applied_count: number | null
           auto_action: string | null
           auto_action_params: Json | null
           auto_execute: boolean | null
@@ -2940,6 +2948,7 @@ export type Database = {
           deleted_by: string | null
           display_name: string | null
           domain: string | null
+          domain_pattern: string | null
           email_address: string
           email_count: number | null
           exclusive_agent_id: string | null
@@ -2951,11 +2960,13 @@ export type Database = {
           id: string
           interaction_count: number | null
           is_active: boolean | null
+          last_applied_at: string | null
           last_email_at: string | null
           last_interaction_at: string | null
           notes: string | null
           operator_id: string | null
           preferred_channel: string | null
+          priority: number | null
           prompt_id: string | null
           success_rate: number | null
           tone_override: string | null
@@ -2965,10 +2976,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address?: string | null
           ai_confidence_threshold?: number | null
           ai_suggested_group?: string | null
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
+          applied_count?: number | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -2980,6 +2993,7 @@ export type Database = {
           deleted_by?: string | null
           display_name?: string | null
           domain?: string | null
+          domain_pattern?: string | null
           email_address: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -2991,11 +3005,13 @@ export type Database = {
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          last_applied_at?: string | null
           last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
           operator_id?: string | null
           preferred_channel?: string | null
+          priority?: number | null
           prompt_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
@@ -3005,10 +3021,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address?: string | null
           ai_confidence_threshold?: number | null
           ai_suggested_group?: string | null
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
+          applied_count?: number | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -3020,6 +3038,7 @@ export type Database = {
           deleted_by?: string | null
           display_name?: string | null
           domain?: string | null
+          domain_pattern?: string | null
           email_address?: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -3031,11 +3050,13 @@ export type Database = {
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          last_applied_at?: string | null
           last_email_at?: string | null
           last_interaction_at?: string | null
           notes?: string | null
           operator_id?: string | null
           preferred_channel?: string | null
+          priority?: number | null
           prompt_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
