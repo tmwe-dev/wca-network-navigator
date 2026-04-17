@@ -6853,6 +6853,7 @@ export type Database = {
         }[]
       }
       get_current_operator_id: { Args: never; Returns: string }
+      get_dashboard_snapshot: { Args: never; Returns: Json }
       get_directory_counts: {
         Args: never
         Returns: {
