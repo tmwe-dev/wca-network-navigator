@@ -9,6 +9,8 @@ import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { useWcaSync } from "@/hooks/useWcaSync";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
+import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
+import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
 
 export interface BackgroundServicesValues {
   outreachQueue: ReturnType<typeof useOutreachQueue>;
@@ -23,6 +25,8 @@ interface Props {
 function ActiveBackgroundServices({ children }: Props): React.ReactElement {
   useJobHealthMonitor();
   useWcaSync();
+  useOptimusBridgeListener();
+  useAiExtractBridgeListener();
   const outreachQueue = useOutreachQueue();
   const globalSync = useGlobalAutoSync();
   return <>{children({ outreachQueue, globalSync })}</>;
