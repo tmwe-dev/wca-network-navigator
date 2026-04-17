@@ -115,6 +115,19 @@ export function LinkedInTest() {
     log("📨 Lettura inbox LinkedIn (30s timeout)...");
     const r = await liMsg("readLinkedInInbox", {}, 35000);
     const threads = (r?.threads || []) as Array<Record<string, unknown>>;
+
+    // Inline Optimus summary
+    const opt = r?.optimus as { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number } | undefined;
+    if (opt) {
+      const tag = opt.cached ? "cache" : "AI fresh";
+      const conf = typeof opt.confidence === "number" ? `${(opt.confidence * 100).toFixed(0)}%` : "n/d";
+      const lat = opt.latencyMs ? `${opt.latencyMs}ms` : "—";
+      const dropped = typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
+      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${threads.length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
+    } else if (r?.method && String(r.method).startsWith("legacy")) {
+      log(`⚠️ Optimus non disponibile, fallback ${r.method}`, "warn");
+    }
+
     if (r?.success && threads.length) {
       log(`✅ Trovati ${threads.length} thread`, "ok");
       threads.forEach((t) => log(`  • ${t.name}: ${((t.lastMessage as string) || "").slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
