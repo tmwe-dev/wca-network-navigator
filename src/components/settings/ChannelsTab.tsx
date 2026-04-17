@@ -5,7 +5,10 @@ import {
   Loader2, CheckCircle2, RefreshCw, Download,
   MessageCircle, Linkedin, Bot, Zap, WifiOff,
 } from "lucide-react";
-import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
+import {
+  downloadLinkedInExtensionZip,
+  downloadWhatsAppExtensionZip,
+} from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
@@ -130,11 +133,13 @@ export function ChannelsTab({
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
               <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                <Button variant="outline" size="sm" onClick={() => {
-                  fetch("/linkedin-extension.zip")
-                    .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                    .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
-                    .catch(() => toast.error("File non disponibile"));
+                <Button variant="outline" size="sm" onClick={async () => {
+                  try {
+                    await downloadLinkedInExtensionZip();
+                  } catch (e) {
+                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                    toast.error("File non disponibile");
+                  }
                 }}>
                   <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
                 </Button>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { downloadLinkedInExtensionZip } from "@/lib/whatsappExtensionZip";
 
 const log = createLogger("LinkedInTab");
 
@@ -95,11 +96,13 @@ export function LinkedInTab({
         <div className="mt-3 space-y-3">
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <Button className="w-full" size="sm" variant="outline" onClick={() => {
-                fetch("/linkedin-extension.zip")
-                  .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                  .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
-                  .catch(() => toast.error("File non disponibile"));
+              <Button className="w-full" size="sm" variant="outline" onClick={async () => {
+                try {
+                  await downloadLinkedInExtensionZip();
+                } catch (e) {
+                  log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                  toast.error("File non disponibile");
+                }
               }}>
                 <Download className="w-4 h-4 mr-2" /> Scarica Estensione LinkedIn
               </Button>
