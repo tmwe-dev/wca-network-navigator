@@ -65,6 +65,7 @@ var OptimusClient = globalThis.OptimusClient || (function() {
   return { requestPlan: requestPlan, executePlan: executePlan,
            simplifyDom: simplifyDom, computeHash: computeHash };
 })();
+globalThis.OptimusClient = OptimusClient;
 
 // ══════════════════════════════════════════════
 // Optimus Client — WhatsApp Extension
