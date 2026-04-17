@@ -112,14 +112,6 @@
       }
     }
 
-    if (!isExtensionAlive()) {
-      alive = false;
-      currentHeartbeat = BASE_HEARTBEAT_MS; // reset backoff
-      failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
-      post({ direction: "from-extension-li", action: "extensionDead" });
-      return;
-    }
-
     try {
       const msg = { source: "li-content-bridge", action: data.action };
       if (data.url) msg.url = data.url;
