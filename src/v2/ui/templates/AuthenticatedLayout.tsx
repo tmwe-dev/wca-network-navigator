@@ -61,6 +61,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useAiBridgeListener();
+
+
   useEffect(() => {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
