@@ -726,6 +726,8 @@ const Actions = (function () {
     const LIMIT = maxMessages || 50;
     try {
       const r = await TabManager.getOrCreateWaTab();
+      // Bring the WA tab to foreground BEFORE sleep — background tabs throttle DOM
+      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
       await TabManager.sleep(r.reused ? 1500 : 5000);
       await ensurePageHelpers(r.tab.id);
 
@@ -875,6 +877,7 @@ const Actions = (function () {
     const MAX_SCROLLS = maxScrolls || 30;
     try {
       const r = await TabManager.getOrCreateWaTab();
+      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
       await TabManager.sleep(r.reused ? 1500 : 5000);
       await ensurePageHelpers(r.tab.id);
 
