@@ -4,7 +4,7 @@
 // Uses native input API instead of execCommand
 // ══════════════════════════════════════════════════
 
-const Auth = (function () {
+var Auth = globalThis.Auth || (function () {
 
   // ── Cookie ──
   async function getLiAtCookie() {
@@ -299,3 +299,4 @@ const Auth = (function () {
     autoLogin: autoLogin,
   };
 })();
+globalThis.Auth = Auth;

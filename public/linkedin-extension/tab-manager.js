@@ -4,7 +4,7 @@
 // Queue system with priority lanes
 // ══════════════════════════════════════════════════
 
-const TabManager = (function () {
+var TabManager = globalThis.TabManager || (function () {
   let _liTabId = null;
 
   // ── Retry-safe tab creation ──
@@ -146,3 +146,4 @@ const TabManager = (function () {
     sleep: sleep,
   };
 })();
+globalThis.TabManager = TabManager;

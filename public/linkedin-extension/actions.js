@@ -3,7 +3,7 @@
 // Orchestrates hybrid operations into user-facing actions
 // ══════════════════════════════════════════════════
 
-const Actions = (function () {
+var Actions = globalThis.Actions || (function () {
 
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
@@ -407,3 +407,4 @@ const Actions = (function () {
     learnDom: learnDom,
   };
 })();
+globalThis.Actions = Actions;
