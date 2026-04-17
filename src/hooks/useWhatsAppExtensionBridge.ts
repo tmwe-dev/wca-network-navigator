@@ -32,9 +32,9 @@ export function useWhatsAppExtensionBridge() {
       if (!data || data.direction !== "from-extension-wa") return;
 
       if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-      if (data.action === "extensionDead") { setIsAvailable(false); return; }
+      if (data.action === "extensionDead") { configSentRef.current = false; setIsAvailable(false); return; }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
-      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
+      if (data.action === "ping" && data.response?.error) { configSentRef.current = false; setIsAvailable(false); return; }
 
       // Push event from MutationObserver
       if (data.action === "sidebarChanged") {
@@ -66,13 +66,12 @@ export function useWhatsAppExtensionBridge() {
   // Send Supabase config to extension so it can call AI edge function
   const sendConfig = useCallback(async () => {
     if (configSentRef.current) return;
-    
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    
+
     if (!supabaseUrl || !anonKey) return;
 
-    // Get auth token if available
     let authToken = "";
     try {
       const { supabase } = await import("@/integrations/supabase/client");
@@ -80,17 +79,29 @@ export function useWhatsAppExtensionBridge() {
       authToken = data.session?.access_token || "";
     } catch (err) { console.warn("[WA Bridge] Failed to get auth session:", err); }
 
-    const requestId = `wa_setConfig_${Date.now()}`;
-    window.postMessage({
-      direction: "from-webapp-wa",
-      action: "setConfig",
-      requestId,
-      supabaseUrl,
-      anonKey,
-      authToken,
-    }, window.location.origin);
-    
-    configSentRef.current = true;
+    const requestId = `wa_setConfig_${crypto.randomUUID()}`;
+    const result = await new Promise<WaExtensionResponse>((resolve) => {
+      const timer = setTimeout(() => {
+        pendingRef.current.delete(requestId);
+        resolve({ success: false, error: "Config timeout" });
+      }, 8000);
+
+      pendingRef.current.set(requestId, (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      });
+
+      window.postMessage({
+        direction: "from-webapp-wa",
+        action: "setConfig",
+        requestId,
+        supabaseUrl,
+        anonKey,
+        authToken,
+      }, window.location.origin);
+    });
+
+    configSentRef.current = result.success === true;
   }, []);
 
   useEffect(() => {

@@ -6,6 +6,17 @@
 // ══════════════════════════════════════════════
 
 (function () {
+  if (globalThis.__WA_HEARTBEAT_TIMER__) {
+    clearTimeout(globalThis.__WA_HEARTBEAT_TIMER__);
+    globalThis.__WA_HEARTBEAT_TIMER__ = null;
+  }
+  if (globalThis.__WA_MSG_LISTENER__) {
+    window.removeEventListener("message", globalThis.__WA_MSG_LISTENER__);
+  }
+  if (globalThis.__WA_OPTIMUS_REQUEST_LISTENER__) {
+    try { chrome.runtime.onMessage.removeListener(globalThis.__WA_OPTIMUS_REQUEST_LISTENER__); } catch (_) {}
+  }
+
   const BASE_HEARTBEAT_MS = 8000;
   const MAX_HEARTBEAT_MS = 30000;
   let currentHeartbeat = BASE_HEARTBEAT_MS;
@@ -165,6 +176,7 @@
       }
       scheduleHeartbeat();
     }, currentHeartbeat);
+    globalThis.__WA_HEARTBEAT_TIMER__ = heartbeatTimer;
   }
 
   // ── Remove previous listener if re-injected ──
