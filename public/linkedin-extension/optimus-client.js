@@ -1,4 +1,4 @@
-var OptimusClient = (function() {
+var OptimusClient = globalThis.OptimusClient || (function() {
   var _pendingResolve = null;
   var _pendingTimeout = null;
 
