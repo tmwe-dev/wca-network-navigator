@@ -371,7 +371,7 @@ const Actions = (function () {
       dropped: execRes.dropped || 0,
     };
   }
-...
+
   // ── Optimus-first: extract messages from open chat panel ──
   // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
   async function tryOptimusReadThread(tabId, previousFailed, failureContext) {
