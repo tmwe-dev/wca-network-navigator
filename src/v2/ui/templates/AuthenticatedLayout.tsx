@@ -123,6 +123,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   // dopo first paint per non bloccare il TTI.
   const wcaSession = useWcaSession();
 
+  // Prefetch top routes during idle so navigation is instant.
+  useEffect(() => { scheduleIdlePrefetch(); }, []);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth", { replace: true });
   }, [isLoading, isAuthenticated, navigate]);
