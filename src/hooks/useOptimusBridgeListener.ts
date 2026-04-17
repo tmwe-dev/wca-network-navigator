@@ -71,7 +71,7 @@ export function useOptimusBridgeListener() {
 
         if (error) {
           emit({ kind: "error", channel: data.channel, pageType: data.pageType, error: error.message });
-          replyToExtension(data.requestId, { success: false, error: error.message });
+          replyToExtension(data.requestId, { success: false, error: error.message, code: "EDGE_ERROR" });
           return;
         }
 
@@ -90,7 +90,8 @@ export function useOptimusBridgeListener() {
           });
         }
 
-        replyToExtension(data.requestId, { success: true, ...result });
+        // Flatten so getPlan() in optimus-client.js sees success/plan/cached at top level
+        replyToExtension(data.requestId, { success: true, ...(result || {}) });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         log.warn("optimus bridge error", { error: message });
@@ -110,10 +111,10 @@ export function useOptimusBridgeListener() {
 }
 
 function replyToExtension(requestId: string, payload: Record<string, unknown>) {
-  // The extension background is listening via chrome.runtime.onMessage.
-  // Content scripts cannot call chrome.runtime from the page context, so we
-  // rely on the extension's content script to relay this. We use a custom
-  // event that the WA/LI content scripts forward to the background.
+  // The extension content scripts (WA + LI) listen for this message and
+  // forward it to the background as { source:"wca-optimus-response",
+  // requestId, payload } — Optimus.getPlan in optimus-client.js then resolves
+  // with `payload` directly, so the structure here MUST stay nested.
   window.postMessage(
     {
       direction: "from-webapp-optimus-response",
