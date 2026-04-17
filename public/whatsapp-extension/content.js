@@ -109,18 +109,6 @@
       if (data.phone) msg.phone = data.phone;
       if (data.text) msg.text = data.text;
       if (data.contact) msg.contact = data.contact;
-      alive = false;
-      currentHeartbeat = BASE_HEARTBEAT_MS;
-      failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
-      post({ direction: "from-extension-wa", action: "extensionDead" });
-      return;
-    }
-
-    try {
-      const msg = { source: "wa-content-bridge", action: data.action };
-      if (data.phone) msg.phone = data.phone;
-      if (data.text) msg.text = data.text;
-      if (data.contact) msg.contact = data.contact;
       if (data.maxMessages) msg.maxMessages = data.maxMessages;
       if (data.maxScrolls) msg.maxScrolls = data.maxScrolls;
       if (data.lastKnownText) msg.lastKnownText = data.lastKnownText;
