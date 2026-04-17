@@ -9,7 +9,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getCaCertsForHost } from "../check-inbox/caCerts.ts";
+import { getCaCertsForHost } from "./caCerts.ts";
 
 interface RuleRow {
   id: string;
