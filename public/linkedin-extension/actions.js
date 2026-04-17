@@ -88,6 +88,93 @@ const Actions = (function () {
     } catch (err) { return Config.errorResponse(Config.ERROR.SEARCH_FAILED, err.message); }
   }
 
+  // ── Optimus-first helpers ──
+  async function tryOptimusInbox(tabId, previousFailed, failureContext) {
+    const inboxSelector = '[class*="msg-overlay-list-bubble"], [class*="msg-conversations-container"], main, [role="main"]';
+    const snap = await Optimus.snapshotPage(tabId, inboxSelector, 6, 3000);
+    if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
+
+    const planRes = await Optimus.getPlan({
+      channel: "linkedin",
+      pageType: "messaging",
+      snapshot: snap.snapshot,
+      hash: snap.hash,
+      previousPlanFailed: !!previousFailed,
+      failureContext: failureContext || null,
+    });
+    if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+
+    const execRes = await Optimus.executePlanInTab(tabId, inboxSelector, planRes.plan || planRes);
+    if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
+
+    return {
+      success: true,
+      cached: !!planRes.cached,
+      planVersion: planRes.plan_version || 0,
+      confidence: planRes.confidence || 0,
+      latencyMs: planRes.ai_latency_ms || 0,
+      items: execRes.items || [],
+      candidates: execRes.candidates || 0,
+      dropped: execRes.dropped || 0,
+    };
+  }
+
+  async function tryOptimusThread(tabId, previousFailed, failureContext) {
+    const threadSelector = '[class*="msg-s-message-list"], [class*="msg-thread"], main, [role="main"]';
+    const snap = await Optimus.snapshotPage(tabId, threadSelector, 6, 3000);
+    if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
+
+    const planRes = await Optimus.getPlan({
+      channel: "linkedin",
+      pageType: "thread",
+      snapshot: snap.snapshot,
+      hash: snap.hash,
+      previousPlanFailed: !!previousFailed,
+      failureContext: failureContext || null,
+    });
+    if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+
+    const execRes = await Optimus.executePlanInTab(tabId, threadSelector, planRes.plan || planRes);
+    if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
+
+    return {
+      success: true,
+      cached: !!planRes.cached,
+      planVersion: planRes.plan_version || 0,
+      confidence: planRes.confidence || 0,
+      latencyMs: planRes.ai_latency_ms || 0,
+      items: execRes.items || [],
+      candidates: execRes.candidates || 0,
+      dropped: execRes.dropped || 0,
+    };
+  }
+
+  function mapOptimusInboxItems(items) {
+    return items.map(function (it) {
+      return {
+        name: it.participant_name || it.thread_name || it.name || "",
+        threadUrl: it.thread_url || it.url || "",
+        unread: !!(it.unread_indicator && String(it.unread_indicator).trim()),
+        lastMessage: it.last_message_preview || it.last_message || it.preview || "",
+        lastActivity: it.last_activity_time || it.timestamp || "",
+      };
+    }).filter(function (t) { return !!t.name; });
+  }
+
+  function mapOptimusThreadMessages(items) {
+    return items.map(function (it) {
+      const sender = it.message_sender || it.sender || "";
+      const s = String(sender).toLowerCase().trim();
+      const direction = it.direction || ((s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound");
+      return {
+        text: it.message_text || it.text || it.body || "",
+        sender: sender,
+        timestamp: it.message_time || it.timestamp || it.time || new Date().toISOString(),
+        direction: direction,
+      };
+    }).filter(function (m) { return !!m.text; });
+  }
+
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
@@ -109,28 +196,54 @@ const Actions = (function () {
       } catch (_) {}
     }
 
-    // Level 1: AX Tree
+    // ── Optimus-first ──
+    let optimus = await tryOptimusInbox(tab.id, false, null);
+    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
+      optimus = await tryOptimusInbox(tab.id, true, "Cached plan returned 0 threads from LI messaging inbox");
+    }
+
+    if (optimus.success) {
+      const threads = mapOptimusInboxItems(optimus.items);
+      return {
+        success: true,
+        threads: threads,
+        method: optimus.cached ? "optimus-cache" : "optimus-ai",
+        optimus: {
+          cached: optimus.cached,
+          planVersion: optimus.planVersion,
+          confidence: optimus.confidence,
+          latencyMs: optimus.latencyMs,
+          dropped: optimus.dropped,
+        },
+      };
+    }
+
+    // Optimus reachable but failed → propagate
+    if (!optimus.optimusUnavailable) {
+      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
+    }
+
+    // ── Legacy fallback (only if Optimus unreachable: 503/no-app-tab/timeout) ──
+    // Legacy A: AX Tree
     let axError = null;
     try {
       const axResult = await AXTree.readInbox(tab.id);
-      if (axResult && axResult.threads && axResult.threads.length > 0) return axResult;
+      if (axResult && axResult.threads && axResult.threads.length > 0) {
+        axResult.method = "legacy-ax";
+        return axResult;
+      }
       axError = "ax_tree returned 0 threads";
-    } catch (e) { axError = e.message || String(e); console.warn("[LI-Hybrid] AX inbox failed:", axError); }
+    } catch (e) { axError = e.message || String(e); }
 
-    // Level 2: Structural fallback — multiple strategies
+    // Legacy B: structural fallback (kept here, used only when Optimus is down)
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: function () {
           const threads = [];
           const seen = {};
-          const diagnostics = { methods: [], candidatesFound: 0, candidatesRejected: 0, url: window.location.href, bodyLength: (document.body.innerText || "").length };
-
-          // Strategy 0: Modern selectors (2025-2026 LinkedIn layout)
-          const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"], [class*="msg-overlay-conversation-bubble"]');
-          diagnostics.methods.push("modern_cards:" + modernCards.length);
+          const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
           modernCards.forEach(function (card) {
-            diagnostics.candidatesFound++;
             const link = card.querySelector("a[href*='/messaging/']") || card.closest("a[href*='/messaging/']");
             const threadUrl = link ? (link.href || "") : "";
             if (seen[threadUrl] && threadUrl) return;
@@ -138,120 +251,41 @@ const Actions = (function () {
             let name = "";
             const h3 = card.querySelector("h3");
             if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
-            if (!name) { const spans = card.querySelectorAll("span"); for (let s = 0; s < Math.min(spans.length, 10); s++) { const t = (spans[s].textContent || "").trim(); if (t.length > 1 && t.length < 60 && !/^\d{1,2}[\/:\.]/.test(t) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(t)) { name = t; break; } } }
-            if (!name || name.length < 2) { diagnostics.candidatesRejected++; return; }
+            if (!name) { const spans = card.querySelectorAll("span"); for (let s = 0; s < Math.min(spans.length, 10); s++) { const t = (spans[s].textContent || "").trim(); if (t.length > 1 && t.length < 60 && !/^\d{1,2}[\/:\.]/.test(t)) { name = t; break; } } }
+            if (!name || name.length < 2) return;
             let lastMsg = "";
             const msgEl = card.querySelector("p, [class*='snippet'], [class*='preview']");
             if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
             const unread = !!card.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
             threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
           });
-
-          // Strategy 1: thread links
           if (threads.length === 0) {
             const threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
-            diagnostics.methods.push("thread_links:" + threadLinks.length);
             threadLinks.forEach(function (link) {
               const threadUrl = link.href || "";
               if (seen[threadUrl]) return;
               seen[threadUrl] = true;
               const container = link.closest("li") || link.parentElement;
               if (!container) return;
-              diagnostics.candidatesFound++;
               let name = "";
-              let lastMsg = "";
-              let unread = false;
               const h3 = container.querySelector("h3");
               if (h3) { const h3t = h3.textContent.replace(/\s+/g, " ").trim(); if (h3t.length > 1 && h3t.length < 80) name = h3t; }
-              if (!name) { const spans = container.querySelectorAll("span"); for (let si = 0; si < spans.length; si++) { const st = (spans[si].textContent || "").trim(); if (st.length > 1 && st.length < 60 && !/^\d{1,2}[\/:\.]/.test(st) && !/^(oggi|ieri|today|yesterday|now|ora)/i.test(st) && !/^(passa|go to|details)/i.test(st)) { name = st; break; } } }
               if (!name) { const img = container.querySelector("img[alt]"); if (img) { const alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar/i.test(alt)) name = alt; } }
+              if (!name) return;
               const msgP = container.querySelector("p, [class*='snippet']");
-              if (msgP) lastMsg = msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
-              const badge = container.querySelector("[class*='unread'], [class*='badge']");
-              if (badge) unread = true;
-              if (!name || /^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(name)) { diagnostics.candidatesRejected++; return; }
-              threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+              const lastMsg = msgP ? msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120) : "";
+              threads.push({ name: name, threadUrl: threadUrl, unread: false, lastMessage: lastMsg });
             });
           }
-
-          // Strategy 2: list items in messaging sidebar
-          if (threads.length === 0) {
-            const listItems = document.querySelectorAll("ul li, [role='list'] [role='listitem'], [class*='msg-conversation-listitem'], [class*='conversation-list'] li");
-            diagnostics.methods.push("list_items:" + listItems.length);
-            listItems.forEach(function (li) {
-              diagnostics.candidatesFound++;
-              const link = li.querySelector("a[href*='/messaging/'], a[href*='thread']");
-              const threadUrl = link ? (link.href || "") : "";
-              if (seen[threadUrl] && threadUrl) return;
-              if (threadUrl) seen[threadUrl] = true;
-              let name = "";
-              const h3 = li.querySelector("h3");
-              if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
-              if (!name) { const img = li.querySelector("img[alt]"); if (img) { const alt = (img.getAttribute("alt") || "").trim(); if (alt.length > 1 && alt.length < 60 && !/photo|foto|avatar|placeholder/i.test(alt)) name = alt; } }
-              if (!name) { const spans = li.querySelectorAll("span, p"); for (let s = 0; s < Math.min(spans.length, 10); s++) { const t = (spans[s].textContent || "").trim(); if (t.length > 1 && t.length < 60 && !/^\d/.test(t) && !/^(passa|go to|details|scrivi|messaggistica)/i.test(t)) { name = t; break; } } }
-              if (!name || name.length < 2) { diagnostics.candidatesRejected++; return; }
-              let lastMsg = "";
-              const msgEl = li.querySelector("p, [class*='snippet'], [class*='preview']");
-              if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
-              const unread = !!li.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
-              threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
-            });
-          }
-
-          // Strategy 3: conversation cards by img alt text
-          if (threads.length === 0) {
-            const imgs = document.querySelectorAll("img[alt]");
-            diagnostics.methods.push("img_alt:" + imgs.length);
-            imgs.forEach(function (img) {
-              const alt = (img.getAttribute("alt") || "").trim();
-              if (alt.length < 2 || alt.length > 60) return;
-              if (/photo|foto|avatar|placeholder|logo|linkedin/i.test(alt)) return;
-              const container = img.closest("li, a, [role='listitem']");
-              if (!container) return;
-              diagnostics.candidatesFound++;
-              if (seen[alt]) return;
-              seen[alt] = true;
-              const link = container.querySelector("a[href*='/messaging/']") || (container.tagName === "A" ? container : null);
-              const threadUrl = link ? (link.href || "") : "";
-              threads.push({ name: alt, threadUrl: threadUrl, unread: false, lastMessage: "" });
-            });
-          }
-
-          // Strategy 4: Generic anchor scan for messaging links with text
-          if (threads.length === 0) {
-            const allAnchors = document.querySelectorAll("a[href*='/messaging/']");
-            diagnostics.methods.push("generic_anchors:" + allAnchors.length);
-            allAnchors.forEach(function (a) {
-              const href = a.href || "";
-              if (!/\/messaging\/thread\//.test(href)) return;
-              if (seen[href]) return;
-              seen[href] = true;
-              diagnostics.candidatesFound++;
-              const text = a.textContent.replace(/\s+/g, " ").trim();
-              // Extract first plausible name from text
-              const parts = text.split(/\n/).map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 1 && p.length < 60; });
-              let name = "";
-              for (let p = 0; p < parts.length; p++) {
-                if (!/^\d/.test(parts[p]) && !/^(passa|go to|details|scrivi|messaggistica|today|yesterday|oggi|ieri)/i.test(parts[p])) { name = parts[p]; break; }
-              }
-              if (name) threads.push({ name: name, threadUrl: href, unread: false, lastMessage: "" });
-            });
-          }
-
-          // Enhanced diagnostics if 0 threads
-          if (threads.length === 0) {
-            diagnostics.aCount = document.querySelectorAll("a").length;
-            diagnostics.liCount = document.querySelectorAll("li").length;
-            diagnostics.h3Count = document.querySelectorAll("h3").length;
-            diagnostics.imgCount = document.querySelectorAll("img").length;
-            diagnostics.bodyTextPreview = (document.body.innerText || "").substring(0, 500);
-          }
-
-          return { success: true, threads: threads, method: "structural_fallback", diagnostics: diagnostics };
+          return { success: true, threads: threads, method: "legacy-structural" };
         },
       });
-      return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No inbox data");
-    } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message + (axError ? " | AX: " + axError : "")); }
+      const out = (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No inbox data");
+      if (out && out.success) out.legacyReason = "optimus_unavailable: " + (optimus.error || "unknown");
+      return out;
+    } catch (e) {
+      return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message + (axError ? " | AX: " + axError : ""));
+    }
   }
 
   async function readThread(threadUrl) {
@@ -259,13 +293,41 @@ const Actions = (function () {
     const tab = await TabManager.getLinkedInTab(threadUrl, false);
     await TabManager.sleep(6000);
 
-    // Level 1: AX Tree
+    // ── Optimus-first ──
+    let optimus = await tryOptimusThread(tab.id, false, null);
+    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
+      optimus = await tryOptimusThread(tab.id, true, "Cached plan returned 0 messages from LI thread " + threadUrl);
+    }
+
+    if (optimus.success) {
+      const messages = mapOptimusThreadMessages(optimus.items);
+      return {
+        success: true,
+        messages: messages,
+        method: optimus.cached ? "optimus-cache" : "optimus-ai",
+        optimus: {
+          cached: optimus.cached,
+          planVersion: optimus.planVersion,
+          confidence: optimus.confidence,
+          latencyMs: optimus.latencyMs,
+          dropped: optimus.dropped,
+        },
+      };
+    }
+
+    if (!optimus.optimusUnavailable) {
+      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
+    }
+
+    // ── Legacy fallback ──
     try {
       const axResult = await AXTree.readThread(tab.id);
-      if (axResult && axResult.messages && axResult.messages.length > 0) return axResult;
+      if (axResult && axResult.messages && axResult.messages.length > 0) {
+        axResult.method = "legacy-ax";
+        return axResult;
+      }
     } catch (_) {}
 
-    // Level 3: Structural fallback
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -282,7 +344,7 @@ const Actions = (function () {
             const timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
             if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
           });
-          return { success: true, messages: messages, method: "structural_fallback" };
+          return { success: true, messages: messages, method: "legacy-structural" };
         },
       });
       return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No thread data");
