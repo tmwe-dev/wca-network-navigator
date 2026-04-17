@@ -665,12 +665,71 @@ const Actions = (function () {
     return { success: true, messages: msgs, contact: target, method: "dom" };
   }
 
+  // ── Optimus-first: extract messages from open chat panel ──
+  // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
+  async function tryOptimusReadThread(tabId, previousFailed, failureContext) {
+    const panelSelector = '[data-testid="conversation-panel-messages"], #main [role="application"], #main';
+    const snap = await Optimus.snapshotPage(tabId, panelSelector, 6, 3000);
+    if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
+
+    const planRes = await Optimus.getPlan({
+      channel: "whatsapp",
+      pageType: "thread",
+      snapshot: snap.snapshot,
+      hash: snap.hash,
+      previousPlanFailed: !!previousFailed,
+      failureContext: failureContext || null,
+    });
+
+    if (!planRes || !planRes.success) {
+      return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    }
+
+    const execRes = await Optimus.executePlanInTab(tabId, panelSelector, planRes.plan || planRes);
+    if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
+
+    return {
+      success: true,
+      cached: !!planRes.cached,
+      planVersion: planRes.plan_version || 0,
+      confidence: planRes.confidence || 0,
+      latencyMs: planRes.ai_latency_ms || 0,
+      items: execRes.items || [],
+      candidates: execRes.candidates || 0,
+      dropped: execRes.dropped || 0,
+    };
+  }
+
+  // Map Optimus extracted items to legacy message shape used by useWhatsAppAdaptiveSync
+  function mapOptimusThreadItems(items, contactName) {
+    return items.map(function (it) {
+      // Optimus may return keys like message_text, message_sender, message_time, direction
+      const text = it.message_text || it.text || it.body || "";
+      const senderRaw = it.message_sender || it.sender || "";
+      const timestamp = it.message_time || it.timestamp || it.time || "";
+      // Detect direction: explicit field wins, otherwise infer from sender = "Tu"/"You"/"Me"
+      let direction = it.direction || "";
+      if (!direction) {
+        const s = String(senderRaw).toLowerCase().trim();
+        direction = (s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound";
+      }
+      return {
+        direction: direction,
+        text: text,
+        timestamp: timestamp,
+        contact: direction === "outbound" ? "me" : (senderRaw || contactName),
+      };
+    }).filter(function (m) { return !!m.text; });
+  }
+
   async function readThread(contactName, maxMessages) {
+    const LIMIT = maxMessages || 50;
     try {
       const r = await TabManager.getOrCreateWaTab();
       await TabManager.sleep(r.reused ? 1500 : 5000);
       await ensurePageHelpers(r.tab.id);
 
+      // Step 1: open the target chat (this part stays as-is)
       const results = await chrome.scripting.executeScript({
         target: { tabId: r.tab.id },
         args: [contactName],
@@ -680,7 +739,37 @@ const Actions = (function () {
       const scriptResult = results && results[0] ? results[0].result : null;
       if (!scriptResult || !scriptResult.success) return scriptResult || { success: false, error: "Script error" };
 
-      // Try AI extraction
+      // Step 2: Optimus-first extraction
+      let optimus = await tryOptimusReadThread(r.tab.id, false, null);
+      if (optimus.success && optimus.items.length === 0 && optimus.cached) {
+        optimus = await tryOptimusReadThread(r.tab.id, true, "Cached plan returned 0 messages from thread panel for " + contactName);
+      }
+
+      if (optimus.success) {
+        const allMessages = mapOptimusThreadItems(optimus.items, contactName);
+        const messages = allMessages.slice(-LIMIT);
+        return {
+          success: true,
+          messages: messages,
+          contact: contactName,
+          method: optimus.cached ? "optimus-cache" : "optimus-ai",
+          optimus: {
+            cached: optimus.cached,
+            planVersion: optimus.planVersion,
+            confidence: optimus.confidence,
+            latencyMs: optimus.latencyMs,
+            dropped: optimus.dropped,
+          },
+        };
+      }
+
+      // Optimus reachable but failed structurally → propagate failure
+      if (!optimus.optimusUnavailable) {
+        return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error", contact: contactName };
+      }
+
+      // ── Legacy fallback (only if Optimus unreachable: 503/no-app-tab/timeout) ──
+      // Legacy Path A: AI extraction on the panel HTML
       if (scriptResult.html && Config.hasConfig()) {
         const aiResult = await AiExtract.callAiExtract(scriptResult.html, "thread");
         if (aiResult && aiResult.success && aiResult.items && aiResult.items.length > 0) {
@@ -688,19 +777,22 @@ const Actions = (function () {
             success: true,
             messages: aiResult.items.map(function (m) {
               return { direction: m.direction || "inbound", text: m.text || "", timestamp: m.timestamp || "", contact: m.contact || contactName };
-            }),
-            contact: contactName, method: "ai",
+            }).slice(-LIMIT),
+            contact: contactName,
+            method: "legacy-ai",
           };
         }
       }
 
-      // DOM fallback
+      // Legacy Path B: hardcoded DOM extraction
       const domResults = await chrome.scripting.executeScript({
         target: { tabId: r.tab.id },
-        args: [contactName, maxMessages || 50],
+        args: [contactName, LIMIT],
         func: _pageDomReadMessages,
       });
-      return domResults && domResults[0] ? domResults[0].result : { success: false, error: "DOM fallback failed" };
+      const domRes = domResults && domResults[0] ? domResults[0].result : null;
+      if (domRes) domRes.method = "legacy-dom:" + (domRes.method || "unknown");
+      return domRes || { success: false, error: "DOM fallback failed" };
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -766,6 +858,19 @@ const Actions = (function () {
     return { success: true, messages: msgs, foundLast: hitLast, totalInDom: msgEls.length };
   }
 
+  // Page-only scroller: scrolls the panel up and signals if reached top
+  function _pageScrollUpOnly() {
+    const H = window.__waH;
+    const panel = H.qsDeep('[data-testid="conversation-panel-messages"]') || H.qsDeep('#main [role="application"]') || H.qsDeep("#main");
+    if (!panel) return { success: false, error: "Panel not found" };
+    const scrollContainer = panel.closest('[data-testid="conversation-panel-body"]') || panel.parentElement;
+    if (!scrollContainer) return { success: false, error: "Scroll container not found" };
+    const before = scrollContainer.scrollTop;
+    scrollContainer.scrollTop = 0;
+    const after = scrollContainer.scrollTop;
+    return { success: true, scrollBefore: before, scrollAfter: after, reachedTop: after === 0 && before === 0 };
+  }
+
   async function backfillChat(contactName, lastKnownText, maxScrolls) {
     const MAX_SCROLLS = maxScrolls || 30;
     try {
@@ -773,40 +878,140 @@ const Actions = (function () {
       await TabManager.sleep(r.reused ? 1500 : 5000);
       await ensurePageHelpers(r.tab.id);
 
+      // 1. Open the target chat
       const openResult = await chrome.scripting.executeScript({
         target: { tabId: r.tab.id },
         args: [contactName],
         func: _pageOpenChatForBackfill,
       });
-
       const openRes = openResult && openResult[0] ? openResult[0].result : null;
       if (!openRes || !openRes.success) return openRes || { success: false, error: "Open failed" };
 
+      const panelSelector = '[data-testid="conversation-panel-messages"], #main [role="application"], #main';
       const allMessages = [];
-      let foundLast = false;
+      const seen = new Set();
       const scrollDelays = [1, 2, 1.5, 3, 1, 2.5, 2, 1, 3, 1.5];
-      let scrollIdx;
+      let foundLast = false;
+      let scrollIdx = 0;
+      let optimusUnavailable = false;
+      let plan = null;
+      let cached = false;
+      let planVersion = 0;
+      let confidence = 0;
 
-      for (scrollIdx = 0; scrollIdx < MAX_SCROLLS && !foundLast; scrollIdx++) {
-        const scrollResult = await chrome.scripting.executeScript({
-          target: { tabId: r.tab.id },
-          args: [contactName, lastKnownText || ""],
-          func: _pageScrollAndRead,
+      // 2. Get an Optimus plan ONCE before the loop
+      const initialSnap = await Optimus.snapshotPage(r.tab.id, panelSelector, 6, 3000);
+      if (initialSnap && initialSnap.ok) {
+        const planRes = await Optimus.getPlan({
+          channel: "whatsapp",
+          pageType: "thread",
+          snapshot: initialSnap.snapshot,
+          hash: initialSnap.hash,
+          previousPlanFailed: false,
+          failureContext: null,
         });
-
-        const res = scrollResult && scrollResult[0] ? scrollResult[0].result : null;
-        if (!res || !res.success) break;
-        if (res.messages && res.messages.length) {
-          for (const m of res.messages) {
-            const isDup = allMessages.some(function (existing) { return existing.text === m.text && existing.timestamp === m.timestamp; });
-            if (!isDup) allMessages.push(m);
-          }
+        if (planRes && planRes.success) {
+          plan = planRes.plan || planRes;
+          cached = !!planRes.cached;
+          planVersion = planRes.plan_version || 0;
+          confidence = planRes.confidence || 0;
+        } else {
+          optimusUnavailable = true;
         }
-        if (res.foundLast) { foundLast = true; break; }
+      } else {
+        optimusUnavailable = true;
+      }
+
+      function pushUnique(msg) {
+        const key = (msg.text || "") + "|" + (msg.timestamp || "");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        if (lastKnownText && msg.text === lastKnownText) return "stop";
+        allMessages.push(msg);
+        return true;
+      }
+
+      // 3. Loop: extract → scroll → extract
+      for (scrollIdx = 0; scrollIdx < MAX_SCROLLS && !foundLast; scrollIdx++) {
+        if (plan && !optimusUnavailable) {
+          // Optimus extraction with cached plan
+          let exec = await Optimus.executePlanInTab(r.tab.id, panelSelector, plan);
+          let items = (exec && exec.items) || [];
+
+          // Retry once with fresh plan if cache returned 0
+          if (items.length === 0 && cached) {
+            const freshSnap = await Optimus.snapshotPage(r.tab.id, panelSelector, 6, 3000);
+            if (freshSnap && freshSnap.ok) {
+              const freshRes = await Optimus.getPlan({
+                channel: "whatsapp",
+                pageType: "thread",
+                snapshot: freshSnap.snapshot,
+                hash: freshSnap.hash,
+                previousPlanFailed: true,
+                failureContext: "Cached plan returned 0 messages during backfill scroll " + scrollIdx + " for " + contactName,
+              });
+              if (freshRes && freshRes.success) {
+                plan = freshRes.plan || freshRes;
+                cached = !!freshRes.cached;
+                planVersion = freshRes.plan_version || 0;
+                confidence = freshRes.confidence || 0;
+                exec = await Optimus.executePlanInTab(r.tab.id, panelSelector, plan);
+                items = (exec && exec.items) || [];
+              }
+            }
+            if (items.length === 0) break; // DOM no longer recognized
+          }
+
+          const mapped = mapOptimusThreadItems(items, contactName);
+          for (const m of mapped) {
+            const r2 = pushUnique(m);
+            if (r2 === "stop") { foundLast = true; break; }
+          }
+        } else {
+          // Legacy fallback: scroll-and-read with hardcoded selectors
+          const scrollResult = await chrome.scripting.executeScript({
+            target: { tabId: r.tab.id },
+            args: [contactName, lastKnownText || ""],
+            func: _pageScrollAndRead,
+          });
+          const res = scrollResult && scrollResult[0] ? scrollResult[0].result : null;
+          if (!res || !res.success) break;
+          if (res.messages) {
+            for (const m of res.messages) {
+              const r2 = pushUnique(m);
+              if (r2 === "stop") { foundLast = true; break; }
+            }
+          }
+          if (res.foundLast) { foundLast = true; break; }
+        }
+
+        if (foundLast) break;
+
+        // 4. Scroll up to load older messages
+        if (plan && !optimusUnavailable) {
+          const scrollRes = await chrome.scripting.executeScript({
+            target: { tabId: r.tab.id },
+            func: _pageScrollUpOnly,
+          });
+          const sr = scrollRes && scrollRes[0] ? scrollRes[0].result : null;
+          if (sr && sr.reachedTop) break;
+        }
         await TabManager.sleep(scrollDelays[scrollIdx % scrollDelays.length] * 1000);
       }
 
-      return { success: true, messages: allMessages, contact: contactName, foundLast: foundLast, scrollCount: scrollIdx };
+      return {
+        success: true,
+        messages: allMessages,
+        contact: contactName,
+        foundLast: foundLast,
+        scrollCount: scrollIdx,
+        method: optimusUnavailable ? "legacy-dom" : (cached ? "optimus-cache" : "optimus-ai"),
+        optimus: optimusUnavailable ? null : {
+          cached: cached,
+          planVersion: planVersion,
+          confidence: confidence,
+        },
+      };
     } catch (err) {
       return { success: false, error: err.message };
     }
