@@ -120,12 +120,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     enabled: isAuthenticated && sessionReady,
   });
 
-  useJobHealthMonitor();
-  useWcaSync();
-  useOptimusBridgeListener();
-  useAiExtractBridgeListener();
-  const outreachQueue = useOutreachQueue();
-  const globalSync = useGlobalAutoSync();
+  // ⚡ Perf: hook critici per UI (sessione WCA) montati subito.
+  // Hook background (useJobHealthMonitor, useWcaSync, useOutreachQueue,
+  // useGlobalAutoSync, useOptimusBridgeListener, useAiExtractBridgeListener)
+  // sono spostati in <BackgroundServices> e avviati su requestIdleCallback
+  // dopo first paint per non bloccare il TTI.
   const wcaSession = useWcaSession();
 
   useEffect(() => {
