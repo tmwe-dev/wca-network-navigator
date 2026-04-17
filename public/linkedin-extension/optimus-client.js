@@ -318,6 +318,4 @@ var Optimus = globalThis.Optimus || (function () {
     getPlan: getPlan,
     executePlanInTab: executePlanInTab,
   };
-})();
-})();
 globalThis.Optimus = Optimus;
