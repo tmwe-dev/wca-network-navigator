@@ -171,27 +171,26 @@ const AILearn = (function () {
         return null;
       }
 
-      const response = await fetch(supabaseUrl + "/functions/v1/linkedin-ai-extract", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseKey,
-          "Authorization": "Bearer " + supabaseKey,
-        },
-        body: JSON.stringify({
-          mode: "learnDom",
-          pageType: pageType || "profile",
-          snapshot: snapshot,
-        }),
+      // VIA BRIDGE: niente fetch diretto a Supabase (CORS blocca chrome-extension://)
+      if (typeof AiBridge === "undefined" || !AiBridge.aiExtractRequest) {
+        console.warn("[AI-Learn] AiBridge non disponibile");
+        _learning = false;
+        return null;
+      }
+      const bridgeResp = await AiBridge.aiExtractRequest({
+        channel: "linkedin",
+        mode: "learnDom",
+        pageType: pageType || "profile",
+        snapshot: snapshot,
       });
 
-      if (!response.ok) {
-        console.warn("[AI-Learn] Edge function returned", response.status);
+      if (!bridgeResp || bridgeResp.success === false) {
+        console.warn("[AI-Learn] Bridge AI error:", bridgeResp && bridgeResp.error);
         _learning = false;
         return null;
       }
 
-      const data = await response.json();
+      const data = bridgeResp.data || {};
       if (data.schema) {
         const schema = await saveSchema(data.schema, pageType);
         console.log("[AI-Learn] ✅ Selectors learned for '" + pageType + "':", Object.keys(schema).length, "keys");

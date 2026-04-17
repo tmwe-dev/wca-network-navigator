@@ -21,17 +21,16 @@ const Auth = (function () {
       const liAt = await getLiAtCookie();
       if (!liAt) return Config.errorResponse(Config.ERROR.NO_COOKIE, "Cookie li_at non trovato");
 
-      const url = Config.getUrl();
-      const key = Config.getKey();
-      if (!url || !key) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione Supabase mancante");
-
-      const res = await fetch(url + "/functions/v1/save-linkedin-cookie", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": key, "Authorization": "Bearer " + key },
-        body: JSON.stringify({ cookie: liAt }),
-      });
-      const data = await res.json();
-      return Config.successResponse({ cookieLength: liAt.length, saved: data.success });
+      // VIA BRIDGE: niente fetch diretto a Supabase (CORS blocca chrome-extension://)
+      if (typeof AiBridge === "undefined" || !AiBridge.liCookieRequest) {
+        return Config.errorResponse(Config.ERROR.NO_CONFIG, "Bridge webapp non disponibile");
+      }
+      const bridgeResp = await AiBridge.liCookieRequest({ cookie: liAt });
+      if (!bridgeResp || bridgeResp.success === false) {
+        return Config.errorResponse(Config.ERROR.UNKNOWN, (bridgeResp && bridgeResp.error) || "Bridge cookie sync failed");
+      }
+      const data = bridgeResp.data || {};
+      return Config.successResponse({ cookieLength: liAt.length, saved: data.success !== false });
     } catch (err) {
       return Config.errorResponse(Config.ERROR.UNKNOWN, err.message);
     }
@@ -242,12 +241,15 @@ const Auth = (function () {
 
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione non impostata");
 
-    const credRes = await fetch(Config.getUrl() + "/functions/v1/get-linkedin-credentials", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": Config.getKey(), "Authorization": "Bearer " + Config.getKey() },
-      body: JSON.stringify({}),
-    });
-    const creds = await credRes.json();
+    // VIA BRIDGE: niente fetch diretto a Supabase (CORS blocca chrome-extension://)
+    if (typeof AiBridge === "undefined" || !AiBridge.liCredsRequest) {
+      return Config.errorResponse(Config.ERROR.NO_CONFIG, "Bridge webapp non disponibile per credenziali");
+    }
+    const credsBridge = await AiBridge.liCredsRequest();
+    if (!credsBridge || credsBridge.success === false) {
+      return Config.errorResponse(Config.ERROR.LOGIN_FAILED, (credsBridge && credsBridge.error) || "Lettura credenziali fallita");
+    }
+    const creds = (credsBridge.data || {});
     if (!creds.email || !creds.password) return Config.errorResponse(Config.ERROR.LOGIN_FAILED, "Credenziali LinkedIn non configurate");
 
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/");

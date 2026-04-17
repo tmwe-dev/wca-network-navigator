@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.1.0",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. Architettura modulare ibrida AX Tree + Optimus AI Self-Healing (payload nested bridge).",
+  "version": "3.2.0",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.2 zero-fetch (tutti gli edge call via bridge webapp, no CORS).",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {

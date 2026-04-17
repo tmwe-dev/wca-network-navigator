@@ -66,29 +66,26 @@ const AiExtract = (function () {
     }
   }
 
-  // ── Call AI edge function ──
+  // ── Call AI edge function VIA BRIDGE (no direct fetch — CORS blocks chrome-extension://)
+  // Background → AiBridge → content script → webapp → edge function → ritorno via postMessage
   async function callAiExtract(html, mode) {
-    if (!Config.hasConfig()) return null;
     try {
-      const url = Config.getUrl() + "/functions/v1/whatsapp-ai-extract";
-      const headers = {
-        "Content-Type": "application/json",
-        "apikey": Config.getKey(),
-      };
-      headers["Authorization"] = "Bearer " + (Config.getToken() || Config.getKey());
-
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({ html: html, mode: mode }),
-      });
-      if (!resp.ok) {
-        console.warn("[WA AI] Edge error:", resp.status);
+      if (typeof AiBridge === "undefined" || !AiBridge.aiExtractRequest) {
+        console.warn("[WA AI] AiBridge non disponibile — impossibile invocare edge function");
         return null;
       }
-      return await resp.json();
+      const result = await AiBridge.aiExtractRequest({
+        channel: "whatsapp",
+        mode: mode,
+        html: html,
+      });
+      if (!result || result.success === false) {
+        console.warn("[WA AI] Bridge AI error:", result && result.error);
+        return null;
+      }
+      return result.data || null;
     } catch (e) {
-      console.warn("[WA AI] Fetch failed:", e.message);
+      console.warn("[WA AI] Bridge call failed:", e.message);
       return null;
     }
   }
