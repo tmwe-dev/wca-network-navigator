@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
-import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
+import {
+  downloadLinkedInExtensionZip,
+  downloadWhatsAppExtensionZip,
+} from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
@@ -93,11 +96,14 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Login automatico e invio messaggi LinkedIn</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              fetch("/linkedin-extension.zip")
-                .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("LinkedIn extension scaricata!"); })
-                .catch(() => toast.error("File non disponibile — pacchettizzazione necessaria"));
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                await downloadLinkedInExtensionZip();
+                toast.success("LinkedIn extension scaricata!");
+              } catch (e) {
+                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                toast.error("File non disponibile");
+              }
             }}>
               <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
             </Button>
