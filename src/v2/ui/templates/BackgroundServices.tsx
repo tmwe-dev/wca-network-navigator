@@ -39,12 +39,16 @@ export function BackgroundServices({ children }: Props): React.ReactElement {
 
   React.useEffect(() => {
     const ric: typeof window.requestIdleCallback | undefined = window.requestIdleCallback;
-    const handle = ric
-      ? ric(() => setReady(true), { timeout: 2000 })
-      : window.setTimeout(() => setReady(true), 1500);
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+    if (ric) {
+      idleHandle = ric(() => setReady(true), { timeout: 2000 });
+    } else {
+      timeoutHandle = window.setTimeout(() => setReady(true), 1500);
+    }
     return () => {
-      if (ric && typeof handle === "number") window.cancelIdleCallback(handle);
-      else window.clearTimeout(handle as number);
+      if (idleHandle != null && window.cancelIdleCallback) window.cancelIdleCallback(idleHandle);
+      if (timeoutHandle != null) window.clearTimeout(timeoutHandle);
     };
   }, []);
 
