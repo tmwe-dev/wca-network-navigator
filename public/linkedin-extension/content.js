@@ -203,6 +203,55 @@
   }
 
   globalThis.__LI_OPTIMUS_REQUEST_LISTENER__ = function (msg, sender, sendResponse) {
+    // ── AI Bridge: background → webapp via postMessage ──
+    if (msg && msg.action === "aiBridgeRequest") {
+      const reqId = msg.requestId;
+      const responseDirection = msg.responseDirection;
+
+      window.postMessage({
+        direction: msg.direction,
+        requestId: reqId,
+        payload: msg.payload || {},
+      }, "*");
+
+      var finishedAi = false;
+      var timerAi = setTimeout(function () {
+        if (finishedAi) return;
+        finishedAi = true;
+        window.removeEventListener("message", aiHandler);
+        try {
+          chrome.runtime.sendMessage({
+            source: "li-ai-bridge-response",
+            requestId: reqId,
+            payload: { success: false, error: "WEBAPP_TIMEOUT" },
+          });
+        } catch (_) {}
+        sendResponse({ ok: true });
+      }, 14000);
+
+      function aiHandler(event) {
+        if (event.source !== window) return;
+        const d = event.data;
+        if (!d || d.direction !== responseDirection) return;
+        if (d.requestId && d.requestId !== reqId) return;
+        if (finishedAi) return;
+        finishedAi = true;
+        clearTimeout(timerAi);
+        window.removeEventListener("message", aiHandler);
+        try {
+          chrome.runtime.sendMessage({
+            source: "li-ai-bridge-response",
+            requestId: reqId,
+            payload: d.payload || { success: false, error: "EMPTY" },
+          });
+        } catch (_) {}
+        sendResponse({ ok: true });
+      }
+
+      window.addEventListener("message", aiHandler);
+      return true;
+    }
+
     if (!msg || msg.action !== "optimusRequest") return false;
 
     window.postMessage({
