@@ -96,7 +96,7 @@ export function WhatsAppTest() {
       const conf = typeof opt.confidence === "number" ? `${(opt.confidence * 100).toFixed(0)}%` : "n/d";
       const lat = opt.latencyMs ? `${opt.latencyMs}ms` : "—";
       const dropped = typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
-      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${(r.messages || []).length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
+      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${((r.messages as unknown[]) || []).length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
     } else if (r.method && String(r.method).startsWith("legacy")) {
       log(`⚠️ Optimus non disponibile, fallback ${r.method}`, "warn");
     }
