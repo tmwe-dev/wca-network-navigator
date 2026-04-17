@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useWhatsAppExtensionBridge");
+let lastTabVisibleToastAt = 0;
 
 type WaExtensionResponse = {
   success: boolean;
@@ -43,6 +45,16 @@ export function useWhatsAppExtensionBridge() {
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
         pendingRef.current.delete(data.requestId);
+        const resp = data.response as (WaExtensionResponse & { errorCode?: string }) | undefined;
+        if (resp && resp.errorCode === "TAB_NOT_VISIBLE") {
+          const now = Date.now();
+          if (now - lastTabVisibleToastAt > 3000) {
+            lastTabVisibleToastAt = now;
+            toast.error("Apri WhatsApp Web nel browser", {
+              description: "La tab deve essere visibile per leggere i messaggi.",
+            });
+          }
+        }
         resolve(data.response);
       }
     }

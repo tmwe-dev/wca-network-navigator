@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useLinkedInExtensionBridge");
+let lastTabVisibleToastAt = 0;
 
 type LiExtensionResponse = {
   success: boolean;
@@ -101,6 +103,16 @@ export function useLinkedInExtensionBridge() {
         pendingRef.current.set(requestId, (response) => {
           clearTimeout(timer);
           log.debug("← response", { action, requestId, success: response.success, error: response.error });
+          const resp = response as LiExtensionResponse & { errorCode?: string };
+          if (resp && resp.errorCode === "TAB_NOT_VISIBLE") {
+            const now = Date.now();
+            if (now - lastTabVisibleToastAt > 3000) {
+              lastTabVisibleToastAt = now;
+              toast.error("Apri LinkedIn nel browser", {
+                description: "La tab deve essere visibile per leggere i messaggi.",
+              });
+            }
+          }
           resolve(response);
         });
 
