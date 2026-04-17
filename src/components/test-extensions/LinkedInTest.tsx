@@ -1,11 +1,12 @@
 /**
  * LinkedInTest — LinkedIn extension testing tab
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { liMsg } from "./extensionBridge";
+import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 
 const LI_COOLDOWN_MS = 5000;
 
@@ -27,6 +28,22 @@ export function LinkedInTest() {
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
+
+  // Stream Optimus events into the LinkedIn terminal
+  useEffect(() => {
+    return subscribeOptimusEvents((e) => {
+      if (e.channel !== "linkedin") return;
+      if (e.kind === "cache-hit") {
+        log(`🤖 Optimus: piano cache (v${e.planVersion}) · ${e.pageType}`, "ok");
+      } else if (e.kind === "ai-fresh") {
+        log(`🤖 Optimus: nuovo piano AI generato in ${e.latencyMs}ms · confidence ${(e.confidence * 100).toFixed(0)}% · v${e.planVersion}`, "info");
+      } else if (e.kind === "stale") {
+        log(`⚠️ Optimus: AI non risponde, uso ultimo piano cache (stale) · ${e.pageType}`, "warn");
+      } else if (e.kind === "error") {
+        log(`❌ Optimus: ${e.error}`, "error");
+      }
+    });
+  }, [log]);
 
   const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
 
@@ -98,6 +115,19 @@ export function LinkedInTest() {
     log("📨 Lettura inbox LinkedIn (30s timeout)...");
     const r = await liMsg("readLinkedInInbox", {}, 35000);
     const threads = (r?.threads || []) as Array<Record<string, unknown>>;
+
+    // Inline Optimus summary
+    const opt = r?.optimus as { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number } | undefined;
+    if (opt) {
+      const tag = opt.cached ? "cache" : "AI fresh";
+      const conf = typeof opt.confidence === "number" ? `${(opt.confidence * 100).toFixed(0)}%` : "n/d";
+      const lat = opt.latencyMs ? `${opt.latencyMs}ms` : "—";
+      const dropped = typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
+      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${threads.length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
+    } else if (r?.method && String(r.method).startsWith("legacy")) {
+      log(`⚠️ Optimus non disponibile, fallback ${r.method}`, "warn");
+    }
+
     if (r?.success && threads.length) {
       log(`✅ Trovati ${threads.length} thread`, "ok");
       threads.forEach((t) => log(`  • ${t.name}: ${((t.lastMessage as string) || "").slice(0, 60) || "—"} ${t.unread ? "🔴" : ""}`, "info"));
