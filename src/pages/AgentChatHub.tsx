@@ -178,8 +178,21 @@ export default function AgentChatHub() {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Carousel */}
-      <div className="border-b border-border/40 bg-card/30 backdrop-blur-sm">
-        <AgentAvatarCarousel agents={agents} activeId={activeId} onSelect={setActiveId} />
+      <div className="border-b border-border/40 bg-card/30 backdrop-blur-sm min-h-[88px] flex items-center">
+        {agents.length > 0 ? (
+          <AgentAvatarCarousel agents={agents} activeId={activeId} onSelect={setActiveId} />
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-6 text-xs text-muted-foreground">
+            {seeding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sto creando i tuoi agenti base…
+              </>
+            ) : (
+              <>Nessun agente disponibile. Apri Impostazioni → Agenti per crearne uno.</>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Agent header */}
