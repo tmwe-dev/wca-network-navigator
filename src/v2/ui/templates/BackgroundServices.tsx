@@ -28,10 +28,23 @@ function ActiveBackgroundServices({ children }: Props): React.ReactElement {
   return <>{children({ outreachQueue, globalSync })}</>;
 }
 
-/** Stub values used while the real services are still deferred. */
+/** Stub values used while the real services are still deferred. Shape-compatible. */
+const noop = () => { /* deferred */ };
 const STUB: BackgroundServicesValues = {
-  outreachQueue: undefined as unknown as ReturnType<typeof useOutreachQueue>,
-  globalSync: undefined as unknown as ReturnType<typeof useGlobalAutoSync>,
+  outreachQueue: {
+    pendingCount: 0,
+    processing: false,
+    paused: false,
+    setPaused: noop,
+  } as unknown as ReturnType<typeof useOutreachQueue>,
+  globalSync: {
+    nightPause: false,
+    isNightTime: false,
+    manualOverride: false,
+    toggleNightPause: noop,
+    resumeMinutes: 0,
+    emailSync: undefined,
+  } as unknown as ReturnType<typeof useGlobalAutoSync>,
 };
 
 export function BackgroundServices({ children }: Props): React.ReactElement {
