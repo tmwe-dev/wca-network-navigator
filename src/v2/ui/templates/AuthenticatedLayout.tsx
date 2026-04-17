@@ -325,15 +325,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       {/* Main content */}
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
-                        <LayoutHeader
-                          onToggleSidebar={() => setSidebarOpen(o => !o)}
-                          onAiClick={() => setIntelliflowOpen(true)}
-                          onAddContact={() => setAddContactOpen(true)}
-                          onAgentDash={() => setAgentDashOpen(true)}
-                          onTestExt={() => setTestExtOpen(true)}
-                          outreachQueue={outreachQueue}
-                          globalSync={globalSync}
-                        />
+                        <BackgroundServices>
+                          {({ outreachQueue, globalSync }) => (
+                            <LayoutHeader
+                              onToggleSidebar={() => setSidebarOpen(o => !o)}
+                              onAiClick={() => setIntelliflowOpen(true)}
+                              onAddContact={() => setAddContactOpen(true)}
+                              onAgentDash={() => setAgentDashOpen(true)}
+                              onTestExt={() => setTestExtOpen(true)}
+                              outreachQueue={outreachQueue}
+                              globalSync={globalSync}
+                            />
+                          )}
+                        </BackgroundServices>
                         <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
