@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useBackfillState } from "@/hooks/useBackfillState";
+import { OptimusBadge } from "@/components/outreach/OptimusBadge";
 
 export type WhatsAppToolbarProps = {
   isReading: boolean;
@@ -63,6 +64,7 @@ export function WhatsAppToolbar({
           {isAvailable ? (isAuthenticated ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />) : <WifiOff className="w-2.5 h-2.5" />}
           {badgeState.label}
         </Badge>
+        <OptimusBadge channel="whatsapp" pageType="sidebar" />
       </div>
       {isBfActive && (
         <div className="flex items-center gap-2 mt-1">

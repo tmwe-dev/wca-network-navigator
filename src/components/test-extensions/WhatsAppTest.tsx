@@ -1,12 +1,13 @@
 /**
  * WhatsAppTest — WhatsApp extension testing tab
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { waMsg, sendToExtension } from "./extensionBridge";
 import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
+import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 
 interface FoundContact {
   contact: string;
@@ -23,6 +24,22 @@ export function WhatsAppTest() {
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
+
+  // Stream eventi Optimus nel terminal in tempo reale
+  useEffect(() => {
+    return subscribeOptimusEvents((e) => {
+      if (e.channel !== "whatsapp") return;
+      if (e.kind === "cache-hit") {
+        log(`🤖 Optimus: piano cache (v${e.planVersion}) · ${e.pageType}`, "ok");
+      } else if (e.kind === "ai-fresh") {
+        log(`🤖 Optimus: nuovo piano AI generato in ${e.latencyMs}ms · confidence ${(e.confidence * 100).toFixed(0)}% · v${e.planVersion}`, "info");
+      } else if (e.kind === "stale") {
+        log(`⚠️ Optimus: AI non risponde, uso ultimo piano cache (stale) · ${e.pageType}`, "warn");
+      } else if (e.kind === "error") {
+        log(`❌ Optimus: ${e.error}`, "error");
+      }
+    });
+  }, [log]);
 
   const isExpectedWaVersion = (version?: string) => version === WHATSAPP_EXTENSION_REQUIRED_VERSION;
 
@@ -71,6 +88,19 @@ export function WhatsAppTest() {
     const r = await waMsg("readUnread", {}, 60000);
     if (!r?.success) { log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error"); setRunning(false); return; }
     log(`✅ Metodo: ${r.method || "?"} | Scansionati: ${r.scanned || "?"}`, "ok");
+
+    // Riepilogo Optimus inline (dalla response)
+    const opt = r.optimus as { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number } | undefined;
+    if (opt) {
+      const tag = opt.cached ? "cache" : "AI fresh";
+      const conf = typeof opt.confidence === "number" ? `${(opt.confidence * 100).toFixed(0)}%` : "n/d";
+      const lat = opt.latencyMs ? `${opt.latencyMs}ms` : "—";
+      const dropped = typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
+      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${((r.messages as unknown[]) || []).length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
+    } else if (r.method && String(r.method).startsWith("legacy")) {
+      log(`⚠️ Optimus non disponibile, fallback ${r.method}`, "warn");
+    }
+
     const msgs = (r.messages || []) as Array<Record<string, unknown>>;
     log(`📬 Messaggi trovati: ${msgs.length}`);
     for (const m of msgs) {
@@ -79,7 +109,7 @@ export function WhatsAppTest() {
       log(`  👤 ${m.contact}${unread}${verify} — "${((m.lastMessage as string) || "").slice(0, 80)}" — ⏰ ${m.time || "?"}`, (m.unreadCount as number) > 0 ? "ok" : "info");
     }
     if (msgs.length === 0) {
-      log("⚠️ ZERO messaggi — il selettore DOM non trova le chat!", "error");
+      log("❌ Optimus: DOM non riconosciuto · 0 estratti · serve intervento", "error");
     } else {
       setFoundContacts(msgs.map((m) => ({ contact: m.contact as string, time: m.time as string | undefined })));
     }
