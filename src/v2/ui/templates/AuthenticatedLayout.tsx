@@ -113,6 +113,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   useJobHealthMonitor();
   useWcaSync();
+  useOptimusBridgeListener();
   const outreachQueue = useOutreachQueue();
   const globalSync = useGlobalAutoSync();
   const wcaSession = useWcaSession();
