@@ -21,7 +21,7 @@ try {
 // ── Action registry ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "5.1-csp" });
+    sendResponse({ success: true, version: "5.2.0" });
     return false;
   },
 

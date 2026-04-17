@@ -1,3 +1,71 @@
+var OptimusClient = (function() {
+  var _pendingResolve = null;
+  var _pendingTimeout = null;
+
+  function simplifyDom(html) {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<svg[\s\S]*?<\/svg>/gi, '<svg/>')
+      .replace(/src="data:[^"]*"/gi, 'src="[data]"')
+      .replace(/src="https?:\/\/[^\"]{50,}"/gi, 'src="[url]"')
+      .replace(/style="[^"]*"/gi, '')
+      .replace(/\s{2,}/g, ' ');
+  }
+
+  function computeHash(str) {
+    var hash = 5381;
+    for (var i = 0; i < Math.min(str.length, 2000); i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return 'h' + Math.abs(hash).toString(36);
+  }
+
+  function requestPlan(channel, pageType, domHtml, opts) {
+    opts = opts || {};
+    var snapshot = simplifyDom(domHtml);
+    var domHash = computeHash(snapshot);
+    return {
+      channel: channel,
+      pageType: pageType,
+      domSnapshot: snapshot,
+      domHash: domHash,
+      previousPlanFailed: opts.previousPlanFailed || false,
+      failureContext: opts.failureContext || null
+    };
+  }
+
+  function executePlan(plan, elements) {
+    if (!plan || !plan.selectors) return [];
+    var items = [];
+    var sel = plan.selectors;
+    elements.forEach(function(el) {
+      var item = {};
+      var fieldCount = 0;
+      var fields = ['contact_name','last_message','timestamp',
+        'unread_indicator','message_text','message_sender',
+        'message_time','thread_url','participant_name'];
+      fields.forEach(function(field) {
+        if (sel[field] && sel[field].primary) {
+          var found = el.querySelector(sel[field].primary);
+          if (!found && sel[field].fallback)
+            found = el.querySelector(sel[field].fallback);
+          if (found) {
+            item[field] = found.textContent.trim();
+            fieldCount++;
+          }
+        }
+      });
+      if (fieldCount >= 2) items.push(item);
+    });
+    return items;
+  }
+
+  return { requestPlan: requestPlan, executePlan: executePlan,
+           simplifyDom: simplifyDom, computeHash: computeHash };
+})();
+
 // ══════════════════════════════════════════════
 // Optimus Client — WhatsApp Extension
 // Background-side helpers: dom-hash, plan request via webapp bridge,
