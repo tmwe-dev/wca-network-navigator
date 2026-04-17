@@ -1,25 +1,13 @@
-// TODO(v2-migration): wrapper temporaneo di src/pages/Outreach.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
- * OutreachPage V2 — Thin wrapper mounting V1 Outreach with all tabs
- * (Cockpit, In Uscita, Attività, Circuito/HoldingPattern, Coda AI)
+ * OutreachPage V2 — Direct mount, no inner Suspense.
  */
 import * as React from "react";
-import { Suspense, lazy } from "react";
-
-const OutreachV1 = lazy(() => import("@/pages/Outreach"));
+import OutreachV1 from "@/pages/Outreach";
 
 export function OutreachPage(): React.ReactElement {
   return (
     <div data-testid="page-outreach" className="h-full">
-    <Suspense
-      fallback={
-        <div className="flex h-full items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      }
-    >
       <OutreachV1 />
-    </Suspense>
     </div>
   );
 }
