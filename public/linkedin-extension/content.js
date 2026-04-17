@@ -198,6 +198,42 @@
     relayMessage(data);
   });
 
+  if (globalThis.__LI_OPTIMUS_REQUEST_LISTENER__) {
+    chrome.runtime.onMessage.removeListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__);
+  }
+
+  globalThis.__LI_OPTIMUS_REQUEST_LISTENER__ = function (msg, sender, sendResponse) {
+    if (!msg || msg.action !== "optimusRequest") return false;
+
+    window.postMessage({
+      direction: "from-extension-optimus-request",
+      payload: msg.payload,
+    }, "*");
+
+    var finished = false;
+    var timer = setTimeout(function () {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener("message", handler);
+      sendResponse({ success: false, error: "OPTIMUS_TIMEOUT" });
+    }, 15000);
+
+    function handler(event) {
+      if (event.source !== window) return;
+      if (!event.data || event.data.direction !== "from-webapp-optimus-response") return;
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      window.removeEventListener("message", handler);
+      sendResponse(event.data.payload);
+    }
+
+    window.addEventListener("message", handler);
+    return true;
+  };
+
+  chrome.runtime.onMessage.addListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__);
+
   post({ direction: "from-extension-li", action: "contentScriptReady" });
   scheduleHeartbeat();
 })();

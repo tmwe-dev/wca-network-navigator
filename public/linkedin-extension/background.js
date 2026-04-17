@@ -24,7 +24,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "3.0" });
+    sendResponse({ success: true, version: "3.1.0" });
     return false; // sync
   },
 

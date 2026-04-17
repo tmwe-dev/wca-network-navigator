@@ -336,14 +336,18 @@ const Actions = (function () {
     const snap = await Optimus.snapshotPage(tabId, sidebarSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
 
-    // 2. ask plan via webapp bridge
-    const planRes = await Optimus.getPlan({
-      channel: "whatsapp",
-      pageType: "sidebar",
-      snapshot: snap.snapshot,
-      hash: snap.hash,
+    // 2. build request payload with OptimusClient compatibility helper
+    const req = OptimusClient.requestPlan("whatsapp", "sidebar", snap.snapshot, {
       previousPlanFailed: !!previousFailed,
       failureContext: failureContext || null,
+    });
+    const planRes = await Optimus.getPlan({
+      channel: req.channel,
+      pageType: req.pageType,
+      snapshot: req.domSnapshot,
+      hash: req.domHash,
+      previousPlanFailed: req.previousPlanFailed,
+      failureContext: req.failureContext,
     });
 
     if (!planRes || !planRes.success) {
@@ -367,304 +371,7 @@ const Actions = (function () {
       dropped: execRes.dropped || 0,
     };
   }
-
-  async function executeReadUnreadFlow(tabId) {
-    const discovery = await Discovery.waitForRenderableWaUi(tabId, 4, [700, 1100, 1600]);
-    if (discovery && discovery.hasQR) return { success: false, error: "WhatsApp Web non connesso - scansiona il QR code" };
-
-    // ── Optimus first ──
-    let optimus = await tryOptimusReadUnread(tabId, false, null);
-    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-      // retry with fresh plan
-      optimus = await tryOptimusReadUnread(
-        tabId, true,
-        "Cached plan returned 0 items from sidebar"
-      );
-    }
-
-    if (optimus.success) {
-      const messages = optimus.items.map(function (it) {
-        return {
-          contact: it.contact_name || it.thread_name || "Sconosciuto",
-          lastMessage: it.last_message || "",
-          time: it.timestamp || new Date().toISOString(),
-          unreadCount: it.unread_indicator ? (parseInt(it.unread_indicator, 10) || 1) : 0,
-        };
-      });
-      return {
-        success: true,
-        messages: messages,
-        scanned: optimus.candidates,
-        method: optimus.cached ? "optimus-cache" : "optimus-ai",
-        optimus: {
-          cached: optimus.cached,
-          planVersion: optimus.planVersion,
-          confidence: optimus.confidence,
-          latencyMs: optimus.latencyMs,
-          dropped: optimus.dropped,
-        },
-        diagnostic: Discovery.compactDiscovery(discovery),
-      };
-    }
-
-    // ── Legacy fallback (only if Optimus is unavailable, e.g. 503/no-app-tab) ──
-    if (!optimus.optimusUnavailable) {
-      // Optimus reachable but failed structurally — keep the failure
-      return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error" };
-    }
-
-    // Try legacy AI extraction first
-    if (Config.hasConfig()) {
-      const sidebarHtml = await AiExtract.grabSidebarHtml(tabId);
-      if (sidebarHtml && sidebarHtml.length > 100) {
-        const aiResult = await AiExtract.callAiExtract(sidebarHtml, "sidebar");
-        if (aiResult && aiResult.success && aiResult.items && aiResult.items.length > 0) {
-          return {
-            success: true,
-            messages: aiResult.items.map(function (item) {
-              return { contact: item.contact || "Sconosciuto", lastMessage: item.lastMessage || "", time: item.time || new Date().toISOString(), unreadCount: item.unreadCount || 1 };
-            }),
-            scanned: 0, method: "legacy-ai", diagnostic: Discovery.compactDiscovery(discovery),
-          };
-        }
-      }
-    }
-
-    // Final fallback: hardcoded DOM strategies (S1-S5)
-    const domResult = await readUnreadDOM(tabId);
-    if (domResult) {
-      domResult.method = "legacy-dom:" + (domResult.method || "unknown");
-      domResult.diagnostic = Discovery.compactDiscovery(discovery);
-    }
-    return domResult;
-  }
-
-  async function readUnreadMessages() {
-    try {
-      const r = await TabManager.getOrCreateWaTab();
-      const tab = r.tab;
-      await TabManager.sleep(r.reused ? 1500 : 5000);
-      const preflight = await Discovery.runDiscoveryScript(tab.id);
-      const shouldHydrate = !tab.active && (!preflight || (!preflight.hasQR && !Discovery.hasRenderableWaUi(preflight) && (Discovery.hasShellSignals(preflight) || preflight.appLoaded)));
-
-      if (shouldHydrate) {
-        return await TabManager.withTemporarilyVisibleTab(tab.id, async function () {
-          return await executeReadUnreadFlow(tab.id);
-        });
-      }
-      return await executeReadUnreadFlow(tab.id);
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  }
-
-  // ══════════════════════════════════════════════
-  // SEND MESSAGE — injected page function
-  // ══════════════════════════════════════════════
-  async function _pageSendWhatsApp(contact, msg) {
-    const H = window.__waH;
-
-    async function openChat(name) {
-      const searchBox = H.qsDeep('[data-testid="chat-list-search"]') ||
-        H.qsDeep('[contenteditable="true"][role="textbox"]') ||
-        H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]') ||
-        H.qsDeep('[data-testid="search"]') || H.qsDeep('[aria-label*="search" i]') || H.qsDeep('[aria-label*="cerca" i]');
-
-      if (searchBox) {
-        const input = searchBox.querySelector ? (searchBox.querySelector('[contenteditable="true"]') || searchBox.querySelector('input') || searchBox) : searchBox;
-        H.modernClearAndType(input, name);
-        await new Promise(function(r) { setTimeout(r, 1500); });
-
-        let chatResults = H.qsaDeep('[data-testid="cell-frame-container"],[data-testid="chat-cell-wrapper"],[role="listitem"],[role="row"],[role="option"]');
-        if (!chatResults.length) chatResults = H.qsaDeep('span[title]');
-        for (let i = 0; i < chatResults.length; i++) {
-          const el = chatResults[i];
-          const titleEl = el.querySelector ? el.querySelector('span[title]') : null;
-          const title = titleEl ? (titleEl.getAttribute('title') || '') : (el.getAttribute('title') || '');
-          if (title.toLowerCase().includes(name.toLowerCase())) {
-            const clickTarget = el.closest('[data-testid="cell-frame-container"]') || el.closest('[data-testid="chat-cell-wrapper"]') || el.closest('[role="listitem"]') || el.closest('[role="row"]') || el;
-            clickTarget.click();
-            await new Promise(function(r) { setTimeout(r, 800); });
-            const clearBtn = H.qsDeep('[data-testid="x-alt"]') || H.qsDeep('[data-testid="search-close"]') || H.qsDeep('[data-testid="search-input-clear"]');
-            if (clearBtn) clearBtn.click();
-            return true;
-          }
-        }
-        const esc = H.qsDeep('[data-testid="x-alt"]') || H.qsDeep('[data-testid="search-close"]') || H.qsDeep('[data-testid="search-input-clear"]');
-        if (esc) esc.click();
-      }
-      return false;
-    }
-
-    // Step 0: Check if the target chat is already open
-    let opened = false;
-    const currentHeader = H.qsDeep('#main header span[title]') ||
-      H.qsDeep('[data-testid="conversation-info-header-chat-title"]') ||
-      H.qsDeep('#main header [role="button"] span');
-    if (currentHeader) {
-      const headerTitle = (currentHeader.getAttribute('title') || currentHeader.textContent || '').trim().toLowerCase();
-      const contactClean = contact.trim().toLowerCase();
-      if (headerTitle && contactClean && (headerTitle.includes(contactClean) || contactClean.includes(headerTitle))) {
-        opened = true;
-      }
-    }
-
-    if (!opened) {
-      opened = await openChat(contact);
-    }
-
-    // Retry with first name only if full name failed
-    if (!opened && contact.includes(" ")) {
-      const firstName = contact.split(" ")[0];
-      if (firstName.length >= 2) {
-        opened = await openChat(firstName);
-      }
-    }
-
-    if (!opened) {
-      const cleanPhone = contact.replace(/[^0-9]/g, "");
-      if (cleanPhone.length >= 5) {
-        window.location.href = "https://web.whatsapp.com/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(msg);
-        await new Promise(function(r) { setTimeout(r, 4000); });
-      } else {
-        return { success: false, error: "Contatto non trovato: " + contact };
-      }
-    }
-
-    if (opened) {
-      const inputBox = H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('#main [contenteditable="true"]') || H.qsDeep('[role="textbox"][contenteditable="true"]');
-      if (inputBox) {
-        H.modernInsertText(inputBox, msg);
-        await new Promise(function(r) { setTimeout(r, 300); });
-      }
-    }
-
-    const start = Date.now();
-    while (Date.now() - start < 10000) {
-      const btn = H.qsDeep('span[data-icon="send"]') || H.qsDeep('[data-testid="send"]') || H.qsDeep('[data-testid="compose-btn-send"]') || H.qsDeep('button[aria-label*="end" i]') || H.qsDeep('button[aria-label*="nvia" i]');
-      if (btn) {
-        (btn.closest("button") || btn).click();
-        await new Promise(function(r) { setTimeout(r, 1000); });
-        return { success: true };
-      }
-      await new Promise(function(r) { setTimeout(r, 500); });
-    }
-    return { success: false, error: "Pulsante invio non trovato" };
-  }
-
-  // Page function for URL-based send (no existing tab)
-  async function _pageSendUrlFallback() {
-    const H = window.__waH;
-    const start = Date.now();
-    while (Date.now() - start < 15000) {
-      if (H.qsDeep('canvas[aria-label]') || H.qsDeep('[data-testid="qrcode"]'))
-        return { success: false, error: "Non connesso a WhatsApp Web" };
-      const btn = H.qsDeep('span[data-icon="send"]') || H.qsDeep('[data-testid="send"]') || H.qsDeep('[data-testid="compose-btn-send"]') || H.qsDeep('button[aria-label*="end" i]') || H.qsDeep('button[aria-label*="nvia" i]');
-      if (btn) {
-        (btn.closest("button") || btn).click();
-        await new Promise(function(r) { setTimeout(r, 1500); });
-        return { success: true };
-      }
-      await new Promise(function(r) { setTimeout(r, 500); });
-    }
-    return { success: false, error: "Pulsante invio non trovato" };
-  }
-
-  async function sendWhatsAppMessage(phone, text) {
-    try {
-      const existingTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-
-      if (existingTabs.length > 0) {
-        const tabId = existingTabs[0].id;
-        if (existingTabs[0].status !== "complete") await TabManager.waitForLoad(tabId, 10000);
-        await ensurePageHelpers(tabId);
-
-        const results = await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          args: [phone, text],
-          func: _pageSendWhatsApp,
-        });
-        return results && results[0] ? results[0].result : { success: false, error: "Nessun risultato" };
-      }
-
-      // No existing tab — use send URL
-      const cleanPhone = phone.replace(/[^0-9]/g, "");
-      const url = Config.WA_BASE + "/send?phone=" + cleanPhone + "&text=" + encodeURIComponent(text);
-      const tab = await TabManager.safeCreateTab(url, false);
-      const loaded = await TabManager.waitForLoad(tab.id, 30000);
-      if (!loaded) { await TabManager.safeRemoveTab(tab.id); return { success: false, error: "WA non caricato" }; }
-      await TabManager.sleep(3000);
-      await ensurePageHelpers(tab.id);
-
-      const results2 = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: _pageSendUrlFallback,
-      });
-      const result2 = results2 && results2[0] ? results2[0].result : null;
-      await TabManager.sleep(500);
-      await TabManager.safeRemoveTab(tab.id);
-      return result2 || { success: false, error: "Nessun risultato" };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  }
-
-  // ══════════════════════════════════════════════
-  // READ THREAD — injected page functions
-  // ══════════════════════════════════════════════
-  async function _pageOpenAndReadThread(target) {
-    const H = window.__waH;
-
-    function currentChatMatches(name) {
-      const header = H.qsDeep('#main header span[title]') || H.qsDeep('#main header [dir="auto"]') || H.qsDeep('[data-testid="conversation-header"] span[title]');
-      const label = header ? ((header.getAttribute("title") || header.textContent || "").trim()) : "";
-      return !!label && label.toLowerCase().includes(name.toLowerCase());
-    }
-
-    if (!currentChatMatches(target)) {
-      const searchBox = H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') || H.qsDeep('[data-testid="chat-list-search"]') || H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]') || H.qsDeep('[data-testid="search"]') || H.qsDeep('[aria-label*="search" i]') || H.qsDeep('[aria-label*="cerca" i]') || H.qsDeep('[role="textbox"][contenteditable="true"]');
-      if (!searchBox) return { success: false, error: "Search box not found" };
-      H.modernClearAndType(searchBox, target);
-      await new Promise(function(r) { setTimeout(r, 1500); });
-
-      const chats = H.qsaDeep('[data-testid="cell-frame-container"],[data-testid="chat-cell-wrapper"],[role="listitem"],[role="row"]');
-      let clicked = false;
-      for (const c of chats) {
-        const titleEl = c.querySelector('span[title]');
-        const title = titleEl ? (titleEl.getAttribute("title") || "") : "";
-        if (title.toLowerCase().includes(target.toLowerCase())) {
-          (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
-          clicked = true; break;
-        }
-      }
-      if (!clicked) return { success: false, error: "Chat non trovata: " + target };
-
-      const clearBtn = H.qsDeep('[data-testid="search-input-clear"]') || H.qsDeep('[data-testid="x-alt"]') || H.qsDeep('[data-testid="search-close"]');
-      if (clearBtn) clearBtn.click();
-      await new Promise(function(r) { setTimeout(r, 2000); });
-    }
-
-    const panel = H.qsDeep('[data-testid="conversation-panel-messages"]') || H.qsDeep('#main [role="application"]') || H.qsDeep('#main');
-    return { success: true, html: panel ? panel.outerHTML : null };
-  }
-
-  function _pageDomReadMessages(target, limit) {
-    const H = window.__waH;
-    let msgEls = H.qsaDeep('[data-testid="msg-container"]');
-    if (!msgEls.length) msgEls = H.qsaDeep('[role="row"][data-id]');
-    const msgs = [];
-    const items = Array.from(msgEls).slice(-limit);
-    for (const el of items) {
-      const isOut = !!(el.querySelector('[data-testid="msg-dblcheck"]') || el.querySelector('[data-testid="msg-check"]'));
-      const textEl = el.querySelector('[data-testid="balloon-text"] span') || el.querySelector('.selectable-text span') || el.querySelector('[dir="ltr"]');
-      const text = textEl?.textContent?.trim() || "";
-      if (!text) continue;
-      const timeEl = el.querySelector('[data-testid="msg-meta"] span') || el.querySelector('time');
-      msgs.push({ direction: isOut ? "outbound" : "inbound", text: text, timestamp: timeEl?.textContent?.trim() || "", contact: isOut ? "me" : target });
-    }
-    return { success: true, messages: msgs, contact: target, method: "dom" };
-  }
-
+...
   // ── Optimus-first: extract messages from open chat panel ──
   // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
   async function tryOptimusReadThread(tabId, previousFailed, failureContext) {
@@ -672,13 +379,17 @@ const Actions = (function () {
     const snap = await Optimus.snapshotPage(tabId, panelSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
 
-    const planRes = await Optimus.getPlan({
-      channel: "whatsapp",
-      pageType: "thread",
-      snapshot: snap.snapshot,
-      hash: snap.hash,
+    const req = OptimusClient.requestPlan("whatsapp", "thread", snap.snapshot, {
       previousPlanFailed: !!previousFailed,
       failureContext: failureContext || null,
+    });
+    const planRes = await Optimus.getPlan({
+      channel: req.channel,
+      pageType: req.pageType,
+      snapshot: req.domSnapshot,
+      hash: req.domHash,
+      previousPlanFailed: req.previousPlanFailed,
+      failureContext: req.failureContext,
     });
 
     if (!planRes || !planRes.success) {

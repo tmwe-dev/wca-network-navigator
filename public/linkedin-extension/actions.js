@@ -94,13 +94,17 @@ const Actions = (function () {
     const snap = await Optimus.snapshotPage(tabId, inboxSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
 
-    const planRes = await Optimus.getPlan({
-      channel: "linkedin",
-      pageType: "messaging",
-      snapshot: snap.snapshot,
-      hash: snap.hash,
+    const req = OptimusClient.requestPlan("linkedin", "messaging", snap.snapshot, {
       previousPlanFailed: !!previousFailed,
       failureContext: failureContext || null,
+    });
+    const planRes = await Optimus.getPlan({
+      channel: req.channel,
+      pageType: req.pageType,
+      snapshot: req.domSnapshot,
+      hash: req.domHash,
+      previousPlanFailed: req.previousPlanFailed,
+      failureContext: req.failureContext,
     });
     if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
 
@@ -124,13 +128,17 @@ const Actions = (function () {
     const snap = await Optimus.snapshotPage(tabId, threadSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
 
-    const planRes = await Optimus.getPlan({
-      channel: "linkedin",
-      pageType: "thread",
-      snapshot: snap.snapshot,
-      hash: snap.hash,
+    const req = OptimusClient.requestPlan("linkedin", "thread", snap.snapshot, {
       previousPlanFailed: !!previousFailed,
       failureContext: failureContext || null,
+    });
+    const planRes = await Optimus.getPlan({
+      channel: req.channel,
+      pageType: req.pageType,
+      snapshot: req.domSnapshot,
+      hash: req.domHash,
+      previousPlanFailed: req.previousPlanFailed,
+      failureContext: req.failureContext,
     });
     if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
 
