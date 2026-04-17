@@ -21,6 +21,28 @@
 
   const MAX_STRING_LENGTH = 5000;
 
+  // Actions that require a fully rendered DOM (background tabs throttle rendering)
+  const VISIBILITY_REQUIRED_ACTIONS = ["readUnread", "readThread", "backfillChat", "diagnosticDom", "learnDom"];
+
+  function waitForVisible(timeoutMs) {
+    if (document.visibilityState === "visible") return Promise.resolve(true);
+    return new Promise(function (resolve) {
+      const timer = setTimeout(function () {
+        document.removeEventListener("visibilitychange", onChange);
+        resolve(false);
+      }, timeoutMs || 3000);
+      function onChange() {
+        if (document.visibilityState === "visible") {
+          clearTimeout(timer);
+          document.removeEventListener("visibilitychange", onChange);
+          // 1s extra to let the renderer paint
+          setTimeout(function () { resolve(true); }, 1000);
+        }
+      }
+      document.addEventListener("visibilitychange", onChange);
+    });
+  }
+
   function isExtensionAlive() {
     try {
       if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
@@ -58,7 +80,7 @@
     return null;
   }
 
-  function relayMessage(data) {
+  async function relayMessage(data) {
     const validationError = validatePayload(data);
     if (validationError) {
       failResponse(data, validationError, "ERR_VALIDATION");
@@ -66,6 +88,27 @@
     }
 
     if (!isExtensionAlive()) {
+      alive = false;
+      currentHeartbeat = BASE_HEARTBEAT_MS;
+      failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
+      post({ direction: "from-extension-wa", action: "extensionDead" });
+      return;
+    }
+
+    // Gate: actions that read DOM require the tab to be visible
+    if (VISIBILITY_REQUIRED_ACTIONS.indexOf(data.action) !== -1) {
+      const visible = await waitForVisible(3000);
+      if (!visible) {
+        failResponse(data, "La tab di WhatsApp Web deve essere visibile per leggere i messaggi", "TAB_NOT_VISIBLE");
+        return;
+      }
+    }
+
+    try {
+      const msg = { source: "wa-content-bridge", action: data.action };
+      if (data.phone) msg.phone = data.phone;
+      if (data.text) msg.text = data.text;
+      if (data.contact) msg.contact = data.contact;
       alive = false;
       currentHeartbeat = BASE_HEARTBEAT_MS;
       failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
