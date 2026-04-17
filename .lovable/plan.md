@@ -1,53 +1,122 @@
 
 
-# Piano: Nome intelligente dei mittenti in Email Intelligence
+L'utente vuole estendere il pattern soft-delete a TUTTE le tabelle del sistema, non solo `imported_contacts`. Devo individuare le tabelle critiche dove avviene `DELETE` fisico e applicare lo stesso pattern.
 
-## Problema
-Attualmente il nome visualizzato sulle card dei mittenti usa la parte locale dell'email (es. "notifications" da notifications@vercel.com) o il primo segmento del dominio. Il risultato è poco leggibile e non rappresentativo.
+Tabelle candidate principali (dato il dominio CRM/BI):
+- `partners`, `partner_contacts` (anagrafica)
+- `business_cards` (BCA)
+- `activities`, `reminders` (agenda)
+- `import_logs`, `imported_contacts` (già fatto)
+- `agents`, `outreach_missions`, `outreach_queue`, `outreach_schedules`, `mission_actions` (campagne)
+- `channel_messages` (email/WA/LI)
+- `kb_entries`, `ai_memory` (knowledge)
+- `email_address_rules`, `directory_cache`
+- `notes`, `attachments` ecc.
 
-## Logica richiesta
-- **Email aziendali** (dominio non personale): usare il nome del dominio pulito e capitalizzato
-  - `notifications@vercel.com` → **Vercel**
-  - `broadcast@wcabroadcast.com` → **WCA Broadcast** (split su camelCase/separatori)
-  - `marketing@everest.com` → **Everest**
-  - `newsletters-noreply@linkedin.com` → **LinkedIn**
-  - `sara.triassi@tmwi.com` → **Sara Triassi · TMWI** (nome riconosciuto + azienda)
-- **Email personali** (gmail, yahoo, hotmail, outlook, etc.): usare la parte locale come nome
-  - `john.smith@gmail.com` → **John Smith**
+Tabelle dove il DELETE fisico DEVE restare (operative/audit):
+- `audit_log_entries`, `supervisor_audit_log` (audit immutabile)
+- `extension_dispatch_queue`, `outreach_schedules` quando `status='completed'` (ciclo di vita)
+- `credit_transactions` (immutabile)
+- `channel_backfill_state` (stato tecnico)
+- Tabelle di cache TTL (`scrape_cache`, `directory_cache`)
+- `auth.*` (gestito da Supabase)
+- Tabelle di sessione/log temporanee
 
-## Modifiche
+## Piano
 
-### 1. Nuova utility `src/lib/senderDisplayName.ts`
-Funzione pura `deriveSenderDisplayName(email: string): string` con questa logica:
-- Estrai `localPart` e `domain`
-- Lista di domini personali noti: gmail, yahoo, hotmail, outlook, live, icloud, aol, protonmail, etc.
-- Se dominio personale: formatta `localPart` sostituendo `.` e `_` con spazi, capitalizza ogni parola
-- Se dominio aziendale:
-  - Prendi il nome base del dominio (senza TLD): `vercel.com` → `vercel`, `wcabroadcast.com` → `wcabroadcast`
-  - Split intelligente su camelCase, trattini, underscore: `wcabroadcast` → `wca broadcast`
-  - Mappa di override per brand noti: `linkedin` → `LinkedIn`, `tmwe` → `TMWE`, `tmwi` → `TMWI`
-  - Se `localPart` sembra un nome di persona (contiene `.` o `_` tra due parole, nessuna keyword di ruolo): mostra `"Nome Cognome · Azienda"`
-  - Altrimenti: solo nome azienda capitalizzato
+### 1. Migration SQL: aggiungere `deleted_at` + `deleted_by` alle tabelle business
 
-### 2. Applicazione nei 3 punti di costruzione `companyName`
+Tabelle da soft-deletare:
+- `partners`
+- `partner_contacts`
+- `business_cards`
+- `activities`
+- `reminders`
+- `agents`
+- `outreach_missions`
+- `outreach_queue`
+- `mission_actions`
+- `channel_messages` (email/WA/LI nascoste, non perse)
+- `kb_entries`
+- `ai_memory`
+- `email_address_rules`
+- `import_logs` (e cascade soft sui contatti già impostato)
+- `notes` / `note_attachments` se presenti
 
-**`ManualGroupingTab.tsx` riga 129** (lettura da DB):
+Ogni tabella riceve:
+```sql
+ALTER TABLE public.<t>
+  ADD COLUMN IF NOT EXISTS deleted_at timestamptz,
+  ADD COLUMN IF NOT EXISTS deleted_by uuid;
+CREATE INDEX IF NOT EXISTS idx_<t>_not_deleted
+  ON public.<t> (created_at DESC) WHERE deleted_at IS NULL;
 ```
-companyName: r.company_name || deriveSenderDisplayName(r.email_address)
+
+### 2. Aggiornare RLS: nascondere automaticamente i record soft-deleted nelle SELECT
+
+Aggiungo `AND deleted_at IS NULL` alle policy SELECT esistenti delle tabelle interessate (mantenendo policy separate per ruolo "admin recovery").
+
+### 3. Refactor DAL (`src/data/*.ts`)
+
+Sostituire ogni `.delete()` con `.update({ deleted_at: now(), deleted_by: uid })` nei file:
+- `partners.ts`, `partnerContacts.ts`
+- `businessCards.ts`
+- `activities.ts`, `reminders.ts`
+- `agents.ts`
+- `outreach.ts` / `missions.ts`
+- `channelMessages.ts`
+- `kb.ts`, `memory.ts`
+- `emailRules.ts`
+- `importLogs.ts`
+- (`contacts.ts` già fatto)
+
+Aggiungere a ogni query SELECT principale `.is("deleted_at", null)`.
+
+### 4. Refactor V2 IO mutations (`src/v2/io/supabase/mutations/*.ts`)
+
+Stesso pattern per i mutator V2.
+
+### 5. Edge Functions
+
+Rivedere e convertire DELETE in UPDATE soft-delete in:
+- `supabase/functions/agent-execute/toolHandlers.ts`
+- `supabase/functions/_shared/toolHandlersWrite.ts`
+- Altre edge function con `.delete()` su tabelle business (audit con grep)
+
+Non toccare: `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memory).
+
+### 6. Helper centralizzato
+
+Creare `src/data/_softDelete.ts`:
+```ts
+export async function softDelete(table, ids) {
+  return supabase.from(table)
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+}
+export async function restore(table, ids) { ... }
 ```
 
-**`ManualGroupingTab.tsx` riga 243** (populateAddressRules — INSERT nuove regole):
-Aggiungere `company_name: deriveSenderDisplayName(addr)` e `display_name` nel payload INSERT.
+E in edge functions `supabase/functions/_shared/softDelete.ts` equivalente.
 
-**`SenderManagementTab.tsx` riga 121** (costruzione in-memory):
-```
-companyName: deriveSenderDisplayName(email)
-```
+### 7. Schema Zod V2
 
-### 3. File toccati
-- `src/lib/senderDisplayName.ts` (nuovo)
-- `src/components/email-intelligence/ManualGroupingTab.tsx` (2 righe)
-- `src/components/email-intelligence/SenderManagementTab.tsx` (1 riga)
+Aggiungere `deleted_at: z.string().nullable().optional()` agli schema esistenti.
 
-Zero modifiche al database. La funzione `deriveSenderDisplayName` è pura e testabile.
+### 8. Cosa NON viene toccato
+
+- Tabelle audit/log/cache/queue tecniche (lista sopra)
+- Trigger DB e cascade FK esistenti restano funzionanti (colonne nullable)
+- Nessuna UI nuova "cestino" in questa fase (la creiamo dopo)
+- Funzioni RPC (`get_country_stats`, `get_contact_group_counts`, ecc.) → aggiungo filtro `deleted_at IS NULL` solo dove rilevante
+
+### 9. Verifica post-deploy
+
+- Test: cancellare un partner / un'attività / un BCA / un messaggio → spariscono dall'UI ma restano in DB con `deleted_at IS NOT NULL`
+- Query di controllo: `SELECT count(*) FILTER (WHERE deleted_at IS NOT NULL) FROM <ogni tabella>`
+- RLS: utente non-admin non vede record soft-deleted
+
+## Risultato
+
+Da ora in poi nessun record business viene mai eliminato fisicamente. Qualsiasi "elimina" nell'app diventa un soft-delete completamente recuperabile dal DB. I dati persi prima di questa modifica non sono recuperabili.
 
