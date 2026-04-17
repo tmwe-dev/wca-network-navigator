@@ -14,6 +14,7 @@ try {
     "ai-learn.js",
     "auth.js",
     "hybrid-ops.js",
+    "optimus-client.js",
     "actions.js"
   );
 } catch (e) {

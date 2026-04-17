@@ -11,6 +11,7 @@ try {
     "tab-manager.js",
     "discovery.js",
     "ai-extract.js",
+    "optimus-client.js",
     "actions.js"
   );
 } catch (e) {
