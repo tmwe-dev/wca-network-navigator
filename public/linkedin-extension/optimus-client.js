@@ -318,5 +318,6 @@ var Optimus = globalThis.Optimus || (function () {
     snapshotPage: snapshotPage,
     getPlan: getPlan,
     executePlanInTab: executePlanInTab,
+  };
 })();
 globalThis.Optimus = Optimus;
