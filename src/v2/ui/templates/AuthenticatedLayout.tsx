@@ -36,6 +36,7 @@ import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
 import { queryKeys } from "@/lib/queryKeys";
+import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 
 const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
