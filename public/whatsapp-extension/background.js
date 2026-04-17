@@ -10,6 +10,7 @@ try {
     "config.js",
     "tab-manager.js",
     "discovery.js",
+    "ai-bridge.js",
     "ai-extract.js",
     "optimus-client.js",
     "actions.js"
@@ -21,7 +22,7 @@ try {
 // ── Action registry ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "5.2.0" });
+    sendResponse({ success: true, version: "5.3.0" });
     return false;
   },
 

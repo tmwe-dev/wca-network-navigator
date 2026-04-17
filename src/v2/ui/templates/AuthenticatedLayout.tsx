@@ -35,6 +35,7 @@ import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { useWcaSession } from "@/hooks/useWcaSession";
 import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
+import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
@@ -114,6 +115,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   useJobHealthMonitor();
   useWcaSync();
   useOptimusBridgeListener();
+  useAiExtractBridgeListener();
   const outreachQueue = useOutreachQueue();
   const globalSync = useGlobalAutoSync();
   const wcaSession = useWcaSession();

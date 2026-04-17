@@ -11,6 +11,7 @@ try {
     "config.js",
     "tab-manager.js",
     "ax-tree.js",
+    "ai-bridge.js",
     "ai-learn.js",
     "auth.js",
     "hybrid-ops.js",
@@ -24,7 +25,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "3.1.0" });
+    sendResponse({ success: true, version: "3.2.0" });
     return false; // sync
   },
 
