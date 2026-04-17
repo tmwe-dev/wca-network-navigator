@@ -1,11 +1,12 @@
 /**
  * LinkedInTest — LinkedIn extension testing tab
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { liMsg } from "./extensionBridge";
+import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 
 const LI_COOLDOWN_MS = 5000;
 
