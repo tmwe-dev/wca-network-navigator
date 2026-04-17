@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WhatsApp Direct Send",
-  "version": "5.1.0",
-  "description": "Invio diretto messaggi WhatsApp dal Cockpit — Architettura Modulare v5",
+  "version": "5.2.0",
+  "description": "Invio diretto messaggi WhatsApp dal Cockpit — Architettura Modulare v5 + Optimus AI bridge (payload nested)",
   "permissions": [
     "tabs",
     "activeTab",
