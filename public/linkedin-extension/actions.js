@@ -178,6 +178,8 @@ const Actions = (function () {
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+    // Ensure tab is visible: pages in background suspend rendering → empty DOM
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
 
     // Smart wait: up to 8s, checking for conversation elements every 500ms
     let waited = 0;
@@ -291,6 +293,7 @@ const Actions = (function () {
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
     const tab = await TabManager.getLinkedInTab(threadUrl, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
     await TabManager.sleep(6000);
 
     // ── Optimus-first ──
@@ -353,6 +356,7 @@ const Actions = (function () {
 
   async function diagnostic() {
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
     await TabManager.sleep(5000);
 
     let axAvailable = false;
@@ -398,6 +402,7 @@ const Actions = (function () {
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
     const url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
     const tab = await TabManager.getLinkedInTab(url, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
     await TabManager.sleep(4000);
     const schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
     if (schema) return Config.successResponse({ schema: schema, keysCount: Object.keys(schema).length });
