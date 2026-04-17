@@ -3881,6 +3881,8 @@ export type Database = {
           country: string | null
           created_at: string
           deep_search_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           enrichment_data: Json | null
           external_id: string | null
@@ -3918,6 +3920,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           deep_search_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           enrichment_data?: Json | null
           external_id?: string | null
@@ -3955,6 +3959,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           deep_search_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           enrichment_data?: Json | null
           external_id?: string | null
