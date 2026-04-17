@@ -1,4 +1,6 @@
-var OptimusClient = (function() {
+// ⚡ Idempotent: service worker MV3 può rieseguire importScripts su wake-up.
+// Usare `var` + guard evita "Identifier has already been declared".
+var OptimusClient = globalThis.OptimusClient || (function () {
   var _pendingResolve = null;
   var _pendingTimeout = null;
 
