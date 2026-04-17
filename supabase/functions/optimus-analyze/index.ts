@@ -35,6 +35,52 @@ const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 const AI_TIMEOUT_MS = 15000;
 
+function channelGuidance(channel: string, pageType: string): string[] {
+  // Guida specifica per canale + page_type. I nomi dei campi DEVONO matchare
+  // esattamente quelli letti da OptimusClient.executePlan() / _pageExecutePlan().
+  if (channel === "whatsapp" && pageType === "sidebar") {
+    return [
+      "",
+      "GUIDA WHATSAPP SIDEBAR:",
+      "Il DOM di WhatsApp Web usa classi CSS offuscate (es. x1n2onr6, _ak72) che cambiano frequentemente. NON usarle come selettori primari.",
+      "Selettori STABILI da preferire:",
+      "- container: [role=\"grid\"] (fallback: #pane-side)",
+      "- thread_item: [role=\"row\"] (singola conversazione nella lista)",
+      "- contact_name: span[title] dentro [role=\"gridcell\"][aria-colindex=\"2\"]",
+      "- last_message: secondo span dentro la riga sotto il nome (preview testo)",
+      "- timestamp: span con testo che matcha HH:MM, \"ieri\", o nome del giorno",
+      "- unread_indicator: span con aria-label che contiene \"non lett\" / \"unread\", o badge numerico",
+      "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: contact_name, last_message, timestamp, unread_indicator.",
+    ];
+  }
+  if (channel === "whatsapp" && pageType === "thread") {
+    return [
+      "",
+      "GUIDA WHATSAPP THREAD:",
+      "- container: [role=\"application\"] o div[data-tab=\"8\"] (area messaggi)",
+      "- message_bubble: div[role=\"row\"] dentro la chat area",
+      "- message_text: span.selectable-text (innerText del messaggio)",
+      "- message_sender: data-pre-plain-text del padre, o span del mittente",
+      "- message_time: span con formato HH:MM all'interno del bubble",
+      "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: message_text, message_sender, message_time.",
+    ];
+  }
+  if (channel === "linkedin" && (pageType === "messaging" || pageType === "inbox")) {
+    return [
+      "",
+      "GUIDA LINKEDIN MESSAGING:",
+      "- container: sezione con la lista conversazioni (ul.msg-conversations-container__conversations-list o aside lista)",
+      "- thread_item: li o div che contiene avatar + nome + preview di un thread",
+      "- participant_name: testo nel link/heading della riga (nome contatto)",
+      "- last_message: preview testo sotto il nome",
+      "- timestamp: testo con formato temporale (es. \"2h\", \"ieri\", \"15 apr\")",
+      "- thread_url: href del link nella riga (contiene /messaging/thread/)",
+      "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: participant_name, last_message, timestamp, thread_url.",
+    ];
+  }
+  return [];
+}
+
 function buildSystemPrompt(input: AnalyzeInput, previousPlan: Record<string, unknown> | null): string {
   const lines: string[] = [
     "Sei Optimus, un agente specializzato nell'analisi di pagine web per estrarre dati strutturati. Analizza il DOM fornito e genera un piano di estrazione.",
@@ -50,12 +96,16 @@ function buildSystemPrompt(input: AnalyzeInput, previousPlan: Record<string, unk
   }
   lines.push(
     "",
-    "REGOLE:",
+    "REGOLE GENERALI:",
     "- Usa SOLO selettori CSS standard (no XPath)",
     "- Preferisci selettori stabili: role, aria-label, data-*, tag semantici",
-    "- Evita classi generate/offuscate (es. x1n2onr6) come selettore primario",
+    "- Evita classi generate/offuscate (es. x1n2onr6, _ak72) come selettore primario",
     "- Per ogni selettore fornisci un'alternativa di fallback",
     "- Indica il livello di confidenza (0-1) per ogni selettore",
+    "- I NOMI DEI CAMPI nell'output sono FISSI: usa esattamente quelli indicati nella guida del canale; nomi diversi (es. \"name\" invece di \"contact_name\") sono ERRORE.",
+  );
+  lines.push(...channelGuidance(input.channel, input.page_type));
+  lines.push(
     "",
     "FORMATO OUTPUT (JSON strict, nessun testo extra):",
     `{
@@ -72,8 +122,8 @@ function buildSystemPrompt(input: AnalyzeInput, previousPlan: Record<string, unk
   "confidence": 0.9,
   "dom_version_hint": "..."
 }`,
-    "Per thread_read aggiungere: message_bubble, message_text, message_sender, message_time.",
-    "Per LinkedIn inbox aggiungere: thread_url, participant_name, last_activity.",
+    "Per WhatsApp thread_read aggiungere: message_bubble, message_text, message_sender, message_time (sostituendo i campi sidebar).",
+    "Per LinkedIn messaging aggiungere/usare: participant_name, last_message, timestamp, thread_url (al posto di contact_name/unread_indicator).",
   );
   return lines.join("\n");
 }
