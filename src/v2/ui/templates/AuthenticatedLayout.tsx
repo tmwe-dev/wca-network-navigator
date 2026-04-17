@@ -29,18 +29,14 @@ import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRun
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
 
-import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
-import { useWcaSync } from "@/hooks/useWcaSync";
-import { useOutreachQueue } from "@/hooks/useOutreachQueue";
-import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { useWcaSession } from "@/hooks/useWcaSession";
-import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
-import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
+import { BackgroundServices } from "./BackgroundServices";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
 import { queryKeys } from "@/lib/queryKeys";
+import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 
 const ContactRecordDrawer = lazy(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -73,7 +69,15 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const { status: authStatus } = useAuth();
   const sessionReady = authStatus === "authenticated";
 
-  useEffect(() => { if (sessionReady) queryClient.invalidateQueries(); }, [sessionReady]);
+  // ⚡ Perf: invalidate cache only on sign-in transition (not on every sessionReady toggle).
+  // Old behavior re-fetched ~30 queries on every navigation.
+  const prevSessionReady = useRef(false);
+  useEffect(() => {
+    if (sessionReady && !prevSessionReady.current) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
+    }
+    prevSessionReady.current = sessionReady;
+  }, [sessionReady]);
 
   const [commandOpen, setCommandOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
@@ -112,13 +116,15 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     enabled: isAuthenticated && sessionReady,
   });
 
-  useJobHealthMonitor();
-  useWcaSync();
-  useOptimusBridgeListener();
-  useAiExtractBridgeListener();
-  const outreachQueue = useOutreachQueue();
-  const globalSync = useGlobalAutoSync();
+  // ⚡ Perf: hook critici per UI (sessione WCA) montati subito.
+  // Hook background (useJobHealthMonitor, useWcaSync, useOutreachQueue,
+  // useGlobalAutoSync, useOptimusBridgeListener, useAiExtractBridgeListener)
+  // sono spostati in <BackgroundServices> e avviati su requestIdleCallback
+  // dopo first paint per non bloccare il TTI.
   const wcaSession = useWcaSession();
+
+  // Prefetch top routes during idle so navigation is instant.
+  useEffect(() => { scheduleIdlePrefetch(); }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth", { replace: true });
@@ -323,28 +329,24 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       {/* Main content */}
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
-                        <LayoutHeader
-                          onToggleSidebar={() => setSidebarOpen(o => !o)}
-                          onAiClick={() => setIntelliflowOpen(true)}
-                          onAddContact={() => setAddContactOpen(true)}
-                          onAgentDash={() => setAgentDashOpen(true)}
-                          onTestExt={() => setTestExtOpen(true)}
-                          outreachQueue={outreachQueue}
-                          globalSync={globalSync}
-                        />
+                        <BackgroundServices>
+                          {({ outreachQueue, globalSync }) => (
+                            <LayoutHeader
+                              onToggleSidebar={() => setSidebarOpen(o => !o)}
+                              onAiClick={() => setIntelliflowOpen(true)}
+                              onAddContact={() => setAddContactOpen(true)}
+                              onAgentDash={() => setAgentDashOpen(true)}
+                              onTestExt={() => setTestExtOpen(true)}
+                              outreachQueue={outreachQueue}
+                              globalSync={globalSync}
+                            />
+                          )}
+                        </BackgroundServices>
                         <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={location.pathname}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.15 }}
-                              className="h-full"
-                            >
-                              <Outlet />
-                            </motion.div>
-                          </AnimatePresence>
+                          {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
+                          <div className="h-full animate-in fade-in duration-150">
+                            <Outlet />
+                          </div>
                         </main>
                         <Suspense fallback={null}><MobileBottomNav /></Suspense>
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
