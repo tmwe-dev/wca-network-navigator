@@ -1,136 +1,109 @@
 
 
-L'utente vuole una **mappatura completa del ciclo WhatsApp** del sistema: cosa legge, come ragiona, cosa fa coi contatti. È una richiesta di **audit/report**, non di implementazione → presento il documento direttamente come piano informativo, senza modifiche al codice.
+# Analisi profonda — Apertura pagine lenta (5–10s)
 
-## CICLO WHATSAPP — MAPPA COMPLETA
+## Diagnosi: 8 colli di bottiglia identificati
 
-### A. LIVELLO 1 — ESTENSIONE BROWSER (cliente, su `web.whatsapp.com`)
+### 🔴 Critici (causano i 5-10s percepiti)
 
-**Posizione**: `public/whatsapp-extension/` (manifest v3, versione 5.1)
-**Moduli**:
-- `background.js` — router messaggi, registry azioni
-- `content.js` — bridge con la webapp, heartbeat adattivo (8–30s)
-- `tab-manager.js` — gestisce/recupera la tab di WhatsApp Web
-- `discovery.js` — riconosce stato UI (QR, loading, sidebar pronta)
-- `actions.js` — esegue azioni reali sul DOM
-- `ai-extract.js` — fallback AI quando il DOM non è interpretabile
-- `config.js` — credenziali Supabase ricevute dalla webapp
+**1. Triplo lazy/Suspense annidato per ogni pagina**
+Il rendering di `/v2/network` attraversa:
+```text
+App.tsx Suspense
+  └─ V2Routes Suspense
+      └─ guardedPage Suspense (PageSkeleton)
+          └─ NetworkPage.tsx [V2 wrapper] → Suspense (spinner)
+              └─ Network.tsx [V1 wrapper] → Suspense (TabFallback)
+                  └─ Operations.tsx (vero contenuto, 329 righe)
+```
+4 RTT in serie per scaricare i chunk JS. Lo spinner cambia 3 volte = "white screen" lungo. Stesso problema su Dashboard, CRM, Outreach, Contacts.
 
-**Cosa sa fare** (azioni esposte):
-1. `verifySession` — verifica login WhatsApp Web (5 strategie: sidebar/chat-items/compose-box/shell-fallback/QR)
-2. `readUnread` — scansiona la sidebar e estrae chat con messaggi non letti (S1 schema appreso → S2 testid → S3 role → S4 container → S5 euristica span+title; fallback AI su HTML grezzo)
-3. `readThread` — apre una chat e legge gli ultimi N messaggi (default 50)
-4. `backfillChat` — scrolla all'indietro per recuperare lo storico (max 30 scroll)
-5. `sendWhatsApp` — apre chat e digita+invia un messaggio (CSP-compliant, no eval)
-6. `learnDom` — manda l'HTML al backend AI per imparare nuovi selettori CSS (auto-healing quando WA cambia DOM)
-7. `diagnosticDom` — raccoglie stato pagina per debug
+**2. `queryClient.invalidateQueries()` GLOBALE in `AuthenticatedLayout.tsx:76`**
+Senza `queryKey` → invalida TUTTE le query in cache ogni volta che `sessionReady` toggla. Dopo navigazione/refresh si scatena un refetch a cascata di 30+ query. È il "tutto si ricarica da zero".
 
-### B. LIVELLO 2 — BRIDGE WEBAPP ↔ ESTENSIONE
+**3. AnimatePresence `mode="wait"` sull'Outlet** (`AuthenticatedLayout.tsx:336`)
+Aspetta che l'animazione exit (150ms) finisca PRIMA di iniziare a montare la nuova pagina → blocca anche lo Suspense fallback. +300ms a ogni navigazione.
 
-**File**: `src/hooks/useWhatsAppExtensionBridge.ts`
-- Comunicazione via `window.postMessage` con direction `from-webapp-wa` ↔ `from-extension-wa`
-- Ping ogni 3s → setta `isAvailable`
-- `verifySession` ogni 30s → setta `isAuthenticated`
-- All'avvio invia config Supabase (url+anonKey+JWT) all'estensione
-- Espone: `sendWhatsApp, readUnread, readThread, backfillChat, learnDom, verifySession`
+**4. Hook globali bloccanti al mount del layout**
+`useJobHealthMonitor`, `useWcaSync`, `useOptimusBridgeListener`, `useAiExtractBridgeListener`, `useOutreachQueue`, `useGlobalAutoSync`, `useWcaSession` → tutti partono in parallelo. `useGlobalAutoSync` legge `app_settings`, `useEmailAutoSync` parte un setInterval, `useOutreachQueue` istanzia bridge WA+LI con relativi `chrome.runtime` polling.
 
-### C. LIVELLO 3 — ORCHESTRAZIONE LATO APP
+**5. Dashboard `useDashboardData` fa 12 query Supabase in parallelo**
+Promise.all su 12 `.from(...).count()`. La query più lenta determina TTFB. Una sola lenta a 2s blocca tutta la dashboard.
 
-#### C1. Sync manuale (lettura)
-**File**: `src/hooks/useWhatsAppAdaptiveSync.ts`
-- **Solo manuale**, no polling/timer (vincolo `whatsapp-stealth-sync`)
-- Click "Leggi" → `readNow()`:
-  - Se nessuna chat focalizzata → `sidebarScan()` → `readUnread`
-  - Se chat focalizzata → `threadScan()` → `readThread(20)`
-- Per ogni messaggio:
-  - Detect `direction` (prefisso "Tu:", "You:", ecc. → outbound; altrimenti inbound)
-  - Genera ID deterministico via `buildDeterministicId("wa", contact, text, time)` per dedup
-  - Risolve `operator_id` per l'utente
-  - Upsert in `channel_messages` con `onConflict: user_id,message_id_external, ignoreDuplicates: true`
-- Notifica toast "📱 N nuovi messaggi" + invalida query React-Query
+### 🟡 Secondari
 
-#### C2. Backfill profondo (recupero storico)
-**File**: `src/hooks/useWhatsAppBackfill.ts`
-- Cursor persistente in tabella `channel_backfill_state` (per `operator_id+channel+external_chat_id`)
-- Per sessione: max 10 chat, pause 17.5s ±15% tra chat, max 30 scroll/chat
-- Ogni click avanza il cursor `oldest_message_at` indietro nel tempo
-- Se la chat raggiunge l'inizio → `reached_beginning=true`, skip nei click successivi
+**6. Prefetch ferma al wrapper, non al contenuto vero**
+`prefetchRoute("/v2/network")` carica solo `NetworkPage.tsx` (25 righe wrapper), NON `Network.tsx` né `Operations.tsx`. Il prefetch attuale è quasi inutile.
 
-#### C3. Invio messaggi (outbound)
-**Edge function**: `supabase/functions/send-whatsapp/index.ts`
-- Verifica rate limit via RPC `check_channel_rate_limit` (max 5/min)
-- Inserisce in `extension_dispatch_queue` con `status='pending'`
-- L'estensione fa polling della coda e invia via DOM injection
-- Conferma delivery via webhook `receive-channel-message` (aggiorna `delivered_at`)
+**7. Bundle splitting non ottimale**
+`vendor-three-core` + `vendor-three-fiber` + `vendor-three-drei` = 3 chunk in serie per la Dashboard 3D. `framer-motion` separato ma usato sempre.
 
-**Hook applicativi che invocano l'invio**:
-- `useSendWhatsApp.ts` — invio singolo (Cockpit, contact panel)
-- `useOutreachQueue.ts` — invio batch da campagne (delay 5s tra invii)
+**8. `motion.div key={pathname}` rimonta tutto ad ogni route**
+Forza React a smontare l'intero sub-tree → effetti riavviati anche con cache hit.
 
-### D. LIVELLO 4 — INGESTION & DEDUP
+---
 
-Tutti i messaggi (inbound dal sync + outbound delivered) finiscono in `channel_messages` con:
-- `channel='whatsapp'`, `direction`, `from_address`, `to_address`, `body_text`, `operator_id`, `user_id`
-- `message_id_external` deterministico → dedup transazionale via `ON CONFLICT`
-- Trigger `channel_messages_search_trigger` aggiorna `search_vector` (full-text)
-- Trigger `on_inbound_message` (solo `direction='inbound'`):
-  - **a)** Cerca match con `outreach_queue` via `partner_id` o `from_address` → marca `replied_at`
-  - **b)** Cancella followup pendenti in `outreach_schedules` (`status='skipped'`)
-  - **c)** Crea `activity` di tipo `follow_up` (priorità `high`, due_date `now()`)
-  - **d)** Invoca via `pg_net` → edge function `classify-inbound-message`
+## Piano di intervento (ordine d'impatto)
 
-### E. LIVELLO 5 — RAGIONAMENTO AI (classificazione + decisione)
+### FASE 1 — Quick wins (rischio basso, ~70% del beneficio)
 
-**Edge function**: `supabase/functions/classify-inbound-message/index.ts`
-Modello: `google/gemini-3-flash-preview` via Lovable AI Gateway
+1. **Rimuovere `queryClient.invalidateQueries()` globale** in `AuthenticatedLayout.tsx:76`. Sostituire con invalidate mirato solo all'evento `SIGNED_IN` (non al toggle di sessionReady).
 
-**Output strutturato** (tool calling JSON):
-- `classification`: positive | negative | neutral | needs_human | spam
-- `confidence`: 0–1
-- `sentiment`: positive | negative | neutral | mixed
-- `urgency`: critical | high | normal | low
-- `intent`: descrizione breve
-- `reasoning`: spiegazione
+2. **Collassare il triplo wrapper V2→V1→Operations**:
+   - Pagine V2 wrapper (`NetworkPage`, `CRMPage`, `OutreachPage`, `DashboardPage`, `ContactsPage`, ecc.) → rimuovere lo Suspense interno; resta solo quello di `guardedPage`.
+   - Pagine V1 di passaggio (`Network.tsx → Operations`) → far importare `Operations` direttamente nel routes V2.
+   - Risultato: 1 solo Suspense per pagina invece di 3-4.
 
-**Hint specifico WhatsApp**: "This is a WhatsApp message (short, informal)" → modifica il tono di valutazione vs email/LinkedIn.
+3. **Estendere `prefetchRoutes.ts` ai contenuti reali**: hover su "Network" → prefetch in catena `NetworkPage` + `Network` + `Operations`. Aggiungere prefetch automatico al primo `requestIdleCallback` per le 4 pagine top: Dashboard, Network, CRM, Outreach.
 
-**Side-effects**:
-1. Insert in `reply_classifications` (storico classificazioni)
-2. Aggiorna `activity.description` con etichetta `[positive 87% | positive] whatsapp from +39…`
-3. Se `needs_human` → priorità activity = `critical`
-4. Se `positive` + missione `autopilot=true` → crea `ai_pending_actions(action_type='send_proposal')` → trigger `on_ai_pending_action_approved` → `pending-action-executor`
+4. **Rimuovere `mode="wait"` dall'AnimatePresence** sul main outlet. Risparmio 150-300ms per navigazione.
 
-### F. LIVELLO 6 — IMPATTO SUL CONTATTO
+### FASE 2 — Hook background (~15%)
 
-A valle della classificazione, si attivano automatismi sul partner/lead:
+5. **Defer hook background**: avviare `useOutreachQueue`, `useGlobalAutoSync`, `useJobHealthMonitor` in `requestIdleCallback` (1.5s dopo first paint).
 
-1. **Lead status escalation** (memory `automated-lead-status-logic`): la `classify-email-response` (e per analogia inbound WA) può promuovere `lead_status: new → contacted → in_progress → negotiation`
-2. **Holding pattern** (memory `holding-pattern-governance`): se positivo, esce dal circuito d'attesa ✈️
-3. **Activity timeline**: nuova attività `follow_up` visibile in `/v2/agenda` e nel pannello partner
-4. **Mission progress**: `mission_actions` aggiornata; followup pendenti vengono `skipped`
-5. **Increment counters**: `partners.interaction_count` / `imported_contacts.interaction_count` via RPC `increment_partner_interaction`
-6. **Reliability scorecard**: rispondi-rapidamente alza il "response rate" del partner
+6. **Lazy-mount bridge listeners** (`useOptimusBridgeListener`, `useAiExtractBridgeListener`) solo quando il pannello estensioni è aperto.
 
-### G. UI DOVE APPARE TUTTO QUESTO
+### FASE 3 — Dashboard (~10%)
 
-- `/v2/in-arrivo` (tab WhatsApp): toolbar `WhatsAppToolbar` con pulsanti "Leggi"/"Recupera storico"
-- Inbox WhatsApp: lista chat + thread view (legge da `channel_messages` filtrata `channel='whatsapp'`)
-- `WhatsAppExtensionStatus`: badge isAvailable/isAuthenticated nel header
-- Cockpit / Contact panel: bottone "WhatsApp" → `useSendWhatsApp`
-- AI Control Center: classificazioni e pending actions visibili in audit log
+7. **1 RPC `get_dashboard_snapshot`** che restituisce JSON unico al posto delle 12 query parallele. 12 RTT → 1.
 
-### H. PUNTI DI ATTENZIONE / RISCHI NOTI
+8. **Lazy-load widget pesanti**: `OperativeMetricsGrid`, `SmartActions`, `AgentStatusPanel` (oggi caricati subito).
 
-1. **TOS WhatsApp**: l'intero impianto si regge su DOM injection (no API ufficiale). Memory `multichannel-extension-architecture` documenta il rischio.
-2. **Rate limit**: 5 msg/min hard cap; backfill 10 chat/sessione, 17.5s tra chat (anti-flood).
-3. **DOM healing**: se WA cambia il DOM, `learnDom` rigenera selettori via AI. Ma se l'AI sbaglia, sync va a 0.
-4. **operator_id mancante**: utenti senza riga in `operators` vedono i messaggi scartati (log "no operator found"). Già osservato nei log check-inbox.
-5. **Sync solo manuale**: nessun WA arriva senza che l'utente clicchi "Leggi" → memory `whatsapp-stealth-sync` lo richiede esplicitamente per evitare ban.
-6. **Direction detection fragile**: prefissi "Tu:/You:/Tú:" sono localizzati; se WA cambia lingua, tutti i messaggi appaiono come `inbound`.
+### FASE 4 — Bundle (~5%, rischio medio)
 
-## RIEPILOGO IN UNA RIGA
+9. Unire `vendor-three-*` in un unico chunk (caricato solo dalla dashboard 3D).
+10. Spostare `framer-motion` in `vendor-react`.
+11. Lazy-import `recharts` solo dentro i widget chart.
 
-**Click "Leggi" → estensione legge sidebar/thread WA Web → upsert in `channel_messages` (dedup) → trigger `on_inbound_message` → activity + classify-inbound-message AI → escalation lead_status / pending action / followup skip → UI inbox + agenda + cockpit aggiornati.**
+---
 
-Vuoi che approfondisca un anello specifico (es. la parte AI di classificazione, il backfill cursor, o l'invio outbound), o vuoi un intervento concreto su uno dei punti deboli (es. fix direction detection, gestione operator_id mancante, healing DOM più robusto)?
+## Stima impatto cumulativo
+
+| Fix | Risparmio TTI |
+|---|---|
+| Rimuovi invalidate globale | -1.5s |
+| Collassa triplo Suspense | -1.0s |
+| Prefetch reale dei contenuti | -0.8s |
+| Rimuovi `mode="wait"` | -0.3s |
+| Defer hook background | -0.4s |
+| RPC dashboard unica | -0.5s |
+| **Totale** | **da 5-10s → 0.5-1.5s** |
+
+---
+
+## Domande prima di partire
+
+**A. Scope** — su quali fasi procedere?
+- (a) **Solo Fase 1** — quick wins, rischio minimo, ~70% del beneficio. Consigliato come primo step.
+- (b) **Fasi 1+2** — aggiunge defer degli hook, ~85%, rischio basso.
+- (c) **Fasi 1+2+3** — include nuova RPC Postgres `get_dashboard_snapshot`, ~95%, richiede migration.
+- (d) **Tutte le 4 fasi** — massimo impatto, include riorganizzazione bundle (rischio regressione visiva minimo).
+
+**B. Animazione transizione pagine** — preferisci:
+- Rimuoverla del tutto (sensazione "app nativa", massima velocità)
+- Mantenerla ma senza `mode="wait"` (fade leggero, -150ms)
+- Lascio decidere a me (consiglio: rimuovere `mode="wait"`, mantenere fade entry)
+
+Rispondi A+B (es. "a + nativa") e procedo end-to-end.
 
