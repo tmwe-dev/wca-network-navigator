@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAgents } from "@/hooks/useAgents";
+import { useAgents, type AgentInsert } from "@/hooks/useAgents";
 import { AgentAvatarCarousel } from "@/components/agents/AgentAvatarCarousel";
 import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,13 +23,14 @@ interface Message {
 }
 
 export default function AgentChatHub() {
-  const { agents, isLoading } = useAgents();
+  const { agents, isLoading, createAgent } = useAgents();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [voiceCallOpen, setVoiceCallOpen] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const chatMapRef = useRef<Map<string, Message[]>>(new Map());
   const [, forceRender] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -41,6 +42,36 @@ export default function AgentChatHub() {
   useEffect(() => {
     if (!activeId && agents.length > 0) setActiveId(agents[0].id);
   }, [agents, activeId]);
+
+  // Auto-seed: se l'utente non ha ancora agenti, crea il roster base
+  // (Luca director, Marco outreach, Sara sales, Robin support).
+  // Evita la pagina vuota mostrata dopo il primo login.
+  useEffect(() => {
+    if (isLoading || seeding || agents.length > 0) return;
+    let cancelled = false;
+    (async () => {
+      setSeeding(true);
+      const roster: Array<Partial<AgentInsert>> = [
+        { name: "Luca", role: "director", avatar_emoji: "🧠", is_active: true, system_prompt: "Sei Luca, director strategico." },
+        { name: "Marco", role: "outreach", avatar_emoji: "📧", is_active: true, system_prompt: "Sei Marco, specialista outreach email." },
+        { name: "Sara", role: "sales", avatar_emoji: "💼", is_active: true, system_prompt: "Sei Sara, sales manager." },
+        { name: "Robin", role: "support", avatar_emoji: "🎯", is_active: true, system_prompt: "Sei Robin, supporto clienti." },
+      ];
+      try {
+        for (const a of roster) {
+          if (cancelled) return;
+          await createAgent.mutateAsync(a);
+        }
+        toast.success("Agenti base creati");
+      } catch (e) {
+        log.warn("seed agents failed", { error: e instanceof Error ? e.message : String(e) });
+        toast.error("Impossibile creare gli agenti base");
+      } finally {
+        if (!cancelled) setSeeding(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isLoading, agents.length, seeding, createAgent]);
 
   const activeAgent = agents.find((a) => a.id === activeId) ?? null;
   const messages = activeId ? chatMapRef.current.get(activeId) ?? [] : [];
@@ -147,8 +178,21 @@ export default function AgentChatHub() {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Carousel */}
-      <div className="border-b border-border/40 bg-card/30 backdrop-blur-sm">
-        <AgentAvatarCarousel agents={agents} activeId={activeId} onSelect={setActiveId} />
+      <div className="border-b border-border/40 bg-card/30 backdrop-blur-sm min-h-[88px] flex items-center">
+        {agents.length > 0 ? (
+          <AgentAvatarCarousel agents={agents} activeId={activeId} onSelect={setActiveId} />
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-6 text-xs text-muted-foreground">
+            {seeding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sto creando i tuoi agenti base…
+              </>
+            ) : (
+              <>Nessun agente disponibile. Apri Impostazioni → Agenti per crearne uno.</>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Agent header */}
