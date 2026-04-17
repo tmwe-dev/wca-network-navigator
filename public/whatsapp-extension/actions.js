@@ -4,7 +4,7 @@
 // Uses inject-once helpers pattern
 // ══════════════════════════════════════════════
 
-const Actions = (function () {
+var Actions = globalThis.Actions || (function () {
 
   // ══════════════════════════════════════════════
   // INJECT-ONCE: Page helpers (shadow DOM, input)

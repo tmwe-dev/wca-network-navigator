@@ -5,7 +5,7 @@
 // invalidation
 // ══════════════════════════════════════════════
 
-const AiExtract = (function () {
+var AiExtract = globalThis.AiExtract || (function () {
   const SCHEMA_TTL_MS = 3 * 60 * 60 * 1000; // 3h
   const MAX_FAILURES_BEFORE_INVALIDATE = 3;
 

@@ -3,7 +3,7 @@
 // Tab lifecycle, queue serialization, hydration
 // ══════════════════════════════════════════════
 
-const TabManager = (function () {
+var TabManager = globalThis.TabManager || (function () {
   // ── Two-lane queue: session (lightweight) vs action (heavy) ──
   let _sessionQueue = Promise.resolve();
   let _actionQueue = Promise.resolve();

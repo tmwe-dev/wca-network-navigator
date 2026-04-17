@@ -4,7 +4,7 @@
 // element discovery without hardcoded selectors
 // ══════════════════════════════════════════════
 
-const Discovery = (function () {
+var Discovery = globalThis.Discovery || (function () {
 
   // ── Injected discovery script (runs inside WA tab) ──
   function buildDiscoveryScript() {
