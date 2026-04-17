@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/apiError";
 const WHATSAPP_EXTENSION_ZIP_FILENAME = "whatsapp-extension.zip";
 const LINKEDIN_EXTENSION_ZIP_FILENAME = "linkedin-extension.zip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.3.1";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.3.2";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.2.1";
 
 const EXTENSION_FILES = {

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WhatsApp Direct Send",
-  "version": "5.3.1",
-  "description": "Invio diretto messaggi WhatsApp dal Cockpit — v5.3.1 fix idempotent module loading (no more 'Actions is not defined' on SW wake-up)",
+  "version": "5.3.2",
+  "description": "Invio diretto messaggi WhatsApp dal Cockpit — v5.3.2 bootstrap bridge compatibile e config ack retry",
   "permissions": [
     "tabs",
     "activeTab",

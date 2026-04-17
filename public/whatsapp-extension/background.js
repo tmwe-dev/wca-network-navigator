@@ -22,7 +22,7 @@ try {
 // ── Action registry ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "5.3.1" });
+    sendResponse({ success: true, version: "5.3.2" });
     return false;
   },
 
