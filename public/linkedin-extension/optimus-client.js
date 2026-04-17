@@ -72,7 +72,7 @@ var OptimusClient = (function() {
 // page-injectable simplifyDom + executePlan.
 // ══════════════════════════════════════════════
 
-const Optimus = (function () {
+var Optimus = globalThis.Optimus || (function () {
 
   // ── Page-context: simplify a subtree to compact HTML ──
   // Designed to be injected via chrome.scripting.executeScript,
