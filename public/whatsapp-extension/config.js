@@ -87,3 +87,4 @@ var Config = globalThis.Config || (function () {
     errorResponse: errorResponse,
   };
 })();
+globalThis.Config = Config;

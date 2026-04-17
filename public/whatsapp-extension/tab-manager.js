@@ -166,3 +166,4 @@ var TabManager = globalThis.TabManager || (function () {
     syncBridgeAcrossOpenTabs: syncBridgeAcrossOpenTabs,
   };
 })();
+globalThis.TabManager = TabManager;

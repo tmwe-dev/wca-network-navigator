@@ -284,3 +284,4 @@ var AiExtract = globalThis.AiExtract || (function () {
     learnDomSelectors: learnDomSelectors,
   };
 })();
+globalThis.AiExtract = AiExtract;

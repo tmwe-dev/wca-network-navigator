@@ -303,3 +303,4 @@ var Discovery = globalThis.Discovery || (function () {
     compactDiscovery: compactDiscovery,
   };
 })();
+globalThis.Discovery = Discovery;

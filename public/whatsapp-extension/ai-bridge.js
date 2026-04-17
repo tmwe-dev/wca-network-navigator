@@ -99,3 +99,4 @@ var AiBridge = globalThis.AiBridge || (function () {
     sendRequest: sendRequest,
   };
 })();
+globalThis.AiBridge = AiBridge;

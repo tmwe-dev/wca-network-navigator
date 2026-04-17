@@ -764,3 +764,4 @@ var Actions = globalThis.Actions || (function () {
     diagnostic: diagnostic,
   };
 })();
+globalThis.Actions = Actions;
