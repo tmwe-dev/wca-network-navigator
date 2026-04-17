@@ -22,6 +22,31 @@
   // Max payload sizes
   const MAX_STRING_LENGTH = 5000;
 
+  // Actions that require a fully rendered DOM (background tabs throttle rendering)
+  const VISIBILITY_REQUIRED_ACTIONS = [
+    "extractProfile", "sendMessage", "sendConnectionRequest",
+    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
+    "diagnosticLinkedInDom", "learnDom",
+  ];
+
+  function waitForVisible(timeoutMs) {
+    if (document.visibilityState === "visible") return Promise.resolve(true);
+    return new Promise(function (resolve) {
+      const timer = setTimeout(function () {
+        document.removeEventListener("visibilitychange", onChange);
+        resolve(false);
+      }, timeoutMs || 3000);
+      function onChange() {
+        if (document.visibilityState === "visible") {
+          clearTimeout(timer);
+          document.removeEventListener("visibilitychange", onChange);
+          setTimeout(function () { resolve(true); }, 1000);
+        }
+      }
+      document.addEventListener("visibilitychange", onChange);
+    });
+  }
+
   function isExtensionAlive() {
     try {
       if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
@@ -62,12 +87,29 @@
     return null;
   }
 
-  function relayMessage(data) {
+  async function relayMessage(data) {
     // Validate payload before relay
     const validationError = validatePayload(data);
     if (validationError) {
       failResponse(data, validationError, "ERR_VALIDATION");
       return;
+    }
+
+    if (!isExtensionAlive()) {
+      alive = false;
+      currentHeartbeat = BASE_HEARTBEAT_MS; // reset backoff
+      failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
+      post({ direction: "from-extension-li", action: "extensionDead" });
+      return;
+    }
+
+    // Gate: actions that read DOM require the tab to be visible
+    if (VISIBILITY_REQUIRED_ACTIONS.indexOf(data.action) !== -1) {
+      const visible = await waitForVisible(3000);
+      if (!visible) {
+        failResponse(data, "La tab di LinkedIn deve essere visibile per leggere i messaggi", "TAB_NOT_VISIBLE");
+        return;
+      }
     }
 
     if (!isExtensionAlive()) {
