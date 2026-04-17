@@ -4,7 +4,7 @@
 // Uses InputNative instead of execCommand
 // ══════════════════════════════════════════════════
 
-const HybridOps = (function () {
+var HybridOps = globalThis.HybridOps || (function () {
 
   // ── InputNative: replaces execCommand for contenteditable ──
   function nativeInsertText(text) {
@@ -303,3 +303,4 @@ const HybridOps = (function () {
     addNote: addNote,
   };
 })();
+globalThis.HybridOps = HybridOps;

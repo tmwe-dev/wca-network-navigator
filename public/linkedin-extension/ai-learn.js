@@ -5,7 +5,7 @@
 // - No execCommand — uses Selection API + InputEvent
 // ══════════════════════════════════════════════════
 
-const AILearn = (function () {
+var AILearn = globalThis.AILearn || (function () {
   const CACHE_PREFIX = "li_dom_schema_";
   const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
   const MAX_FAILURES = 3;
@@ -335,3 +335,4 @@ const AILearn = (function () {
     clickConnectWithSchema: clickConnectWithSchema,
   };
 })();
+globalThis.AILearn = AILearn;

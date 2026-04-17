@@ -4,7 +4,7 @@
 // instead of fragile CSS selectors
 // ══════════════════════════════════════════════════
 
-const AXTree = (function () {
+var AXTree = globalThis.AXTree || (function () {
   // Attach debugger to tab, run query, detach
   async function withDebugger(tabId, fn) {
     try {
@@ -407,3 +407,4 @@ const AXTree = (function () {
     isAvailable: isAvailable,
   };
 })();
+globalThis.AXTree = AXTree;

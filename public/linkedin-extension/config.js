@@ -3,7 +3,7 @@
 // Dynamic config via chrome.storage (no hardcoded keys)
 // ══════════════════════════════════════════════════
 
-const Config = (function () {
+var Config = globalThis.Config || (function () {
   const _cache = { supabaseUrl: "", supabaseAnonKey: "" };
   let _loaded = false;
 
@@ -76,3 +76,4 @@ const Config = (function () {
     successResponse: successResponse,
   };
 })();
+globalThis.Config = Config;
