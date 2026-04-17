@@ -85,22 +85,8 @@ const TabManager = (function () {
       }
     }
 
-    // Try finding any existing LinkedIn tab
-    try {
-      const existingTabs = await chrome.tabs.query({ url: "https://*.linkedin.com/*" });
-      if (existingTabs && existingTabs.length > 0) {
-        _liTabId = existingTabs[0].id;
-        if (skipNavigateIfSameDomain && urlMatchesTarget(existingTabs[0].url, url)) {
-          if (existingTabs[0].status !== "complete") await waitForLoad(_liTabId, 15000);
-          return { id: _liTabId, reused: true };
-        }
-        await chrome.tabs.update(_liTabId, { url: url });
-        await waitForLoad(_liTabId, 20000);
-        return { id: _liTabId, reused: false };
-      }
-    } catch (_) {}
-
-    // Create new tab
+    // Create a dedicated background tab for the extension.
+    // Do not hijack user-opened LinkedIn tabs.
     const tab = await safeCreate({ url: url, active: false });
     _liTabId = tab.id;
     await waitForLoad(tab.id, 20000);
