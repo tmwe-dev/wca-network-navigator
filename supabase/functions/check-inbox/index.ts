@@ -576,6 +576,38 @@ Deno.serve(async (req) => {
 
     try { client.disconnect(); } catch (e: unknown) { console.debug("disconnect skipped:", extractErrorMessage(e)); }
 
+    // ── Apply email rules sui nuovi messaggi (best-effort, fire-and-forget) ──
+    try {
+      const newMsgIds = messages.map(m => m.id as string).filter(Boolean);
+      if (newMsgIds.length > 0) {
+        const { data: opRow } = await supabase
+          .from("operators")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const opId = opRow?.id;
+        if (opId) {
+          // Invocazione asincrona: non blocca la response
+          const ruleResp = await fetch(`${supabaseUrl}/functions/v1/apply-email-rules`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({ operator_id: opId, message_ids: newMsgIds }),
+          });
+          if (!ruleResp.ok) {
+            console.warn("[check-inbox] apply-email-rules failed:", ruleResp.status);
+          } else {
+            const ruleResult = await ruleResp.json();
+            console.log("[check-inbox] apply-email-rules:", ruleResult);
+          }
+        }
+      }
+    } catch (rulesErr: unknown) {
+      console.warn("[check-inbox] apply-email-rules error (non-blocking):", extractErrorMessage(rulesErr));
+    }
+
     const matched = messages.filter(m => m.source_type !== "unknown").length;
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
