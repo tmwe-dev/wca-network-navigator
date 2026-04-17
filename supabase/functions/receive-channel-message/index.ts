@@ -76,17 +76,19 @@ Deno.serve(async (req) => {
     if (body_html) row.body_html = body_html;
     if (subject) row.subject = subject;
 
-    const { data: msg, error: insertErr } = message_id_external
+    if (!message_id_external) {
+      console.warn(`[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`);
+    }
+
+    const { data: msgRows, error: insertErr } = message_id_external
       ? await supabase
           .from("channel_messages")
           .upsert([row], { onConflict: "user_id,message_id_external", ignoreDuplicates: true })
           .select("id")
-          .maybeSingle()
       : await supabase
           .from("channel_messages")
           .insert(row)
-          .select("id")
-          .single();
+          .select("id");
 
     if (insertErr) {
       console.error("[receive-channel-message] Insert error:", insertErr);
@@ -95,8 +97,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    const msgId = msgRows?.[0]?.id ?? null;
+    const wasDuplicate = message_id_external && (!msgRows || msgRows.length === 0);
+
     // If outbound delivery confirmation, update dispatch queue
-    if (direction === "outbound" && dispatch_id) {
+    if (direction === "outbound" && dispatch_id && !wasDuplicate) {
       await supabase
         .from("extension_dispatch_queue")
         .update({ status: "delivered", delivered_at: new Date().toISOString() })
@@ -104,11 +109,16 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id);
     }
 
-    console.log(`[receive-channel-message] ${direction} ${channel} msg ${msg.id}`);
+    if (wasDuplicate) {
+      console.log(`[receive-channel-message] ${direction} ${channel} duplicate skipped (ext_id=${message_id_external})`);
+    } else {
+      console.log(`[receive-channel-message] ${direction} ${channel} msg ${msgId}`);
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      message_id: msg.id,
+      message_id: msgId,
+      duplicate: wasDuplicate,
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
