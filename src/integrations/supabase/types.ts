@@ -6115,6 +6115,149 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_agent_log: {
+        Row: {
+          ai_latency_ms: number | null
+          ai_model: string | null
+          ai_tokens_in: number | null
+          ai_tokens_out: number | null
+          channel: string
+          created_at: string
+          dom_snapshot_hash: string | null
+          dom_snapshot_size: number | null
+          error_message: string | null
+          execution_result: string | null
+          extraction_plan: Json | null
+          id: string
+          items_extracted: number | null
+          items_found: number | null
+          memory_id: string | null
+          operator_id: string
+          page_type: string
+          screenshot_included: boolean | null
+          used_cached_plan: boolean
+        }
+        Insert: {
+          ai_latency_ms?: number | null
+          ai_model?: string | null
+          ai_tokens_in?: number | null
+          ai_tokens_out?: number | null
+          channel: string
+          created_at?: string
+          dom_snapshot_hash?: string | null
+          dom_snapshot_size?: number | null
+          error_message?: string | null
+          execution_result?: string | null
+          extraction_plan?: Json | null
+          id?: string
+          items_extracted?: number | null
+          items_found?: number | null
+          memory_id?: string | null
+          operator_id?: string
+          page_type: string
+          screenshot_included?: boolean | null
+          used_cached_plan?: boolean
+        }
+        Update: {
+          ai_latency_ms?: number | null
+          ai_model?: string | null
+          ai_tokens_in?: number | null
+          ai_tokens_out?: number | null
+          channel?: string
+          created_at?: string
+          dom_snapshot_hash?: string | null
+          dom_snapshot_size?: number | null
+          error_message?: string | null
+          execution_result?: string | null
+          extraction_plan?: Json | null
+          id?: string
+          items_extracted?: number | null
+          items_found?: number | null
+          memory_id?: string | null
+          operator_id?: string
+          page_type?: string
+          screenshot_included?: boolean | null
+          used_cached_plan?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_agent_log_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "scraper_agent_memory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraper_agent_log_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scraper_agent_memory: {
+        Row: {
+          channel: string
+          consecutive_failures: number
+          consecutive_successes: number
+          created_at: string
+          dom_structure_hash: string | null
+          extraction_plan: Json
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          operator_id: string
+          page_type: string
+          plan_version: number
+          total_ai_calls: number
+          total_invocations: number
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          consecutive_failures?: number
+          consecutive_successes?: number
+          created_at?: string
+          dom_structure_hash?: string | null
+          extraction_plan?: Json
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          operator_id?: string
+          page_type: string
+          plan_version?: number
+          total_ai_calls?: number
+          total_invocations?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          consecutive_failures?: number
+          consecutive_successes?: number
+          created_at?: string
+          dom_structure_hash?: string | null
+          extraction_plan?: Json
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          operator_id?: string
+          page_type?: string
+          plan_version?: number
+          total_ai_calls?: number
+          total_invocations?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_agent_memory_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supervisor_audit_log: {
         Row: {
           action_category: string
