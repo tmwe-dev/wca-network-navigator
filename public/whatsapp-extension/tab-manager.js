@@ -76,27 +76,25 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (_) { return null; }
   }
 
-  // ── Ensure tab is active+focused so DOM rendering resumes (no restore) ──
+  // ── STEALTH MODE: never steal focus from the user's app window ──
+  // Previously this activated the WA tab and focused its window, which kicked
+  // the user out of the Cockpit. We now only verify the tab exists and rely on
+  // sleep timers to compensate for background-tab DOM throttling — same approach
+  // as the LinkedIn extension, which reads inbox without ever calling
+  // chrome.tabs.update({active:true}) or chrome.windows.update({focused:true}).
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
       if (!tab) return false;
-      let activated = false;
-      if (!tab.active) {
-        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (_) {}
-      }
-      // Bring the tab's window to the front too
-      if (typeof tab.windowId === "number") {
-        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
-      }
-      if (activated) await sleep(postActivateMs || 1200);
+      // Add a small extra wait so background-tab DOM has time to settle.
+      await sleep(Math.min(postActivateMs || 600, 1500));
       return true;
     } catch (_) { return false; }
   }
 
-  // Backward-compat shim: still exposed but no longer restores previous tab.
+  // Backward-compat shim: also stealth — never activates or focuses the tab.
   async function withTemporarilyVisibleTab(tabId, fn) {
-    await ensureTabVisibleAndWait(tabId);
+    await ensureTabVisibleAndWait(tabId, 600);
     return await fn();
   }
 
