@@ -424,10 +424,6 @@ var Actions = globalThis.Actions || (function () {
   // ── Optimus-first: extract messages from open chat panel ──
   // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
   async function tryOptimusReadThread(tabId, previousFailed, failureContext) {
-    // Guard: if Optimus modules are not loaded, signal unavailable so legacy fallback kicks in
-    if (typeof Optimus === "undefined" || typeof OptimusClient === "undefined") {
-      return { success: false, error: "optimus_not_loaded", optimusUnavailable: true };
-    }
     const panelSelector = '[data-testid="conversation-panel-messages"], #main [role="application"], #main';
     const snap = await Optimus.snapshotPage(tabId, panelSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
