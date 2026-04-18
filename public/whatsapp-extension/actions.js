@@ -381,54 +381,407 @@ var Actions = globalThis.Actions || (function () {
     return results && results[0] ? results[0].result : { success: false, error: "No result" };
   }
 
+  // ══════════════════════════════════════════════
+  // OPTIMUS V2 — readUnreadMessages: stabilize → unified extract → relearn → restore
+  // ══════════════════════════════════════════════
   async function readUnreadMessages() {
     try {
       const r = await TabManager.getOrCreateWaTab();
-      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
-      await TabManager.sleep(r.reused ? 1200 : 4000);
 
-      let optimus = await tryOptimusReadUnread(r.tab.id, false, null);
-      // I1: Force relearn whenever 0 items (DOM may have changed), not just when cached
-      if (optimus.success && optimus.items.length === 0) {
-        console.log("[WA Optimus] 0 items, forcing relearn...");
-        optimus = await tryOptimusReadUnread(r.tab.id, true, "Plan returned 0 items, DOM may have changed");
+      // STEP 1: Stabilize (N1)
+      const activation = await TabManager.activateAndStabilize(r.tab.id, 3000);
+      if (!activation.stable) {
+        await activation.restore();
+        return { success: false, error: "DOM non stabile dopo activation" };
       }
 
-      if (optimus.success) {
-        const normalizedItems = (optimus.items || []).map(function (item) {
-          return {
-            contact: String(item.contact || item.name || item.contact_name || "Sconosciuto").trim(),
-            lastMessage: String(item.lastMessage || item.last_message || item.message || item.text || "").trim(),
-            time: String(item.time || item.timestamp || item.date || new Date().toISOString()).trim(),
-            unreadCount: parseInt(item.unreadCount || item.unread_count || item.unread || 0) || 0,
-          };
-        });
+      try {
+        // STEP 2: Unified extract (singola executeScript con multi-segnale + scoring)
+        await ensurePageHelpers(r.tab.id);
+        let result = await unifiedExtract(r.tab.id);
+
+        // STEP 3: AI relearn se 0 contatti (ma item trovati → DOM rotto, non vuoto)
+        if (result.itemsTotal > 0 && result.itemsWithContact === 0) {
+          console.log("[WA V2] 0 contacts on " + result.itemsTotal + " items → triggering relearn");
+          const relearned = await aiRelearnAndExtract(r.tab.id, result.diagnosticInfo);
+          if (relearned && relearned.itemsWithContact > 0) result = relearned;
+        }
+
+        const messages = (result.items || [])
+          .filter(function (it) { return it.contactName; })
+          .map(function (it) {
+            return {
+              contact: it.contactName,
+              lastMessage: it.lastMessage || "",
+              time: it.timestamp || new Date().toISOString(),
+              unreadCount: it.unreadCount || 0,
+              hasUnread: !!it.hasUnread,
+              confidence: it.confidence || 0,
+            };
+          });
+
         return {
           success: true,
-          messages: normalizedItems,
-          scanned: optimus.candidates || normalizedItems.length || 0,
-          method: optimus.cached ? "optimus-cache" : "optimus-ai",
-          optimus: {
-            cached: optimus.cached,
-            planVersion: optimus.planVersion,
-            confidence: optimus.confidence,
-            latencyMs: optimus.latencyMs,
-            dropped: optimus.dropped,
+          messages: messages,
+          scanned: result.itemsTotal || 0,
+          method: result.method || "unified-v2",
+          meta: {
+            itemsTotal: result.itemsTotal,
+            itemsWithContact: result.itemsWithContact,
+            itemsWithUnread: result.itemsWithUnread,
+            strategy: result.strategy,
+            scores: result.scores,
           },
         };
+      } finally {
+        // STEP 4: Restore tab precedente
+        await activation.restore();
       }
-
-      // Any Optimus failure (unreachable OR structural) → fall through to legacy
-      console.warn("[WA Actions] Optimus failed, falling through to legacy:", optimus.error);
-
-      const domRes = await readUnreadDOM(r.tab.id);
-      if (domRes) {
-        domRes.method = "legacy-dom:" + (domRes.method || "unknown");
-      }
-      return domRes || { success: false, error: "Unread fallback failed" };
     } catch (err) {
       return { success: false, error: err.message };
     }
+  }
+
+  // ══════════════════════════════════════════════
+  // OPTIMUS V2 — unifiedExtract: page-injected multi-strategy
+  // ══════════════════════════════════════════════
+  async function unifiedExtract(tabId) {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: _pageUnifiedExtract,
+    });
+    return (results && results[0] && results[0].result)
+      || { itemsTotal: 0, itemsWithContact: 0, itemsWithUnread: 0, items: [], method: "unified-v2-empty" };
+  }
+
+  function _pageUnifiedExtract() {
+    const H = window.__waH;
+    if (!H) return { itemsTotal: 0, itemsWithContact: 0, itemsWithUnread: 0, items: [], method: "no-helpers" };
+
+    function avg(arr) {
+      if (!arr.length) return 0;
+      return Math.round(arr.reduce(function (a, b) { return a + b; }, 0) / arr.length);
+    }
+
+    // ── A. Find chat items (multi-strategia con scoring) ──
+    const strategies = [
+      { sel: '[data-testid="cell-frame-container"]', score: 90, name: "testid-cell" },
+      { sel: '[role="row"]', score: 80, name: "role-row" },
+      { sel: '[role="listitem"]', score: 75, name: "role-listitem" },
+      { sel: '[role="grid"] > *', score: 60, name: "grid-children" },
+    ];
+    let chatItems = [];
+    let strategy = "none";
+    let strategyScore = 0;
+    for (let si = 0; si < strategies.length; si++) {
+      const s = strategies[si];
+      const found = H.filterVisible(H.qsaDeep(s.sel));
+      if (found.length >= 3 && (found.length * s.score > chatItems.length * strategyScore)) {
+        chatItems = found; strategy = s.name; strategyScore = s.score;
+      }
+    }
+    if (chatItems.length === 0) {
+      const titled = H.filterVisible(H.qsaDeep('span[title]'));
+      const parentMap = new Map();
+      for (let ti = 0; ti < titled.length; ti++) {
+        const sp = titled[ti];
+        const ancestor = sp.closest('[tabindex],[role="row"],[role="listitem"]');
+        if (ancestor && !parentMap.has(ancestor)) parentMap.set(ancestor, true);
+      }
+      if (parentMap.size >= 3) { chatItems = Array.from(parentMap.keys()); strategy = "heuristic-title"; strategyScore = 40; }
+    }
+    if (chatItems.length === 0) {
+      return {
+        itemsTotal: 0, itemsWithContact: 0, itemsWithUnread: 0,
+        items: [], strategy: "none", method: "unified-v2",
+        diagnosticInfo: { error: "no_chat_items", bodyChildren: document.body ? document.body.children.length : 0 },
+      };
+    }
+
+    // ── B. Extract per item ──
+    const items = [];
+    let itemsWithContact = 0, itemsWithUnread = 0;
+    const scores = { contact: [], badge: [] };
+
+    for (let i = 0; i < chatItems.length; i++) {
+      const chat = chatItems[i];
+      const item = { contactName: null, lastMessage: null, timestamp: null, unreadCount: 0, hasUnread: false, confidence: 0 };
+      let contactScore = 0, badgeScore = 0;
+
+      // Contact name
+      const cstr = [
+        { fn: function () { return H.qsWithin(chat, 'span[title][dir="auto"]'); }, get: function (el) { return el.getAttribute("title"); }, score: 95 },
+        { fn: function () { return H.qsWithin(chat, '[data-testid="cell-frame-title"] span'); }, get: function (el) { return el.textContent && el.textContent.trim(); }, score: 90 },
+        { fn: function () { return H.qsWithin(chat, 'span[title]'); }, get: function (el) { return el.getAttribute("title"); }, score: 85 },
+        { fn: function () { return H.qsWithin(chat, '[role="gridcell"] span[dir="auto"]'); }, get: function (el) { return el.textContent && el.textContent.trim(); }, score: 70 },
+        { fn: function () {
+            const spans = H.qsaWithin(chat, 'span');
+            for (let k = 0; k < spans.length; k++) {
+              const t = (spans[k].textContent || "").trim();
+              if (t.length > 1 && t.length < 50 && !/^\d+$/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t)) return spans[k];
+            }
+            return null;
+          }, get: function (el) { return el.textContent && el.textContent.trim(); }, score: 30 },
+      ];
+      for (let cs = 0; cs < cstr.length; cs++) {
+        const el = cstr[cs].fn();
+        if (el) {
+          const v = cstr[cs].get(el);
+          if (v && v.length > 0 && v.length < 80) { item.contactName = v; contactScore = cstr[cs].score; break; }
+        }
+      }
+
+      // Unread badge — 6 strategie ordinate
+      const bstr = [
+        { fn: function () { return H.qsWithin(chat, '[data-testid="icon-unread-count"]') || H.qsWithin(chat, '[data-testid="unread-count"]'); },
+          get: function (el) { return parseInt(el.textContent) || 1; }, score: 95 },
+        { fn: function () {
+            const ar = H.qsaWithin(chat, 'span[aria-label]');
+            for (let k = 0; k < ar.length; k++) {
+              const lbl = (ar[k].getAttribute("aria-label") || "").toLowerCase();
+              if (lbl.includes("unread") || lbl.includes("non lett") || lbl.includes("da leggere")) return ar[k];
+            }
+            return null;
+          }, get: function (el) { return parseInt(el.textContent) || 1; }, score: 90 },
+        { fn: function () {
+            const spans = H.qsaWithin(chat, 'span');
+            for (let k = 0; k < spans.length; k++) {
+              const txt = spans[k].textContent.trim();
+              if (!/^\d{1,3}$/.test(txt)) continue;
+              const ps = spans[k].parentElement ? window.getComputedStyle(spans[k].parentElement) : null;
+              const br = ps ? parseFloat(ps.borderRadius) || 0 : 0;
+              if (br >= 8) return spans[k];
+            }
+            return null;
+          }, get: function (el) { return parseInt(el.textContent) || 1; }, score: 85 },
+        { fn: function () {
+            const spans = H.qsaWithin(chat, 'span');
+            for (let k = 0; k < spans.length; k++) {
+              const txt = spans[k].textContent.trim();
+              if (!/^\d{1,3}$/.test(txt)) continue;
+              const bg = window.getComputedStyle(spans[k]).backgroundColor;
+              const pbg = spans[k].parentElement ? window.getComputedStyle(spans[k].parentElement).backgroundColor : "";
+              if ((bg + pbg).match(/37,\s*211|25d366|00a884|rgb\(0,\s*168|rgb\(37/i)) return spans[k];
+            }
+            return null;
+          }, get: function (el) { return parseInt(el.textContent) || 1; }, score: 80 },
+        { fn: function () {
+            const els = H.qsaWithin(chat, '[class*="unread"], [class*="badge"]');
+            for (let k = 0; k < els.length; k++) {
+              const txt = els[k].textContent.trim();
+              if (/^\d{1,3}$/.test(txt)) return els[k];
+              const rect = els[k].getBoundingClientRect ? els[k].getBoundingClientRect() : null;
+              if (rect && rect.width > 0 && rect.width < 20 && rect.height > 0 && rect.height < 20) return els[k];
+            }
+            return null;
+          }, get: function (el) { const n = parseInt(el.textContent); return n > 0 ? n : 1; }, score: 70 },
+        { fn: function () {
+            const spans = H.qsaWithin(chat, 'span');
+            for (let k = 0; k < spans.length; k++) {
+              const txt = spans[k].textContent.trim();
+              if (!/^\d{1,3}$/.test(txt)) continue;
+              const rect = spans[k].getBoundingClientRect ? spans[k].getBoundingClientRect() : null;
+              if (rect && rect.width > 0 && rect.width < 40 && rect.height > 0 && rect.height < 30) return spans[k];
+            }
+            return null;
+          }, get: function (el) { return parseInt(el.textContent) || 1; }, score: 50 },
+      ];
+      for (let bi = 0; bi < bstr.length; bi++) {
+        const el = bstr[bi].fn();
+        if (el) { item.unreadCount = bstr[bi].get(el); item.hasUnread = true; badgeScore = bstr[bi].score; break; }
+      }
+
+      // Last message
+      let msgEl = H.qsWithin(chat, '[data-testid="last-msg-status"]')
+        || H.qsWithin(chat, '[data-testid="cell-frame-secondary"] span[title]')
+        || H.qsWithin(chat, '[data-testid="cell-frame-secondary"] span')
+        || H.qsWithin(chat, '[data-testid="last-msg"] span');
+      if (!msgEl) {
+        const sps = H.qsaWithin(chat, 'span');
+        const cands = [];
+        for (let k = 0; k < sps.length; k++) {
+          const t = sps[k].textContent && sps[k].textContent.trim();
+          if (t && t.length > 3 && t !== item.contactName && !/^\d+$/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t)) cands.push(sps[k]);
+        }
+        if (cands.length > 0) msgEl = cands[cands.length - 1];
+      }
+      if (msgEl) item.lastMessage = (msgEl.textContent || "").trim();
+
+      // Timestamp
+      let timeEl = H.qsWithin(chat, '[data-testid="cell-frame-primary-detail"]')
+        || H.qsWithin(chat, '[data-testid="msg-time"]')
+        || H.qsWithin(chat, 'time');
+      if (!timeEl) {
+        const sps = H.qsaWithin(chat, 'span');
+        for (let k = 0; k < sps.length; k++) {
+          const st = sps[k].textContent && sps[k].textContent.trim();
+          if (st && /^\d{1,2}[:.]\d{2}/.test(st)) { timeEl = sps[k]; break; }
+          if (st && /^(ieri|oggi|luned|marted|mercoled|gioved|venerd|sabato|domenic)/i.test(st)) { timeEl = sps[k]; break; }
+        }
+      }
+      if (timeEl) item.timestamp = (timeEl.textContent || "").trim();
+
+      item.confidence = Math.round((contactScore + badgeScore) / 2);
+      if (item.contactName) {
+        itemsWithContact++;
+        if (item.hasUnread) itemsWithUnread++;
+      }
+      items.push(item);
+      scores.contact.push(contactScore);
+      scores.badge.push(badgeScore);
+    }
+
+    // Diagnostic per relearn
+    let diagnosticInfo = null;
+    if (itemsWithContact === 0 && chatItems.length > 0) {
+      const sampleHtml = [];
+      for (let si = 0; si < Math.min(chatItems.length, 3); si++) {
+        sampleHtml.push(chatItems[si].outerHTML.slice(0, 2500));
+      }
+      diagnosticInfo = {
+        error: "zero_contacts_extracted",
+        itemsFound: chatItems.length,
+        strategy: strategy,
+        sampleItems: sampleHtml,
+        dataTestIds: Array.from(new Set(
+          Array.from(document.querySelectorAll('[data-testid]')).map(function (e) { return e.getAttribute('data-testid'); })
+        )).slice(0, 30),
+        roles: Array.from(new Set(
+          Array.from(document.querySelectorAll('[role]')).map(function (e) { return e.getAttribute('role'); })
+        )),
+      };
+    }
+
+    return {
+      itemsTotal: chatItems.length,
+      itemsWithContact: itemsWithContact,
+      itemsWithUnread: itemsWithUnread,
+      items: items,
+      strategy: strategy,
+      method: "unified-v2",
+      scores: { avgContact: avg(scores.contact), avgBadge: avg(scores.badge) },
+      diagnosticInfo: diagnosticInfo,
+    };
+  }
+
+  // ══════════════════════════════════════════════
+  // OPTIMUS V2 — aiRelearnAndExtract: rich snapshot → AI direct-first → validate in-context
+  // ══════════════════════════════════════════════
+  async function aiRelearnAndExtract(tabId, diagnosticInfo) {
+    // 1. Rich snapshot (riusa AiExtract.learnDomSelectors che ora è direct-first)
+    const learnRes = await AiExtract.learnDomSelectors(tabId);
+    if (!learnRes || !learnRes.success || !learnRes.schema) return null;
+
+    // 2. Validate + extract in-context
+    const validated = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: _pageValidateAndExtract,
+      args: [learnRes.schema],
+    });
+    const result = validated && validated[0] && validated[0].result;
+    if (!result || result.itemsWithContact === 0) return null;
+
+    // 3. Cache solo selettori validati (TTL 12h gestito dal consumer)
+    try {
+      const validatedPlan = {};
+      for (const k in learnRes.schema) {
+        if (result.validatedSelectors && result.validatedSelectors[k]) validatedPlan[k] = learnRes.schema[k];
+      }
+      if (Object.keys(validatedPlan).length > 0) {
+        await chrome.storage.local.set({
+          optimus_v2_plan: validatedPlan,
+          optimus_v2_at: Date.now(),
+          optimus_v2_validation: result.validationMeta,
+        });
+      }
+    } catch (e) { console.debug("[WA V2] cache save failed:", e?.message); }
+
+    return result;
+  }
+
+  function _pageValidateAndExtract(selectors) {
+    const H = window.__waH;
+    if (!H) return { itemsTotal: 0, itemsWithContact: 0, items: [], method: "ai-relearn-v2-no-helpers" };
+
+    const validatedSelectors = {};
+    for (const k in (selectors || {})) {
+      const sel = selectors[k];
+      if (!sel) continue;
+      const selectorStr = typeof sel === "string" ? sel : (sel.primary || sel.selector || String(sel));
+      try {
+        const matches = H.qsaDeep(selectorStr);
+        if (matches.length > 0) validatedSelectors[k] = { selector: selectorStr, matchCount: matches.length };
+      } catch (e) { /* invalid selector */ }
+    }
+
+    const containerSel = (validatedSelectors.chatItem && validatedSelectors.chatItem.selector)
+      || (validatedSelectors.container && validatedSelectors.container.selector)
+      || '[role="row"]';
+    const chatItems = H.filterVisible(H.qsaDeep(containerSel));
+
+    const items = [];
+    let itemsWithContact = 0, itemsWithUnread = 0;
+
+    for (let i = 0; i < chatItems.length; i++) {
+      const chat = chatItems[i];
+      const item = { contactName: null, lastMessage: null, timestamp: null, unreadCount: 0, hasUnread: false, confidence: 70 };
+
+      // Contact: AI selector validato → fallback strutturale
+      const contactSel = validatedSelectors.contactName && validatedSelectors.contactName.selector;
+      if (contactSel) {
+        const el = H.qsWithin(chat, contactSel);
+        if (el) item.contactName = el.getAttribute("title") || (el.textContent || "").trim();
+      }
+      if (!item.contactName) {
+        const el = H.qsWithin(chat, 'span[title][dir="auto"]') || H.qsWithin(chat, 'span[title]');
+        if (el) item.contactName = el.getAttribute("title") || (el.textContent || "").trim();
+      }
+
+      // Badge: AI → fallback aria/numeric
+      const badgeSel = validatedSelectors.unreadBadge && validatedSelectors.unreadBadge.selector;
+      if (badgeSel) {
+        const el = H.qsWithin(chat, badgeSel);
+        if (el) { item.unreadCount = parseInt(el.textContent) || 1; item.hasUnread = true; }
+      }
+      if (!item.hasUnread) {
+        const ar = H.qsaWithin(chat, 'span[aria-label]');
+        for (let k = 0; k < ar.length; k++) {
+          const lbl = (ar[k].getAttribute("aria-label") || "").toLowerCase();
+          if (lbl.includes("unread") || lbl.includes("non lett") || lbl.includes("da leggere")) {
+            item.unreadCount = parseInt(ar[k].textContent) || 1; item.hasUnread = true; break;
+          }
+        }
+      }
+
+      // Last message + timestamp: fallback strutturali
+      const msgSel = validatedSelectors.lastMessage && validatedSelectors.lastMessage.selector;
+      const msgEl = (msgSel && H.qsWithin(chat, msgSel)) || H.qsWithin(chat, '[data-testid="cell-frame-secondary"] span');
+      if (msgEl) item.lastMessage = (msgEl.textContent || "").trim();
+
+      const timeSel = validatedSelectors.timestamp && validatedSelectors.timestamp.selector;
+      const timeEl = (timeSel && H.qsWithin(chat, timeSel)) || H.qsWithin(chat, '[data-testid="cell-frame-primary-detail"]') || H.qsWithin(chat, 'time');
+      if (timeEl) item.timestamp = (timeEl.textContent || "").trim();
+
+      if (item.contactName) {
+        itemsWithContact++;
+        if (item.hasUnread) itemsWithUnread++;
+      }
+      items.push(item);
+    }
+
+    return {
+      itemsTotal: chatItems.length,
+      itemsWithContact: itemsWithContact,
+      itemsWithUnread: itemsWithUnread,
+      items: items,
+      validatedSelectors: validatedSelectors,
+      validationMeta: {
+        selectorsReceived: Object.keys(selectors || {}).length,
+        selectorsValidated: Object.keys(validatedSelectors).length,
+        timestamp: Date.now(),
+      },
+      method: "ai-relearn-v2",
+    };
   }
 
   // ── I3: Map AI learn output keys to Optimus executor keys ──

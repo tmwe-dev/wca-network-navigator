@@ -96,6 +96,17 @@ RILEVAMENTO STATO:
 NOTA: WhatsApp Web in italiano usa label come "Elenco chat", "Cerca", "Scrivi un messaggio".
 Se trovi aria-label italiani, usali: [aria-label*="elenco" i], [aria-label*="cerca" i].
 
+OPTIMUS V2 — SNAPSHOT RICCO:
+Lo snapshot include per ogni chat item: outerHTML completo, catena antenati (3 livelli con tag/role/testid), prev/next sibling, lista spans con (text, title, dimensioni, bgColor, parentBgColor, parentBorderRadius), elementi con attributi stabili (role/aria-label/data-testid/title/tabindex/dir).
+USA QUESTI DATI per dedurre selettori robusti:
+- Se uno span ha title e dir="auto", è quasi sempre il nome contatto → usa span[title][dir="auto"]
+- Se uno span ha parentBorderRadius >= 8 e text numerico 1-3 cifre, è un badge unread
+- Se parentBgColor verde (rgb(37,211,...) o simili) + cifre, è badge unread
+- In assenza di data-testid, preferisci role + aria-label + tag semantici + attributi strutturali
+
+FEEDBACK SELETTORI PRECEDENTI:
+Se lo snapshot include "failedSelectors", quei selettori sono stati provati e NON hanno funzionato. NON restituirli, proponi alternative diverse.
+
 Restituisci SOLO JSON valido. Nessuna spiegazione, nessun markdown.`;
 
       userPrompt = `Analizza questo snapshot DOM di WhatsApp Web e restituisci i CSS selector:\n\n${trimmedHtml}`;

@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.8.0";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.7.0";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.9.0";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.8.0";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,41 +19,41 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.8.0",
+    latestVersion: "5.9.0",
     items: [
+      {
+        version: "5.9.0",
+        filename: "whatsapp-extension-5.9.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.9.0.zip",
+        current: true,
+        note: "Optimus V2 — stabilize tab + unified extract multi-segnale + AI relearn con validazione in-context, direct-first edge function",
+      },
       {
         version: "5.8.0",
         filename: "whatsapp-extension-5.8.0.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.8.0.zip",
-        current: true,
-        note: "Versione corrente — M3/M7 badge detection senza data-testid + fallback strutturali, M4 brief tab activation per sbloccare DOM throttling background",
-      },
-      {
-        version: "5.7.0",
-        filename: "whatsapp-extension-5.7.0.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.7.0.zip",
         current: false,
-        note: "Archivio — prompt AI ottimizzati IT, snapshot DOM arricchito",
+        note: "Archivio — badge detection senza data-testid + brief tab activation",
       },
     ],
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.7.0",
+    latestVersion: "3.8.0",
     items: [
+      {
+        version: "3.8.0",
+        filename: "linkedin-extension-3.8.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.8.0.zip",
+        current: true,
+        note: "Optimus V2 — activateAndStabilize, direct-first AI, dedup inbox + filtro notification",
+      },
       {
         version: "3.7.0",
         filename: "linkedin-extension-3.7.0.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.7.0.zip",
-        current: true,
-        note: "Versione corrente — M1 anti-multitab (cerca tab esistenti), M2 dedup inbox + filtro notification badge, M5 brief tab activation",
-      },
-      {
-        version: "3.6.0",
-        filename: "linkedin-extension-3.6.0.zip",
-        path: "/chrome-extensions/linkedin/linkedin-extension-3.6.0.zip",
         current: false,
-        note: "Archivio — prompt AI ottimizzati IT con threadUrl + direction + auth",
+        note: "Archivio — anti-multitab + dedup inbox + brief tab activation",
       },
     ],
   },

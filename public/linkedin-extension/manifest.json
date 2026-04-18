@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.7.0",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.7.0 anti-multitab (M1), dedup inbox + filtro notification (M2), brief tab activation (M5).",
+  "version": "3.8.0",
+  "description": "Optimus V2 — stabilize tab + direct-first AI + dedup inbox + filtro notification badge",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {

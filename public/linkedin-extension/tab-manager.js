@@ -117,10 +117,63 @@ var TabManager = globalThis.TabManager || (function () {
     return _liTabId;
   }
 
-  // ── STEALTH MODE v2 (M5): brief tab activation for DOM rendering ──
-  // Identico a WA M4: chrome.tabs.update({active:true}) senza
-  // chrome.windows.update({focused:true}) attiva il tab nella sua finestra
-  // senza portare la finestra in primo piano → Cockpit non disturbato.
+  // ── OPTIMUS V2 (N1): activateAndStabilize ──
+  // Stesso pattern WA: salva tab attivo, attiva LI, attende DOM stabile (msg-overlay,
+  // msg-conversations-container, main, ecc.) e ritorna restore().
+  async function activateAndStabilize(tabId, maxWaitMs) {
+    let previousTabId = null;
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
+      if (windowTabs && windowTabs[0]) previousTabId = windowTabs[0].id;
+    } catch (err) { console.debug("[LI Tab] N1 save prev:", err?.message); }
+
+    try { await chrome.tabs.update(tabId, { active: true }); }
+    catch (err) { console.debug("[LI Tab] N1 activate:", err?.message); }
+
+    const startTime = Date.now();
+    const maxWait = maxWaitMs || 3000;
+    let stable = false;
+
+    while (Date.now() - startTime < maxWait) {
+      try {
+        const check = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: function () {
+            return {
+              ready: document.readyState === "complete",
+              visible: document.visibilityState === "visible",
+              hasContent: !!(
+                document.querySelector('[class*="msg-conversations"]') ||
+                document.querySelector('[class*="msg-overlay"]') ||
+                document.querySelector('main') ||
+                document.querySelector('[role="main"]')
+              ),
+              loading: !!document.querySelector('[class*="loading"]'),
+            };
+          },
+        });
+        const r = check && check[0] && check[0].result;
+        if (r && r.ready && r.visible && r.hasContent) { stable = true; break; }
+      } catch (err) { console.debug("[LI Tab] N1 probe:", err?.message); }
+      await sleep(300);
+    }
+
+    if (stable) await sleep(500);
+
+    return {
+      stable: stable,
+      previousTabId: previousTabId,
+      restore: async function () {
+        if (previousTabId && previousTabId !== tabId) {
+          try { await chrome.tabs.update(previousTabId, { active: true }); }
+          catch (err) { console.debug("[LI Tab] N1 restore:", err?.message); }
+        }
+      },
+    };
+  }
+
+  // ── STEALTH MODE v2 (M5) — DEPRECATED, kept for backward compat ──
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
@@ -170,6 +223,7 @@ var TabManager = globalThis.TabManager || (function () {
     waitForLoad: waitForLoad,
     getLinkedInTab: getLinkedInTab,
     getTabId: getTabId,
+    activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
     enqueueSession: enqueueSession,
     enqueueAction: enqueueAction,

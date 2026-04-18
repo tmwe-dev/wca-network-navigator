@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "WCA WhatsApp Bridge v5.8",
-  "version": "5.8.0",
-  "description": "Invio diretto messaggi WhatsApp dal Cockpit — v5.8.0 badge detection senza data-testid, brief tab activation per DOM rendering, fallback strutturali rinforzati",
+  "name": "WCA WhatsApp Bridge v5.9",
+  "version": "5.9.0",
+  "description": "Optimus V2 — stabilize+unified extract+AI relearn con validazione in-context, direct-first edge function, multi-segnale scoring per badge/contact",
   "permissions": [
     "tabs",
     "activeTab",
