@@ -239,15 +239,18 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executeListReminders(args: Record<string, unknown>) {
+  async function executeListReminders(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("reminders").select("id, title, description, due_date, priority, status, partner_id, created_at")
       .order("due_date", { ascending: true }).limit(30);
+    if (userId) query = query.eq("user_id", userId);
     if (args.status) query = query.eq("status", args.status);
     if (args.priority) query = query.eq("priority", args.priority);
     const { data, error } = await query;
     if (error) return { error: error.message };
     const partnerIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
-    const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
+    let pq = supabase.from("partners").select("id, company_name").in("id", partnerIds);
+    if (userId) pq = pq.eq("user_id", userId);
+    const { data: partners } = await pq;
     const nameMap: Record<string, string> = {};
     for (const p of (partners || []) as Array<{ id: string; company_name: string }>) nameMap[p.id] = p.company_name;
     let results = (data || []).map((r: Record<string, unknown>) => ({
@@ -276,12 +279,13 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executeSearchContacts(args: Record<string, unknown>) {
+  async function executeSearchContacts(args: Record<string, unknown>, userId?: string) {
     const isCount = !!args.count_only;
     let query = supabase.from("imported_contacts").select(
       isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
       isCount ? { count: "exact", head: true } : undefined
     );
+    if (userId) query = query.eq("user_id", userId);
     if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
     if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
     if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
