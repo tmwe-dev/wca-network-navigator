@@ -159,7 +159,7 @@ export async function downloadStaticExtensionZip(
     // a stale ZIP under a fresh filename (es. 5.5.1 mascherata da 5.7.0).
     if (
       filename === WHATSAPP_EXTENSION_CURRENT_FILENAME &&
-      EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION === WHATSAPP_EXTENSION_REQUIRED_VERSION
+      (EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION as string) === (WHATSAPP_EXTENSION_REQUIRED_VERSION as string)
     ) {
       blob = base64ToBlob(EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64, "application/zip");
     } else {
