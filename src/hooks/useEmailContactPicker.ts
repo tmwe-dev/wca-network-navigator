@@ -12,6 +12,7 @@ import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
 import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
 import { queryKeys } from "@/lib/queryKeys";
+import { isInHoldingPattern } from "@/constants/holdingPattern";
 
 const log = createLogger("EmailComposerContactPicker");
 
@@ -145,7 +146,7 @@ export function useEmailContactPicker() {
 
   // ── Filtered & sorted lists ──
   const filteredPartners = useMemo(() => {
-    const list = state.hideHolding ? partners.filter(p => p.lead_status !== "holding_pattern") : partners;
+    const list = state.hideHolding ? partners.filter(p => !isInHoldingPattern(p.lead_status)) : partners;
     const sorted = [...list];
     switch (state.partnerSort) {
       case "name": sorted.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "")); break;
@@ -155,7 +156,7 @@ export function useEmailContactPicker() {
   }, [partners, state.hideHolding, state.partnerSort]);
 
   const filteredContacts = useMemo(() => {
-    const list = state.hideHolding ? contacts.filter(c => c.lead_status !== "holding_pattern") : contacts;
+    const list = state.hideHolding ? contacts.filter(c => !isInHoldingPattern(c.lead_status)) : contacts;
     const sorted = [...list];
     switch (state.contactSort) {
       case "name": sorted.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
@@ -177,7 +178,7 @@ export function useEmailContactPicker() {
   }, [filteredContacts]);
 
   const filteredBca = useMemo(() => {
-    const list = state.hideHolding ? bcaCards.filter(c => c.lead_status !== "holding_pattern") : bcaCards;
+    const list = state.hideHolding ? bcaCards.filter(c => !isInHoldingPattern(c.lead_status)) : bcaCards;
     const sorted = [...list];
     switch (state.bcaSort) {
       case "name": sorted.sort((a, b) => (a.contact_name || "").localeCompare(b.contact_name || "")); break;
