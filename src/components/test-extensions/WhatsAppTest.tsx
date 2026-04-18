@@ -150,6 +150,22 @@ export function WhatsAppTest() {
         <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
         <Button onClick={testReadUnread} disabled={running} size="sm">📨 Leggi Messaggi</Button>
         <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">🔍 Diagnostica DOM</Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={running}
+          onClick={async () => {
+            setRunning(true);
+            log("🧠 Test AI Extract via bridge...");
+            try {
+              const result = await waMsg("readUnread", {}, 90000);
+              log("Risultato AI: " + JSON.stringify(result, null, 2).slice(0, 2000), result?.success ? "ok" : "error");
+            } catch (e) {
+              log("❌ AI Extract fallito: " + (e instanceof Error ? e.message : String(e)), "error");
+            }
+            setRunning(false);
+          }}
+        >🧠 AI Extract</Button>
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
       </div>
       <div className="flex gap-2">
