@@ -68,7 +68,7 @@ var OptimusClient = globalThis.OptimusClient || (function() {
 globalThis.OptimusClient = OptimusClient;
 
 // ══════════════════════════════════════════════
-// Optimus Client — WhatsApp Extension
+// Optimus Client — LinkedIn Extension
 // Background-side helpers: dom-hash, plan request via webapp bridge,
 // page-injectable simplifyDom + executePlan.
 // ══════════════════════════════════════════════
@@ -182,8 +182,21 @@ var Optimus = globalThis.Optimus || (function () {
 
   // ── Request plan via webapp bridge ──
   async function _findAppTab() {
-    const tabs = await chrome.tabs.query({ url: ["*://*.lovable.app/*", "*://*.lovableproject.com/*", "http://localhost/*"] });
-    return tabs && tabs.length > 0 ? tabs[0] : null;
+    try {
+      var tabs = await chrome.tabs.query({});
+      for (var i = 0; i < tabs.length; i++) {
+        var url = tabs[i].url || "";
+        if (
+          url.match(/lovable\.app/i) ||
+          url.match(/lovableproject\.com/i) ||
+          url.match(/localhost(:\d+)?/i) ||
+          url.match(/127\.0\.0\.1(:\d+)?/i)
+        ) {
+          return tabs[i];
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   async function getPlan(params) {
@@ -267,6 +280,10 @@ var Optimus = globalThis.Optimus || (function () {
     }
     function getText(el) {
       if (!el) return "";
+      // For links, prefer href attribute (critical for thread_url extraction)
+      if (el.tagName === "A" && el.getAttribute("href")) {
+        return el.getAttribute("href").trim();
+      }
       return (el.getAttribute("title") || el.getAttribute("aria-label") || el.textContent || "").trim();
     }
 
@@ -285,6 +302,9 @@ var Optimus = globalThis.Optimus || (function () {
 
     const fieldKeys = Object.keys(sels).filter(function (k) { return k !== "container" && k !== "thread_item" && k !== "message_bubble"; });
 
+    // Fields that should extract href instead of text
+    var URL_FIELDS = ["thread_url", "profile_url", "url", "link", "href"];
+
     const items = [];
     let dropped = 0;
     for (const itemEl of itemEls) {
@@ -294,7 +314,12 @@ var Optimus = globalThis.Optimus || (function () {
         const f = sels[k] || {};
         const el = pickFirst(itemEl, f.primary, f.fallback);
         if (el) {
-          obj[k] = getText(el);
+          // For URL fields, prefer href; for others, prefer text content
+          if (URL_FIELDS.indexOf(k) !== -1 && el.tagName === "A" && el.getAttribute("href")) {
+            obj[k] = el.getAttribute("href").trim();
+          } else {
+            obj[k] = getText(el);
+          }
           if (obj[k]) foundFields++;
         }
       }

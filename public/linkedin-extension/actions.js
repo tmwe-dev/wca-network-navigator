@@ -8,6 +8,7 @@ var Actions = globalThis.Actions || (function () {
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
     const tab = await TabManager.getLinkedInTab(url);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     return await HybridOps.extractProfile(tab.id);
   }
 
@@ -15,6 +16,7 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickMessage(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
     await TabManager.sleep(3000);
@@ -24,6 +26,7 @@ var Actions = globalThis.Actions || (function () {
   async function sendConnectionRequest(profileUrl, note) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
     const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickConnect(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, (clickResult && clickResult.error) || "Connect button not found");
     await TabManager.sleep(2000);
@@ -52,6 +55,7 @@ var Actions = globalThis.Actions || (function () {
     if (!query) return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Query mancante");
     const searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
     const tab = await TabManager.getLinkedInTab(searchUrl);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(3000);
     try {
       const results = await chrome.scripting.executeScript({
@@ -186,6 +190,7 @@ var Actions = globalThis.Actions || (function () {
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
@@ -210,12 +215,12 @@ var Actions = globalThis.Actions || (function () {
       };
     }
 
-    // Optimus reachable but failed → propagate
-    if (!optimus.optimusUnavailable) {
-      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
-    }
+    // Any Optimus failure → fall through to legacy AX/structural
+    // (previously only fell through if optimusUnavailable was true,
+    //  which missed cases where Optimus responded but plan execution failed)
+    console.warn("[LI Actions] Optimus inbox failed, falling through to legacy:", optimus.error);
 
-    // ── Legacy fallback (only if Optimus unreachable: 503/no-app-tab/timeout) ──
+    // ── Legacy fallback ──
     // Legacy A: AX Tree
     let axError = null;
     try {
@@ -283,6 +288,7 @@ var Actions = globalThis.Actions || (function () {
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
     const tab = await TabManager.getLinkedInTab(threadUrl, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
@@ -307,9 +313,8 @@ var Actions = globalThis.Actions || (function () {
       };
     }
 
-    if (!optimus.optimusUnavailable) {
-      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
-    }
+    // Any Optimus failure → fall through to legacy AX/structural
+    console.warn("[LI Actions] Optimus thread failed, falling through to legacy:", optimus.error);
 
     // ── Legacy fallback ──
     try {
@@ -345,12 +350,13 @@ var Actions = globalThis.Actions || (function () {
 
   async function diagnostic() {
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     let axAvailable = false;
     try { axAvailable = await AXTree.isAvailable(tab.id); } catch (_) {}
 
-    const schema = await AILearn.getCached();
+    const schema = await AILearn.getCached("messaging");
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -390,6 +396,7 @@ var Actions = globalThis.Actions || (function () {
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
     const url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
     const tab = await TabManager.getLinkedInTab(url, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
     const schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
     if (schema) return Config.successResponse({ schema: schema, keysCount: Object.keys(schema).length });
