@@ -288,6 +288,15 @@ var AiExtract = globalThis.AiExtract || (function () {
       if (aiResult && aiResult.success && aiResult.items && aiResult.items.length > 0) {
         const schema = aiResult.items[0];
         await saveSchema(schema, "web.whatsapp.com");
+        // I4: Cache learned plan for Optimus executor (24h TTL on read side)
+        try {
+          await chrome.storage.local.set({
+            optimus_learned_plan: schema,
+            optimus_learned_at: Date.now(),
+            optimus_learned_domain: "web.whatsapp.com",
+          });
+          console.log("[WA AI] Plan cached for Optimus");
+        } catch (cacheErr) { console.debug("[WA AI] Cache save failed:", cacheErr?.message); }
         console.log("[WA AI] ✅ Learned " + Object.keys(schema).length + " selectors");
         _learning = false;
         return { success: true, schema: schema };
