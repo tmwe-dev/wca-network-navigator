@@ -124,6 +124,23 @@ GUARDRAIL:
 - Usa alias/nome breve nel saluto, mai nome completo
 ${ch === "email" ? "- La prima riga dell'output DEVE essere 'Subject: <oggetto>' — SEMPRE, senza eccezioni" : ""}
 ${readinessTotal < 30 ? `\nATTENZIONE INTERNA: readiness score basso (${readinessTotal}/100). Genera in modo più neutro e conservativo. Evita affermazioni specifiche su servizi o capabilities del mittente che non sono confermate dai dati.` : ""}
+${touchCount && touchCount > 0 ? `
+REGOLA ANTI-RIPETIZIONE (CRITICA):
+- Questo NON è il primo contatto (touch #${touchCount + 1}).
+- NON ripetere la presentazione aziendale.
+- NON dire "siamo esperti di..." o "la nostra azienda...".
+- Riferirsi ai messaggi precedenti: "come accennavo", "riprendendo il discorso".
+- Il destinatario CI CONOSCE GIÀ. Trattalo di conseguenza.
+` : ""}
+${ch === "whatsapp" && (!touchCount || touchCount === 0) ? `
+⚠️ ATTENZIONE: Stai generando un messaggio WhatsApp per un PRIMO CONTATTO.
+Questo è VIETATO dalla dottrina multi-canale (§4).
+WhatsApp è consentito solo dopo che:
+a) Il contatto ci ha scritto via WhatsApp per primo, OPPURE
+b) Il contatto ha dato esplicitamente il numero per WhatsApp, OPPURE
+c) Siamo in fase qualified+ con consenso.
+AZIONE: Suggerisci di usare EMAIL come primo contatto invece.
+` : ""}
 
 DECISION OBJECT (decisione già presa — esegui, non ridecidere):
 ${JSON.stringify(decision, null, 2)}
