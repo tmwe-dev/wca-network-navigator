@@ -11,6 +11,16 @@ Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
+    // J8 — Auth check: require at least apikey or Authorization header
+    const authHeader = req.headers.get("Authorization");
+    const apiKey = req.headers.get("apikey");
+    if (!authHeader && !apiKey) {
+      return new Response(JSON.stringify({ error: "Missing auth" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     const { mode, pageType, snapshot } = await req.json();
 
     if (mode !== "learnDom") {
