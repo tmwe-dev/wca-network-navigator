@@ -53,6 +53,9 @@ Deno.serve(async (req) => {
   } catch { /* */ }
 
   const allOk = Object.values(checks).every((v) => v === "ok");
+  // Core services that, if down, mean the app cannot function.
+  // ai_gateway and storage being down → "degraded" (app still works) → return 200.
+  const coreOk = checks.database === "ok" && checks.auth === "ok";
   const overallStatus = allOk ? "healthy" : "degraded";
 
   // Webhook alerting on degraded status
