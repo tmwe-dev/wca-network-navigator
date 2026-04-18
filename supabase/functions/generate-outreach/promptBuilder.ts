@@ -42,6 +42,10 @@ export interface OutreachPromptContext {
   lastOutcome?: string;
   daysSinceLastContact?: number;
   warmthScore?: number;
+  // Fix 3.2: active playbook (governs tone/content/CTA)
+  playbookBlock?: string;
+  // Fix 3.3: honest channel declaration (full vs limited context)
+  channelDeclaration?: string;
 }
 
 export function getModel(quality: Quality): string {
