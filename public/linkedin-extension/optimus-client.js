@@ -182,8 +182,21 @@ var Optimus = globalThis.Optimus || (function () {
 
   // ── Request plan via webapp bridge ──
   async function _findAppTab() {
-    const tabs = await chrome.tabs.query({ url: ["*://*.lovable.app/*", "*://*.lovableproject.com/*", "http://localhost/*"] });
-    return tabs && tabs.length > 0 ? tabs[0] : null;
+    try {
+      var tabs = await chrome.tabs.query({});
+      for (var i = 0; i < tabs.length; i++) {
+        var url = tabs[i].url || "";
+        if (
+          url.match(/lovable\.app/i) ||
+          url.match(/lovableproject\.com/i) ||
+          url.match(/localhost(:\d+)?/i) ||
+          url.match(/127\.0\.0\.1(:\d+)?/i)
+        ) {
+          return tabs[i];
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   async function getPlan(params) {
