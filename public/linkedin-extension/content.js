@@ -1,15 +1,27 @@
 // ══════════════════════════════════════════════
-// LinkedIn Content Script Bridge v3.0
-// Improved: 8s heartbeat with exponential backoff,
-//           payload validation, structured error codes
+// LinkedIn Content Script Bridge v3.3.0
+// Idempotent: cleans previous injection state before binding new listeners
+// Origin-restricted: only accepts messages from trusted webapp origins
+// Visibility gate moved to background (per-action ensureTabVisibleAndWait)
 // ══════════════════════════════════════════════
 
 (function () {
+  // ── Cleanup from previous injection ──
+  if (globalThis.__LI_MSG_LISTENER__) {
+    try { window.removeEventListener("message", globalThis.__LI_MSG_LISTENER__); } catch (_) {}
+  }
+  if (globalThis.__LI_HEARTBEAT_TIMER__) {
+    try { clearTimeout(globalThis.__LI_HEARTBEAT_TIMER__); } catch (_) {}
+    globalThis.__LI_HEARTBEAT_TIMER__ = null;
+  }
+  if (globalThis.__LI_OPTIMUS_REQUEST_LISTENER__) {
+    try { chrome.runtime.onMessage.removeListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__); } catch (_) {}
+  }
+
   const BASE_HEARTBEAT_MS = 8000;
   const MAX_HEARTBEAT_MS = 30000;
   let currentHeartbeat = BASE_HEARTBEAT_MS;
   let alive = true;
-  let heartbeatTimer = null;
 
   // Allowed actions whitelist
   const ALLOWED_ACTIONS = [
@@ -22,29 +34,15 @@
   // Max payload sizes
   const MAX_STRING_LENGTH = 5000;
 
-  // Actions that require a fully rendered DOM (background tabs throttle rendering)
-  const VISIBILITY_REQUIRED_ACTIONS = [
-    "extractProfile", "sendMessage", "sendConnectionRequest",
-    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
-    "diagnosticLinkedInDom", "learnDom",
-  ];
-
-  function waitForVisible(timeoutMs) {
-    if (document.visibilityState === "visible") return Promise.resolve(true);
-    return new Promise(function (resolve) {
-      const timer = setTimeout(function () {
-        document.removeEventListener("visibilitychange", onChange);
-        resolve(false);
-      }, timeoutMs || 3000);
-      function onChange() {
-        if (document.visibilityState === "visible") {
-          clearTimeout(timer);
-          document.removeEventListener("visibilitychange", onChange);
-          setTimeout(function () { resolve(true); }, 1000);
-        }
-      }
-      document.addEventListener("visibilitychange", onChange);
-    });
+  // ── Origin check: only accept messages from trusted webapp domains ──
+  function isAllowedOrigin(origin) {
+    if (!origin) return false;
+    return !!(
+      origin.match(/\.lovable\.app$/i) ||
+      origin.match(/\.lovableproject\.com$/i) ||
+      origin.match(/^https?:\/\/localhost(:\d+)?$/i) ||
+      origin.match(/^https?:\/\/127\.0\.0\.1(:\d+)?$/i)
+    );
   }
 
   function isExtensionAlive() {
@@ -97,20 +95,16 @@
 
     if (!isExtensionAlive()) {
       alive = false;
-      currentHeartbeat = BASE_HEARTBEAT_MS; // reset backoff
+      currentHeartbeat = BASE_HEARTBEAT_MS;
       failResponse(data, "Extension context invalidated — ricarica la pagina", "ERR_CONTEXT_DEAD");
       post({ direction: "from-extension-li", action: "extensionDead" });
       return;
     }
 
-    // Gate: actions that read DOM require the tab to be visible
-    if (VISIBILITY_REQUIRED_ACTIONS.indexOf(data.action) !== -1) {
-      const visible = await waitForVisible(3000);
-      if (!visible) {
-        failResponse(data, "La tab di LinkedIn deve essere visibile per leggere i messaggi", "TAB_NOT_VISIBLE");
-        return;
-      }
-    }
+    // NOTE: Visibility gate removed from content script.
+    // This script runs in the WEBAPP tab, not the LinkedIn tab — so document.visibilityState
+    // here reflects the webapp's visibility, not LinkedIn's. The proper visibility check
+    // happens in actions.js via TabManager.ensureTabVisibleAndWait(tabId).
 
     try {
       const msg = { source: "li-content-bridge", action: data.action };
@@ -133,7 +127,6 @@
         }
 
         alive = true;
-        // Successful — increase heartbeat interval (backoff)
         currentHeartbeat = Math.min(currentHeartbeat * 1.5, MAX_HEARTBEAT_MS);
 
         post({
@@ -155,29 +148,30 @@
     }
   }
 
-  // ── Adaptive heartbeat with exponential backoff ──
+  // ── Adaptive heartbeat with exponential backoff (idempotent across reinjections) ──
   function scheduleHeartbeat() {
-    if (heartbeatTimer) clearTimeout(heartbeatTimer);
-    heartbeatTimer = setTimeout(function () {
+    if (globalThis.__LI_HEARTBEAT_TIMER__) clearTimeout(globalThis.__LI_HEARTBEAT_TIMER__);
+    globalThis.__LI_HEARTBEAT_TIMER__ = setTimeout(function () {
       const nowAlive = isExtensionAlive();
       if (nowAlive && !alive) {
         alive = true;
-        currentHeartbeat = BASE_HEARTBEAT_MS; // reset on reconnect
+        currentHeartbeat = BASE_HEARTBEAT_MS;
         post({ direction: "from-extension-li", action: "contentScriptReady" });
       } else if (!nowAlive && alive) {
         alive = false;
         currentHeartbeat = BASE_HEARTBEAT_MS;
         post({ direction: "from-extension-li", action: "extensionDead" });
       } else if (nowAlive) {
-        // Stable — slowly increase interval
         currentHeartbeat = Math.min(currentHeartbeat * 1.2, MAX_HEARTBEAT_MS);
       }
       scheduleHeartbeat();
     }, currentHeartbeat);
   }
 
-  window.addEventListener("message", function (event) {
+  // ── Main listener (saved on globalThis for cleanup on re-inject) ──
+  globalThis.__LI_MSG_LISTENER__ = function (event) {
     if (event.source !== window) return;
+    if (!isAllowedOrigin(event.origin)) return;
     const data = event.data;
     if (!data) return;
 
@@ -196,11 +190,9 @@
 
     if (data.direction !== "from-webapp-li") return;
     relayMessage(data);
-  });
+  };
 
-  if (globalThis.__LI_OPTIMUS_REQUEST_LISTENER__) {
-    chrome.runtime.onMessage.removeListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__);
-  }
+  window.addEventListener("message", globalThis.__LI_MSG_LISTENER__);
 
   globalThis.__LI_OPTIMUS_REQUEST_LISTENER__ = function (msg, sender, sendResponse) {
     // ── AI Bridge: background → webapp via postMessage ──
@@ -231,6 +223,7 @@
 
       function aiHandler(event) {
         if (event.source !== window) return;
+        if (!isAllowedOrigin(event.origin)) return;
         const d = event.data;
         if (!d || d.direction !== responseDirection) return;
         if (d.requestId && d.requestId !== reqId) return;
@@ -269,6 +262,7 @@
 
     function handler(event) {
       if (event.source !== window) return;
+      if (!isAllowedOrigin(event.origin)) return;
       if (!event.data || event.data.direction !== "from-webapp-optimus-response") return;
       if (finished) return;
       finished = true;
