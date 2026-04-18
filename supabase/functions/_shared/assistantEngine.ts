@@ -38,24 +38,46 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
     ...config.messages,
   ];
 
-  let response = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: allMessages,
-      tools: config.tools.length > 0 ? config.tools : undefined,
-      ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
-    }),
+  let response: Response | null = null;
+  const MAX_RETRIES = 2;
+  const requestBody = JSON.stringify({
+    model,
+    messages: allMessages,
+    tools: config.tools.length > 0 ? config.tools : undefined,
+    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
   });
 
-  if (!response.ok) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    response = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: requestBody,
+    });
+
+    if (response.ok) break;
+
     const status = response.status;
-    const text = await response.text();
     if (status === 429) throw Object.assign(new Error("Rate limit"), { status: 429 });
     if (status === 402) throw Object.assign(new Error("Crediti AI esauriti"), { status: 402 });
-    console.error("AI gateway error:", status, text);
-    throw Object.assign(new Error(`AI error: ${status}`), { status: 500 });
+    if (status < 500) {
+      const text = await response.text();
+      console.error("AI gateway error:", status, text);
+      throw Object.assign(new Error(`AI error: ${status}`), { status });
+    }
+
+    if (attempt < MAX_RETRIES) {
+      const delay = 1000 * Math.pow(2, attempt);
+      console.warn(`AI gateway 5xx (${status}), retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    } else {
+      const text = await response.text();
+      console.error("AI gateway error after retries:", status, text);
+      throw Object.assign(new Error(`AI error: ${status}`), { status: 500 });
+    }
+  }
+
+  if (!response || !response.ok) {
+    throw Object.assign(new Error("AI gateway: no response after retries"), { status: 500 });
   }
 
   let result = await response.json();
