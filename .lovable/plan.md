@@ -1,45 +1,35 @@
 
 
-## Fase 3 — Generatori guidati da Dottrina
+## Fase 4 — Skin & Brain alignment
 
 ### Stato verificato
-- **Fix 3.1**: `index.ts:154` calcola `relationship_stage` da `interactionHistoryCount` (cold/warming/active). Ma `contextAssembler.ts:208` chiama già `analyzeRelationshipHistory()` che ritorna `metrics.relationship_stage` (cold/warm/active/stale/ghosted) — solo che `metrics` non viene esposto fuori. Doppia verità.
-- **Fix 3.2**: Nessun riferimento a `commercial_playbooks` o `partner_workflow_state` in `generate-outreach/contextAssembler.ts` né in `generate-email`. Confermato: playbook NON inietta nei generatori.
-- **Schema reale**: `partner_workflow_state` ha `workflow_id` (FK NOT NULL → `commercial_workflows.id`), NO `active_playbook_code`. Per recuperare il playbook attivo serve join: `partner_workflow_state` → `commercial_workflows.code` → `commercial_playbooks.workflow_code` (prendendo il più prioritario).
-- **Fix 3.3**: Nessuna dichiarazione di canale onesta nel context outreach.
-- **Fix 3.4**: `cadence-engine/index.ts:434-445` `scheduleNextStep` non porta context strategico nel metadata.
+- **Fix 4.1**: ✅ già fatto. `scopeConfigs.ts` ha già case per `deep-search`, `chat`, `mission-builder`. `unified-assistant` li include in `VALID_SCOPES`. Skip totale.
+- **Fix 4.2**: composer V2 chiama ancora `ai-assistant` direttamente con `context: "email_composer"` (string). Da migrare a `unified-assistant` con `scope: "extension"`.
+- **Fix 4.3**: il prompt originale era basato su uno schema sbagliato (`services_offered`, `notes` NON esistono nella tabella `partners`). Lo snippet attuale usa colonne valide. Arricchimento opportuno con `email`, `phone`, `last_interaction_at`, `interaction_count` (esistono, aggiungono contesto utile per il vocale).
+- **Fix 4.4**: `voice-brain-bridge` costruisce un mega-prompt monolitico chiamando `aiChat` direttamente. Da refattorizzare per delegare a `unified-assistant` (scope `extension`, mode `conversational`), preservando il contratto JSON `say/actions/next_state/end_call/transfer_to_human/memory_to_save` via post-processing.
 
 ### Modifiche
 
 | # | File | Modifica |
 |---|------|----------|
-| 3.1 | `supabase/functions/generate-outreach/contextAssembler.ts` | Aggiungo `relationshipStage` e `relationshipMetrics` al return type. In `analyzeRelationshipHistory`, espongo `metrics.relationship_stage`, `metrics.unanswered_count`, `metrics.days_since_last_contact`, `metrics.commercial_state` |
-| 3.1 | `supabase/functions/generate-outreach/index.ts` | `decision.relationship_stage = ctx.relationshipStage` (single source). Aggiungo `decision.relationship_detail` con metriche reali. Aggiorno anche `cta_type`, `email_type` e `forbidden_elements` per usare lo stage reale (cold/warm/active/stale/ghosted) anziché il count |
-| 3.2 | `supabase/functions/generate-outreach/contextAssembler.ts` | Loader `loadActivePlaybook(supabase, userId, partnerId)`: se esiste `partner_workflow_state` con `status='active'`, join via `workflow_id` → `commercial_workflows.code` → cerca `commercial_playbooks` con `workflow_code` matching e `is_active=true` (priorità desc, prendi primo). Restituisco `playbookContext` text block. Aggiungo `playbookBlock` al return |
-| 3.2 | `supabase/functions/generate-outreach/promptBuilder.ts` | Inserisco `playbookBlock` nel system prompt come sezione "PLAYBOOK ATTIVO" (sopra gli altri context block) |
-| 3.2 | `supabase/functions/generate-email/contextAssembler.ts` | Stesso loader playbook + aggiungo `playbookBlock` a `ContextBlocks` |
-| 3.2 | `supabase/functions/generate-email/promptBuilder.ts` | Iniezione `playbookBlock` nel system prompt |
-| 3.3 | `supabase/functions/generate-outreach/contextAssembler.ts` | Aggiungo `channelDeclaration` al return: email = "contesto storico completo", whatsapp/linkedin = "contesto limitato, tono breve" |
-| 3.3 | `supabase/functions/generate-outreach/promptBuilder.ts` | Iniezione `channelDeclaration` come prima riga del system prompt |
-| 3.4 | `supabase/functions/cadence-engine/index.ts:434-445` | `scheduleNextStep`: arricchisco `metadata.cadence_context` con `previous_channel`, `previous_step`, `sequence_position`, `escalation_reason` |
+| 4.2 | `src/v2/hooks/useEmailComposerV2.ts` | Sostituisco `invokeEdge("ai-assistant", { body: { messages, context: "email_composer", use_kb }})` → `invokeEdge("unified-assistant", { body: { messages, scope: "extension", context: { source: "email_composer", use_kb }}})`. Mantengo lettura `data?.response \|\| data?.content` |
+| 4.3 | `supabase/functions/voice-brain-bridge/index.ts` | `loadPartnerSnippet` arricchito: aggiungo select su `email, phone, last_interaction_at, interaction_count`. Aggiungo righe nello snippet output. Niente `services_offered`/`notes` (colonne inesistenti) |
+| 4.4 | `supabase/functions/voice-brain-bridge/index.ts` | Refactor del blocco `aiChat` (linee 311-348): chiamo internamente `unified-assistant` via fetch con `scope: "extension"`, `mode: "conversational"`, `context: { source: "voice", partner_id, partner_snippet, voice_context, voice_contract }`. Estraggo il `content` dalla risposta e applico `safeJsonParse` + `makeSafeReply`. Mantengo il logging `ai_request_log` con `routed_to: "voice-brain-bridge→unified-assistant"`. Preservo timeout di 12s. Fallback a chiamata diretta `aiChat` se `unified-assistant` fallisce con 5xx (resilienza) |
 
 ### Ordine
-3.4 (autocontenuto) → 3.1 (contextAssembler + index) → 3.3 (declaration aggiungibile in stesso pass su contextAssembler) → 3.2 (playbook loader, doppio file)
+4.2 (autocontenuto frontend) → 4.3 (estensione select) → 4.4 (refactor proxy)
 
 ### Deploy
-Edge functions: `generate-outreach`, `generate-email`, `cadence-engine`.
+Edge function: `voice-brain-bridge`. Frontend useEmailComposerV2 = solo build.
 
 ### Verifica
-- Grep `relationship_stage` in `generate-outreach/index.ts` → una sola sorgente (da `ctx`)
-- Grep `loadActivePlaybook` → presente in entrambi i contextAssembler
-- Grep `cadence_context` → presente in `scheduleNextStep`
-- Smoke test:
-  - Partner con `partner_workflow_state` attivo + workflow con playbook → log debug `_debug.playbook_active=true`
-  - Partner con 5 sent / 0 received → `decision_object.relationship_stage="ghosted"`
-  - Generate outreach WhatsApp → prompt contiene "contesto storico limitato"
+- Composer V2 → Network tab mostra POST a `/functions/v1/unified-assistant` con `scope: "extension"`
+- `voice-brain-bridge` log: `routed_to` mostra il proxy
+- `loadPartnerSnippet` per partner reale → snippet contiene email/phone/interaction_count
+- Test integrazione esistenti `voice-brain-bridge` (`index_test.ts`, `index.integration.test.ts`) restano verdi
 
 ### Fuori scope
-- Aggiungere colonna `active_playbook_code` a `partner_workflow_state` (qui si usa join via workflow_code, sufficiente)
-- UI per attivare playbook manualmente
-- Test E2E
+- Migrazione altri hook V2 verso unified-assistant (già OK)
+- Cambio modello voce (resta `gemini-2.5-flash` lato unified-assistant)
+- Aggiunta colonne `services_offered`/`notes` allo schema partners
 
