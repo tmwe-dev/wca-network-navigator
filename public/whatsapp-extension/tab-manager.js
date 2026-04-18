@@ -76,13 +76,67 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
-  // ── STEALTH MODE v2 (M4): brief tab activation for DOM rendering ──
-  // Il DOM di WhatsApp è pesantemente throttled quando il tab è in background.
-  // getBoundingClientRect() → 0, getComputedStyle() inaffidabile, elementi non renderizzati.
-  // Soluzione: chrome.tabs.update({active:true}) attiva il tab NELLA SUA FINESTRA
-  // senza chiamare chrome.windows.update({focused:true}), quindi la finestra
-  // dell'utente (Cockpit) NON viene disturbata. Dopo l'attivazione, il tab originale
-  // viene ripristinato.
+  // ── OPTIMUS V2 (N1): activateAndStabilize ──
+  // Direct-first: salva tab attivo, attiva WA, attende DOM stabile (readyState +
+  // visibilityState + presenza chat/grid/sidebar + assenza loading screen).
+  // Ritorna { stable, previousTabId, restore() } — chi chiama deve invocare restore()
+  // a fine estrazione. NON usa chrome.windows.update({focused:true}) → Cockpit intatto.
+  async function activateAndStabilize(tabId, maxWaitMs) {
+    let previousTabId = null;
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
+      if (windowTabs && windowTabs[0]) previousTabId = windowTabs[0].id;
+    } catch (err) { console.debug("[WA Tab] N1 save prev:", err?.message); }
+
+    try { await chrome.tabs.update(tabId, { active: true }); }
+    catch (err) { console.debug("[WA Tab] N1 activate:", err?.message); }
+
+    const startTime = Date.now();
+    const maxWait = maxWaitMs || 3000;
+    let stable = false;
+
+    while (Date.now() - startTime < maxWait) {
+      try {
+        const check = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: function () {
+            return {
+              ready: document.readyState === "complete",
+              visible: document.visibilityState === "visible",
+              hasContent: !!(
+                document.querySelector('[role="row"]') ||
+                document.querySelector('#pane-side') ||
+                document.querySelector('[role="grid"]')
+              ),
+              loading: !!(
+                document.querySelector('[data-testid="startup"]') ||
+                document.querySelector('.landing-window')
+              ),
+            };
+          },
+        });
+        const r = check && check[0] && check[0].result;
+        if (r && r.ready && r.visible && r.hasContent && !r.loading) { stable = true; break; }
+      } catch (err) { console.debug("[WA Tab] N1 probe:", err?.message); }
+      await sleep(300);
+    }
+
+    if (stable) await sleep(500); // settle per virtualizzazione
+
+    return {
+      stable: stable,
+      previousTabId: previousTabId,
+      restore: async function () {
+        if (previousTabId && previousTabId !== tabId) {
+          try { await chrome.tabs.update(previousTabId, { active: true }); }
+          catch (err) { console.debug("[WA Tab] N1 restore:", err?.message); }
+        }
+      },
+    };
+  }
+
+  // ── STEALTH MODE v2 (M4) — DEPRECATED, kept for backward compat ──
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
@@ -179,6 +233,7 @@ var TabManager = globalThis.TabManager || (function () {
     waitForLoad: waitForLoad,
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
+    activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
     withTemporarilyVisibleTab: withTemporarilyVisibleTab,
     injectBridgeIntoTab: injectBridgeIntoTab,

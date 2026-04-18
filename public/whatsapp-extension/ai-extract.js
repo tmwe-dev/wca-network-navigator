@@ -66,39 +66,17 @@ var AiExtract = globalThis.AiExtract || (function () {
     }
   }
 
-  // Call AI edge function via webapp bridge (CORS-safe), with direct fallback (I2)
+  // OPTIMUS V2 (N2): direct-first, bridge come fallback opzionale
   async function callAiExtract(html, mode) {
     if (!Config.hasConfig()) return null;
-    let result = null;
 
-    // Step 1: try via webapp bridge
+    // PRIMARIO: chiamata diretta alla edge function
     try {
-      result = await AiBridge.callAiExtract(html, mode);
-      if (result && result.success) return result;
-      if (result) console.warn("[WA AI] Bridge returned non-success:", result.error);
-    } catch (e) {
-      console.warn("[WA AI] Bridge call failed:", e.message);
-      result = { error: e.message };
-    }
-
-    // Step 2 (I2): Direct fallback to edge function when bridge unavailable
-    const errStr = String((result && result.error) || "").toLowerCase();
-    const bridgeUnavailable = !result
-      || errStr.includes("webapp_tab_not_found")
-      || errStr.includes("no_app_tab")
-      || errStr.includes("no app tab")
-      || errStr.includes("bridge");
-
-    if (bridgeUnavailable) {
-      console.log("[WA AI] Bridge unavailable, calling edge function directly");
-      try {
-        const url = Config.getUrl();
-        const key = Config.getKey();
-        const token = Config.getToken();
-        if (!url || !key) {
-          console.warn("[WA AI] Missing url/key for direct call");
-          return result && result.success ? result : null;
-        }
+      const url = Config.getUrl();
+      const key = Config.getKey();
+      const token = Config.getToken();
+      if (url && key) {
+        console.log("[WA AI] direct-first → edge function");
         const directResp = await fetch(`${url}/functions/v1/whatsapp-ai-extract`, {
           method: "POST",
           headers: {
@@ -108,16 +86,22 @@ var AiExtract = globalThis.AiExtract || (function () {
           },
           body: JSON.stringify({ html: html, mode: mode }),
         });
-        if (directResp.ok) {
-          return await directResp.json();
-        }
-        console.warn("[WA AI] Direct call HTTP error:", directResp.status);
-      } catch (directErr) {
-        console.warn("[WA AI] Direct call failed:", directErr?.message);
+        if (directResp.ok) return await directResp.json();
+        console.warn("[WA AI] Direct call HTTP:", directResp.status);
       }
+    } catch (e) {
+      console.warn("[WA AI] Direct call failed:", e?.message);
     }
 
-    return result && result.success ? result : null;
+    // FALLBACK: bridge via webapp (bonus, non critico)
+    try {
+      const result = await AiBridge.callAiExtract(html, mode);
+      if (result && result.success) return result;
+    } catch (e) {
+      console.warn("[WA AI] Bridge fallback failed:", e?.message);
+    }
+
+    return null;
   }
 
   // ── Grab sidebar HTML ──
