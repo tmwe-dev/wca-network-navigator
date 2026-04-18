@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/apiError";
+import { EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.4.0";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.2.1";
@@ -97,9 +98,31 @@ async function fetchStaticAsset(assetPath: string, fallbackPaths: string[] = [])
   throw (lastError instanceof Error ? lastError : new Error("Static asset unavailable"));
 }
 
+function base64ToBlob(base64: string, mimeType: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+}
+
 export async function downloadStaticExtensionZip(assetPath: string, filename: string, fallbackPaths: string[] = []) {
-  const response = await fetchStaticAsset(assetPath, fallbackPaths);
-  const blob = await response.blob();
+  let blob: Blob;
+
+  try {
+    const response = await fetchStaticAsset(assetPath, fallbackPaths);
+    blob = await response.blob();
+  } catch (error) {
+    if (filename === WHATSAPP_EXTENSION_CURRENT_FILENAME) {
+      blob = base64ToBlob(EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64, "application/zip");
+    } else {
+      throw error;
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
 
