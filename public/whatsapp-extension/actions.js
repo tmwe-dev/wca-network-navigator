@@ -552,6 +552,44 @@ var Actions = globalThis.Actions || (function () {
     }
   }
 
+  async function sendWhatsAppMessage(phone, text) {
+    try {
+      const r = await TabManager.getOrCreateWaTab();
+      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
+      await TabManager.sleep(r.reused ? 1200 : 4000);
+      await ensurePageHelpers(r.tab.id);
+
+      const openResult = await chrome.scripting.executeScript({
+        target: { tabId: r.tab.id },
+        args: [phone],
+        func: _pageOpenChatForBackfill,
+      });
+      const openRes = openResult && openResult[0] ? openResult[0].result : null;
+      if (!openRes || !openRes.success) return openRes || { success: false, error: "Open failed" };
+
+      const sendResult = await chrome.scripting.executeScript({
+        target: { tabId: r.tab.id },
+        args: [text],
+        func: function (messageText) {
+          const H = window.__waH;
+          const composer = H.qsDeep('footer [contenteditable="true"]') || H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('[data-testid="compose-box-input"]');
+          if (!composer) return { success: false, error: "Composer not found" };
+
+          H.modernClearAndType(composer, messageText);
+
+          const sendBtn = H.qsDeep('[data-testid="send"]') || H.qsDeep('button[aria-label*="send" i]') || H.qsDeep('button[aria-label*="invia" i]') || H.qsDeep('span[data-icon="send"]')?.closest('button');
+          if (!sendBtn) return { success: false, error: "Send button not found" };
+          sendBtn.click();
+          return { success: true, sent: true };
+        },
+      });
+
+      return sendResult && sendResult[0] ? sendResult[0].result : { success: false, error: "Send failed" };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
   // ══════════════════════════════════════════════
   // BACKFILL CHAT — injected page functions
   // ══════════════════════════════════════════════
