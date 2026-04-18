@@ -10,7 +10,6 @@ try {
     "config.js",
     "tab-manager.js",
     "discovery.js",
-    "optimus-client.js",
     "ai-bridge.js",
     "ai-extract.js",
     "actions.js"
