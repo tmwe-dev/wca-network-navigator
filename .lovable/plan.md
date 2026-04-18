@@ -1,53 +1,87 @@
 
 
-## Audit corretto: piano riallineato alla struttura reale
+## Piano: KB Supervisor — Interfaccia Vocale + Canvas Documenti
 
-Il prompt originale assume KB entries con `category='sales_doctrine'` e chapter `§1-§11` (struttura "Robin CAT-XX") che **non esistono** nel database. Le entry reali hanno category `negoziazione`/`voice_rules`/`frasi_modello`/`followup`/`chiusura` con chapter testuali. Anche il workflow `lead_qualification` non esiste in `commercial_workflows`.
+Riallineato all'architettura V2 reale (la pagina vive in `/v2/kb-supervisor`, non `/kb-supervisor`).
 
-Riallineo il piano alle entry reali e ai file effettivi.
+### File da creare
 
-### SEZIONE 1 — Aggiornamenti KB entries esistenti (via tool insert/update)
+**Pagina V2** (`src/v2/ui/pages/`)
+- `KBSupervisorPage.tsx` — split-panel `ResizablePanelGroup` 40/60, header + footer
 
-**Entry reali individuate da aggiornare:**
+**Hook** (`src/v2/ui/pages/kb-supervisor/hooks/`)
+- `useKBSupervisorState.ts` — stato chat, voce, canvas, audit, approvazioni. Riusa `useVoiceInput` (`src/v2/ui/pages/command/hooks/useVoiceInput.ts`), `invokeEdge` (`src/lib/api/invokeEdge.ts`), `supabase` client. **Usa DAL** (`src/data/kbEntries.ts`) per load/update/delete invece di `supabase.from()` diretto (rispetta layer rules).
 
-| ID | Title | Chapter | Fix |
-|----|-------|---------|-----|
-| `2b97b116…` | Comandamenti 1-5 della negoziazione | 10 Comandamenti | Fix D — gate "applica solo da FASE 3+" |
-| `1bd31ef8…` | Comandamenti 6-10 della negoziazione | 10 Comandamenti | Fix D — stesso gate |
-| `b40d9d19…` | Chiusura e follow-up vocale | Chiusura | Fix E — gate "solo per negotiation+" + tag `holding_pattern` |
-| `30eb70b7…` | Modello 2-3: Follow-up e Proposta (EN) | Email Modello | Fix B — modulazione tono follow-up #1/#2/#3 + tag `tone_modulation`, `relationship_progression` |
-| `ebae6d08…` | Fase 3-5: Proposta, Obiezioni, Chiusura | Protocollo Vendita 5 Fasi | Fix E — gate chiusura |
-| `506d7e7c…` | 5 modelli di chiusura | Tecniche di Chiusura | Fix E — gate "negotiation+" + tag `negotiation_technique` |
+**Componenti** (`src/components/kb-supervisor/`)
+- `KBSupervisorChat.tsx` — messaggi + input testo + bottoni microfono/audio (sonner per toast)
+- `KBSupervisorCanvas.tsx` — Tabs `[Documenti | Documento | Modifiche | Audit]` con diff side-by-side e bottoni Approva/Rifiuta
+- `KBSupervisorHeader.tsx` — toggle Guidato/Autonomo + status audio/audit
+- `KBSupervisorFooter.tsx` — last audit, totale documenti, totale issues
 
-**Fix mancanti (entry inesistenti):** Cold Outreach, Regole tono, Cliente nervoso → da **creare ex-novo** come 3 nuove KB entries con il contenuto della dottrina, invece di tentare UPDATE su entry assenti.
+### File da modificare
 
-### SEZIONE 2 — Workflow `lead_qualification` (non esiste)
+**`src/v2/routes.tsx`** — aggiungere lazy import + route protetta:
+```tsx
+const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then(m => ({ default: m.KBSupervisorPage })));
+// dentro <Route element={<AuthenticatedLayout/>}>:
+<Route path="kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
+```
 
-Invece di UPDATE, **inserire** il workflow nuovo in `commercial_workflows` con i 6 gate mappati agli stati commerciali (Discovery→new, First Touch→first_touch_sent, Nurturing→holding, Engagement→engaged, Proposal→qualified, Closing→negotiation).
+**`src/v2/ui/templates/LayoutSidebarNav.tsx`** — nel gruppo `nav.group_ai_agents` aggiungere voce con icona `Brain` (lucide):
+```tsx
+{ labelKey: "nav.kb_supervisor", path: "/v2/kb-supervisor", icon: <Brain className="h-4 w-4" /> },
+```
+Più chiave i18n `nav.kb_supervisor` nei file di traduzione (it/en) se presenti — fallback al label hardcoded altrimenti.
 
-### SEZIONE 3 — `generate-outreach/promptBuilder.ts`
+**`supabase/functions/_shared/scopeConfigs.ts`** — al case `"kb-supervisor"` (riga 308) appendere al `systemPrompt`:
+- formato `structured` con campi `action`, `document_id`, `audit_request`, `canvas_content`
+- distinzione modalità `guidato` vs `autonomo`
+- istruzione "rispondi sempre in italiano"
 
-**Fix K — Anti-ripetizione:** aggiungere blocco condizionale nel `systemPrompt` (dopo riga 126, dentro il template) che si attiva quando `touchCount > 0` con istruzione "NON ripetere presentazione, riferirsi ai messaggi precedenti".
+**`supabase/functions/unified-assistant/index.ts`** — verificare che il `result` ritorni il campo `structured` dal modello (parse JSON dal contenuto se l'AI lo restituisce inline tra delimitatori, oppure usare tool-calling). Estensione minima: catturare blocco ` ```json ... ``` ` dalla risposta e includerlo nel payload di ritorno se non già presente.
 
-**Fix L — Guardrail WhatsApp primo contatto:** aggiungere blocco condizionale `ch === "whatsapp" && (!touchCount || touchCount === 0)` con avviso che vìola dottrina §4.
+### Architettura chat → canvas
 
-### SEZIONE 4 — `generate-email/promptBuilder.ts`
+```text
+User msg → useKBSupervisorState.sendMessage()
+  → invokeEdge('unified-assistant', {scope:'kb-supervisor', messages, extra_context})
+  → response.content (testo per chat) + response.structured (azione canvas)
+  → if structured.action → setProposedChanges(pending) + setCanvasTab('diff')
+  → if structured.document_id → load doc → setCanvasTab('document')
+  → if structured.audit_request → invokeEdge('kb-supervisor', {audit_level:'all'})
+  → speakResponse(content) via elevenlabs-tts (se voiceEnabled)
+```
 
-**Fix M — Phase awareness in `buildStrategicAdvisor`:** estendere la firma della funzione per accettare `commercialState` e `touchCount`, e iniettare nel blocco "## Contesto:" la fase + tone guide. Aggiornare la chiamata in `buildEmailPrompts` (riga 187-192) per passare i nuovi parametri.
+Approve flow: `approveChange()` → DAL `upsertKbEntry`/`deleteKbEntry` → `loadDocuments()` → toast → notifica AI con messaggio sistema.
 
-### SEZIONE 5 — `_shared/sameLocationGuard.ts`
+### Modalità voce
 
-**Fix N — Mapping tassonomia:** estendere `RelationshipMetrics` con campo `commercial_state: "new" | "holding" | "engaged"`. Calcolare il mapping `cold→new, warm→holding, active→engaged, stale→holding, ghosted→holding` dopo il calcolo di `stage` (riga 232) e includerlo nel return (riga 247).
+- **STT**: `useVoiceInput` esistente con `lang: "it-IT"`, auto-submit dopo 2s di silenzio
+- **TTS**: `supabase.functions.invoke('elevenlabs-tts')` con voice ID da `app_settings`, fallback `JBFqnCBsd6RMkjVDRZzb`
+- Toggle audio ON/OFF nel header chat; stop automatico dell'audio quando disattivato
 
-### Esecuzione
+### Sicurezza & layer rules
 
-1. **Migration SQL** per UPDATE delle 6 entry esistenti + INSERT delle 3 nuove (Cold Outreach, Regole Tono, Cliente Nervoso) + INSERT del workflow `lead_qualification`.
-2. **Edit** dei 3 file edge function (outreach promptBuilder, email promptBuilder, sameLocationGuard).
-3. **Verifica** finale con grep + read sulle entry KB aggiornate.
+- Tutte le query KB passano da `src/data/kbEntries.ts` (DAL), nessun `supabase.from('kb_entries')` diretto in hook/componenti
+- Soft-delete: `deleteKbEntry` già rispetta il trigger globale (UPDATE `is_active=false` invece di DELETE fisico)
+- Solo admin/operator possono accedere — la route eredita il `V2AuthGate` esistente
+- Toast: **sonner** (non `useToast` legacy), coerente con resto V2
+
+### Verifica finale
+
+```bash
+ls src/v2/ui/pages/KBSupervisorPage.tsx \
+   src/v2/ui/pages/kb-supervisor/hooks/useKBSupervisorState.ts \
+   src/components/kb-supervisor/{Chat,Canvas,Header,Footer}.tsx
+grep "kb-supervisor" src/v2/routes.tsx src/v2/ui/templates/LayoutSidebarNav.tsx
+grep -A3 "FORMATO RISPOSTA\|structured" supabase/functions/_shared/scopeConfigs.ts
+```
 
 ### Note critiche
 
-- I tag `holding_pattern`, `relationship_progression`, `tone_modulation`, `closing`, `negotiation_technique`, `reactivation` verranno aggiunti dove pertinenti via `array_append` con guardia `NOT (... = ANY(tags))`.
-- Le 3 nuove entry useranno `category='sales_doctrine'` (categoria nuova, allineata alla Dottrina L0) con `priority=8` e `user_id=NULL` (globali).
-- Nessuna modifica al sistema di caricamento KB (già gestito da L0/L1).
+- **Niente `/kb-supervisor` root**: il prompt originale assumeva routing legacy V1. La rotta corretta è `/v2/kb-supervisor` dentro `AuthenticatedLayout`
+- **DAL obbligatorio**: il prompt originale fa `supabase.from()` diretto nell'hook → riallineato a `src/data/kbEntries.ts`
+- **No physical delete**: `delete` action → soft delete via `is_active=false`
+- **i18n**: chiave `nav.kb_supervisor` da aggiungere ai locale files se esistenti
+- **Edge function `kb-supervisor` e scope già esistono** dalla sessione precedente — solo arricchire il system prompt con il formato structured
 
