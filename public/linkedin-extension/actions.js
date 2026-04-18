@@ -143,9 +143,14 @@ var Actions = globalThis.Actions || (function () {
         date: "timestamp",
         messageTimeSelector: "timestamp",
         // Unread badge
+        // Unread badge
         unreadBadge: "unread_badge",
         unreadIndicator: "unread_badge",
         unreadDot: "unread_badge",
+        // J10 — Thread URL
+        threadUrl: "thread_url",
+        conversationUrl: "thread_url",
+        url: "thread_url",
       };
       return buildPlanFromKeyMap(schema, keyMap);
     }
@@ -167,6 +172,9 @@ var Actions = globalThis.Actions || (function () {
         time: "timestamp",
         date: "timestamp",
         messageTimeSelector: "timestamp",
+        // J9 — Direction (AI returns this from prompt J6)
+        direction: "direction",
+        messageDirection: "direction",
       };
       return buildPlanFromKeyMap(schema, keyMap);
     }
@@ -313,9 +321,19 @@ var Actions = globalThis.Actions || (function () {
 
   function mapOptimusThreadMessages(items) {
     return items.map(function (it) {
-      const sender = it.message_sender || it.sender || "";
-      const s = String(sender).toLowerCase().trim();
-      const direction = it.direction || ((s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound");
+      const sender = it.message_sender || it.sender || it.sender_name || "";
+      const dirField = it.direction || "";
+      let direction;
+      if (dirField && (dirField === "outbound" || dirField === "inbound")) {
+        direction = dirField;
+      } else if (dirField) {
+        // J11 — AI might return a CSS class like "msg-s-event--outbound" — check for "outbound" substring
+        direction = String(dirField).toLowerCase().includes("outbound") ? "outbound" : "inbound";
+      } else {
+        // Fallback: infer from sender name
+        const s = String(sender).toLowerCase().trim();
+        direction = (s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound";
+      }
       return {
         text: it.message_text || it.text || it.body || "",
         sender: sender,
