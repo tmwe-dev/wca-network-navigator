@@ -19,7 +19,62 @@ interface _PartnerRow { id: string; company_name: string; city: string; country_
 interface _ContactRow { id: string; name: string | null; company_name: string | null; email: string | null; phone: string | null; country: string | null; lead_status: string | null; created_at: string; [key: string]: unknown; }
 interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: string]: unknown; }
 
+// ═══ SHARED APPROVAL GUARD ═══
+// Tools with real-world side effects must respect agent_require_approval.
+// When the user has enabled approval, queue the action in ai_pending_actions
+// instead of executing directly. Read-only/inspection tools bypass this guard.
+const SIDE_EFFECT_TOOLS = new Set<string>([
+  "send_email",
+  "send_whatsapp",
+  "send_linkedin",
+  "queue_channel_message",
+  "update_partner",
+  "create_task",
+  "schedule_followup",
+]);
+
+async function isApprovalRequired(userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("user_id", userId)
+    .eq("key", "agent_require_approval")
+    .maybeSingle();
+  return data?.value === "true" || (data?.value as unknown) === true;
+}
+
 export async function executeTool(name: string, args: Record<string, unknown>, userId: string, authHeader: string, context?: ExecuteContext): Promise<unknown> {
+  // ── Centralized approval gate for side-effect tools ──
+  if (SIDE_EFFECT_TOOLS.has(name)) {
+    const requiresApproval = await isApprovalRequired(userId);
+    if (requiresApproval) {
+      const partnerId = (args.partner_id ?? args.partnerId) as string | undefined;
+      const recipient = (args.to_email ?? args.to ?? args.email ?? args.recipient) as string | undefined;
+      const { error: queueError } = await supabase.from("ai_pending_actions").insert({
+        user_id: userId,
+        partner_id: partnerId ? String(partnerId) : null,
+        email_address: recipient ? String(recipient) : null,
+        action_type: name,
+        action_payload: args,
+        reasoning: `Agent tool "${name}" intercepted by approval guard (agent_require_approval=true).`,
+        confidence: 0.9,
+        source: "agent_autonomous",
+        status: "pending",
+      });
+      if (queueError) {
+        console.error(`[approval-guard] Failed to queue ${name}:`, queueError);
+        return { error: `Impossibile accodare azione "${name}" per approvazione` };
+      }
+      return {
+        success: true,
+        queued: true,
+        requires_approval: true,
+        action_type: name,
+        message: `Azione "${name}" accodata per approvazione umana. Non eseguita.`,
+      };
+    }
+  }
+
   switch (name) {
     case "search_partners": {
       const isCount = !!args.count_only;
@@ -335,46 +390,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "send_email": {
-      // ═══ HARD GUARD: agent approval required ═══
-      // agent-execute è sempre contesto agente autonomo. Se l'utente ha attivato
-      // agent_require_approval, non inviare direttamente: accoda in ai_pending_actions.
-      const { data: approvalSetting } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("user_id", userId)
-        .eq("key", "agent_require_approval")
-        .maybeSingle();
-
-      const requiresApproval =
-        approvalSetting?.value === "true" || approvalSetting?.value === true;
-
-      if (requiresApproval) {
-        const { error: queueError } = await supabase.from("ai_pending_actions").insert({
-          user_id: userId,
-          action_type: "send_email",
-          action_payload: {
-            to: args.to_email,
-            to_name: args.to_name,
-            subject: args.subject,
-            html: args.html_body,
-            partner_id: args.partner_id ?? null,
-          },
-          status: "pending",
-          source: "agent_autonomous",
-          reasoning: "Agent attempted send_email; agent_require_approval=true",
-          partner_id: args.partner_id ? String(args.partner_id) : null,
-        });
-        if (queueError) {
-          console.error("Failed to queue email for approval:", queueError);
-          return { error: "Impossibile accodare email per approvazione" };
-        }
-        return {
-          success: true,
-          requires_approval: true,
-          message: `Email a ${args.to_email} accodata per approvazione utente. Non inviata.`,
-        };
-      }
-
+      // Approval guard handled centrally above. Reaching here means approval is NOT required.
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
@@ -817,7 +833,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
 
     case "get_holding_pattern": {
       const items: HoldingItem[] = [];
-      const activeStatuses = ["contacted", "in_progress"];
+      const activeStatuses = ["contacted", "in_progress", "negotiation"];
       const now = new Date();
       if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
         let pq = supabase.from("partners").select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")
