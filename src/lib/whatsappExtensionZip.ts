@@ -42,12 +42,12 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.2.1",
+    latestVersion: "3.3.0",
     items: [
       {
-        version: "3.2.1",
-        filename: "linkedin-extension-3.2.1.zip",
-        path: "/chrome-extensions/linkedin/linkedin-extension-3.2.1.zip",
+        version: "3.3.0",
+        filename: "linkedin-extension-3.3.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.3.0.zip",
         current: true,
         note: "Versione corrente",
       },
