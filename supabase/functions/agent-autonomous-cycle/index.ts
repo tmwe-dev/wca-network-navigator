@@ -268,12 +268,12 @@ serve(async (req) => {
       let transitionsApplied = 0;
       let sequenceActions = 0;
 
-      // 2.5a: Evaluate state transitions for active partners
+      // 2.5a: Evaluate state transitions for active partners (tassonomia canonica)
       const { data: activePartners } = await supabase
         .from("partners")
         .select("id, lead_status, last_interaction_at")
         .eq("user_id", userId)
-        .in("lead_status", ["new", "first_touch_sent", "holding", "engaged", "qualified"])
+        .in("lead_status", ["new", "contacted", "in_progress", "negotiation"])
         .not("lead_status", "is", null)
         .limit(50);
 
@@ -305,16 +305,18 @@ serve(async (req) => {
               target_filters: { partner_id: partner.id, from_state: t.from, to_state: t.to, trigger: t.trigger } as Record<string, unknown>,
               status: "proposed",
             });
+            console.log("[AutonomousCycle] state_transition proposed", JSON.stringify({ partner_id: partner.id, from: t.from, to: t.to }));
           }
         }
       }
 
-      // 2.5b: Next-action sequencing for first_touch_sent partners
+      // 2.5b: Next-action sequencing per partner in stato "contacted"
+      // (= primo touch inviato, ancora dentro la finestra di engagement 14gg)
       const { data: firstTouchPartners } = await supabase
         .from("partners")
         .select("id, last_interaction_at")
         .eq("user_id", userId)
-        .eq("lead_status", "first_touch_sent")
+        .eq("lead_status", "contacted")
         .limit(20);
 
       for (const partner of (firstTouchPartners || [])) {
