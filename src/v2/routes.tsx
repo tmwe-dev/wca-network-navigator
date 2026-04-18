@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useParams, Outlet } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -105,6 +105,12 @@ function V2AuthGateRaw(): React.ReactElement {
   }
 
   return <Outlet />;
+}
+
+/** Alias redirect preserving :id param */
+function RACompanyRedirect(): React.ReactElement {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/v2/ra-company/${id ?? ""}`} replace />;
 }
 
 // ── Router ───────────────────────────────────────────────────────────
