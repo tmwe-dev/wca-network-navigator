@@ -261,6 +261,35 @@ serve(async (req) => {
 
         if (actionsCreated > 0) await sleep(DELAY_BETWEEN_AGENTS_MS);
       }
+
+      // ═══ PHASE 3: Weekly KB Supervisor Audit (Sunday 6-8 AM, structural only) ═══
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 = Sunday
+      const hour = today.getHours();
+      if (dayOfWeek === 0 && hour >= 6 && hour <= 8) {
+        try {
+          const auditResp = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/kb-supervisor`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ user_id: userId, audit_level: "structural" }),
+            },
+          );
+          const auditResult = await auditResp.json();
+          results.push({
+            phase: "kb_audit",
+            user_id: userId,
+            issues_found: auditResult.summary?.total_issues || 0,
+            critical: auditResult.summary?.critical || 0,
+          });
+        } catch (auditErr) {
+          console.warn("[autonomous-cycle] KB audit failed:", auditErr);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ success: true, cycle: new Date().toISOString(), results }), {

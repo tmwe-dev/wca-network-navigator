@@ -1186,4 +1186,22 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "run_kb_audit",
+      description: "Esegue un audit della Knowledge Base verificando struttura, coerenza e allineamento strategico. Usa questo tool quando l'utente chiede di verificare, analizzare o ottimizzare la KB.",
+      parameters: {
+        type: "object",
+        properties: {
+          audit_level: {
+            type: "string",
+            enum: ["structural", "coherence", "strategic", "all"],
+            description: "Livello di audit: structural (tag/categorie), coherence (contraddizioni), strategic (allineamento obiettivo), all (tutti)",
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];

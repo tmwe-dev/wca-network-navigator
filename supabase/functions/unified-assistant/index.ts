@@ -9,6 +9,7 @@ import { forwardToFunction } from "../_shared/proxyUtils.ts";
 
 const VALID_SCOPES = new Set([
   "partner_hub", "cockpit", "contacts", "import", "extension", "strategic",
+  "kb-supervisor",
 ]);
 
 serve(async (req) => {
