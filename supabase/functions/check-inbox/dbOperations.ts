@@ -187,7 +187,7 @@ export async function saveMessageToDb(
     .eq("user_id", params.userId);
 
   // Auto-escalation
-  if (params.match.source_type === "imported_contact" && params.match.source_id) {
+  if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {
     await supabase.rpc("increment_contact_interaction", { p_contact_id: params.match.source_id });
     await supabase.from("imported_contacts")
       .update({ lead_status: "contacted" })
@@ -210,11 +210,6 @@ export async function saveMessageToDb(
       await supabase.from("partners")
         .update(updates)
         .eq("id", params.match.partner_id);
-    }
-  }
-
-  // Auto-escalation imported_contact (guard UUID)
-  // Note: source_id già validato sopra in safeSourceId, riutilizziamo guard pattern
     }
   }
 
