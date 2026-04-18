@@ -1,61 +1,63 @@
 
+Obiettivo reale: non “riapplicare alla cieca” J/K, ma chiudere il gap tra sorgente, runtime e modello dati, perché dal codice letto i fix REPAIR-J e REPAIR-K risultano presenti nel repository, mentre il comportamento che descrivi indica drift o integrazione rotta.
 
-# PROMPT-REPAIR-I — Optimus Auto-Learn (WhatsApp + LinkedIn)
+Diagnosi verificata dal codice:
+- REPAIR-J è presente nei sorgenti:
+  - `supabase/functions/whatsapp-ai-extract/index.ts` contiene prompt WA in italiano, schema ridotto, selezione modello condizionale `learnDom -> gemini-2.5-flash`.
+  - `supabase/functions/linkedin-ai-extract/index.ts` contiene prompt LI in italiano, `threadUrl`, `direction`, timeout 30s e check auth header/apikey.
+  - `public/whatsapp-extension/ai-extract.js` contiene `chatItemSamples`, `buttons`, `tabIndexElements`, `lang`.
+  - `public/linkedin-extension/actions.js` contiene `convertLinkedInSchemaToOptimusPlan`, mapping `threadUrl`, `direction` e `mapOptimusThreadMessages`.
+- REPAIR-K è presente nei sorgenti:
+  - esistono `supabase/functions/_shared/cadenceEngine.ts` e `supabase/functions/_shared/stateTransitions.ts`
+  - `generate-outreach`, `agent-autonomous-cycle` e `agent-execute` importano e usano già i blocchi K.
 
-## Stato attuale (verifica reale del codice)
+Quindi il problema probabile NON è “codice assente”, ma uno di questi:
+1. funzioni backend pubblicate non allineate ai file locali;
+2. ZIP estensioni serviti/non aggiornati o cache browser/CDN;
+3. mismatch strutturale del modello stati: K usa `first_touch_sent / holding / engaged / qualified / archived`, mentre parti esistenti del prodotto usano ancora `new / contacted / in_progress / negotiation / converted / lost`. Questo è il bug architetturale più serio: anche con file presenti, K può risultare di fatto “non applicato” o non osservabile.
 
-WhatsApp (I1-I6): **già implementati** nel ciclo precedente (v5.6.0). Verificherò solo che siano davvero presenti come da spec, e applicherò ritocchi se manca qualcosa.
+Piano correttivo che implementerò appena approvato:
 
-LinkedIn (I7-I9): **da fare ora**. Il modulo `ai-learn.js` esiste già con cache 3h e snapshot DOM, ma `actions.js` non lo invoca mai nel flusso Optimus, e `ai-learn.js` muore se manca `AiBridge`.
+1. Audit runtime verità unica
+- Verificare ciò che è davvero servito in preview/pubblicato:
+  - manifest e contenuto ZIP WA/LI correnti;
+  - backend pubblicato di `whatsapp-ai-extract`, `linkedin-ai-extract`, `generate-outreach`, `agent-autonomous-cycle`, `agent-execute`.
+- Confrontare runtime vs repository per individuare il punto esatto di drift.
 
-## Cosa farò
+2. Correzione drift deploy/asset
+- Se runtime è vecchio: ridistribuire le edge function coinvolte.
+- Se ZIP/manifest sono vecchi: rigenerare WA e LI dalle cartelle sorgente correnti e riallineare:
+  - `public/chrome-extensions/catalog.json`
+  - `src/lib/whatsappExtensionZip.ts`
+  - alias root `public/whatsapp-extension.zip` / `public/linkedin-extension.zip`
+- Invalidare fallback incoerenti e verificare che i download puntino solo agli asset correnti.
 
-### Parte 1 — Verifica WhatsApp (I1-I6)
-Apro `public/whatsapp-extension/actions.js`, `ai-extract.js` e `supabase/functions/whatsapp-ai-extract/index.ts` per confermare che il ciclo precedente abbia davvero applicato I1-I6. Se trovo gap, li chiudo. Niente bump di versione se è già tutto a posto.
+3. Correzione strutturale REPAIR-K
+- Riallineare il cadence/state engine alla tassonomia lead già esistente nel prodotto.
+- Opzione che seguirò salvo tuo veto: NON introdurre nuovi `lead_status` sparsi; invece:
+  - usare gli stati canonici esistenti per trigger e sequencing;
+  - oppure isolare i nuovi stati in un campo separato se davvero indispensabili.
+- Aggiornare `cadenceEngine.ts`, `stateTransitions.ts`, `generate-outreach`, `agent-autonomous-cycle` e ogni punto che oggi assume stati non canonici.
 
-### Parte 2 — LinkedIn auto-relearn (I7-I9)
+4. Hardening osservabile
+- Aggiungere logging esplicito su:
+  - cadence violation;
+  - transizioni proposte/applicate;
+  - sequence step creati;
+  - reason codes per blocchi WA/LI AI extraction.
+- Così il prossimo audit non dipende da supposizioni o summary falsi.
 
-**I7 — `public/linkedin-extension/actions.js`**
-- In `tryOptimusInbox`: quando `getPlan` fallisce, chiamo `AILearn.learnFromAI(tabId, "messaging", url, key)`, converto lo schema con `convertLinkedInSchemaToOptimusPlan(..., "messaging")` e ritento `Optimus.executePlanInTab`.
-- In `tryOptimusThread`: stessa logica con `pageType: "thread"`.
-- Rimuovo la condizione `&& optimus.cached` sul ramo "0 items" così il relearn parte sempre quando l'inbox torna vuota.
+5. Verifica finale obbligatoria
+- Test puntuali delle 5 funzioni backend coinvolte.
+- Verifica del contenuto reale dei ZIP correnti.
+- Verifica end-to-end:
+  - WA/LI learnDom e mapping Optimus;
+  - `generate-outreach` che blocca con 422 quando viola cadenza;
+  - `agent-autonomous-cycle` che crea task `state_transition` e `sequence_step`;
+  - `agent-execute` che li gestisce davvero.
 
-**I8 — `public/linkedin-extension/actions.js`**
-- Aggiungo `convertLinkedInSchemaToOptimusPlan(schema, pageType)` con due key map (messaging vs thread) e helper `buildPlanFromKeyMap` condiviso. Ritorna `null` se mancano i campi minimi (`container` + `contact_name`/`sender_name`).
-
-**I9 — `public/linkedin-extension/ai-learn.js`**
-- In `learnFromAI`: provo prima `AiBridge.aiExtractRequest` se disponibile; se fallisce o `AiBridge` è undefined, faccio fetch diretto a `whatsapp-ai-extract` (edge function condivisa, già abilitata a `channel: "linkedin"` + `pageType`).
-- Garantisco reset di `_learning` su tutti i percorsi di errore.
-
-### Parte 3 — Packaging e versioning
-- Bump `public/linkedin-extension/manifest.json` a **3.5.0**.
-- Aggiorno `DEFAULT_EXTENSION_CATALOG` in `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json` con LinkedIn `3.5.0` (corrente) e archivio `3.4.0`.
-- Rigenero `public/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip` e l'alias root `public/linkedin-extension.zip` direttamente da `public/linkedin-extension/`.
-- Verifica finale: lettura del `manifest.json` dentro lo zip per confermare `3.5.0`.
-
-### Parte 4 — Test
-- Aggiorno eventuali test che referenziano la versione LinkedIn corrente.
-- Eseguo `vitest` per non lasciare regressioni.
-
-## File coinvolti
-
-- `public/linkedin-extension/actions.js` (I7 + I8)
-- `public/linkedin-extension/ai-learn.js` (I9)
-- `public/linkedin-extension/manifest.json` (bump 3.5.0)
-- `public/whatsapp-extension/actions.js`, `ai-extract.js` (solo se la verifica trova gap su I1-I6)
-- `supabase/functions/whatsapp-ai-extract/index.ts` (verifica I6, ritocco se serve sul ramo `channel: "linkedin"`)
-- `src/lib/whatsappExtensionZip.ts`
-- `public/chrome-extensions/catalog.json`
-- `public/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip` (nuovo)
-- `public/linkedin-extension.zip` (rigenerato)
-- `src/test/misc-modules.test.ts` se referenzia LinkedIn 3.4.0
-
-## Risultato atteso
-
-Quando clicchi "Leggi" su LinkedIn:
-1. Optimus prova il piano cached / via bridge.
-2. Se fallisce → `AILearn.learnFromAI` parte automaticamente (anche senza tab webapp aperto, grazie al fallback diretto).
-3. Lo schema appreso viene convertito nel formato che `Optimus.executePlanInTab` capisce.
-4. Retry → estrazione messaggi, niente più "0 estratti, serve intervento".
-5. Tutto in background, niente nuove finestre, coerente con la regola stealth-sync.
-
+Risultato atteso:
+- eliminiamo il falso “0 fix applicati” distinguendo codice presente vs runtime reale;
+- REPAIR-J resta attivo anche a runtime;
+- REPAIR-K smette di essere nominalmente presente ma semanticamente incompatibile con gli stati del CRM;
+- download estensioni, backend e agent loop tornano coerenti tra loro.
