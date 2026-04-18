@@ -207,14 +207,14 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, message: "Reminder aggiornato." };
   }
 
-  async function executeDeleteRecords(args: Record<string, unknown>) {
+  async function executeDeleteRecords(args: Record<string, unknown>, userId: string) {
     const table = String(args.table);
     const ids = args.ids as string[];
     if (!ids || ids.length === 0) return { error: "Nessun ID specificato" };
     if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
-    const validTables = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+    const validTables = ["partners", "prospects", "activities", "reminders"];
     if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
-    const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
+    const { error } = await supabase.from(table as "partners" | "prospects" | "activities" | "reminders").delete().eq("user_id", userId).in("id", ids);
     if (error) return { error: error.message };
     return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
   }
