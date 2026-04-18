@@ -427,9 +427,21 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
 
     // ━━━ CHAT MODE ━━━
     if (chat_messages && Array.isArray(chat_messages)) {
+      // Compress long histories (parità con ai-assistant: soglia 8 messaggi)
+      let processedMessages = chat_messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })) as Record<string, unknown>[];
+      if (processedMessages.length > 8) {
+        try {
+          const apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
+          const compressed = await compressMessages(supabase, processedMessages, apiKey, userId);
+          console.log(`[agent-execute] Compressed ${processedMessages.length} → ${compressed.length} messages`);
+          processedMessages = compressed;
+        } catch (compressErr) {
+          console.warn("[agent-execute] Compression failed, using original:", compressErr);
+        }
+      }
       const allMessages = [
         { role: "system", content: systemPrompt },
-        ...chat_messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+        ...processedMessages,
       ];
 
       let response: Response | null = null;
