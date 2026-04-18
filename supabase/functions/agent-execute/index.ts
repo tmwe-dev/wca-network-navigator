@@ -118,6 +118,25 @@ serve(async (req) => {
 `;
       contextBlock += `\n\n${commercialDoctrineBlock}`;
 
+      // === CADENZA CONTATTO — REGOLE ASSOLUTE ===
+      const cadenceBlock = `
+## CADENZA CONTATTO — REGOLE ASSOLUTE
+
+- NUOVO contatto: SOLO email come primo canale. MAI WhatsApp o LinkedIn.
+- Dopo primo invio: attendi 3 giorni. Se nessuna risposta → follow-up email.
+- Giorno 5 senza risposta: LinkedIn connection request.
+- Giorno 7: secondo follow-up email con valore aggiunto.
+- Giorno 10: messaggio LinkedIn (se connesso).
+- Giorno 14: breakup email. Se nessuna risposta → stato HOLDING.
+- In HOLDING: 1 contatto ogni 5-7 giorni, alternando email e LinkedIn.
+- In ENGAGED: fino a 3 contatti/settimana, tutti i canali (WA solo con consenso).
+- In QUALIFIED: fino a 5 contatti/settimana, focus su scheduling call/meeting.
+- In NEGOTIATION: risposte rapide (1-2 giorni), WA per follow-up veloci.
+- WhatsApp MAI come primo contatto. Solo dopo consenso esplicito O risposta inbound WA.
+- ALTERNARE i canali: non inviare 2 email consecutive se LinkedIn è disponibile.
+`;
+      contextBlock += `\n${cadenceBlock}`;
+
       // 4. Prompt Operativi (tutti, come fa ai-assistant)
       const { data: opPrompts } = await supabase.from("operative_prompts").select("name, objective, procedure, criteria, tags, priority")
         .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false });
