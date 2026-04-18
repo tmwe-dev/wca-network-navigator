@@ -50,7 +50,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.9.0",
+      version: "5.10.0",
       modulesLoaded: _modulesLoaded,
     });
     return false;
@@ -174,7 +174,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[WhatsApp Extension v5.9.0] Installed — Optimus V2 (stabilize+unified+relearn)");
+  console.log("[WhatsApp Extension v5.10.0] Installed — Optimus V2.1 (automation window isolation)");
   if (typeof Config !== "undefined") {
     await Config.load();
     if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
