@@ -49,7 +49,7 @@ var HybridOps = globalThis.HybridOps || (function () {
             },
           });
           if (photoRes[0] && photoRes[0].result) axResult.photoUrl = photoRes[0].result;
-        } catch (_) {}
+        } catch (err) { console.debug("[LI Hybrid]", err?.message); }
         axResult.profileUrl = (await chrome.tabs.get(tabId)).url;
         return Config.successResponse({ profile: axResult, method: "ax_tree" });
       }
@@ -240,7 +240,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     try {
       const axResult = await AXTree.clickMessageButton(tabId);
       if (axResult && axResult.success) return axResult;
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Hybrid]", err?.message); }
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
@@ -261,7 +261,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     try {
       const axResult = await AXTree.addNote(tabId, noteText);
       if (axResult && axResult.success) return axResult;
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Hybrid]", err?.message); }
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },

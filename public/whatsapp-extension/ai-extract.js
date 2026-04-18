@@ -29,7 +29,7 @@ var AiExtract = globalThis.AiExtract || (function () {
         _schemaAt = data.waSchemaAt;
         _schemaKey = data.waSchemaKey || "";
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Extract]", err?.message); }
     return _schema;
   }
 
@@ -45,7 +45,7 @@ var AiExtract = globalThis.AiExtract || (function () {
         waSchemaAt: _schemaAt,
         waSchemaKey: _schemaKey,
       });
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Extract]", err?.message); }
   }
 
   function isSchemaStale() {
@@ -98,7 +98,7 @@ var AiExtract = globalThis.AiExtract || (function () {
                 scanShadowRoots(el.shadowRoot, roots, seen);
               }
             }
-          } catch (_) {}
+          } catch (err) { console.debug("[WA Extract]", err?.message); }
         }
         let rootsCache = null;
         function getRoots() {
@@ -114,7 +114,7 @@ var AiExtract = globalThis.AiExtract || (function () {
               root.querySelectorAll(sel).forEach(function (el) {
                 if (!seen.has(el)) { seen.add(el); out.push(el); }
               });
-            } catch (_) {}
+            } catch (err) { console.debug("[WA Extract]", err?.message); }
           }
           return out;
         }
@@ -172,7 +172,7 @@ var AiExtract = globalThis.AiExtract || (function () {
                   scanShadowRoots(el.shadowRoot, roots, seen);
                 }
               }
-            } catch (_) {}
+            } catch (err) { console.debug("[WA Extract]", err?.message); }
           }
           let rootsCache = null;
           function getRoots() {
@@ -185,7 +185,7 @@ var AiExtract = globalThis.AiExtract || (function () {
             const out = [], seen = new Set();
             for (const root of getRoots()) {
               try { root.querySelectorAll(sel).forEach(function (el) { if (!seen.has(el)) { seen.add(el); out.push(el); } }); }
-              catch (_) {}
+              catch (err) { console.debug("[WA Extract]", err?.message); }
             }
             return out;
           }

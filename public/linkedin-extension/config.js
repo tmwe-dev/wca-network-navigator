@@ -30,7 +30,7 @@ var Config = globalThis.Config || (function () {
       if (data.li_supabase_url) _cache.supabaseUrl = data.li_supabase_url;
       if (data.li_supabase_anon_key) _cache.supabaseAnonKey = data.li_supabase_anon_key;
       _loaded = true;
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Config]", err?.message); }
     return _cache;
   }
 
@@ -43,7 +43,7 @@ var Config = globalThis.Config || (function () {
         li_supabase_anon_key: _cache.supabaseAnonKey,
       });
       _loaded = true;
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Config]", err?.message); }
   }
 
   function getUrl() { return _cache.supabaseUrl; }
