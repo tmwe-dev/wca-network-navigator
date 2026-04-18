@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.9.0";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.8.0";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.0";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.0";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,41 +19,41 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.9.0",
+    latestVersion: "5.10.0",
     items: [
+      {
+        version: "5.10.0",
+        filename: "whatsapp-extension-5.10.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.0.zip",
+        current: true,
+        note: "Optimus V2.1 — automation window isolation: i tab WA non rubano più il focus al Cockpit",
+      },
       {
         version: "5.9.0",
         filename: "whatsapp-extension-5.9.0.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.9.0.zip",
-        current: true,
-        note: "Optimus V2 — stabilize tab + unified extract multi-segnale + AI relearn con validazione in-context, direct-first edge function",
-      },
-      {
-        version: "5.8.0",
-        filename: "whatsapp-extension-5.8.0.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.8.0.zip",
         current: false,
-        note: "Archivio — badge detection senza data-testid + brief tab activation",
+        note: "Archivio — Optimus V2 (focus stealing bug)",
       },
     ],
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.8.0",
+    latestVersion: "3.9.0",
     items: [
+      {
+        version: "3.9.0",
+        filename: "linkedin-extension-3.9.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.0.zip",
+        current: true,
+        note: "Optimus V2.1 — automation window isolation: i tab LI non rubano più il focus al Cockpit",
+      },
       {
         version: "3.8.0",
         filename: "linkedin-extension-3.8.0.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.8.0.zip",
-        current: true,
-        note: "Optimus V2 — activateAndStabilize, direct-first AI, dedup inbox + filtro notification",
-      },
-      {
-        version: "3.7.0",
-        filename: "linkedin-extension-3.7.0.zip",
-        path: "/chrome-extensions/linkedin/linkedin-extension-3.7.0.zip",
         current: false,
-        note: "Archivio — anti-multitab + dedup inbox + brief tab activation",
+        note: "Archivio — Optimus V2 (focus stealing bug)",
       },
     ],
   },
