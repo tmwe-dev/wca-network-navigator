@@ -103,22 +103,40 @@ Textboxes: ${JSON.stringify(snapshot.textboxes || [])}
 HTML samples:
 ${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v as string).substring(0, 800)}`).join("\n\n")}`;
 
-    const aiResponse = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-      }),
-    });
+    // J7 — Timeout 30s + AbortController on AI gateway fetch
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 30000);
+
+    let aiResponse: Response;
+    try {
+      aiResponse = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 2000,
+        }),
+        signal: aiController.signal,
+      });
+      clearTimeout(aiTimeout);
+    } catch (fetchErr) {
+      clearTimeout(aiTimeout);
+      if ((fetchErr as Error).name === "AbortError") {
+        return new Response(
+          JSON.stringify({ error: "AI gateway timeout (30s)" }),
+          { status: 504, headers: { ...dynCors, "Content-Type": "application/json" } }
+        );
+      }
+      throw fetchErr;
+    }
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
