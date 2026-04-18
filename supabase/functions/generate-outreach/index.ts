@@ -119,9 +119,18 @@ serve(async (req) => {
       );
 
       if (!cadenceResult.allowed) {
+        console.warn("[generate-outreach] CADENCE_VIOLATION", JSON.stringify({
+          partner_id: ctx.partnerId,
+          channel: ch,
+          state: ctx.commercialState || "new",
+          reasonCode: cadenceResult.reasonCode,
+          reason: cadenceResult.reason,
+          touchesThisWeek,
+        }));
         return new Response(
           JSON.stringify({
             error: "cadence_violation",
+            reasonCode: cadenceResult.reasonCode,
             message: cadenceResult.reason,
             suggestedChannel: cadenceResult.suggestedChannel,
             nextAllowedDate: cadenceResult.nextAllowedDate,

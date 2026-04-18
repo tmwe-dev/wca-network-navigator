@@ -122,16 +122,19 @@ serve(async (req) => {
       const cadenceBlock = `
 ## CADENZA CONTATTO — REGOLE ASSOLUTE
 
-- NUOVO contatto: SOLO email come primo canale. MAI WhatsApp o LinkedIn.
+Tassonomia stati: new | contacted | in_progress | negotiation | converted | lost
+
+- NEW (mai contattato): SOLO email come primo canale. MAI WhatsApp o LinkedIn.
 - Dopo primo invio: attendi 3 giorni. Se nessuna risposta → follow-up email.
 - Giorno 5 senza risposta: LinkedIn connection request.
 - Giorno 7: secondo follow-up email con valore aggiunto.
 - Giorno 10: messaggio LinkedIn (se connesso).
-- Giorno 14: breakup email. Se nessuna risposta → stato HOLDING.
-- In HOLDING: 1 contatto ogni 5-7 giorni, alternando email e LinkedIn.
-- In ENGAGED: fino a 3 contatti/settimana, tutti i canali (WA solo con consenso).
-- In QUALIFIED: fino a 5 contatti/settimana, focus su scheduling call/meeting.
-- In NEGOTIATION: risposte rapide (1-2 giorni), WA per follow-up veloci.
+- Giorno 14: breakup email.
+- CONTACTED (primo touch fatto, in attesa risposta): max 2 contatti/settimana, alternare email/LinkedIn, intervallo minimo 3 giorni.
+- IN_PROGRESS (dialogo attivo): fino a 3 contatti/settimana, tutti i canali (WA solo con consenso).
+- NEGOTIATION (trattativa): risposte rapide (1-2 giorni), WA per follow-up veloci.
+- CONVERTED (cliente): contatto di mantenimento ogni 7+ giorni.
+- LOST (perso/archiviato): nessun contatto automatico, solo riattivazione manuale.
 - WhatsApp MAI come primo contatto. Solo dopo consenso esplicito O risposta inbound WA.
 - ALTERNARE i canali: non inviare 2 email consecutive se LinkedIn è disponibile.
 `;
