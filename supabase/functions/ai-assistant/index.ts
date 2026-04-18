@@ -429,6 +429,7 @@ Non eseguire tool di scrittura o modifica`;
 
     const contextBlocks = [
       { key: "doctrine", content: doctrineContext, priority: 100, minTokens: 0 },
+      { key: "holding_state", content: holdingContextBlock, priority: 95, minTokens: 0 },
       { key: "profile", content: userProfile, priority: 90, minTokens: 100 },
       { key: "memory", content: memoryContext, priority: 80, minTokens: 200 },
       { key: "kb", content: kbContext, priority: 70, minTokens: 200 },
