@@ -321,9 +321,19 @@ var Actions = globalThis.Actions || (function () {
 
   function mapOptimusThreadMessages(items) {
     return items.map(function (it) {
-      const sender = it.message_sender || it.sender || "";
-      const s = String(sender).toLowerCase().trim();
-      const direction = it.direction || ((s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound");
+      const sender = it.message_sender || it.sender || it.sender_name || "";
+      const dirField = it.direction || "";
+      let direction;
+      if (dirField && (dirField === "outbound" || dirField === "inbound")) {
+        direction = dirField;
+      } else if (dirField) {
+        // J11 — AI might return a CSS class like "msg-s-event--outbound" — check for "outbound" substring
+        direction = String(dirField).toLowerCase().includes("outbound") ? "outbound" : "inbound";
+      } else {
+        // Fallback: infer from sender name
+        const s = String(sender).toLowerCase().trim();
+        direction = (s === "tu" || s === "you" || s === "me" || s === "io") ? "outbound" : "inbound";
+      }
       return {
         text: it.message_text || it.text || it.body || "",
         sender: sender,
