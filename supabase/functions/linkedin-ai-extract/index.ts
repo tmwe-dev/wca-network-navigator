@@ -1,7 +1,7 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const AI_URL = "https://ai-gateway.lovable.dev/api/chat/completions";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
