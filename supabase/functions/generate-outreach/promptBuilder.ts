@@ -152,13 +152,18 @@ ${email_type_prompt ? `STRUTTURA EMAIL OBBLIGATORIA (tipo: ${email_type_id}):\n$
   if (commercialState !== undefined || touchCount !== undefined) {
     const tc = touchCount || 0;
     const ws = warmthScore ?? 0;
-    const toneInstruction = tc === 0
-      ? "PRIMO CONTATTO: Tono freddo-professionale. Breve. CTA basso impegno. NON vendere."
-      : tc <= 3 && ws < 50
-      ? "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione."
-      : tc > 3 && ws < 50
-      ? "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza. Costruire credibilità."
-      : "RELAZIONE CALDA: Tono da collega/amico professionale. Personalizzazione alta. Proposte concrete.";
+    const stateToTone: Record<string, string> = {
+      new: "PRIMO CONTATTO — Freddo-professionale. Presentati brevemente, vai al punto. Nessuna familiarità.",
+      first_touch_sent: "FOLLOW-UP INIZIALE — Professionale. Hai già scritto. Non ripresentarti. Aggiungi valore.",
+      holding: "NURTURING — Cordiale. Il contatto ti conosce. Mostra interesse per il suo business.",
+      engaged: "DIALOGO ATTIVO — Collega amichevole. Puoi essere diretto e propositivo.",
+      qualified: "LEAD QUALIFICATO — Partner diretto. Parla di soluzioni concrete, numeri, tempistiche.",
+      negotiation: "TRATTATIVA — Partner diretto. Focus su termini, condizioni, next steps.",
+      converted: "CLIENTE — Pari livello. Tono naturale, relazione consolidata.",
+    };
+    const toneInstruction = commercialState
+      ? (stateToTone[commercialState] || stateToTone.holding)
+      : (tc === 0 ? stateToTone.new : stateToTone.holding);
     commercialBlock = `\n--- STATO COMMERCIALE ---
 - Fase: ${(commercialState || "new").toUpperCase()}
 - Contatti totali inviati: ${tc}

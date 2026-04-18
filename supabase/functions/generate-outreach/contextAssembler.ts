@@ -311,6 +311,7 @@ export async function assembleOutreachContext(
   let commercialState = "new";
   let touchCount = 0;
   let daysSinceLastContact = 0;
+  let lastOutcome: string | null = null;
   if (partnerId) {
     const { data: pState } = await supabase
       .from("partners")
@@ -326,11 +327,17 @@ export async function assembleOutreachContext(
     }
   }
 
+  const warmthScore = Math.min(100,
+    (touchCount || 0) * 15 +
+    (daysSinceLastContact != null && daysSinceLastContact < 14 ? 20 : 0) +
+    (lastOutcome === "positive" ? 15 : 0)
+  );
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     historyText, interactionHistoryCount, conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
     settings, partnerId, websiteSource, linkedinSource,
-    commercialState, touchCount, daysSinceLastContact,
+    commercialState, touchCount, daysSinceLastContact, warmthScore,
   };
 }

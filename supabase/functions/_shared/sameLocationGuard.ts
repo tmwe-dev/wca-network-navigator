@@ -246,6 +246,10 @@ export async function analyzeRelationshipHistory(
   };
   const commercialState = commercialStateMap[stage];
 
+  // Exported helper: map any internal stage to commercial taxonomy (default holding)
+  // Note: defined as module-level export below for reuse
+
+
   const metrics: RelationshipMetrics = {
     total_interactions: interactions.length,
     total_emails_sent: emailsSent.length + activities.length,
