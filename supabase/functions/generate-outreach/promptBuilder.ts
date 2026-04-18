@@ -42,6 +42,10 @@ export interface OutreachPromptContext {
   lastOutcome?: string;
   daysSinceLastContact?: number;
   warmthScore?: number;
+  // Fix 3.2: active playbook (governs tone/content/CTA)
+  playbookBlock?: string;
+  // Fix 3.3: honest channel declaration (full vs limited context)
+  channelDeclaration?: string;
 }
 
 export function getModel(quality: Quality): string {
@@ -57,6 +61,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
+    playbookBlock, channelDeclaration,
   } = ctx;
 
   let recipientName = "";
@@ -103,9 +108,9 @@ ${enrichmentSnippet}
     : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-  const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
+  const systemPrompt = `${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un esperto stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
 Hai accesso a una Knowledge Base di tecniche di vendita e negoziazione — usala autonomamente per scegliere strategia, tono e struttura.
-
+${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
 ${channelContext}
 
 CONTESTO:

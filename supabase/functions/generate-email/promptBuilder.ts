@@ -77,6 +77,8 @@ export interface EmailPromptContext {
   lastOutcome?: string;
   daysSinceLastContact?: number;
   warmthScore?: number;
+  // Fix 3.2: active playbook (governs tone/content/CTA)
+  playbookBlock?: string;
 }
 
 // ── Helpers ──
@@ -143,6 +145,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: stri
     salesKBSlice, salesKBSections, _signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
+    playbookBlock,
   } = ctx;
 
   // Resolve names
@@ -231,7 +234,7 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
 
   const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
 Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
-
+${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
 ${strategicAdvisor}
 
 ## Formato output:
