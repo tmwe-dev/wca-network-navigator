@@ -112,6 +112,21 @@ const ACTION_HANDLERS = {
     return true;
   },
 
+  backfillLinkedInThread: function (msg, sendResponse) {
+    if (!msg.threadUrl) {
+      sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, "threadUrl richiesto"));
+      return false;
+    }
+    TabManager.enqueueAction(async function () {
+      try {
+        sendResponse(await Actions.backfillThread(msg.threadUrl, msg.lastKnownText || "", msg.maxScrolls || 20));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
+      }
+    });
+    return true;
+  },
+
   diagnosticLinkedInDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
       try { sendResponse(await Actions.diagnostic()); }

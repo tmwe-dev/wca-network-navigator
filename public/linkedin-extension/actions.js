@@ -559,6 +559,7 @@ var Actions = globalThis.Actions || (function () {
     searchProfile: searchProfile,
     readInbox: readInbox,
     readThread: readThread,
+    backfillThread: backfillThread,
     diagnostic: diagnostic,
     learnDom: learnDom,
   };
