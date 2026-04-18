@@ -191,7 +191,7 @@ var HybridOps = globalThis.HybridOps || (function () {
 
     // Level 2: AI Learn
     try {
-      let schema = await AILearn.getCached();
+      let schema = await AILearn.getCached("profile");
       if (!schema && Config.isReady()) schema = await AILearn.learnFromAI(tabId, "profile", Config.getUrl(), Config.getKey());
       if (schema) {
         const learnRes = await chrome.scripting.executeScript({
