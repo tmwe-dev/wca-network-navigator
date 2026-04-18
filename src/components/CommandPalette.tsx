@@ -30,23 +30,23 @@ const NAV_ITEMS = [
   { label: "CRM Contatti", icon: Users, v1Path: "/v1/crm", v2Path: "/v2/crm" },
   { label: "Outreach", icon: Rocket, v1Path: "/v1/outreach", v2Path: "/v2/outreach" },
   { label: "Inreach", icon: Inbox, v1Path: "/v1/inreach", v2Path: "/v2/inreach" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email-composer" },
+  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/outreach/composer" },
   { label: "AI Arena", icon: Gamepad2, v1Path: "/v1/ai-arena", v2Path: "/v2/ai-arena" },
   { label: "AI Control", icon: Target, v1Path: "/v1/ai-control", v2Path: "/v2/ai-control" },
   { label: "Email Intelligence", icon: Brain, v1Path: "/v1/email-intelligence", v2Path: "/v2/email-intelligence" },
   { label: "Campagne", icon: Send, v1Path: "/v1/campaigns", v2Path: "/v2/campaigns" },
-  { label: "Agenda", icon: Calendar, v1Path: "/v1/agenda", v2Path: "/v2/agenda" },
-  { label: "Chat Agenti", icon: MessageCircle, v1Path: "/v1/agent-chat", v2Path: "/v2/agent-chat" },
-  { label: "Staff Direzionale", icon: BookOpen, v1Path: "/v1/staff-direzionale", v2Path: "/v2/staff" },
-  { label: "Mission Builder", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/missions" },
-  { label: "Telemetria", icon: BarChart3, v1Path: "/v1/telemetry", v2Path: "/v2/telemetry" },
-  { label: "Diagnostica", icon: Wrench, v1Path: "/v1/diagnostics", v2Path: "/v2/diagnostics" },
+  { label: "Agenda", icon: Calendar, v1Path: "/v1/agenda", v2Path: "/v2/outreach/agenda" },
+  { label: "Chat Agenti", icon: MessageCircle, v1Path: "/v1/agent-chat", v2Path: "/v2/agents" },
+  { label: "Staff Direzionale", icon: BookOpen, v1Path: "/v1/staff-direzionale", v2Path: "/v2/ai-staff" },
+  { label: "Mission Builder", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
+  { label: "Telemetria", icon: BarChart3, v1Path: "/v1/telemetry", v2Path: "/v2/settings/telemetry" },
+  { label: "Diagnostica", icon: Wrench, v1Path: "/v1/diagnostics", v2Path: "/v2/settings/diagnostics" },
   { label: "Impostazioni", icon: Settings, v1Path: "/v1/settings", v2Path: "/v2/settings" },
 ];
 
 const QUICK_ACTIONS = [
-  { label: "Nuova Missione", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/missions" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email-composer" },
+  { label: "Nuova Missione", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
+  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/outreach/composer" },
   { label: "Visualizza Preferiti", icon: Star, v1Path: "/v1/network?favorites=true", v2Path: "/v2/network?favorites=true" },
 ];
 

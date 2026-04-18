@@ -33,7 +33,7 @@ const NAV_CARDS = [
   { key: "outreach", title: "Outreach", description: "Cockpit AI e invio email", route: "/v2/outreach", icon: Radar },
   { key: "network", title: "Network", description: "Partner e directory", route: "/v2/network", icon: Network },
   { key: "crm", title: "CRM", description: "Prospect e contatti", route: "/v2/crm", icon: Users },
-  { key: "agenda", title: "Agenda", description: "Attività e follow-up", route: "/v2/agenda", icon: CalendarCheck },
+  { key: "agenda", title: "Agenda", description: "Attività e follow-up", route: "/v2/outreach/agenda", icon: CalendarCheck },
 ] as const;
 
 export default function SuperHome3D() {

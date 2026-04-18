@@ -141,38 +141,58 @@ export function V2Routes(): React.ReactElement {
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
           <Route path="network" element={guardedPage(DeepSearchPage, "Network")} />
+
+          {/* CRM + figli */}
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
+          <Route path="crm/contacts" element={guardedPage(ContactsPage, "Contacts")} />
+          <Route path="crm/prospects" element={guardedPage(ProspectPage, "Prospects")} />
+          <Route path="crm/acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
+          <Route path="contacts" element={<Navigate to="/v2/crm/contacts" replace />} />
+          <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
+          <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
+
+          {/* Outreach + figli */}
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
+          <Route path="outreach/composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
+          <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
+          <Route path="email-composer" element={<Navigate to="/v2/outreach/composer" replace />} />
+          <Route path="agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
+          <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
+
           <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />
-          <Route path="agenda" element={guardedPage(AgendaPage, "Agenda")} />
-          <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
+
+          {/* Agents + figli */}
           <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
-          <Route path="agent-capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
-          <Route path="agent-tasks" element={guardedPage(AgentTasksPage, "AgentTasks")} />
-          <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
-          <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
+          <Route path="agents/missions" element={guardedPage(MissionBuilderPage, "Missions")} />
+          <Route path="agents/autopilot" element={guardedPage(MissionsAutopilotPage, "AutopilotMissions")} />
+          <Route path="agents/capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
+          <Route path="agents/tasks" element={guardedPage(AgentTasksPage, "AgentTasks")} />
+          <Route path="missions" element={<Navigate to="/v2/agents/missions" replace />} />
+          <Route path="autopilot-missions" element={<Navigate to="/v2/agents/autopilot" replace />} />
+          <Route path="agent-capabilities" element={<Navigate to="/v2/agents/capabilities" replace />} />
+          <Route path="agent-tasks" element={<Navigate to="/v2/agents/tasks" replace />} />
+          <Route path="agent-chat" element={<Navigate to="/v2/agents" replace />} />
+
+          {/* Campaigns + figli */}
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
-          <Route path="prospects" element={guardedPage(ProspectPage, "Prospects")} />
+          <Route path="campaigns/jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
+          <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns/jobs" replace />} />
+
+          {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
+          <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
+          <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="ai-lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="knowledge-base" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
+          <Route path="kb-supervisor" element={<Navigate to="/v2/ai-staff/kb-supervisor" replace />} />
+          <Route path="ai-lab" element={<Navigate to="/v2/ai-staff/lab" replace />} />
+
+          {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
           <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
           <Route path="deep-search" element={<Navigate to="/v2/network" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
-          <Route path="telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
-          <Route path="partner-directory" element={guardedPage(OperationsPage, "PartnerDirectory")} />
-          <Route path="operations" element={<Navigate to="/v2/partner-directory" replace />} />
-          <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
-          <Route path="diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
-          <Route path="import" element={<Navigate to="/v2/partner-directory" replace />} />
-          <Route path="acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="agent-chat" element={<Navigate to="/v2/agents" replace />} />
-          <Route path="contacts" element={guardedPage(ContactsPage, "Contacts")} />
-          <Route path="email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
           <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
           <Route path="ra-company/:id" element={guardedPage(RACompanyDetailPage, "RACompanyDetail")} />
@@ -180,17 +200,35 @@ export function V2Routes(): React.ReactElement {
           <Route path="research/explorer" element={<Navigate to="/v2/ra-explorer" replace />} />
           <Route path="research/scraping" element={<Navigate to="/v2/ra-scraping" replace />} />
           <Route path="research/company/:id" element={<RACompanyRedirect />} />
-          <Route path="campaign-jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
-          <Route path="admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
+
+          {/* Partner directory + alias */}
+          <Route path="partner-directory" element={guardedPage(OperationsPage, "PartnerDirectory")} />
+          <Route path="operations" element={<Navigate to="/v2/partner-directory" replace />} />
+          <Route path="import" element={<Navigate to="/v2/partner-directory" replace />} />
+
+          {/* Settings + figli admin/system */}
+          <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
+          <Route path="settings/admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
+          <Route path="settings/email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
+          <Route path="settings/diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
+          <Route path="settings/telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
+          <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
+          <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
+          <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
+          <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
+          <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
+          <Route path="telemetry" element={<Navigate to="/v2/settings/telemetry" replace />} />
+          <Route path="observability" element={<Navigate to="/v2/settings/observability" replace />} />
+          <Route path="admin/health" element={<Navigate to="/v2/settings/health" replace />} />
+
+          {/* Standalone */}
           <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
           <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
           <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
-          <Route path="admin/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
-          <Route path="observability" element={guardedPage(ObservabilityPage, "Observability")} />
-          <Route path="autopilot-missions" element={guardedPage(MissionsAutopilotPage, "AutopilotMissions")} />
+
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
       </Routes>
