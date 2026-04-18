@@ -42,6 +42,21 @@ var OptimusClient = globalThis.OptimusClient || (function() {
 
   function executePlan(plan, elements) {
     if (!plan || !plan.selectors) return [];
+
+    // F4 — validate selectors against malicious patterns before execution
+    var SELECTOR_BLACKLIST = /javascript:|on\w+\s*=|<script|eval\(|Function\(/i;
+    var planFields = plan.fields || plan.selectors || {};
+    for (var fk in planFields) {
+      if (!Object.prototype.hasOwnProperty.call(planFields, fk)) continue;
+      var field = planFields[fk] || {};
+      var selStr = field.primary || field.selector || "";
+      var fbStr = field.fallback || "";
+      if (SELECTOR_BLACKLIST.test(selStr) || SELECTOR_BLACKLIST.test(fbStr)) {
+        console.warn("[Optimus] Rejected malicious selector:", selStr);
+        return { items: [], error: "invalid_selector" };
+      }
+    }
+
     var items = [];
     var sel = plan.selectors;
     elements.forEach(function(el) {
