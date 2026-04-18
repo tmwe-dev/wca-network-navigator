@@ -210,8 +210,9 @@ REGOLE:
       Authorization: `Bearer ${LOVABLE_API_KEY}`,
       "Content-Type": "application/json",
     };
+    const selectedModel = mode === "learnDom" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
     const gatewayBody = JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
+      model: selectedModel,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
