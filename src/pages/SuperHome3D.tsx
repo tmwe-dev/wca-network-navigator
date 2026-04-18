@@ -15,6 +15,7 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryKeys } from "@/lib/queryKeys";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DeferredOnVisible } from "@/components/shared/DeferredOnVisible";
 
 // ⚡ Perf: lazy-load widget pesanti per alleggerire il bundle iniziale della Dashboard.
 // lazyRetry → resilient ai fallimenti intermittenti del proxy Preview di Lovable.
@@ -44,10 +45,10 @@ export default function SuperHome3D() {
 
   const { data: jobs = [] } = useDownloadJobs();
 
-  // Briefing deferred — only fetch when user opens the section
+  // Briefing deferred — edge function (LLM call, ~2-5s) only runs when user opens the section.
   const [briefingOpen, setBriefingOpen] = useState(false);
-  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
-  // Note: useDailyBriefing has staleTime=15min so it won't refetch if already cached
+  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing(briefingOpen);
+  // Note: useDailyBriefing has staleTime=15min so it won't refetch if already cached.
 
   const [actionPrompt, setActionPrompt] = useState<string | null>(null);
 
@@ -152,13 +153,17 @@ export default function SuperHome3D() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Charts */}
-        <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
-          <DashboardCharts />
-        </Suspense>
-        <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
-          <ResponseRateCard />
-        </Suspense>
+        {/* Charts — deferred until scrolled near viewport (Recharts ~80kb + 4 queries) */}
+        <DeferredOnVisible placeholder={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+          <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+            <DashboardCharts />
+          </Suspense>
+        </DeferredOnVisible>
+        <DeferredOnVisible placeholder={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
+          <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
+            <ResponseRateCard />
+          </Suspense>
+        </DeferredOnVisible>
 
       </div>
       </ScrollArea>
