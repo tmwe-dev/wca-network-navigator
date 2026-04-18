@@ -55,6 +55,7 @@ var Actions = globalThis.Actions || (function () {
     if (!query) return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Query mancante");
     const searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
     const tab = await TabManager.getLinkedInTab(searchUrl);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(3000);
     try {
       const results = await chrome.scripting.executeScript({
