@@ -76,23 +76,44 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
-  // ── STEALTH MODE: never steal focus from the user's app window ──
-  // Previously this activated the WA tab and focused its window, which kicked
-  // the user out of the Cockpit. We now only verify the tab exists and rely on
-  // sleep timers to compensate for background-tab DOM throttling — same approach
-  // as the LinkedIn extension, which reads inbox without ever calling
-  // chrome.tabs.update({active:true}) or chrome.windows.update({focused:true}).
+  // ── STEALTH MODE v2 (M4): brief tab activation for DOM rendering ──
+  // Il DOM di WhatsApp è pesantemente throttled quando il tab è in background.
+  // getBoundingClientRect() → 0, getComputedStyle() inaffidabile, elementi non renderizzati.
+  // Soluzione: chrome.tabs.update({active:true}) attiva il tab NELLA SUA FINESTRA
+  // senza chiamare chrome.windows.update({focused:true}), quindi la finestra
+  // dell'utente (Cockpit) NON viene disturbata. Dopo l'attivazione, il tab originale
+  // viene ripristinato.
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
       if (!tab) return false;
-      // Add a small extra wait so background-tab DOM has time to settle.
-      await sleep(Math.min(postActivateMs || 600, 1500));
+      // M4: Se il tab è nascosto, attivalo brevemente per forzare rendering DOM
+      if (tab.active === false) {
+        // Salva il tab attivo corrente nella stessa finestra
+        let previousActiveTabId = null;
+        try {
+          const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
+          if (windowTabs && windowTabs[0]) previousActiveTabId = windowTabs[0].id;
+        } catch (err) { console.debug("[WA Tab] M4 save prev:", err?.message); }
+
+        // Attiva il tab WA (rendering DOM si sblocca)
+        try { await chrome.tabs.update(tabId, { active: true }); } catch (err) { console.debug("[WA Tab] M4 activate:", err?.message); }
+        // Aspetta che il DOM si renderizzi
+        await sleep(Math.min(postActivateMs || 600, 1500));
+
+        // Ripristina il tab precedente (utente non se ne accorge)
+        if (previousActiveTabId && previousActiveTabId !== tabId) {
+          try { await chrome.tabs.update(previousActiveTabId, { active: true }); } catch (err) { console.debug("[WA Tab] M4 restore:", err?.message); }
+        }
+      } else {
+        // Tab già attivo — solo sleep
+        await sleep(Math.min(postActivateMs || 600, 1500));
+      }
       return true;
     } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
   }
 
-  // Backward-compat shim: also stealth — never activates or focuses the tab.
+  // M6: Backward-compat shim — ora usa ensureTabVisibleAndWait con M4 activation
   async function withTemporarilyVisibleTab(tabId, fn) {
     await ensureTabVisibleAndWait(tabId, 600);
     return await fn();

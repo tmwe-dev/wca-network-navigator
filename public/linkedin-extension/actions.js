@@ -396,12 +396,29 @@ var Actions = globalThis.Actions || (function () {
         func: function () {
           const threads = [];
           const seen = {};
+          const seenNames = {}; // M2: dedup anche per nome
+          // M2: pattern per notification badge da filtrare
+          var notifPattern = /^\d+\s+\d*\s*(nuov[aoe]|new)\s*(notifich?[ae]?|message|notification)/i;
+
+          function addThread(name, threadUrl, unread, lastMsg) {
+            // M2: filtra notification badge estratte come thread
+            if (notifPattern.test(name)) return;
+            // M2: filtra "Sponsorizzata" come nome contatto standalone
+            if (/^sponsorizzat[ao]$/i.test(name.trim())) return;
+            // M2: dedup per threadUrl
+            if (threadUrl && seen[threadUrl]) return;
+            if (threadUrl) seen[threadUrl] = true;
+            // M2: dedup per nome (se non c'è threadUrl, o se threadUrl diverso ma stesso nome)
+            var nameKey = name.toLowerCase().replace(/\s+/g, " ").trim();
+            if (seenNames[nameKey]) return;
+            seenNames[nameKey] = true;
+            threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+          }
+
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
           modernCards.forEach(function (card) {
             const link = card.querySelector("a[href*='/messaging/']") || card.closest("a[href*='/messaging/']");
             const threadUrl = link ? (link.href || "") : "";
-            if (seen[threadUrl] && threadUrl) return;
-            if (threadUrl) seen[threadUrl] = true;
             let name = "";
             const h3 = card.querySelector("h3");
             if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
@@ -411,14 +428,12 @@ var Actions = globalThis.Actions || (function () {
             const msgEl = card.querySelector("p, [class*='snippet'], [class*='preview']");
             if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
             const unread = !!card.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
-            threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+            addThread(name, threadUrl, unread, lastMsg);
           });
           if (threads.length === 0) {
             const threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");
             threadLinks.forEach(function (link) {
               const threadUrl = link.href || "";
-              if (seen[threadUrl]) return;
-              seen[threadUrl] = true;
               const container = link.closest("li") || link.parentElement;
               if (!container) return;
               let name = "";
@@ -428,7 +443,7 @@ var Actions = globalThis.Actions || (function () {
               if (!name) return;
               const msgP = container.querySelector("p, [class*='snippet']");
               const lastMsg = msgP ? msgP.textContent.replace(/\s+/g, " ").trim().substring(0, 120) : "";
-              threads.push({ name: name, threadUrl: threadUrl, unread: false, lastMessage: lastMsg });
+              addThread(name, threadUrl, false, lastMsg);
             });
           }
           return { success: true, threads: threads, method: "legacy-structural" };
