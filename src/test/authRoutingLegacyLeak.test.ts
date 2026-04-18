@@ -19,7 +19,7 @@ describe("Auth and routing legacy leak guardrails", () => {
   });
 
   it("command palette resolves V2-safe mission routes", () => {
-    expect(commandPaletteSource).toContain('v2Path: "/v2/missions"');
+    expect(commandPaletteSource).toContain('v2Path: "/v2/agents/missions"');
     expect(commandPaletteSource).toContain('const isV2 = location.pathname.startsWith("/v2")');
   });
 
