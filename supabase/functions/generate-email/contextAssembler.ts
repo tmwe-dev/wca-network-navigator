@@ -523,6 +523,9 @@ export async function assembleContextBlocks(
     if (sigParts.length > 0) signatureBlock = sigParts.join("\n");
   }
 
+  // Fix 3.2: Active playbook
+  const playbook = await loadActivePlaybook(supabase, userId, effectivePartnerId ?? null);
+
   return {
     historyContext, relationshipBlock, branchBlock, interlocutorBlock,
     metInPersonContext, cachedEnrichmentContext, documentsContext,
@@ -531,5 +534,6 @@ export async function assembleContextBlocks(
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections_used,
     signatureBlock, networks, services, socialLinks, settings,
     commercialState, touchCount, daysSinceLastContact, warmthScore, lastChannel, lastOutcome,
+    playbookBlock: playbook.block, playbookActive: playbook.active,
   };
 }
