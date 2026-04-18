@@ -215,7 +215,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     case "create_reminder": {
       const partner = await resolvePartnerId(args);
       if (!partner) return { error: "Partner non trovato" };
-      const { error } = await supabase.from("reminders").insert({ partner_id: partner.id, title: String(args.title), description: args.description ? String(args.description) : null, due_date: String(args.due_date), priority: String(args.priority || "medium") });
+      const { error } = await supabase.from("reminders").insert({ partner_id: partner.id, title: String(args.title), description: args.description ? String(args.description) : null, due_date: String(args.due_date), priority: String(args.priority || "medium"), user_id: userId });
       if (error) return { error: error.message };
       return { success: true, message: `Reminder creato per "${partner.name}".` };
     }
