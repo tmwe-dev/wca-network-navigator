@@ -92,7 +92,19 @@ export function buildStrategicAdvisor(context: {
   hasHistory?: boolean;
   followUpCount?: number;
   hasEnrichmentData?: boolean;
+  commercialState?: string;
+  touchCount?: number;
 }): string {
+  const phaseContext = context.commercialState
+    ? `\n- Fase commerciale: ${context.commercialState} (touch #${context.touchCount || 0})`
+    : "";
+  const tc = context.touchCount ?? 0;
+  const toneGuide = tc === 0
+    ? "\n- PRIMO CONTATTO: tono freddo-professionale, breve, CTA basso impegno"
+    : tc <= 3
+      ? "\n- FOLLOW-UP INIZIALE: tono cordiale, riferirsi a scambi precedenti, aggiungere valore"
+      : "\n- RELAZIONE ATTIVA: tono da collega, personalizzazione alta, NON ripetere presentazione";
+
   return `
 # STRATEGIC ADVISOR — Contesto per Decisione Autonoma
 
@@ -103,12 +115,13 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 - Tipo email: ${context.emailCategory || "generico"}
 - Storia interazioni disponibile: ${context.hasHistory ? "SÌ" : "NO"}
 - Tentativo follow-up: ${context.followUpCount ? `#${context.followUpCount}` : "N/A"}
-- Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}
+- Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}${phaseContext}${toneGuide}
 
 ## Guardrail:
 - Se c'è storia interazioni → non ripetere approcci già usati
 - Se dati enrichment scarsi → resta generico ma vero
 - Ogni comunicazione deve portare VALORE NUOVO
+- Adattare il tono alla fase della relazione (mai forzare familiarità in FASE 1-2)
 `;
 }
 
@@ -189,6 +202,8 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
     hasHistory: !!historyContext,
     followUpCount: prevActCount,
     hasEnrichmentData: !!cachedEnrichmentContext,
+    commercialState,
+    touchCount,
   });
 
   const senderContext = `

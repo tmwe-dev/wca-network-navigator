@@ -174,6 +174,8 @@ export interface RelationshipMetrics {
   days_since_last_contact: number;
   relationship_stage: "cold" | "warm" | "active" | "stale" | "ghosted";
   tone_suggestion: string;
+  // Mapping alla tassonomia della Dottrina Commerciale L0
+  commercial_state: "new" | "holding" | "engaged";
 }
 
 export async function analyzeRelationshipHistory(
@@ -234,6 +236,16 @@ export async function analyzeRelationshipHistory(
   // No hardcoded tone — let the AI decide based on stage + context
   const toneSuggestion = stage;
 
+  // Map internal stage to Commercial Doctrine L0 taxonomy
+  const commercialStateMap: Record<RelationshipMetrics["relationship_stage"], RelationshipMetrics["commercial_state"]> = {
+    cold: "new",
+    warm: "holding",
+    active: "engaged",
+    stale: "holding",   // stale resta in holding, va riattivato
+    ghosted: "holding", // ghosted resta in holding, serve tecnica Voss di riattivazione
+  };
+  const commercialState = commercialStateMap[stage];
+
   const metrics: RelationshipMetrics = {
     total_interactions: interactions.length,
     total_emails_sent: emailsSent.length + activities.length,
@@ -244,6 +256,7 @@ export async function analyzeRelationshipHistory(
     days_since_last_contact: daysSinceLastContact,
     relationship_stage: stage,
     tone_suggestion: toneSuggestion,
+    commercial_state: commercialState,
   };
 
   const historyParts: string[] = [];
