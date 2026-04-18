@@ -307,10 +307,30 @@ export async function assembleOutreachContext(
     supabase, userId, params.contact_email || null,
   );
 
+  // Commercial state for prompt context
+  let commercialState = "new";
+  let touchCount = 0;
+  let daysSinceLastContact = 0;
+  if (partnerId) {
+    const { data: pState } = await supabase
+      .from("partners")
+      .select("lead_status, interaction_count, last_interaction_at")
+      .eq("id", partnerId)
+      .maybeSingle();
+    if (pState) {
+      commercialState = pState.lead_status || "new";
+      touchCount = pState.interaction_count || 0;
+      daysSinceLastContact = pState.last_interaction_at
+        ? Math.floor((Date.now() - new Date(pState.last_interaction_at).getTime()) / 86400000)
+        : 0;
+    }
+  }
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     historyText, interactionHistoryCount, conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
     settings, partnerId, websiteSource, linkedinSource,
+    commercialState, touchCount, daysSinceLastContact,
   };
 }
