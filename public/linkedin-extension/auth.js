@@ -261,7 +261,9 @@ var Auth = globalThis.Auth || (function () {
     if (!creds.email || !creds.password) return Config.errorResponse(Config.ERROR.LOGIN_FAILED, "Credenziali LinkedIn non configurate");
 
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/");
-    try { await chrome.tabs.update(tab.id, { active: true }); } catch (_) {}
+    try { await chrome.tabs.update(tab.id, { active: true }); } catch (err) {
+      console.warn("[LI Auth] tab activate failed:", (err && err.message) || err);
+    }
 
     try {
       const initialStateRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: inspectPage });
