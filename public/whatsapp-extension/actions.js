@@ -364,9 +364,8 @@ var Actions = globalThis.Actions || (function () {
         };
       }
 
-      if (!optimus.optimusUnavailable) {
-        return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error" };
-      }
+      // Any Optimus failure (unreachable OR structural) → fall through to legacy
+      console.warn("[WA Actions] Optimus failed, falling through to legacy:", optimus.error);
 
       const domRes = await readUnreadDOM(r.tab.id);
       if (domRes) {
@@ -525,10 +524,8 @@ var Actions = globalThis.Actions || (function () {
         };
       }
 
-      // Optimus reachable but failed structurally → propagate failure
-      if (!optimus.optimusUnavailable) {
-        return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error", contact: contactName };
-      }
+      // Any Optimus failure (unreachable OR structural) → fall through to legacy
+      console.warn("[WA Actions] Optimus readThread failed, falling through to legacy:", optimus.error);
 
       // ── Legacy fallback (only if Optimus unreachable: 503/no-app-tab/timeout) ──
       // Legacy Path A: AI extraction on the panel HTML

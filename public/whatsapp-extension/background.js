@@ -27,6 +27,8 @@ function _checkModules() {
     globalThis.Discovery &&
     globalThis.AiBridge &&
     globalThis.AiExtract &&
+    globalThis.OptimusClient &&
+    globalThis.Optimus &&
     globalThis.Actions
   );
 }
@@ -48,7 +50,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.5.0",
+      version: "5.5.1",
       modulesLoaded: _modulesLoaded,
     });
     return false;

@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api/apiError";
 import { EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.5.0";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.5.1";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.3.1";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -15,12 +15,12 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.5.0",
+    latestVersion: "5.5.1",
     items: [
       {
-        version: "5.5.0",
-        filename: "whatsapp-extension-5.5.0.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.5.0.zip",
+        version: "5.5.1",
+        filename: "whatsapp-extension-5.5.1.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.5.1.zip",
         current: true,
         note: "Versione corrente",
       },
