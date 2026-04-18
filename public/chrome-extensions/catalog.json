@@ -1,28 +1,21 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.5.1",
+    "latestVersion": "5.6.0",
     "items": [
+      {
+        "version": "5.6.0",
+        "filename": "whatsapp-extension-5.6.0.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.6.0.zip",
+        "current": true,
+        "note": "Versione corrente — Optimus auto-relearn + cache locale piano AI 24h + fallback edge function diretto"
+      },
       {
         "version": "5.5.1",
         "filename": "whatsapp-extension-5.5.1.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.5.1.zip",
-        "current": true,
-        "note": "Versione corrente — fallback legacy permissivo + Optimus module-check"
-      },
-      {
-        "version": "5.3.2",
-        "filename": "whatsapp-extension-5.3.2.zip",
-        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.3.2.zip",
         "current": false,
-        "note": "Archivio"
-      },
-      {
-        "version": "1.1",
-        "filename": "whatsapp-extension-1.1.zip",
-        "path": "/chrome-extensions/whatsapp/whatsapp-extension-1.1.zip",
-        "current": false,
-        "note": "Archivio compatibilità"
+        "note": "Archivio — fallback legacy permissivo + Optimus module-check"
       }
     ]
   },
