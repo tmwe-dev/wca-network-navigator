@@ -16,6 +16,7 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickMessage(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
     await TabManager.sleep(3000);
