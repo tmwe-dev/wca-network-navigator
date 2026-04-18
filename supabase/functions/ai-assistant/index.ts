@@ -365,6 +365,38 @@ Non eseguire tool di scrittura o modifica`;
     };
     const ctxTags = extractContextTags(conversationContext);
 
+    // ── Commercial state injection (holding pattern awareness) ──
+    let holdingContextBlock = "";
+    if (conversationContext.partner_id) {
+      try {
+        const { data: partnerState } = await supabase
+          .from("partners")
+          .select("lead_status, last_interaction_at, interaction_count, company_name")
+          .eq("id", conversationContext.partner_id)
+          .maybeSingle();
+        if (partnerState) {
+          // Update relationship_stage in tags if not present
+          if (!conversationContext.relationship_stage && partnerState.lead_status) {
+            conversationContext.relationship_stage = partnerState.lead_status;
+          }
+          const daysInHolding = partnerState.last_interaction_at
+            ? Math.floor((Date.now() - new Date(partnerState.last_interaction_at).getTime()) / 86400000)
+            : 0;
+          const lines = [
+            `STATO COMMERCIALE PARTNER: ${(partnerState.lead_status || "new").toUpperCase()}`,
+            partnerState.company_name ? `Azienda: ${partnerState.company_name}` : null,
+            `Interazioni totali: ${partnerState.interaction_count || 0}`,
+            partnerState.last_interaction_at ? `Giorni dall'ultimo contatto: ${daysInHolding}` : "Mai contattato",
+            daysInHolding > 90 ? `🔴 CRITICO: Holding da ${daysInHolding} giorni — review obbligatoria (riattivazione Voss o archiviazione motivata)` : null,
+            daysInHolding > 30 && daysInHolding <= 90 ? `⚠️ ATTENZIONE: Contatto stagnante da ${daysInHolding} giorni — valutare riattivazione` : null,
+          ].filter(Boolean);
+          holdingContextBlock = `--- STATO COMMERCIALE (HOLDING PATTERN) ---\n${lines.join("\n")}\n`;
+        }
+      } catch (e) {
+        console.warn("[ai-assistant] holding state fetch failed:", e);
+      }
+    }
+
     // ── Load all context in parallel ──
     let memoryContext: string, userProfile: string, kbContext: string, opPrompts: string, missionHistory: string, doctrineContext: string, emailContext: string;
     if (isConversational) {
