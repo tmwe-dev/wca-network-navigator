@@ -1,6 +1,6 @@
 import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
