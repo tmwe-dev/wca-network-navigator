@@ -329,6 +329,47 @@ var Actions = globalThis.Actions || (function () {
     return results && results[0] ? results[0].result : { success: false, error: "No result" };
   }
 
+  async function readUnreadMessages() {
+    try {
+      const r = await TabManager.getOrCreateWaTab();
+      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
+      await TabManager.sleep(r.reused ? 1200 : 4000);
+
+      let optimus = await tryOptimusReadUnread(r.tab.id, false, null);
+      if (optimus.success && optimus.items.length === 0 && optimus.cached) {
+        optimus = await tryOptimusReadUnread(r.tab.id, true, "Cached plan returned 0 unread chats from sidebar");
+      }
+
+      if (optimus.success) {
+        return {
+          success: true,
+          messages: optimus.items,
+          scanned: optimus.candidates || optimus.items.length || 0,
+          method: optimus.cached ? "optimus-cache" : "optimus-ai",
+          optimus: {
+            cached: optimus.cached,
+            planVersion: optimus.planVersion,
+            confidence: optimus.confidence,
+            latencyMs: optimus.latencyMs,
+            dropped: optimus.dropped,
+          },
+        };
+      }
+
+      if (!optimus.optimusUnavailable) {
+        return { success: false, error: optimus.error || "optimus_failed", method: "optimus-error" };
+      }
+
+      const domRes = await readUnreadDOM(r.tab.id);
+      if (domRes) {
+        domRes.method = "legacy-dom:" + (domRes.method || "unknown");
+      }
+      return domRes || { success: false, error: "Unread fallback failed" };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
   // ── Optimus-first: try AI extraction plan, fallback to legacy on 503 ──
   async function tryOptimusReadUnread(tabId, previousFailed, failureContext) {
     // 1. snapshot the sidebar
