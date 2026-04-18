@@ -1,7 +1,7 @@
 // TODO(v2-migration): wrapper temporaneo di src/pages/Network.tsx. Tracked in docs/v2/MIGRATION_STATUS.md.
 /**
- * DeepSearchPage V2 — Thin wrapper mounting V1 Network
- * Deep Search ricerca avanzata
+ * NetworkPage V2 — Mounts V1 Network (partner search & map)
+ * Renamed from DeepSearchPage in consolidation phase
  */
 import * as React from "react";
 import { Suspense, lazy } from "react";

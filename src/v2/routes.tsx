@@ -140,7 +140,7 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
-          <Route path="network" element={<Navigate to="/v2/deep-search" replace />} />
+          <Route path="network" element={guardedPage(DeepSearchPage, "Network")} />
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
           <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />
@@ -154,19 +154,21 @@ export function V2Routes(): React.ReactElement {
           <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
           <Route path="prospects" element={guardedPage(ProspectPage, "Prospects")} />
-          <Route path="staff" element={guardedPage(StaffPage, "Staff")} />
+          <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
+          <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="ai-lab" element={guardedPage(AILabPage, "AILab")} />
-          <Route path="knowledge-base" element={<Navigate to="/v2/staff" replace />} />
+          <Route path="knowledge-base" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
           <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
-          <Route path="deep-search" element={guardedPage(DeepSearchPage, "DeepSearch")} />
+          <Route path="deep-search" element={<Navigate to="/v2/network" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
           <Route path="telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
-          <Route path="operations" element={guardedPage(OperationsPage, "Operations")} />
+          <Route path="partner-directory" element={guardedPage(OperationsPage, "PartnerDirectory")} />
+          <Route path="operations" element={<Navigate to="/v2/partner-directory" replace />} />
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
           <Route path="diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
-          <Route path="import" element={<Navigate to="/v2/operations" replace />} />
+          <Route path="import" element={<Navigate to="/v2/partner-directory" replace />} />
           <Route path="acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
           <Route path="agent-chat" element={<Navigate to="/v2/agents" replace />} />
           <Route path="contacts" element={guardedPage(ContactsPage, "Contacts")} />
