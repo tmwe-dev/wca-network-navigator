@@ -187,14 +187,14 @@ export async function saveMessageToDb(
     .eq("user_id", params.userId);
 
   // Auto-escalation
-  if (params.match.source_type === "imported_contact" && params.match.source_id) {
+  if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {
     await supabase.rpc("increment_contact_interaction", { p_contact_id: params.match.source_id });
     await supabase.from("imported_contacts")
       .update({ lead_status: "contacted" })
       .eq("id", params.match.source_id)
       .eq("lead_status", "new");
   }
-  if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id) {
+  if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id && UUID_RE.test(String(params.match.partner_id))) {
     const { data: partnerData } = await supabase.from("partners")
       .select("interaction_count, lead_status")
       .eq("id", params.match.partner_id)
