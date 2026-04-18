@@ -57,7 +57,36 @@ serve(async (req) => {
 
     // All scopes route to ai-assistant (the main engine)
     // Scope is passed through so ai-assistant can adjust behavior
-    return forwardToFunction("ai-assistant", body, req.headers);
+    const upstream = await forwardToFunction("ai-assistant", body, req.headers);
+
+    // For kb-supervisor scope: parse inline ```json ... ``` block from content
+    // and surface it as `structured` field if not already present.
+    if (body.scope === "kb-supervisor") {
+      try {
+        const upstreamBody = await upstream.clone().json();
+        if (upstreamBody && typeof upstreamBody.content === "string" && !upstreamBody.structured) {
+          const match = upstreamBody.content.match(/```json\s*([\s\S]*?)\s*```/);
+          if (match) {
+            try {
+              const parsed = JSON.parse(match[1]);
+              upstreamBody.structured = parsed;
+              // Strip JSON block from displayed content
+              upstreamBody.content = upstreamBody.content.replace(/```json\s*[\s\S]*?\s*```/, "").trim();
+            } catch (parseErr) {
+              console.warn("kb-supervisor: failed to parse inline JSON block:", parseErr);
+            }
+          }
+          return new Response(JSON.stringify(upstreamBody), {
+            status: upstream.status,
+            headers: { ...dynCors, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        console.warn("kb-supervisor: structured extraction skipped:", e);
+      }
+    }
+
+    return upstream;
   } catch (e: unknown) {
     console.error("unified-assistant error:", e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
