@@ -8,6 +8,7 @@ var Actions = globalThis.Actions || (function () {
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
     const tab = await TabManager.getLinkedInTab(url);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     return await HybridOps.extractProfile(tab.id);
   }
 
