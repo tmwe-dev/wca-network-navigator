@@ -432,7 +432,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
       if (processedMessages.length > 8) {
         try {
           const apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
-          const compressed = await compressMessages(supabase, processedMessages, apiKey, userId);
+          const compressed = await compressMessages(supabase as Parameters<typeof compressMessages>[0], processedMessages, apiKey, userId);
           console.log(`[agent-execute] Compressed ${processedMessages.length} → ${compressed.length} messages`);
           processedMessages = compressed;
         } catch (compressErr) {
