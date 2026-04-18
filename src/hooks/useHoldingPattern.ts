@@ -36,7 +36,7 @@ export interface TimelineEntry {
   outcome?: string | null;
 }
 
-const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
+const ACTIVE_STATUSES = [...HOLDING_STATUSES];
 
 export function useHoldingPatternList() {
   return useQuery({
