@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.4",
-  "version": "5.4.1",
-  "description": "Invio diretto messaggi WhatsApp dal Cockpit — v5.4.1 modular architecture, AI bridge, Optimus relay, origin hardening",
+  "version": "5.4.2",
+  "description": "Invio diretto messaggi WhatsApp dal Cockpit — v5.4.2 Optimus guards, modular architecture, AI bridge, origin hardening",
   "permissions": [
     "tabs",
     "activeTab",

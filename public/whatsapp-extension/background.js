@@ -47,7 +47,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.4.1",
+      version: "5.4.2",
       modulesLoaded: _modulesLoaded,
     });
     return false;
