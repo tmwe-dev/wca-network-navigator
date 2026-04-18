@@ -1,108 +1,74 @@
 
 
-## Analisi Performance — Apertura `/v2` e maschere principali
+## Piano: Dottrina Commerciale L0 + Integrazione Sistema
 
-### Cosa succede quando apri `/v2` (Dashboard) — sequenza reale
+Implementazione in 7 parti, tutte verificate sui file reali del progetto.
 
-```text
-1. App.tsx mount
-   └─ AuthProvider → getSession() locale (~5ms) → status="authenticated"
-2. V2Routes → V2AuthGate → AuthenticatedLayout mount
-3. AuthenticatedLayout monta in cascata:
-   ├─ 6 Provider annidati (QueryClient, Tooltip, ActiveOperator,
-   │  ContactDrawer, DeepSearch, GlobalFilters, Mission) — ~50ms
-   ├─ useAuthV2 (secondo hook auth, parallelo a useAuth)
-   ├─ useWcaSession (heartbeat WCA)
-   ├─ useAiBridgeListener
-   ├─ useQuery onboarding.completed → SELECT profiles (~150ms)
-   ├─ scheduleIdlePrefetch → precarica 4 chunk (Network, CRM, Outreach, Dashboard)
-   └─ BackgroundServices (ritardato a requestIdleCallback ~16ms-2s):
-       ├─ useJobHealthMonitor → useDownloadJobs → SELECT download_jobs LIMIT 50
-       │  └─ + canale Realtime "download-jobs-realtime-singleton"
-       ├─ useWcaSync
-       ├─ useOptimusBridgeListener
-       ├─ useAiExtractBridgeListener
-       ├─ useOutreachQueue
-       └─ useGlobalAutoSync:
-           ├─ useAutoConnect
-           ├─ SELECT app_settings (work hours)
-           ├─ setInterval 60s notturno
-           └─ useEmailAutoSync (auto-sync IMAP periodico)
+### PARTE A — Migration SQL: 6 KB Entries Dottrinali (system_doctrine, priority 10, tag `system_core`)
 
-4. DashboardPage → SuperHome3D mount, lancia in parallelo:
-   ├─ useDashboardData → RPC get_dashboard_snapshot (1 call, ~300-800ms)
-   ├─ useDownloadJobs → SELECT download_jobs (duplicata con #3)
-   ├─ useDailyBriefing → invokeEdge("daily-briefing")
-   │  └─ Edge function → 3-5 secondi (LLM call interna) ⚠️
-   └─ Lazy-load 5 widget pesanti:
-       ├─ SmartActions
-       ├─ OperativeMetricsGrid
-       ├─ AgentStatusPanel
-       ├─ DashboardCharts → 4 useQuery aggiuntive:
-       │  ├─ SELECT activities (ultimi 30gg)
-       │  ├─ SELECT activities LIMIT 1000
-       │  ├─ SELECT response_patterns
-       │  └─ SELECT imported_contacts (lead_score)
-       └─ ResponseRateCard → 1 useQuery
-   + Recharts (~80kb gzip) caricato a runtime
+Nuovo file `supabase/migrations/<timestamp>_dottrina_commerciale_l0.sql` con 6 INSERT in `kb_entries`:
+1. **§1 LEGGE FONDAMENTALE** — Circuito di Attesa (tassonomia stati, regole inviolabili, mapping con `lead_status`)
+2. **§2 PROGRESSIONE RELAZIONALE** — 5 fasi sconosciuto→referente, modulazione tono, warmth_score
+3. **§3 DOTTRINA USCITE** — converted/archived/blacklisted con motivi validi/non validi
+4. **§4 DOTTRINA MULTI-CANALE** — matrice canale×fase, regole email/LI/WA/telefono
+5. **§5 APPRENDIMENTO COMMERCIALE** — cosa salvare, mutazione profilo, segnali
+6. **§6 KB SUPERVISOR** — 3 livelli di calibrazione (strutturale/logica/strategica)
 
-5. HomeAIPrompt:
-   └─ useAppSettings → SELECT app_settings (terza volta in pagina)
-```
+Tutti con `user_id=NULL` (globali), `category='system_doctrine'`, `priority=10`, `is_active=true`, tag include `system_core` → caricamento automatico via `loadKBContext` LEVEL 0 (già presente in `contextLoader.ts:139-140`).
 
-### Cosa rallenta davvero (in ordine d'impatto)
+### PARTE B — `supabase/functions/ai-assistant/systemPrompt.ts`
 
-**🔴 Critico — TTI percepito**
+- **Riga 41-42**: tradurre Golden Rules #7 e #8 in italiano (INTELLIGENCE PRE-AZIONE, PERSONALIZZAZIONE OBBLIGATORIA)
+- **Aggiungere costante `COMMERCIAL_DOCTRINE`** prima di `KB_LOADING_INSTRUCTION`
+- **Riga 61-67**: aggiungere `COMMERCIAL_DOCTRINE` nell'array `parts` tra `GOLDEN_RULES` e `KB_LOADING_INSTRUCTION`
 
-| # | Causa | Costo |
-|---|---|---|
-| 1 | `useDailyBriefing` invoca edge `daily-briefing` che internamente chiama un LLM. Bloccante per il widget Briefing AI ma il `useQuery` parte subito al mount → satura connessioni e produce loading di 2-5s | **+2000-5000ms** |
-| 2 | `DashboardCharts` lancia **4 query separate** invece di una RPC; `activities` LIMIT 1000 senza indice mirato; bundle Recharts ~80kb caricato eagerly nella stessa schermata | **+400-1200ms + 80kb JS** |
-| 3 | Onboarding wizard gate: `onboardingLoading` blocca il render dell'Outlet finché `profiles.onboarding_completed` non risponde (anche con cache infinita, primo hit netto) | **+150-400ms** |
-| 4 | Doppio sistema auth: `useAuth()` (centrale) + `useAuthV2()` (legacy) montati insieme = 2 listener `onAuthStateChange` + doppia logica di status | **+50-150ms + flicker** |
+### PARTE C — `supabase/functions/_shared/contextTagExtractor.ts`
 
-**🟠 Alto — overhead costante**
+Sostituire il blocco `relationship_stage` (righe 62-65) con logica estesa che:
+- Aggiunge categoria `system_doctrine` e tag `commercial_doctrine`
+- Mappa stage → tag specifici tramite `stageTagMap` (new, contacted, holding, engaged, qualified, negotiation, converted)
 
-| # | Causa | Note |
-|---|---|---|
-| 5 | `useDownloadJobs` montato **2 volte** (in `BackgroundServices > useJobHealthMonitor` e in `SuperHome3D` direttamente). Il singleton evita il doppio canale Realtime ma la `useQuery` resta duplicata se le `queryKey` divergono | Da verificare |
-| 6 | `useAppSettings` chiamato in 3+ punti (HomeAIPrompt, GlobalAutoSync, altri) → 3 SELECT app_settings al primo paint | |
-| 7 | `scheduleIdlePrefetch` carica subito 4 grossi chunk (Network/CRM/Outreach/Dashboard inclusi `Operations`, `CRM`, `Outreach` V1) → **+~500-900kb JS** scaricati anche se l'utente non naviga | |
-| 8 | 6 Provider innestati + `GlobalFiltersContext` con reducer da 33 filtri → ogni cambio rotta riconcilia tutto | |
-| 9 | `setInterval` 60s in `useGlobalAutoSync` per night-pause + `useEmailAutoSync` periodico | Costo basso ma costante |
+### PARTE D — `supabase/functions/ai-assistant/index.ts` + `contextLoader.ts`
 
-**🟡 Medio — pagine secondarie (Network/CRM/Outreach)**
+Nel file `index.ts` intorno alla riga 365 (subito dopo `extractContextTags`):
+- Se `conversationContext.partner_id` è presente, fetch async di `partners` (lead_status, last_interaction_at, interaction_count)
+- Costruire `holdingContextBlock` con stato + giorni stagnazione + warning >30/>90 giorni
+- Aggiungere il blocco a `contextBlocks` (riga 398-406) con `key:"holding_state", priority:90`
 
-- `NetworkPage` → monta `Operations` (329 righe) che usa `useGlobalFilters`, `useDeepSearch`, `useCountryStats`, `usePartner`, `rpcGetDirectoryCounts`, `BusinessCardsView`, `PartnerListPanel`. Al primo accesso: chunk ~200kb + 2-3 query parallele per le country counts.
-- `CRMPage` → monta `CRM` (117 righe) lazy-load `AIMatchDialog` + Kanban; `useUrlState` reidrata filtri da URL (sync onMount).
-- Entrambe **non hanno Suspense interno** (delegato a `guardedPage`) → durante la transizione l'utente vede `<PageSkeleton />` finché non è pronto **tutto** il chunk + le query del `useEffect` iniziale.
-- `useTrackPage("network")` aggiunge una insert in tabella telemetria a ogni navigazione.
+### PARTE E — `supabase/functions/generate-outreach/promptBuilder.ts` + `contextAssembler.ts`
 
-### Diagnosi riassuntiva
+**promptBuilder.ts**: estendere `OutreachPromptContext` con `commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore`. Aggiungere `commercialBlock` nel `userPrompt` prima del GOAL con istruzioni tono dinamiche basate su touchCount e warmthScore.
 
-L'apertura di `/v2` è **lenta principalmente per 3 motivi**:
+**contextAssembler.ts**: in `assembleOutreachContext` (vicino riga 203 dove c'è già `partnerId`), leggere `partners.lead_status, interaction_count, last_interaction_at` e ritornare i nuovi campi nell'oggetto `OutreachContextBlocks`.
 
-1. **La Dashboard fa lavoro che non serve subito**: 4 grafici Recharts + briefing AI partono al mount, anche se l'utente molto probabilmente naviga via.
-2. **Il prefetch idle è troppo aggressivo**: scarica preventivamente 4 grosse rotte V1 (~500-900kb), competendo con le query attive.
-3. **Edge function `daily-briefing` lenta**: un LLM call sincrono dietro `useQuery` con `staleTime` 15min — il primo hit di giornata è devastante.
+### PARTE F — `supabase/functions/generate-email/promptBuilder.ts` + `contextAssembler.ts`
 
-Le pagine secondarie (Network/CRM/Outreach) sono lente al **primo** accesso perché caricano grossi chunk V1 senza skeleton parziali; dal secondo accesso sono cache-hit.
+Stesso pattern di Parte E:
+- Estendere `EmailPromptContext` con i 6 campi commerciali
+- Inserire `commercialBlock` nel `userPrompt` prima di `GOAL DELLA COMUNICAZIONE` (riga 240)
+- In `contextAssembler.ts` leggere stato commerciale dal `partner` già caricato (è in `loadStandalonePartner` riga 143 — `lead_status` già selezionato) e calcolare giorni
 
-### Piano d'azione consigliato (in ordine di ROI)
+### PARTE G — `supabase/functions/agent-execute/index.ts`
 
-1. **Defer Briefing AI**: spostare `useDailyBriefing` dietro l'apertura del `<Collapsible>` "Briefing AI" (oggi `briefingOpen` esiste ma la query parte comunque). Stima: **-2000ms TTI**.
-2. **Defer DashboardCharts + ResponseRateCard**: Intersection Observer / "Mostra grafici" on-demand, oppure `requestIdleCallback`. Stima: **-400ms + -80kb JS iniziali**.
-3. **Consolidare le 4 query charts** in un'unica RPC `get_dashboard_charts_snapshot` (pattern già usato per `get_dashboard_snapshot`). Stima: 4 RTT → 1.
-4. **Limitare `scheduleIdlePrefetch` a 1-2 rotte** (solo `/v2/network` come hot-path); rimuovere CRM/Outreach dal prefetch globale, lasciandoli all'hover.
-5. **Deduplicare auth**: deprecare `useAuthV2` ovunque non serve la `profile.displayName` async; usare solo `useAuth` da `AuthProvider`.
-6. **Cache `app_settings` lato client**: una sola `useQuery` con chiave globale, invalidata su update.
-7. **Skeleton parziali in NetworkPage/CRMPage**: mostrare grid/header subito, lazy-load i pannelli pesanti (BusinessCardsView, Kanban) con Suspense interno.
-8. **`useTrackPage`**: batch + flush su requestIdleCallback invece di insert sincrona.
+Aggiungere const `commercialDoctrine` (DOTTRINA COMMERCIALE LEGGE SUPREMA, 8 regole per agenti) prima del blocco "I TUOI CLIENTI ASSEGNATI" (riga ~150) e iniettarla in `contextBlock`. Verrà inclusa automaticamente in `assembleContext` (riga 407) tramite un nuovo blocco `{ key: "commercial_doctrine", content: commercialDoctrine, priority: 98, minTokens: 300 }`.
 
-### Stima impatto cumulato
+### Verifica finale
 
-- **TTI Dashboard**: da ~3-5s percepiti a ~800-1200ms (-70%).
-- **JS iniziale**: -80-150kb gzip.
-- **Query al primo paint**: da ~12 a ~5.
-- **Navigazione tra pagine già visitate**: invariata (già ottimizzata via React Query cache).
+Dopo l'implementazione, eseguire i grep di verifica del prompt (A-I) per confermare:
+- 6 entries `Dottrina Commerciale §X` nella migration
+- `COMMERCIAL_DOCTRINE`/`MACCHINA COMMERCIALE` in systemPrompt.ts
+- Regole 7-8 tradotte (INTELLIGENCE PRE-AZIONE, PERSONALIZZAZIONE OBBLIGATORIA)
+- `commercial_doctrine` + `stageTagMap` in contextTagExtractor.ts
+- `holding_state` / `daysInHolding` / `STATO COMMERCIALE` in contextLoader/index ai-assistant
+- `commercialState`/`touchCount`/`STATO COMMERCIALE` in entrambi i promptBuilder
+- `DOTTRINA COMMERCIALE`/`LEGGE SUPREMA` in agent-execute
+- `tsc --noEmit --skipLibCheck` senza errori
+
+### Note tecniche
+
+- Le KB entries L0 vengono caricate automaticamente da `loadKBContext` LEVEL 0 (già implementato) perché matchano `category='system_doctrine'` + `tags overlaps ['system_core']`
+- Il blocco `holding_state` ha priority 90 (sopra profilo, sotto dottrina KB 100)
+- Nessuna modifica a `client.ts`, `types.ts`, `config.toml`
+- Nessuna nuova edge function — solo estensioni a quelle esistenti
+- Tassonomia `lead_status` esistente preservata (mapping documentato in §1)
 
