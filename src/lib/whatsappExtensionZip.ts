@@ -1,5 +1,8 @@
 import { ApiError } from "@/lib/api/apiError";
-import { EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64 } from "@/lib/embeddedWhatsAppExtensionZip";
+import {
+  EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64,
+  EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
+} from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.7.0";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.6.0";
