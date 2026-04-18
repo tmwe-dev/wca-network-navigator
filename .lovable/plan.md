@@ -1,116 +1,74 @@
 
+Obiettivo: chiudere il loop una volta sola, fare audit reale degli asset estensione e riallineare codice, cataloghi e ZIP così non esistono più versioni fantasma né fallback che servono file obsoleti.
 
-## Piano: AI Architettura Parte 2 — Migrazione a invokeEdge + Scope Config
+Diagnosi già confermata dal codice:
+- `src/lib/whatsappExtensionZip.ts` dichiara WhatsApp corrente `5.5.1` e LinkedIn `3.4.0`.
+- `public/chrome-extensions/catalog.json` è incoerente: per WhatsApp pubblica ancora `5.4.0` come “corrente” e punta a `/whatsapp-extension.zip`.
+- In `public/chrome-extensions/whatsapp/` esistono `5.5.1`, `5.3.2`, `1.1`; il file `5.4.0` non esiste proprio, ma è ancora pubblicizzato.
+- I download usano fallback root (`/whatsapp-extension.zip`, `/linkedin-extension.zip`): se il path versionato fallisce, può partire uno ZIP root vecchio/sbagliato e l’utente scarica roba incoerente.
+- C’è anche un test rotto/stantio: `src/test/misc-modules.test.ts` si aspetta ancora `5.4.0`.
 
-Tutti i bug confermati sui file reali. Riallineamento necessario su `useAiAssistantChat` e `useGlobalChat` per preservare lo streaming SSE.
+Piano di correzione:
+1. Unificare la “source of truth” delle versioni
+- Allineare `public/chrome-extensions/catalog.json` alle versioni reali:
+  - WhatsApp corrente `5.5.1`
+  - LinkedIn corrente `3.4.0`
+- Rimuovere dal catalogo ogni entry che non ha un file fisico reale.
+- Rendere coerente il catalogo statico con `DEFAULT_EXTENSION_CATALOG` in `src/lib/whatsappExtensionZip.ts`.
 
-### Vincolo critico: streaming SSE
+2. Audit reale degli ZIP e rigenerazione pulita
+- Verificare il contenuto interno degli ZIP attuali leggendo almeno:
+  - `manifest.json`
+  - file critici modificati di recente
+- Rigenerare gli ZIP direttamente dalle cartelle sorgente corrette:
+  - `public/whatsapp-extension/`
+  - `public/linkedin-extension/`
+- Pubblicare nuovamente:
+  - file versionati in `public/chrome-extensions/...`
+  - file root `public/whatsapp-extension.zip` e `public/linkedin-extension.zip`
+- Regola: i file root devono essere alias esatti della versione corrente, non copie vecchie.
 
-Sia `useAiAssistantChat` che `useGlobalChat` consumano la risposta come **SSE stream** (riga 145-177 di useAiAssistantChat, riga 80-119 di useGlobalChat). `invokeEdge` usa `supabase.functions.invoke` che **non espone il ReadableStream** — restituisce `{ data, error }` con il body parsato come JSON o testo.
+3. Eliminare i fallback ambigui o renderli sicuri
+- Rifattorizzare `src/lib/whatsappExtensionZip.ts` per evitare che un fallback “silenzioso” serva uno ZIP obsoleto.
+- Possibili regole implementative:
+  - usare prima il file versionato;
+  - mantenere il fallback root solo se è garantito identico alla versione corrente;
+  - migliorare il logging per distinguere “404”, “failed to fetch”, “fallback usato”.
+- Per WhatsApp manterrò il fallback embedded solo come ultima rete di sicurezza, ma coerente con la versione corrente.
 
-**Decisione**: tenere il path JSON via `invokeEdge` come **primario** (è il path già usato quando `content-type === application/json`, riga 132-141 di useAiAssistantChat e riga 199-201 di useGlobalChat) e **rimuovere** completamente il path streaming SSE. L'edge function `ai-assistant` ritorna già JSON in modalità tool-calling (verificato dal codice esistente). Lo streaming SSE residuo era un fallback per response non-JSON che non si verifica più dopo il refactor backend.
+4. Correggere i punti UI che oggi mascherano il problema
+- Aggiornare i punti di download in:
+  - `src/components/settings/ExtensionsTab.tsx`
+  - `src/components/settings/ChannelsTab.tsx`
+  - `src/components/settings/LinkedInTab.tsx`
+  - `src/components/settings/ExtensionDownloadCatalog.tsx`
+- Obiettivo:
+  - stesso comportamento ovunque;
+  - stesso naming/versione mostrata;
+  - toast più chiari se manca il file vero.
 
-Se per qualche motivo serve preservare lo streaming, va aggiunto un `fetchStream` wrapper separato — ma è fuori scope di questo prompt.
+5. Sistemare i test stantii
+- Aggiornare `src/test/misc-modules.test.ts` da `5.4.0` a `5.5.1`.
+- Cercare altri riferimenti residui a versioni vecchie (`5.4.0`, `1.1`, ecc.) e riallinearli solo dove corretto.
 
-### Fix #5 — `src/hooks/useAiAssistantChat.ts`
+Verifica finale che farò dopo l’implementazione:
+- controllo che i file esistano davvero nei path serviti dalla UI;
+- controllo del `manifest.json` dentro ogni ZIP corrente:
+  - WhatsApp = `5.5.1`
+  - LinkedIn = `3.4.0`
+- controllo che catalogo UI e file reali coincidano;
+- prova download da Settings senza “File non disponibile” sui file correnti;
+- verifica che non esistano più riferimenti “corrente” a versioni inesistenti.
 
-1. **Riga 8** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
-2. **Riga 27** → eliminare `const CHAT_URL = ...`
-3. **Righe 113-180** → sostituire l'intero blocco try (fetch + parsing JSON + SSE stream loop) con:
-   ```ts
-   try {
-     const allMsgs = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
-     const enrichedContext = { ...context, currentPage: location.pathname };
-     const data = await invokeEdge<{ content?: string; error?: string }>("ai-assistant", {
-       body: { messages: allMsgs, context: enrichedContext },
-       context: "aiAssistantChat",
-     });
-     const content = data.content || data.error || "Nessuna risposta";
-     upsertAssistant(content);
-     const { uiActions } = parseStructuredMessage(content);
-     if (uiActions.length > 0) handleUiActions(uiActions);
-   } catch (e) { ... }
-   ```
-4. Rimuovere `supabase.auth.getSession()` e la variabile `token` (gestiti da `invokeEdge`).
+File coinvolti:
+- `src/lib/whatsappExtensionZip.ts`
+- `public/chrome-extensions/catalog.json`
+- `src/components/settings/ExtensionsTab.tsx`
+- `src/components/settings/ChannelsTab.tsx`
+- `src/components/settings/LinkedInTab.tsx`
+- `src/components/settings/ExtensionDownloadCatalog.tsx`
+- `src/test/misc-modules.test.ts`
+- ZIP statici in `public/whatsapp-extension.zip`, `public/linkedin-extension.zip`, `public/chrome-extensions/whatsapp/*`, `public/chrome-extensions/linkedin/*`
 
-### Fix #6 — `src/hooks/useGlobalChat.ts`
-
-1. **Riga 10** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
-2. **Righe 14-15** → eliminare `CHAT_URL` e `SUPER_URL` (mantenere `TTS_URL` riga 16, usato altrove)
-3. **Righe 76-119** → eliminare `interface SSEDelta` e funzione `readSSEStream` (non più usata)
-4. **Righe 180-211** → sostituire l'intero blocco try fetch+parse con:
-   ```ts
-   try {
-     const allMsgs = prevMessages.map((m) => ({ role: m.role, content: m.content }));
-     const edgeFunction = state.mode === "conversational" ? "unified-assistant" : "ai-assistant";
-     const body = state.mode === "conversational"
-       ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
-       : { messages: allMsgs };
-     const data = await invokeEdge<{ content?: string; error?: string }>(edgeFunction, {
-       body, context: "globalChat",
-     });
-     assistantContent = data.content || data.error || "Nessuna risposta";
-   } catch (e) { ... }
-   ```
-5. Rimuovere `supabase.auth.getSession()` e la variabile `token` dalla closure di `sendMessage`.
-
-### Fix #7 — `src/v2/hooks/useEmailComposerV2.ts`
-
-1. **Top file** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
-2. **Righe 80-84** (send-email) → sostituire `supabase.functions.invoke("send-email", ...)` con:
-   ```ts
-   await invokeEdge("send-email", {
-     body: { to: r.email, subject, html: body },
-     context: "emailComposerV2Send",
-   });
-   ```
-   Rimuovere il check `if (error) throw error` (invokeEdge già throwa).
-3. **Righe 102-114** (ai-assistant) → sostituire con:
-   ```ts
-   const data = await invokeEdge<{ response?: string }>("ai-assistant", {
-     body: { messages: [...], context: "email_composer", use_kb: useKB },
-     context: "emailComposerV2",
-   });
-   if (data?.response) setBody(data.response);
-   ```
-   **Nota**: il codice originale usa `data.response` (non `data.content`) — preservato.
-
-### Fix #8 — `supabase/functions/_shared/scopeConfigs.ts`
-
-**Riga 383** (prima del `default` throw) → aggiungere 3 nuovi case:
-```ts
-case "deep-search":
-  return {
-    systemPrompt: "Sei un assistente di ricerca approfondita...",
-    tools: PLATFORM_TOOLS,
-    creditLabel: "Deep Search V2",
-  };
-case "chat":
-  return {
-    systemPrompt: "Sei un assistente conversazionale per agenti autonomi...",
-    tools: PLATFORM_TOOLS,
-    creditLabel: "Agent Chat V2",
-  };
-case "mission-builder":
-  return {
-    systemPrompt: "Sei il configuratore di missioni outreach...",
-    tools: [],
-    temperature: 0.5,
-    creditLabel: "Mission Builder V2",
-  };
-```
-
-### File modificati (4)
-
-1. `src/hooks/useAiAssistantChat.ts` — invokeEdge + rimozione SSE stream
-2. `src/hooks/useGlobalChat.ts` — invokeEdge + rimozione SSE stream + readSSEStream/SSEDelta
-3. `src/v2/hooks/useEmailComposerV2.ts` — invokeEdge per ai-assistant + send-email
-4. `supabase/functions/_shared/scopeConfigs.ts` — 3 nuovi scope case
-
-### Note critiche
-
-- **Streaming SSE rimosso**: il backend `ai-assistant` ritorna già JSON in modalità tool-calling. Lo streaming era legacy. Effetto UX: il messaggio assistente appare in un solo update invece che progressivo. Accettabile dato il guadagno di error normalization, budget guardrail, Sentry breadcrumbs e cost tracking.
-- **TTS_URL preservato**: `playTTS` (riga 54-74 di useGlobalChat) continua a usare `fetch` diretto perché ritorna un Blob audio, non gestibile da `invokeEdge`. Fuori scope.
-- **`useEmailComposerV2.ts` ritorno**: `invokeEdge` ritorna direttamente il body, non `{ data }` — adattato di conseguenza.
-- **Backward compat scope config**: `kb-supervisor` esistente preservato. I 3 nuovi scope si allineano alle attese di `unified-assistant/index.ts` aggiornato in Fase 1.
-
+Nota operativa:
+- la parte decisiva non è solo “cambiare testo nel catalogo”: va rifatto il packaging degli ZIP e verificato il contenuto interno. In questa modalità read-only posso solo diagnosticare; appena approvi, passo all’implementazione completa e alla verifica profonda degli asset reali.
