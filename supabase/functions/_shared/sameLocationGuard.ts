@@ -246,6 +246,10 @@ export async function analyzeRelationshipHistory(
   };
   const commercialState = commercialStateMap[stage];
 
+  // Exported helper: map any internal stage to commercial taxonomy (default holding)
+  // Note: defined as module-level export below for reuse
+
+
   const metrics: RelationshipMetrics = {
     total_interactions: interactions.length,
     total_emails_sent: emailsSent.length + activities.length,
@@ -317,4 +321,21 @@ export function buildRelationshipAnalysisBlock(metrics: RelationshipMetrics): st
 - Giorni dall'ultimo contatto: ${metrics.days_since_last_contact}
 - Fase relazione: ${metrics.relationship_stage.toUpperCase()}
 `;
+}
+
+/**
+ * Map any internal relationship stage to Commercial Doctrine L0 taxonomy.
+ * Default: "holding" (mai "archived" — l'AI non archivia mai).
+ */
+export function mapToCommercialState(internalStage: string): string {
+  const map: Record<string, string> = {
+    cold: "new",
+    warm: "holding",
+    active: "engaged",
+    stale: "holding",
+    ghosted: "holding",
+    hot: "qualified",
+    closed: "converted",
+  };
+  return map[internalStage] || "holding";
 }
