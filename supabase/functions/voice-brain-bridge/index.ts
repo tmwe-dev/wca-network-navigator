@@ -323,31 +323,75 @@ serve(async (req) => {
   let modelUsed = "";
   let aiStatus: "ok" | "error" | "timeout" = "ok";
   let aiErrorMessage: string | null = null;
+  let routedTo = "voice-brain-bridge→unified-assistant";
   const aiT0 = Date.now();
+
+  // Primary route: proxy through unified-assistant (scope=extension, mode=conversational).
+  // Preserves the JSON voice contract via post-processing on the returned content.
   try {
-    const result = await aiChat({
-      models: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 400,
-      timeoutMs: 12000,
-      maxRetries: 1,
-      context: `voice-brain-bridge:${(turn.external_call_id || "no-id").slice(0, 16)}`,
-    });
-    modelUsed = result.modelUsed || "";
-    parsed = safeJsonParse(result.content || "");
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 12000);
+    const uaResp = await fetch(`${SUPABASE_URL}/functions/v1/unified-assistant`, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SERVICE_ROLE}`,
+        "apikey": SERVICE_ROLE,
+      },
+      body: JSON.stringify({
+        scope: "extension",
+        mode: "conversational",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        context: {
+          source: "voice",
+          partner_id: turn.caller_context?.partner_id || null,
+          partner_snippet: partnerSnippet,
+          voice_context: voiceCtx,
+          voice_contract: true,
+        },
+      }),
+    }).finally(() => clearTimeout(timeoutId));
+
+    if (!uaResp.ok) {
+      throw new Error(`unified-assistant http ${uaResp.status}`);
+    }
+    const uaBody = await uaResp.json();
+    modelUsed = (uaBody?.model as string) || (uaBody?._meta?.model as string) || "unified-assistant";
+    const content = (uaBody?.content as string) || (uaBody?.response as string) || "";
+    parsed = safeJsonParse(content);
   } catch (e) {
-    aiStatus = "error";
-    if (e instanceof AiGatewayError) {
-      console.error("aiChat failed:", e.message, e.kind);
-      aiErrorMessage = `${e.kind}: ${e.message}`;
-      if (e.kind === "timeout") aiStatus = "timeout";
-    } else {
-      console.error("aiChat unknown error:", (e as Error).message);
-      aiErrorMessage = (e as Error).message;
+    // Fallback: direct aiChat (resilience for 5xx / timeouts on unified-assistant)
+    routedTo = "voice-brain-bridge→aiChat-fallback";
+    console.warn("unified-assistant proxy failed, falling back to aiChat:", (e as Error).message);
+    try {
+      const result = await aiChat({
+        models: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 400,
+        timeoutMs: 12000,
+        maxRetries: 1,
+        context: `voice-brain-bridge:${(turn.external_call_id || "no-id").slice(0, 16)}`,
+      });
+      modelUsed = result.modelUsed || "";
+      parsed = safeJsonParse(result.content || "");
+    } catch (e2) {
+      aiStatus = "error";
+      if (e2 instanceof AiGatewayError) {
+        console.error("aiChat fallback failed:", e2.message, e2.kind);
+        aiErrorMessage = `${e2.kind}: ${e2.message}`;
+        if (e2.kind === "timeout") aiStatus = "timeout";
+      } else {
+        console.error("aiChat fallback unknown error:", (e2 as Error).message);
+        aiErrorMessage = (e2 as Error).message;
+      }
     }
   }
   const aiLatency = Date.now() - aiT0;
@@ -362,7 +406,7 @@ serve(async (req) => {
     status: aiStatus,
     intent: turn.intent || null,
     error_message: aiErrorMessage,
-    routed_to: "voice-brain-bridge",
+    routed_to: routedTo,
     metadata: { external_call_id: turn.external_call_id || null },
   });
 
