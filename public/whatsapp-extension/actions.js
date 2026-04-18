@@ -341,10 +341,18 @@ var Actions = globalThis.Actions || (function () {
       }
 
       if (optimus.success) {
+        const normalizedItems = (optimus.items || []).map(function (item) {
+          return {
+            contact: String(item.contact || item.name || item.contact_name || "Sconosciuto").trim(),
+            lastMessage: String(item.lastMessage || item.last_message || item.message || item.text || "").trim(),
+            time: String(item.time || item.timestamp || item.date || new Date().toISOString()).trim(),
+            unreadCount: parseInt(item.unreadCount || item.unread_count || item.unread || 0) || 0,
+          };
+        });
         return {
           success: true,
-          messages: optimus.items,
-          scanned: optimus.candidates || optimus.items.length || 0,
+          messages: normalizedItems,
+          scanned: optimus.candidates || normalizedItems.length || 0,
           method: optimus.cached ? "optimus-cache" : "optimus-ai",
           optimus: {
             cached: optimus.cached,
@@ -530,7 +538,12 @@ var Actions = globalThis.Actions || (function () {
           return {
             success: true,
             messages: aiResult.items.map(function (m) {
-              return { direction: m.direction || "inbound", text: m.text || "", timestamp: m.timestamp || "", contact: m.contact || contactName };
+              return {
+                direction: String(m.direction || (m.is_outbound ? "outbound" : "inbound")).trim(),
+                text: String(m.text || m.message || m.content || "").trim(),
+                timestamp: String(m.timestamp || m.time || m.date || "").trim(),
+                contact: String(m.contact || m.sender || m.from || contactName).trim(),
+              };
             }).slice(-LIMIT),
             contact: contactName,
             method: "legacy-ai",
@@ -552,39 +565,113 @@ var Actions = globalThis.Actions || (function () {
     }
   }
 
+  // Page-side fallback: after navigating to wa.me?phone=..., focus composer and click send
+  function _pageSendUrlFallback() {
+    const H = window.__waH;
+    const composer = H.qsDeep('footer [contenteditable="true"]') || H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('[data-testid="compose-box-input"]');
+    if (!composer) return { success: false, error: "Composer not found after URL nav" };
+    // Text is already pre-filled by ?text= param in WA Web — just focus & send
+    composer.focus();
+    const sendBtn = H.qsDeep('[data-testid="send"]') || H.qsDeep('button[aria-label*="send" i]') || H.qsDeep('button[aria-label*="invia" i]') || H.qsDeep('span[data-icon="send"]')?.closest('button');
+    if (!sendBtn) return { success: false, error: "Send button not found after URL nav" };
+    sendBtn.click();
+    return { success: true, sent: true, method: "url-fallback" };
+  }
+
+  // Page-side primary path: search the contact in sidebar then send
+  function _pageSendWhatsApp(target, messageText) {
+    const H = window.__waH;
+    const searchBox = H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') || H.qsDeep('[data-testid="chat-list-search"]') || H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]');
+    if (!searchBox) return { success: false, error: "Search box not found" };
+
+    H.modernClearAndType(searchBox, target);
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        const chats = H.qsaDeep('[data-testid="cell-frame-container"],[data-testid="chat-cell-wrapper"],[role="listitem"],[role="row"]');
+        let clicked = false;
+        for (const c of chats) {
+          const titleEl = c.querySelector('span[title]');
+          const title = titleEl ? (titleEl.getAttribute("title") || "") : "";
+          if (title.toLowerCase().includes(target.toLowerCase())) {
+            (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
+            clicked = true; break;
+          }
+        }
+        const clearBtn = H.qsDeep('[data-testid="search-input-clear"]') || H.qsDeep('[data-testid="x-alt"]') || H.qsDeep('[data-testid="search-close"]');
+        if (clearBtn) clearBtn.click();
+        if (!clicked) { resolve({ success: false, error: "Chat not found in sidebar: " + target }); return; }
+
+        setTimeout(function () {
+          const composer = H.qsDeep('footer [contenteditable="true"]') || H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('[data-testid="compose-box-input"]');
+          if (!composer) { resolve({ success: false, error: "Composer not found" }); return; }
+          H.modernClearAndType(composer, messageText);
+          const sendBtn = H.qsDeep('[data-testid="send"]') || H.qsDeep('button[aria-label*="send" i]') || H.qsDeep('button[aria-label*="invia" i]') || H.qsDeep('span[data-icon="send"]')?.closest('button');
+          if (!sendBtn) { resolve({ success: false, error: "Send button not found" }); return; }
+          sendBtn.click();
+          resolve({ success: true, sent: true, method: "search" });
+        }, 1500);
+      }, 1500);
+    });
+  }
+
   async function sendWhatsAppMessage(phone, text) {
     try {
-      const r = await TabManager.getOrCreateWaTab();
-      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1200);
-      await TabManager.sleep(r.reused ? 1200 : 4000);
-      await ensurePageHelpers(r.tab.id);
+      // Determine if input is a phone number or contact name
+      var cleanPhone = String(phone || "").replace(/[^0-9+]/g, "");
+      var isPhoneNumber = cleanPhone.length >= 7;
 
-      const openResult = await chrome.scripting.executeScript({
-        target: { tabId: r.tab.id },
-        args: [phone],
-        func: _pageOpenChatForBackfill,
-      });
-      const openRes = openResult && openResult[0] ? openResult[0].result : null;
-      if (!openRes || !openRes.success) return openRes || { success: false, error: "Open failed" };
+      var existingTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
 
-      const sendResult = await chrome.scripting.executeScript({
-        target: { tabId: r.tab.id },
-        args: [text],
-        func: function (messageText) {
-          const H = window.__waH;
-          const composer = H.qsDeep('footer [contenteditable="true"]') || H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('[data-testid="compose-box-input"]');
-          if (!composer) return { success: false, error: "Composer not found" };
+      if (existingTabs.length > 0) {
+        var tabId = existingTabs[0].id;
+        if (existingTabs[0].status !== "complete") await TabManager.waitForLoad(tabId, 10000);
+        await TabManager.ensureTabVisibleAndWait(tabId, 1200);
+        await ensurePageHelpers(tabId);
 
-          H.modernClearAndType(composer, messageText);
+        // Try search-based send first (works for existing contacts)
+        var results = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          args: [phone, text],
+          func: _pageSendWhatsApp,
+        });
+        var result = results && results[0] ? results[0].result : null;
 
-          const sendBtn = H.qsDeep('[data-testid="send"]') || H.qsDeep('button[aria-label*="send" i]') || H.qsDeep('button[aria-label*="invia" i]') || H.qsDeep('span[data-icon="send"]')?.closest('button');
-          if (!sendBtn) return { success: false, error: "Send button not found" };
-          sendBtn.click();
-          return { success: true, sent: true };
-        },
-      });
+        // If search failed and we have a phone number, try URL-based approach
+        if (result && !result.success && isPhoneNumber) {
+          var numericPhone = cleanPhone.replace(/^\+/, "");
+          var sendUrl = Config.WA_BASE + "/send?phone=" + numericPhone + "&text=" + encodeURIComponent(text);
+          await chrome.tabs.update(tabId, { url: sendUrl });
+          await TabManager.waitForLoad(tabId, 15000);
+          await TabManager.sleep(3000);
+          await ensurePageHelpers(tabId);
+          var urlResults = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: _pageSendUrlFallback,
+          });
+          return urlResults && urlResults[0] ? urlResults[0].result : { success: false, error: "URL send failed" };
+        }
 
-      return sendResult && sendResult[0] ? sendResult[0].result : { success: false, error: "Send failed" };
+        return result || { success: false, error: "Nessun risultato" };
+      }
+
+      // No existing WA tab — create one with send URL if phone number
+      if (isPhoneNumber) {
+        var numericPhone2 = cleanPhone.replace(/^\+/, "");
+        var url = Config.WA_BASE + "/send?phone=" + numericPhone2 + "&text=" + encodeURIComponent(text);
+        var tab = await TabManager.safeCreateTab(url, false);
+        var loaded = await TabManager.waitForLoad(tab.id, 30000);
+        if (!loaded) { await TabManager.safeRemoveTab(tab.id); return { success: false, error: "WA non caricato" }; }
+        await TabManager.sleep(4000);
+        await ensurePageHelpers(tab.id);
+        var results2 = await chrome.scripting.executeScript({
+          target: { tab.id },
+          func: _pageSendUrlFallback,
+        });
+        return results2 && results2[0] ? results2[0].result : { success: false, error: "Nessun risultato" };
+      }
+
+      // Not a phone number and no existing tab — can't search
+      return { success: false, error: "Nessuna tab WhatsApp aperta e il contatto non è un numero di telefono" };
     } catch (err) {
       return { success: false, error: err.message };
     }

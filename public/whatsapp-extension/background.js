@@ -145,6 +145,17 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return false;
   }
 
+  // Handle Optimus responses from content script
+  if (message.source === "wa-content-bridge" && message.type === "optimus-response") {
+    if (typeof OptimusClient !== "undefined" && typeof OptimusClient.handleResponse === "function") {
+      OptimusClient.handleResponse(message);
+    } else if (typeof AiBridge !== "undefined") {
+      // Fallback: route optimus responses through AiBridge
+      AiBridge.handleResponse({ ...message, type: "ai-bridge-response" });
+    }
+    return false;
+  }
+
   // Handle normal actions from content script
   if (message.source !== "wa-content-bridge") return false;
 
