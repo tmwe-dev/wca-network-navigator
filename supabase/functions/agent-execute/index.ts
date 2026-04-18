@@ -384,10 +384,8 @@ serve(async (req) => {
       if (signature) systemPrompt += `\nFIRMA: ${signature}`;
     }
 
-    systemPrompt += contextBlock;
-    systemPrompt += learningBlock;
-    systemPrompt += missionBlock;
-    systemPrompt += `\n\nACCESSO SISTEMA:
+    // ━━━ Token-budget aware context assembly (parità con ai-assistant) ━━━
+    const baseDoctrine = systemPrompt + `\n\nACCESSO SISTEMA:
 - Hai accesso COMPLETO a: tutti i tool operativi, KB globale, prompt operativi, team roster, storico attività dei colleghi, i tuoi clienti assegnati.
 - Consulta la KB e i prompt operativi prima di agire.
 - Usa search_memory per recuperare decisioni e contesto storico.
@@ -397,17 +395,25 @@ serve(async (req) => {
 
 Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le risposte. Sei un agente operativo che agisce sul database reale — non simulare, esegui le azioni.`;
 
-    // Persona-filtered KB (priorità su globale per questo agente)
-    if (personaKbEntries.length) {
-      systemPrompt += "\n\n--- KNOWLEDGE BASE (AGENTE) ---\n";
-      for (const k of personaKbEntries) systemPrompt += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
-    }
+    const personaKbBlock = personaKbEntries.length
+      ? "\n\n--- KNOWLEDGE BASE (AGENTE) ---\n" + personaKbEntries.map(k => `### ${k.title}\n${k.content.substring(0, 800)}\n`).join("\n")
+      : "";
+    const agentKb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
+    const agentKbBlock = agentKb?.length
+      ? "\n\n--- KNOWLEDGE BASE ---\n" + agentKb.map(e => `### ${e.title}\n${e.content}`).join("\n")
+      : "";
 
-    const kb = agent.knowledge_base as Array<{ title: string; content: string }> | null;
-    if (kb?.length) {
-      systemPrompt += "\n\n--- KNOWLEDGE BASE ---\n";
-      for (const entry of kb) systemPrompt += `\n### ${entry.title}\n${entry.content}\n`;
-    }
+    const contextBudget = getContextBudget("google/gemini-3-flash-preview");
+    const assembled = assembleContext([
+      { key: "doctrine", content: baseDoctrine, priority: 100, minTokens: 500 },
+      { key: "mission", content: missionBlock, priority: 95, minTokens: 200 },
+      { key: "persona_kb", content: personaKbBlock, priority: 90, minTokens: 300 },
+      { key: "context", content: contextBlock, priority: 80, minTokens: 500 },
+      { key: "learning", content: learningBlock, priority: 70, minTokens: 200 },
+      { key: "agent_kb", content: agentKbBlock, priority: 60, minTokens: 300 },
+    ], contextBudget);
+    console.log(`[agent-execute] Context: ${assembled.stats.totalTokens}/${contextBudget} tokens, included=${assembled.stats.included.join(",")}, truncated=${assembled.stats.truncated.join(",") || "none"}, dropped=${assembled.stats.dropped.join(",") || "none"}`);
+    systemPrompt = assembled.text;
 
     // Filter tools
     const assignedTools = (agent.assigned_tools as string[]) || [];
