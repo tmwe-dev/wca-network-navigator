@@ -136,10 +136,11 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { countries_with_gaps: results.length, gaps: results.slice(0, 30) };
   }
 
-  async function executeListJobs(args: Record<string, unknown>) {
+  async function executeListJobs(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("download_jobs")
       .select("id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, last_processed_company, error_message, network_name")
       .order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
+    if (userId) query = query.eq("user_id", userId);
     if (args.status) query = query.eq("status", args.status);
     if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
     const { data, error } = await query;
