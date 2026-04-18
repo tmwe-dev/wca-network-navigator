@@ -161,59 +161,112 @@ If no unread chats found, return an empty array [].`;
       ? { type: "object", properties: { selectors: itemSchema }, required: ["selectors"] }
       : { type: "object", properties: { items: { type: "array", items: itemSchema } }, required: ["items"] };
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: toolName,
-                description: toolDescription,
-                parameters: toolSchema,
-              },
-            },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: toolName },
+    // F1 — AbortController timeout 30s on AI gateway fetch
+    // F6 — retry once on 429 with Retry-After backoff
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 30000);
+    let retried = false;
+
+    const gatewayUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const gatewayHeaders = {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    };
+    const gatewayBody = JSON.stringify({
+      model: "google/gemini-2.5-flash-lite",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: toolName,
+            description: toolDescription,
+            parameters: toolSchema,
           },
-        }),
+        },
+      ],
+      tool_choice: {
+        type: "function",
+        function: { name: toolName },
+      },
+    });
+
+    let aiResponse: Response;
+    try {
+      aiResponse = await fetch(gatewayUrl, {
+        method: "POST",
+        headers: gatewayHeaders,
+        body: gatewayBody,
+        signal: aiController.signal,
+      });
+      clearTimeout(aiTimeout);
+    } catch (fetchErr) {
+      clearTimeout(aiTimeout);
+      if ((fetchErr as Error).name === "AbortError") {
+        return new Response(
+          JSON.stringify({ error: "AI gateway timeout (30s)" }),
+          { status: 504, headers: { ...dynCors, "Content-Type": "application/json" } }
+        );
       }
-    );
+      throw fetchErr;
+    }
 
     if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      
-      if (aiResponse.status === 429) {
+      // F6 — retry once on 429
+      if (aiResponse.status === 429 && !retried) {
+        retried = true;
+        const retryAfter = parseInt(aiResponse.headers.get("Retry-After") || "3", 10);
+        await new Promise((r) => setTimeout(r, retryAfter * 1000));
+        const retryController = new AbortController();
+        const retryTimer = setTimeout(() => retryController.abort(), 30000);
+        try {
+          const retryResponse = await fetch(gatewayUrl, {
+            method: "POST",
+            headers: gatewayHeaders,
+            body: gatewayBody,
+            signal: retryController.signal,
+          });
+          clearTimeout(retryTimer);
+          if (retryResponse.ok) {
+            aiResponse = retryResponse;
+          } else {
+            return new Response(
+              JSON.stringify({ error: "Rate limit exceeded after retry" }),
+              { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
+            );
+          }
+        } catch (retryErr) {
+          clearTimeout(retryTimer);
+          return new Response(
+            JSON.stringify({ error: "Rate limit retry failed: " + ((retryErr as Error).message || "unknown") }),
+            { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        const errText = await aiResponse.text();
+        console.error("AI gateway error:", aiResponse.status, errText);
+
+        if (aiResponse.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded, retry later" }),
+            { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
+          );
+        }
+        if (aiResponse.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "AI credits exhausted" }),
+            { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } }
+          );
+        }
+
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded, retry later" }),
-          { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "AI extraction failed" }),
+          { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted" }),
-          { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ error: "AI extraction failed" }),
-        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
     }
 
     const aiData = await aiResponse.json();
