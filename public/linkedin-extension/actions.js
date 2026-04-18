@@ -286,6 +286,7 @@ var Actions = globalThis.Actions || (function () {
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
     const tab = await TabManager.getLinkedInTab(threadUrl, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
@@ -310,9 +311,8 @@ var Actions = globalThis.Actions || (function () {
       };
     }
 
-    if (!optimus.optimusUnavailable) {
-      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
-    }
+    // Any Optimus failure → fall through to legacy AX/structural
+    console.warn("[LI Actions] Optimus thread failed, falling through to legacy:", optimus.error);
 
     // ── Legacy fallback ──
     try {
