@@ -140,7 +140,7 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
-          <Route path="network" element={guardedPage(NetworkPage, "Network")} />
+          <Route path="network" element={<Navigate to="/v2/deep-search" replace />} />
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
           <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />
