@@ -111,7 +111,7 @@ async function fetchDashboardData(): Promise<DashboardData> {
     suggestions.push({ id: "unread-emails", icon: "📨", label: `${data.unread_emails} email da leggere`, description: "Analizza e classifica le email in arrivo", route: "/v2/inreach", count: data.unread_emails, priority: 100 });
   }
   if (data.proposed_tasks > 0) {
-    suggestions.push({ id: "proposed-tasks", icon: "🤖", label: `${data.proposed_tasks} task agente da confermare`, description: "Approva o modifica i task proposti dagli agenti", route: "/v2/agent-tasks", count: data.proposed_tasks, priority: 95 });
+    suggestions.push({ id: "proposed-tasks", icon: "🤖", label: `${data.proposed_tasks} task agente da confermare`, description: "Approva o modifica i task proposti dagli agenti", route: "/v2/agents/tasks", count: data.proposed_tasks, priority: 95 });
   }
   if (data.actions_proposed > 0) {
     suggestions.push({ id: "pending-approval", icon: "✅", label: `${data.actions_proposed} azioni da autorizzare`, description: "Approva le azioni programmate dalle missioni", route: "/v2/outreach", count: data.actions_proposed, priority: 90 });

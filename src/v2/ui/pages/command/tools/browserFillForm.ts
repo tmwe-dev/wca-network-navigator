@@ -58,7 +58,7 @@ export const browserFillFormTool: Tool = {
 
     // Extract form URL and fields from prompt
     const urlMatch = prompt.match(/(?:pagina|form|url)\s+(\/[^\s,]+)/i);
-    const formUrl = urlMatch?.[1] ?? "/v2/contacts/new";
+    const formUrl = urlMatch?.[1] ?? "/v2/crm/contacts/new";
 
     // Parse field instructions (simplified — in production the AI would structure this)
     const fields: FormField[] = [];

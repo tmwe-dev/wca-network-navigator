@@ -21,8 +21,8 @@ const routePrefetchMap: Record<string, readonly Loader[]> = {
     () => import("@/v2/ui/pages/CRMPage"),
     () => import("@/pages/CRM"),
   ],
-  // Contacts hub
-  "/v2/contacts": [
+  // Contacts hub (canonical /v2/crm/contacts)
+  "/v2/crm/contacts": [
     () => import("@/v2/ui/pages/ContactsPage"),
     () => import("@/pages/Contacts"),
   ],

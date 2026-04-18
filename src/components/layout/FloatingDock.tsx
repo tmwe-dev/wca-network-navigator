@@ -8,7 +8,7 @@ const items = [
   { to: "/v2/agents", icon: Sparkles, label: "Agenti" },
   { to: "/v2/inreach", icon: Mail, label: "Email" },
   { to: "/v2/outreach", icon: MessageCircle, label: "Comunicazioni" },
-  { to: "/v2/contacts", icon: Linkedin, label: "Contatti" },
+  { to: "/v2/crm/contacts", icon: Linkedin, label: "Contatti" },
   { to: "/v2/templates", icon: Layers, label: "Template" },
   { to: "/v2/automations", icon: Zap, label: "Automazioni" },
   { to: "/v2/audit", icon: Shield, label: "Audit" },
