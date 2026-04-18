@@ -172,6 +172,9 @@ var Actions = globalThis.Actions || (function () {
         time: "timestamp",
         date: "timestamp",
         messageTimeSelector: "timestamp",
+        // J9 — Direction (AI returns this from prompt J6)
+        direction: "direction",
+        messageDirection: "direction",
       };
       return buildPlanFromKeyMap(schema, keyMap);
     }
