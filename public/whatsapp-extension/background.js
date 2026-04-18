@@ -1,5 +1,5 @@
 // ==================================================
-// WhatsApp Extension v5.4.0 — Modular Architecture
+// WhatsApp Extension v5.7.0 — Modular Architecture
 // background.js = Message Router only
 // Modules: config, tab-manager, discovery,
 //          ai-bridge, ai-extract, actions
@@ -50,7 +50,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.5.1",
+      version: "5.7.0",
       modulesLoaded: _modulesLoaded,
     });
     return false;
@@ -174,7 +174,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[WhatsApp Extension v5.4.0] Installed — Modular Architecture");
+  console.log("[WhatsApp Extension v5.7.0] Installed — Modular Architecture");
   if (typeof Config !== "undefined") {
     await Config.load();
     if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
