@@ -1,13 +1,58 @@
 import { ApiError } from "@/lib/api/apiError";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.3.2";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.4.0";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.2.1";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
 const WHATSAPP_EXTENSION_CURRENT_PATH = `/chrome-extensions/whatsapp/${WHATSAPP_EXTENSION_CURRENT_FILENAME}`;
 const LINKEDIN_EXTENSION_CURRENT_PATH = `/chrome-extensions/linkedin/${LINKEDIN_EXTENSION_CURRENT_FILENAME}`;
+const WHATSAPP_EXTENSION_FALLBACK_PATH = "/whatsapp-extension.zip";
+const LINKEDIN_EXTENSION_FALLBACK_PATH = "/linkedin-extension.zip";
 const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
+
+const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
+  whatsapp: {
+    title: "WhatsApp Direct Send",
+    latestVersion: "5.4.0",
+    items: [
+      {
+        version: "5.4.0",
+        filename: "whatsapp-extension-5.4.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.4.0.zip",
+        current: true,
+        note: "Versione corrente",
+      },
+      {
+        version: "5.3.2",
+        filename: "whatsapp-extension-5.3.2.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.3.2.zip",
+        current: false,
+        note: "Archivio",
+      },
+      {
+        version: "1.1",
+        filename: "whatsapp-extension-1.1.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-1.1.zip",
+        current: false,
+        note: "Archivio compatibilità",
+      },
+    ],
+  },
+  linkedin: {
+    title: "LinkedIn Cookie Sync",
+    latestVersion: "3.2.1",
+    items: [
+      {
+        version: "3.2.1",
+        filename: "linkedin-extension-3.2.1.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.2.1.zip",
+        current: true,
+        note: "Versione corrente",
+      },
+    ],
+  },
+};
 
 export type ExtensionCatalogChannel = "whatsapp" | "linkedin";
 
@@ -30,26 +75,30 @@ export interface ExtensionCatalog {
   linkedin?: ExtensionCatalogSection;
 }
 
-async function fetchStaticAsset(assetPath: string) {
-  let response: Response;
+async function fetchStaticAsset(assetPath: string, fallbackPaths: string[] = []) {
+  let lastError: unknown;
 
-  try {
-    response = await fetch(`${assetPath}?t=${Date.now()}`, {
-      cache: "no-store",
-    });
-  } catch (err) {
-    throw ApiError.from(err, "fetchStaticAsset");
+  for (const path of [assetPath, ...fallbackPaths]) {
+    try {
+      const response = await fetch(`${path}?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        return response;
+      }
+
+      lastError = await ApiError.fromResponse(response, "fetchStaticAsset");
+    } catch (err) {
+      lastError = ApiError.from(err, "fetchStaticAsset");
+    }
   }
 
-  if (!response.ok) {
-    throw await ApiError.fromResponse(response, "fetchStaticAsset");
-  }
-
-  return response;
+  throw (lastError instanceof Error ? lastError : new Error("Static asset unavailable"));
 }
 
-export async function downloadStaticExtensionZip(assetPath: string, filename: string) {
-  const response = await fetchStaticAsset(assetPath);
+export async function downloadStaticExtensionZip(assetPath: string, filename: string, fallbackPaths: string[] = []) {
+  const response = await fetchStaticAsset(assetPath, fallbackPaths);
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -63,20 +112,26 @@ export async function downloadStaticExtensionZip(assetPath: string, filename: st
 }
 
 export async function fetchExtensionCatalog(): Promise<ExtensionCatalog> {
-  const response = await fetchStaticAsset(EXTENSION_CATALOG_PATH);
-  return (await response.json()) as ExtensionCatalog;
+  try {
+    const response = await fetchStaticAsset(EXTENSION_CATALOG_PATH);
+    return (await response.json()) as ExtensionCatalog;
+  } catch {
+    return DEFAULT_EXTENSION_CATALOG;
+  }
 }
 
 export async function downloadWhatsAppExtensionZip() {
   return downloadStaticExtensionZip(
     WHATSAPP_EXTENSION_CURRENT_PATH,
-    WHATSAPP_EXTENSION_CURRENT_FILENAME
+    WHATSAPP_EXTENSION_CURRENT_FILENAME,
+    [WHATSAPP_EXTENSION_FALLBACK_PATH]
   );
 }
 
 export async function downloadLinkedInExtensionZip() {
   return downloadStaticExtensionZip(
     LINKEDIN_EXTENSION_CURRENT_PATH,
-    LINKEDIN_EXTENSION_CURRENT_FILENAME
+    LINKEDIN_EXTENSION_CURRENT_FILENAME,
+    [LINKEDIN_EXTENSION_FALLBACK_PATH]
   );
 }
