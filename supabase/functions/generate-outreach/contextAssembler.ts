@@ -285,6 +285,15 @@ export async function assembleOutreachContext(
   let interlocutorBlock = "";
   let branchBlock = "";
   let historyText = "";
+  // Fix 3.1: expose real relationship metrics (single source of truth)
+  let relationshipStage: "cold" | "warm" | "active" | "stale" | "ghosted" = "cold";
+  let relationshipMetrics = {
+    response_rate: 0,
+    unanswered_count: 0,
+    days_since_last_contact: 0,
+    commercial_state: "new" as "new" | "holding" | "engaged",
+    total_interactions: 0,
+  };
 
   const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
 
@@ -297,6 +306,15 @@ export async function assembleOutreachContext(
     historyText = ht;
     interactionHistoryCount = metrics.total_interactions;
     relationshipBlock = buildRelationshipAnalysisBlock(metrics);
+    // Fix 3.1: capture real metrics for downstream decision
+    relationshipStage = metrics.relationship_stage;
+    relationshipMetrics = {
+      response_rate: metrics.response_rate ?? 0,
+      unanswered_count: metrics.unanswered_count ?? 0,
+      days_since_last_contact: metrics.days_since_last_contact ?? 0,
+      commercial_state: metrics.commercial_state,
+      total_interactions: metrics.total_interactions ?? 0,
+    };
     if (historyText) { intelligence.data_found.interactions = true; contextParts.push(`[STORIA INTERAZIONI]\n${historyText}`); }
     else { intelligence.data_found.interactions = false; }
     const branches = await getSameCompanyBranches(supabase, partnerId);
