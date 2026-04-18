@@ -104,6 +104,94 @@ export interface OutreachContextBlocks {
   partnerId: string | null;
   websiteSource: "cached" | "not_available";
   linkedinSource: "cached" | "live_scraped" | "not_available";
+  // ── Fix 3.1: real relationship stage (single source of truth) ──
+  relationshipStage: "cold" | "warm" | "active" | "stale" | "ghosted";
+  relationshipMetrics: {
+    response_rate: number;
+    unanswered_count: number;
+    days_since_last_contact: number;
+    commercial_state: "new" | "holding" | "engaged";
+    total_interactions: number;
+  };
+  // ── Fix 3.2: active playbook injection ──
+  playbookBlock: string;
+  playbookActive: boolean;
+  // ── Fix 3.3: honest channel declaration ──
+  channelDeclaration: string;
+}
+
+/**
+ * Fix 3.2 — Loader del playbook commerciale attivo per un partner.
+ * Path: partner_workflow_state(active) → commercial_workflows.code → commercial_playbooks(workflow_code, is_active=true).
+ */
+export async function loadActivePlaybook(
+  supabase: SupabaseClient,
+  userId: string,
+  partnerId: string | null,
+): Promise<{ block: string; active: boolean }> {
+  if (!partnerId) return { block: "", active: false };
+
+  const { data: state } = await supabase
+    .from("partner_workflow_state")
+    .select("workflow_id, status, current_step")
+    .eq("user_id", userId)
+    .eq("partner_id", partnerId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!state?.workflow_id) return { block: "", active: false };
+
+  const { data: workflow } = await supabase
+    .from("commercial_workflows")
+    .select("code, name")
+    .eq("id", state.workflow_id)
+    .maybeSingle();
+
+  if (!workflow?.code) return { block: "", active: false };
+
+  const { data: playbooks } = await supabase
+    .from("commercial_playbooks")
+    .select("name, description, prompt_template, suggested_actions, kb_tags, code")
+    .eq("workflow_code", workflow.code)
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(1);
+
+  const playbook = playbooks?.[0];
+  if (!playbook) return { block: "", active: false };
+
+  const lines: string[] = [
+    `# PLAYBOOK ATTIVO — ${playbook.name} (workflow: ${workflow.code}, step: ${state.current_step ?? 0})`,
+  ];
+  if (playbook.description) lines.push(`Obiettivo: ${playbook.description}`);
+  if (playbook.prompt_template) lines.push(`\nIstruzioni operative:\n${playbook.prompt_template}`);
+  if (playbook.suggested_actions) {
+    const actions = typeof playbook.suggested_actions === "string"
+      ? playbook.suggested_actions
+      : JSON.stringify(playbook.suggested_actions);
+    lines.push(`\nAzioni suggerite: ${actions}`);
+  }
+  lines.push(`\nQuesto playbook GUIDA tono, contenuto e CTA. Rispetta le istruzioni prima di applicare la KB generica.`);
+
+  return { block: lines.join("\n") + "\n", active: true };
+}
+
+/**
+ * Fix 3.3 — Dichiarazione onesta del canale: l'AI deve sapere se ha contesto storico completo o limitato.
+ */
+export function buildChannelDeclaration(channel: Channel): string {
+  switch (channel) {
+    case "email":
+      return `CANALE: EMAIL — canale primario, contesto storico completo (interazioni, classificazioni, risposte).`;
+    case "whatsapp":
+      return `CANALE: WHATSAPP — contesto storico LIMITATO (no thread completo). Tono breve, diretto, conversazionale. Max 2-4 righe.`;
+    case "linkedin":
+      return `CANALE: LINKEDIN — contesto storico LIMITATO. Tono professionale, conciso. Max 4-6 righe.`;
+    case "sms":
+      return `CANALE: SMS — un solo messaggio breve (max 160 caratteri). Solo per follow-up urgenti.`;
+    default:
+      return `CANALE: ${(channel as string).toUpperCase()} — adatta tono e lunghezza.`;
+  }
 }
 
 export async function assembleOutreachContext(
