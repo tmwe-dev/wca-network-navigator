@@ -70,6 +70,13 @@ export interface EmailPromptContext {
   salesKBSlice: string;
   salesKBSections: string[];
   signatureBlock: string;
+  // Commercial state context (holding pattern awareness)
+  commercialState?: string;
+  touchCount?: number;
+  lastChannel?: string;
+  lastOutcome?: string;
+  daysSinceLastContact?: number;
+  warmthScore?: number;
 }
 
 // ── Helpers ──
