@@ -61,6 +61,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
+    playbookBlock, channelDeclaration,
   } = ctx;
 
   let recipientName = "";
