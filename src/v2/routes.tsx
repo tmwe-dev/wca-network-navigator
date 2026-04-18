@@ -25,6 +25,7 @@ const ImportPage = lazy(() => import("./ui/pages/ImportPage").then((m) => ({ def
 const StaffPage = lazy(() => import("./ui/pages/StaffPage").then((m) => ({ default: m.StaffPage })));
 const AILabPage = lazy(() => import("./ui/pages/AILabPage").then((m) => ({ default: m.AILabPage })));
 const KnowledgeBasePage = lazy(() => import("./ui/pages/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
+const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })));
 const InreachPage = lazy(() => import("./ui/pages/InreachPage").then((m) => ({ default: m.InreachPage })));
 const AgendaPage = lazy(() => import("./ui/pages/AgendaPage").then((m) => ({ default: m.AgendaPage })));
 const ProspectPage = lazy(() => import("./ui/pages/ProspectPage").then((m) => ({ default: m.ProspectPage })));
@@ -156,6 +157,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="staff" element={guardedPage(StaffPage, "Staff")} />
           <Route path="ai-lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="knowledge-base" element={guardedPage(KnowledgeBasePage, "KnowledgeBase")} />
+          <Route path="kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
           <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
           <Route path="deep-search" element={guardedPage(DeepSearchPage, "DeepSearch")} />

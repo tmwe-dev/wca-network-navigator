@@ -13,7 +13,7 @@ import {
   FlaskConical, Book, BarChart3, Earth, Search,
   ArrowUpDown, Cpu, Cog, Upload, Send, Command,
   Wifi, WifiOff, Sun, Moon, BrainCircuit, ShieldCheck, Gamepad2,
-  MessageSquare,
+  MessageSquare, Brain,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 
@@ -70,6 +70,7 @@ const navGroupsDef: readonly NavGroup[] = [
       { labelKey: "nav.staff", path: "/v2/staff", icon: <UserCog className="h-4 w-4" /> },
       { labelKey: "nav.ai_lab", path: "/v2/ai-lab", icon: <FlaskConical className="h-4 w-4" /> },
       { labelKey: "nav.knowledge", path: "/v2/knowledge-base", icon: <Book className="h-4 w-4" /> },
+      { labelKey: "nav.kb_supervisor", path: "/v2/kb-supervisor", icon: <Brain className="h-4 w-4" /> },
       { labelKey: "nav.ai_arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
       { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
       { labelKey: "nav.ai_control", path: "/v2/ai-control", icon: <ShieldCheck className="h-4 w-4" /> },
