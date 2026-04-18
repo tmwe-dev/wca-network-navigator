@@ -327,7 +327,9 @@ export async function executeTool(
       return { count: data?.length, classifications: data };
     }
     case "get_conversation_context": {
-      const { data, error } = await supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address)).maybeSingle();
+      let q = supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address));
+      if (userId) q = q.eq("user_id", userId);
+      const { data, error } = await q.maybeSingle();
       if (error) return { error: error.message };
       if (!data) return { message: "No conversation context found for this address." };
       return data;
