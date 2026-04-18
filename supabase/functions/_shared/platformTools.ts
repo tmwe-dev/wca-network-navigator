@@ -296,6 +296,7 @@ export async function executePlatformTool(
         activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
         partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
         priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as Record<string, unknown>,
+        user_id: userId,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
