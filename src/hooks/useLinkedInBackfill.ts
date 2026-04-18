@@ -20,12 +20,14 @@ type BackfillProgress = {
   threadsProcessed: number;
   threadsTotal: number;
   recoveredMessages: number;
+  pauseReason: string | null;
   lastError: string | null;
 };
 
 const INITIAL: BackfillProgress = {
   status: "idle", phase: "idle", currentThread: null,
-  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0, lastError: null,
+  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0,
+  pauseReason: null, lastError: null,
 };
 
 const MAX_THREADS_PER_SESSION = 5;
