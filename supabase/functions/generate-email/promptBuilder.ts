@@ -234,7 +234,7 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
 
   const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
 Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
-
+${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
 ${strategicAdvisor}
 
 ## Formato output:
