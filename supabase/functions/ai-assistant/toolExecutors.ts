@@ -275,7 +275,7 @@ export async function executeTool(
     create_activity: () => writeH.executeCreateActivity(args, userId!),
     delete_records: () => writeH.executeDeleteRecords(args, userId!),
     generate_outreach: () => writeH.executeGenerateOutreach(args, authHeader!),
-    send_email: () => writeH.executeSendEmail(args, authHeader!),
+    send_email: () => writeH.executeSendEmail(args, authHeader!, userId!),
     deep_search_partner: () => writeH.executeDeepSearchPartner(args, authHeader!),
     deep_search_contact: () => writeH.executeDeepSearchContact(args, authHeader!),
     enrich_partner_website: () => writeH.executeEnrichPartnerWebsite(args, authHeader!),
