@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.8.0",
-  "description": "Optimus V2 — stabilize tab + direct-first AI + dedup inbox + filtro notification badge",
+  "version": "3.9.0",
+  "description": "Optimus V2.1 — automation window isolation (no focus stealing), direct-first AI, dedup inbox, filtro notification badge",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {

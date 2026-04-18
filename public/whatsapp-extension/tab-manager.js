@@ -1,12 +1,16 @@
 // ══════════════════════════════════════════════
-// WhatsApp Extension v5.0 — Tab Manager Module
-// Tab lifecycle, queue serialization, hydration
+// WhatsApp Extension v5.10 — Tab Manager Module
+// AUTOMATION WINDOW ISOLATION (no focus stealing)
 // ══════════════════════════════════════════════
 
 var TabManager = globalThis.TabManager || (function () {
   // ── Two-lane queue: session (lightweight) vs action (heavy) ──
   let _sessionQueue = Promise.resolve();
   let _actionQueue = Promise.resolve();
+
+  // ── Automation window/tab ownership (persisted in chrome.storage.session) ──
+  let _automationWindowId = null;
+  let _ownedWaTabIds = new Set();
 
   function enqueueSession(fn) {
     _sessionQueue = _sessionQueue.then(fn).catch(function (e) {
@@ -24,20 +28,110 @@ var TabManager = globalThis.TabManager || (function () {
     return new Promise(function (r) { setTimeout(r, ms); });
   }
 
+  // ── Persistence helpers (service worker may restart) ──
+  async function loadOwnership() {
+    try {
+      const data = await chrome.storage.session.get(["wa_automation_window", "wa_owned_tabs"]);
+      if (data.wa_automation_window) _automationWindowId = data.wa_automation_window;
+      if (Array.isArray(data.wa_owned_tabs)) _ownedWaTabIds = new Set(data.wa_owned_tabs);
+    } catch (e) { /* session storage may be unavailable */ }
+  }
+
+  async function saveOwnership() {
+    try {
+      await chrome.storage.session.set({
+        wa_automation_window: _automationWindowId,
+        wa_owned_tabs: Array.from(_ownedWaTabIds),
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  function markOwned(tabId) {
+    _ownedWaTabIds.add(tabId);
+    saveOwnership();
+  }
+
+  function isOwned(tabId) {
+    return _ownedWaTabIds.has(tabId);
+  }
+
+  // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
+  // This window lives off-screen / minimized and never steals focus.
+  async function getOrCreateAutomationWindow() {
+    await loadOwnership();
+    // Validate cached window
+    if (_automationWindowId !== null) {
+      try {
+        const win = await chrome.windows.get(_automationWindowId);
+        if (win) return _automationWindowId;
+      } catch (e) {
+        _automationWindowId = null;
+      }
+    }
+    // Create a NEW minimized window for automation
+    try {
+      const win = await chrome.windows.create({
+        url: "about:blank",
+        focused: false,
+        state: "minimized",
+        type: "normal",
+      });
+      _automationWindowId = win.id;
+      // Some platforms ignore focused:false on create — force unfocus by
+      // re-focusing the previously focused window if we know it.
+      try {
+        const allWins = await chrome.windows.getAll();
+        const userWin = allWins.find(function (w) { return w.id !== win.id && w.type === "normal"; });
+        if (userWin) {
+          await chrome.windows.update(userWin.id, { focused: true });
+        }
+      } catch (e) { /* ignore */ }
+      // Remove the placeholder about:blank tab once the window exists
+      try {
+        if (win.tabs && win.tabs[0]) {
+          // Keep it as a placeholder — we'll close it after we have a real WA tab
+          markOwned(win.tabs[0].id);
+        }
+      } catch (e) { /* ignore */ }
+      await saveOwnership();
+      return _automationWindowId;
+    } catch (e) {
+      console.warn("[WA TabMgr] Failed to create automation window:", e?.message);
+      _automationWindowId = null;
+      return null;
+    }
+  }
+
   // ── Safe tab operations with retry ──
   async function safeCreateTab(url, active) {
     for (let i = 0; i < 3; i++) {
       try {
-        return await chrome.tabs.create({ url: url, active: active || false });
+        // Always try to create in the automation window first
+        const winId = await getOrCreateAutomationWindow();
+        const opts = { url: url, active: !!active };
+        if (winId !== null) opts.windowId = winId;
+        const tab = await chrome.tabs.create(opts);
+        markOwned(tab.id);
+        return tab;
       } catch (e) {
         if (i < 2) await sleep(500 * (i + 1));
-        else throw e;
+        else {
+          // Last resort: create without windowId (background tab in current window)
+          // BUT we still mark it owned so we don't steal focus from it
+          const tab = await chrome.tabs.create({ url: url, active: false });
+          markOwned(tab.id);
+          return tab;
+        }
       }
     }
   }
 
   async function safeRemoveTab(tabId) {
-    try { await chrome.tabs.remove(tabId); } catch (err) { console.debug("[WA Tab]", err?.message); }
+    try {
+      await chrome.tabs.remove(tabId);
+      _ownedWaTabIds.delete(tabId);
+      saveOwnership();
+    } catch (err) { console.debug("[WA Tab]", err?.message); }
   }
 
   async function waitForLoad(tabId, timeoutMs) {
@@ -53,19 +147,37 @@ var TabManager = globalThis.TabManager || (function () {
     return false;
   }
 
-  function sortTabsByFreshness(tabs) {
-    return (tabs || []).slice().sort(function (a, b) {
-      const aScore = (a.active ? 1000 : 0) + (a.status === "complete" ? 100 : 0);
-      const bScore = (b.active ? 1000 : 0) + (b.status === "complete" ? 100 : 0);
-      if (bScore !== aScore) return bScore - aScore;
-      return Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0);
-    });
-  }
-
+  // ── REUSE LOGIC: only OWNED tabs are eligible (never user tabs) ──
   async function getBestExistingWaTab() {
+    await loadOwnership();
     try {
-      const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-      return sortTabsByFreshness(tabs)[0] || null;
+      // Step 1: look ONLY among owned tabs
+      const owned = Array.from(_ownedWaTabIds);
+      for (const tid of owned) {
+        try {
+          const t = await chrome.tabs.get(tid);
+          if (t && t.url && /web\.whatsapp\.com/i.test(t.url)) return t;
+        } catch (e) {
+          // Tab no longer exists — clean up
+          _ownedWaTabIds.delete(tid);
+        }
+      }
+      saveOwnership();
+      // Step 2: look in the automation window only
+      if (_automationWindowId !== null) {
+        try {
+          const tabs = await chrome.tabs.query({
+            windowId: _automationWindowId,
+            url: "https://web.whatsapp.com/*",
+          });
+          if (tabs && tabs[0]) {
+            markOwned(tabs[0].id);
+            return tabs[0];
+          }
+        } catch (e) { /* window gone */ }
+      }
+      // We deliberately do NOT reuse user-opened web.whatsapp.com tabs
+      return null;
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
@@ -76,26 +188,52 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
-  // ── OPTIMUS V2 (N1): activateAndStabilize ──
-  // Direct-first: salva tab attivo, attiva WA, attende DOM stabile (readyState +
-  // visibilityState + presenza chat/grid/sidebar + assenza loading screen).
-  // Ritorna { stable, previousTabId, restore() } — chi chiama deve invocare restore()
-  // a fine estrazione. NON usa chrome.windows.update({focused:true}) → Cockpit intatto.
+  // ── Move tab into the automation window if it isn't already there ──
+  async function ensureTabInAutomationWindow(tabId) {
+    try {
+      const winId = await getOrCreateAutomationWindow();
+      if (winId === null) return false;
+      const tab = await chrome.tabs.get(tabId);
+      if (tab.windowId === winId) return true;
+      // Move it — this happens silently and does NOT steal focus
+      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
+      return true;
+    } catch (e) {
+      console.debug("[WA TabMgr] ensureTabInAutomationWindow:", e?.message);
+      return false;
+    }
+  }
+
+  // ── OPTIMUS V2.1 (FOCUS-SAFE): activateAndStabilize ──
+  // CONTRACT: NEVER call chrome.tabs.update({active:true}) on a tab that lives
+  // in a window the user is currently working in.
+  //
+  // Strategy:
+  //   1. Ensure the tab is in our automation window (move it if not).
+  //   2. Activate it ONLY inside the automation window.
+  //   3. The automation window stays minimized/unfocused — Cockpit untouched.
+  //   4. No restore() is needed because we never touched the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
-    let previousTabId = null;
+    // Move tab to automation window (silent — no focus change)
+    await ensureTabInAutomationWindow(tabId);
+
+    // Activate ONLY within the automation window. If the move failed and the
+    // tab is still in a user window, we MUST NOT activate it. Probe DOM as-is.
+    let activatedInAutomation = false;
     try {
       const tab = await chrome.tabs.get(tabId);
-      const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
-      if (windowTabs && windowTabs[0]) previousTabId = windowTabs[0].id;
-    } catch (err) { console.debug("[WA Tab] N1 save prev:", err?.message); }
+      if (tab.windowId === _automationWindowId) {
+        await chrome.tabs.update(tabId, { active: true });
+        activatedInAutomation = true;
+      } else {
+        console.warn("[WA TabMgr] Tab " + tabId + " not in automation window — skipping activate to preserve user focus");
+      }
+    } catch (err) { console.debug("[WA Tab] V2.1 activate:", err?.message); }
 
-    try { await chrome.tabs.update(tabId, { active: true }); }
-    catch (err) { console.debug("[WA Tab] N1 activate:", err?.message); }
-
+    // Wait for DOM stable (works even without activation thanks to MV3 scripting)
     const startTime = Date.now();
     const maxWait = maxWaitMs || 3000;
     let stable = false;
-
     while (Date.now() - startTime < maxWait) {
       try {
         const check = await chrome.scripting.executeScript({
@@ -103,7 +241,6 @@ var TabManager = globalThis.TabManager || (function () {
           func: function () {
             return {
               ready: document.readyState === "complete",
-              visible: document.visibilityState === "visible",
               hasContent: !!(
                 document.querySelector('[role="row"]') ||
                 document.querySelector('#pane-side') ||
@@ -117,71 +254,51 @@ var TabManager = globalThis.TabManager || (function () {
           },
         });
         const r = check && check[0] && check[0].result;
-        if (r && r.ready && r.visible && r.hasContent && !r.loading) { stable = true; break; }
-      } catch (err) { console.debug("[WA Tab] N1 probe:", err?.message); }
+        // We do NOT require visibilityState=visible anymore — minimized
+        // automation window will report "hidden", but DOM is rendered.
+        if (r && r.ready && r.hasContent && !r.loading) { stable = true; break; }
+      } catch (err) { console.debug("[WA Tab] V2.1 probe:", err?.message); }
       await sleep(300);
     }
-
-    if (stable) await sleep(500); // settle per virtualizzazione
+    if (stable) await sleep(500);
 
     return {
       stable: stable,
-      previousTabId: previousTabId,
+      previousTabId: null, // never changed user's window
+      activatedInAutomation: activatedInAutomation,
       restore: async function () {
-        if (previousTabId && previousTabId !== tabId) {
-          try { await chrome.tabs.update(previousTabId, { active: true }); }
-          catch (err) { console.debug("[WA Tab] N1 restore:", err?.message); }
-        }
+        // No-op: we never stole focus
+        return;
       },
     };
   }
 
-  // ── STEALTH MODE v2 (M4) — DEPRECATED, kept for backward compat ──
+  // ── DEPRECATED shim — now delegates to focus-safe activateAndStabilize ──
+  // Kept for backward-compat with verifySession and legacy paths.
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
-    try {
-      const tab = await chrome.tabs.get(tabId);
-      if (!tab) return false;
-      // M4: Se il tab è nascosto, attivalo brevemente per forzare rendering DOM
-      if (tab.active === false) {
-        // Salva il tab attivo corrente nella stessa finestra
-        let previousActiveTabId = null;
-        try {
-          const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
-          if (windowTabs && windowTabs[0]) previousActiveTabId = windowTabs[0].id;
-        } catch (err) { console.debug("[WA Tab] M4 save prev:", err?.message); }
-
-        // Attiva il tab WA (rendering DOM si sblocca)
-        try { await chrome.tabs.update(tabId, { active: true }); } catch (err) { console.debug("[WA Tab] M4 activate:", err?.message); }
-        // Aspetta che il DOM si renderizzi
-        await sleep(Math.min(postActivateMs || 600, 1500));
-
-        // Ripristina il tab precedente (utente non se ne accorge)
-        if (previousActiveTabId && previousActiveTabId !== tabId) {
-          try { await chrome.tabs.update(previousActiveTabId, { active: true }); } catch (err) { console.debug("[WA Tab] M4 restore:", err?.message); }
-        }
-      } else {
-        // Tab già attivo — solo sleep
-        await sleep(Math.min(postActivateMs || 600, 1500));
-      }
-      return true;
-    } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
+    const res = await activateAndStabilize(tabId, Math.max(postActivateMs || 600, 1500));
+    return !!res.stable || !!res.activatedInAutomation;
   }
 
-  // M6: Backward-compat shim — ora usa ensureTabVisibleAndWait con M4 activation
+  // ── DEPRECATED shim ──
   async function withTemporarilyVisibleTab(tabId, fn) {
     await ensureTabVisibleAndWait(tabId, 600);
     return await fn();
   }
 
-  // ── Get or create WA tab ──
+  // ── Get or create WA tab (always in automation window) ──
   async function getOrCreateWaTab() {
     try {
       const existing = await getBestExistingWaTab();
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
+        // Make sure it lives in the automation window
+        await ensureTabInAutomationWindow(existing.id);
         return { tab: existing, reused: true };
       }
     } catch (err) { console.debug("[WA Tab]", err?.message); }
+
+    // Create fresh in automation window
     const tab = await safeCreateTab(Config.WA_BASE, false);
     const loaded = await waitForLoad(tab.id, 30000);
     if (!loaded) throw new Error("WhatsApp Web non caricato");
@@ -224,6 +341,9 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (err) { console.debug("[WA Tab]", err?.message); }
   }
 
+  // Initialize ownership cache from session storage
+  loadOwnership();
+
   return {
     sleep: sleep,
     enqueueSession: enqueueSession,
@@ -233,6 +353,9 @@ var TabManager = globalThis.TabManager || (function () {
     waitForLoad: waitForLoad,
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
+    getOrCreateAutomationWindow: getOrCreateAutomationWindow,
+    ensureTabInAutomationWindow: ensureTabInAutomationWindow,
+    isOwned: isOwned,
     activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
     withTemporarilyVisibleTab: withTemporarilyVisibleTab,
