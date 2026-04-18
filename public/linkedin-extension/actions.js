@@ -188,6 +188,7 @@ var Actions = globalThis.Actions || (function () {
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
@@ -212,12 +213,12 @@ var Actions = globalThis.Actions || (function () {
       };
     }
 
-    // Optimus reachable but failed → propagate
-    if (!optimus.optimusUnavailable) {
-      return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Optimus error: " + (optimus.error || "unknown"));
-    }
+    // Any Optimus failure → fall through to legacy AX/structural
+    // (previously only fell through if optimusUnavailable was true,
+    //  which missed cases where Optimus responded but plan execution failed)
+    console.warn("[LI Actions] Optimus inbox failed, falling through to legacy:", optimus.error);
 
-    // ── Legacy fallback (only if Optimus unreachable: 503/no-app-tab/timeout) ──
+    // ── Legacy fallback ──
     // Legacy A: AX Tree
     let axError = null;
     try {
