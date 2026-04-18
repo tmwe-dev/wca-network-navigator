@@ -259,11 +259,67 @@ var AiExtract = globalThis.AiExtract || (function () {
             snapshot.broadSample = app.outerHTML.slice(0, 8000);
           }
 
-          // J5 — Sample chat items (first 3 rows for AI to understand structure)
+          // J5 — Sample chat items (RICH: outerHTML + ancestors + spans dettagliati)
           var chatItemSamples = [];
           var rowCandidates = qsaDeep('[role="row"], [data-testid="cell-frame-container"], [tabindex="-1"][role="listitem"]');
           for (var ci = 0; ci < Math.min(rowCandidates.length, 3); ci++) {
-            chatItemSamples.push(rowCandidates[ci].outerHTML.slice(0, 1500));
+            var row = rowCandidates[ci];
+            var sample = { outerHTML: row.outerHTML.slice(0, 3000), ancestors: [], spans: [], elements: [] };
+
+            // Ancestors 3 livelli
+            var anc = row.parentElement;
+            for (var a = 0; a < 3 && anc; a++) {
+              sample.ancestors.push({
+                tag: anc.tagName.toLowerCase(),
+                role: anc.getAttribute('role'),
+                ariaLabel: anc.getAttribute('aria-label'),
+                testId: anc.getAttribute('data-testid'),
+                childCount: anc.children.length,
+              });
+              anc = anc.parentElement;
+            }
+            // Prev/next sibling
+            if (row.previousElementSibling) sample.prevSibling = { tag: row.previousElementSibling.tagName.toLowerCase(), role: row.previousElementSibling.getAttribute('role') };
+            if (row.nextElementSibling) sample.nextSibling = { tag: row.nextElementSibling.tagName.toLowerCase(), role: row.nextElementSibling.getAttribute('role') };
+
+            // Spans con dettagli completi (max 25)
+            var rowSpans = row.querySelectorAll('span');
+            for (var rsi = 0; rsi < Math.min(rowSpans.length, 25); rsi++) {
+              var sp = rowSpans[rsi];
+              var rect = sp.getBoundingClientRect();
+              var ps = sp.parentElement ? window.getComputedStyle(sp.parentElement) : null;
+              sample.spans.push({
+                text: (sp.textContent || '').trim().slice(0, 80),
+                title: sp.getAttribute('title'),
+                ariaLabel: sp.getAttribute('aria-label'),
+                dir: sp.getAttribute('dir'),
+                width: Math.round(rect.width),
+                height: Math.round(rect.height),
+                bgColor: window.getComputedStyle(sp).backgroundColor,
+                parentBgColor: ps ? ps.backgroundColor : null,
+                parentBorderRadius: ps ? ps.borderRadius : null,
+              });
+            }
+            // Elementi con attributi stabili (max 30)
+            var rowAll = row.querySelectorAll('*');
+            for (var rai = 0; rai < Math.min(rowAll.length, 60) && sample.elements.length < 30; rai++) {
+              var el = rowAll[rai];
+              var attrs = {};
+              for (var aa = 0; aa < el.attributes.length; aa++) {
+                var an = el.attributes[aa].name;
+                if (['role','aria-label','data-testid','title','tabindex','dir','href'].indexOf(an) !== -1) {
+                  attrs[an] = el.attributes[aa].value;
+                }
+              }
+              if (Object.keys(attrs).length > 0) {
+                sample.elements.push({
+                  tag: el.tagName.toLowerCase(),
+                  attrs: attrs,
+                  text: (el.textContent || '').trim().slice(0, 40),
+                });
+              }
+            }
+            chatItemSamples.push(sample);
           }
           if (chatItemSamples.length > 0) snapshot.chatItemSamples = chatItemSamples;
 
