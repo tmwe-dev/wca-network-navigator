@@ -76,6 +76,7 @@ export function composeSystemPrompt(opts: ComposeSystemPromptOptions): string {
     REASONING_FRAMEWORK,
     INFO_SEARCH_HIERARCHY,
     GOLDEN_RULES,
+    COMMERCIAL_DOCTRINE,
     KB_LOADING_INSTRUCTION,
   ];
 
