@@ -166,6 +166,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
           <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
           <Route path="ra-company/:id" element={guardedPage(RACompanyDetailPage, "RACompanyDetail")} />
+          {/* Aliases: /v2/research/* → canonical /v2/ra-* */}
+          <Route path="research/explorer" element={<Navigate to="/v2/ra-explorer" replace />} />
+          <Route path="research/scraping" element={<Navigate to="/v2/ra-scraping" replace />} />
+          <Route path="research/company/:id" element={<Navigate to="/v2/ra-company/:id" replace />} />
           <Route path="campaign-jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
           <Route path="admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
           <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
