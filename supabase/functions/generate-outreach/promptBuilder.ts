@@ -108,9 +108,9 @@ ${enrichmentSnippet}
     : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-  const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
+  const systemPrompt = `${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un esperto stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
 Hai accesso a una Knowledge Base di tecniche di vendita e negoziazione — usala autonomamente per scegliere strategia, tono e struttura.
-
+${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
 ${channelContext}
 
 CONTESTO:
