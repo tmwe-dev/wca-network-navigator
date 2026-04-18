@@ -356,8 +356,10 @@ var Actions = globalThis.Actions || (function () {
       await TabManager.sleep(r.reused ? 1200 : 4000);
 
       let optimus = await tryOptimusReadUnread(r.tab.id, false, null);
-      if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-        optimus = await tryOptimusReadUnread(r.tab.id, true, "Cached plan returned 0 unread chats from sidebar");
+      // I1: Force relearn whenever 0 items (DOM may have changed), not just when cached
+      if (optimus.success && optimus.items.length === 0) {
+        console.log("[WA Optimus] 0 items, forcing relearn...");
+        optimus = await tryOptimusReadUnread(r.tab.id, true, "Plan returned 0 items, DOM may have changed");
       }
 
       if (optimus.success) {
