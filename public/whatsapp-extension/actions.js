@@ -272,9 +272,11 @@ var Actions = globalThis.Actions || (function () {
       const chat = chatItems[i];
       let badge = null, count = 0;
 
+      // S1: data-testid (può essere assente nel DOM attuale)
       badge = H.qsWithin(chat, '[data-testid="icon-unread-count"]') || H.qsWithin(chat, '[data-testid="unread-count"]');
       if (badge) count = parseInt(badge.textContent) || 1;
 
+      // S2: aria-label con testo "unread" / "non letti" / "da leggere"
       if (!badge) {
         const ariaEls = H.qsaWithin(chat, 'span[aria-label]');
         for (const ae of ariaEls) {
@@ -285,28 +287,58 @@ var Actions = globalThis.Actions || (function () {
         }
       }
 
+      // M3-S3: Badge numerica — qualsiasi span con solo cifre in un contenitore piccolo
+      // WhatsApp usa classi obfuscate ma la struttura è: piccolo span con "1", "2", etc.
+      // dentro un div circolare. Cerchiamo senza dipendere dal colore (fallisce in background tab).
       if (!badge) {
         const spans = H.qsaWithin(chat, 'span');
         for (const s of spans) {
           const txt = s.textContent.trim();
-          if (txt && /^\d+$/.test(txt) && txt.length <= 4) {
+          if (txt && /^\d{1,3}$/.test(txt)) {
+            // Verifica che sia un badge e non un orario o altro numero
+            const rect = s.getBoundingClientRect ? s.getBoundingClientRect() : null;
+            const isSmall = rect && rect.width > 0 && rect.width < 40 && rect.height < 30;
+            // Controlla colore verde O dimensione badge-like
             const bg = window.getComputedStyle(s).backgroundColor;
             const parentBg = s.parentElement ? window.getComputedStyle(s.parentElement).backgroundColor : "";
-            if ((bg + parentBg).match(/37,\s*211|25d366|00a884|rgb\(0,\s*168|rgb\(37/i)) {
+            const isGreen = (bg + parentBg).match(/37,\s*211|25d366|00a884|rgb\(0,\s*168|rgb\(37/i);
+            // Controlla se il parent è "rotondo" (border-radius alto = badge)
+            const parentStyle = s.parentElement ? window.getComputedStyle(s.parentElement) : null;
+            const borderRadius = parentStyle ? parseFloat(parentStyle.borderRadius) || 0 : 0;
+            const isBadgeShaped = borderRadius >= 8;
+            if (isGreen || (isSmall && isBadgeShaped)) {
               count = parseInt(txt) || 1; badge = s; break;
             }
           }
         }
       }
 
-      // Removed VERIFY_COUNT: only return actual unread items
+      // M3-S4: Classe CSS con pattern badge/unread (WhatsApp obfusca ma alcuni pattern restano)
+      if (!badge) {
+        const allEls = H.qsaWithin(chat, '[class*="unread"], [class*="badge"], [aria-label*="unread"], [aria-label*="non lett"]');
+        for (const el of allEls) {
+          const txt = el.textContent.trim();
+          if (txt && /^\d{1,3}$/.test(txt)) {
+            count = parseInt(txt) || 1; badge = el; break;
+          }
+          // Badge senza numero (punto verde) = almeno 1
+          const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+          if (rect && rect.width > 0 && rect.width < 20 && rect.height > 0 && rect.height < 20) {
+            count = 1; badge = el; break;
+          }
+        }
+      }
+
+      // Solo unread: salta item senza badge confermato
       if (count === 0) continue;
 
       let contactName = "Sconosciuto";
-      const titleEl = H.qsWithin(chat, 'span[title][dir="auto"]') || H.qsWithin(chat, 'span[title]') || H.qsWithin(chat, '[data-testid="cell-frame-title"] span');
+      // M7: Priorità a selettori strutturali (span[title][dir]) — data-testid potrebbe non esistere
+      const titleEl = H.qsWithin(chat, 'span[title][dir="auto"]') || H.qsWithin(chat, 'span[title]') || H.qsWithin(chat, '[data-testid="cell-frame-title"] span') || H.qsWithin(chat, '[role="gridcell"] span[dir="auto"]');
       if (titleEl) contactName = titleEl.getAttribute("title") || titleEl.textContent?.trim() || "Sconosciuto";
 
       let lastMessage = "";
+      // M7: Selettori strutturali prima di data-testid; ultimo fallback su secondo gridcell
       let msgEl = H.qsWithin(chat, '[data-testid="last-msg-status"]') || H.qsWithin(chat, '[data-testid="cell-frame-secondary"] span[title]') || H.qsWithin(chat, '[data-testid="cell-frame-secondary"] span') || H.qsWithin(chat, '[data-testid="last-msg"] span');
       if (!msgEl) {
         const allSpans = H.qsaWithin(chat, 'span');

@@ -85,8 +85,28 @@ var TabManager = globalThis.TabManager || (function () {
       }
     }
 
-    // Create a dedicated background tab for the extension.
-    // Do not hijack user-opened LinkedIn tabs.
+    // M1: Service worker MV3 può riavviarsi → _liTabId perso.
+    // Cercare tab LinkedIn esistenti PRIMA di crearne uno nuovo.
+    try {
+      const allTabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+      if (allTabs && allTabs.length > 0) {
+        // Preferire tab non attivi (creati dall'estensione) rispetto a quelli utente
+        const best = allTabs.find(function (t) { return !t.active; }) || allTabs[0];
+        _liTabId = best.id;
+        console.log("[LI Tab] M1: Riusato tab esistente #" + best.id + " (url: " + (best.url || "").substring(0, 60) + ")");
+        if (skipNavigateIfSameDomain && best.url && urlMatchesTarget(best.url, url)) {
+          if (best.status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForLoad(_liTabId, 20000);
+        return { id: _liTabId, reused: false };
+      }
+    } catch (queryErr) {
+      console.debug("[LI Tab] M1: query tabs failed:", queryErr?.message);
+    }
+
+    // Nessun tab LinkedIn trovato — creane uno in background
     const tab = await safeCreate({ url: url, active: false });
     _liTabId = tab.id;
     await waitForLoad(tab.id, 20000);
@@ -97,17 +117,30 @@ var TabManager = globalThis.TabManager || (function () {
     return _liTabId;
   }
 
-  // ── STEALTH: never steal focus from the user's window ──
-  // Same pattern as WhatsApp extension: only verify the tab exists,
-  // then sleep so background-tab DOM throttling has time to settle.
-  // We MUST NOT call chrome.tabs.update({active:true}) or
-  // chrome.windows.update({focused:true}) — that kicks the user out of the Cockpit.
+  // ── STEALTH MODE v2 (M5): brief tab activation for DOM rendering ──
+  // Identico a WA M4: chrome.tabs.update({active:true}) senza
+  // chrome.windows.update({focused:true}) attiva il tab nella sua finestra
+  // senza portare la finestra in primo piano → Cockpit non disturbato.
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
       if (!tab) return false;
-      // Small extra wait so background-tab DOM has time to settle.
-      await sleep(Math.min(postActivateMs || 600, 1500));
+      if (tab.active === false) {
+        let previousActiveTabId = null;
+        try {
+          const windowTabs = await chrome.tabs.query({ windowId: tab.windowId, active: true });
+          if (windowTabs && windowTabs[0]) previousActiveTabId = windowTabs[0].id;
+        } catch (err) { console.debug("[LI Tab] M5 save prev:", err?.message); }
+
+        try { await chrome.tabs.update(tabId, { active: true }); } catch (err) { console.debug("[LI Tab] M5 activate:", err?.message); }
+        await sleep(Math.min(postActivateMs || 600, 1500));
+
+        if (previousActiveTabId && previousActiveTabId !== tabId) {
+          try { await chrome.tabs.update(previousActiveTabId, { active: true }); } catch (err) { console.debug("[LI Tab] M5 restore:", err?.message); }
+        }
+      } else {
+        await sleep(Math.min(postActivateMs || 600, 1500));
+      }
       return true;
     } catch (err) { console.debug("[LI Tab] visible:", err?.message); return false; }
   }

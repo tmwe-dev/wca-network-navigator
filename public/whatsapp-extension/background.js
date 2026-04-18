@@ -1,5 +1,5 @@
 // ==================================================
-// WhatsApp Extension v5.7.0 — Modular Architecture
+// WhatsApp Extension v5.8.0 — Modular Architecture
 // background.js = Message Router only
 // Modules: config, tab-manager, discovery,
 //          ai-bridge, ai-extract, actions
@@ -50,7 +50,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.7.0",
+      version: "5.8.0",
       modulesLoaded: _modulesLoaded,
     });
     return false;

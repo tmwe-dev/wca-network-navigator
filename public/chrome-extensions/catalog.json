@@ -1,41 +1,41 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.7.0",
+    "latestVersion": "5.8.0",
     "items": [
+      {
+        "version": "5.8.0",
+        "filename": "whatsapp-extension-5.8.0.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.8.0.zip",
+        "current": true,
+        "note": "Versione corrente — M3/M7 badge detection senza data-testid + fallback strutturali, M4 brief tab activation per sbloccare DOM throttling background"
+      },
       {
         "version": "5.7.0",
         "filename": "whatsapp-extension-5.7.0.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.7.0.zip",
-        "current": true,
-        "note": "Versione corrente — prompt AI ottimizzati IT, snapshot DOM arricchito (chat samples, buttons, tabindex), modello flash per learnDom"
-      },
-      {
-        "version": "5.6.0",
-        "filename": "whatsapp-extension-5.6.0.zip",
-        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.6.0.zip",
         "current": false,
-        "note": "Archivio — Optimus auto-relearn + cache locale piano AI 24h"
+        "note": "Archivio — prompt AI ottimizzati IT, snapshot DOM arricchito"
       }
     ]
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.6.0",
+    "latestVersion": "3.7.0",
     "items": [
+      {
+        "version": "3.7.0",
+        "filename": "linkedin-extension-3.7.0.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.7.0.zip",
+        "current": true,
+        "note": "Versione corrente — M1 anti-multitab (cerca tab esistenti), M2 dedup inbox + filtro notification badge, M5 brief tab activation"
+      },
       {
         "version": "3.6.0",
         "filename": "linkedin-extension-3.6.0.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.6.0.zip",
-        "current": true,
-        "note": "Versione corrente — prompt AI ottimizzati IT con threadUrl + direction + auth + timeout 30s"
-      },
-      {
-        "version": "3.5.0",
-        "filename": "linkedin-extension-3.5.0.zip",
-        "path": "/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip",
         "current": false,
-        "note": "Archivio — Optimus auto-relearn LinkedIn + fallback edge function diretto"
+        "note": "Archivio — prompt AI ottimizzati IT con threadUrl + direction + auth"
       }
     ]
   }
