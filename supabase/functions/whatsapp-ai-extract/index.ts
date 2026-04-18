@@ -311,6 +311,8 @@ If no unread chats found, return an empty array [].`;
         mode,
         items,
         htmlLength: html.length,
+        truncated: wasTruncated,
+        original_length: html.length,
       }),
       {
         headers: { ...dynCors, "Content-Type": "application/json" },

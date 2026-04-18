@@ -38,6 +38,23 @@ var Actions = globalThis.Actions || (function () {
           _rootsCache = roots; return roots;
         }
 
+        // F2 — Auto-invalidate shadow DOM cache on major DOM changes
+        let _cacheObserver = null;
+        function setupCacheObserver() {
+          if (_cacheObserver) return;
+          try {
+            _cacheObserver = new MutationObserver(function (mutations) {
+              const dominated = mutations.some(function (m) {
+                return m.addedNodes.length > 3 || m.removedNodes.length > 3;
+              });
+              if (dominated) {
+                _rootsCache = null;
+              }
+            });
+            _cacheObserver.observe(document.body, { childList: true, subtree: true });
+          } catch (_) {}
+        }
+
         function getNestedRoots(root) {
           const roots = [root]; const seen = new Set([root]);
           scanShadowRoots(root, roots, seen);
@@ -136,6 +153,9 @@ var Actions = globalThis.Actions || (function () {
           modernInsertText: modernInsertText,
           invalidateCache: invalidateCache,
         };
+
+        // F2 — start MutationObserver after helpers are installed
+        setupCacheObserver();
       },
     });
   }
@@ -800,7 +820,8 @@ var Actions = globalThis.Actions || (function () {
       }
 
       function pushUnique(msg) {
-        const key = (msg.text || "") + "|" + (msg.timestamp || "");
+        // F3 — include sender/direction in dedup key to avoid collisions
+        const key = (msg.sender || msg.direction || "?") + "|" + (msg.text || "") + "|" + (msg.timestamp || "");
         if (seen.has(key)) return false;
         seen.add(key);
         if (lastKnownText && msg.text === lastKnownText) return "stop";
