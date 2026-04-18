@@ -145,7 +145,7 @@ async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, par
   try {
     const { data } = await supabase
       .from("partners")
-      .select("id, company_name, country_code, country_name, city, profile_description, lead_status, rating, partner_type")
+      .select("id, company_name, country_code, country_name, city, profile_description, lead_status, rating, partner_type, email, phone, last_interaction_at, interaction_count")
       .eq("id", partnerId)
       .maybeSingle();
     if (!data) return "";
@@ -157,6 +157,10 @@ async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, par
       data.partner_type ? `Tipo: ${data.partner_type}` : "",
       data.lead_status ? `Lead status: ${data.lead_status}` : "",
       data.rating ? `Rating: ${data.rating}` : "",
+      data.email ? `Email: ${data.email}` : "",
+      data.phone ? `Telefono: ${data.phone}` : "",
+      typeof data.interaction_count === "number" ? `Interazioni: ${data.interaction_count}` : "",
+      data.last_interaction_at ? `Ultima interazione: ${data.last_interaction_at}` : "",
       data.profile_description ? `Profilo: ${String(data.profile_description).slice(0, 240)}` : "",
     ].filter(Boolean).join("\n");
   } catch { return ""; }
