@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.3.1",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.3.1 active-tab preference, 127.0.0.1 host.",
+  "version": "3.4.0",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.4.0 backfillThread con scroll-back.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {

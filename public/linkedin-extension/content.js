@@ -28,6 +28,7 @@
     "ping", "verifySession", "syncCookie", "autoLogin",
     "extractProfile", "sendMessage", "sendConnectionRequest",
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
+    "backfillLinkedInThread",
     "diagnosticLinkedInDom", "learnDom", "setConfig",
   ];
 
@@ -113,6 +114,8 @@
       if (data.note !== undefined) msg.note = data.note;
       if (data.query) msg.query = data.query;
       if (data.threadUrl) msg.threadUrl = data.threadUrl;
+      if (data.lastKnownText) msg.lastKnownText = data.lastKnownText;
+      if (data.maxScrolls) msg.maxScrolls = data.maxScrolls;
       if (data.pageType) msg.pageType = data.pageType;
       if (data.supabaseUrl) msg.supabaseUrl = data.supabaseUrl;
       if (data.supabaseAnonKey) msg.supabaseAnonKey = data.supabaseAnonKey;

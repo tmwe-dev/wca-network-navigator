@@ -250,7 +250,7 @@ export function useWhatsAppBackfill() {
               body_text: text,
               message_id_external: extId,
               raw_payload: msg as never,
-            } as never, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+            } as never, { onConflict: "message_id_external", ignoreDuplicates: true });
 
           if (!error && status === 201) chatRecovered++;
           else chatDupes++;
