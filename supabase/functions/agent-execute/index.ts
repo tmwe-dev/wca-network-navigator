@@ -5,6 +5,8 @@ import { ALL_TOOLS } from "./toolDefs.ts";
 import { executeTool } from "./toolHandlers.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
+import { compressMessages } from "../ai-assistant/contextLoader.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
