@@ -32,8 +32,6 @@ interface PlaybookTriggerConditions {
   lead_status?: string[];
 }
 
-// Variable declared at module scope, set by executeSearchKb closure
-const userId = "";
 
 export function createEnterpriseHandlers(supabase: SupabaseClient) {
 
@@ -153,7 +151,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
     return { ui_action: { type: args.action_type, payload: args.payload || {} }, message: `Azione UI: ${args.action_type}` };
   }
 
-  async function executeSearchKb(args: Record<string, unknown>) {
+  async function executeSearchKb(args: Record<string, unknown>, _userId: string) {
     const query = String(args.query || "").trim();
     if (!query) return { error: "query è obbligatoria" };
     const limit = Math.min(Math.max(Number(args.limit) || 6, 1), 20);
@@ -166,7 +164,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
       if (matches.length === 0) {
         const { data } = await supabase.from("kb_entries")
           .select("id, title, content, category, chapter, tags, priority")
-          .eq("is_active", true).eq("user_id", userId).ilike("content", `%${escapeLike(query)}%`)
+          .eq("is_active", true).eq("user_id", _userId).ilike("content", `%${escapeLike(query)}%`)
           .order("priority", { ascending: false }).limit(limit);
         return { matches: data || [], method: "fallback_text" };
       }

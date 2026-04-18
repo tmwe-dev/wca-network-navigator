@@ -187,7 +187,7 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(state.mode === "conversational"
-          ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat" }
+          ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
           : { messages: allMsgs }),
       });
 
