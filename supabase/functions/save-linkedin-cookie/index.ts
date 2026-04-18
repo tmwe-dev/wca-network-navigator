@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
+import { encryptValue } from "../_shared/linkedinCrypto.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -14,8 +15,15 @@ Deno.serve(async (req) => {
 
   try {
     const { cookie } = await req.json()
-    if (!cookie || typeof cookie !== 'string') {
-      return respond({ success: false, message: 'Cookie li_at mancante' }, 400, dynCors)
+    // FIX G6 — strict cookie format validation
+    if (
+      !cookie ||
+      typeof cookie !== 'string' ||
+      cookie.length < 20 ||
+      cookie.length > 500 ||
+      /[<>"']/.test(cookie)
+    ) {
+      return respond({ success: false, message: 'Cookie format invalid' }, 400, dynCors)
     }
 
     const supabase = createClient(
@@ -25,10 +33,14 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString()
 
-    console.log(`save-linkedin-cookie: received li_at (${cookie.length} chars), auth: ${auth.authMethod}`)
+    // FIX G4 — no length/content logging
+    console.log(`save-linkedin-cookie: cookie received and encrypted, auth: ${auth.authMethod}`)
+
+    // FIX G1 — encrypt cookie before persisting
+    const encryptedCookie = await encryptValue(cookie)
 
     await supabase.from('app_settings').upsert(
-      { key: 'linkedin_li_at', value: cookie, updated_at: now },
+      { key: 'linkedin_li_at', value: encryptedCookie, updated_at: now },
       { onConflict: 'key' }
     )
     await supabase.from('app_settings').upsert(
