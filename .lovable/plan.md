@@ -1,58 +1,108 @@
 
 
-## Audit & Piano: 3 Fix Sicurezza Isolamento Dati
+## Analisi Performance — Apertura `/v2` e maschere principali
 
-### Scoperta importante durante l'audit
-Il prompt assume che `userId` sia disponibile nella closure di `createWriteHandlers(supabase)`. **Non lo è**: il factory viene istanziato a livello modulo in `ai-assistant/index.ts` riga 44 (`const writeH = createWriteHandlers(supabase)`), prima che `userId` venga estratto dal JWT della request. Quindi `userId` deve essere passato **per ogni chiamata** dell'handler, non al factory. Gli stessi bug esistono **duplicati** in altri 2 file: `agent-execute/toolHandlers.ts` e `_shared/platformTools.ts`. Vanno fixati anche lì per coerenza, altrimenti l'AI invocata dagli agenti autonomi continuerebbe a creare record orfani.
+### Cosa succede quando apri `/v2` (Dashboard) — sequenza reale
 
----
+```text
+1. App.tsx mount
+   └─ AuthProvider → getSession() locale (~5ms) → status="authenticated"
+2. V2Routes → V2AuthGate → AuthenticatedLayout mount
+3. AuthenticatedLayout monta in cascata:
+   ├─ 6 Provider annidati (QueryClient, Tooltip, ActiveOperator,
+   │  ContactDrawer, DeepSearch, GlobalFilters, Mission) — ~50ms
+   ├─ useAuthV2 (secondo hook auth, parallelo a useAuth)
+   ├─ useWcaSession (heartbeat WCA)
+   ├─ useAiBridgeListener
+   ├─ useQuery onboarding.completed → SELECT profiles (~150ms)
+   ├─ scheduleIdlePrefetch → precarica 4 chunk (Network, CRM, Outreach, Dashboard)
+   └─ BackgroundServices (ritardato a requestIdleCallback ~16ms-2s):
+       ├─ useJobHealthMonitor → useDownloadJobs → SELECT download_jobs LIMIT 50
+       │  └─ + canale Realtime "download-jobs-realtime-singleton"
+       ├─ useWcaSync
+       ├─ useOptimusBridgeListener
+       ├─ useAiExtractBridgeListener
+       ├─ useOutreachQueue
+       └─ useGlobalAutoSync:
+           ├─ useAutoConnect
+           ├─ SELECT app_settings (work hours)
+           ├─ setInterval 60s notturno
+           └─ useEmailAutoSync (auto-sync IMAP periodico)
 
-### FIX #5 — `loadUserProfile` userId obbligatorio
-**File**: `supabase/functions/ai-assistant/contextLoader.ts` riga 66-68
-- Cambia firma in `userId: string` (non opzionale) + early return se vuoto + filtro `.eq("user_id", userId)` sempre applicato.
-- I 2 call site in `index.ts` (righe 374, 384) già passano `userId` → zero impatto runtime.
+4. DashboardPage → SuperHome3D mount, lancia in parallelo:
+   ├─ useDashboardData → RPC get_dashboard_snapshot (1 call, ~300-800ms)
+   ├─ useDownloadJobs → SELECT download_jobs (duplicata con #3)
+   ├─ useDailyBriefing → invokeEdge("daily-briefing")
+   │  └─ Edge function → 3-5 secondi (LLM call interna) ⚠️
+   └─ Lazy-load 5 widget pesanti:
+       ├─ SmartActions
+       ├─ OperativeMetricsGrid
+       ├─ AgentStatusPanel
+       ├─ DashboardCharts → 4 useQuery aggiuntive:
+       │  ├─ SELECT activities (ultimi 30gg)
+       │  ├─ SELECT activities LIMIT 1000
+       │  ├─ SELECT response_patterns
+       │  └─ SELECT imported_contacts (lead_score)
+       └─ ResponseRateCard → 1 useQuery
+   + Recharts (~80kb gzip) caricato a runtime
 
-### FIX #6 — Activities & Reminders con `user_id` esplicito
-**File `_shared/toolHandlersWrite.ts`**:
-- Cambio firma di `executeCreateReminder(args, userId: string)` e `executeCreateActivity(args, userId: string)`. Aggiungo `user_id: userId` nelle 2 insert (righe 57-61 e 130-138).
+5. HomeAIPrompt:
+   └─ useAppSettings → SELECT app_settings (terza volta in pagina)
+```
 
-**File `ai-assistant/toolExecutors.ts`** righe 263, 267:
-- Sposto `create_reminder` e `create_activity` dal `writeMap` (no auth) al `writeAuthMap` (con auth), passando `userId!`. La key check `userId ? ... : { error: "Auth required" }` lo gestisce già al map enterprise — replico per write.
+### Cosa rallenta davvero (in ordine d'impatto)
 
-**Duplicati negli altri file** (stesso bug):
-- `_shared/platformTools.ts` riga 290-302 (`create_activity`) e 324-330 (`create_reminder`): aggiungo `user_id: userId` (la funzione `executeTool` già riceve `userId` come parametro).
-- `agent-execute/toolHandlers.ts` riga 215-221 (`create_reminder`) e 303-315 (`create_activity`): stesso fix.
+**🔴 Critico — TTI percepito**
 
-### FIX #7 — `delete_records` con ownership
-**File `_shared/toolHandlersWrite.ts`** riga 208-218:
-- Rimuovo `imported_contacts` da `validTables`.
-- Aggiungo parametro `userId: string` a `executeDeleteRecords`.
-- Aggiungo `.eq("user_id", userId)` prima di `.in("id", ids)`.
+| # | Causa | Costo |
+|---|---|---|
+| 1 | `useDailyBriefing` invoca edge `daily-briefing` che internamente chiama un LLM. Bloccante per il widget Briefing AI ma il `useQuery` parte subito al mount → satura connessioni e produce loading di 2-5s | **+2000-5000ms** |
+| 2 | `DashboardCharts` lancia **4 query separate** invece di una RPC; `activities` LIMIT 1000 senza indice mirato; bundle Recharts ~80kb caricato eagerly nella stessa schermata | **+400-1200ms + 80kb JS** |
+| 3 | Onboarding wizard gate: `onboardingLoading` blocca il render dell'Outlet finché `profiles.onboarding_completed` non risponde (anche con cache infinita, primo hit netto) | **+150-400ms** |
+| 4 | Doppio sistema auth: `useAuth()` (centrale) + `useAuthV2()` (legacy) montati insieme = 2 listener `onAuthStateChange` + doppia logica di status | **+50-150ms + flicker** |
 
-**File `ai-assistant/toolExecutors.ts`** riga 271:
-- Sposto `delete_records` dal `writeMap` al `writeAuthMap`, passando `userId!`.
+**🟠 Alto — overhead costante**
 
-**Duplicati**:
-- `_shared/platformTools.ts` riga 682-690: rimuovo `imported_contacts` + aggiungo `.eq("user_id", userId)`.
-- `agent-execute/toolHandlers.ts` riga 438-445: stesso fix (la funzione già riceve `userId`).
+| # | Causa | Note |
+|---|---|---|
+| 5 | `useDownloadJobs` montato **2 volte** (in `BackgroundServices > useJobHealthMonitor` e in `SuperHome3D` direttamente). Il singleton evita il doppio canale Realtime ma la `useQuery` resta duplicata se le `queryKey` divergono | Da verificare |
+| 6 | `useAppSettings` chiamato in 3+ punti (HomeAIPrompt, GlobalAutoSync, altri) → 3 SELECT app_settings al primo paint | |
+| 7 | `scheduleIdlePrefetch` carica subito 4 grossi chunk (Network/CRM/Outreach/Dashboard inclusi `Operations`, `CRM`, `Outreach` V1) → **+~500-900kb JS** scaricati anche se l'utente non naviga | |
+| 8 | 6 Provider innestati + `GlobalFiltersContext` con reducer da 33 filtri → ogni cambio rotta riconcilia tutto | |
+| 9 | `setInterval` 60s in `useGlobalAutoSync` per night-pause + `useEmailAutoSync` periodico | Costo basso ma costante |
 
----
+**🟡 Medio — pagine secondarie (Network/CRM/Outreach)**
 
-### File modificati totali (5)
-1. `supabase/functions/ai-assistant/contextLoader.ts` — firma `loadUserProfile`
-2. `supabase/functions/_shared/toolHandlersWrite.ts` — firme + insert + delete con `user_id`
-3. `supabase/functions/ai-assistant/toolExecutors.ts` — sposta `create_reminder`/`create_activity`/`delete_records` nel writeAuthMap
-4. `supabase/functions/_shared/platformTools.ts` — fix duplicati
-5. `supabase/functions/agent-execute/toolHandlers.ts` — fix duplicati
+- `NetworkPage` → monta `Operations` (329 righe) che usa `useGlobalFilters`, `useDeepSearch`, `useCountryStats`, `usePartner`, `rpcGetDirectoryCounts`, `BusinessCardsView`, `PartnerListPanel`. Al primo accesso: chunk ~200kb + 2-3 query parallele per le country counts.
+- `CRMPage` → monta `CRM` (117 righe) lazy-load `AIMatchDialog` + Kanban; `useUrlState` reidrata filtri da URL (sync onMount).
+- Entrambe **non hanno Suspense interno** (delegato a `guardedPage`) → durante la transizione l'utente vede `<PageSkeleton />` finché non è pronto **tutto** il chunk + le query del `useEffect` iniziale.
+- `useTrackPage("network")` aggiunge una insert in tabella telemetria a ogni navigazione.
 
-### Effetto netto
-- AI Assistant: activities/reminders creati dall'AI ora hanno `user_id` corretto → visibili solo all'autore via RLS. Delete blocca cross-user e shared tables.
-- Agent Execute (autonomous cycle): stessa protezione → record creati dagli agenti autonomi sono attribuiti all'utente proprietario della missione.
-- `loadUserProfile`: contratto rafforzato, zero regressioni runtime.
+### Diagnosi riassuntiva
 
-### Rischi
-- Zero rischi di regressione: tutti i call site attuali passano già `userId` al livello superiore. La modifica è additiva.
-- Compile-time: TypeScript catturerà eventuali call site dimenticati al primo build.
+L'apertura di `/v2` è **lenta principalmente per 3 motivi**:
 
-**Stima**: ~5 minuti di lavoro.
+1. **La Dashboard fa lavoro che non serve subito**: 4 grafici Recharts + briefing AI partono al mount, anche se l'utente molto probabilmente naviga via.
+2. **Il prefetch idle è troppo aggressivo**: scarica preventivamente 4 grosse rotte V1 (~500-900kb), competendo con le query attive.
+3. **Edge function `daily-briefing` lenta**: un LLM call sincrono dietro `useQuery` con `staleTime` 15min — il primo hit di giornata è devastante.
+
+Le pagine secondarie (Network/CRM/Outreach) sono lente al **primo** accesso perché caricano grossi chunk V1 senza skeleton parziali; dal secondo accesso sono cache-hit.
+
+### Piano d'azione consigliato (in ordine di ROI)
+
+1. **Defer Briefing AI**: spostare `useDailyBriefing` dietro l'apertura del `<Collapsible>` "Briefing AI" (oggi `briefingOpen` esiste ma la query parte comunque). Stima: **-2000ms TTI**.
+2. **Defer DashboardCharts + ResponseRateCard**: Intersection Observer / "Mostra grafici" on-demand, oppure `requestIdleCallback`. Stima: **-400ms + -80kb JS iniziali**.
+3. **Consolidare le 4 query charts** in un'unica RPC `get_dashboard_charts_snapshot` (pattern già usato per `get_dashboard_snapshot`). Stima: 4 RTT → 1.
+4. **Limitare `scheduleIdlePrefetch` a 1-2 rotte** (solo `/v2/network` come hot-path); rimuovere CRM/Outreach dal prefetch globale, lasciandoli all'hover.
+5. **Deduplicare auth**: deprecare `useAuthV2` ovunque non serve la `profile.displayName` async; usare solo `useAuth` da `AuthProvider`.
+6. **Cache `app_settings` lato client**: una sola `useQuery` con chiave globale, invalidata su update.
+7. **Skeleton parziali in NetworkPage/CRMPage**: mostrare grid/header subito, lazy-load i pannelli pesanti (BusinessCardsView, Kanban) con Suspense interno.
+8. **`useTrackPage`**: batch + flush su requestIdleCallback invece di insert sincrona.
+
+### Stima impatto cumulato
+
+- **TTI Dashboard**: da ~3-5s percepiti a ~800-1200ms (-70%).
+- **JS iniziale**: -80-150kb gzip.
+- **Query al primo paint**: da ~12 a ~5.
+- **Navigazione tra pagine già visitate**: invariata (già ottimizzata via React Query cache).
 
