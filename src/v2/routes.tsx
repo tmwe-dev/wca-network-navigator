@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useParams, Outlet } from "react-router-dom";
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -107,6 +107,12 @@ function V2AuthGateRaw(): React.ReactElement {
   return <Outlet />;
 }
 
+/** Alias redirect preserving :id param */
+function RACompanyRedirect(): React.ReactElement {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/v2/ra-company/${id ?? ""}`} replace />;
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
@@ -166,6 +172,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
           <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
           <Route path="ra-company/:id" element={guardedPage(RACompanyDetailPage, "RACompanyDetail")} />
+          {/* Aliases: /v2/research/* → canonical /v2/ra-* */}
+          <Route path="research/explorer" element={<Navigate to="/v2/ra-explorer" replace />} />
+          <Route path="research/scraping" element={<Navigate to="/v2/ra-scraping" replace />} />
+          <Route path="research/company/:id" element={<RACompanyRedirect />} />
           <Route path="campaign-jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
           <Route path="admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
           <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
