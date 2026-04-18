@@ -37,7 +37,7 @@ var TabManager = globalThis.TabManager || (function () {
   }
 
   async function safeRemoveTab(tabId) {
-    try { await chrome.tabs.remove(tabId); } catch (_) {}
+    try { await chrome.tabs.remove(tabId); } catch (err) { console.debug("[WA Tab]", err?.message); }
   }
 
   async function waitForLoad(tabId, timeoutMs) {
@@ -47,7 +47,7 @@ var TabManager = globalThis.TabManager || (function () {
       try {
         const tab = await chrome.tabs.get(tabId);
         if (tab.status === "complete") return true;
-      } catch (_) { return false; }
+      } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
       await sleep(500);
     }
     return false;
@@ -66,14 +66,14 @@ var TabManager = globalThis.TabManager || (function () {
     try {
       const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
       return sortTabsByFreshness(tabs)[0] || null;
-    } catch (_) { return null; }
+    } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
   async function getLastFocusedActiveTab() {
     try {
       const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       return tabs && tabs[0] ? tabs[0] : null;
-    } catch (_) { return null; }
+    } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
 
   // ── STEALTH MODE: never steal focus from the user's app window ──
@@ -89,7 +89,7 @@ var TabManager = globalThis.TabManager || (function () {
       // Add a small extra wait so background-tab DOM has time to settle.
       await sleep(Math.min(postActivateMs || 600, 1500));
       return true;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
   }
 
   // Backward-compat shim: also stealth — never activates or focuses the tab.
@@ -106,7 +106,7 @@ var TabManager = globalThis.TabManager || (function () {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
         return { tab: existing, reused: true };
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Tab]", err?.message); }
     const tab = await safeCreateTab(Config.WA_BASE, false);
     const loaded = await waitForLoad(tab.id, 30000);
     if (!loaded) throw new Error("WhatsApp Web non caricato");
@@ -122,7 +122,7 @@ var TabManager = globalThis.TabManager || (function () {
         files: ["content.js"],
       });
       return true;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
   }
 
   async function injectBridgeIntoTab(tabId) {
@@ -136,7 +136,7 @@ var TabManager = globalThis.TabManager || (function () {
         injected = ok || injected;
       }
       return injected;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[WA Tab]", err?.message); return false; }
   }
 
   async function syncBridgeAcrossOpenTabs() {
@@ -146,7 +146,7 @@ var TabManager = globalThis.TabManager || (function () {
         if (typeof tabs[i].id !== "number") continue;
         await injectBridgeIntoTab(tabs[i].id);
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Tab]", err?.message); }
   }
 
   return {

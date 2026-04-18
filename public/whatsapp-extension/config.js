@@ -52,7 +52,7 @@ var Config = globalThis.Config || (function () {
       _key = data.anonKey || "";
       // authToken is never persisted — always received fresh via setConfig
       _token = "";
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Config]", err?.message); }
   }
 
   async function save(url, key, token) {
@@ -62,7 +62,7 @@ var Config = globalThis.Config || (function () {
     try {
       // Only persist non-sensitive config. authToken is kept in memory only.
       await chrome.storage.local.set({ supabaseUrl: _url, anonKey: _key });
-    } catch (_) {}
+    } catch (err) { console.debug("[WA Config]", err?.message); }
   }
 
   function getUrl() { return _url; }

@@ -323,7 +323,7 @@ var Actions = globalThis.Actions || (function () {
         axResult.method = "legacy-ax";
         return axResult;
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Actions]", err?.message); }
 
     try {
       const results = await chrome.scripting.executeScript({
@@ -503,7 +503,7 @@ var Actions = globalThis.Actions || (function () {
     await TabManager.sleep(2500);
 
     let axAvailable = false;
-    try { axAvailable = await AXTree.isAvailable(tab.id); } catch (_) {}
+    try { axAvailable = await AXTree.isAvailable(tab.id); } catch (err) { console.debug("[LI Actions] AX check:", err?.message); }
 
     const schema = await AILearn.getCached("messaging");
 

@@ -225,7 +225,7 @@ var Optimus = globalThis.Optimus || (function () {
         }
         return candidates[0];
       });
-    } catch (_) { return Promise.resolve(null); }
+    } catch (err) { console.debug("[WA Optimus] plan request:", err?.message); return Promise.resolve(null); }
   }
 
   // ── Request plan via content.js relay ──
@@ -304,11 +304,11 @@ var Optimus = globalThis.Optimus || (function () {
   function _pageExecutePlan(rootSelector, fallbackBody, plan) {
     function trySel(root, sel) {
       if (!sel) return null;
-      try { return root.querySelector(sel); } catch (_) { return null; }
+      try { return root.querySelector(sel); } catch (err) { console.debug("[WA Optimus] sel:", err?.message); return null; }
     }
     function tryAll(root, sel) {
       if (!sel) return [];
-      try { return Array.from(root.querySelectorAll(sel)); } catch (_) { return []; }
+      try { return Array.from(root.querySelectorAll(sel)); } catch (err) { console.debug("[WA Optimus] selAll:", err?.message); return []; }
     }
     function pickFirst(root, primary, fallback) {
       var a = trySel(root, primary);

@@ -32,7 +32,7 @@ var AiBridge = globalThis.AiBridge || (function () {
       if (candidates.length === 0) return null;
       for (const c of candidates) if (c.active) return c;
       return candidates[0];
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Bridge] findTab:", err?.message); }
     return null;
   }
 

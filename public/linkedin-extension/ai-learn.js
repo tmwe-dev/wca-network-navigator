@@ -27,7 +27,7 @@ var AILearn = globalThis.AILearn || (function () {
           return schema;
         }
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Learn]", err?.message); }
     return null;
   }
 

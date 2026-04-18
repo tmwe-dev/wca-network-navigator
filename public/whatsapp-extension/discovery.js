@@ -20,7 +20,7 @@ var Discovery = globalThis.Discovery || (function () {
               scanShadowRoots(el.shadowRoot, roots, seen);
             }
           }
-        } catch (_) {}
+        } catch (err) { console.debug("[WA Discovery]", err?.message); }
       }
 
       let searchRootsCache = null;
@@ -40,7 +40,7 @@ var Discovery = globalThis.Discovery || (function () {
             root.querySelectorAll(sel).forEach(function (el) {
               if (!seen.has(el)) { seen.add(el); out.push(el); }
             });
-          } catch (_) {}
+          } catch (err) { console.debug("[WA Discovery]", err?.message); }
         }
         return out;
       }
@@ -52,7 +52,7 @@ var Discovery = globalThis.Discovery || (function () {
           try {
             const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
             return !rect || rect.width > 0 || rect.height > 0;
-          } catch (_) { return true; }
+          } catch (err) { console.debug("[WA Discovery] rect:", err?.message); return true; }
         });
       }
 
@@ -180,7 +180,7 @@ var Discovery = globalThis.Discovery || (function () {
           const lower = String(key || '').toLowerCase();
           return authMarkerPatterns.some(function (m) { return lower.indexOf(m) !== -1; });
         }).slice(0, 12);
-      } catch (_) {}
+      } catch (err) { console.debug("[WA Discovery]", err?.message); }
 
       // ── App loaded check ──
       result.appLoaded = !!(qsDeep('#app') || qsDeep('[id="app"]'));
@@ -212,7 +212,7 @@ var Discovery = globalThis.Discovery || (function () {
             const titleEl = firstItem.querySelector('span[title]');
             result.firstTitle = titleEl ? titleEl.getAttribute("title") : null;
           }
-        } catch (_) {}
+        } catch (err) { console.debug("[WA Discovery]", err?.message); }
       }
 
       // ── data-testid inventory ──
@@ -266,7 +266,7 @@ var Discovery = globalThis.Discovery || (function () {
         if (lastResult && (lastResult.hasQR || hasRenderableWaUi(lastResult))) {
           return lastResult;
         }
-      } catch (_) {}
+      } catch (err) { console.debug("[WA Discovery]", err?.message); }
     }
     return lastResult;
   }
