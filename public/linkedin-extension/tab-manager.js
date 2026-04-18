@@ -97,19 +97,17 @@ var TabManager = globalThis.TabManager || (function () {
     return _liTabId;
   }
 
-  // ── Ensure tab is active+focused so DOM rendering resumes (no restore) ──
+  // ── STEALTH: never steal focus from the user's window ──
+  // Same pattern as WhatsApp extension: only verify the tab exists,
+  // then sleep so background-tab DOM throttling has time to settle.
+  // We MUST NOT call chrome.tabs.update({active:true}) or
+  // chrome.windows.update({focused:true}) — that kicks the user out of the Cockpit.
   async function ensureTabVisibleAndWait(tabId, postActivateMs) {
     try {
       const tab = await chrome.tabs.get(tabId);
       if (!tab) return false;
-      let activated = false;
-      if (!tab.active) {
-        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (err) { console.debug("[LI Tab] update:", err?.message); }
-      }
-      if (typeof tab.windowId === "number") {
-        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (err) { console.debug("[LI Tab] focus:", err?.message); }
-      }
-      if (activated) await sleep(postActivateMs || 1200);
+      // Small extra wait so background-tab DOM has time to settle.
+      await sleep(Math.min(postActivateMs || 600, 1500));
       return true;
     } catch (err) { console.debug("[LI Tab] visible:", err?.message); return false; }
   }

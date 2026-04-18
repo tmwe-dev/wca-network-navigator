@@ -261,9 +261,8 @@ var Auth = globalThis.Auth || (function () {
     if (!creds.email || !creds.password) return Config.errorResponse(Config.ERROR.LOGIN_FAILED, "Credenziali LinkedIn non configurate");
 
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/");
-    try { await chrome.tabs.update(tab.id, { active: true }); } catch (err) {
-      console.warn("[LI Auth] tab activate failed:", (err && err.message) || err);
-    }
+    // STEALTH: do NOT activate/focus the tab — keep work in background to avoid
+    // hijacking the user's Cockpit window. executeScript works on inactive tabs.
 
     try {
       const initialStateRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: inspectPage });
