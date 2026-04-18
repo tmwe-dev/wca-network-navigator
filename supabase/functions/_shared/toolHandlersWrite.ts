@@ -51,13 +51,14 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, partner_id: partner.id, company_name: partner.name, message: `Nota aggiunta a "${partner.name}": ${args.subject}` };
   }
 
-  async function executeCreateReminder(args: Record<string, unknown>) {
+  async function executeCreateReminder(args: Record<string, unknown>, userId: string) {
     const partner = await resolvePartnerId(args);
     if (!partner) return { error: "Partner non trovato. Specifica partner_id o company_name." };
     const { error } = await supabase.from("reminders").insert({
       partner_id: partner.id, title: String(args.title),
       description: args.description ? String(args.description) : null,
       due_date: String(args.due_date), priority: String(args.priority || "medium"),
+      user_id: userId,
     });
     if (error) return { error: error.message };
     return { success: true, partner_id: partner.id, company_name: partner.name, due_date: args.due_date, priority: args.priority || "medium", message: `Reminder creato per "${partner.name}": "${args.title}" (scadenza: ${args.due_date})` };
