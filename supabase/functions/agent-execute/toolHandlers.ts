@@ -335,6 +335,46 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     }
 
     case "send_email": {
+      // ═══ HARD GUARD: agent approval required ═══
+      // agent-execute è sempre contesto agente autonomo. Se l'utente ha attivato
+      // agent_require_approval, non inviare direttamente: accoda in ai_pending_actions.
+      const { data: approvalSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("user_id", userId)
+        .eq("key", "agent_require_approval")
+        .maybeSingle();
+
+      const requiresApproval =
+        approvalSetting?.value === "true" || approvalSetting?.value === true;
+
+      if (requiresApproval) {
+        const { error: queueError } = await supabase.from("ai_pending_actions").insert({
+          user_id: userId,
+          action_type: "send_email",
+          action_payload: {
+            to: args.to_email,
+            to_name: args.to_name,
+            subject: args.subject,
+            html: args.html_body,
+            partner_id: args.partner_id ?? null,
+          },
+          status: "pending",
+          source: "agent_autonomous",
+          reasoning: "Agent attempted send_email; agent_require_approval=true",
+          partner_id: args.partner_id ? String(args.partner_id) : null,
+        });
+        if (queueError) {
+          console.error("Failed to queue email for approval:", queueError);
+          return { error: "Impossibile accodare email per approvazione" };
+        }
+        return {
+          success: true,
+          requires_approval: true,
+          message: `Email a ${args.to_email} accodata per approvazione utente. Non inviata.`,
+        };
+      }
+
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
