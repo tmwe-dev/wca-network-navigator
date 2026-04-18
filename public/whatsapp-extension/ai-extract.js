@@ -275,6 +275,42 @@ var AiExtract = globalThis.AiExtract || (function () {
             snapshot.broadSample = app.outerHTML.slice(0, 8000);
           }
 
+          // J5 — Sample chat items (first 3 rows for AI to understand structure)
+          var chatItemSamples = [];
+          var rowCandidates = qsaDeep('[role="row"], [data-testid="cell-frame-container"], [tabindex="-1"][role="listitem"]');
+          for (var ci = 0; ci < Math.min(rowCandidates.length, 3); ci++) {
+            chatItemSamples.push(rowCandidates[ci].outerHTML.slice(0, 1500));
+          }
+          if (chatItemSamples.length > 0) snapshot.chatItemSamples = chatItemSamples;
+
+          // J5 — Visible buttons
+          var buttons = [];
+          qsaDeep('button, [role="button"]').forEach(function(btn) {
+            if (btn.offsetParent === null) return;
+            buttons.push({
+              text: (btn.textContent || '').trim().slice(0, 50),
+              ariaLabel: btn.getAttribute('aria-label') || '',
+              testId: btn.getAttribute('data-testid') || '',
+            });
+          });
+          snapshot.buttons = buttons.slice(0, 20);
+
+          // J5 — Tabindex elements (WhatsApp uses tabindex extensively)
+          var tabIndexEls = [];
+          qsaDeep('[tabindex]').forEach(function(el) {
+            var ti = el.getAttribute('tabindex');
+            tabIndexEls.push({
+              tag: el.tagName.toLowerCase(),
+              tabindex: ti,
+              role: el.getAttribute('role') || '',
+              testId: el.getAttribute('data-testid') || '',
+            });
+          });
+          snapshot.tabIndexElements = tabIndexEls.slice(0, 30);
+
+          // J5 — Page language
+          snapshot.lang = document.documentElement.lang || navigator.language || 'unknown';
+
           return snapshot;
         },
       });
