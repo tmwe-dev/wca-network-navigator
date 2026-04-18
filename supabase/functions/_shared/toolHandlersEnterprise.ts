@@ -32,8 +32,6 @@ interface PlaybookTriggerConditions {
   lead_status?: string[];
 }
 
-// Variable declared at module scope, set by executeSearchKb closure
-const userId = "";
 
 export function createEnterpriseHandlers(supabase: SupabaseClient) {
 
