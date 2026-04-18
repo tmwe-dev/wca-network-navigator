@@ -10,29 +10,37 @@ type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabas
 
 export function createReadHandlers(supabase: SupabaseClient) {
 
-  async function executeSearchPartners(args: Record<string, unknown>) {
+  async function executeSearchPartners(args: Record<string, unknown>, userId?: string) {
     const isCount = !!args.count_only;
     let partnerIdFilter: string[] | null = null;
 
     if (args.service) {
-      const { data } = await supabase.from("partner_services").select("partner_id").eq("service_category", args.service);
+      let q = supabase.from("partner_services").select("partner_id").eq("service_category", args.service);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       partnerIdFilter = (data || []).map((r: { partner_id: string }) => r.partner_id);
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.certification) {
-      const { data } = await supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
+      let q = supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const certIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => certIds.includes(id)) : certIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.network_name) {
-      const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
+      let q = supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const netIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.has_phone !== undefined && args.has_phone) {
-      const { data } = await supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
+      let q = supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const phoneIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => phoneIds.includes(id)) : phoneIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
@@ -43,6 +51,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       isCount ? { count: "exact", head: true } : undefined
     );
 
+    if (userId) query = query.eq("user_id", userId);
     if (partnerIdFilter) query = query.in("id", partnerIdFilter.slice(0, 500));
     if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
     if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
