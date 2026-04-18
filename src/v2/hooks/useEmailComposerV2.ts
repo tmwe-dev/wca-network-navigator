@@ -100,14 +100,14 @@ export function useEmailComposerV2() {
         ? `Destinatario: ${recipients[0].name} di ${recipients[0].companyName ?? "N/D"} (${recipients[0].email})`
         : "";
 
-      const data = await invokeEdge<{ response?: string; content?: string }>("ai-assistant", {
+      const data = await invokeEdge<{ response?: string; content?: string }>("unified-assistant", {
         body: {
           messages: [{
             role: "user",
             content: `Genera un'email di tipo "${emailType}", tono "${tone}". ${recipientInfo}. Oggetto: ${subject || "da definire"}. ${goal ? `Obiettivo: ${goal}` : ""} Contesto: outreach commerciale logistica.`,
           }],
-          context: "email_composer",
-          use_kb: useKB,
+          scope: "extension",
+          context: { source: "email_composer", use_kb: useKB },
         },
         context: "emailComposerV2",
       });
