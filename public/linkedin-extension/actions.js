@@ -143,9 +143,14 @@ var Actions = globalThis.Actions || (function () {
         date: "timestamp",
         messageTimeSelector: "timestamp",
         // Unread badge
+        // Unread badge
         unreadBadge: "unread_badge",
         unreadIndicator: "unread_badge",
         unreadDot: "unread_badge",
+        // J10 — Thread URL
+        threadUrl: "thread_url",
+        conversationUrl: "thread_url",
+        url: "thread_url",
       };
       return buildPlanFromKeyMap(schema, keyMap);
     }
