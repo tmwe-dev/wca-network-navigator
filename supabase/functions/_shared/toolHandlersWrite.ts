@@ -22,7 +22,7 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     return null;
   }
 
-  async function executeUpdatePartner(args: Record<string, unknown>) {
+  async function executeUpdatePartner(args: Record<string, unknown>, userId: string) {
     const partner = await resolvePartnerId(args);
     if (!partner) return { error: "Partner non trovato" };
     const updates: Record<string, unknown> = {};
@@ -33,7 +33,7 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     if (args.company_alias) { updates.company_alias = args.company_alias; changes.push(`alias: ${args.company_alias}`); }
     if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare specificato" };
     updates.updated_at = new Date().toISOString();
-    const { error } = await supabase.from("partners").update(updates).eq("id", partner.id);
+    const { error } = await supabase.from("partners").update(updates).eq("user_id", userId).eq("id", partner.id);
     if (error) return { error: error.message };
     return { success: true, partner_id: partner.id, company_name: partner.name, changes, message: `Partner "${partner.name}" aggiornato: ${changes.join(", ")}` };
   }
@@ -88,21 +88,21 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     return { success: true, updated_count: ids.length, status, message: `${ids.length} contatti aggiornati a "${status}"` };
   }
 
-  async function executeBulkUpdatePartners(args: Record<string, unknown>) {
+  async function executeBulkUpdatePartners(args: Record<string, unknown>, userId: string) {
     const updates: Record<string, unknown> = {};
     const changes: string[] = [];
     if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
     if (args.lead_status) { updates.lead_status = args.lead_status; changes.push(`lead status: ${args.lead_status}`); }
     if (Object.keys(updates).length === 0) return { error: "Nessun aggiornamento specificato" };
     updates.updated_at = new Date().toISOString();
-    let countQuery = supabase.from("partners").select("id", { count: "exact", head: true });
+    let countQuery = supabase.from("partners").select("id", { count: "exact", head: true }).eq("user_id", userId);
     if (args.partner_ids && Array.isArray(args.partner_ids)) countQuery = countQuery.in("id", args.partner_ids as string[]);
     else if (args.country_code) countQuery = countQuery.eq("country_code", String(args.country_code).toUpperCase());
     else return { error: "Specifica country_code o partner_ids" };
     const { count } = await countQuery;
     if (!count || count === 0) return { error: "Nessun partner trovato" };
     if (count > 5) return { needs_confirmation: true, count, changes, message: `Trovati ${count} partner. Confermi l'aggiornamento: ${changes.join(", ")}?` };
-    let updateQuery = supabase.from("partners").update(updates);
+    let updateQuery = supabase.from("partners").update(updates).eq("user_id", userId);
     if (args.partner_ids && Array.isArray(args.partner_ids)) updateQuery = updateQuery.in("id", args.partner_ids as string[]);
     else if (args.country_code) updateQuery = updateQuery.eq("country_code", String(args.country_code).toUpperCase());
     const { error } = await updateQuery;

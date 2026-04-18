@@ -14,6 +14,7 @@ import { escapeLike } from "../_shared/sqlEscape.ts";
 import { createReadHandlers } from "../_shared/toolHandlersRead.ts";
 import { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
 import { createEnterpriseHandlers } from "../_shared/toolHandlersEnterprise.ts";
+import { getScopeConfig } from "../_shared/scopeConfigs.ts";
 
 import { composeSystemPrompt } from "./systemPrompt.ts";
 import { TOOL_DEFINITIONS } from "./toolDefinitions.ts";
@@ -509,12 +510,37 @@ Non eseguire tool di scrittura o modifica`;
 
     // ── AI call with model fallback ──
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
-    const activeTools = isConversational ? undefined : TOOL_DEFINITIONS;
+    // Tool filtering: use scope-specific tools if available, else all tools
+    let activeTools: typeof TOOL_DEFINITIONS | undefined = undefined;
+    if (!isConversational) {
+      if (scope && scope !== "partner_hub") {
+        try {
+          const scopeConfig = getScopeConfig(scope);
+          activeTools = scopeConfig.tools as typeof TOOL_DEFINITIONS;
+          console.log(`[AI] Scope "${scope}" → ${activeTools.length} tools`);
+        } catch {
+          activeTools = TOOL_DEFINITIONS;
+          console.log(`[AI] Scope "${scope}" not in scopeConfigs, using all ${TOOL_DEFINITIONS.length} tools`);
+        }
+      } else {
+        activeTools = TOOL_DEFINITIONS;
+      }
+    }
+    // Scope-specific model override (e.g. strategic uses gemini-2.5-flash)
+    let scopeModel: string | undefined;
+    if (scope && scope !== "partner_hub" && !provider.isUserKey) {
+      try {
+        const sc = getScopeConfig(scope);
+        if (sc.model) scopeModel = sc.model;
+      } catch { /* ignore */ }
+    }
     const fallbackModels = provider.isUserKey
       ? [provider.model]
       : isConversational
         ? ["google/gemini-2.5-flash", "openai/gpt-5-mini"]
-        : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
+        : scopeModel
+          ? [scopeModel, provider.model, "openai/gpt-5-mini"]
+          : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
     let response: Response | null = null;
     for (const tryModel of fallbackModels) {
@@ -561,8 +587,24 @@ Non eseguire tool di scrittura o modifica`;
     let lastJobCreated: Record<string, unknown> | null = null;
     const uiActions: Record<string, unknown>[] = [];
 
+    let lastToolSignature = "";
+    let repeatedToolCount = 0;
     while (assistantMessage?.tool_calls?.length && iterations < 8) {
       iterations++;
+      // Detect repeated tool calls (same tool + same args = stuck)
+      const currentSignature = (assistantMessage.tool_calls as Array<{ function: { name: string; arguments: string } }>)
+        .map((tc) => `${tc.function.name}:${tc.function.arguments}`)
+        .join("|");
+      if (currentSignature === lastToolSignature) {
+        repeatedToolCount++;
+        if (repeatedToolCount >= 2) {
+          console.warn(`[AI] Tool loop stuck: same call repeated ${repeatedToolCount + 1}x, breaking`);
+          break;
+        }
+      } else {
+        repeatedToolCount = 0;
+      }
+      lastToolSignature = currentSignature;
       const toolResults: Record<string, unknown>[] = [];
 
       for (const tc of assistantMessage.tool_calls) {
