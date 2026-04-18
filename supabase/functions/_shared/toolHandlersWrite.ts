@@ -51,13 +51,14 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, partner_id: partner.id, company_name: partner.name, message: `Nota aggiunta a "${partner.name}": ${args.subject}` };
   }
 
-  async function executeCreateReminder(args: Record<string, unknown>) {
+  async function executeCreateReminder(args: Record<string, unknown>, userId: string) {
     const partner = await resolvePartnerId(args);
     if (!partner) return { error: "Partner non trovato. Specifica partner_id o company_name." };
     const { error } = await supabase.from("reminders").insert({
       partner_id: partner.id, title: String(args.title),
       description: args.description ? String(args.description) : null,
       due_date: String(args.due_date), priority: String(args.priority || "medium"),
+      user_id: userId,
     });
     if (error) return { error: error.message };
     return { success: true, partner_id: partner.id, company_name: partner.name, due_date: args.due_date, priority: args.priority || "medium", message: `Reminder creato per "${partner.name}": "${args.title}" (scadenza: ${args.due_date})` };
@@ -118,7 +119,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, card_id: args.card_id, message: "Biglietto da visita collegato manualmente." };
   }
 
-  async function executeCreateActivity(args: Record<string, unknown>) {
+  async function executeCreateActivity(args: Record<string, unknown>, userId: string) {
     let partnerId = args.partner_id as string | null;
     let companyName = args.company_name as string || "";
     if (!partnerId && companyName) {
@@ -135,6 +136,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
       email_subject: args.email_subject ? String(args.email_subject) : null,
       email_body: args.email_body ? String(args.email_body) : null,
       source_meta: { company_name: companyName } as Record<string, unknown>,
+      user_id: userId,
     }).select("id").single();
     if (error) return { error: error.message };
     return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
@@ -205,14 +207,14 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, message: "Reminder aggiornato." };
   }
 
-  async function executeDeleteRecords(args: Record<string, unknown>) {
+  async function executeDeleteRecords(args: Record<string, unknown>, userId: string) {
     const table = String(args.table);
     const ids = args.ids as string[];
     if (!ids || ids.length === 0) return { error: "Nessun ID specificato" };
     if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
-    const validTables = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+    const validTables = ["partners", "prospects", "activities", "reminders"];
     if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
-    const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
+    const { error } = await supabase.from(table as "partners" | "prospects" | "activities" | "reminders").delete().eq("user_id", userId).in("id", ids);
     if (error) return { error: error.message };
     return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
   }

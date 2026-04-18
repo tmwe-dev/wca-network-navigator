@@ -260,20 +260,20 @@ export async function executeTool(
   const writeMap: Record<string, () => Promise<unknown>> = {
     update_partner: () => writeH.executeUpdatePartner(args),
     add_partner_note: () => writeH.executeAddPartnerNote(args),
-    create_reminder: () => writeH.executeCreateReminder(args),
     update_lead_status: () => writeH.executeUpdateLeadStatus(args),
     bulk_update_partners: () => writeH.executeBulkUpdatePartners(args),
     link_business_card: () => writeH.executeLinkBusinessCard(args),
-    create_activity: () => writeH.executeCreateActivity(args),
     update_activity: () => writeH.executeUpdateActivity(args),
     manage_partner_contact: () => writeH.executeManagePartnerContact(args),
     update_reminder: () => writeH.executeUpdateReminder(args),
-    delete_records: () => writeH.executeDeleteRecords(args),
   };
   if (writeMap[name]) return writeMap[name]();
 
   // Write handlers needing authHeader
   const writeAuthMap: Record<string, () => Promise<unknown>> = {
+    create_reminder: () => writeH.executeCreateReminder(args, userId!),
+    create_activity: () => writeH.executeCreateActivity(args, userId!),
+    delete_records: () => writeH.executeDeleteRecords(args, userId!),
     generate_outreach: () => writeH.executeGenerateOutreach(args, authHeader!),
     send_email: () => writeH.executeSendEmail(args, authHeader!),
     deep_search_partner: () => writeH.executeDeepSearchPartner(args, authHeader!),
@@ -282,7 +282,7 @@ export async function executeTool(
     scan_directory: () => writeH.executeScanDirectory(args, authHeader!),
     generate_aliases: () => writeH.executeGenerateAliases(args, authHeader!),
   };
-  if (writeAuthMap[name]) return authHeader ? writeAuthMap[name]() : { error: "Auth required" };
+  if (writeAuthMap[name]) return userId ? writeAuthMap[name]() : { error: "Auth required" };
 
   // ── Enterprise handlers (shared module) ──
   const entAuthMap: Record<string, () => Promise<unknown>> = {

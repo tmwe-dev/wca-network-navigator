@@ -296,6 +296,7 @@ export async function executePlatformTool(
         activity_type: String(args.activity_type), source_type: "partner", source_id: partnerId || crypto.randomUUID(),
         partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
         priority: String(args.priority || "medium"), source_meta: { company_name: companyName } as Record<string, unknown>,
+        user_id: userId,
       }).select("id").single();
       if (error) return { error: error.message };
       return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
@@ -324,7 +325,7 @@ export async function executePlatformTool(
     case "create_reminder": {
       const partner = await resolvePartnerId(args);
       if (!partner) return { error: "Partner non trovato" };
-      const { error } = await supabase.from("reminders").insert({ partner_id: partner.id, title: String(args.title), description: args.description ? String(args.description) : null, due_date: String(args.due_date), priority: String(args.priority || "medium") });
+      const { error } = await supabase.from("reminders").insert({ partner_id: partner.id, title: String(args.title), description: args.description ? String(args.description) : null, due_date: String(args.due_date), priority: String(args.priority || "medium"), user_id: userId });
       if (error) return { error: error.message };
       return { success: true, message: `Reminder creato per "${partner.name}".` };
     }
@@ -682,10 +683,10 @@ export async function executePlatformTool(
     case "delete_records": {
       const table = String(args.table);
       const ids = args.ids as string[];
-      const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+      const valid = ["partners", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-       
-      const { error } = await supabase.from(table as "partners").delete().in("id", ids);
+
+      const { error } = await supabase.from(table as "partners").delete().eq("user_id", userId).in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 
