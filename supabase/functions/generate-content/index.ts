@@ -40,9 +40,10 @@ serve(async (req) => {
           status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
         });
     }
-  } catch (e: Record<string, unknown>) {
+  } catch (e: unknown) {
     console.error("generate-content error:", e);
-    return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
+    const message = e instanceof Error ? e.message : String(e);
+    return new Response(JSON.stringify({ error: message || "Unknown error" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
