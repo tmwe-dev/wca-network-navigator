@@ -119,9 +119,13 @@ export async function downloadStaticExtensionZip(assetPath: string, filename: st
     const response = await fetchStaticAsset(assetPath, fallbackPaths);
     blob = await response.blob();
   } catch (error) {
-    // Embedded fallback only for the CURRENT WhatsApp version — guarantees
-    // user always gets a coherent ZIP, never a stale one.
-    if (filename === WHATSAPP_EXTENSION_CURRENT_FILENAME) {
+    // Embedded fallback only for the CURRENT WhatsApp version AND only if the
+    // embedded base64 truly contains that same version. This prevents serving
+    // a stale ZIP under a fresh filename (es. 5.5.1 mascherata da 5.7.0).
+    if (
+      filename === WHATSAPP_EXTENSION_CURRENT_FILENAME &&
+      EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION === WHATSAPP_EXTENSION_REQUIRED_VERSION
+    ) {
       blob = base64ToBlob(EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64, "application/zip");
     } else {
       throw error;
