@@ -664,7 +664,7 @@ var Actions = globalThis.Actions || (function () {
         await TabManager.sleep(4000);
         await ensurePageHelpers(tab.id);
         var results2 = await chrome.scripting.executeScript({
-          target: { tab.id },
+          target: { tabId: tab.id },
           func: _pageSendUrlFallback,
         });
         return results2 && results2[0] ? results2[0].result : { success: false, error: "Nessun risultato" };
