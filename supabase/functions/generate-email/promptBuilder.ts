@@ -129,6 +129,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: stri
     conversationIntelligenceContext,
     salesKBSlice, salesKBSections, _signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
+    commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
   } = ctx;
 
   // Resolve names
