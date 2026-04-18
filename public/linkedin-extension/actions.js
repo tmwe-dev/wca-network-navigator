@@ -254,7 +254,35 @@ var Actions = globalThis.Actions || (function () {
       previousPlanFailed: req.previousPlanFailed,
       failureContext: req.failureContext,
     });
-    if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    if (!planRes || !planRes.success) {
+      // I7 — Auto-relearn: Optimus thread plan failed, try AI learning
+      console.log("[LI Optimus] Thread plan failed, triggering auto-relearn...");
+      try {
+        const learnResult = await AILearn.learnFromAI(tabId, "thread", Config.getUrl(), Config.getKey());
+        if (learnResult && !learnResult.error) {
+          const freshPlan = convertLinkedInSchemaToOptimusPlan(learnResult, "thread");
+          if (freshPlan) {
+            const retryExec = await Optimus.executePlanInTab(tabId, threadSelector, freshPlan);
+            if (retryExec && retryExec.items && retryExec.items.length > 0) {
+              return {
+                success: true,
+                cached: false,
+                planVersion: 0,
+                confidence: 0,
+                latencyMs: 0,
+                items: retryExec.items,
+                candidates: retryExec.candidates || 0,
+                dropped: retryExec.dropped || 0,
+                method: "optimus-relearned",
+              };
+            }
+          }
+        }
+      } catch (learnErr) {
+        console.warn("[LI Optimus] Thread auto-relearn failed:", learnErr?.message);
+      }
+      return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    }
 
     const execRes = await Optimus.executePlanInTab(tabId, threadSelector, planRes.plan || planRes);
     if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
@@ -305,8 +333,9 @@ var Actions = globalThis.Actions || (function () {
 
     // ── Optimus-first ──
     let optimus = await tryOptimusInbox(tab.id, false, null);
-    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-      optimus = await tryOptimusInbox(tab.id, true, "Cached plan returned 0 threads from LI messaging inbox");
+    if (optimus.success && optimus.items.length === 0) {
+      console.log("[LI Optimus] 0 threads, forcing relearn...");
+      optimus = await tryOptimusInbox(tab.id, true, "Plan returned 0 threads, DOM may have changed");
     }
 
     if (optimus.success) {
