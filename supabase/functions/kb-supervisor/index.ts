@@ -112,10 +112,10 @@ serve(async (req: Request) => {
         }
       }
 
-      // 1e. Commercial states with doctrine
+      // 1e. Commercial states with doctrine (tassonomia canonica DB)
       const commercialStates = [
-        "new", "first_touch_sent", "holding", "engaged",
-        "qualified", "negotiation", "converted", "archived",
+        "new", "contacted", "in_progress",
+        "negotiation", "converted", "lost",
       ];
       for (const state of commercialStates) {
         const hasEntry = kbEntries.some((e) =>
