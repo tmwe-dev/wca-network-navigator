@@ -396,6 +396,7 @@ var Actions = globalThis.Actions || (function () {
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
     const url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
     const tab = await TabManager.getLinkedInTab(url, false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
     const schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
     if (schema) return Config.successResponse({ schema: schema, keysCount: Object.keys(schema).length });
