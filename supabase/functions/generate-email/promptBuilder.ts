@@ -77,6 +77,8 @@ export interface EmailPromptContext {
   lastOutcome?: string;
   daysSinceLastContact?: number;
   warmthScore?: number;
+  // Fix 3.2: active playbook (governs tone/content/CTA)
+  playbookBlock?: string;
 }
 
 // ── Helpers ──
