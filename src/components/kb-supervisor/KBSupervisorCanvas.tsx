@@ -283,9 +283,9 @@ export function KBSupervisorCanvas({
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { label: "Critiche", count: auditReport.summary?.critical ?? 0, className: "text-destructive" },
-                    { label: "Alte", count: auditReport.summary?.high ?? 0, className: "text-orange-500" },
-                    { label: "Medie", count: auditReport.summary?.medium ?? 0, className: "text-yellow-500" },
-                    { label: "Basse", count: auditReport.summary?.low ?? 0, className: "text-blue-500" },
+                    { label: "Alte", count: auditReport.summary?.high ?? 0, className: "text-warning" },
+                    { label: "Medie", count: auditReport.summary?.medium ?? 0, className: "text-warning/70" },
+                    { label: "Basse", count: auditReport.summary?.low ?? 0, className: "text-info" },
                   ].map(({ label, count, className }) => (
                     <Card key={label}>
                       <CardContent className="p-3 text-center">
@@ -302,15 +302,15 @@ export function KBSupervisorCanvas({
                       key={i}
                       className={
                         issue.severity === "critical" ? "border-destructive/50" :
-                        issue.severity === "high" ? "border-orange-500/50" :
+                        issue.severity === "high" ? "border-warning/50" :
                         ""
                       }
                     >
                       <CardContent className="p-3">
                         <div className="flex items-start gap-2">
                           {issue.severity === "critical" ? <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" /> :
-                           issue.severity === "high" ? <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" /> :
-                           <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />}
+                           issue.severity === "high" ? <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" /> :
+                           <Info className="w-4 h-4 text-info mt-0.5 shrink-0" />}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-[9px]">{issue.level}</Badge>
