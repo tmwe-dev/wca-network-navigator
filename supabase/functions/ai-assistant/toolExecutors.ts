@@ -258,10 +258,8 @@ export async function executeTool(
 
   // ── Write handlers (shared module) ──
   const writeMap: Record<string, () => Promise<unknown>> = {
-    update_partner: () => writeH.executeUpdatePartner(args),
     add_partner_note: () => writeH.executeAddPartnerNote(args),
     update_lead_status: () => writeH.executeUpdateLeadStatus(args),
-    bulk_update_partners: () => writeH.executeBulkUpdatePartners(args),
     link_business_card: () => writeH.executeLinkBusinessCard(args),
     update_activity: () => writeH.executeUpdateActivity(args),
     manage_partner_contact: () => writeH.executeManagePartnerContact(args),
@@ -269,8 +267,10 @@ export async function executeTool(
   };
   if (writeMap[name]) return writeMap[name]();
 
-  // Write handlers needing authHeader
+  // Write handlers needing authHeader / userId
   const writeAuthMap: Record<string, () => Promise<unknown>> = {
+    update_partner: () => writeH.executeUpdatePartner(args, userId!),
+    bulk_update_partners: () => writeH.executeBulkUpdatePartners(args, userId!),
     create_reminder: () => writeH.executeCreateReminder(args, userId!),
     create_activity: () => writeH.executeCreateActivity(args, userId!),
     delete_records: () => writeH.executeDeleteRecords(args, userId!),
