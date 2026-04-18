@@ -306,7 +306,7 @@ export async function executeTool(
   // Enterprise handlers without user requirement
   const entMap: Record<string, () => Promise<unknown>> = {
     execute_ui_action: () => entH.executeUiAction(args),
-    search_kb: () => entH.executeSearchKb(args),
+    search_kb: () => entH.executeSearchKb(args, userId || ""),
   };
   if (entMap[name]) return entMap[name]();
 
