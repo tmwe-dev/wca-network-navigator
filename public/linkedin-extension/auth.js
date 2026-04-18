@@ -62,10 +62,13 @@ var Auth = globalThis.Auth || (function () {
       const sessionResult = results[0] && results[0].result;
       if (sessionResult && sessionResult.authenticated) {
         syncCookieToServer().catch(function () {});
+        return sessionResult;
       }
-      return sessionResult || { authenticated: false, reason: "no_result" };
+      // Conservative: cookie alone is not enough — need page-level confirmation
+      return sessionResult || { authenticated: false, reason: "cookie_only_no_page_verify", cookie: true };
     } catch (_) {
-      return { authenticated: true, reason: "cookie_present_script_error", cookieLength: liAt.length };
+      // Page script failed: do NOT trust cookie alone
+      return { authenticated: false, reason: "cookie_only_script_error", cookie: true, cookieLength: liAt.length };
     }
   }
 
