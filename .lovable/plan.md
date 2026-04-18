@@ -1,97 +1,136 @@
 
+## Diagnosi certa
 
-## Analisi rapida
+Sì: il problema l’ho introdotto io nella nuova architettura.
 
-L'utente propone una riarchitettura completa del sistema di estrazione DOM (Optimus V2). Verifico lo stato attuale dei file chiave per dimensionare correttamente l'intervento.
-<lov-tool-use id="toolu_vrtx_01GVCTe4h7WjrtB1JoPr5PdC" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"public/whatsapp-extension\"}">
-</lov-tool-use>
+### Root cause WhatsApp
+In `public/whatsapp-extension/actions.js`, `readUnreadMessages()` chiama:
+- `TabManager.activateAndStabilize(r.tab.id, 3000)`
 
-<lov-tool-use id="toolu_vrtx_01Nhdf3D1diZCovSzT3oEP2b" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"public/linkedin-extension\"}">
-</lov-tool-use>
+E in `public/whatsapp-extension/tab-manager.js`, `activateAndStabilize()` fa:
+- `chrome.tabs.update(tabId, { active: true })`
 
-<lov-tool-use id="toolu_vrtx_01AJFrWt7GCZHBsTsZQNfSU7" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"supabase/functions/whatsapp-ai-extract\"}">
-</lov-tool-use>
+Quindi la lettura unread porta davvero il tab WhatsApp in primo piano.
 
-<lov-tool-use id="toolu_vrtx_01R38sNFFwKbZedSqgkdsmqj" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"public/whatsapp-extension\"}">
-</lov-tool-use>
+In più, `getOrCreateWaTab()` crea il tab nel window corrente (`chrome.tabs.create(...)` senza `windowId`) e `getBestExistingWaTab()` privilegia addirittura i tab attivi. Quindi oggi la strategia è intrusiva per design.
 
-<lov-tool-use id="toolu_vrtx_017u96MoUpkgPgnK4XUN39ui" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"public/linkedin-extension\"}">
-</lov-tool-use>
+### Root cause LinkedIn
+Sì, anche LinkedIn è rotto nello stesso modo.
 
-<lov-tool-use id="toolu_vrtx_011Rbx8qY9dRopMn2pcJNKDg" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"supabase/functions/whatsapp-ai-extract\"}">
-</lov-tool-use>
+In `public/linkedin-extension/actions.js`:
+- `readInbox()` chiama `ensureTabVisibleAndWait(tab.id, 1200)`
+- `readThread()` chiama `ensureTabVisibleAndWait(tab.id, 1200)`
+- anche `extractProfileByUrl`, `sendLinkedInMessage`, `sendConnectionRequest`, `searchProfile` lo fanno
 
-<lov-tool-use id="toolu_vrtx_01EJukpLxzkmZ5GxgQ8ptYfy" name="code--view" integration-id="code" data="{\"file_path\": \"public/whatsapp-extension/ai-extract.js\"}">
-</lov-tool-use>
+E in `public/linkedin-extension/tab-manager.js`, `ensureTabVisibleAndWait()` fa:
+- `chrome.tabs.update(tabId, { active: true })`
 
-<lov-tool-use id="toolu_vrtx_01SXPzbd8E4FExbZc41ZqdYH" name="code--view" integration-id="code" data="{\"file_path\": \"public/whatsapp-extension/config.js\"}">
-</lov-tool-use>
+Inoltre `getLinkedInTab()` può riusare tab LinkedIn già esistenti dell’utente e navigarli.
 
-<lov-tool-use id="toolu_vrtx_01E7gRjBYUStAjo8KeesXy4d" name="code--view" integration-id="code" data="{\"file_path\": \"supabase/functions/whatsapp-ai-extract/index.ts\", \"lines\": \"1-80\"}">
-</lov-tool-use>
+## Errore architetturale
 
-<lov-tool-use id="toolu_vrtx_01Qicvgh8i3XtU1RKbgi3ueZ" name="code--view" integration-id="code" data="{\"file_path\": \"public/whatsapp-extension/actions.js\", \"lines\": \"1-80\"}">
-</lov-tool-use>
+La scelta “DOM stabile = attivo nella finestra utente” è sbagliata per questo prodotto.  
+Qui il vincolo corretto è:
 
-<lov-tool-use id="toolu_vrtx_01KfYBWbbH2kbAsSgtZGN3kG" name="code--view" integration-id="code" data="{\"file_path\": \"public/whatsapp-extension/tab-manager.js\"}">
-</lov-tool-use>
-Ho abbastanza contesto. Le modifiche sono ampie ma chirurgiche su file esistenti. Presento il piano.
+- mai rubare il focus del Cockpit
+- mai cambiare tab nella finestra su cui l’utente sta lavorando
+- mai riusare tab utente per automazioni WA/LI
 
-<lov-plan>
+## Piano di correzione
 
-## Optimus V2 — Piano di ricostruzione
+### 1) Isolare WA e LI in tab gestiti dall’estensione
+Modificherò:
+- `public/whatsapp-extension/tab-manager.js`
+- `public/linkedin-extension/tab-manager.js`
 
-### Obiettivo
-Sostituire l'attuale flusso "Optimus bridge → legacy fallback → patch" con un flusso unico **Stabilize → UnifiedExtract → AI Relearn (in-context validation)**, applicato sia a WhatsApp che a LinkedIn. Direct-first sulle edge function, bridge come bonus opzionale.
+Per fare in modo che:
+- WA e LI usino solo tab “owned” dall’estensione
+- i tab nuovi non vengano più creati nella finestra del Cockpit
+- non vengano più riusati tab utente già aperti
 
-### Cambi per file
+Approccio:
+- creare/riusare una finestra dedicata di automazione non focalizzata
+- aprire lì i tab WA/LI
+- salvare `windowId/tabId` gestiti dall’estensione
+- se esiste un tab WA/LI nella finestra utente, ignorarlo
 
-**WhatsApp**
-1. `public/whatsapp-extension/tab-manager.js`
-   - Aggiungere `activateAndStabilize(tabId, maxWaitMs)` che salva il tab attivo precedente, attiva il tab WA, attende DOM stabile (readyState complete + visibilityState visible + presenza `[role="row"]`/`#pane-side`/`[role="grid"]` + assenza loading screen), e ritorna una `restore()` per ripristinare il tab originale.
-   - Mantenere come deprecato `ensureTabVisibleAndWait` e `withTemporarilyVisibleTab` per backward compat.
-2. `public/whatsapp-extension/actions.js`
-   - Riscrivere `readUnreadMessages()` con il flusso V2: stabilize → unified extract → relearn (se 0 contatti) → restore.
-   - Nuova `_pageUnifiedExtract()` con multi-strategia + scoring per: chat items, contactName, lastMessage, timestamp, unreadBadge (6 strategie ordinate per score). Output include `itemsTotal`, `itemsWithContact`, `itemsWithUnread`, `strategy`, `scores`, `diagnosticInfo`.
-   - Nuova `aiRelearnAndExtract(tabId, diagnosticInfo)` che cattura rich snapshot, chiama AI direct-first, valida in-context, cache solo selettori validati con TTL 12h.
-   - Nuova `_pageValidateAndExtract(selectors)` iniettata che testa ogni selettore AI sul DOM vivo e usa solo quelli con match > 0, con fallback strutturali multi-segnale.
-3. `public/whatsapp-extension/ai-extract.js`
-   - Invertire ordine: `callAiExtract` prima fetch diretto, poi bridge come fallback.
-   - Riscrivere `learnDomSelectors` con il **rich snapshot** (ancestors 3 livelli, prev/next sibling, span con dimensioni/colore/border-radius del parent, attributi stabili di tutti gli elementi figli, sample outerHTML completo fino a 3000 char).
-4. `public/whatsapp-extension/optimus-client.js`
-   - Marcare `getPlan/executePlanInTab/handlePlanResponse` come deprecati (no-op preservati per backward compat). Mantenere `simplifyDom` e `computeHash` come utility.
+### 2) Rimuovere il focus stealing dai flussi di lettura
+Modificherò:
+- `public/whatsapp-extension/actions.js`
+- `public/linkedin-extension/actions.js`
 
-**LinkedIn (stesso pattern)**
-5. `public/linkedin-extension/tab-manager.js` — `activateAndStabilize` analogo (ricerca tab esistenti già presente da M1).
-6. `public/linkedin-extension/actions.js` — Unified extract con scoring, dedup per nome + URL, filtro notification badge (già presente da M2, da estendere a multi-segnale).
-7. `public/linkedin-extension/ai-learn.js` — direct-first, bridge fallback.
-8. `public/linkedin-extension/optimus-client.js` — deprecazione path bridge.
+Per fare in modo che:
+- `readUnreadMessages()`
+- `readInbox()`
+- `readThread()`
 
-**Edge function**
-9. `supabase/functions/whatsapp-ai-extract/index.ts`
-   - Aggiornare prompt `learnDom` per gestire il nuovo snapshot ricco e accettare un campo opzionale `failedSelectors` con feedback ("non rigenerare gli stessi").
+non usino più tab che possano impattare la vista utente.
 
-**Versioning + ZIP**
-10. WA → `5.9.0`, LI → `3.8.0` in: manifest, background ping, `WHATSAPP_EXTENSION_REQUIRED_VERSION`/`LINKEDIN_EXTENSION_REQUIRED_VERSION`, embedded base64 WA, test, ZIP fisici (`/public/chrome-extensions/...` e alias root), catalog.json.
+### 3) Riscrivere stabilize/visibility in modalità non intrusiva
+Modificherò:
+- `activateAndStabilize()` WA
+- `activateAndStabilize()` LI
+- `ensureTabVisibleAndWait()` LI
+- shim WA backward-compat
 
-### Ordine di applicazione
-N1 Tab stability (WA+LI) → N2 Direct-first AI → N3 Unified extract WA → N4 AI relearn + validate → N5 Edge function prompt → N6 Unified extract LI → N7 Deprecate bridge path → N8 Bump + regen ZIP.
+Nuova regola:
+- è consentito attivare un tab solo dentro la finestra di automazione dell’estensione
+- mai attivare un tab nella finestra attualmente focalizzata dall’utente
+- se il tab è nella finestra sbagliata, va ricreato/spostato nell’area di automazione
 
-### Verifiche post-fix
-- `grep` sentinelle: `activateAndStabilize`, `unifiedExtract`, `_pageValidateAndExtract`, `aiRelearnAndExtract`, `optimus_v2_plan`, `direct-first`.
-- Nessun `chrome.windows.update({focused:true})` introdotto.
-- Estrazione manifest dai nuovi ZIP → `5.9.0`/`3.8.0`.
-- TS build verde su `WHATSAPP_EXTENSION_REQUIRED_VERSION === "5.9.0"`.
-- Test manuale: ping risponde nuova versione, `readUnread` ritorna `meta.itemsWithContact > 0` su sidebar reale, log mostra `method: "unified-v2"` (cache hit) o `method: "ai-relearn-v2"` (relearn).
+### 4) Correggere le euristiche di reuse
+Modificherò:
+- `getBestExistingWaTab()`
+- `getOrCreateWaTab()`
+- `getLinkedInTab()`
+- eventuali helper di sorting/reuse
 
-### Note operative per te dopo deploy
-1. `chrome://extensions` → **Rimuovi** WA 5.8 e LI 3.7.
-2. Scarica i nuovi ZIP.
-3. Estrai in cartelle vuote nuove e "Carica estensione non pacchettizzata".
-4. Verifica ping: WA `5.9.0`, LI `3.8.0`.
+Per evitare:
+- preferenza per tab attivi
+- reuse cieco di qualunque tab `web.whatsapp.com` / `linkedin.com`
+- navigazione di tab utente già aperti
 
-### Fuori scope
-- Niente refactor dei moduli `discovery.js`, `auth.js`, `ax-tree.js`, `hybrid-ops.js` (restano invariati).
-- Niente modifiche all'UI cockpit/test page se non aggiornamento stringhe versione.
-- L'unfocus della finestra Cockpit resta garantito: solo `chrome.tabs.update({active})`, mai `chrome.windows.update({focused:true})`.
+### 5) Verifica specifica LinkedIn
+Controllerò e sistemerò tutti i path LI che oggi possono spostare la vista:
+- `readInbox`
+- `readThread`
+- `extractProfileByUrl`
+- `sendLinkedInMessage`
+- `sendConnectionRequest`
+- `searchProfile`
+- eventuale `diagnostic()`
 
+## Risultato atteso
+
+Dopo la fix:
+- leggere i messaggi WhatsApp non deve più cambiare pagina nel Cockpit
+- leggere inbox/thread LinkedIn non deve più cambiare pagina
+- i tab WA/LI usati dall’estensione devono vivere fuori dal flusso visivo dell’utente
+- l’estrazione deve continuare a funzionare senza riusare tab utente
+
+## File da toccare
+
+- `public/whatsapp-extension/tab-manager.js`
+- `public/whatsapp-extension/actions.js`
+- `public/linkedin-extension/tab-manager.js`
+- `public/linkedin-extension/actions.js`
+
+Possibile aggiornamento anche di:
+- `public/whatsapp-extension/background.js`
+- `public/linkedin-extension/background.js`
+
+solo se serve persistere metadata dei tab/finestra gestiti.
+
+## Verifiche che farò dopo l’implementazione
+
+1. Nessun `chrome.tabs.update({ active: true })` deve più colpire tab nella finestra utente.
+2. Nessun reuse di tab utente WA/LI.
+3. WA `readUnreadMessages()` deve funzionare senza spostare la vista.
+4. LI `readInbox()` e `readThread()` devono funzionare senza spostare la vista.
+5. Verifica end-to-end sul caso reale: Cockpit aperto, lettura WA/LI, vista invariata.
+
+## Nota importante
+
+Non è un bug “forse”: è confermato dal codice attuale.  
+WhatsApp è rotto. LinkedIn è potenzialmente rotto nello stesso modo.  
+La correzione giusta non è un altro cerotto: è separare definitivamente i tab di automazione dai tab dell’utente.
