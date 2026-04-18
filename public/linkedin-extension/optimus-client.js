@@ -68,7 +68,7 @@ var OptimusClient = globalThis.OptimusClient || (function() {
 globalThis.OptimusClient = OptimusClient;
 
 // ══════════════════════════════════════════════
-// Optimus Client — WhatsApp Extension
+// Optimus Client — LinkedIn Extension
 // Background-side helpers: dom-hash, plan request via webapp bridge,
 // page-injectable simplifyDom + executePlan.
 // ══════════════════════════════════════════════
