@@ -189,7 +189,23 @@
   globalThis.__WA_MSG_LISTENER__ = function (event) {
     if (event.source !== window) return;
     var data = event.data;
-    if (!data || data.direction !== "from-webapp-wa") return;
+    if (!data) return;
+
+    // Optimus response from webapp → forward to background as runtime message.
+    // background's Optimus.getPlan() listens for { source:"wca-optimus-response", requestId, payload }
+    if (data.direction === "from-webapp-optimus-response") {
+      if (!isExtensionAlive()) return;
+      try {
+        chrome.runtime.sendMessage({
+          source: "wca-optimus-response",
+          requestId: data.requestId,
+          payload: data.payload,
+        });
+      } catch (_) {}
+      return;
+    }
+
+    if (data.direction !== "from-webapp-wa") return;
     relayMessage(data);
   };
 
