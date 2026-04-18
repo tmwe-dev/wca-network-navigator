@@ -350,7 +350,7 @@ var Actions = globalThis.Actions || (function () {
     let axAvailable = false;
     try { axAvailable = await AXTree.isAvailable(tab.id); } catch (_) {}
 
-    const schema = await AILearn.getCached();
+    const schema = await AILearn.getCached("messaging");
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
