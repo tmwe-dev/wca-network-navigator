@@ -63,9 +63,9 @@ export async function consumeCredits(supabase: SupabaseClient, userId: string, u
 
 // ━━━ Load User Profile ━━━
 
-export async function loadUserProfile(supabase: SupabaseClient, userId?: string): Promise<string> {
-  let query = supabase.from("app_settings").select("key, value").like("key", "ai_%");
-  if (userId) query = query.eq("user_id", userId);
+export async function loadUserProfile(supabase: SupabaseClient, userId: string): Promise<string> {
+  if (!userId) return "";
+  const query = supabase.from("app_settings").select("key, value").like("key", "ai_%").eq("user_id", userId);
   const { data } = await query;
   if (!data?.length) return "";
 
