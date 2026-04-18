@@ -103,6 +103,21 @@ serve(async (req) => {
         for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
       }
 
+      // === COMMERCIAL DOCTRINE INJECTION ===
+      const commercialDoctrineBlock = `
+## DOTTRINA COMMERCIALE — REGOLE AGENTE
+
+1. NON archiviare MAI un contatto autonomamente. Solo l'admin può farlo.
+2. Ogni contatto in "holding" DEVE ricevere follow-up secondo cadenza configurata.
+3. Il tono del messaggio DEVE corrispondere alla fase relazionale del contatto.
+4. MAI usare WhatsApp come primo canale di contatto.
+5. MAI ripetere la presentazione aziendale dopo il primo contatto.
+6. Alternare i canali: se l'ultimo era email, il prossimo sia LinkedIn o WhatsApp.
+7. Prima di proporre un servizio, verificare che il contatto sia almeno in fase "engaged".
+8. Se il contatto non risponde da >30 giorni, escalare la priorità del follow-up, NON archiviare.
+`;
+      contextBlock += `\n\n${commercialDoctrineBlock}`;
+
       // 4. Prompt Operativi (tutti, come fa ai-assistant)
       const { data: opPrompts } = await supabase.from("operative_prompts").select("name, objective, procedure, criteria, tags, priority")
         .eq("user_id", userId).eq("is_active", true).order("priority", { ascending: false });
