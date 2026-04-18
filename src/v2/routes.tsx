@@ -150,13 +150,13 @@ export function V2Routes(): React.ReactElement {
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
           <Route path="agent-capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
           <Route path="agent-tasks" element={guardedPage(AgentTasksPage, "AgentTasks")} />
-          <Route path="cockpit" element={guardedPage(CockpitPage, "Cockpit")} />
+          <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
           <Route path="missions" element={guardedPage(MissionBuilderPage, "MissionBuilder")} />
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
           <Route path="prospects" element={guardedPage(ProspectPage, "Prospects")} />
           <Route path="staff" element={guardedPage(StaffPage, "Staff")} />
           <Route path="ai-lab" element={guardedPage(AILabPage, "AILab")} />
-          <Route path="knowledge-base" element={guardedPage(KnowledgeBasePage, "KnowledgeBase")} />
+          <Route path="knowledge-base" element={<Navigate to="/v2/staff" replace />} />
           <Route path="kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
           <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
@@ -166,9 +166,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="operations" element={guardedPage(OperationsPage, "Operations")} />
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
           <Route path="diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
-          <Route path="import" element={guardedPage(ImportPage, "Import")} />
+          <Route path="import" element={<Navigate to="/v2/operations" replace />} />
           <Route path="acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="agent-chat" element={guardedPage(AgentChatHubPage, "AgentChat")} />
+          <Route path="agent-chat" element={<Navigate to="/v2/agents" replace />} />
           <Route path="contacts" element={guardedPage(ContactsPage, "Contacts")} />
           <Route path="email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />

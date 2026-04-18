@@ -24,12 +24,12 @@ const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "": "/v2",
-  "network": "/v2/network",
+  "network": "/v2/deep-search",
   "crm": "/v2/crm",
   "outreach": "/v2/outreach",
   "inreach": "/v2/inreach",
   "agenda": "/v2/agenda",
-  "agent-chat": "/v2/agent-chat",
+  "agent-chat": "/v2/agents",
   "settings": "/v2/settings",
   "settings/operators": "/v2/settings",
   "settings/users": "/v2/admin-users",
@@ -50,7 +50,7 @@ const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "email-intelligence": "/v2/email-intelligence",
   "operations": "/v2/operations",
   "contacts": "/v2/contacts",
-  "cockpit": "/v2/cockpit",
+  "cockpit": "/v2/outreach",
   "reminders": "/v2/agenda",
 };
 
