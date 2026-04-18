@@ -10,29 +10,37 @@ type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabas
 
 export function createReadHandlers(supabase: SupabaseClient) {
 
-  async function executeSearchPartners(args: Record<string, unknown>) {
+  async function executeSearchPartners(args: Record<string, unknown>, userId?: string) {
     const isCount = !!args.count_only;
     let partnerIdFilter: string[] | null = null;
 
     if (args.service) {
-      const { data } = await supabase.from("partner_services").select("partner_id").eq("service_category", args.service);
+      let q = supabase.from("partner_services").select("partner_id").eq("service_category", args.service);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       partnerIdFilter = (data || []).map((r: { partner_id: string }) => r.partner_id);
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.certification) {
-      const { data } = await supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
+      let q = supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const certIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => certIds.includes(id)) : certIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.network_name) {
-      const { data } = await supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
+      let q = supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const netIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.has_phone !== undefined && args.has_phone) {
-      const { data } = await supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
+      let q = supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
       const phoneIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => phoneIds.includes(id)) : phoneIds;
       if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
@@ -43,6 +51,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       isCount ? { count: "exact", head: true } : undefined
     );
 
+    if (userId) query = query.eq("user_id", userId);
     if (partnerIdFilter) query = query.in("id", partnerIdFilter.slice(0, 500));
     if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
     if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
@@ -127,10 +136,11 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { countries_with_gaps: results.length, gaps: results.slice(0, 30) };
   }
 
-  async function executeListJobs(args: Record<string, unknown>) {
+  async function executeListJobs(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("download_jobs")
       .select("id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, last_processed_company, error_message, network_name")
       .order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
+    if (userId) query = query.eq("user_id", userId);
     if (args.status) query = query.eq("status", args.status);
     if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
     const { data, error } = await query;
@@ -145,23 +155,31 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executePartnerDetail(args: Record<string, unknown>) {
+  async function executePartnerDetail(args: Record<string, unknown>, userId?: string) {
     let partner: Record<string, unknown> | null = null;
     if (args.partner_id) {
-      const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
+      let q = supabase.from("partners").select("*").eq("id", args.partner_id);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.maybeSingle();
       partner = data;
     } else if (args.company_name) {
-      const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
+      let q = supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.limit(1).maybeSingle();
       partner = data;
     }
     if (!partner) return { error: "Partner non trovato" };
+    const pid = partner.id as string;
+    const ownerFilter = userId ? { user_id: userId } : null;
+    const applyOwner = <T extends { eq: (col: string, val: unknown) => T }>(q: T): T =>
+      ownerFilter ? q.eq("user_id", ownerFilter.user_id) : q;
     const [contactsRes, networksRes, servicesRes, certsRes, socialsRes, blacklistRes] = await Promise.all([
-      supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", partner.id),
-      supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", partner.id),
-      supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-      supabase.from("partner_certifications").select("certification").eq("partner_id", partner.id),
-      supabase.from("partner_social_links").select("platform, url").eq("partner_id", partner.id),
-      supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", partner.id),
+      applyOwner(supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_services").select("service_category").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_certifications").select("certification").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_social_links").select("platform, url").eq("partner_id", pid)),
+      supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", pid),
     ]);
     return {
       id: partner.id, company_name: partner.company_name, alias: partner.company_alias, city: partner.city,
@@ -222,15 +240,18 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executeListReminders(args: Record<string, unknown>) {
+  async function executeListReminders(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("reminders").select("id, title, description, due_date, priority, status, partner_id, created_at")
       .order("due_date", { ascending: true }).limit(30);
+    if (userId) query = query.eq("user_id", userId);
     if (args.status) query = query.eq("status", args.status);
     if (args.priority) query = query.eq("priority", args.priority);
     const { data, error } = await query;
     if (error) return { error: error.message };
     const partnerIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
-    const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
+    let pq = supabase.from("partners").select("id, company_name").in("id", partnerIds);
+    if (userId) pq = pq.eq("user_id", userId);
+    const { data: partners } = await pq;
     const nameMap: Record<string, string> = {};
     for (const p of (partners || []) as Array<{ id: string; company_name: string }>) nameMap[p.id] = p.company_name;
     let results = (data || []).map((r: Record<string, unknown>) => ({
@@ -259,12 +280,13 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executeSearchContacts(args: Record<string, unknown>) {
+  async function executeSearchContacts(args: Record<string, unknown>, userId?: string) {
     const isCount = !!args.count_only;
     let query = supabase.from("imported_contacts").select(
       isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
       isCount ? { count: "exact", head: true } : undefined
     );
+    if (userId) query = query.eq("user_id", userId);
     if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name)}%`);
     if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
     if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
@@ -282,13 +304,17 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { count: data?.length || 0, contacts: data || [] };
   }
 
-  async function executeGetContactDetail(args: Record<string, unknown>) {
+  async function executeGetContactDetail(args: Record<string, unknown>, userId?: string) {
     let contact: Record<string, unknown> | null = null;
     if (args.contact_id) {
-      const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
+      let q = supabase.from("imported_contacts").select("*").eq("id", args.contact_id);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.maybeSingle();
       contact = data;
     } else if (args.contact_name) {
-      const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
+      let q = supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name)}%`);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.limit(1).maybeSingle();
       contact = data;
     }
     if (!contact) return { error: "Contatto non trovato" };
@@ -296,12 +322,13 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { ...contact, interactions: interactions || [] };
   }
 
-  async function executeSearchProspects(args: Record<string, unknown>) {
+  async function executeSearchProspects(args: Record<string, unknown>, userId?: string) {
     const isCount = !!args.count_only;
     let query = supabase.from("prospects").select(
       isCount ? "id" : "id, company_name, city, province, region, codice_ateco, descrizione_ateco, fatturato, dipendenti, email, phone, pec, website, lead_status, partita_iva, forma_giuridica, rating_affidabilita, created_at",
       isCount ? { count: "exact", head: true } : undefined
     );
+    if (userId) query = query.eq("user_id", userId);
     if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
     if (args.city) query = query.ilike("city", `%${escapeLike(args.city)}%`);
     if (args.province) query = query.ilike("province", `%${escapeLike(args.province)}%`);
@@ -318,9 +345,10 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { count: data?.length || 0, prospects: data || [] };
   }
 
-  async function executeListActivities(args: Record<string, unknown>) {
+  async function executeListActivities(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("activities").select("id, title, description, activity_type, status, priority, due_date, source_type, source_meta, partner_id, created_at, completed_at, email_subject")
       .order("due_date", { ascending: true, nullsFirst: false }).limit(Number(args.limit) || 30);
+    if (userId) query = query.eq("user_id", userId);
     if (args.status) query = query.eq("status", args.status);
     if (args.activity_type) query = query.eq("activity_type", args.activity_type);
     if (args.source_type) query = query.eq("source_type", args.source_type);
@@ -339,11 +367,12 @@ export function createReadHandlers(supabase: SupabaseClient) {
     return { count: results.length, activities: results.map((a: Record<string, unknown>) => ({ ...a, company_name: (a.source_meta as Record<string, unknown> | null)?.company_name || null })) };
   }
 
-  async function executeSearchBusinessCards(args: Record<string, unknown>) {
+  async function executeSearchBusinessCards(args: Record<string, unknown>, userId?: string) {
     let query = supabase.from("business_cards")
       .select("id, company_name, contact_name, email, phone, event_name, met_at, location, match_status, match_confidence, matched_partner_id, matched_contact_id, tags, created_at")
       .order("created_at", { ascending: false })
       .limit(Number(args.limit) || 20);
+    if (userId) query = query.eq("user_id", userId);
     if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name)}%`);
     if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
     if (args.contact_name) query = query.ilike("contact_name", `%${escapeLike(args.contact_name)}%`);
@@ -353,7 +382,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const partnerIds = [...new Set((data || []).filter((c: Record<string, unknown>) => c.matched_partner_id).map((c: Record<string, unknown>) => c.matched_partner_id))];
     const partnerNames: Record<string, string> = {};
     if (partnerIds.length > 0) {
-      const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
+      let pq = supabase.from("partners").select("id, company_name").in("id", partnerIds);
+      if (userId) pq = pq.eq("user_id", userId);
+      const { data: partners } = await pq;
       for (const p of (partners || []) as Array<{ id: string; company_name: string }>) partnerNames[p.id] = p.company_name;
     }
     return {
@@ -368,12 +399,14 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executeCheckJobStatus(args: Record<string, unknown>) {
+  async function executeCheckJobStatus(args: Record<string, unknown>, userId?: string) {
     const result: Record<string, unknown> = {};
     if (args.job_id) {
-      const { data: job, error } = await supabase.from("download_jobs")
+      let jq = supabase.from("download_jobs")
         .select("id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, completed_at, last_processed_company, error_message, network_name")
-        .eq("id", args.job_id).single();
+        .eq("id", args.job_id);
+      if (userId) jq = jq.eq("user_id", userId);
+      const { data: job, error } = await jq.maybeSingle();
       if (error || !job) {
         result.job = { error: "Job non trovato", job_id: args.job_id };
       } else {
@@ -392,9 +425,11 @@ export function createReadHandlers(supabase: SupabaseClient) {
         };
       }
     }
-    const { data: activeJobs } = await supabase.from("download_jobs")
+    let activeQ = supabase.from("download_jobs")
       .select("id, country_name, country_code, status, current_index, total_count, job_type, last_processed_company, error_message, created_at")
       .in("status", ["running", "pending", "paused"]).order("created_at", { ascending: false }).limit(10);
+    if (userId) activeQ = activeQ.eq("user_id", userId);
+    const { data: activeJobs } = await activeQ;
     result.active_downloads = {
       count: activeJobs?.length || 0,
       jobs: (activeJobs || []).map((j: Record<string, unknown>) => ({
@@ -403,9 +438,11 @@ export function createReadHandlers(supabase: SupabaseClient) {
         detail: `${j.current_index}/${j.total_count}`, last_company: j.last_processed_company, error: j.error_message,
       })),
     };
-    const { data: recentJobs } = await supabase.from("download_jobs")
+    let recentQ = supabase.from("download_jobs")
       .select("id, country_name, country_code, status, current_index, total_count, contacts_found_count, contacts_missing_count, completed_at, error_message")
       .in("status", ["completed", "cancelled", "failed"]).order("completed_at", { ascending: false }).limit(5);
+    if (userId) recentQ = recentQ.eq("user_id", userId);
+    const { data: recentJobs } = await recentQ;
     result.recently_completed = {
       count: recentJobs?.length || 0,
       jobs: (recentJobs || []).map((j: Record<string, unknown>) => ({
@@ -415,7 +452,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
       })),
     };
     if (args.include_email_queue !== false) {
-      const { data: emailQueue } = await supabase.from("email_campaign_queue").select("status").in("status", ["pending", "sending"]);
+      let eq = supabase.from("email_campaign_queue").select("status").in("status", ["pending", "sending"]);
+      if (userId) eq = eq.eq("user_id", userId);
+      const { data: emailQueue } = await eq;
       const pending = (emailQueue || []).filter((r: Record<string, unknown>) => r.status === "pending").length;
       const sending = (emailQueue || []).filter((r: Record<string, unknown>) => r.status === "sending").length;
       result.email_queue = { pending, sending, total: pending + sending };

@@ -238,21 +238,21 @@ export async function executeTool(
 
   // ── Read handlers (shared module) ──
   const readMap: Record<string, () => Promise<unknown>> = {
-    search_partners: () => readH.executeSearchPartners(args),
+    search_partners: () => readH.executeSearchPartners(args, userId),
     get_country_overview: () => readH.executeCountryOverview(args),
     get_directory_status: () => readH.executeDirectoryStatus(args),
-    list_jobs: () => readH.executeListJobs(args),
-    get_partner_detail: () => readH.executePartnerDetail(args),
+    list_jobs: () => readH.executeListJobs(args, userId),
+    get_partner_detail: () => readH.executePartnerDetail(args, userId),
     get_global_summary: () => readH.executeGlobalSummary(),
     check_blacklist: () => readH.executeCheckBlacklist(args),
-    list_reminders: () => readH.executeListReminders(args),
+    list_reminders: () => readH.executeListReminders(args, userId),
     get_partners_without_contacts: () => readH.executePartnersWithoutContacts(args),
-    search_contacts: () => readH.executeSearchContacts(args),
-    get_contact_detail: () => readH.executeGetContactDetail(args),
-    search_prospects: () => readH.executeSearchProspects(args),
-    list_activities: () => readH.executeListActivities(args),
-    search_business_cards: () => readH.executeSearchBusinessCards(args),
-    check_job_status: () => readH.executeCheckJobStatus(args),
+    search_contacts: () => readH.executeSearchContacts(args, userId),
+    get_contact_detail: () => readH.executeGetContactDetail(args, userId),
+    search_prospects: () => readH.executeSearchProspects(args, userId),
+    list_activities: () => readH.executeListActivities(args, userId),
+    search_business_cards: () => readH.executeSearchBusinessCards(args, userId),
+    check_job_status: () => readH.executeCheckJobStatus(args, userId),
   };
   if (readMap[name]) return readMap[name]();
 
