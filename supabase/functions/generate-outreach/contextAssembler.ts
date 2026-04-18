@@ -439,11 +439,20 @@ export async function assembleOutreachContext(
     (lastOutcome === "positive" ? 15 : 0)
   );
 
+  // Fix 3.2: Active playbook
+  const playbook = await loadActivePlaybook(supabase, userId, partnerId);
+
+  // Fix 3.3: Honest channel declaration
+  const channelDeclaration = buildChannelDeclaration(channel);
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     historyText, interactionHistoryCount, conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
     settings, partnerId, websiteSource, linkedinSource,
     commercialState, touchCount, daysSinceLastContact, warmthScore,
+    relationshipStage, relationshipMetrics,
+    playbookBlock: playbook.block, playbookActive: playbook.active,
+    channelDeclaration,
   };
 }
