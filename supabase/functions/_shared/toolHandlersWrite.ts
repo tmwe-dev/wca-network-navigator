@@ -119,7 +119,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
     return { success: true, card_id: args.card_id, message: "Biglietto da visita collegato manualmente." };
   }
 
-  async function executeCreateActivity(args: Record<string, unknown>) {
+  async function executeCreateActivity(args: Record<string, unknown>, userId: string) {
     let partnerId = args.partner_id as string | null;
     let companyName = args.company_name as string || "";
     if (!partnerId && companyName) {
@@ -136,6 +136,7 @@ export function createWriteHandlers(supabase: SupabaseClient) {
       email_subject: args.email_subject ? String(args.email_subject) : null,
       email_body: args.email_body ? String(args.email_body) : null,
       source_meta: { company_name: companyName } as Record<string, unknown>,
+      user_id: userId,
     }).select("id").single();
     if (error) return { error: error.message };
     return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
