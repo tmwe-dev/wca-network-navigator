@@ -1,80 +1,116 @@
 
 
-## Piano: AI Architettura Parte 1 — Tool Filtering + Partner Isolation
+## Piano: AI Architettura Parte 2 — Migrazione a invokeEdge + Scope Config
 
-Tutti i bug confermati sui file reali. Il piano richiede **un riallineamento chirurgico** rispetto al prompt originale per via dell'architettura singleton di `writeH`.
+Tutti i bug confermati sui file reali. Riallineamento necessario su `useAiAssistantChat` e `useGlobalChat` per preservare lo streaming SSE.
 
-### Fix #1 — Tool filtering per scope in `ai-assistant/index.ts`
+### Vincolo critico: streaming SSE
 
-**Riga 19** → aggiungere import:
+Sia `useAiAssistantChat` che `useGlobalChat` consumano la risposta come **SSE stream** (riga 145-177 di useAiAssistantChat, riga 80-119 di useGlobalChat). `invokeEdge` usa `supabase.functions.invoke` che **non espone il ReadableStream** — restituisce `{ data, error }` con il body parsato come JSON o testo.
+
+**Decisione**: tenere il path JSON via `invokeEdge` come **primario** (è il path già usato quando `content-type === application/json`, riga 132-141 di useAiAssistantChat e riga 199-201 di useGlobalChat) e **rimuovere** completamente il path streaming SSE. L'edge function `ai-assistant` ritorna già JSON in modalità tool-calling (verificato dal codice esistente). Lo streaming SSE residuo era un fallback per response non-JSON che non si verifica più dopo il refactor backend.
+
+Se per qualche motivo serve preservare lo streaming, va aggiunto un `fetchStream` wrapper separato — ma è fuori scope di questo prompt.
+
+### Fix #5 — `src/hooks/useAiAssistantChat.ts`
+
+1. **Riga 8** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
+2. **Riga 27** → eliminare `const CHAT_URL = ...`
+3. **Righe 113-180** → sostituire l'intero blocco try (fetch + parsing JSON + SSE stream loop) con:
+   ```ts
+   try {
+     const allMsgs = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+     const enrichedContext = { ...context, currentPage: location.pathname };
+     const data = await invokeEdge<{ content?: string; error?: string }>("ai-assistant", {
+       body: { messages: allMsgs, context: enrichedContext },
+       context: "aiAssistantChat",
+     });
+     const content = data.content || data.error || "Nessuna risposta";
+     upsertAssistant(content);
+     const { uiActions } = parseStructuredMessage(content);
+     if (uiActions.length > 0) handleUiActions(uiActions);
+   } catch (e) { ... }
+   ```
+4. Rimuovere `supabase.auth.getSession()` e la variabile `token` (gestiti da `invokeEdge`).
+
+### Fix #6 — `src/hooks/useGlobalChat.ts`
+
+1. **Riga 10** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
+2. **Righe 14-15** → eliminare `CHAT_URL` e `SUPER_URL` (mantenere `TTS_URL` riga 16, usato altrove)
+3. **Righe 76-119** → eliminare `interface SSEDelta` e funzione `readSSEStream` (non più usata)
+4. **Righe 180-211** → sostituire l'intero blocco try fetch+parse con:
+   ```ts
+   try {
+     const allMsgs = prevMessages.map((m) => ({ role: m.role, content: m.content }));
+     const edgeFunction = state.mode === "conversational" ? "unified-assistant" : "ai-assistant";
+     const body = state.mode === "conversational"
+       ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
+       : { messages: allMsgs };
+     const data = await invokeEdge<{ content?: string; error?: string }>(edgeFunction, {
+       body, context: "globalChat",
+     });
+     assistantContent = data.content || data.error || "Nessuna risposta";
+   } catch (e) { ... }
+   ```
+5. Rimuovere `supabase.auth.getSession()` e la variabile `token` dalla closure di `sendMessage`.
+
+### Fix #7 — `src/v2/hooks/useEmailComposerV2.ts`
+
+1. **Top file** → aggiungere `import { invokeEdge } from "@/lib/api/invokeEdge"`
+2. **Righe 80-84** (send-email) → sostituire `supabase.functions.invoke("send-email", ...)` con:
+   ```ts
+   await invokeEdge("send-email", {
+     body: { to: r.email, subject, html: body },
+     context: "emailComposerV2Send",
+   });
+   ```
+   Rimuovere il check `if (error) throw error` (invokeEdge già throwa).
+3. **Righe 102-114** (ai-assistant) → sostituire con:
+   ```ts
+   const data = await invokeEdge<{ response?: string }>("ai-assistant", {
+     body: { messages: [...], context: "email_composer", use_kb: useKB },
+     context: "emailComposerV2",
+   });
+   if (data?.response) setBody(data.response);
+   ```
+   **Nota**: il codice originale usa `data.response` (non `data.content`) — preservato.
+
+### Fix #8 — `supabase/functions/_shared/scopeConfigs.ts`
+
+**Riga 383** (prima del `default` throw) → aggiungere 3 nuovi case:
 ```ts
-import { getScopeConfig } from "../_shared/scopeConfigs.ts";
+case "deep-search":
+  return {
+    systemPrompt: "Sei un assistente di ricerca approfondita...",
+    tools: PLATFORM_TOOLS,
+    creditLabel: "Deep Search V2",
+  };
+case "chat":
+  return {
+    systemPrompt: "Sei un assistente conversazionale per agenti autonomi...",
+    tools: PLATFORM_TOOLS,
+    creditLabel: "Agent Chat V2",
+  };
+case "mission-builder":
+  return {
+    systemPrompt: "Sei il configuratore di missioni outreach...",
+    tools: [],
+    temperature: 0.5,
+    creditLabel: "Mission Builder V2",
+  };
 ```
 
-**Riga 512** → sostituire l'assegnazione monolitica di `activeTools` con la logica scope-aware proposta:
-- `partner_hub` (default) e scope sconosciuti → tutti i 60 tool (comportamento attuale preservato)
-- `cockpit` / `extension` → `PLATFORM_TOOLS` (sottoinsieme curato)
-- `contacts` / `import` → `PLATFORM_TOOLS` + tool extra dedicati
-- `strategic` → 0 tool (modalità consulenza pura)
+### File modificati (4)
 
-Log diagnostico: `[AI] Scope "X" → N tools`.
-
-### Fix #2 — Modello scope-specific (`strategic` → `gemini-2.5-flash`)
-
-**Riga 513-517** → introdurre `scopeModel` letto da `getScopeConfig(scope).model` e premettilo alla cascade dei fallback (solo se non si usa user-key e lo scope ne definisce uno). Solo `strategic` ha attualmente un model override; altri scope continuano col `provider.model` standard.
-
-### Fix #3 — User isolation su `update_partner` e `bulk_update_partners`
-
-**Riallineamento necessario**: il prompt originale assume che `userId` sia disponibile nella closure di `createWriteHandlers`. **Non lo è**: la factory è chiamata una sola volta a livello modulo (riga 44 di `index.ts`) come singleton condiviso. Soluzione corretta — passare `userId` come parametro alle 2 funzioni vulnerabili (stesso pattern già usato per `executeCreateReminder`, `executeDeleteRecords`, `executeSendEmail`).
-
-**Modifiche in `_shared/toolHandlersWrite.ts`:**
-
-1. **Riga 25** — firma `executeUpdatePartner(args: Record<string, unknown>, userId: string)`
-2. **Riga 36** — query update:
-   ```ts
-   .from("partners").update(updates).eq("user_id", userId).eq("id", partner.id)
-   ```
-3. **Riga 91** — firma `executeBulkUpdatePartners(args: Record<string, unknown>, userId: string)`
-4. **Riga 98** — countQuery: aggiungere `.eq("user_id", userId)` prima di `.in("id", ...)` o `.eq("country_code", ...)` (per non dare conferme su partner di altri utenti)
-5. **Riga 105** — updateQuery: aggiungere `.eq("user_id", userId)` prima dei filtri
-
-**Modifiche in `ai-assistant/toolExecutors.ts`:**
-
-6. **Righe 261, 264** — spostare `update_partner` e `bulk_update_partners` dal `writeMap` (no auth) al `writeAuthMap` (richiede userId), oppure passare `userId!` direttamente:
-   ```ts
-   update_partner: () => writeH.executeUpdatePartner(args, userId!),
-   bulk_update_partners: () => writeH.executeBulkUpdatePartners(args, userId!),
-   ```
-   E aggiungere il guard `if (!userId) return { error: "Auth required" }` per queste righe (oppure spostarle nel `writeAuthMap` esistente che già fa il check a riga 285).
-
-**Scelta**: spostarle in `writeAuthMap` (più pulito, riusa il check `userId` esistente).
-
-7. **Riga 14** — aggiornare l'interfaccia `WriteHandlers` solo se TypeScript stretto si lamenta delle nuove firme; usa `Function` generico quindi probabilmente non serve modifica.
-
-### Fix #4 — Break euristico nel tool loop
-
-**Riga 558** → introdurre `lastToolSignature` + `repeatedToolCount` prima del `while`. Detection: stessa stringa `name:args` ripetuta 2 volte consecutive → break con warning. Limite hard `iterations < 8` resta invariato.
-
-### File modificati (3)
-
-1. `supabase/functions/ai-assistant/index.ts` — import + tool filter + scope model + repetition break
-2. `supabase/functions/_shared/toolHandlersWrite.ts` — aggiunta param `userId` su 2 funzioni + guard `.eq("user_id", userId)` sulle 3 query partner
-3. `supabase/functions/ai-assistant/toolExecutors.ts` — spostare 2 entry da `writeMap` a `writeAuthMap` con `userId!`
-
-### Verifica post-fix
-
-```bash
-grep "getScopeConfig" supabase/functions/ai-assistant/index.ts
-grep "scopeModel\|scopeConfig" supabase/functions/ai-assistant/index.ts
-grep -A1 'from("partners").update' supabase/functions/_shared/toolHandlersWrite.ts | grep "user_id"
-grep "repeatedToolCount\|lastToolSignature" supabase/functions/ai-assistant/index.ts
-npx tsc --noEmit --skipLibCheck 2>&1 | head -20
-```
+1. `src/hooks/useAiAssistantChat.ts` — invokeEdge + rimozione SSE stream
+2. `src/hooks/useGlobalChat.ts` — invokeEdge + rimozione SSE stream + readSSEStream/SSEDelta
+3. `src/v2/hooks/useEmailComposerV2.ts` — invokeEdge per ai-assistant + send-email
+4. `supabase/functions/_shared/scopeConfigs.ts` — 3 nuovi scope case
 
 ### Note critiche
 
-- **Backward compat**: `partner_hub` (scope di default usato da `useGlobalChat`) continua a ricevere tutti i 60 tool — zero regressione funzionale per la chat principale.
-- **Sicurezza**: Le RLS sulle policy `partners` esistono già, ma proteggono solo `service_role`-bypass parziale; aggiungere `.eq("user_id", userId)` lato applicazione è **defense-in-depth**, non sostituzione delle RLS.
-- **Strategic = 0 tool**: corretto da design. Se un giorno servisse search_kb in modalità strategica, basterà aggiungerlo a `tools: []` in scopeConfigs.
-- **Non tocchiamo `executeAddPartnerNote`, `executeUpdateActivity`, ecc.**: il prompt richiede solo i 2 endpoint partner — gli altri usano già `partner_id` risolto da `resolvePartnerId` o operano su entità con RLS solide. Estensioni successive in fase separata se necessario.
+- **Streaming SSE rimosso**: il backend `ai-assistant` ritorna già JSON in modalità tool-calling. Lo streaming era legacy. Effetto UX: il messaggio assistente appare in un solo update invece che progressivo. Accettabile dato il guadagno di error normalization, budget guardrail, Sentry breadcrumbs e cost tracking.
+- **TTS_URL preservato**: `playTTS` (riga 54-74 di useGlobalChat) continua a usare `fetch` diretto perché ritorna un Blob audio, non gestibile da `invokeEdge`. Fuori scope.
+- **`useEmailComposerV2.ts` ritorno**: `invokeEdge` ritorna direttamente il body, non `{ data }` — adattato di conseguenza.
+- **Backward compat scope config**: `kb-supervisor` esistente preservato. I 3 nuovi scope si allineano alle attese di `unified-assistant/index.ts` aggiornato in Fase 1.
 
