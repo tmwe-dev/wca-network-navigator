@@ -52,6 +52,10 @@ export function extractContextTags(ctx: ConversationContext): ContextTags {
   const categories: string[] = [];
   let priority_boost = 0;
 
+  // Commercial doctrine — always included
+  categories.push("commercial_doctrine");
+  tags.push("system_core");
+
   // Partner country
   if (ctx.partner_country) {
     tags.push(ctx.partner_country.toLowerCase());
@@ -78,19 +82,8 @@ export function extractContextTags(ctx: ConversationContext): ContextTags {
     if (!categories.includes("system_doctrine")) categories.push("system_doctrine");
     if (!tags.includes("commercial_doctrine")) tags.push("commercial_doctrine");
 
-    // Stage-specific tags for targeted KB loading
-    const stageTagMap: Record<string, string[]> = {
-      "new": ["cold_outreach", "prospecting"],
-      "contacted": ["holding_pattern", "nurturing", "tone_modulation"],
-      "first_touch_sent": ["holding_pattern", "nurturing"],
-      "holding": ["holding_pattern", "nurturing", "follow_up"],
-      "in_progress": ["relationship_progression", "tone_modulation", "trust_building"],
-      "engaged": ["relationship_progression", "tone_modulation", "trust_building"],
-      "qualified": ["relationship_progression", "closing", "negoziazione"],
-      "negotiation": ["closing", "negoziazione", "obiezioni"],
-      "converted": ["conversion", "onboarding", "account_management"],
-    };
-    const extraTags = stageTagMap[stage] || [];
+    // Stage-specific tags from canonical STAGE_TAG_MAP
+    const extraTags = STAGE_TAG_MAP[stage] || [];
     for (const t of extraTags) if (!tags.includes(t)) tags.push(t);
   }
 
