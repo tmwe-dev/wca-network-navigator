@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { evaluateTransitions, applyTransition } from "../_shared/stateTransitions.ts";
+import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 
 
 const supabase = createClient(
@@ -260,6 +262,139 @@ serve(async (req) => {
         results.push({ agent: agent.name, role: agent.role, actions_created: actionsCreated });
 
         if (actionsCreated > 0) await sleep(DELAY_BETWEEN_AGENTS_MS);
+      }
+
+      // ═══ PHASE 2.5: State transitions + Next-action sequencing ═══
+      let transitionsApplied = 0;
+      let sequenceActions = 0;
+
+      // 2.5a: Evaluate state transitions for active partners
+      const { data: activePartners } = await supabase
+        .from("partners")
+        .select("id, lead_status, last_interaction_at")
+        .eq("user_id", userId)
+        .in("lead_status", ["new", "first_touch_sent", "holding", "engaged", "qualified"])
+        .not("lead_status", "is", null)
+        .limit(50);
+
+      const salesAgent = agents.find(a => ["outreach", "sales", "account"].includes(a.role)) || agents[0];
+
+      for (const partner of (activePartners || [])) {
+        const transitions = await evaluateTransitions(supabase, partner.id, userId);
+        for (const t of transitions) {
+          if (!t.shouldTransition) continue;
+          if (t.autoApply) {
+            const ok = await applyTransition(supabase, partner.id, userId, t);
+            if (ok) transitionsApplied++;
+          } else {
+            if (!salesAgent) continue;
+            // Check if proposal already exists
+            const { data: existing } = await supabase.from("agent_tasks")
+              .select("id")
+              .eq("agent_id", salesAgent.id)
+              .eq("task_type", "state_transition")
+              .contains("target_filters", { partner_id: partner.id, to_state: t.to } as Record<string, unknown>)
+              .maybeSingle();
+            if (existing) continue;
+
+            await supabase.from("agent_tasks").insert({
+              agent_id: salesAgent.id,
+              user_id: userId,
+              task_type: "state_transition",
+              description: `📊 Proposta transizione: partner ${partner.id} da "${t.from}" a "${t.to}". Trigger: ${t.trigger}`,
+              target_filters: { partner_id: partner.id, from_state: t.from, to_state: t.to, trigger: t.trigger } as Record<string, unknown>,
+              status: "proposed",
+            });
+          }
+        }
+      }
+
+      // 2.5b: Next-action sequencing for first_touch_sent partners
+      const { data: firstTouchPartners } = await supabase
+        .from("partners")
+        .select("id, last_interaction_at")
+        .eq("user_id", userId)
+        .eq("lead_status", "first_touch_sent")
+        .limit(20);
+
+      for (const partner of (firstTouchPartners || [])) {
+        if (sequenceActions >= budgetPerAgent) break;
+        if (!partner.last_interaction_at) continue;
+
+        const daysSinceFirst = Math.floor(
+          (Date.now() - new Date(partner.last_interaction_at).getTime()) / 86400000,
+        );
+
+        // Get completed steps
+        const { data: completedActs } = await supabase
+          .from("activities")
+          .select("activity_type")
+          .eq("source_id", partner.id)
+          .eq("user_id", userId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: true });
+
+        const completedSteps = (completedActs || []).map((_a, idx) => idx);
+
+        // Check for inbound reply
+        const { count: inboundCount } = await supabase
+          .from("channel_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("partner_id", partner.id)
+          .eq("direction", "inbound");
+
+        const hasReply = (inboundCount || 0) > 0;
+
+        // Check LinkedIn connection
+        const { data: liConn } = await supabase
+          .from("partner_social_links")
+          .select("id")
+          .eq("partner_id", partner.id)
+          .eq("platform", "linkedin")
+          .maybeSingle();
+
+        const nextStep = getNextEngagementStep(
+          daysSinceFirst,
+          completedSteps,
+          !!liConn,
+          hasReply,
+        );
+
+        if (nextStep && salesAgent) {
+          const { data: existingSeq } = await supabase.from("agent_tasks")
+            .select("id")
+            .eq("agent_id", salesAgent.id)
+            .contains("target_filters", { partner_id: partner.id, sequence_day: nextStep.day } as Record<string, unknown>)
+            .maybeSingle();
+          if (existingSeq) continue;
+
+          const needsApproval = forceApproval || nextStep.channel === "whatsapp";
+          await supabase.from("agent_tasks").insert({
+            agent_id: salesAgent.id,
+            user_id: userId,
+            task_type: "sequence_step",
+            description: `📋 Sequenza giorno ${nextStep.day}: ${nextStep.action} via ${nextStep.channel} per partner ${partner.id}`,
+            target_filters: {
+              partner_id: partner.id,
+              channel: nextStep.channel,
+              action: nextStep.action,
+              sequence_day: nextStep.day,
+              auto_approved: !needsApproval,
+            } as Record<string, unknown>,
+            status: needsApproval ? "proposed" : "pending",
+          });
+          sequenceActions++;
+        }
+      }
+
+      if (transitionsApplied > 0 || sequenceActions > 0) {
+        results.push({
+          phase: "sequencing",
+          user_id: userId,
+          transitions_applied: transitionsApplied,
+          sequence_actions: sequenceActions,
+        });
       }
 
       // ═══ PHASE 3: Weekly KB Supervisor Audit (Sunday 6-8 AM, structural only) ═══

@@ -13,6 +13,23 @@ import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 import { assembleOutreachContext } from "./contextAssembler.ts";
 import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts";
 import { parseOutreachResponse } from "./responseParser.ts";
+import { checkCadence } from "../_shared/cadenceEngine.ts";
+
+async function checkWhatsAppConsent(
+  supabase: ReturnType<typeof createClient>,
+  partnerId: string | null,
+  userId: string,
+): Promise<boolean> {
+  if (!partnerId) return false;
+  const { count } = await supabase
+    .from("channel_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("partner_id", partnerId)
+    .eq("channel", "whatsapp")
+    .eq("direction", "inbound");
+  return (count || 0) > 0;
+}
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -67,6 +84,57 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
       throw e;
+    }
+
+    // ── Cadence check: rispettiamo i tempi e i canali? ──
+    if (ch === "email" || ch === "linkedin" || ch === "whatsapp") {
+      const lastContactDate = ctx.daysSinceLastContact != null && ctx.daysSinceLastContact > 0
+        ? new Date(Date.now() - ctx.daysSinceLastContact * 86400000).toISOString()
+        : null;
+
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      let touchesThisWeek = 0;
+      if (ctx.partnerId) {
+        const { count } = await supabase
+          .from("activities")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("source_id", ctx.partnerId)
+          .gte("created_at", weekAgo)
+          .in("status", ["completed", "pending"]);
+        touchesThisWeek = count || 0;
+      }
+
+      const hasWhatsAppConsent = ch === "whatsapp"
+        ? await checkWhatsAppConsent(supabase, ctx.partnerId, userId)
+        : false;
+
+      const cadenceResult = checkCadence(
+        ctx.commercialState || "new",
+        lastContactDate,
+        null, // lastChannel non tracciato in ctx
+        touchesThisWeek,
+        ch,
+        hasWhatsAppConsent,
+      );
+
+      if (!cadenceResult.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "cadence_violation",
+            message: cadenceResult.reason,
+            suggestedChannel: cadenceResult.suggestedChannel,
+            nextAllowedDate: cadenceResult.nextAllowedDate,
+          }),
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Suggerimento alternanza canali → warning informativo, non blocco
+      if (cadenceResult.suggestedChannel && cadenceResult.suggestedChannel !== ch) {
+        (ctx as Record<string, unknown>).cadenceWarning =
+          `SUGGERIMENTO CADENZA: considera ${cadenceResult.suggestedChannel} invece di ${ch} (alternanza canali).`;
+      }
     }
 
     // ── Decision Object ──
