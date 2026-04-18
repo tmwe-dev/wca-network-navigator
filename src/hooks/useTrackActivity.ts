@@ -16,6 +16,14 @@ type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"]
 
 const log = createLogger("useTrackActivity");
 
+/**
+ * Returns true only if the current status allows escalation to "contacted".
+ * Never downgrades advanced states (in_progress, negotiation, converted, lost).
+ */
+function canEscalateToContacted(status: string | null | undefined): boolean {
+  return !status || status === "new";
+}
+
 export function useTrackActivity() {
   const qc = useQueryClient();
 
@@ -43,10 +51,20 @@ export function useTrackActivity() {
         });
       } catch (actErr: unknown) { log.error("track activity insert failed", { message: actErr instanceof Error ? actErr.message : String(actErr) }); }
 
-      // 2. Escalate lead_status new → contacted
+      // 2. Escalate lead_status only from "new" → "contacted"; never downgrade
       if (params.sourceType === "partner" && params.partnerId) {
-        // Conditional update: only escalate if currently "new"
-        await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now });
+        const { data: currentPartner } = await supabase
+          .from("partners")
+          .select("lead_status")
+          .eq("id", params.partnerId)
+          .maybeSingle();
+
+        if (canEscalateToContacted(currentPartner?.lead_status)) {
+          await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now });
+        } else {
+          // Advanced state (in_progress / negotiation / converted / lost) — refresh timestamp only
+          await updatePartner(params.partnerId, { last_interaction_at: now });
+        }
 
         // Create interaction record
         await createInteraction({
@@ -56,8 +74,17 @@ export function useTrackActivity() {
           notes: params.description || `Attività: ${params.title}`,
         });
       } else if (params.sourceType === "imported_contact") {
-        // Conditional update: only escalate if currently "new"
-        await updateContact(params.sourceId, { lead_status: "contacted", last_interaction_at: now });
+        const { data: currentContact } = await supabase
+          .from("imported_contacts")
+          .select("lead_status")
+          .eq("id", params.sourceId)
+          .maybeSingle();
+
+        if (canEscalateToContacted(currentContact?.lead_status)) {
+          await updateContact(params.sourceId, { lead_status: "contacted", last_interaction_at: now });
+        } else {
+          await updateContact(params.sourceId, { last_interaction_at: now });
+        }
 
         await insertContactInteraction({
           contact_id: params.sourceId,
@@ -67,7 +94,16 @@ export function useTrackActivity() {
           created_by: user.id,
         });
       } else if (params.sourceType === "business_card") {
-        await updateBusinessCard(params.sourceId, { lead_status: "contacted" });
+        const { data: currentBca } = await supabase
+          .from("business_cards")
+          .select("lead_status")
+          .eq("id", params.sourceId)
+          .maybeSingle();
+
+        if (canEscalateToContacted(currentBca?.lead_status)) {
+          await updateBusinessCard(params.sourceId, { lead_status: "contacted" });
+        }
+        // No timestamp column on business_cards — nothing else to update
       }
     },
     onSuccess: () => {

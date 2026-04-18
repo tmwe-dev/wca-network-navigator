@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { HOLDING_STATUSES } from "@/constants/holdingPattern";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByLeadStatus } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
@@ -35,7 +36,7 @@ export interface TimelineEntry {
   outcome?: string | null;
 }
 
-const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
+const ACTIVE_STATUSES = [...HOLDING_STATUSES];
 
 export function useHoldingPatternList() {
   return useQuery({
