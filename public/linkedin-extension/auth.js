@@ -11,7 +11,8 @@ var Auth = globalThis.Auth || (function () {
     try {
       const cookie = await chrome.cookies.get({ url: "https://www.linkedin.com/", name: "li_at" });
       return cookie ? cookie.value : null;
-    } catch (_) {
+    } catch (err) {
+      console.warn("[LI Auth] cookie read failed:", (err && err.message) || err);
       return null;
     }
   }
@@ -67,7 +68,8 @@ var Auth = globalThis.Auth || (function () {
       }
       // Conservative: cookie alone is not enough — need page-level confirmation
       return sessionResult || { authenticated: false, reason: "cookie_only_no_page_verify", cookie: true };
-    } catch (_) {
+    } catch (err) {
+      console.warn("[LI Auth] verifySession DOM inspect failed:", (err && err.message) || err);
       // Page script failed: do NOT trust cookie alone
       return { authenticated: false, reason: "cookie_only_script_error", cookie: true, cookieLength: liAt.length };
     }
@@ -222,7 +224,9 @@ var Auth = globalThis.Auth || (function () {
             });
           }
           if (state && state.isChallenge) sawChallenge = true;
-        } catch (_) {}
+        } catch (err) {
+          console.warn("[LI Auth] poll inspectPage failed:", (err && err.message) || err);
+        }
       }
     }
 
@@ -257,7 +261,9 @@ var Auth = globalThis.Auth || (function () {
     if (!creds.email || !creds.password) return Config.errorResponse(Config.ERROR.LOGIN_FAILED, "Credenziali LinkedIn non configurate");
 
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/");
-    try { await chrome.tabs.update(tab.id, { active: true }); } catch (_) {}
+    try { await chrome.tabs.update(tab.id, { active: true }); } catch (err) {
+      console.warn("[LI Auth] tab activate failed:", (err && err.message) || err);
+    }
 
     try {
       const initialStateRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: inspectPage });
