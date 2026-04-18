@@ -154,23 +154,31 @@ export function createReadHandlers(supabase: SupabaseClient) {
     };
   }
 
-  async function executePartnerDetail(args: Record<string, unknown>) {
+  async function executePartnerDetail(args: Record<string, unknown>, userId?: string) {
     let partner: Record<string, unknown> | null = null;
     if (args.partner_id) {
-      const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
+      let q = supabase.from("partners").select("*").eq("id", args.partner_id);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.maybeSingle();
       partner = data;
     } else if (args.company_name) {
-      const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
+      let q = supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name)}%`);
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q.limit(1).maybeSingle();
       partner = data;
     }
     if (!partner) return { error: "Partner non trovato" };
+    const pid = partner.id as string;
+    const ownerFilter = userId ? { user_id: userId } : null;
+    const applyOwner = <T extends { eq: (col: string, val: unknown) => T }>(q: T): T =>
+      ownerFilter ? q.eq("user_id", ownerFilter.user_id) : q;
     const [contactsRes, networksRes, servicesRes, certsRes, socialsRes, blacklistRes] = await Promise.all([
-      supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", partner.id),
-      supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", partner.id),
-      supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-      supabase.from("partner_certifications").select("certification").eq("partner_id", partner.id),
-      supabase.from("partner_social_links").select("platform, url").eq("partner_id", partner.id),
-      supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", partner.id),
+      applyOwner(supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_services").select("service_category").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_certifications").select("certification").eq("partner_id", pid)),
+      applyOwner(supabase.from("partner_social_links").select("platform, url").eq("partner_id", pid)),
+      supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", pid),
     ]);
     return {
       id: partner.id, company_name: partner.company_name, alias: partner.company_alias, city: partner.city,
