@@ -26,6 +26,7 @@ var Actions = globalThis.Actions || (function () {
   async function sendConnectionRequest(profileUrl, note) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
     const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickConnect(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, (clickResult && clickResult.error) || "Connect button not found");
     await TabManager.sleep(2000);
