@@ -1,8 +1,8 @@
 import { ApiError } from "@/lib/api/apiError";
 import { EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.4.2";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.3.0";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.5.0";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.3.1";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -15,14 +15,21 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.4.0",
+    latestVersion: "5.5.0",
     items: [
+      {
+        version: "5.5.0",
+        filename: "whatsapp-extension-5.5.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.5.0.zip",
+        current: true,
+        note: "Versione corrente",
+      },
       {
         version: "5.4.0",
         filename: "whatsapp-extension-5.4.0.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.4.0.zip",
-        current: true,
-        note: "Versione corrente",
+        current: false,
+        note: "Archivio",
       },
       {
         version: "5.3.2",
@@ -31,23 +38,16 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
         current: false,
         note: "Archivio",
       },
-      {
-        version: "1.1",
-        filename: "whatsapp-extension-1.1.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-1.1.zip",
-        current: false,
-        note: "Archivio compatibilità",
-      },
     ],
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.3.0",
+    latestVersion: "3.3.1",
     items: [
       {
-        version: "3.3.0",
-        filename: "linkedin-extension-3.3.0.zip",
-        path: "/chrome-extensions/linkedin/linkedin-extension-3.3.0.zip",
+        version: "3.3.1",
+        filename: "linkedin-extension-3.3.1.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.3.1.zip",
         current: true,
         note: "Versione corrente",
       },
