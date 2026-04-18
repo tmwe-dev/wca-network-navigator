@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.3.0",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.3.0 Optimus URL extraction, AILearn pageType, visibility-aware tab actions, origin hardening.",
+  "version": "3.3.1",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.3.1 active-tab preference, 127.0.0.1 host.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {
@@ -14,7 +14,9 @@
         "https://*.lovable.app/*",
         "https://*.lovableproject.com/*",
         "http://localhost:*/*",
-        "*://localhost:*/*"
+        "*://localhost:*/*",
+        "http://127.0.0.1:*/*",
+        "*://127.0.0.1:*/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle",

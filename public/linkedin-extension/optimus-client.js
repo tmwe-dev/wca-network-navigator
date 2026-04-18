@@ -184,6 +184,7 @@ var Optimus = globalThis.Optimus || (function () {
   async function _findAppTab() {
     try {
       var tabs = await chrome.tabs.query({});
+      var candidates = [];
       for (var i = 0; i < tabs.length; i++) {
         var url = tabs[i].url || "";
         if (
@@ -192,9 +193,15 @@ var Optimus = globalThis.Optimus || (function () {
           url.match(/localhost(:\d+)?/i) ||
           url.match(/127\.0\.0\.1(:\d+)?/i)
         ) {
-          return tabs[i];
+          candidates.push(tabs[i]);
         }
       }
+      if (candidates.length === 0) return null;
+      // Prefer active tab, then most recently accessed
+      for (var j = 0; j < candidates.length; j++) {
+        if (candidates[j].active) return candidates[j];
+      }
+      return candidates[0];
     } catch (_) {}
     return null;
   }

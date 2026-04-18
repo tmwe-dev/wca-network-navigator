@@ -18,6 +18,7 @@ var AiBridge = globalThis.AiBridge || (function () {
   async function findWebappTab() {
     try {
       const tabs = await chrome.tabs.query({});
+      const candidates = [];
       for (const t of tabs) {
         if (!t.url) continue;
         if (
@@ -25,9 +26,12 @@ var AiBridge = globalThis.AiBridge || (function () {
           /https:\/\/[^/]+\.lovableproject\.com\//i.test(t.url) ||
           /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(t.url)
         ) {
-          return t;
+          candidates.push(t);
         }
       }
+      if (candidates.length === 0) return null;
+      for (const c of candidates) if (c.active) return c;
+      return candidates[0];
     } catch (_) {}
     return null;
   }

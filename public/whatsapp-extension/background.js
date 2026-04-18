@@ -12,6 +12,7 @@ try {
     "discovery.js",
     "ai-bridge.js",
     "ai-extract.js",
+    "optimus-client.js",
     "actions.js"
   );
 } catch (e) {
@@ -47,7 +48,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.4.2",
+      version: "5.5.0",
       modulesLoaded: _modulesLoaded,
     });
     return false;
@@ -147,11 +148,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
   // Handle Optimus responses from content script
   if (message.source === "wa-content-bridge" && message.type === "optimus-response") {
-    if (typeof OptimusClient !== "undefined" && typeof OptimusClient.handleResponse === "function") {
-      OptimusClient.handleResponse(message);
-    } else if (typeof AiBridge !== "undefined") {
-      // Fallback: route optimus responses through AiBridge
-      AiBridge.handleResponse({ ...message, type: "ai-bridge-response" });
+    // Route to Optimus module which manages pending plan requests
+    if (typeof Optimus !== "undefined" && typeof Optimus.handlePlanResponse === "function") {
+      Optimus.handlePlanResponse(message);
     }
     return false;
   }

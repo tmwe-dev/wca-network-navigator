@@ -24,10 +24,11 @@ var AiBridge = globalThis.AiBridge || (function () {
     const timeout = timeoutMs || 30000;
     const requestId = generateId();
 
-    // Find a tab running our webapp to relay through
+    // Find a tab running our webapp to relay through (prefer active tab)
     let appTab = null;
     try {
       const tabs = await chrome.tabs.query({});
+      const candidates = [];
       for (let i = 0; i < tabs.length; i++) {
         const url = tabs[i].url || "";
         if (
@@ -36,9 +37,11 @@ var AiBridge = globalThis.AiBridge || (function () {
           url.match(/localhost/i) ||
           url.match(/127\.0\.0\.1/i)
         ) {
-          appTab = tabs[i];
-          break;
+          candidates.push(tabs[i]);
         }
+      }
+      if (candidates.length > 0) {
+        appTab = candidates.find((t) => t.active) || candidates[0];
       }
     } catch (e) {
       console.error("[AiBridge] Tab query failed:", e);
