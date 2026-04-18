@@ -134,7 +134,7 @@ export function useWhatsAppAdaptiveSync() {
       };
       const { error, status } = await supabase
         .from("channel_messages")
-        .upsert([row], { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
+        .upsert([row], { onConflict: "message_id_external", ignoreDuplicates: true });
       if (!error && status === 201) newCount++;
     }
     return { newCount };

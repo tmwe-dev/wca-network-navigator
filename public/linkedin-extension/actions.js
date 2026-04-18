@@ -348,6 +348,155 @@ var Actions = globalThis.Actions || (function () {
     } catch (e) { return Config.errorResponse(Config.ERROR.INBOX_FAILED, e.message); }
   }
 
+  async function backfillThread(threadUrl, lastKnownText, maxScrolls) {
+    var MAX_SCROLLS = maxScrolls || 20;
+    if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "threadUrl richiesto");
+
+    try {
+      var tab = await TabManager.getLinkedInTab(threadUrl, false);
+      await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      await TabManager.sleep(2500);
+
+      var threadSelector = '[class*="msg-s-message-list"], [class*="msg-thread"], main, [role="main"]';
+      var allMessages = [];
+      var seen = {};
+      var foundLast = false;
+      var scrollIdx = 0;
+      var optimusUnavailable = false;
+      var plan = null;
+      var cached = false;
+
+      // Get Optimus plan ONCE before the loop
+      var initialSnap = await Optimus.snapshotPage(tab.id, threadSelector, 6, 3000);
+      if (initialSnap && initialSnap.ok) {
+        var planRes = await Optimus.getPlan({
+          channel: "linkedin",
+          pageType: "thread",
+          snapshot: initialSnap.snapshot,
+          hash: initialSnap.hash,
+          previousPlanFailed: false,
+          failureContext: null,
+        });
+        if (planRes && planRes.success) {
+          plan = planRes.plan || planRes;
+          cached = !!planRes.cached;
+        } else {
+          optimusUnavailable = true;
+        }
+      } else {
+        optimusUnavailable = true;
+      }
+
+      function pushUnique(msg) {
+        var key = (msg.text || "") + "|" + (msg.timestamp || "");
+        if (seen[key]) return false;
+        seen[key] = true;
+        if (lastKnownText && msg.text && msg.text.trim().toLowerCase() === lastKnownText.trim().toLowerCase()) return "stop";
+        allMessages.push(msg);
+        return true;
+      }
+
+      // Loop: extract → scroll up → extract
+      var scrollDelays = [1.5, 2, 2.5, 3, 1.5, 2, 3, 2.5, 1.5, 2];
+      for (scrollIdx = 0; scrollIdx < MAX_SCROLLS && !foundLast; scrollIdx++) {
+
+        if (plan && !optimusUnavailable) {
+          // Optimus extraction
+          var exec = await Optimus.executePlanInTab(tab.id, threadSelector, plan);
+          var items = (exec && exec.items) || [];
+
+          // Retry once with fresh plan if cache returned 0
+          if (items.length === 0 && cached) {
+            var freshSnap = await Optimus.snapshotPage(tab.id, threadSelector, 6, 3000);
+            if (freshSnap && freshSnap.ok) {
+              var freshRes = await Optimus.getPlan({
+                channel: "linkedin",
+                pageType: "thread",
+                snapshot: freshSnap.snapshot,
+                hash: freshSnap.hash,
+                previousPlanFailed: true,
+                failureContext: "Cached plan returned 0 messages during LI backfill scroll " + scrollIdx,
+              });
+              if (freshRes && freshRes.success) {
+                plan = freshRes.plan || freshRes;
+                cached = !!freshRes.cached;
+                exec = await Optimus.executePlanInTab(tab.id, threadSelector, plan);
+                items = (exec && exec.items) || [];
+              }
+            }
+            if (items.length === 0) break;
+          }
+
+          var mapped = mapOptimusThreadMessages(items);
+          for (var mi = 0; mi < mapped.length; mi++) {
+            var r2 = pushUnique(mapped[mi]);
+            if (r2 === "stop") { foundLast = true; break; }
+          }
+        } else {
+          // Legacy fallback: DOM extraction
+          var domResults = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: function () {
+              var messages = [];
+              var items = document.querySelectorAll("li[class*='msg-'], li[class*='message'], [class*='msg-s-event']");
+              if (items.length === 0) items = document.querySelectorAll("main li, [role='main'] li");
+              items.forEach(function (item) {
+                var bodyEl = item.querySelector("p, [class*='body'], [class*='content']");
+                var senderEl = item.querySelector("h3, span[class*='name'], [class*='sender']");
+                var timeEl = item.querySelector("time, [class*='time']");
+                var text = bodyEl ? bodyEl.textContent.trim() : "";
+                var sender = senderEl ? senderEl.textContent.trim() : "";
+                var timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
+                if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
+              });
+              return { success: true, messages: messages };
+            },
+          });
+          var domRes = domResults && domResults[0] ? domResults[0].result : null;
+          if (domRes && domRes.messages) {
+            for (var di = 0; di < domRes.messages.length; di++) {
+              var r3 = pushUnique(domRes.messages[di]);
+              if (r3 === "stop") { foundLast = true; break; }
+            }
+          }
+        }
+
+        if (foundLast) break;
+
+        // Scroll up to load older messages
+        var scrollRes = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            var container = document.querySelector('[class*="msg-s-message-list"]')
+              || document.querySelector('[class*="msg-thread"]')
+              || document.querySelector("main");
+            if (!container) return { success: false, error: "Scroll container not found" };
+            var scrollEl = container.closest('[class*="msg-s-message-list-container"]') || container;
+            var before = scrollEl.scrollTop;
+            scrollEl.scrollTop = 0;
+            var after = scrollEl.scrollTop;
+            return { success: true, reachedTop: (after === 0 && before === 0) };
+          },
+        });
+        var sr = scrollRes && scrollRes[0] ? scrollRes[0].result : null;
+        if (sr && sr.reachedTop) break;
+
+        await TabManager.sleep(scrollDelays[scrollIdx % scrollDelays.length] * 1000);
+      }
+
+      return {
+        success: true,
+        messages: allMessages,
+        threadUrl: threadUrl,
+        foundLast: foundLast,
+        scrollCount: scrollIdx,
+        method: optimusUnavailable ? "legacy-dom" : (cached ? "optimus-cache" : "optimus-ai"),
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
   async function diagnostic() {
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
@@ -410,6 +559,7 @@ var Actions = globalThis.Actions || (function () {
     searchProfile: searchProfile,
     readInbox: readInbox,
     readThread: readThread,
+    backfillThread: backfillThread,
     diagnostic: diagnostic,
     learnDom: learnDom,
   };

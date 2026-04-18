@@ -25,7 +25,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "3.3.1" });
+    sendResponse({ success: true, version: "3.4.0" });
     return false; // sync
   },
 
@@ -108,6 +108,21 @@ const ACTION_HANDLERS = {
     TabManager.enqueueAction(async function () {
       try { sendResponse(await Actions.readThread(msg.threadUrl)); }
       catch (err) { sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, err.message)); }
+    });
+    return true;
+  },
+
+  backfillLinkedInThread: function (msg, sendResponse) {
+    if (!msg.threadUrl) {
+      sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, "threadUrl richiesto"));
+      return false;
+    }
+    TabManager.enqueueAction(async function () {
+      try {
+        sendResponse(await Actions.backfillThread(msg.threadUrl, msg.lastKnownText || "", msg.maxScrolls || 20));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
+      }
     });
     return true;
   },

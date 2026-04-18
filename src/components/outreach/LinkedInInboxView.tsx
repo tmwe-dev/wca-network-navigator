@@ -203,10 +203,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                       {bfProgress.status === "paused" ? "⏸ " : "▶ "}
                       <span className="text-foreground font-medium">{bfProgress.currentThread || "Preparazione..."}</span>
                     </p>
-                    {bfProgress.pauseReason && (
-                      <p className="text-yellow-600 dark:text-yellow-400">⚠ {bfProgress.pauseReason}</p>
-                    )}
-                    <p>✓ {bfProgress.recoveredMessages} recuperati{bfProgress.duplicatesSkipped ? ` • ${bfProgress.duplicatesSkipped} dup` : ""}</p>
+                    <p>✓ {bfProgress.recoveredMessages} recuperati</p>
                     {bfProgress.lastError && (
                       <p className="text-red-400 truncate" title={bfProgress.lastError}>❌ {bfProgress.lastError}</p>
                     )}
