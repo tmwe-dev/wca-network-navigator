@@ -380,6 +380,10 @@ var Actions = globalThis.Actions || (function () {
 
   // ── Optimus-first: try AI extraction plan, fallback to legacy on 503 ──
   async function tryOptimusReadUnread(tabId, previousFailed, failureContext) {
+    // Guard: if Optimus modules are not loaded, signal unavailable so legacy fallback kicks in
+    if (typeof Optimus === "undefined" || typeof OptimusClient === "undefined") {
+      return { success: false, error: "optimus_not_loaded", optimusUnavailable: true };
+    }
     // 1. snapshot the sidebar
     const sidebarSelector = '[data-tab="3"], #pane-side, [role="grid"]';
     const snap = await Optimus.snapshotPage(tabId, sidebarSelector, 6, 3000);
@@ -424,6 +428,10 @@ var Actions = globalThis.Actions || (function () {
   // ── Optimus-first: extract messages from open chat panel ──
   // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
   async function tryOptimusReadThread(tabId, previousFailed, failureContext) {
+    // Guard: if Optimus modules are not loaded, signal unavailable so legacy fallback kicks in
+    if (typeof Optimus === "undefined" || typeof OptimusClient === "undefined") {
+      return { success: false, error: "optimus_not_loaded", optimusUnavailable: true };
+    }
     const panelSelector = '[data-testid="conversation-panel-messages"], #main [role="application"], #main';
     const snap = await Optimus.snapshotPage(tabId, panelSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
@@ -779,22 +787,26 @@ var Actions = globalThis.Actions || (function () {
       let planVersion = 0;
       let confidence = 0;
 
-      // 2. Get an Optimus plan ONCE before the loop
-      const initialSnap = await Optimus.snapshotPage(r.tab.id, panelSelector, 6, 3000);
-      if (initialSnap && initialSnap.ok) {
-        const planRes = await Optimus.getPlan({
-          channel: "whatsapp",
-          pageType: "thread",
-          snapshot: initialSnap.snapshot,
-          hash: initialSnap.hash,
-          previousPlanFailed: false,
-          failureContext: null,
-        });
-        if (planRes && planRes.success) {
-          plan = planRes.plan || planRes;
-          cached = !!planRes.cached;
-          planVersion = planRes.plan_version || 0;
-          confidence = planRes.confidence || 0;
+      // 2. Get an Optimus plan ONCE before the loop (only if Optimus modules loaded)
+      if (typeof Optimus !== "undefined" && typeof OptimusClient !== "undefined") {
+        const initialSnap = await Optimus.snapshotPage(r.tab.id, panelSelector, 6, 3000);
+        if (initialSnap && initialSnap.ok) {
+          const planRes = await Optimus.getPlan({
+            channel: "whatsapp",
+            pageType: "thread",
+            snapshot: initialSnap.snapshot,
+            hash: initialSnap.hash,
+            previousPlanFailed: false,
+            failureContext: null,
+          });
+          if (planRes && planRes.success) {
+            plan = planRes.plan || planRes;
+            cached = !!planRes.cached;
+            planVersion = planRes.plan_version || 0;
+            confidence = planRes.confidence || 0;
+          } else {
+            optimusUnavailable = true;
+          }
         } else {
           optimusUnavailable = true;
         }
