@@ -441,7 +441,17 @@ async function scheduleNextStep(
     trigger_condition: "no_response",
     parent_action_id: action.id,
     cadence_rule: { ...rule, current_step: nextStep },
-    metadata: { ...meta, partner_id: actionPartnerId },
+    metadata: {
+      ...meta,
+      partner_id: actionPartnerId,
+      cadence_context: {
+        previous_channel: action.action_type,
+        previous_step: currentStep,
+        sequence_position: `${nextStep + 1}/${rule.sequence.length}`,
+        escalation_reason: "no_response",
+        delay_days: delayDays,
+      },
+    },
   });
 }
 
