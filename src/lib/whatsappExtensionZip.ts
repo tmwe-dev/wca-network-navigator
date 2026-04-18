@@ -2,7 +2,7 @@ import { ApiError } from "@/lib/api/apiError";
 import { EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.6.0";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.4.0";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.5.0";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -35,14 +35,21 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.4.0",
+    latestVersion: "3.5.0",
     items: [
+      {
+        version: "3.5.0",
+        filename: "linkedin-extension-3.5.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip",
+        current: true,
+        note: "Versione corrente — Optimus auto-relearn LinkedIn + fallback edge function diretto + cache schema 3h",
+      },
       {
         version: "3.4.0",
         filename: "linkedin-extension-3.4.0.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.4.0.zip",
-        current: true,
-        note: "Versione corrente — stealth background, no focus hijack",
+        current: false,
+        note: "Archivio — stealth background, no focus hijack",
       },
     ],
   },

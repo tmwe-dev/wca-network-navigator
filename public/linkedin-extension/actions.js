@@ -92,6 +92,88 @@ var Actions = globalThis.Actions || (function () {
     } catch (err) { return Config.errorResponse(Config.ERROR.SEARCH_FAILED, err.message); }
   }
 
+  // ── Schema → Optimus plan converter ──
+  function buildPlanFromKeyMap(schema, keyMap) {
+    const plan = { fields: {} };
+    for (const schemaKey in schema) {
+      if (!schema.hasOwnProperty(schemaKey)) continue;
+      if (schemaKey === "learnedAt" || schemaKey === "pageType") continue;
+      const optimusKey = keyMap[schemaKey];
+      const selector = schema[schemaKey];
+      if (!optimusKey || !selector) continue;
+      plan.fields[optimusKey] = {
+        primary: typeof selector === "string"
+          ? selector
+          : (selector.primary || selector.selector || String(selector)),
+        fallback: typeof selector === "object"
+          ? (selector.fallback || selector.alt || null)
+          : null,
+      };
+    }
+    if (!plan.fields.container && !plan.fields.contact_name && !plan.fields.sender_name) {
+      console.warn("[LI Optimus] Schema conversion failed: missing key fields");
+      return null;
+    }
+    return plan;
+  }
+
+  function convertLinkedInSchemaToOptimusPlan(schema, pageType) {
+    if (!schema) return null;
+
+    if (pageType === "messaging" || pageType === "inbox") {
+      const keyMap = {
+        // Container
+        threadItem: "container",
+        conversationItem: "container",
+        conversationListSelector: "container",
+        messageItem: "container",
+        // Contact name
+        contactName: "contact_name",
+        participantName: "contact_name",
+        senderName: "contact_name",
+        conversationNameSelector: "contact_name",
+        // Last message
+        lastMessage: "last_message",
+        snippet: "last_message",
+        messagePreview: "last_message",
+        messageBodySelector: "last_message",
+        // Timestamp
+        timestamp: "timestamp",
+        time: "timestamp",
+        date: "timestamp",
+        messageTimeSelector: "timestamp",
+        // Unread badge
+        unreadBadge: "unread_badge",
+        unreadIndicator: "unread_badge",
+        unreadDot: "unread_badge",
+      };
+      return buildPlanFromKeyMap(schema, keyMap);
+    }
+
+    if (pageType === "thread") {
+      const keyMap = {
+        messageItem: "container",
+        messageBubble: "container",
+        messageItemSelector: "container",
+        senderName: "sender_name",
+        authorName: "sender_name",
+        participantName: "sender_name",
+        messageSenderSelector: "sender_name",
+        messageText: "message_text",
+        messageBody: "message_text",
+        messageContent: "message_text",
+        messageBodySelector: "message_text",
+        timestamp: "timestamp",
+        time: "timestamp",
+        date: "timestamp",
+        messageTimeSelector: "timestamp",
+      };
+      return buildPlanFromKeyMap(schema, keyMap);
+    }
+
+    return null;
+  }
+
   // ── Optimus-first helpers ──
   async function tryOptimusInbox(tabId, previousFailed, failureContext) {
     const inboxSelector = '[class*="msg-overlay-list-bubble"], [class*="msg-conversations-container"], main, [role="main"]';
@@ -110,7 +192,35 @@ var Actions = globalThis.Actions || (function () {
       previousPlanFailed: req.previousPlanFailed,
       failureContext: req.failureContext,
     });
-    if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    if (!planRes || !planRes.success) {
+      // I7 — Auto-relearn: Optimus plan failed, try AI learning
+      console.log("[LI Optimus] Inbox plan failed, triggering auto-relearn...");
+      try {
+        const learnResult = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
+        if (learnResult && !learnResult.error) {
+          const freshPlan = convertLinkedInSchemaToOptimusPlan(learnResult, "messaging");
+          if (freshPlan) {
+            const retryExec = await Optimus.executePlanInTab(tabId, inboxSelector, freshPlan);
+            if (retryExec && retryExec.items && retryExec.items.length > 0) {
+              return {
+                success: true,
+                cached: false,
+                planVersion: 0,
+                confidence: 0,
+                latencyMs: 0,
+                items: retryExec.items,
+                candidates: retryExec.candidates || 0,
+                dropped: retryExec.dropped || 0,
+                method: "optimus-relearned",
+              };
+            }
+          }
+        }
+      } catch (learnErr) {
+        console.warn("[LI Optimus] Inbox auto-relearn failed:", learnErr?.message);
+      }
+      return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    }
 
     const execRes = await Optimus.executePlanInTab(tabId, inboxSelector, planRes.plan || planRes);
     if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
@@ -144,7 +254,35 @@ var Actions = globalThis.Actions || (function () {
       previousPlanFailed: req.previousPlanFailed,
       failureContext: req.failureContext,
     });
-    if (!planRes || !planRes.success) return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    if (!planRes || !planRes.success) {
+      // I7 — Auto-relearn: Optimus thread plan failed, try AI learning
+      console.log("[LI Optimus] Thread plan failed, triggering auto-relearn...");
+      try {
+        const learnResult = await AILearn.learnFromAI(tabId, "thread", Config.getUrl(), Config.getKey());
+        if (learnResult && !learnResult.error) {
+          const freshPlan = convertLinkedInSchemaToOptimusPlan(learnResult, "thread");
+          if (freshPlan) {
+            const retryExec = await Optimus.executePlanInTab(tabId, threadSelector, freshPlan);
+            if (retryExec && retryExec.items && retryExec.items.length > 0) {
+              return {
+                success: true,
+                cached: false,
+                planVersion: 0,
+                confidence: 0,
+                latencyMs: 0,
+                items: retryExec.items,
+                candidates: retryExec.candidates || 0,
+                dropped: retryExec.dropped || 0,
+                method: "optimus-relearned",
+              };
+            }
+          }
+        }
+      } catch (learnErr) {
+        console.warn("[LI Optimus] Thread auto-relearn failed:", learnErr?.message);
+      }
+      return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
+    }
 
     const execRes = await Optimus.executePlanInTab(tabId, threadSelector, planRes.plan || planRes);
     if (!execRes || !execRes.success) return { success: false, error: execRes && execRes.error || "execute_failed", optimusUnavailable: false };
@@ -195,8 +333,9 @@ var Actions = globalThis.Actions || (function () {
 
     // ── Optimus-first ──
     let optimus = await tryOptimusInbox(tab.id, false, null);
-    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-      optimus = await tryOptimusInbox(tab.id, true, "Cached plan returned 0 threads from LI messaging inbox");
+    if (optimus.success && optimus.items.length === 0) {
+      console.log("[LI Optimus] 0 threads, forcing relearn...");
+      optimus = await tryOptimusInbox(tab.id, true, "Plan returned 0 threads, DOM may have changed");
     }
 
     if (optimus.success) {
@@ -293,8 +432,9 @@ var Actions = globalThis.Actions || (function () {
 
     // ── Optimus-first ──
     let optimus = await tryOptimusThread(tab.id, false, null);
-    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-      optimus = await tryOptimusThread(tab.id, true, "Cached plan returned 0 messages from LI thread " + threadUrl);
+    if (optimus.success && optimus.items.length === 0) {
+      console.log("[LI Optimus] 0 messages in thread, forcing relearn...");
+      optimus = await tryOptimusThread(tab.id, true, "Plan returned 0 messages from LI thread " + threadUrl);
     }
 
     if (optimus.success) {

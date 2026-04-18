@@ -37,12 +37,12 @@ Deno.serve(async (req) => {
     const systemPrompt = `You are a DOM selector expert for LinkedIn web pages.
 Given a structural snapshot of a LinkedIn ${pageType || "profile"} page, identify the most reliable CSS selectors for each UI element.
 
-RULES:
+STRICT RULES:
 - Prefer selectors using: [role], [aria-label], [data-testid], semantic tags (h1, nav, main, button)
-- AVOID class-based selectors that contain random hashes or obfuscated names
+- AVOID class-based selectors that contain random hashes or obfuscated names (e.g. x1n2onr6, _ak72, _3OvU8)
 - If a class name looks semantic and stable (e.g., "msg-form", "profile-card"), you may use it
 - Return ONLY a JSON object with the selector mappings
-- Each value must be a valid CSS selector string
+- Each value must be a valid CSS selector string, or null if not found
 
 For a PROFILE page, return:
 {
@@ -56,17 +56,25 @@ For a PROFILE page, return:
   "moreButtonSelector": "CSS selector for the More/Altro dropdown button"
 }
 
-For a MESSAGING page, return:
+For a MESSAGING / INBOX page (list of conversations), return:
 {
-  "conversationListSelector": "CSS selector for conversation list items",
-  "conversationLinkSelector": "CSS selector for thread links",
-  "conversationNameSelector": "CSS selector for contact name in list",
+  "threadItem": "CSS selector for a single conversation row in the inbox list (CRITICAL — must match individual rows)",
+  "contactName": "CSS selector for the contact name within a conversation row",
+  "lastMessage": "CSS selector for the last message preview within a conversation row",
+  "timestamp": "CSS selector for the timestamp within a conversation row",
+  "unreadBadge": "CSS selector for the unread indicator/badge within a conversation row",
+  "messageInputSelector": "CSS selector for the message input box (when a thread is open)",
+  "sendButtonSelector": "CSS selector for the send button"
+}
+
+For a THREAD page (open conversation with messages), return:
+{
+  "messageItem": "CSS selector for a single message bubble/row in the thread (CRITICAL)",
+  "senderName": "CSS selector for the sender name within a message",
+  "messageText": "CSS selector for the message text content within a message",
+  "timestamp": "CSS selector for the message timestamp within a message",
   "messageInputSelector": "CSS selector for the message input box",
-  "sendButtonSelector": "CSS selector for the send button",
-  "messageItemSelector": "CSS selector for individual message items",
-  "messageSenderSelector": "CSS selector for sender name in a message",
-  "messageBodySelector": "CSS selector for message text content",
-  "messageTimeSelector": "CSS selector for message timestamp"
+  "sendButtonSelector": "CSS selector for the send button"
 }
 
 Return ONLY valid JSON. No explanation, no markdown.`;
