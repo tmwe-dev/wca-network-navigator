@@ -146,19 +146,36 @@ serve(async (req) => {
       }
     }
 
-    // ── Decision Object ──
+    // ── Decision Object (Fix 3.1: usa relationship_stage REALE) ──
     const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
+    const stage = ctx.relationshipStage; // cold | warm | active | stale | ghosted
+    const isAdvanced = stage === "warm" || stage === "active";
+    const isStaleOrGhosted = stage === "stale" || stage === "ghosted";
     const decision = {
-      email_type: email_type_id || (ctx.interactionHistoryCount > 0 ? "follow_up" : "primo_contatto"),
-      relationship_stage: ctx.interactionHistoryCount === 0 ? "cold" : ctx.interactionHistoryCount < 3 ? "warming" : "active",
+      email_type: email_type_id || (stage === "cold" ? "primo_contatto" : isStaleOrGhosted ? "reattivazione" : "follow_up"),
+      // Single source of truth: stage da analyzeRelationshipHistory (NO doppia verità da count)
+      relationship_stage: stage,
+      relationship_detail: {
+        stage,
+        response_rate: ctx.relationshipMetrics.response_rate,
+        unanswered_streak: ctx.relationshipMetrics.unanswered_count,
+        days_since_last_contact: ctx.relationshipMetrics.days_since_last_contact,
+        commercial_state: ctx.relationshipMetrics.commercial_state,
+        total_interactions: ctx.relationshipMetrics.total_interactions,
+      },
       language: effectiveLanguage,
-      tone: oracle_tone || "professionale",
+      tone: oracle_tone || (isStaleOrGhosted ? "cordiale_non_insistente" : "professionale"),
       hook_strategy: ctx.intelligence.data_found.networks ? "shared_network" : ctx.intelligence.data_found.partner ? "company_reference" : "sector_relevance",
-      cta_type: ctx.interactionHistoryCount === 0 ? "light_interest_probe" : ctx.interactionHistoryCount < 3 ? "micro_commitment" : "direct_action",
-      forbidden_elements: ["overclaiming", "multi_cta", ...(ctx.interactionHistoryCount === 0 ? ["price", "discount"] : [])],
+      cta_type: stage === "cold" ? "light_interest_probe" : isAdvanced ? "direct_action" : isStaleOrGhosted ? "soft_reopen" : "micro_commitment",
+      forbidden_elements: [
+        "overclaiming",
+        "multi_cta",
+        ...(stage === "cold" ? ["price", "discount"] : []),
+        ...(isStaleOrGhosted ? ["pressure", "urgency_fake"] : []),
+      ],
       max_length_lines: ch === "email" ? 12 : ch === "linkedin" ? 6 : 4,
-      persuasion_pattern: email_type_id === "follow_up" ? "strategic_no" : email_type_id === "partnership" ? "loss_aversion" : "label_technique",
+      persuasion_pattern: email_type_id === "follow_up" ? "strategic_no" : email_type_id === "partnership" ? "loss_aversion" : isStaleOrGhosted ? "pattern_interrupt" : "label_technique",
     };
 
     // ── Readiness ──
