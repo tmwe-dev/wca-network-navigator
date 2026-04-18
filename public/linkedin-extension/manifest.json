@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.2.1",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.2.1 idempotent SW modules (tutti gli edge call via bridge webapp, no CORS).",
+  "version": "3.3.0",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.3.0 Optimus URL extraction, AILearn pageType, visibility-aware tab actions, origin hardening.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {
