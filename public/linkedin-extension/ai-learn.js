@@ -171,21 +171,71 @@ var AILearn = globalThis.AILearn || (function () {
         return null;
       }
 
-      // VIA BRIDGE: niente fetch diretto a Supabase (CORS blocca chrome-extension://)
-      if (typeof AiBridge === "undefined" || !AiBridge.aiExtractRequest) {
-        console.warn("[AI-Learn] AiBridge non disponibile");
-        _learning = false;
-        return null;
+      let bridgeResp = null;
+
+      // Tentativo 1 — via webapp bridge (preferito, gestisce CORS)
+      if (typeof AiBridge !== "undefined" && AiBridge.aiExtractRequest) {
+        try {
+          bridgeResp = await AiBridge.aiExtractRequest({
+            channel: "linkedin",
+            mode: "learnDom",
+            pageType: pageType || "profile",
+            snapshot: snapshot,
+          });
+        } catch (bridgeErr) {
+          console.warn("[AI-Learn] Bridge call failed:", bridgeErr?.message);
+          bridgeResp = null;
+        }
+      } else {
+        console.log("[AI-Learn] AiBridge non disponibile, salto al fallback diretto");
       }
-      const bridgeResp = await AiBridge.aiExtractRequest({
-        channel: "linkedin",
-        mode: "learnDom",
-        pageType: pageType || "profile",
-        snapshot: snapshot,
-      });
+
+      // Tentativo 2 — fallback diretto edge function se bridge KO o webapp tab assente
+      const bridgeFailed = !bridgeResp
+        || bridgeResp.success === false
+        || bridgeResp.code === "NO_WEBAPP_TAB"
+        || bridgeResp.error === "webapp_tab_not_found"
+        || bridgeResp.error === "NO_APP_TAB"
+        || bridgeResp.error === "BRIDGE_TIMEOUT";
+
+      if (bridgeFailed) {
+        if (!supabaseUrl || !supabaseKey) {
+          console.warn("[AI-Learn] Direct fallback: missing supabase URL/key");
+          _learning = false;
+          return null;
+        }
+        console.log("[AI-Learn] Calling linkedin-ai-extract edge function directly");
+        try {
+          const directResp = await fetch(`${supabaseUrl}/functions/v1/linkedin-ai-extract`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+              "apikey": supabaseKey,
+            },
+            body: JSON.stringify({
+              mode: "learnDom",
+              pageType: pageType || "profile",
+              snapshot: snapshot,
+            }),
+          });
+          if (directResp.ok) {
+            const directData = await directResp.json();
+            bridgeResp = { success: true, data: directData };
+          } else {
+            console.warn("[AI-Learn] Direct call HTTP", directResp.status);
+            _learning = false;
+            return null;
+          }
+        } catch (directErr) {
+          console.warn("[AI-Learn] Direct call failed:", directErr?.message);
+          _learning = false;
+          return null;
+        }
+      }
 
       if (!bridgeResp || bridgeResp.success === false) {
-        console.warn("[AI-Learn] Bridge AI error:", bridgeResp && bridgeResp.error);
+        console.warn("[AI-Learn] AI error:", bridgeResp && bridgeResp.error);
         _learning = false;
         return null;
       }
