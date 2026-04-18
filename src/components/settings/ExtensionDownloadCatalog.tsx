@@ -21,6 +21,13 @@ interface ExtensionDownloadCatalogProps {
 
 function VersionRow({ item }: { item: ExtensionCatalogItem }) {
   const [downloading, setDownloading] = useState(false);
+  const fallbackPaths = item.current
+    ? item.filename.startsWith("whatsapp-extension-")
+      ? ["/whatsapp-extension.zip"]
+      : item.filename.startsWith("linkedin-extension-")
+        ? ["/linkedin-extension.zip"]
+        : []
+    : [];
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
@@ -39,7 +46,7 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
         onClick={async () => {
           setDownloading(true);
           try {
-            await downloadStaticExtensionZip(item.path, item.filename);
+            await downloadStaticExtensionZip(item.path, item.filename, fallbackPaths);
             toast.success(`Scaricato ${item.filename}`);
           } catch (error) {
             log.warn("download failed", { error: error instanceof Error ? error.message : String(error), item });
