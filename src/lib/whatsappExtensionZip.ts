@@ -22,14 +22,7 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
         filename: "whatsapp-extension-5.5.1.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.5.1.zip",
         current: true,
-        note: "Versione corrente",
-      },
-      {
-        version: "5.4.0",
-        filename: "whatsapp-extension-5.4.0.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.4.0.zip",
-        current: false,
-        note: "Archivio",
+        note: "Versione corrente — fallback legacy permissivo + Optimus module-check",
       },
       {
         version: "5.3.2",
@@ -37,6 +30,13 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.3.2.zip",
         current: false,
         note: "Archivio",
+      },
+      {
+        version: "1.1",
+        filename: "whatsapp-extension-1.1.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-1.1.zip",
+        current: false,
+        note: "Archivio compatibilità",
       },
     ],
   },
@@ -89,13 +89,13 @@ async function fetchStaticAsset(assetPath: string, fallbackPaths: string[] = [])
         return response;
       }
 
-      lastError = await ApiError.fromResponse(response, "fetchStaticAsset");
+      lastError = await ApiError.fromResponse(response, `fetchStaticAsset:${path}:${response.status}`);
     } catch (err) {
-      lastError = ApiError.from(err, "fetchStaticAsset");
+      lastError = ApiError.from(err, `fetchStaticAsset:${path}`);
     }
   }
 
-  throw (lastError instanceof Error ? lastError : new Error("Static asset unavailable"));
+  throw (lastError instanceof Error ? lastError : new Error(`Static asset unavailable: ${assetPath}`));
 }
 
 function base64ToBlob(base64: string, mimeType: string) {
@@ -116,6 +116,8 @@ export async function downloadStaticExtensionZip(assetPath: string, filename: st
     const response = await fetchStaticAsset(assetPath, fallbackPaths);
     blob = await response.blob();
   } catch (error) {
+    // Embedded fallback only for the CURRENT WhatsApp version — guarantees
+    // user always gets a coherent ZIP, never a stale one.
     if (filename === WHATSAPP_EXTENSION_CURRENT_FILENAME) {
       blob = base64ToBlob(EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64, "application/zip");
     } else {
