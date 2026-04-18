@@ -183,7 +183,7 @@ var Actions = globalThis.Actions || (function () {
   // ══════════════════════════════════════════════
   function _pageReadUnreadDOM(schema) {
     const H = window.__waH;
-    const VERIFY_COUNT = 5;
+    // Removed VERIFY_COUNT: only return chats with actual unread messages
 
     if (H.qsDeep('canvas[aria-label]') || H.qsDeep('[data-testid="qrcode"]') || H.qsDeep('[data-ref]'))
       return { success: false, error: "QR code visibile - accedi a WhatsApp Web" };
@@ -279,8 +279,8 @@ var Actions = globalThis.Actions || (function () {
         }
       }
 
-      const isVerify = processed < VERIFY_COUNT;
-      if (count === 0 && !isVerify) continue;
+      // Removed VERIFY_COUNT: only return actual unread items
+      if (count === 0) continue;
 
       let contactName = "Sconosciuto";
       const titleEl = H.qsWithin(chat, 'span[title][dir="auto"]') || H.qsWithin(chat, 'span[title]') || H.qsWithin(chat, '[data-testid="cell-frame-title"] span');
@@ -310,7 +310,7 @@ var Actions = globalThis.Actions || (function () {
       }
       if (timeEl) time = timeEl.textContent?.trim() || time;
 
-      messages.push({ contact: contactName, lastMessage: lastMessage, time: time, unreadCount: count, isVerify: isVerify && count === 0 });
+      messages.push({ contact: contactName, lastMessage: lastMessage, time: time, unreadCount: count });
       processed++;
     }
     return { success: true, messages: messages, scanned: chatItems.length, method: method };

@@ -47,10 +47,11 @@ var Config = globalThis.Config || (function () {
 
   async function load() {
     try {
-      const data = await chrome.storage.local.get(["supabaseUrl", "anonKey", "authToken"]);
+      const data = await chrome.storage.local.get(["supabaseUrl", "anonKey"]);
       _url = data.supabaseUrl || "";
       _key = data.anonKey || "";
-      _token = data.authToken || "";
+      // authToken is never persisted — always received fresh via setConfig
+      _token = "";
     } catch (_) {}
   }
 
@@ -59,7 +60,8 @@ var Config = globalThis.Config || (function () {
     _key = key || "";
     _token = token || "";
     try {
-      await chrome.storage.local.set({ supabaseUrl: _url, anonKey: _key, authToken: _token });
+      // Only persist non-sensitive config. authToken is kept in memory only.
+      await chrome.storage.local.set({ supabaseUrl: _url, anonKey: _key });
     } catch (_) {}
   }
 
