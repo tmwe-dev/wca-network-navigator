@@ -1,6 +1,6 @@
 import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
@@ -8,11 +8,10 @@ import { type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { createLogger } from "@/lib/log";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 const log = createLogger("GlobalChat");
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
-const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/unified-assistant`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 type ChatMode = "operational" | "conversational";
@@ -71,51 +70,6 @@ async function playTTS(text: string, voiceId: string): Promise<void> {
   const audio = new Audio(url);
   audio.onended = () => URL.revokeObjectURL(url);
   await audio.play();
-}
-
-interface SSEDelta {
-  choices?: Array<{ delta?: { content?: string } }>;
-}
-
-async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<string> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let textBuffer = "";
-  let result = "";
-
-  const processLine = (line: string) => {
-    if (line.startsWith(":") || line.trim() === "") return;
-    if (!line.startsWith("data: ")) return;
-    const jsonStr = line.slice(6).trim();
-    if (jsonStr === "[DONE]") return;
-    try {
-      const parsed: SSEDelta = JSON.parse(jsonStr);
-      const content = parsed.choices?.[0]?.delta?.content;
-      if (content) result += content;
-    } catch {
-      // best-effort parse
-    }
-  };
-
-   
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    textBuffer += decoder.decode(value, { stream: true });
-    let newlineIndex: number;
-    while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-      let line = textBuffer.slice(0, newlineIndex);
-      textBuffer = textBuffer.slice(newlineIndex + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      processLine(line);
-    }
-  }
-  // Process remaining buffer
-  for (let raw of textBuffer.split("\n")) {
-    if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-    processLine(raw);
-  }
-  return result;
 }
 
 interface UseGlobalChatOptions {
@@ -179,32 +133,15 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
 
     try {
       const allMsgs = prevMessages.map((m) => ({ role: m.role, content: m.content }));
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const url = state.mode === "conversational" ? SUPER_URL : CHAT_URL;
-
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(state.mode === "conversational"
-          ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
-          : { messages: allMsgs }),
+      const edgeFunction = state.mode === "conversational" ? "unified-assistant" : "ai-assistant";
+      const body = state.mode === "conversational"
+        ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
+        : { messages: allMsgs };
+      const data = await invokeEdge<{ content?: string; error?: string }>(edgeFunction, {
+        body,
+        context: "globalChat",
       });
-
-      if (!resp.ok) {
-        const err: { error?: string } = await resp.json().catch(() => ({ error: "Errore di rete" }));
-        assistantContent = `⚠️ ${err.error || "Errore durante la richiesta"}`;
-      } else {
-        const contentType = resp.headers.get("content-type") || "";
-        if (contentType.includes("application/json")) {
-          const data: { content?: string; error?: string } = await resp.json();
-          assistantContent = data.content || data.error || "Nessuna risposta";
-        } else if (resp.body) {
-          assistantContent = await readSSEStream(resp.body);
-        } else {
-          assistantContent = "Errore: nessun body";
-        }
-      }
+      assistantContent = data.content || data.error || "Nessuna risposta";
     } catch (e: unknown) {
       log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
       assistantContent = "⚠️ Errore di connessione. Riprova.";

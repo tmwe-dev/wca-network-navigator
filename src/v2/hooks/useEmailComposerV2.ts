@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 export interface EmailRecipient {
   readonly email: string;
@@ -77,10 +78,10 @@ export function useEmailComposerV2() {
       if (!body) throw new Error("Corpo mancante");
 
       for (const r of recipients) {
-        const { error } = await supabase.functions.invoke("send-email", {
+        await invokeEdge("send-email", {
           body: { to: r.email, subject, html: body },
+          context: "emailComposerV2Send",
         });
-        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -99,7 +100,7 @@ export function useEmailComposerV2() {
         ? `Destinatario: ${recipients[0].name} di ${recipients[0].companyName ?? "N/D"} (${recipients[0].email})`
         : "";
 
-      const { data } = await supabase.functions.invoke("ai-assistant", {
+      const data = await invokeEdge<{ response?: string }>("ai-assistant", {
         body: {
           messages: [{
             role: "user",
@@ -108,6 +109,7 @@ export function useEmailComposerV2() {
           context: "email_composer",
           use_kb: useKB,
         },
+        context: "emailComposerV2",
       });
       if (data?.response) setBody(data.response);
     },

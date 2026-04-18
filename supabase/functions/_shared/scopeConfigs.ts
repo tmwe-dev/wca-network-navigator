@@ -380,6 +380,28 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         creditLabel: "KB Supervisor",
       };
 
+    case "deep-search":
+      return {
+        systemPrompt: "Sei un assistente di ricerca approfondita. Usa i tool di search e enrichment per trovare informazioni dettagliate sui partner WCA. Rispondi sempre in italiano, conciso e basato su dati reali.",
+        tools: PLATFORM_TOOLS,
+        creditLabel: "Deep Search V2",
+      };
+
+    case "chat":
+      return {
+        systemPrompt: "Sei un assistente conversazionale per agenti autonomi. Rispondi in modo conciso e operativo, in italiano. Usa i tool quando servono dati reali dal database.",
+        tools: PLATFORM_TOOLS,
+        creditLabel: "Agent Chat V2",
+      };
+
+    case "mission-builder":
+      return {
+        systemPrompt: "Sei il configuratore di missioni outreach. Guida l'utente nella creazione di una nuova missione, una domanda alla volta. Rispondi in italiano, sii sintetico e propositivo.",
+        tools: [],
+        temperature: 0.5,
+        creditLabel: "Mission Builder V2",
+      };
+
     default:
       throw new Error(`Unknown scope: ${scope}`);
   }
