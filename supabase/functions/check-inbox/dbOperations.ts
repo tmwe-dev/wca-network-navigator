@@ -213,5 +213,10 @@ export async function saveMessageToDb(
     }
   }
 
+  // Auto-escalation imported_contact (guard UUID)
+  // Note: source_id già validato sopra in safeSourceId, riutilizziamo guard pattern
+    }
+  }
+
   return { savedId: savedMsg.id, msgData: { ...msgData, id: savedMsg.id }, error: null };
 }
