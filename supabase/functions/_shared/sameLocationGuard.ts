@@ -322,3 +322,20 @@ export function buildRelationshipAnalysisBlock(metrics: RelationshipMetrics): st
 - Fase relazione: ${metrics.relationship_stage.toUpperCase()}
 `;
 }
+
+/**
+ * Map any internal relationship stage to Commercial Doctrine L0 taxonomy.
+ * Default: "holding" (mai "archived" — l'AI non archivia mai).
+ */
+export function mapToCommercialState(internalStage: string): string {
+  const map: Record<string, string> = {
+    cold: "new",
+    warm: "holding",
+    active: "engaged",
+    stale: "holding",
+    ghosted: "holding",
+    hot: "qualified",
+    closed: "converted",
+  };
+  return map[internalStage] || "holding";
+}
