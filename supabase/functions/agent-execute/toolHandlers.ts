@@ -982,7 +982,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       return { count: data?.length, classifications: data };
     }
     case "get_conversation_context": {
-      const { data, error } = await supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address)).maybeSingle();
+      const { data, error } = await supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address)).eq("user_id", userId).maybeSingle();
       if (error) return { error: error.message };
       if (!data) return { message: "No conversation context found." };
       return data;
