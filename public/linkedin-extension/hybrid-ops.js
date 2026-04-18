@@ -58,7 +58,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     // Level 2: AI Self-Healing
     console.log("[LI-Hybrid] extractProfile — trying AI Learn...");
     try {
-      let schema = await AILearn.getCached();
+      let schema = await AILearn.getCached("profile");
       if (!schema && Config.isReady()) {
         schema = await AILearn.learnFromAI(tabId, "profile", Config.getUrl(), Config.getKey());
       }
