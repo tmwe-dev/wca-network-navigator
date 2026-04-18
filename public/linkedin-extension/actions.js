@@ -350,6 +350,7 @@ var Actions = globalThis.Actions || (function () {
 
   async function diagnostic() {
     const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
     let axAvailable = false;
