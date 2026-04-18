@@ -36,10 +36,15 @@ export interface DailyBriefing {
   stats: BriefingStats;
 }
 
-export function useDailyBriefing() {
+/**
+ * @param enabled - When false, the (slow, ~2-5s) edge function call is deferred.
+ *                  Default true preserves backward compatibility for existing callers.
+ */
+export function useDailyBriefing(enabled: boolean = true) {
   return useQuery<DailyBriefing>({
     queryKey: queryKeys.dailyBriefing.all,
     staleTime: 15 * 60 * 1000,
+    enabled,
     queryFn: async () => {
       return invokeEdge<DailyBriefing>("daily-briefing", { context: "useDailyBriefing" });
     },
