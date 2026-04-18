@@ -432,8 +432,9 @@ var Actions = globalThis.Actions || (function () {
 
     // ── Optimus-first ──
     let optimus = await tryOptimusThread(tab.id, false, null);
-    if (optimus.success && optimus.items.length === 0 && optimus.cached) {
-      optimus = await tryOptimusThread(tab.id, true, "Cached plan returned 0 messages from LI thread " + threadUrl);
+    if (optimus.success && optimus.items.length === 0) {
+      console.log("[LI Optimus] 0 messages in thread, forcing relearn...");
+      optimus = await tryOptimusThread(tab.id, true, "Plan returned 0 messages from LI thread " + threadUrl);
     }
 
     if (optimus.success) {
