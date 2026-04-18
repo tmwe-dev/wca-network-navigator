@@ -439,9 +439,9 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
     case "delete_records": {
       const table = String(args.table);
       const ids = args.ids as string[];
-      const valid = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+      const valid = ["partners", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      const { error } = await supabase.from(table as "partners" | "imported_contacts" | "prospects" | "activities" | "reminders").delete().in("id", ids);
+      const { error } = await supabase.from(table as "partners" | "prospects" | "activities" | "reminders").delete().eq("user_id", userId).in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 
