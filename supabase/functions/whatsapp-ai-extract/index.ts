@@ -61,104 +61,135 @@ serve(async (req) => {
     let itemSchema: unknown;
 
     if (mode === "learnDom") {
-      // DOM Learning mode: analyze page structure and return CSS selectors
-      systemPrompt = `You are a WhatsApp Web DOM selector expert. Analyze the DOM snapshot (data-testid inventory, role inventory, aria-labels, sample HTML) and return STABLE CSS selectors.
+      systemPrompt = `Sei un esperto di CSS selector per WhatsApp Web. Il tuo compito è analizzare uno snapshot DOM e restituire i selettori CSS più STABILI per ogni elemento della UI.
 
-You MUST return a JSON object with EXACTLY these keys:
-- sidebar: container of the chat list panel (e.g. #pane-side, [data-testid="chatlist"])
-- chatList: scrollable chat list container
-- chatItem: selector for a SINGLE chat item in the sidebar list (CRITICAL — must match individual rows, e.g. [role="row"], [data-testid="cell-frame-container"])
-- chatItemAlt: alternative/fallback selector for chat item
-- chatTitle: contact/group name within a chat item (e.g. span[title], [data-testid="cell-frame-title"] span)
-- contactName: alias of chatTitle (same selector is OK)
-- unreadBadge: badge showing unread message count within a chat item
-- lastMessage: last message preview within a chat item
-- timestamp: time element within a chat item
-- searchBox: search input at the top of the sidebar
-- conversationPanel: panel containing messages in an open chat
-- msgContainer: individual message bubble/container in a thread
-- msgText: text content inside a message bubble
-- msgMeta: timestamp/meta info inside a message bubble
-- msgOutCheck: indicator for sent messages (double check)
-- msgOutSingle: indicator for sent messages (single check)
-- qrCode: QR code element (login detection)
-- mainHeader: header of the open chat showing the contact name
-- composeBox: message input box in an open chat
-- sendButton: send button
-- searchClear: button to clear search
+REGOLE ASSOLUTE:
+1. USA SOLO attributi stabili: [data-testid], [role], [aria-label], tag semantici (span[title], div[tabindex])
+2. MAI usare classi CSS dinamiche/offuscate (es. x1n2onr6, _ak72, _3OvU8, x1lliihq) — cambiano ad ogni deploy di WhatsApp
+3. Se un selettore stabile non esiste, restituisci null — NON inventare classi
+4. I selettori devono funzionare dentro shadow DOM (WhatsApp usa shadow roots)
 
-STRICT RULES:
-1. Use ONLY stable attributes: role, data-testid, aria-label, tag names, IDs.
-2. NEVER use dynamic/obfuscated class names (e.g. x1n2onr6, _ak72, _3OvU8) — they change on every WhatsApp deploy.
-3. Prefer [role="row"], [data-testid="..."], [aria-label*="..." i] patterns.
-4. If you cannot find a stable selector for a field, set its value to null (do NOT invent class-based selectors).
-5. The chatItem selector is the MOST important — it must match individual chat entries in the sidebar.
-6. Return ONLY valid JSON, no markdown, no commentary.`;
-      userPrompt = `Analyze this WhatsApp Web DOM snapshot and return CSS selectors:\n\n${trimmedHtml}`;
+RESTITUISCI un oggetto JSON con ESATTAMENTE queste chiavi (nomi OBBLIGATORI — l'executor Optimus si aspetta questi esatti nomi):
+
+PRIORITÀ ALTA (estrazione sidebar — CRITICI):
+- "chatItem": selettore per UNA SINGOLA riga chat nella sidebar (es. '[role="row"]', '[data-testid="cell-frame-container"]', '[tabindex="-1"][role="listitem"]')
+- "contactName": nome contatto/gruppo dentro una riga chat (es. 'span[title]', '[data-testid="cell-frame-title"] span[title]')
+- "lastMessage": anteprima ultimo messaggio dentro una riga (es. '[data-testid="last-msg-status"] span[title]', 'span[title]:nth-child(2)')
+- "timestamp": orario dentro una riga chat
+- "unreadBadge": badge conteggio messaggi non letti (es. '[data-testid="icon-unread-count"]', 'span[data-testid*="unread"]')
+
+PRIORITÀ MEDIA (navigazione):
+- "chatList": contenitore scrollabile della lista chat (es. '[data-testid="chatlist"]', '[role="grid"]', '#pane-side')
+- "searchBox": campo di ricerca in cima alla sidebar
+- "mainHeader": header della chat aperta col nome contatto
+
+PRIORITÀ BASSA (thread messaggi):
+- "msgContainer": singolo messaggio bubble in un thread aperto (es. '[data-testid="msg-container"]', '[class*="message"][role="row"]')
+- "msgText": testo dentro una bubble (es. '[data-testid="msg-text"] span', '.selectable-text span')
+- "msgMeta": timestamp/meta dentro una bubble
+- "composeBox": campo input messaggio (es. '[data-testid="conversation-compose-box-input"]', '[contenteditable="true"][role="textbox"]')
+- "sendButton": pulsante invio messaggio
+
+RILEVAMENTO STATO:
+- "qrCode": elemento QR code (rilevamento login necessario)
+
+NOTA: WhatsApp Web in italiano usa label come "Elenco chat", "Cerca", "Scrivi un messaggio".
+Se trovi aria-label italiani, usali: [aria-label*="elenco" i], [aria-label*="cerca" i].
+
+Restituisci SOLO JSON valido. Nessuna spiegazione, nessun markdown.`;
+
+      userPrompt = `Analizza questo snapshot DOM di WhatsApp Web e restituisci i CSS selector:\n\n${trimmedHtml}`;
       toolName = "map_selectors";
-      toolDescription = "Return CSS selectors for WhatsApp Web UI elements";
+      toolDescription = "CSS selectors for WhatsApp Web UI — keys must match executor expectations";
       itemSchema = {
         type: "object",
         properties: {
-          sidebar: { type: "string" }, chatList: { type: "string" },
-          chatItem: { type: "string" }, chatItemAlt: { type: "string" },
-          chatTitle: { type: "string" }, contactName: { type: "string" },
-          unreadBadge: { type: "string" }, lastMessage: { type: "string" },
-          timestamp: { type: "string" }, searchBox: { type: "string" },
-          conversationPanel: { type: "string" }, msgContainer: { type: "string" },
-          msgText: { type: "string" }, msgMeta: { type: "string" },
-          msgOutCheck: { type: "string" }, msgOutSingle: { type: "string" },
-          qrCode: { type: "string" }, mainHeader: { type: "string" },
-          composeBox: { type: "string" }, sendButton: { type: "string" },
-          searchClear: { type: "string" },
+          chatItem: { type: "string", description: "Single chat row in sidebar" },
+          contactName: { type: "string", description: "Contact/group name within a chat row" },
+          lastMessage: { type: "string", description: "Last message preview within a chat row" },
+          timestamp: { type: "string", description: "Time within a chat row" },
+          unreadBadge: { type: "string", description: "Unread count badge within a chat row" },
+          chatList: { type: "string", description: "Scrollable chat list container" },
+          searchBox: { type: "string", description: "Search input at top of sidebar" },
+          mainHeader: { type: "string", description: "Header of open chat showing contact name" },
+          msgContainer: { type: "string", description: "Single message bubble in open thread" },
+          msgText: { type: "string", description: "Text content inside a message bubble" },
+          msgMeta: { type: "string", description: "Timestamp/meta inside a message bubble" },
+          composeBox: { type: "string", description: "Message input box in open chat" },
+          sendButton: { type: "string", description: "Send button" },
+          qrCode: { type: "string", description: "QR code element for login detection" },
         },
         required: ["chatItem", "contactName"],
       };
     } else if (mode === "thread") {
-      systemPrompt = `You are a WhatsApp Web HTML parser. Extract individual messages from a WhatsApp conversation HTML.
-Return a JSON array of messages. Each message must have:
-- "direction": "inbound" or "outbound" (outbound = messages with blue ticks or sent by me)
-- "text": the message text content
-- "timestamp": any time info found (could be "14:30", "ieri 18:00", etc.)
-- "contact": the sender name if visible
+      systemPrompt = `Sei un parser HTML specializzato per WhatsApp Web. Estrai i singoli messaggi da una conversazione WhatsApp aperta.
 
-Only return valid JSON array, no markdown, no explanation.`;
-      userPrompt = `Extract all chat messages from this WhatsApp Web HTML:\n\n${trimmedHtml}`;
+PER OGNI MESSAGGIO, ESTRAI:
+- "direction": "outbound" se il messaggio è INVIATO DA ME, "inbound" se RICEVUTO
+  COME DISTINGUERE:
+  - Outbound: ha spunte (✓, ✓✓), icona check, classe "message-out", è allineato a destra, attributo data-testid contiene "out"
+  - Inbound: nessuna spunta, classe "message-in", allineato a sinistra, attributo data-testid contiene "in"
+- "text": il testo del messaggio. Per messaggi con media (immagine, video, audio, documento), metti "[media: tipo]" se il testo non c'è
+- "timestamp": orario esatto come visualizzato (es. "14:30", "15:45"). WhatsApp mostra solo l'ora nei messaggi, non la data
+- "contact": il nome del mittente. In chat 1-a-1: "me" per outbound, nome contatto per inbound. In gruppi: nome visibile sopra la bubble
+
+MESSAGGI SPECIALI DA IGNORARE:
+- Messaggi di sistema ("X ha cambiato il numero", "Messaggio eliminato", date separator come "OGGI", "IERI")
+- Notifiche di sicurezza ("I messaggi sono crittografati end-to-end")
+
+REGOLE:
+- Ordina i messaggi dal più vecchio al più recente (ordine cronologico)
+- Se un messaggio contiene solo emoji, includilo comunque
+- Se un messaggio è stato eliminato ("Questo messaggio è stato eliminato"), includilo con text: "[eliminato]"
+- Restituisci SOLO JSON array valido, nessun markdown, nessuna spiegazione
+- Se non ci sono messaggi, restituisci []`;
+
+      userPrompt = `Estrai tutti i messaggi da questa conversazione WhatsApp Web:\n\n${trimmedHtml}`;
       toolName = "extract_thread";
-      toolDescription = "Return extracted messages from WhatsApp thread";
+      toolDescription = "Extracted messages from WhatsApp conversation";
       itemSchema = {
         type: "object",
         properties: {
-          direction: { type: "string", enum: ["inbound", "outbound"] },
-          text: { type: "string" },
-          timestamp: { type: "string" },
-          contact: { type: "string" },
+          direction: { type: "string", enum: ["inbound", "outbound"], description: "Message direction" },
+          text: { type: "string", description: "Message text or [media: type] or [eliminato]" },
+          timestamp: { type: "string", description: "Time as displayed (HH:MM)" },
+          contact: { type: "string", description: "Sender name (me for outbound)" },
         },
         required: ["direction", "text"],
       };
     } else {
-      systemPrompt = `You are a WhatsApp Web HTML parser. Extract unread conversations from the WhatsApp sidebar HTML.
-Return a JSON array of unread chats. Each chat must have:
-- "contact": the contact or group name
-- "lastMessage": the last message preview text
-- "time": the timestamp shown (e.g. "14:30", "ieri", "12/03/2025")
-- "unreadCount": number of unread messages (from the badge)
+      systemPrompt = `Sei un parser HTML specializzato per WhatsApp Web. Estrai le conversazioni NON LETTE dalla sidebar HTML di WhatsApp.
 
-ONLY include chats that have an unread badge/count visible.
-Only return valid JSON array, no markdown, no explanation.
-If no unread chats found, return an empty array [].`;
-      userPrompt = `Extract unread chats from this WhatsApp Web sidebar HTML:\n\n${trimmedHtml}`;
+COME IDENTIFICARE CHAT NON LETTE:
+- Badge numerico visibile (es. <span> con numero dentro un cerchio verde)
+- Classe o attributo "unread" nel contenitore della chat
+- Il badge mostra il numero di messaggi non letti
+
+PER OGNI CHAT NON LETTA, ESTRAI:
+- "contact": nome del contatto o gruppo (dal titolo, span[title], o header)
+- "lastMessage": anteprima dell'ultimo messaggio (testo visibile sotto il nome)
+- "time": timestamp esattamente come visualizzato (es. "14:30", "ieri", "12/03/2025", "lunedì")
+- "unreadCount": numero di messaggi non letti (dal badge). Se il badge è visibile ma senza numero, metti 1
+
+REGOLE:
+- Includi SOLO chat con badge non-letto visibile. NON includere chat già lette.
+- Se il badge contiene solo un punto/pallino senza numero, unreadCount = 1
+- I timestamp in WhatsApp italiano usano: "oggi", "ieri", nomi giorni ("lunedì"), date (GG/MM/AAAA), orari (HH:MM)
+- Se non trovi chat non lette, restituisci un array vuoto []
+- Restituisci SOLO JSON array valido, nessun markdown, nessuna spiegazione.`;
+
+      userPrompt = `Estrai le chat non lette da questa sidebar HTML di WhatsApp Web:\n\n${trimmedHtml}`;
       toolName = "extract_unread";
-      toolDescription = "Return extracted unread chats from WhatsApp sidebar";
+      toolDescription = "Unread chats from WhatsApp sidebar";
       itemSchema = {
         type: "object",
         properties: {
-          contact: { type: "string" },
-          lastMessage: { type: "string" },
-          time: { type: "string" },
-          unreadCount: { type: "number" },
+          contact: { type: "string", description: "Contact or group name" },
+          lastMessage: { type: "string", description: "Last message preview text" },
+          time: { type: "string", description: "Timestamp as displayed" },
+          unreadCount: { type: "number", description: "Number of unread messages" },
         },
-        required: ["contact", "lastMessage"],
+        required: ["contact"],
       };
     }
 
