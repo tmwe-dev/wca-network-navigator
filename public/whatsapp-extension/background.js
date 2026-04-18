@@ -18,20 +18,28 @@ try {
   console.error("[WA-EXT] Module import failed:", e);
 }
 
-// ── Module load check ──
-var _modulesLoaded = !!(
-  typeof Config !== "undefined" &&
-  typeof TabManager !== "undefined" &&
-  typeof Discovery !== "undefined" &&
-  typeof AiBridge !== "undefined" &&
-  typeof AiExtract !== "undefined" &&
-  typeof Actions !== "undefined"
-);
+// ── Module load check (via globalThis: works after SW restart in MV3) ──
+function _checkModules() {
+  return !!(
+    globalThis.Config &&
+    globalThis.TabManager &&
+    globalThis.Discovery &&
+    globalThis.AiBridge &&
+    globalThis.AiExtract &&
+    globalThis.Actions
+  );
+}
+
+var _modulesLoaded = _checkModules();
 
 if (!_modulesLoaded) {
-  console.error("[WA-EXT] One or more modules failed to load. Config:", typeof Config,
-    "TabManager:", typeof TabManager, "Discovery:", typeof Discovery,
-    "AiBridge:", typeof AiBridge, "AiExtract:", typeof AiExtract, "Actions:", typeof Actions);
+  console.error("[WA-EXT] One or more modules failed to load.",
+    "Config:", !!globalThis.Config,
+    "TabManager:", !!globalThis.TabManager,
+    "Discovery:", !!globalThis.Discovery,
+    "AiBridge:", !!globalThis.AiBridge,
+    "AiExtract:", !!globalThis.AiExtract,
+    "Actions:", !!globalThis.Actions);
 }
 
 // ── Action registry ──
