@@ -278,6 +278,14 @@ export function useLinkedInMessagingBridge() {
     return { ...result, source: "linkedin-ext" };
   }, []);
 
+  // ── BACKFILL THREAD: Scroll-back to retrieve older messages ──
+  const backfillThread = useCallback(async (threadUrl: string, lastKnownText: string, maxScrolls = 20): Promise<BridgeResponse> => {
+    log.debug("backfill thread via extension", { threadUrl });
+    const result = await sendToLinkedInExt("backfillLinkedInThread", { threadUrl, lastKnownText, maxScrolls }, 120000);
+    log.debug("backfillThread result", { preview: JSON.stringify(result).slice(0, 500) });
+    return { ...result, source: "linkedin-ext" };
+  }, []);
+
   // ── SEND MESSAGE: Always via LinkedIn extension ──
   const sendMessage = useCallback(async (profileUrl: string, text: string): Promise<BridgeResponse> => {
     return sendToLinkedInExt("sendMessage", { url: profileUrl, message: text }, 20000);
@@ -288,5 +296,5 @@ export function useLinkedInMessagingBridge() {
     return sendToLinkedInExt("diagnosticLinkedInDom", {}, 30000);
   }, []);
 
-  return { isAvailable, isFireScrapeAvailable, readInbox, readThread, sendMessage, diagnosticDom };
+  return { isAvailable, isFireScrapeAvailable, readInbox, readThread, backfillThread, sendMessage, diagnosticDom };
 }
