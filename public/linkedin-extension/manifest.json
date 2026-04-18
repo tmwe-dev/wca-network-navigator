@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.5.0",
-  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.5.0 Optimus auto-relearn + fallback edge function diretto.",
+  "version": "3.6.0",
+  "description": "Login automatico + sincronizzazione cookie li_at + estrazione profili LinkedIn. v3.6.0 prompt AI ottimizzati IT con threadUrl + direction + auth.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {
