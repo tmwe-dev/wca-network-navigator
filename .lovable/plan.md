@@ -1,74 +1,61 @@
 
-Obiettivo: chiudere il loop una volta sola, fare audit reale degli asset estensione e riallineare codice, cataloghi e ZIP così non esistono più versioni fantasma né fallback che servono file obsoleti.
 
-Diagnosi già confermata dal codice:
-- `src/lib/whatsappExtensionZip.ts` dichiara WhatsApp corrente `5.5.1` e LinkedIn `3.4.0`.
-- `public/chrome-extensions/catalog.json` è incoerente: per WhatsApp pubblica ancora `5.4.0` come “corrente” e punta a `/whatsapp-extension.zip`.
-- In `public/chrome-extensions/whatsapp/` esistono `5.5.1`, `5.3.2`, `1.1`; il file `5.4.0` non esiste proprio, ma è ancora pubblicizzato.
-- I download usano fallback root (`/whatsapp-extension.zip`, `/linkedin-extension.zip`): se il path versionato fallisce, può partire uno ZIP root vecchio/sbagliato e l’utente scarica roba incoerente.
-- C’è anche un test rotto/stantio: `src/test/misc-modules.test.ts` si aspetta ancora `5.4.0`.
+# PROMPT-REPAIR-I — Optimus Auto-Learn (WhatsApp + LinkedIn)
 
-Piano di correzione:
-1. Unificare la “source of truth” delle versioni
-- Allineare `public/chrome-extensions/catalog.json` alle versioni reali:
-  - WhatsApp corrente `5.5.1`
-  - LinkedIn corrente `3.4.0`
-- Rimuovere dal catalogo ogni entry che non ha un file fisico reale.
-- Rendere coerente il catalogo statico con `DEFAULT_EXTENSION_CATALOG` in `src/lib/whatsappExtensionZip.ts`.
+## Stato attuale (verifica reale del codice)
 
-2. Audit reale degli ZIP e rigenerazione pulita
-- Verificare il contenuto interno degli ZIP attuali leggendo almeno:
-  - `manifest.json`
-  - file critici modificati di recente
-- Rigenerare gli ZIP direttamente dalle cartelle sorgente corrette:
-  - `public/whatsapp-extension/`
-  - `public/linkedin-extension/`
-- Pubblicare nuovamente:
-  - file versionati in `public/chrome-extensions/...`
-  - file root `public/whatsapp-extension.zip` e `public/linkedin-extension.zip`
-- Regola: i file root devono essere alias esatti della versione corrente, non copie vecchie.
+WhatsApp (I1-I6): **già implementati** nel ciclo precedente (v5.6.0). Verificherò solo che siano davvero presenti come da spec, e applicherò ritocchi se manca qualcosa.
 
-3. Eliminare i fallback ambigui o renderli sicuri
-- Rifattorizzare `src/lib/whatsappExtensionZip.ts` per evitare che un fallback “silenzioso” serva uno ZIP obsoleto.
-- Possibili regole implementative:
-  - usare prima il file versionato;
-  - mantenere il fallback root solo se è garantito identico alla versione corrente;
-  - migliorare il logging per distinguere “404”, “failed to fetch”, “fallback usato”.
-- Per WhatsApp manterrò il fallback embedded solo come ultima rete di sicurezza, ma coerente con la versione corrente.
+LinkedIn (I7-I9): **da fare ora**. Il modulo `ai-learn.js` esiste già con cache 3h e snapshot DOM, ma `actions.js` non lo invoca mai nel flusso Optimus, e `ai-learn.js` muore se manca `AiBridge`.
 
-4. Correggere i punti UI che oggi mascherano il problema
-- Aggiornare i punti di download in:
-  - `src/components/settings/ExtensionsTab.tsx`
-  - `src/components/settings/ChannelsTab.tsx`
-  - `src/components/settings/LinkedInTab.tsx`
-  - `src/components/settings/ExtensionDownloadCatalog.tsx`
-- Obiettivo:
-  - stesso comportamento ovunque;
-  - stesso naming/versione mostrata;
-  - toast più chiari se manca il file vero.
+## Cosa farò
 
-5. Sistemare i test stantii
-- Aggiornare `src/test/misc-modules.test.ts` da `5.4.0` a `5.5.1`.
-- Cercare altri riferimenti residui a versioni vecchie (`5.4.0`, `1.1`, ecc.) e riallinearli solo dove corretto.
+### Parte 1 — Verifica WhatsApp (I1-I6)
+Apro `public/whatsapp-extension/actions.js`, `ai-extract.js` e `supabase/functions/whatsapp-ai-extract/index.ts` per confermare che il ciclo precedente abbia davvero applicato I1-I6. Se trovo gap, li chiudo. Niente bump di versione se è già tutto a posto.
 
-Verifica finale che farò dopo l’implementazione:
-- controllo che i file esistano davvero nei path serviti dalla UI;
-- controllo del `manifest.json` dentro ogni ZIP corrente:
-  - WhatsApp = `5.5.1`
-  - LinkedIn = `3.4.0`
-- controllo che catalogo UI e file reali coincidano;
-- prova download da Settings senza “File non disponibile” sui file correnti;
-- verifica che non esistano più riferimenti “corrente” a versioni inesistenti.
+### Parte 2 — LinkedIn auto-relearn (I7-I9)
 
-File coinvolti:
+**I7 — `public/linkedin-extension/actions.js`**
+- In `tryOptimusInbox`: quando `getPlan` fallisce, chiamo `AILearn.learnFromAI(tabId, "messaging", url, key)`, converto lo schema con `convertLinkedInSchemaToOptimusPlan(..., "messaging")` e ritento `Optimus.executePlanInTab`.
+- In `tryOptimusThread`: stessa logica con `pageType: "thread"`.
+- Rimuovo la condizione `&& optimus.cached` sul ramo "0 items" così il relearn parte sempre quando l'inbox torna vuota.
+
+**I8 — `public/linkedin-extension/actions.js`**
+- Aggiungo `convertLinkedInSchemaToOptimusPlan(schema, pageType)` con due key map (messaging vs thread) e helper `buildPlanFromKeyMap` condiviso. Ritorna `null` se mancano i campi minimi (`container` + `contact_name`/`sender_name`).
+
+**I9 — `public/linkedin-extension/ai-learn.js`**
+- In `learnFromAI`: provo prima `AiBridge.aiExtractRequest` se disponibile; se fallisce o `AiBridge` è undefined, faccio fetch diretto a `whatsapp-ai-extract` (edge function condivisa, già abilitata a `channel: "linkedin"` + `pageType`).
+- Garantisco reset di `_learning` su tutti i percorsi di errore.
+
+### Parte 3 — Packaging e versioning
+- Bump `public/linkedin-extension/manifest.json` a **3.5.0**.
+- Aggiorno `DEFAULT_EXTENSION_CATALOG` in `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json` con LinkedIn `3.5.0` (corrente) e archivio `3.4.0`.
+- Rigenero `public/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip` e l'alias root `public/linkedin-extension.zip` direttamente da `public/linkedin-extension/`.
+- Verifica finale: lettura del `manifest.json` dentro lo zip per confermare `3.5.0`.
+
+### Parte 4 — Test
+- Aggiorno eventuali test che referenziano la versione LinkedIn corrente.
+- Eseguo `vitest` per non lasciare regressioni.
+
+## File coinvolti
+
+- `public/linkedin-extension/actions.js` (I7 + I8)
+- `public/linkedin-extension/ai-learn.js` (I9)
+- `public/linkedin-extension/manifest.json` (bump 3.5.0)
+- `public/whatsapp-extension/actions.js`, `ai-extract.js` (solo se la verifica trova gap su I1-I6)
+- `supabase/functions/whatsapp-ai-extract/index.ts` (verifica I6, ritocco se serve sul ramo `channel: "linkedin"`)
 - `src/lib/whatsappExtensionZip.ts`
 - `public/chrome-extensions/catalog.json`
-- `src/components/settings/ExtensionsTab.tsx`
-- `src/components/settings/ChannelsTab.tsx`
-- `src/components/settings/LinkedInTab.tsx`
-- `src/components/settings/ExtensionDownloadCatalog.tsx`
-- `src/test/misc-modules.test.ts`
-- ZIP statici in `public/whatsapp-extension.zip`, `public/linkedin-extension.zip`, `public/chrome-extensions/whatsapp/*`, `public/chrome-extensions/linkedin/*`
+- `public/chrome-extensions/linkedin/linkedin-extension-3.5.0.zip` (nuovo)
+- `public/linkedin-extension.zip` (rigenerato)
+- `src/test/misc-modules.test.ts` se referenzia LinkedIn 3.4.0
 
-Nota operativa:
-- la parte decisiva non è solo “cambiare testo nel catalogo”: va rifatto il packaging degli ZIP e verificato il contenuto interno. In questa modalità read-only posso solo diagnosticare; appena approvi, passo all’implementazione completa e alla verifica profonda degli asset reali.
+## Risultato atteso
+
+Quando clicchi "Leggi" su LinkedIn:
+1. Optimus prova il piano cached / via bridge.
+2. Se fallisce → `AILearn.learnFromAI` parte automaticamente (anche senza tab webapp aperto, grazie al fallback diretto).
+3. Lo schema appreso viene convertito nel formato che `Optimus.executePlanInTab` capisce.
+4. Retry → estrazione messaggi, niente più "0 estratti, serve intervento".
+5. Tutto in background, niente nuove finestre, coerente con la regola stealth-sync.
+
