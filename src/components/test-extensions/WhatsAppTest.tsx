@@ -51,8 +51,8 @@ export function WhatsAppTest() {
     }
     const version = ping.version as string | undefined;
     if (!isExpectedWaVersion(version)) {
-      log(`⚠️ Estensione WhatsApp obsoleta rilevata (v${version}). Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`, "error");
-      log("Riscarica /whatsapp-extension.zip, ricarica l'estensione in chrome://extensions e ripeti il test.", "warn");
+      log(`⚠️ Estensione v${version} ancora installata in Chrome. Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`, "error");
+      log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → scarica nuovo ZIP → estrai in CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
       return { ...ping, outdated: true };
     }
     return ping;
@@ -65,7 +65,10 @@ export function WhatsAppTest() {
     if (r?.success) {
       const version = (r.version as string) || "?";
       if (isExpectedWaVersion(version)) log(`✅ Estensione attiva (v${version})`, "ok");
-      else log(`⚠️ Estensione attiva ma obsoleta (v${version}) — richiesta v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`, "error");
+      else {
+        log(`⚠️ Estensione v${version} ancora installata in Chrome — richiesta v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`, "error");
+        log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → estrai il nuovo ZIP in una CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
+      }
     } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
     setRunning(false);
   };

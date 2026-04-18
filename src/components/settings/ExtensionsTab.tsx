@@ -83,10 +83,15 @@ export function ExtensionsTab() {
             <Button variant="outline" size="sm" onClick={async () => {
               try {
                 await downloadWhatsAppExtensionZip();
-                toast.success("Estensione WhatsApp scaricata!");
+                toast.success("Estensione WhatsApp scaricata!", {
+                  description:
+                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                  duration: 15000,
+                });
               } catch (e) {
-                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-                toast.error("File non disponibile");
+                const msg = e instanceof Error ? e.message : String(e);
+                log.warn("operation failed", { error: msg });
+                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
               }
             }}>
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
@@ -111,10 +116,15 @@ export function ExtensionsTab() {
             <Button variant="outline" size="sm" onClick={async () => {
               try {
                 await downloadLinkedInExtensionZip();
-                toast.success("LinkedIn extension scaricata!");
+                toast.success("LinkedIn extension scaricata!", {
+                  description:
+                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                  duration: 15000,
+                });
               } catch (e) {
-                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-                toast.error("File non disponibile");
+                const msg = e instanceof Error ? e.message : String(e);
+                log.warn("operation failed", { error: msg });
+                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
               }
             }}>
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
