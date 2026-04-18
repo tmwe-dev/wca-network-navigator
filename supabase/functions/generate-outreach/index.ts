@@ -254,6 +254,10 @@ serve(async (req) => {
         recipient_intelligence: ctx.intelligence, interaction_history_count: ctx.interactionHistoryCount,
         website_source: ctx.websiteSource, linkedin_source: ctx.linkedinSource,
         decision_object: decision, readiness, readiness_total: readinessTotal, readiness_warnings: readinessWarnings,
+        relationship_stage: ctx.relationshipStage,
+        relationship_metrics: ctx.relationshipMetrics,
+        playbook_active: ctx.playbookActive,
+        channel_declaration: ctx.channelDeclaration,
       },
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
