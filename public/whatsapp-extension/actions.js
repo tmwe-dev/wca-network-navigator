@@ -399,10 +399,96 @@ var Actions = globalThis.Actions || (function () {
     }
   }
 
+  // ── I3: Map AI learn output keys to Optimus executor keys ──
+  function convertSchemaToOptimusPlan(schema) {
+    if (!schema || typeof schema !== "object") return null;
+
+    const keyMap = {
+      chatItem: "container",
+      chatItemAlt: "container_fallback",
+      contactName: "contact_name",
+      chatTitle: "contact_name",
+      chatName: "contact_name",
+      title: "contact_name",
+      lastMessage: "last_message",
+      snippet: "last_message",
+      preview: "last_message",
+      timestamp: "timestamp",
+      timeStamp: "timestamp",
+      time: "timestamp",
+      unreadBadge: "unread_badge",
+      unreadCount: "unread_badge",
+      badge: "unread_badge",
+    };
+
+    const plan = { fields: {} };
+    for (const [aiKey, selector] of Object.entries(schema)) {
+      const optimusKey = keyMap[aiKey];
+      if (!optimusKey || !selector) continue;
+      const primary = typeof selector === "string"
+        ? selector
+        : (selector.primary || selector.selector || String(selector));
+      const fallback = typeof selector === "object" ? (selector.fallback || selector.alt || null) : null;
+      plan.fields[optimusKey] = { primary: primary, fallback: fallback };
+    }
+
+    if (!plan.fields.container && !plan.fields.contact_name) {
+      console.warn("[WA Optimus] Schema conversion failed: missing container or contact_name");
+      return null;
+    }
+    return plan;
+  }
+
+  // ── I4: Local cache for learned plans (24h TTL) ──
+  const LEARNED_PLAN_CACHE_KEY = "optimus_learned_plan";
+  const LEARNED_PLAN_AT_KEY = "optimus_learned_at";
+  const LEARNED_PLAN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+  async function loadCachedLearnedPlan() {
+    try {
+      const stored = await chrome.storage.local.get([LEARNED_PLAN_CACHE_KEY, LEARNED_PLAN_AT_KEY]);
+      if (!stored[LEARNED_PLAN_CACHE_KEY] || !stored[LEARNED_PLAN_AT_KEY]) return null;
+      const ageMs = Date.now() - stored[LEARNED_PLAN_AT_KEY];
+      if (ageMs >= LEARNED_PLAN_MAX_AGE_MS) {
+        console.log("[WA Optimus] Cached plan expired, will relearn");
+        return null;
+      }
+      const schema = typeof stored[LEARNED_PLAN_CACHE_KEY] === "string"
+        ? JSON.parse(stored[LEARNED_PLAN_CACHE_KEY])
+        : stored[LEARNED_PLAN_CACHE_KEY];
+      const plan = convertSchemaToOptimusPlan(schema);
+      if (plan) console.log("[WA Optimus] Loaded cached learned plan (age: " + Math.round(ageMs / 60000) + " min)");
+      return plan;
+    } catch (err) {
+      console.debug("[WA Optimus] Cache load failed:", err?.message);
+      return null;
+    }
+  }
+
   // ── Optimus-first: try AI extraction plan, fallback to legacy on 503 ──
   async function tryOptimusReadUnread(tabId, previousFailed, failureContext) {
-    // 1. snapshot the sidebar
     const sidebarSelector = '[data-tab="3"], #pane-side, [role="grid"]';
+
+    // I4: Try cached learned plan first (skip if forcing relearn)
+    if (!previousFailed) {
+      const cachedPlan = await loadCachedLearnedPlan();
+      if (cachedPlan) {
+        try {
+          const cacheExec = await Optimus.executePlanInTab(tabId, sidebarSelector, cachedPlan);
+          if (cacheExec && cacheExec.success && cacheExec.items && cacheExec.items.length > 0) {
+            return {
+              success: true, cached: true, planVersion: 0, confidence: 0.85, latencyMs: 0,
+              items: cacheExec.items, candidates: cacheExec.candidates || 0, dropped: cacheExec.dropped || 0,
+            };
+          }
+          console.log("[WA Optimus] Cached learned plan returned 0 items, will try bridge/relearn");
+        } catch (cacheErr) {
+          console.debug("[WA Optimus] Cached plan exec failed:", cacheErr?.message);
+        }
+      }
+    }
+
+    // 1. snapshot the sidebar
     const snap = await Optimus.snapshotPage(tabId, sidebarSelector, 6, 3000);
     if (!snap || !snap.ok) return { success: false, error: snap && snap.error || "snapshot_failed", optimusUnavailable: false };
 
@@ -421,8 +507,27 @@ var Actions = globalThis.Actions || (function () {
     });
 
     if (!planRes || !planRes.success) {
-      const code = planRes && planRes.code;
-      // 503 / NO_APP_TAB / TIMEOUT → fall back to legacy
+      // I1: Auto-relearn — Optimus plan failed, try AI learning directly
+      console.log("[WA Optimus] Plan failed, triggering auto-relearn...", planRes && planRes.error);
+      try {
+        const learnResult = await AiExtract.learnDomSelectors(tabId);
+        if (learnResult && learnResult.success && learnResult.schema) {
+          console.log("[WA Optimus] Relearn succeeded, retrying with fresh selectors");
+          const freshPlan = convertSchemaToOptimusPlan(learnResult.schema);
+          if (freshPlan) {
+            const retryExec = await Optimus.executePlanInTab(tabId, sidebarSelector, freshPlan);
+            if (retryExec && retryExec.success && retryExec.items && retryExec.items.length > 0) {
+              return {
+                success: true, cached: false, planVersion: 0, confidence: 0.7, latencyMs: 0,
+                items: retryExec.items, candidates: retryExec.candidates || 0, dropped: retryExec.dropped || 0,
+                method: "optimus-relearned",
+              };
+            }
+          }
+        }
+      } catch (learnErr) {
+        console.warn("[WA Optimus] Auto-relearn failed:", learnErr?.message);
+      }
       return { success: false, error: planRes && planRes.error || "plan_failed", optimusUnavailable: true };
     }
 
@@ -441,6 +546,7 @@ var Actions = globalThis.Actions || (function () {
       dropped: execRes.dropped || 0,
     };
   }
+
 
   // ── Optimus-first: extract messages from open chat panel ──
   // Returns { success, optimusUnavailable, items, cached, planVersion, confidence, latencyMs, dropped, candidates }
