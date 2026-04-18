@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import { ApiError } from "@/lib/api/apiError";
 import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64,
@@ -112,7 +113,41 @@ function base64ToBlob(base64: string, mimeType: string) {
   return new Blob([bytes], { type: mimeType });
 }
 
-export async function downloadStaticExtensionZip(assetPath: string, filename: string, fallbackPaths: string[] = []) {
+async function bytesToShortHash(bytes: ArrayBuffer): Promise<string> {
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const arr = Array.from(new Uint8Array(digest));
+    return arr.slice(0, 4).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return Date.now().toString(16).slice(-8);
+  }
+}
+
+async function readManifestVersionFromZip(blob: Blob): Promise<string | null> {
+  try {
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const manifest = zip.file("manifest.json");
+    if (!manifest) return null;
+    const content = await manifest.async("string");
+    const parsed = JSON.parse(content) as { version?: string };
+    return typeof parsed.version === "string" ? parsed.version : null;
+  } catch {
+    return null;
+  }
+}
+
+function appendHashToFilename(filename: string, hash: string): string {
+  const dot = filename.lastIndexOf(".");
+  if (dot < 0) return `${filename}-${hash}`;
+  return `${filename.slice(0, dot)}-${hash}${filename.slice(dot)}`;
+}
+
+export async function downloadStaticExtensionZip(
+  assetPath: string,
+  filename: string,
+  fallbackPaths: string[] = [],
+  expectedVersion?: string,
+) {
   let blob: Blob;
 
   try {
@@ -132,9 +167,30 @@ export async function downloadStaticExtensionZip(assetPath: string, filename: st
     }
   }
 
+  // Guard B: validate manifest version inside the ZIP before serving.
+  if (expectedVersion) {
+    const buf = await blob.arrayBuffer();
+    const actualVersion = await readManifestVersionFromZip(new Blob([buf]));
+    if (actualVersion && actualVersion !== expectedVersion) {
+      throw new Error(
+        `ZIP corrotto: contiene v${actualVersion} ma il filename dichiara v${expectedVersion}. Riprova fra qualche secondo.`,
+      );
+    }
+    // Guard A: append integrity hash to the filename so any cached/intermediate
+    // copy is immediately distinguishable from the freshly downloaded one.
+    const hash = await bytesToShortHash(buf);
+    const finalName = appendHashToFilename(filename, hash);
+    blob = new Blob([buf], { type: "application/zip" });
+    triggerDownload(blob, finalName);
+    return;
+  }
+
+  triggerDownload(blob, filename);
+}
+
+function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -156,7 +212,8 @@ export async function downloadWhatsAppExtensionZip() {
   return downloadStaticExtensionZip(
     WHATSAPP_EXTENSION_CURRENT_PATH,
     WHATSAPP_EXTENSION_CURRENT_FILENAME,
-    [WHATSAPP_EXTENSION_FALLBACK_PATH]
+    [WHATSAPP_EXTENSION_FALLBACK_PATH],
+    WHATSAPP_EXTENSION_REQUIRED_VERSION,
   );
 }
 
@@ -164,6 +221,7 @@ export async function downloadLinkedInExtensionZip() {
   return downloadStaticExtensionZip(
     LINKEDIN_EXTENSION_CURRENT_PATH,
     LINKEDIN_EXTENSION_CURRENT_FILENAME,
-    [LINKEDIN_EXTENSION_FALLBACK_PATH]
+    [LINKEDIN_EXTENSION_FALLBACK_PATH],
+    LINKEDIN_EXTENSION_REQUIRED_VERSION,
   );
 }
