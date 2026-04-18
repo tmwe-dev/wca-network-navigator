@@ -258,6 +258,13 @@ export interface ContextBlocks {
   services: ServiceRow[];
   socialLinks: SocialLinkRow[];
   settings: Record<string, string>;
+  // ── Commercial state (Doctrine L0 / Holding Pattern awareness) ──
+  commercialState?: string;
+  touchCount?: number;
+  daysSinceLastContact?: number;
+  warmthScore?: number;
+  lastChannel?: string;
+  lastOutcome?: string;
 }
 
 export async function assembleContextBlocks(
@@ -366,12 +373,27 @@ export async function assembleContextBlocks(
   let historyContext = "";
   let relationshipBlock = "";
   let branchBlock = "";
+  let commercialState: string | undefined;
+  let touchCount: number | undefined;
+  let daysSinceLastContact: number | undefined;
+  let warmthScore: number | undefined;
+  let lastChannel: string | undefined;
+  let lastOutcome: string | undefined;
   if (effectivePartnerId) {
     const { metrics, historyText } = await analyzeRelationshipHistory(supabase, effectivePartnerId, userId);
     if (historyText) historyContext = `\n${historyText}\n`;
     relationshipBlock = buildRelationshipAnalysisBlock(metrics);
     const branches = await getSameCompanyBranches(supabase, effectivePartnerId);
     branchBlock = buildBranchCoordinationBlock(branches, partner.city);
+
+    // Extract commercial state from metrics + partner.lead_status
+    const m = metrics as Record<string, unknown>;
+    commercialState = (m.commercial_state as string | undefined) ?? (partner.lead_status as string | undefined);
+    touchCount = typeof m.total_interactions === "number" ? m.total_interactions : (typeof m.touch_count === "number" ? m.touch_count : undefined);
+    daysSinceLastContact = typeof m.days_since_last_contact === "number" ? m.days_since_last_contact : undefined;
+    warmthScore = typeof m.warmth_score === "number" ? m.warmth_score : undefined;
+    lastChannel = m.last_channel as string | undefined;
+    lastOutcome = m.last_outcome as string | undefined;
   }
   const interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
 
@@ -450,5 +472,6 @@ export async function assembleContextBlocks(
     conversationIntelligenceContext,
     salesKBSlice: kbResult.text, salesKBSections: kbResult.sections_used,
     signatureBlock, networks, services, socialLinks, settings,
+    commercialState, touchCount, daysSinceLastContact, warmthScore, lastChannel, lastOutcome,
   };
 }
