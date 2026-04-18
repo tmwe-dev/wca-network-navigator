@@ -76,7 +76,7 @@
     if (!data.action || typeof data.action !== "string") return "Missing action";
     if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
     // Validate string fields don't exceed max length
-    const stringFields = ["url", "message", "note", "query", "threadUrl"];
+    const stringFields = ["url", "message", "note", "query", "threadUrl", "lastKnownText"];
     for (let i = 0; i < stringFields.length; i++) {
       const field = stringFields[i];
       if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {

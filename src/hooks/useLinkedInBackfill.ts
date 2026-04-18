@@ -20,12 +20,14 @@ type BackfillProgress = {
   threadsProcessed: number;
   threadsTotal: number;
   recoveredMessages: number;
+  pauseReason: string | null;
   lastError: string | null;
 };
 
 const INITIAL: BackfillProgress = {
   status: "idle", phase: "idle", currentThread: null,
-  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0, lastError: null,
+  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0,
+  pauseReason: null, lastError: null,
 };
 
 const MAX_THREADS_PER_SESSION = 5;
@@ -72,7 +74,7 @@ export function useLinkedInBackfill() {
         return;
       }
 
-      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle" })); return; }
+      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" })); return; }
 
       // Detect gaps: compare last sidebar message vs last DB message per thread
       const threadsWithGap: { name: string; threadUrl: string; lastDbText: string | null }[] = [];
@@ -111,7 +113,7 @@ export function useLinkedInBackfill() {
 
       for (let i = 0; i < threadsWithGap.length; i++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+          setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
           toast.info("Recupero interrotto");
           return;
         }
@@ -183,7 +185,7 @@ export function useLinkedInBackfill() {
         if (i < threadsWithGap.length - 1) {
           const aborted = await sleepAbortable(jitteredPause(PAUSE_BETWEEN_THREADS_MS), abortRef);
           if (aborted) {
-            setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+            setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
             toast.info("Recupero interrotto");
             return;
           }
