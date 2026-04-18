@@ -47,7 +47,8 @@ serve(async (req) => {
     }
 
     // Trim HTML to avoid token limits (keep max ~30k chars)
-    const trimmedHtml = html.length > 30000 ? html.slice(0, 30000) : html;
+    const wasTruncated = html.length > 30000;
+    const trimmedHtml = wasTruncated ? html.slice(0, 30000) : html;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY)
