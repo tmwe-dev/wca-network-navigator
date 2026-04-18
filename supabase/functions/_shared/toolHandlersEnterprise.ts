@@ -87,7 +87,16 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
     const step = steps[stepIndex];
     let stepResult: unknown = null;
     if (step.tool && typeof step.tool === "string") {
-      stepResult = { note: `Tool "${step.tool}" da eseguire con args: ${JSON.stringify(step.args || {})}` };
+      const toolHandler = toolExecutors[step.tool];
+      if (toolHandler) {
+        try {
+          stepResult = await toolHandler(step.args || {}, _userId);
+        } catch (execErr) {
+          stepResult = { error: `Esecuzione tool "${step.tool}" fallita: ${execErr instanceof Error ? execErr.message : String(execErr)}` };
+        }
+      } else {
+        stepResult = { note: `Tool "${step.tool}" non ha un executor automatico. Esecuzione manuale richiesta.`, args: step.args || {} };
+      }
     }
     steps[stepIndex] = { ...step, status: "completed", completed_at: new Date().toISOString(), result: stepResult };
     const nextStep = stepIndex + 1;
@@ -154,6 +163,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
   async function executeSearchKb(args: Record<string, unknown>, _userId: string) {
     const query = String(args.query || "").trim();
     if (!query) return { error: "query è obbligatoria" };
+    if (!_userId) return { error: "userId mancante — impossibile cercare nella KB" };
     const limit = Math.min(Math.max(Number(args.limit) || 6, 1), 20);
     const categories = Array.isArray(args.categories) ? (args.categories as string[]) : undefined;
     try {
@@ -321,6 +331,20 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
         .order("priority", { ascending: false }).limit(6);
       kbContext = (kb || []) as { title: string; content: string; category: string }[];
     }
+    const partnerId = args.partner_id ? String(args.partner_id) : null;
+    let activationPersisted = false;
+    if (partnerId) {
+      const { error: logErr } = await supabase.from("interactions").insert({
+        partner_id: partnerId,
+        user_id: _userId,
+        interaction_type: "system_note",
+        subject: `Playbook "${pbRow.name}" attivato`,
+        notes: `Codice playbook: ${pbRow.code}. Workflow associato: ${pbRow.workflow_code || "nessuno"}. KB caricata: ${kbContext.length} voci.`,
+        interaction_date: new Date().toISOString(),
+      });
+      activationPersisted = !logErr;
+    }
+
     return {
       success: true,
       playbook: {
@@ -328,10 +352,29 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
         workflow_code: pbRow.workflow_code, prompt_template: pbRow.prompt_template,
         suggested_actions: pbRow.suggested_actions,
       },
+      partner_id: partnerId,
+      activation_persisted: activationPersisted,
       kb_loaded: kbContext.length, kb_entries: kbContext,
-      message: `Playbook "${pbRow.name}" attivato.`,
+      message: partnerId
+        ? `Playbook "${pbRow.name}" attivato e tracciato per il partner.`
+        : `Playbook "${pbRow.name}" caricato (nessun partner specificato — attivazione non persistita).`,
     };
   }
+
+  // Tool executor map for execute_plan_step (real execution of step.tool)
+  const toolExecutors: Record<string, (args: Record<string, unknown>, userId: string) => Promise<unknown>> = {
+    save_memory: executeSaveMemory,
+    search_memory: executeSearchMemory,
+    search_kb: executeSearchKb,
+    save_kb_rule: executeSaveKbRule,
+    save_operative_prompt: executeSaveOperativePrompt,
+    list_workflows: executeListWorkflows,
+    start_workflow: executeStartWorkflow,
+    advance_workflow_gate: executeAdvanceWorkflowGate,
+    list_playbooks: executeListPlaybooks,
+    apply_playbook: executeApplyPlaybook,
+    ui_action: (args) => Promise.resolve(executeUiAction(args)),
+  };
 
   return {
     executeSaveMemory,

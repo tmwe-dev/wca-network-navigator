@@ -100,7 +100,7 @@ export function useEmailComposerV2() {
         ? `Destinatario: ${recipients[0].name} di ${recipients[0].companyName ?? "N/D"} (${recipients[0].email})`
         : "";
 
-      const data = await invokeEdge<{ response?: string }>("ai-assistant", {
+      const data = await invokeEdge<{ response?: string; content?: string }>("ai-assistant", {
         body: {
           messages: [{
             role: "user",
@@ -111,7 +111,8 @@ export function useEmailComposerV2() {
         },
         context: "emailComposerV2",
       });
-      if (data?.response) setBody(data.response);
+      const aiBody = data?.response || data?.content || "";
+      if (aiBody) setBody(aiBody);
     },
     onError: () => toast.error("Errore nella generazione AI"),
   });

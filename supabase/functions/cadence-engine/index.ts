@@ -184,49 +184,155 @@ async function processAction(
     was_auto_executed: autoExecute,
   }).select("id").single();
 
+  const actionType = mapActionType(action.action_type);
+
   if (autoExecute) {
     // Mark action as executing and invoke mission-executor
     await supabase.from("mission_actions").update({
       status: "approved",
     }).eq("id", action.id);
 
-    // Create executed pending action record
+    // Step 1: Generate real content via generate-outreach
+    let executionResult: Record<string, unknown> = {};
+    let executionStatus = "executed";
+
+    try {
+      const genResponse = await fetch(
+        `${supabaseUrl}/functions/v1/generate-outreach`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            partnerId,
+            email: targetEmail,
+            channel: action.action_type || "email",
+            userId: action.user_id,
+            context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}.`,
+          }),
+        },
+      );
+
+      if (genResponse.ok) {
+        const genData = await genResponse.json();
+        executionResult = {
+          subject: genData.subject,
+          body: genData.body,
+          channel: genData.channel || action.action_type,
+          generated: true,
+        };
+
+        // Step 2: If email, attempt real send
+        if (actionType === "send_email" && targetEmail && genData.body) {
+          const sendResponse = await fetch(
+            `${supabaseUrl}/functions/v1/send-email`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({
+                to: targetEmail,
+                subject: genData.subject,
+                body: genData.body,
+                userId: action.user_id,
+                partnerId,
+                source: "cadence_engine",
+              }),
+            },
+          );
+          executionResult.sent = sendResponse.ok;
+          if (!sendResponse.ok) {
+            executionStatus = "failed";
+            executionResult.sendError = await sendResponse.text().catch(() => "unknown");
+          }
+        } else if (actionType !== "send_email") {
+          // Non-email channels: queue with generated content
+          executionStatus = "pending";
+          executionResult.note = `Contenuto generato per canale ${action.action_type}. Invio manuale richiesto.`;
+        }
+      } else {
+        executionStatus = "failed";
+        executionResult = { error: "Content generation failed", status: genResponse.status };
+      }
+    } catch (execErr) {
+      executionStatus = "failed";
+      executionResult = { error: execErr instanceof Error ? execErr.message : "Unknown execution error" };
+    }
+
     await supabase.from("ai_pending_actions").insert({
       user_id: action.user_id,
       decision_log_id: decisionLog?.id,
       partner_id: partnerId,
       email_address: targetEmail,
-      action_type: mapActionType(action.action_type),
-      action_payload: {},
-      reasoning: `Cadence auto-execution: trigger "${trigger}" met`,
+      action_type: actionType,
+      action_payload: executionResult,
+      reasoning: `Cadence auto-execution: trigger "${trigger}" met. Result: ${executionStatus}`,
       confidence: 0.85,
       source: "cadence_engine",
-      status: "executed",
-      executed_at: new Date().toISOString(),
+      status: executionStatus,
+      executed_at: executionStatus === "executed" ? new Date().toISOString() : null,
     });
 
     // Supervisor audit
     logSupervisorAudit(supabase, {
       user_id: action.user_id, actor_type: "cron", actor_name: "cadence-engine",
       action_category: "cadence_executed",
-      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: eseguito`,
+      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: ${executionStatus}`,
       target_type: "mission", target_id: action.id,
       partner_id: partnerId || undefined, email_address: targetEmail || undefined,
       decision_origin: "ai_auto",
-      metadata: { trigger_condition: trigger, cadence_step: action.cadence_rule?.current_step },
+      metadata: { trigger_condition: trigger, cadence_step: action.cadence_rule?.current_step, execution_status: executionStatus },
     });
 
     counters.executed();
   } else {
-    // Create pending action for human review
+    // Pre-generate content so reviewer sees real text
+    let pendingPayload: Record<string, unknown> = {};
+    try {
+      const genResponse = await fetch(
+        `${supabaseUrl}/functions/v1/generate-outreach`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            partnerId,
+            email: targetEmail,
+            channel: action.action_type || "email",
+            userId: action.user_id,
+            context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}. PENDING REVIEW.`,
+          }),
+        },
+      );
+      if (genResponse.ok) {
+        const genData = await genResponse.json();
+        pendingPayload = {
+          subject: genData.subject,
+          body: genData.body,
+          channel: genData.channel || action.action_type,
+          generated: true,
+        };
+      } else {
+        pendingPayload = { note: "Generazione contenuto non riuscita. Creare manualmente.", status: genResponse.status };
+      }
+    } catch (genErr) {
+      pendingPayload = { note: "Generazione contenuto fallita.", error: genErr instanceof Error ? genErr.message : String(genErr) };
+    }
+
     await supabase.from("ai_pending_actions").insert({
       user_id: action.user_id,
       decision_log_id: decisionLog?.id,
       partner_id: partnerId,
       email_address: targetEmail,
-      action_type: mapActionType(action.action_type),
-      action_payload: {},
-      reasoning: `Cadence trigger "${trigger}" met. Awaiting review.`,
+      action_type: actionType,
+      action_payload: pendingPayload,
+      reasoning: `Cadence trigger "${trigger}" met. Awaiting review. Content pre-generated.`,
       confidence: 0.85,
       source: "cadence_engine",
       status: "pending",
@@ -344,7 +450,7 @@ function mapActionType(type: string): string {
     email: "send_email",
     phone: "create_task",
     whatsapp: "send_whatsapp",
-    linkedin: "linkedin_message",
+    linkedin: "send_linkedin",
   };
-  return map[type] || "send_email";
+  return map[type] || "create_task";
 }
