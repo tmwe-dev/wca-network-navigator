@@ -76,8 +76,13 @@ export function LinkedInTab({
             onClick={async () => {
               setSavingLiCreds(true);
               try {
-                await updateSetting.mutateAsync({ key: "linkedin_email", value: liEmail.trim() });
-                await updateSetting.mutateAsync({ key: "linkedin_password", value: liPass.trim() });
+                // FIX G3 — credentials are encrypted server-side via dedicated edge function.
+                // Never write linkedin_email / linkedin_password directly to app_settings.
+                const { supabase } = await import("@/integrations/supabase/client");
+                const { error } = await supabase.functions.invoke("save-linkedin-credentials", {
+                  body: { email: liEmail.trim(), password: liPass.trim() },
+                });
+                if (error) throw error;
                 toast.success("Credenziali LinkedIn salvate!");
               } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
               finally { setSavingLiCreds(false); }

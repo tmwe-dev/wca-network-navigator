@@ -30,9 +30,10 @@ var Auth = globalThis.Auth || (function () {
         return Config.errorResponse(Config.ERROR.UNKNOWN, (bridgeResp && bridgeResp.error) || "Bridge cookie sync failed");
       }
       const data = bridgeResp.data || {};
-      return Config.successResponse({ cookieLength: liAt.length, saved: data.success !== false });
+      return Config.successResponse({ saved: data.success !== false });
     } catch (err) {
-      return Config.errorResponse(Config.ERROR.UNKNOWN, err.message);
+      console.error("[LI Auth] syncCookieToServer failed:", (err && err.message) || err);
+      throw err; // Propagate to caller for visible error handling
     }
   }
 

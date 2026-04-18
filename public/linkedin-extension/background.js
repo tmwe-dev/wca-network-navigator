@@ -162,7 +162,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 chrome.runtime.onInstalled.addListener(async function () {
   console.log("[LinkedIn Extension v3.0] Installed — Modular Architecture");
   await Config.load();
-  Auth.syncCookieToServer().catch(function () {});
+  Auth.syncCookieToServer().catch(function (err) {
+    console.warn("[LI] Cookie sync failed on startup:", (err && err.message) || err);
+  });
 });
 
 chrome.runtime.onStartup.addListener(async function () {
