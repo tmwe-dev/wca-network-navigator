@@ -152,7 +152,7 @@ Se nessun tool è adatto, rispondi: {"toolId": "none", "reasoning": "<motivo>"}
 Tool disponibili:
 ${toolDescriptions}`;
 
-      const decisionResponse = await fetch(provider.baseUrl, {
+      const decisionResponse = await fetch(provider.url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${provider.apiKey}`,
@@ -182,9 +182,9 @@ ${toolDescriptions}`;
 
       try {
         const parsed = JSON.parse(rawContent);
-        // Deduct minimal credits
-        if (!provider.isUserKey) {
-          await consumeCredits(supabase, userId, 1);
+        // Deduct minimal credits (tool-decision uses ~router-grade tokens)
+        if (userId) {
+          await consumeCredits(supabase, userId, { prompt_tokens: 200, completion_tokens: 50 }, provider.isUserKey);
         }
         endMetrics(metrics, 200);
         return new Response(
@@ -234,7 +234,7 @@ ${toolDescriptions}`;
         { role: "user", content: userPrompt },
       ];
 
-      const planResponse = await fetch(provider.baseUrl, {
+      const planResponse = await fetch(provider.url, {
         method: "POST",
         headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -259,7 +259,7 @@ ${toolDescriptions}`;
 
       try {
         const parsed = JSON.parse(rawPlan);
-        if (!provider.isUserKey) await consumeCredits(supabase, userId, 2);
+        if (userId) await consumeCredits(supabase, userId, { prompt_tokens: 600, completion_tokens: 400 }, provider.isUserKey);
         console.log(`[plan-execution] Plan generated: ${parsed.steps?.length ?? 0} steps — ${parsed.summary}`);
         endMetrics(metrics, 200);
         return new Response(

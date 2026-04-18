@@ -139,21 +139,25 @@ async function loadVoiceContext(supabase: ReturnType<typeof createClient>, userI
 
 async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, partnerId?: string): Promise<string> {
   if (!partnerId) return "";
+  // UUID guard: prevent invalid input syntax errors
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(partnerId)) return "";
   try {
     const { data } = await supabase
       .from("partners")
-      .select("id, name, country_code, services, lead_status, rating, notes")
+      .select("id, company_name, country_code, country_name, city, profile_description, lead_status, rating, partner_type")
       .eq("id", partnerId)
       .maybeSingle();
     if (!data) return "";
     return [
       "# PARTNER IN LINEA",
-      `Nome: ${data.name}`,
-      data.country_code ? `Paese: ${data.country_code}` : "",
-      data.services ? `Servizi: ${JSON.stringify(data.services).slice(0, 240)}` : "",
+      `Nome: ${data.company_name}`,
+      data.country_name ? `Paese: ${data.country_name}` : (data.country_code ? `Paese: ${data.country_code}` : ""),
+      data.city ? `Città: ${data.city}` : "",
+      data.partner_type ? `Tipo: ${data.partner_type}` : "",
       data.lead_status ? `Lead status: ${data.lead_status}` : "",
       data.rating ? `Rating: ${data.rating}` : "",
-      data.notes ? `Note: ${String(data.notes).slice(0, 240)}` : "",
+      data.profile_description ? `Profilo: ${String(data.profile_description).slice(0, 240)}` : "",
     ].filter(Boolean).join("\n");
   } catch { return ""; }
 }
