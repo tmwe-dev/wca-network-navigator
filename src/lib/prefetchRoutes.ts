@@ -65,13 +65,17 @@ export function prefetchRoute(path: string): void {
  * Call once after first paint — not blocking TTI.
  */
 export function scheduleIdlePrefetch(): void {
-  const top = ["/v2", "/v2/network", "/v2/crm", "/v2/outreach"];
+  // ⚡ Perf: only prefetch the single hottest route after the dashboard.
+  // CRM/Outreach are 200-300kb chunks each — letting them prefetch by hover
+  // (via prefetchRoute on link mouseenter) avoids burning bandwidth and
+  // competing with the active Dashboard queries on first paint.
+  const top = ["/v2/network"];
   const ric: typeof window.requestIdleCallback | undefined =
     typeof window !== "undefined" ? window.requestIdleCallback : undefined;
   const run = () => top.forEach((p) => prefetchRoute(p));
   if (ric) {
-    ric(run, { timeout: 3000 });
+    ric(run, { timeout: 5000 });
   } else if (typeof window !== "undefined") {
-    setTimeout(run, 1500);
+    setTimeout(run, 2500);
   }
 }
