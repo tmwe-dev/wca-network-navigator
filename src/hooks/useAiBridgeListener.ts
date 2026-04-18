@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Listens for AI bridge requests from the WhatsApp extension
+ * Listens for AI bridge + Optimus requests from the WhatsApp extension
  * (relayed through the content script) and calls the appropriate
  * Supabase edge function, returning the result back to the extension.
  */
@@ -44,7 +44,59 @@ export function useAiBridgeListener() {
         });
     }
 
+    function handleOptimusRequest(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data as
+        | {
+            direction?: string;
+            requestId?: string;
+            domSnapshot?: string;
+            pageType?: string;
+            channel?: string;
+          }
+        | null;
+      if (!data || data.direction !== "from-extension-optimus-request") return;
+
+      const { requestId, domSnapshot, pageType, channel } = data;
+      if (!requestId || !domSnapshot) return;
+
+      supabase.functions
+        .invoke("optimus-analyze", {
+          body: {
+            dom_snapshot: domSnapshot,
+            page_type: pageType,
+            channel: channel || "whatsapp",
+          },
+        })
+        .then(({ data: result, error }) => {
+          window.postMessage(
+            {
+              direction: "from-webapp-optimus-response",
+              requestId,
+              result: error ? null : result,
+              error: error ? error.message : null,
+            },
+            window.location.origin
+          );
+        })
+        .catch((err) => {
+          window.postMessage(
+            {
+              direction: "from-webapp-optimus-response",
+              requestId,
+              result: null,
+              error: err instanceof Error ? err.message : String(err),
+            },
+            window.location.origin
+          );
+        });
+    }
+
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener("message", handleOptimusRequest);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("message", handleOptimusRequest);
+    };
   }, []);
 }

@@ -1,7 +1,8 @@
 // ==================================================
-// WhatsApp Extension v5.4 — Content Script Bridge
+// WhatsApp Extension v5.4.1 — Content Script Bridge
 // Hardened: reinject cleanup, AI bridge relay,
-// payload validation, adaptive heartbeat
+// Optimus relay, payload validation, origin check,
+// adaptive heartbeat
 // ==================================================
 
 (function () {
@@ -29,6 +30,17 @@
   ];
 
   var MAX_STRING_LENGTH = 5000;
+
+  // ── Origin check helper: only accept messages from our app domains ──
+  function isAllowedOrigin(origin) {
+    if (!origin) return false;
+    return !!(
+      origin.match(/\.lovable\.app$/i) ||
+      origin.match(/\.lovableproject\.com$/i) ||
+      origin.match(/^https?:\/\/localhost(:\d+)?$/i) ||
+      origin.match(/^https?:\/\/127\.0\.0\.1(:\d+)?$/i)
+    );
+  }
 
   function isExtensionAlive() {
     try {
@@ -119,49 +131,74 @@
     }
   }
 
-  // ── AI Bridge relay: background → webapp → background ──
-  // Background sends ai-bridge-request to this content script,
-  // we relay it to the webapp page via postMessage,
-  // and relay the response back to background.
+  // ── AI Bridge + Optimus relay: background → webapp → background ──
   globalThis.__WA_AI_BRIDGE_LISTENER__ = function (message, sender, sendResponse) {
-    if (!message || message.source !== "wa-background-bridge" || message.type !== "ai-bridge-request") {
+    if (!message) return false;
+
+    // ── AI Bridge: background → webapp → background ──
+    if (message.source === "wa-background-bridge" && message.type === "ai-bridge-request") {
+      var aibRequestId = message.requestId;
+
+      function onAibWebappResponse(event) {
+        if (event.source !== window) return;
+        if (!isAllowedOrigin(event.origin)) return;
+        var d = event.data;
+        if (!d || d.direction !== "from-webapp-ai-bridge-response" || d.requestId !== aibRequestId) return;
+        window.removeEventListener("message", onAibWebappResponse);
+        try {
+          chrome.runtime.sendMessage({
+            source: "wa-content-bridge",
+            type: "ai-bridge-response",
+            requestId: aibRequestId,
+            data: d.result || null,
+          });
+        } catch (_) {}
+      }
+      window.addEventListener("message", onAibWebappResponse);
+      setTimeout(function () { window.removeEventListener("message", onAibWebappResponse); }, 35000);
+
+      post({
+        direction: "from-extension-ai-bridge-request",
+        requestId: aibRequestId,
+        functionName: message.functionName,
+        payload: message.payload,
+      });
       return false;
     }
 
-    var requestId = message.requestId;
+    // ── Optimus: background → webapp → background ──
+    if (message.source === "wa-background-bridge" && message.type === "optimus-request") {
+      var optRequestId = message.requestId;
 
-    // Listen for the webapp's response (one-shot)
-    function onWebappResponse(event) {
-      if (event.source !== window) return;
-      var d = event.data;
-      if (!d || d.direction !== "from-webapp-ai-bridge-response" || d.requestId !== requestId) return;
-      window.removeEventListener("message", onWebappResponse);
-      // Relay back to background
-      try {
-        chrome.runtime.sendMessage({
-          source: "wa-content-bridge",
-          type: "ai-bridge-response",
-          requestId: requestId,
-          data: d.result || null,
-        });
-      } catch (_) {}
+      function onOptimusWebappResponse(event) {
+        if (event.source !== window) return;
+        if (!isAllowedOrigin(event.origin)) return;
+        var d = event.data;
+        if (!d || d.direction !== "from-webapp-optimus-response" || d.requestId !== optRequestId) return;
+        window.removeEventListener("message", onOptimusWebappResponse);
+        try {
+          chrome.runtime.sendMessage({
+            source: "wa-content-bridge",
+            type: "optimus-response",
+            requestId: optRequestId,
+            data: d.result || null,
+          });
+        } catch (_) {}
+      }
+      window.addEventListener("message", onOptimusWebappResponse);
+      setTimeout(function () { window.removeEventListener("message", onOptimusWebappResponse); }, 45000);
+
+      post({
+        direction: "from-extension-optimus-request",
+        requestId: optRequestId,
+        domSnapshot: message.domSnapshot,
+        pageType: message.pageType,
+        channel: message.channel || "whatsapp",
+      });
+      return false;
     }
-    window.addEventListener("message", onWebappResponse);
 
-    // Set a timeout to clean up
-    setTimeout(function () {
-      window.removeEventListener("message", onWebappResponse);
-    }, 35000);
-
-    // Forward request to webapp
-    post({
-      direction: "from-extension-ai-bridge-request",
-      requestId: requestId,
-      functionName: message.functionName,
-      payload: message.payload,
-    });
-
-    return false; // async response handled via separate message
+    return false;
   };
   chrome.runtime.onMessage.addListener(globalThis.__WA_AI_BRIDGE_LISTENER__);
 
@@ -185,26 +222,14 @@
     }, currentHeartbeat);
   }
 
-  // ── Message listener from webapp ──
+  // ── Message listener from webapp (with origin check) ──
   globalThis.__WA_MSG_LISTENER__ = function (event) {
     if (event.source !== window) return;
+    // Origin check: only accept from our known app domains
+    if (!isAllowedOrigin(event.origin)) return;
+
     var data = event.data;
     if (!data) return;
-
-    // Optimus response from webapp → forward to background as runtime message.
-    // background's Optimus.getPlan() listens for { source:"wca-optimus-response", requestId, payload }
-    if (data.direction === "from-webapp-optimus-response") {
-      if (!isExtensionAlive()) return;
-      try {
-        chrome.runtime.sendMessage({
-          source: "wca-optimus-response",
-          requestId: data.requestId,
-          payload: data.payload,
-        });
-      } catch (_) {}
-      return;
-    }
-
     if (data.direction !== "from-webapp-wa") return;
     relayMessage(data);
   };
