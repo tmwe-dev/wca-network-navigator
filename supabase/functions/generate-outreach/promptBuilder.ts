@@ -35,6 +35,13 @@ export interface OutreachPromptContext {
   // Decision/readiness
   decision: Record<string, unknown>;
   readinessTotal: number;
+  // Commercial state context (holding pattern awareness)
+  commercialState?: string;
+  touchCount?: number;
+  lastChannel?: string;
+  lastOutcome?: string;
+  daysSinceLastContact?: number;
+  warmthScore?: number;
 }
 
 export function getModel(quality: Quality): string {
