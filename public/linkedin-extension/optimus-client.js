@@ -202,7 +202,7 @@ var Optimus = globalThis.Optimus || (function () {
         if (candidates[j].active) return candidates[j];
       }
       return candidates[0];
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Optimus] plan:", err?.message); }
     return null;
   }
 
@@ -274,11 +274,11 @@ var Optimus = globalThis.Optimus || (function () {
   function _pageExecutePlan(rootSelector, fallbackBody, plan) {
     function trySel(root, sel) {
       if (!sel) return null;
-      try { return root.querySelector(sel); } catch (_) { return null; }
+      try { return root.querySelector(sel); } catch (err) { console.debug("[LI Optimus] sel:", err?.message); return null; }
     }
     function tryAll(root, sel) {
       if (!sel) return [];
-      try { return Array.from(root.querySelectorAll(sel)); } catch (_) { return []; }
+      try { return Array.from(root.querySelectorAll(sel)); } catch (err) { console.debug("[LI Optimus] selAll:", err?.message); return []; }
     }
     function pickFirst(root, primary, fallback) {
       const a = trySel(root, primary);

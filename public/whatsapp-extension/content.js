@@ -47,12 +47,12 @@
       if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
       void chrome.runtime.getManifest();
       return true;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[WA Content] extension dead:", err?.message); return false; }
   }
 
   function post(payload) {
     try { window.postMessage(payload, window.location.origin); }
-    catch (_) { window.postMessage(payload, "*"); }
+    catch (err) { console.debug("[WA Content] origin post failed, using *:", err?.message); window.postMessage(payload, "*"); }
   }
 
   function failResponse(data, error, errorCode) {
@@ -152,7 +152,7 @@
             requestId: aibRequestId,
             data: d.result || null,
           });
-        } catch (_) {}
+        } catch (err) { console.debug("[WA Content] AI bridge cleanup:", err?.message); }
       }
       window.addEventListener("message", onAibWebappResponse);
       setTimeout(function () { window.removeEventListener("message", onAibWebappResponse); }, 35000);
@@ -183,7 +183,7 @@
             requestId: optRequestId,
             data: d.result || null,
           });
-        } catch (_) {}
+        } catch (err) { console.debug("[WA Content] Optimus cleanup:", err?.message); }
       }
       window.addEventListener("message", onOptimusWebappResponse);
       setTimeout(function () { window.removeEventListener("message", onOptimusWebappResponse); }, 45000);

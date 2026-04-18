@@ -192,7 +192,7 @@ var Auth = globalThis.Auth || (function () {
     while (Date.now() - startedAt < timeoutMs) {
       await new Promise(function (r) { setTimeout(r, 2000); });
       let tab;
-      try { tab = await chrome.tabs.get(tabId); } catch (_) {
+      try { tab = await chrome.tabs.get(tabId); } catch (err) {
         return Config.errorResponse(Config.ERROR.TAB_CLOSED, "Tab chiuso durante il login");
       }
       lastUrl = tab && tab.url ? tab.url : lastUrl;

@@ -63,7 +63,7 @@ var TabManager = globalThis.TabManager || (function () {
       const currentPath = current.pathname.replace(/\/$/, "");
       const targetPath = target.pathname.replace(/\/$/, "");
       return current.hostname === target.hostname && currentPath === targetPath;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[LI Tab]", err?.message); return false; }
   }
 
   async function getLinkedInTab(url, skipNavigateIfSameDomain) {
@@ -80,7 +80,7 @@ var TabManager = globalThis.TabManager || (function () {
           await waitForLoad(_liTabId, 20000);
           return { id: _liTabId, reused: false };
         }
-      } catch (_) {
+      } catch (err) {
         _liTabId = null;
       }
     }
@@ -104,14 +104,14 @@ var TabManager = globalThis.TabManager || (function () {
       if (!tab) return false;
       let activated = false;
       if (!tab.active) {
-        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (_) {}
+        try { await chrome.tabs.update(tabId, { active: true }); activated = true; } catch (err) { console.debug("[LI Tab] update:", err?.message); }
       }
       if (typeof tab.windowId === "number") {
-        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
+        try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (err) { console.debug("[LI Tab] focus:", err?.message); }
       }
       if (activated) await sleep(postActivateMs || 1200);
       return true;
-    } catch (_) { return false; }
+    } catch (err) { console.debug("[LI Tab] visible:", err?.message); return false; }
   }
 
   // ── Operation Queue with dual lanes ──

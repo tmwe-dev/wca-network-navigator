@@ -20,7 +20,7 @@ var AXTree = globalThis.AXTree || (function () {
       const result = await fn(tabId);
       return result;
     } finally {
-      try { await chrome.debugger.detach({ tabId: tabId }); } catch (_) {}
+      try { await chrome.debugger.detach({ tabId: tabId }); } catch (err) { console.debug("[LI AXTree] detach:", err?.message); }
     }
   }
 
@@ -97,7 +97,7 @@ var AXTree = globalThis.AXTree || (function () {
           await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseReleased", x: x, y: y, button: "left", clickCount: 1 });
           return true;
         }
-      } catch (_) {}
+      } catch (err) { console.debug("[LI AXTree] node:", err?.message); }
     }
     return false;
   }
@@ -283,7 +283,7 @@ var AXTree = globalThis.AXTree || (function () {
                 returnByValue: true,
               });
               let parsed = null;
-              try { parsed = JSON.parse(hrefResult && hrefResult.result && hrefResult.result.value); } catch (_) {}
+              try { parsed = JSON.parse(hrefResult && hrefResult.result && hrefResult.result.value); } catch (err) { console.debug("[LI AXTree] href parse:", err?.message); }
               if (parsed && parsed.href && /\/messaging\/thread\//.test(parsed.href)) {
                 if (seen[parsed.href]) continue;
                 seen[parsed.href] = true;
@@ -292,7 +292,7 @@ var AXTree = globalThis.AXTree || (function () {
                 if (contactName) threads.push({ name: contactName, threadUrl: parsed.href, unread: false, lastMessage: "" });
               }
             }
-          } catch (_) {}
+          } catch (err) { console.debug("[LI AXTree] prop:", err?.message); }
         }
       }
 
@@ -322,7 +322,7 @@ var AXTree = globalThis.AXTree || (function () {
                     threadUrl = hr.result.value;
                   }
                 }
-              } catch (_) {}
+              } catch (err) { console.debug("[LI AXTree] value:", err?.message); }
               if (!name && child.name && child.name.value) {
                 const cn = child.name.value.trim();
                 if (cn.length > 1 && cn.length < 60 && !/^(passa|go to|details)/i.test(cn)) name = cn;

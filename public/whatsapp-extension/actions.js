@@ -27,7 +27,7 @@ var Actions = globalThis.Actions || (function () {
                 scanShadowRoots(el.shadowRoot, roots, seen);
               }
             }
-          } catch (_) {}
+          } catch (err) { console.debug("[WA Actions] page helper setup:", err?.message); }
         }
 
         let _rootsCache = null;
@@ -52,7 +52,7 @@ var Actions = globalThis.Actions || (function () {
               }
             });
             _cacheObserver.observe(document.body, { childList: true, subtree: true });
-          } catch (_) {}
+          } catch (err) { console.debug("[WA Actions] cache observer setup:", err?.message); }
         }
 
         function getNestedRoots(root) {
@@ -65,7 +65,7 @@ var Actions = globalThis.Actions || (function () {
           const out = []; const seen = new Set();
           for (const root of roots) {
             try { root.querySelectorAll(sel).forEach(function(el) { if (!seen.has(el)) { seen.add(el); out.push(el); } }); }
-            catch (_) {}
+            catch (err) { console.debug("[WA Actions] selector failed:", err?.message); }
           }
           return out;
         }
@@ -80,7 +80,7 @@ var Actions = globalThis.Actions || (function () {
             try {
               const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
               return !rect || rect.width > 0 || rect.height > 0;
-            } catch (_) { return true; }
+            } catch (err) { console.debug("[WA Actions] rect check:", err?.message); return true; }
           });
         }
 
