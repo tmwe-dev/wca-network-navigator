@@ -109,9 +109,13 @@ serve(async (req) => {
       enrichmentSnippet: ctx.intelligence.enrichment_snippet,
       interlocutorBlock: ctx.interlocutorBlock, relationshipBlock: ctx.relationshipBlock,
       branchBlock: ctx.branchBlock, metInPersonContext: ctx.metInPersonContext,
+      conversationIntelligenceContext: ctx.conversationIntelligenceContext,
       salesKBSlice: ctx.salesKBSlice, salesKBSections: ctx.salesKBSections,
       commercialLevers: ctx.settings.ai_commercial_levers || "",
       decision, readinessTotal,
+      commercialState: ctx.commercialState,
+      touchCount: ctx.touchCount,
+      daysSinceLastContact: ctx.daysSinceLastContact,
     });
 
     // ── AI call ──

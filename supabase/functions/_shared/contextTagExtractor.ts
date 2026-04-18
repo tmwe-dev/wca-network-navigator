@@ -59,9 +59,28 @@ export function extractContextTags(ctx: ConversationContext): ContextTags {
     tags.push(ctx.email_type.toLowerCase());
   }
 
-  // Relationship stage
+  // Commercial state → load relevant doctrine
   if (ctx.relationship_stage) {
-    tags.push(ctx.relationship_stage.toLowerCase());
+    const stage = ctx.relationship_stage.toLowerCase();
+    tags.push(stage);
+    // Always load commercial doctrine when dealing with a relationship
+    if (!categories.includes("system_doctrine")) categories.push("system_doctrine");
+    if (!tags.includes("commercial_doctrine")) tags.push("commercial_doctrine");
+
+    // Stage-specific tags for targeted KB loading
+    const stageTagMap: Record<string, string[]> = {
+      "new": ["cold_outreach", "prospecting"],
+      "contacted": ["holding_pattern", "nurturing", "tone_modulation"],
+      "first_touch_sent": ["holding_pattern", "nurturing"],
+      "holding": ["holding_pattern", "nurturing", "follow_up"],
+      "in_progress": ["relationship_progression", "tone_modulation", "trust_building"],
+      "engaged": ["relationship_progression", "tone_modulation", "trust_building"],
+      "qualified": ["relationship_progression", "closing", "negoziazione"],
+      "negotiation": ["closing", "negoziazione", "obiezioni"],
+      "converted": ["conversion", "onboarding", "account_management"],
+    };
+    const extraTags = stageTagMap[stage] || [];
+    for (const t of extraTags) if (!tags.includes(t)) tags.push(t);
   }
 
   // Scope → categories

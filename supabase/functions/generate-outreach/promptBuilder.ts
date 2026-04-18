@@ -35,6 +35,13 @@ export interface OutreachPromptContext {
   // Decision/readiness
   decision: Record<string, unknown>;
   readinessTotal: number;
+  // Commercial state context (holding pattern awareness)
+  commercialState?: string;
+  touchCount?: number;
+  lastChannel?: string;
+  lastOutcome?: string;
+  daysSinceLastContact?: number;
+  warmthScore?: number;
 }
 
 export function getModel(quality: Quality): string {
@@ -49,6 +56,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     language, goal, base_proposal, _oracle_tone, email_type_id, email_type_prompt, email_type_structure,
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
+    commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
   } = ctx;
 
   let recipientName = "";
@@ -122,6 +130,30 @@ ${JSON.stringify(decision, null, 2)}
 
 ${email_type_prompt ? `STRUTTURA EMAIL OBBLIGATORIA (tipo: ${email_type_id}):\n${email_type_prompt}\n\nFORMATO: ${email_type_structure || "hook → corpo → CTA"}\n` : ""}`;
 
+  // Commercial state context (holding pattern + tone modulation)
+  let commercialBlock = "";
+  if (commercialState !== undefined || touchCount !== undefined) {
+    const tc = touchCount || 0;
+    const ws = warmthScore ?? 0;
+    const toneInstruction = tc === 0
+      ? "PRIMO CONTATTO: Tono freddo-professionale. Breve. CTA basso impegno. NON vendere."
+      : tc <= 3 && ws < 50
+      ? "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione."
+      : tc > 3 && ws < 50
+      ? "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza. Costruire credibilità."
+      : "RELAZIONE CALDA: Tono da collega/amico professionale. Personalizzazione alta. Proposte concrete.";
+    commercialBlock = `\n--- STATO COMMERCIALE ---
+- Fase: ${(commercialState || "new").toUpperCase()}
+- Contatti totali inviati: ${tc}
+- Ultimo canale: ${lastChannel || "nessuno"}
+- Ultimo esito: ${lastOutcome || "n/a"}
+- Giorni dall'ultimo contatto: ${daysSinceLastContact ?? "n/a"}
+- Calore relazione: ${ws}/100
+
+ISTRUZIONI TONO (basate su fase): ${toneInstruction}
+`;
+  }
+
   const userPrompt = `${senderContext}
 ${recipientContext}
 ${interlocutorBlock}
@@ -129,6 +161,7 @@ ${relationshipBlock}
 ${branchBlock}
 ${metInPersonContext}
 ${intelligenceBlock}
+${commercialBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
