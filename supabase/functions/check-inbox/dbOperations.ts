@@ -194,7 +194,7 @@ export async function saveMessageToDb(
       .eq("id", params.match.source_id)
       .eq("lead_status", "new");
   }
-  if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id) {
+  if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id && UUID_RE.test(String(params.match.partner_id))) {
     const { data: partnerData } = await supabase.from("partners")
       .select("interaction_count, lead_status")
       .eq("id", params.match.partner_id)
