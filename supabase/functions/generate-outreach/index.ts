@@ -210,6 +210,9 @@ serve(async (req) => {
       commercialState: ctx.commercialState,
       touchCount: ctx.touchCount,
       daysSinceLastContact: ctx.daysSinceLastContact,
+      // Fix 3.2 + 3.3
+      playbookBlock: ctx.playbookBlock,
+      channelDeclaration: ctx.channelDeclaration,
     });
 
     // ── AI call ──
