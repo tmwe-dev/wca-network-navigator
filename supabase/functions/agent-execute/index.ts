@@ -564,7 +564,64 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
 
       await supabase.from("agent_tasks").update({ status: "running", started_at: new Date().toISOString() }).eq("id", task_id);
 
-      const taskPrompt = `${systemPrompt}\n\n--- COMPITO ASSEGNATO ---\nTipo: ${task.task_type}\nDescrizione: ${task.description}\nFiltri target: ${JSON.stringify(task.target_filters)}\n\nEsegui il compito usando i tool disponibili. Agisci concretamente sul database. Restituisci un riepilogo delle azioni eseguite e dei risultati.`;
+      // ━━━ K6: Handle special task_types (state_transition, sequence_step) ━━━
+      if (task.task_type === "state_transition") {
+        const filters = (task.target_filters || {}) as Record<string, unknown>;
+        const partnerId = filters.partner_id as string | undefined;
+        const toState = filters.to_state as string | undefined;
+        const fromState = (filters.from_state as string) || "unknown";
+        const trigger = (filters.trigger as string) || "Transizione manuale approvata";
+
+        if (!partnerId || !toState) {
+          await supabase.from("agent_tasks").update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            result_summary: "target_filters incompleti (partner_id/to_state mancanti)",
+          }).eq("id", task_id);
+          return new Response(JSON.stringify({ error: "task_invalid", message: "partner_id/to_state mancanti" }), {
+            status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+          });
+        }
+
+        const { applyTransition } = await import("../_shared/stateTransitions.ts");
+        const applied = await applyTransition(supabase, partnerId, userId, {
+          shouldTransition: true,
+          from: fromState,
+          to: toState,
+          trigger,
+          autoApply: true,
+        });
+
+        await supabase.from("agent_tasks").update({
+          status: applied ? "completed" : "failed",
+          completed_at: new Date().toISOString(),
+          result_summary: applied
+            ? `Stato partner ${partnerId}: ${fromState} → ${toState}. Trigger: ${trigger}`
+            : `Transizione fallita per partner ${partnerId}`,
+        }).eq("id", task_id);
+
+        endMetrics(metrics, applied ? 200 : 500);
+        return new Response(JSON.stringify({
+          success: applied,
+          action: "state_transition",
+          partner_id: partnerId,
+          from_state: fromState,
+          new_state: toState,
+        }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      }
+
+      // sequence_step → arricchisce il prompt con istruzioni specifiche, poi delega all'AI
+      let sequenceInstructions = "";
+      if (task.task_type === "sequence_step") {
+        const filters = (task.target_filters || {}) as Record<string, unknown>;
+        const seqChannel = filters.channel as string | undefined;
+        const seqAction = filters.action as string | undefined;
+        const seqDay = filters.sequence_day as number | undefined;
+        const seqPartner = filters.partner_id as string | undefined;
+        sequenceInstructions = `\n\n--- SEQUENCE STEP ---\nGiorno ${seqDay} della sequenza di engagement.\nCanale: ${seqChannel}.\nAzione: ${seqAction}.\nPartner: ${seqPartner}.\nGenera e registra il messaggio appropriato per questo step usando i tool send_email/send_whatsapp/send_linkedin_message. Rispetta TONO e LUNGHEZZA del canale.`;
+      }
+
+      const taskPrompt = `${systemPrompt}\n\n--- COMPITO ASSEGNATO ---\nTipo: ${task.task_type}\nDescrizione: ${task.description}\nFiltri target: ${JSON.stringify(task.target_filters)}${sequenceInstructions}\n\nEsegui il compito usando i tool disponibili. Agisci concretamente sul database. Restituisci un riepilogo delle azioni eseguite e dei risultati.`;
       const allMessages = [{ role: "system", content: taskPrompt }, { role: "user", content: "Esegui il compito assegnato." }];
 
       let response: Response | null = null;
