@@ -11,7 +11,7 @@ const WHATSAPP_EXTENSION_FALLBACK_PATH = "/whatsapp-extension.zip";
 const LINKEDIN_EXTENSION_FALLBACK_PATH = "/linkedin-extension.zip";
 const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 
-const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
+export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
     latestVersion: "5.4.0",

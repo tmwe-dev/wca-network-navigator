@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DEFAULT_EXTENSION_CATALOG,
   downloadStaticExtensionZip,
   fetchExtensionCatalog,
   type ExtensionCatalog,
@@ -56,14 +57,15 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
 }
 
 export function ExtensionDownloadCatalog({ channel }: ExtensionDownloadCatalogProps) {
-  const [catalog, setCatalog] = useState<ExtensionCatalog | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [catalog, setCatalog] = useState<ExtensionCatalog>(DEFAULT_EXTENSION_CATALOG);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
+      setLoading(true);
       try {
         const data = await fetchExtensionCatalog();
         if (active) {
