@@ -56,6 +56,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     language, goal, base_proposal, _oracle_tone, email_type_id, email_type_prompt, email_type_structure,
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
+    commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
   } = ctx;
 
   let recipientName = "";
