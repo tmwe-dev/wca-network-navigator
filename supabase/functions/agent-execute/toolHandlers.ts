@@ -391,14 +391,111 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
 
     case "send_email": {
       // Approval guard handled centrally above. Reaching here means approval is NOT required.
+      const partnerId = args.partner_id ? String(args.partner_id) : null;
+
+      // ── PRE-SEND: Cadence gate (Costituzione §3 — mai stesso canale <7gg) ──
+      if (partnerId) {
+        const gate = await checkCadenceGate(supabase, userId, partnerId, "email");
+        if (!gate.allowed) {
+          return { error: `BLOCCATO: ${gate.reason}`, blocked_by: "cadence_gate" };
+        }
+      }
+
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
       });
       const data = await response.json();
       if (!response.ok) return { error: data.error || "Errore invio" };
-      if (args.partner_id) await supabase.from("interactions").insert({ partner_id: args.partner_id, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
-      return { success: true, message: `Email inviata a ${args.to_email}.` };
+      if (partnerId) await supabase.from("interactions").insert({ partner_id: partnerId, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
+
+      // ── POST-SEND HOOK (OBBLIGATORIO Costituzione §5) ──
+      const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
+      const hookResult = await runPostSendHook(supabase, {
+        userId,
+        partnerId,
+        contactId: args.contact_id ? String(args.contact_id) : null,
+        channel: "email",
+        sequenceDay: seqDay,
+        preview: String(args.subject || ""),
+      });
+      console.log(`[send_email] post-send hook:`, JSON.stringify(hookResult));
+
+      return { success: true, message: `Email inviata a ${args.to_email}.`, post_send: hookResult };
+    }
+
+    case "send_whatsapp": {
+      // ── WhatsApp gate (Costituzione §4) ──
+      const partnerId = args.partner_id ? String(args.partner_id) : null;
+      let leadStatus: string | null = null;
+      let hasInboundWa = false;
+      if (partnerId) {
+        const { data: p } = await supabase.from("partners").select("lead_status").eq("id", partnerId).maybeSingle();
+        leadStatus = p?.lead_status || null;
+        const { count } = await supabase
+          .from("channel_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId).eq("partner_id", partnerId).eq("channel", "whatsapp").eq("direction", "inbound");
+        hasInboundWa = (count || 0) > 0;
+      }
+      const now = new Date();
+      const wgate = checkWhatsAppGate({
+        partnerLeadStatus: leadStatus,
+        hasInboundWhatsApp: hasInboundWa,
+        isWhitelisted: !!args.whitelisted,
+        localHour: now.getHours(),
+        localDayOfWeek: now.getDay(),
+      });
+      if (!wgate.allowed) {
+        return { error: `BLOCCATO: ${wgate.reason}`, blocked_by: "whatsapp_gate" };
+      }
+      if (partnerId) {
+        const cgate = await checkCadenceGate(supabase, userId, partnerId, "whatsapp");
+        if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
+      }
+      // Bridge invio: registra come pending da bridge estensione
+      await supabase.from("activities").insert({
+        user_id: userId,
+        partner_id: partnerId,
+        source_id: partnerId || crypto.randomUUID(),
+        source_type: partnerId ? "partner" : "imported_contact",
+        activity_type: "whatsapp_message",
+        title: `WA → ${args.phone || args.to || "?"}`,
+        description: String(args.message || "").substring(0, 500),
+        status: "pending",
+      });
+      const hook = await runPostSendHook(supabase, {
+        userId, partnerId,
+        contactId: args.contact_id ? String(args.contact_id) : null,
+        channel: "whatsapp", sequenceDay: 0,
+      });
+      return { success: true, queued_to_bridge: true, post_send: hook };
+    }
+
+    case "send_linkedin_message":
+    case "send_linkedin": {
+      const partnerId = args.partner_id ? String(args.partner_id) : null;
+      if (partnerId) {
+        const cgate = await checkCadenceGate(supabase, userId, partnerId, "linkedin");
+        if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
+      }
+      await supabase.from("activities").insert({
+        user_id: userId,
+        partner_id: partnerId,
+        source_id: partnerId || crypto.randomUUID(),
+        source_type: partnerId ? "partner" : "imported_contact",
+        activity_type: "linkedin_message",
+        title: `LinkedIn → ${args.profile_url || args.to || "?"}`,
+        description: String(args.message || "").substring(0, 500),
+        status: "pending",
+      });
+      const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
+      const hook = await runPostSendHook(supabase, {
+        userId, partnerId,
+        contactId: args.contact_id ? String(args.contact_id) : null,
+        channel: "linkedin", sequenceDay: seqDay,
+      });
+      return { success: true, queued_to_bridge: true, post_send: hook };
     }
 
     case "deep_search_partner": {
