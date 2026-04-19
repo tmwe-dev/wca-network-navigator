@@ -7,6 +7,7 @@ import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -240,7 +241,11 @@ serve(async (req) => {
       promptInstructions,
     );
 
-    const systemPrompt = "You are an email response classifier for a B2B commercial development platform specialized in logistics networks. Classify the incoming email and suggest the best next action. Always respond with valid JSON only, no markdown formatting.";
+    const systemPrompt = await assemblePrompt({
+      agentId: "email-classifier",
+      kbCategories: ["procedures"],
+      injectExcerpts: ["procedures/lead-qualification"],
+    });
 
     // 4. Call AI
     const startMs = Date.now();
