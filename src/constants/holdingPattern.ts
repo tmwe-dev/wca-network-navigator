@@ -6,16 +6,27 @@
  * MUST import from this file to avoid divergent definitions.
  */
 
-export const HOLDING_STATUSES = ["contacted", "in_progress", "negotiation"] as const;
+/**
+ * Holding statuses = leads attivamente nel circuito di attesa,
+ * post primo contatto e pre-conversione/archiviazione.
+ */
+export const HOLDING_STATUSES = ["first_touch_sent", "holding", "engaged"] as const;
 export type HoldingStatus = typeof HOLDING_STATUSES[number];
 
+/**
+ * Tassonomia canonica 9 stati lead (Costituzione Commerciale).
+ * Allineata a partners.lead_status / imported_contacts.lead_status / business_cards.lead_status / prospects.lead_status.
+ */
 export const ALL_LEAD_STATUSES = [
   "new",
-  "contacted",
-  "in_progress",
+  "first_touch_sent",
+  "holding",
+  "engaged",
+  "qualified",
   "negotiation",
   "converted",
-  "lost",
+  "archived",
+  "blacklisted",
 ] as const;
 export type LeadStatus = typeof ALL_LEAD_STATUSES[number];
 

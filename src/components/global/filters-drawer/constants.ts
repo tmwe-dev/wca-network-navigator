@@ -40,11 +40,13 @@ export const COCKPIT_QUALITY: { key: CockpitQualityFilter; label: string }[] = [
   { key: "no_alias", label: "Senza alias" },
 ];
 
+// Tassonomia 9 stati — Cockpit mostra solo gli stati operativi (no terminali)
 export const COCKPIT_STATUS = [
   { value: "all", label: "Tutti" },
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "in_progress", label: "In corso" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Agganciato" },
   { value: "negotiation", label: "Trattativa" },
 ];
 

@@ -5,7 +5,8 @@
 
 const ESCALATION_CATEGORIES = ["interested", "meeting_request"];
 const POSITIVE_SENTIMENTS = ["positive", "very_positive"];
-const DOWNGRADE_ELIGIBLE_STATUSES = ["contacted", "in_progress"];
+// Tassonomia 9 stati: solo first_touch_sent / holding sono eligibili al downgrade auto verso "archived"
+const DOWNGRADE_ELIGIBLE_STATUSES = ["first_touch_sent", "holding"];
 
 /**
  * Computes the next lead status based on email classification results.
@@ -29,10 +30,13 @@ export function computeEscalation(
   if (!ESCALATION_CATEGORIES.includes(category)) return null;
   if (!POSITIVE_SENTIMENTS.includes(sentiment)) return null;
 
+  // Tassonomia 9 stati canonica:
+  // new → first_touch_sent → holding → engaged → qualified → negotiation → converted
   const statusMap: Record<string, string> = {
-    new: "contacted",
-    contacted: "in_progress",
-    in_progress: category === "meeting_request" ? "negotiation" : "in_progress",
+    new: "first_touch_sent",
+    first_touch_sent: "engaged",
+    holding: "engaged",
+    engaged: category === "meeting_request" ? "qualified" : "engaged",
   };
 
   const newStatus = statusMap[currentStatus];
@@ -41,18 +45,13 @@ export function computeEscalation(
 }
 
 /**
- * Determines if a lead should be downgraded to "lost" based on a negative classification.
- * Only downgrades leads in "contacted" or "in_progress" status with high confidence.
+ * Determines if a lead should be downgraded to "archived" based on a negative classification.
+ * Only downgrades leads in "first_touch_sent" or "holding" status with high confidence.
  *
  * @param category - The email classification category (must be "not_interested" to trigger)
  * @param confidence - The AI classification confidence score (0-1, threshold: 0.80)
  * @param currentStatus - The contact's current lead_status
- * @returns "lost" if downgrade criteria are met, null otherwise
- *
- * @example
- * computeDowngrade("not_interested", 0.95, "contacted") // returns "lost"
- * computeDowngrade("not_interested", 0.5, "contacted") // returns null (low confidence)
- * computeDowngrade("interested", 0.95, "contacted") // returns null (wrong category)
+ * @returns "archived" if downgrade criteria are met, null otherwise
  */
 export function computeDowngrade(
   category: string,
@@ -62,5 +61,5 @@ export function computeDowngrade(
   if (category !== "not_interested") return null;
   if (confidence < 0.80) return null;
   if (!DOWNGRADE_ELIGIBLE_STATUSES.includes(currentStatus)) return null;
-  return "lost";
+  return "archived";
 }

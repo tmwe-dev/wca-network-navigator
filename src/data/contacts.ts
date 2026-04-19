@@ -10,7 +10,16 @@ import { queryKeys } from "@/lib/queryKeys";
 
 // ─── Types ──────────────────────────────────────────────
 
-export type LeadStatus = "new" | "contacted" | "in_progress" | "negotiation" | "converted" | "lost";
+export type LeadStatus =
+  | "new"
+  | "first_touch_sent"
+  | "holding"
+  | "engaged"
+  | "qualified"
+  | "negotiation"
+  | "converted"
+  | "archived"
+  | "blacklisted";
 
 type ImportedContactRow = Database["public"]["Tables"]["imported_contacts"]["Row"];
 type ImportedContactInsert = Database["public"]["Tables"]["imported_contacts"]["Insert"];
