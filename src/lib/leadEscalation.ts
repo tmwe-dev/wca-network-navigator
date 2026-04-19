@@ -14,13 +14,13 @@ const DOWNGRADE_ELIGIBLE_STATUSES = ["first_touch_sent", "holding"];
  *
  * @param category - The email classification category (e.g., "interested", "meeting_request")
  * @param sentiment - The detected sentiment (e.g., "positive", "very_positive")
- * @param currentStatus - The contact's current lead_status (e.g., "new", "contacted", "in_progress")
+ * @param currentStatus - The contact's current lead_status (e.g., "new", "first_touch_sent", "holding", "engaged")
  * @returns The new lead_status string, or null if no escalation is needed
  *
  * @example
- * computeEscalation("interested", "positive", "contacted") // returns "in_progress"
- * computeEscalation("spam", "neutral", "contacted") // returns null
- * computeEscalation("meeting_request", "positive", "in_progress") // returns "negotiation"
+ * computeEscalation("interested", "positive", "first_touch_sent") // returns "engaged"
+ * computeEscalation("spam", "neutral", "first_touch_sent") // returns null
+ * computeEscalation("meeting_request", "positive", "engaged") // returns "qualified"
  */
 export function computeEscalation(
   category: string,
