@@ -55,6 +55,8 @@ const CommandPage = () => {
     governance,
     ttsSpeak: tts.speak,
     messages: s.messages,
+    queryContext: s.queryContext,
+    setQueryContext: s.setQueryContext,
   });
 
   const voice = useVoiceInput({

@@ -14,8 +14,18 @@
  */
 import type { Tool, ToolResult, ToolResultColumn } from "./types";
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
-import { executeQueryPlan, QueryValidationError } from "../lib/safeQueryExecutor";
+import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
+
+/** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
+ *  to update conversational query context. Single-tab assumption is fine here. */
+let _lastSuccessfulPlan: QueryPlan | null = null;
+export function getLastSuccessfulQueryPlan(): QueryPlan | null {
+  return _lastSuccessfulPlan;
+}
+export function clearLastSuccessfulQueryPlan(): void {
+  _lastSuccessfulPlan = null;
+}
 
 /* ─── Bulk action templates per tabella ─── */
 
@@ -96,9 +106,40 @@ export const aiQueryTool: Tool = {
     return queryPatterns.some((re) => re.test(lower));
   },
 
-  async execute(prompt: string): Promise<ToolResult> {
-    // 1) Genera QueryPlan via AI
-    const planRes = await planQuery({ prompt });
+  async execute(prompt: string, context): Promise<ToolResult> {
+    // PREFER the natural-language prompt: if planRunner already resolved a JSON
+    // payload from a multi-step plan, the AI Query Planner needs the ORIGINAL
+    // user prompt (or a pre-built QueryPlan in payload), NOT a serialized JSON.
+    const naturalPrompt =
+      context?.originalPrompt && context.originalPrompt.trim().length > 0
+        ? context.originalPrompt
+        : (() => {
+            // If `prompt` looks like JSON (planRunner did JSON.stringify), reject it
+            const trimmed = prompt.trim();
+            if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+              // Try to extract a "prompt" / "query" / "search" hint, else fallback
+              try {
+                const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+                const hint =
+                  (parsed.prompt as string) ??
+                  (parsed.query as string) ??
+                  (parsed.search as string) ??
+                  (parsed.q as string) ??
+                  "";
+                return typeof hint === "string" && hint.length > 0 ? hint : prompt;
+              } catch {
+                return prompt;
+              }
+            }
+            return prompt;
+          })();
+
+    // 1) Genera QueryPlan via AI (passing optional contextHint for follow-ups)
+    const planRes = await planQuery({
+      prompt: naturalPrompt,
+      history: context?.history,
+      contextHint: context?.contextHint,
+    });
 
     if (!isOk(planRes)) {
       return {
@@ -134,6 +175,9 @@ export const aiQueryTool: Tool = {
         meta: { count: 0, sourceLabel: "Safe Query Executor" },
       };
     }
+
+    // Cache plan for conversational context
+    _lastSuccessfulPlan = plan;
 
     const { rows, count, table, columnsUsed } = execResult;
 

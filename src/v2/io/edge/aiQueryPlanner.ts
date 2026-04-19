@@ -10,6 +10,8 @@ export type { QueryPlan };
 export interface PlanQueryRequest {
   prompt: string;
   history?: { role: string; content: string }[];
+  /** Optional structured hint about the previous query for follow-up handling */
+  contextHint?: string;
 }
 
 export async function planQuery(req: PlanQueryRequest) {
@@ -18,6 +20,7 @@ export async function planQuery(req: PlanQueryRequest) {
     {
       prompt: req.prompt,
       history: (req.history ?? []).slice(-6),
+      contextHint: req.contextHint ?? "",
     },
     QueryPlanSchema,
   );

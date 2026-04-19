@@ -123,10 +123,20 @@ export function buildInitialStepStates(steps: PlanStep[]): PlanStepState[] {
  * When a write-step is reached, pauses and yields with status "awaiting-approval".
  * The caller must call `resumeAfterApproval` to continue.
  */
+export interface PlanExecutionExtras {
+  /** Natural-language prompt the user originally typed (preserved through plan resolution) */
+  readonly originalPrompt?: string;
+  /** Conversational context hint (e.g. previous query filters) */
+  readonly contextHint?: string;
+  /** Recent conversation history */
+  readonly history?: { role: string; content: string }[];
+}
+
 export async function executePlan(
   state: PlanExecutionState,
   onStepUpdate: (state: PlanExecutionState) => void,
   startFromStep?: number,
+  extras?: PlanExecutionExtras,
 ): Promise<PlanExecutionState> {
   const sorted = topoSort(state.steps);
   let current: PlanExecutionState = { ...state, status: "running" };
@@ -175,7 +185,13 @@ export async function executePlan(
       const resolvedParams = resolveParams(step.params, current.results);
       const promptText = JSON.stringify(resolvedParams);
       const result = await withTimeout(
-        tool.execute(promptText, { confirmed: false, payload: resolvedParams }),
+        tool.execute(promptText, {
+          confirmed: false,
+          payload: resolvedParams,
+          originalPrompt: extras?.originalPrompt,
+          contextHint: extras?.contextHint,
+          history: extras?.history,
+        }),
         STEP_TIMEOUT_MS,
         `Step ${step.stepNumber} (${step.toolId})`,
       );
