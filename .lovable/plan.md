@@ -1,143 +1,81 @@
 
 
-## Filosofia consolidata (4 livelli)
+## Obiettivo
 
-```text
-LIVELLO 0 — POLICY HARD (codice, non discutibile)
-  permessi, approval gate, side-effect lock, schema validation,
-  whitelist tool, no DELETE, bulk cap, no auth/secrets
-        ▼
-LIVELLO 1 — PROMPT CORE (~30 righe)
-  identità + obiettivo + guardrail soft + indice KB
-        ▼
-LIVELLO 2 — KB PROCEDURES (kb_entries, categoria procedures/doctrine)
-  procedure dettagliate, schema, esempi
-  → assembler INIETTA estratti mirati per workflow critici
-  → list_kb / read_kb come fallback per esplorazione
-        ▼
-LIVELLO 3 — VARIABILI RUNTIME
-  {{user_alias}}, {{recipient_count}}, {{kb_index}}, ...
-```
+Rimuovere completamente i limiti/credit gate dal sistema AI per uso aziendale interno. Le API si usano liberamente, senza budget, senza saldo, senza BYOK forzato. Quando si commercializzerà, si reintrodurranno i limiti via toggle.
 
-## Cosa creo
+## Esplorazione
 
-**Livello 0 — Policy hard (codice)**
-- `src/v2/agent/policy/hardGuards.ts` — funzioni pure: `assertNoDelete`, `assertBulkCap(n, max=5)`, `assertNotAuthTable`, `requiresApproval(toolId)`, `assertSchemaValid`. Usate dai dispatcher tool prima di qualunque side-effect.
-- `supabase/functions/_shared/policy/hardGuards.ts` — gemello edge per validazione server-side.
+Punti dove esiste un blocco/gate:
+- `supabase/functions/ai-assistant/index.ts` — gate `credits.balance <= 0` (appena modificato)
+- `supabase/functions/consume-credits/index.ts` — calcolo costi e `deduct_credits` RPC
+- `supabase/functions/_shared/costGuardrail.ts` — `checkDailyBudget` / `budgetExceededResponse`
+- `supabase/functions/_shared/rateLimiter.ts` — token bucket per-isolate
+- `src/lib/api/costTracker.ts` — `checkBudget` client-side che lancia `BudgetExceededError`
+- `src/hooks/useCredits.ts` — visualizza saldo
+- Edge functions che importano `consumeCredits` / `checkDailyBudget` / `checkRateLimit` (da censire)
 
-**Livello 1 — Prompt core leggeri**
-- `src/v2/agent/prompts/core/luca.md` (Director)
-- `src/v2/agent/prompts/core/super-assistant.md`
-- `src/v2/agent/prompts/core/contacts-assistant.md`
-- `src/v2/agent/prompts/core/cockpit-assistant.md`
-- `src/v2/agent/prompts/core/email-improver.md`
-- `src/v2/agent/prompts/core/daily-briefing.md`
-- `src/v2/agent/prompts/core/email-classifier.md`
-- `src/v2/agent/prompts/core/query-planner.md`
+Memoria correlata: `mem://tech/cost-control-guardrails` e `mem://tech/billing-internal-credits` — vanno aggiornate per riflettere la nuova policy "uso libero interno".
 
-Ogni file < 40 righe: identità, obiettivo, guardrail soft, indice KB, formato output.
+## Strategia
 
-**Livello 2 — Migration KB**
-Insert in `kb_entries` (categoria `procedures` e `doctrine`):
-- `procedures/outreach-flow` — Plan → Approve → Execute multicanale
-- `procedures/email-improvement-techniques` — tecniche oggi inline in `buildImproveEmailSystemPrompt`
-- `procedures/lead-qualification` — workflow 6 stage
-- `procedures/bounce-handling`
-- `procedures/multi-step-actions` — pattern check_job_status
-- `procedures/ai-query-engine` — come usare planQuery / safeExecutor
-- `doctrine/anti-hallucination`
-- `doctrine/tone-and-format` — markdown, IT, formato output
-- `doctrine/safety-guardrails` — versione "soft" per AI, in eco al Livello 0
+Introduco un **kill-switch unico** invece di cancellare il codice (così è facile riattivarlo per la commercializzazione futura).
 
-**Assembler**
-- `src/v2/agent/prompts/assembler.ts` — `assemblePrompt({ agentId, variables, kbCategories, injectExcerpts? })`:
-  - carica core
-  - risolve `{{variabili}}`
-  - se `injectExcerpts` → carica e inietta i primi N caratteri delle entries KB chiave (per workflow critici)
-  - aggiunge sempre indice KB (titoli + categoria, formato compatto)
-  - ritorna stringa
-- `supabase/functions/_shared/prompts/assembler.ts` — versione edge (legge KB con service role).
+### Livello 1 — Edge functions
 
-**Registro metadati**
-- `src/data/agentPrompts.ts` → svuotato dei prompt completi, diventa registro: per ogni agente `{ id, coreFile, requiredVars, kbCategories, criticalProcedures[] }`.
+Variabile d'ambiente `AI_USAGE_LIMITS_ENABLED` (default: `false`).
 
-**Refactor edge functions** (in ordine di criticità):
-1. `improve-email`
-2. `daily-briefing`
-3. `ai-assistant`
-4. `super-assistant`
-5. `classify-email-response`
-6. `contacts-assistant`
-7. `cockpit-assistant`
+Modifico in modalità "bypass quando disabled":
+- `checkDailyBudget` → ritorna sempre `{ allowed: true, ... }` se flag off
+- `checkRateLimit` → ritorna sempre `{ allowed: true, remaining: 999 }` se flag off
+- `consume-credits` → ritorna sempre `{ allowed: true, byok: false, credits_consumed: 0, message: "uso interno illimitato" }` se flag off
+- `ai-assistant` → rimuovo il gate `credits.balance <= 0` (sostituito con check del flag)
 
-Ognuna passa da prompt inline a `assemblePrompt({...})` + chiamata a `hardGuards` prima di mutazioni.
+Tutte le altre edge functions che invocano queste utilities continuano a funzionare senza modifiche.
 
-## Variabili runtime supportate
+### Livello 2 — Client
 
-```text
-{{user_alias}} {{user_company}} {{user_role}} {{user_sector}}
-{{user_tone}} {{user_language}} {{current_date}} {{operator_id}}
-{{recipient_count}} {{recipient_countries}}
-{{available_tools}} {{kb_index}} {{kb_excerpts}}
-{{active_plans}} {{recent_memories}}
-```
+- `costTracker.ts`: `checkBudget()` no-op quando flag off, `trackCost()` continua a tracciare per analytics ma non blocca mai
+- Flag client: `VITE_AI_USAGE_LIMITS_ENABLED` (default: `false`)
+- `useCredits` continua a leggere il saldo per visualizzazione, ma nessun componente lo usa più come gate
 
-## Iniezione selettiva (cautela #1 dell'utente)
+### Livello 3 — UI
 
-Per i workflow critici, l'assembler NON si limita a citare la KB: estrae il blocco rilevante (primi ~800 char della entry) e lo include inline. Esempio per `improve-email`:
-- prompt core (identità + guardrail)
-- + estratto inline di `procedures/email-improvement-techniques`
-- + indice KB completo per esplorazione
-- + variabili risolte
+- `AISettingsTab` (e altri pannelli con avvisi crediti): se flag off, nascondo banner "crediti esauriti / configura BYOK"
+- Manteniamo il display del saldo come informazione, non come blocco
 
-Per workflow non critici, solo indice KB (l'AI usa `read_kb` se serve).
+### Livello 4 — Memoria
 
-Configurazione in `agentPrompts.ts`:
-```ts
-"email-improver": {
-  coreFile: "core/email-improver.md",
-  kbCategories: ["procedures", "doctrine"],
-  criticalProcedures: ["procedures/email-improvement-techniques"], // → injectExcerpts
-  requiredVars: ["user_alias", "user_company", "user_tone"]
-}
-```
+Aggiorno `mem://tech/cost-control-guardrails` e `mem://tech/billing-internal-credits` per documentare:
+- Sistema interno aziendale → limiti DISATTIVATI di default
+- Toggle via env var per riattivare in scenario commerciale futuro
+- Codice preservato, non rimosso
 
-## Hard guards in codice (cautela #2 dell'utente)
+## File modificati
 
-Ogni tool con side-effect, prima di eseguire:
-```ts
-hardGuards.assertNotDestructive(action);
-hardGuards.assertBulkCap(targets.length);
-hardGuards.assertWhitelistedTable(tableName);
-if (hardGuards.requiresApproval(toolId)) → status pending_approval
-```
-Indipendente da quello che dice il prompt. Se l'AI tenta DELETE o bulk > 5, il codice rifiuta a prescindere.
+1. `supabase/functions/_shared/rateLimiter.ts` — bypass se flag off
+2. `supabase/functions/_shared/costGuardrail.ts` — bypass se flag off
+3. `supabase/functions/consume-credits/index.ts` — bypass se flag off
+4. `supabase/functions/ai-assistant/index.ts` — rimuovo gate `balance<=0`
+5. `src/lib/api/costTracker.ts` — `checkBudget` no-op se flag off
+6. `src/v2/ui/organisms/settings/AISettingsTab.tsx` — nascondi avvisi limit (verifico se presenti)
+7. Eventuali banner "crediti esauriti" nel layout (da censire)
+8. `mem://tech/cost-control-guardrails` — aggiornata
+9. `mem://tech/billing-internal-credits` — aggiornata
+10. `mem://index.md` — aggiornata
 
 ## Cosa NON tocco
 
-- AI Query Engine (creato due step fa, già allineato)
-- Logica business (DAL, mutations, RLS)
-- Estetica UI
-- File auth/comm critici (`check-inbox`, `email-imap-proxy`, `mark-imap-seen`)
-
-## Ordine di esecuzione
-
-1. `hardGuards.ts` (client + edge)
-2. Migration KB (procedures + doctrine)
-3. `assembler.ts` (client + edge)
-4. 8 file core in `src/v2/agent/prompts/core/`
-5. Refactor `agentPrompts.ts` a registro
-6. Refactor edge functions una alla volta nell'ordine sopra
-7. Smoke test: per ogni agente refactorato verifico riduzione lunghezza prompt e correttezza output
+- Hard guards di sicurezza (`hardGuards.ts`): NO DELETE, NO bulk > 5, NO auth tables. Restano attivi sempre — sono sicurezza, non costo.
+- Schema DB tabelle `user_credits`, `credit_transactions`, `usage_daily_budget`: restano (utili per analytics futuri).
+- Funzione `deduct_credits` DB: resta (chiamata diventa no-op via flag).
 
 ## Verifica post-implementazione
 
-- `tsc --noEmit` pulito
-- Riduzione prompt: target -70% righe per edge function
-- Test funzionali per agente:
-  - LUCA: "mostra partner US" (deve usare AI Query Engine)
-  - Email Improver: variabili risolte, tecniche da KB applicate
-  - Briefing: formato JSON corretto, niente hardcoded
-- Test hard guards: tentativo DELETE da AI → bloccato dal codice anche se prompt non lo vieta esplicitamente
-- Test fallback: KB irraggiungibile → agente continua con guardrail base senza crash
+1. LUCA risponde anche con `balance = 0`.
+2. Edge function logs di `ai-assistant` → nessun blocco crediti.
+3. `consume-credits` ritorna `allowed: true` senza scalare nulla.
+4. UI: nessun banner "crediti esauriti" visibile.
+5. Hard guards ancora attivi: tentativo DELETE da AI → bloccato.
+6. Riattivazione test: settando `AI_USAGE_LIMITS_ENABLED=true` i limiti tornano funzionanti.
 
