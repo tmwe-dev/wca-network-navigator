@@ -126,6 +126,12 @@ export type ToolResult =
 export interface ToolContext {
   readonly confirmed?: boolean;
   readonly payload?: Record<string, unknown>;
+  /** Original natural-language user prompt (preserved across plan resolution) */
+  readonly originalPrompt?: string;
+  /** Conversational hint string describing previous-turn context (for follow-ups) */
+  readonly contextHint?: string;
+  /** Recent conversation turns for AI context */
+  readonly history?: { role: string; content: string }[];
 }
 
 export interface Tool {
