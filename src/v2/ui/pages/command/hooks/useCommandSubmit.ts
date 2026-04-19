@@ -33,6 +33,8 @@ import {
   isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
+import { tryLocalComment } from "../lib/localResultFormatter";
+import { startTrace, formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 
 interface CommandStateApi {
