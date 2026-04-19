@@ -65,9 +65,25 @@ const KB_LOADING_INSTRUCTION = `DOTTRINA OPERATIVA: Il sistema carica automatica
 Se non trovi una procedura nel contesto iniettato, usa get_procedure o search_kb per cercarla.
 Rispondi sempre in italiano. Tono professionale ma accessibile, come un collega competente.`;
 
+const CONTEXT_ENGAGEMENT_RULES = `REGOLE DI INGAGGIO PER CONTESTO:
+
+scope=cockpit → JSON {actions, message}, 2-3 frasi, verifica next_action post-azione.
+scope=contacts → comandi strutturati, tassonomia 9 stati (new, first_touch_sent, holding, engaged, qualified, negotiation, converted, archived, blacklisted), segnala anomalie.
+scope=outreach → email/messaggio + conferma, gate canale (WhatsApp mai primo contatto), post-invio obbligatorio (reminder + next_action), lingua destinatario.
+scope=strategic → analisi + raccomandazioni, control tower, sfida assunzioni, 3-5 azioni concrete.
+scope=command → dialogo completo + esecuzione, massima espressività.
+scope=extension → azione + conferma breve, accesso completo.
+default → tono consulente, proponi-spiega-esegui.
+
+IDENTITÀ: Consulente strategico senior. Mai "Come posso aiutarti?" — proponi sempre qualcosa di concreto.
+Se operatore è vago: offri ipotesi di default.
+Se operatore è frustrato: più diretto, meno verboso.`;
+
 export interface ComposeSystemPromptOptions {
   operatorBriefing?: string;
   activeWorkflow?: string;
+  /** Scope corrente (cockpit/contacts/outreach/strategic/command/extension). */
+  scope?: string;
 }
 
 export function composeSystemPrompt(opts: ComposeSystemPromptOptions): string {
@@ -77,8 +93,13 @@ export function composeSystemPrompt(opts: ComposeSystemPromptOptions): string {
     INFO_SEARCH_HIERARCHY,
     GOLDEN_RULES,
     COMMERCIAL_DOCTRINE,
+    CONTEXT_ENGAGEMENT_RULES,
     KB_LOADING_INSTRUCTION,
   ];
+
+  if (opts.scope) {
+    parts.push(`🎯 SCOPE ATTIVO: ${opts.scope}\nApplica le regole di ingaggio specifiche per questo scope (vedi sopra).`);
+  }
 
   if (opts.operatorBriefing?.trim()) {
     parts.push(`⚡ BRIEFING OPERATORE (PRIORITÀ MASSIMA)\n\n${opts.operatorBriefing.trim()}`);
