@@ -14,20 +14,27 @@ interface Rule {
 }
 
 const RULES: readonly Rule[] = [
-  // STT typos for "partner"
+  // STT typos for "partner" (very common voice mistakes)
   { pattern: /\bpane\b/gi, replace: "partner" },
   { pattern: /\bpani\b/gi, replace: "partner" },
   { pattern: /\bpartnera\b/gi, replace: "partner" },
   { pattern: /\bpartener\b/gi, replace: "partner" },
   { pattern: /\bpatner\b/gi, replace: "partner" },
   { pattern: /\bpatners\b/gi, replace: "partner" },
+  { pattern: /\bparnter\b/gi, replace: "partner" },
+  { pattern: /\bpartnar\b/gi, replace: "partner" },
+  { pattern: /\bparlano\b/gi, replace: "partner" },
+  { pattern: /\bparlani\b/gi, replace: "partner" },
+  { pattern: /\bpartn\b/gi, replace: "partner" },
+  { pattern: /\bpartnerr\b/gi, replace: "partner" },
   // STT typos for "contatti"
   { pattern: /\bcontati\b/gi, replace: "contatti" },
+  { pattern: /\bcontatt\b/gi, replace: "contatti" },
   // STT typos for "prospect"
   { pattern: /\bprospetto\b/gi, replace: "prospect" },
   { pattern: /\bprospetti\b/gi, replace: "prospect" },
-  // Country name → keep ITALIAN form (planner already maps to ISO-2)
-  // We do NOT replace "stati uniti" with "US" here, the planner does that.
+  // STT typos for "agenti"
+  { pattern: /\bagent\b/gi, replace: "agente" },
   // City normalization (light)
   { pattern: /\bnyc\b/gi, replace: "New York" },
   { pattern: /\bnew york city\b/gi, replace: "New York" },

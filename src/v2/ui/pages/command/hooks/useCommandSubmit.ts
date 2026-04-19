@@ -33,6 +33,8 @@ import {
   isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
+import { tryLocalComment } from "../lib/localResultFormatter";
+import { startTrace, formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 
 interface CommandStateApi {
@@ -89,6 +91,12 @@ function looksLikeSimpleQuery(prompt: string): boolean {
   if (actionPatterns.some((re) => re.test(lower))) return false;
   // Multi-step indicators → use planner
   if (/\b(poi|quindi|dopo|infine|e poi|successivamente)\b/.test(lower)) return false;
+
+  // Aggressive read-verb + domain-noun detector
+  const readVerb = /\b(quant|mostr|elenc|trov|lista|cerca|visualiz|dammi|fammi vedere|recenti|ultim)/i;
+  const domainNoun = /\b(partner|contatt|attivit|email|messagg|agente|biglietti|campagn|prospect|outreach|job|kb)\b/i;
+  if (readVerb.test(lower) && domainNoun.test(lower)) return true;
+
   return aiQueryTool.match(lower);
 }
 
@@ -109,13 +117,41 @@ export function useCommandSubmit(state: CommandStateApi) {
       .map((m) => ({ role: m.role, content: m.content }));
   }, [messages]);
 
-  /** After tool execution, ask AI to comment on the result + suggest next actions */
+  /** After tool execution, comment on the result + suggest next actions.
+   *  Tries LOCAL formatter first (skips LLM), falls back to AI commentary. */
   const commentOnResult = useCallback(
-    async (userPrompt: string, toolId: string, result: ToolResult) => {
+    async (userPrompt: string, toolId: string, result: ToolResult, trace?: TraceBuilder) => {
       const tool = TOOLS.find((t) => t.id === toolId);
       const toolLabel = tool?.label ?? toolId;
-      const resultSummary = serializeResultForAI(result);
 
+      // Try LOCAL formatter (skip LLM for simple count/short list)
+      if (toolId === "ai-query") {
+        const plan = getLastSuccessfulQueryPlan();
+        const local = tryLocalComment(userPrompt, result, plan);
+        if (local) {
+          const finalTrace = trace?.finish();
+          const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+          addMessage({
+            role: "assistant",
+            content: local.message,
+            agentName: "Direttore",
+            timestamp: ts(),
+            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+            governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+            suggestedActions: local.suggestedActions,
+          });
+          // Fire TTS in parallel — does not block
+          if (local.spokenSummary.trim()) {
+            void Promise.resolve().then(() => ttsSpeak(local.spokenSummary));
+          }
+          setVoiceSpeaking(false);
+          return;
+        }
+      }
+
+      // Fallback: full AI commentary
+      const t0 = Date.now();
+      const resultSummary = serializeResultForAI(result);
       const comment = await getAiComment({
         userPrompt,
         toolId,
@@ -123,19 +159,23 @@ export function useCommandSubmit(state: CommandStateApi) {
         resultSummary,
         history: buildHistory(),
       });
+      trace?.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
+
+      const finalTrace = trace?.finish();
+      const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
 
       addMessage({
         role: "assistant",
         content: comment.message,
         agentName: "Direttore",
         timestamp: ts(),
-        meta: result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined,
+        meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
         governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
         suggestedActions: comment.suggestedActions,
       });
 
       const tts = comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200);
-      if (tts.trim()) ttsSpeak(tts);
+      if (tts.trim()) void Promise.resolve().then(() => ttsSpeak(tts));
       setVoiceSpeaking(false);
     },
     [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak],
@@ -349,13 +389,17 @@ export function useCommandSubmit(state: CommandStateApi) {
       setFlowPhase("executing");
       setExecSteps([{ label: "Ricerca AI", detail: "Query DB diretta", status: "pending" as const }]);
 
+      const trace = startTrace(userPrompt);
+
       try {
+        const tFast = Date.now();
         const result = await aiQueryTool.execute(userPrompt, {
           confirmed: false,
           originalPrompt: userPrompt,
           contextHint: hint,
           history: buildHistory(),
         });
+        trace.add({ source: "fast-lane", label: "ai-query", durationMs: Date.now() - tFast });
 
         setLiveResult(result);
         setCanvas(canvasForResult(result));
@@ -376,9 +420,12 @@ export function useCommandSubmit(state: CommandStateApi) {
         });
 
         if (result.kind !== "approval") {
-          await commentOnResult(userPrompt, "ai-query", result);
+          await commentOnResult(userPrompt, "ai-query", result, trace);
+        } else {
+          trace.finish();
         }
       } catch (err: unknown) {
+        trace.finish();
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         toast.error(msg);
         addMessage({

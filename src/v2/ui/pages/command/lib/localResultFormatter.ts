@@ -1,0 +1,218 @@
+/**
+ * localResultFormatter — Template-based response builder for SIMPLE results.
+ *
+ * Goal: skip the final LLM commenting hop (~6s) when the result is trivial:
+ *   • count puro (single number) → "Abbiamo X partner in [paesi]"
+ *   • lista corta (<5 righe)     → riepilogo template
+ *
+ * Returns null when the result needs full AI commentary (analysis, complex
+ * data, explicit user request like "spiegami / analizza / perché").
+ */
+import type { ToolResult } from "../tools/types";
+import type { QueryPlan } from "./safeQueryExecutor";
+import type { SuggestedAction } from "../aiBridge";
+
+const ANALYSIS_KEYWORDS = /\b(analizza|analisi|spiegami|spiega|perch[éè]|perche|come mai|valuta|consiglia|suggerisci|approfond|opinione|raccomanda)\b/i;
+
+const COUNTRY_LABELS: Record<string, string> = {
+  US: "Stati Uniti",
+  IT: "Italia",
+  DE: "Germania",
+  FR: "Francia",
+  ES: "Spagna",
+  CN: "Cina",
+  GB: "Regno Unito",
+  UK: "Regno Unito",
+  NL: "Olanda",
+  BE: "Belgio",
+  CH: "Svizzera",
+  AT: "Austria",
+  PT: "Portogallo",
+  PL: "Polonia",
+  GR: "Grecia",
+  TR: "Turchia",
+  AE: "Emirati Arabi",
+  IN: "India",
+  JP: "Giappone",
+  BR: "Brasile",
+  MX: "Messico",
+  CA: "Canada",
+  AU: "Australia",
+};
+
+const TABLE_NOUN_SINGULAR: Record<string, string> = {
+  partners: "partner",
+  imported_contacts: "contatto",
+  outreach_queue: "messaggio in coda",
+  activities: "attività",
+  channel_messages: "messaggio",
+  agents: "agente",
+  agent_tasks: "task agente",
+  kb_entries: "voce KB",
+  business_cards: "biglietto da visita",
+  download_jobs: "job",
+  campaign_jobs: "job campagna",
+};
+
+const TABLE_NOUN_PLURAL: Record<string, string> = {
+  partners: "partner",
+  imported_contacts: "contatti",
+  outreach_queue: "messaggi in coda",
+  activities: "attività",
+  channel_messages: "messaggi",
+  agents: "agenti",
+  agent_tasks: "task agente",
+  kb_entries: "voci KB",
+  business_cards: "biglietti da visita",
+  download_jobs: "job",
+  campaign_jobs: "job campagna",
+};
+
+function noun(table: string, plural: boolean): string {
+  return (plural ? TABLE_NOUN_PLURAL : TABLE_NOUN_SINGULAR)[table] ?? table;
+}
+
+interface FilterShape {
+  readonly column: string;
+  readonly op: string;
+  readonly value: unknown;
+}
+
+function describeFilters(filters: readonly FilterShape[]): string {
+  const parts: string[] = [];
+  for (const f of filters) {
+    if (f.column === "country_code") {
+      if (f.op === "eq" && typeof f.value === "string") {
+        parts.push(`in ${COUNTRY_LABELS[f.value] ?? f.value}`);
+      } else if (f.op === "in" && Array.isArray(f.value)) {
+        const labels = f.value.map((v) => COUNTRY_LABELS[String(v)] ?? String(v));
+        parts.push(`in ${labels.join(" e ")}`);
+      }
+    } else if (f.column === "city" && typeof f.value === "string") {
+      parts.push(`a ${f.value}`);
+    } else if (f.column === "is_active" && f.value === true) {
+      parts.push("attivi");
+    } else if (f.column === "lead_status" && typeof f.value === "string") {
+      parts.push(`con stato "${f.value}"`);
+    } else if (f.column === "office_type" && typeof f.value === "string") {
+      parts.push(`tipo ${f.value}`);
+    }
+  }
+  return parts.join(" ");
+}
+
+function suggestedActionsFor(table: string, filters: readonly FilterShape[]): SuggestedAction[] {
+  const filtersDesc = describeFilters(filters);
+  if (table === "partners") {
+    const country = filters.find((f) => f.column === "country_code");
+    const countryRef = country
+      ? country.op === "eq"
+        ? COUNTRY_LABELS[String(country.value)] ?? String(country.value)
+        : Array.isArray(country.value)
+          ? country.value.map((v) => COUNTRY_LABELS[String(v)] ?? String(v)).join(" e ")
+          : ""
+      : "";
+    return [
+      { label: `🔍 Mostra i top rated`, prompt: `mostra i top 20 partner ${filtersDesc} per rating` },
+      { label: `🏙️ Filtra per città`, prompt: `quali città hanno più partner ${filtersDesc}` },
+      { label: `📊 Analisi lead status`, prompt: `analizza la distribuzione dei lead status dei partner ${filtersDesc}` },
+    ];
+  }
+  if (table === "imported_contacts") {
+    return [
+      { label: `📋 Mostra elenco`, prompt: `mostra l'elenco dei contatti ${filtersDesc}` },
+      { label: `📧 Verifica email`, prompt: `quanti di questi contatti hanno email valida ${filtersDesc}` },
+    ];
+  }
+  if (table === "activities") {
+    return [
+      { label: `📅 Mostra le prossime`, prompt: `mostra le prossime 10 attività ${filtersDesc}` },
+      { label: `⚠️ Solo urgenti`, prompt: `mostra le attività urgenti ${filtersDesc}` },
+    ];
+  }
+  if (table === "outreach_queue") {
+    return [
+      { label: `📤 Mostra in coda`, prompt: `mostra i prossimi 20 outreach in coda` },
+      { label: `❌ Solo falliti`, prompt: `mostra gli outreach falliti recenti` },
+    ];
+  }
+  return [];
+}
+
+export interface LocalComment {
+  readonly message: string;
+  readonly spokenSummary: string;
+  readonly suggestedActions: SuggestedAction[];
+}
+
+/**
+ * Decide if a result can be commented locally (skip LLM).
+ * Returns the comment, or null if AI is needed.
+ */
+export function tryLocalComment(
+  userPrompt: string,
+  result: ToolResult,
+  plan: QueryPlan | null,
+): LocalComment | null {
+  // User explicitly asked for analysis/explanation → use AI
+  if (ANALYSIS_KEYWORDS.test(userPrompt)) return null;
+
+  // Only handle simple "table" results from ai-query
+  if (result.kind !== "table") return null;
+  if (!plan) return null;
+
+  const count = result.meta?.count ?? result.rows.length;
+  const filters = plan.filters as FilterShape[];
+  const table = plan.table;
+
+  // ── COUNT MODE ──
+  const isCountMode =
+    (plan.columns?.length === 1 && plan.columns[0] === "id") ||
+    /\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt);
+
+  if (isCountMode) {
+    const filtersDesc = describeFilters(filters);
+    const word = noun(table, count !== 1);
+    const countFmt = count.toLocaleString("it-IT");
+    const message =
+      count === 0
+        ? `Non risultano ${word} ${filtersDesc}.`.trim().replace(/\s+/g, " ")
+        : `Abbiamo **${countFmt}** ${word}${filtersDesc ? " " + filtersDesc : ""}.`;
+    const spokenSummary =
+      count === 0
+        ? `Nessun ${word} ${filtersDesc}`
+        : `Abbiamo ${countFmt} ${word} ${filtersDesc}`.trim();
+    return {
+      message,
+      spokenSummary,
+      suggestedActions: suggestedActionsFor(table, filters),
+    };
+  }
+
+  // ── SHORT LIST MODE (≤ 5 rows) ──
+  if (count > 0 && count <= 5) {
+    const filtersDesc = describeFilters(filters);
+    const word = noun(table, count !== 1);
+    const sampleNames = result.rows
+      .slice(0, 5)
+      .map((r) => {
+        const v =
+          (r["company_name"] as string | undefined) ??
+          (r["name"] as string | undefined) ??
+          (r["title"] as string | undefined) ??
+          (r["subject"] as string | undefined);
+        return v ? `• ${v}` : null;
+      })
+      .filter((x): x is string => x !== null);
+    const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}`;
+    const spokenSummary = `${count} ${word} ${filtersDesc}`.trim();
+    return {
+      message,
+      spokenSummary,
+      suggestedActions: suggestedActionsFor(table, filters),
+    };
+  }
+
+  // Otherwise → fallback to AI commentary
+  return null;
+}
