@@ -7,7 +7,7 @@ import { Button } from "../atoms/Button";
 import { Badge } from "../atoms/Badge";
 import { X, Filter } from "lucide-react";
 
-const LEAD_STATUSES = ["new", "contacted", "in_progress", "negotiation", "converted", "lost"] as const;
+const LEAD_STATUSES = ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"] as const;
 
 export interface ContactFilterValues {
   readonly leadStatus?: string;

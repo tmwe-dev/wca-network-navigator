@@ -26,11 +26,12 @@ interface Stage {
 
 const STAGES: Stage[] = [
   { id: "new", label: "Nuovo", icon: <UserPlus className="h-3.5 w-3.5" />, colorClass: "text-muted-foreground", bgClass: "bg-muted/30", borderClass: "border-border/40" },
-  { id: "contacted", label: "Contattato", icon: <Send className="h-3.5 w-3.5" />, colorClass: "text-blue-400", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20" },
-  { id: "in_progress", label: "In Corso", icon: <Clock className="h-3.5 w-3.5" />, colorClass: "text-yellow-400", bgClass: "bg-yellow-500/10", borderClass: "border-yellow-500/20" },
+  { id: "first_touch_sent", label: "Primo Contatto", icon: <Send className="h-3.5 w-3.5" />, colorClass: "text-blue-400", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20" },
+  { id: "holding", label: "In Attesa", icon: <Clock className="h-3.5 w-3.5" />, colorClass: "text-amber-400", bgClass: "bg-amber-500/10", borderClass: "border-amber-500/20" },
+  { id: "engaged", label: "Coinvolto", icon: <Snowflake className="h-3.5 w-3.5" />, colorClass: "text-cyan-400", bgClass: "bg-cyan-500/10", borderClass: "border-cyan-500/20" },
+  { id: "qualified", label: "Qualificato", icon: <Star className="h-3.5 w-3.5" />, colorClass: "text-indigo-400", bgClass: "bg-indigo-500/10", borderClass: "border-indigo-500/20" },
   { id: "negotiation", label: "Trattativa", icon: <Handshake className="h-3.5 w-3.5" />, colorClass: "text-purple-400", bgClass: "bg-purple-500/10", borderClass: "border-purple-500/20" },
   { id: "converted", label: "Cliente", icon: <Star className="h-3.5 w-3.5" />, colorClass: "text-yellow-300", bgClass: "bg-yellow-500/10", borderClass: "border-yellow-500/20" },
-  { id: "lost", label: "Perso", icon: <Snowflake className="h-3.5 w-3.5" />, colorClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-500/20" },
 ];
 
 interface PipelineContact {

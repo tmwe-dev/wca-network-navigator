@@ -25,8 +25,8 @@ const log = createLogger("HoldingPatternTab");
 
 /* ── Status groups ── */
 const GROUPS: { key: string; label: string; color: string; count?: number }[] = [
-  { key: "contacted", label: "Contattati", color: "text-primary" },
-  { key: "in_progress", label: "In Corso", color: "text-amber-500" },
+  { key: "first_touch_sent", label: "Primo Contatto", color: "text-primary" },
+  { key: "holding", label: "In Attesa", color: "text-amber-500" },
   { key: "negotiation", label: "Trattativa", color: "text-chart-3" },
 ];
 

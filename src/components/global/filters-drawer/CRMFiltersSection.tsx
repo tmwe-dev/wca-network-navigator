@@ -138,9 +138,14 @@ export function CRMFiltersSection() {
 
   const statusOptions: FilterOption[] = [
     { value: "new", label: "Nuovo" },
-    { value: "contacted", label: "Contattato" },
+    { value: "first_touch_sent", label: "Primo contatto" },
+    { value: "holding", label: "In attesa" },
+    { value: "engaged", label: "Coinvolto" },
     { value: "qualified", label: "Qualificato" },
+    { value: "negotiation", label: "Trattativa" },
     { value: "converted", label: "Convertito" },
+    { value: "archived", label: "Archiviato" },
+    { value: "blacklisted", label: "Blacklist" },
   ];
 
   const holdingOptions: FilterOption[] = [

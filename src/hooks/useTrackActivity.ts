@@ -51,7 +51,7 @@ export function useTrackActivity() {
         });
       } catch (actErr: unknown) { log.error("track activity insert failed", { message: actErr instanceof Error ? actErr.message : String(actErr) }); }
 
-      // 2. Escalate lead_status only from "new" → "contacted"; never downgrade
+      // 2. Escalate lead_status only from "new" → "first_touch_sent"; never downgrade
       if (params.sourceType === "partner" && params.partnerId) {
         const { data: currentPartner } = await supabase
           .from("partners")

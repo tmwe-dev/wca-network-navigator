@@ -215,12 +215,17 @@
     "emails": "Emails",
     "notes": "Notes",
     "lead_score": "Lead Score",
-    "new": "New",
-    "contacted": "Contacted",
-    "in_progress": "In Progress",
-    "negotiation": "Negotiation",
-    "won": "Won",
-    "lost": "Lost"
+    "lead_status": {
+      "new": "New",
+      "first_touch_sent": "First Touch Sent",
+      "holding": "Holding",
+      "engaged": "Engaged",
+      "qualified": "Qualified",
+      "negotiation": "Negotiation",
+      "converted": "Converted",
+      "archived": "Archived",
+      "blacklisted": "Blacklisted"
+    }
   },
   "status": {
     "loading": "Loading...",
