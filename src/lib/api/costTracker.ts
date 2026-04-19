@@ -31,8 +31,17 @@ export function configureCostTracker(partial: Partial<CostTrackerConfig>) {
   softLimitWarned = false;
 }
 
+/**
+ * Kill-switch client: per uso interno aziendale i budget sono disattivati.
+ * Riattivare in scenario commerciale settando VITE_AI_USAGE_LIMITS_ENABLED=true.
+ */
+function limitsEnabled(): boolean {
+  return import.meta.env.VITE_AI_USAGE_LIMITS_ENABLED === "true";
+}
+
 /** Throws ApiError(RATE_LIMITED) if session hard limit is exceeded. */
 export function checkBudget(): void {
+  if (!limitsEnabled()) return;
   if (stats.totalCredits >= config.hardLimit) {
     log.warn("hard limit reached", { stats, config });
     throw new ApiError({
