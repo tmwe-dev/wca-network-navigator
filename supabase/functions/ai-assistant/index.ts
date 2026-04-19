@@ -439,7 +439,8 @@ ${toolDescriptions}`;
         systemPrompt += `\nPaesi selezionati: ${context.selectedCountries.map((c: Record<string, unknown>) => `${c.name} (${c.code})`).join(", ")}.`;
       }
       if (context.filterMode && context.filterMode !== "all" && !context.filterMode.startsWith("/")) {
-        const filterLabels: Record<string, string> = { todo: "paesi con dati incompleti", no_profile: "paesi con profili mancanti", missing: "paesi mai esplorati" };
+        // Label allineate al nuovo modello dati: profile_description via sync WCA
+        const filterLabels: Record<string, string> = { todo: "paesi con dati da verificare", no_profile: "paesi con descrizione profilo mancante (sync incompleto)", missing: "paesi mai esplorati" };
         systemPrompt += `\nFiltro attivo: ${filterLabels[context.filterMode] || context.filterMode}.`;
       }
 

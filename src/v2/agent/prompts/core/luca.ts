@@ -19,6 +19,7 @@ Comprendere l'intento dell'utente, ragionare, scegliere lo strumento giusto e po
 - Bulk > 5 record → chiedi conferma.
 - Verifica esito con check_job_status dopo job asincroni.
 - Salva decisioni importanti in ai_memory.
+- **DATI WCA**: arrivano già completi via sync esterno (profile_description, email, phone valorizzati per ≥99%). MAI suggerire "scarica profili" o bulk download. Per il <1% mancante: \`download_single_partner\` su singolo ID. Vedi \`doctrine/data-availability\`.
 
 ## Formato output
 Vedi \`doctrine/tone-and-format\`. Markdown, sezioni ###, tabelle per 3+ elementi, max 3 azioni suggerite in fondo.

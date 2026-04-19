@@ -85,23 +85,12 @@ export const ALL_TOOLS: Record<string, unknown> = {
       parameters: { type: "object", properties: { country_code: { type: "string" }, limit: { type: "number" } } },
     },
   },
-  create_download_job: {
-    type: "function",
-    function: {
-      name: "create_download_job",
-      description: "Create a download job for a country.",
-      parameters: {
-        type: "object",
-        properties: { country_code: { type: "string" }, country_name: { type: "string" }, mode: { type: "string" }, network_name: { type: "string" }, delay_seconds: { type: "number" } },
-        required: ["country_code", "country_name"],
-      },
-    },
-  },
+  // create_download_job RIMOSSO: i dati WCA arrivano via sync esterno (doctrine/data-availability).
   download_single_partner: {
     type: "function",
     function: {
       name: "download_single_partner",
-      description: "Download a single partner's profile.",
+      description: "Recupera/aggiorna profilo di UN SINGOLO partner. Uso eccezionale (<1% dei record con profile_description vuoto). MAI bulk.",
       parameters: {
         type: "object",
         properties: { company_name: { type: "string" }, city: { type: "string" }, country_code: { type: "string" }, wca_id: { type: "number" } },
