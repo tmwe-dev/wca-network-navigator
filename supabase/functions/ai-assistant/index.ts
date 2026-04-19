@@ -350,7 +350,7 @@ Non usare formattazione markdown (grassetto, intestazioni, elenchi puntati)
 Non emettere blocchi STRUCTURED_DATA, OPERATIONS, UI_ACTIONS
 Non eseguire tool di scrittura o modifica`;
     } else {
-      systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock });
+      systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock, scope: scope || undefined });
     }
 
     // ── Extract context tags for KB loading ──
