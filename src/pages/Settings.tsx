@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -19,6 +19,7 @@ import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/pages/AdminUsers";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { BackupExportTab } from "@/components/settings/BackupExportTab";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -50,6 +51,7 @@ export default function Settings() {
     { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "timing", label: "Timing & Schedule", icon: Clock },
+    { value: "backup-export", label: "Backup & Export", icon: Package },
   ];
 
   return (
@@ -116,6 +118,11 @@ export default function Settings() {
             {tab === "timing" && (
               <div className="float-panel p-5">
                 <TimingSettings />
+              </div>
+            )}
+            {tab === "backup-export" && (
+              <div className="float-panel p-5">
+                <BackupExportTab />
               </div>
             )}
           </div>
