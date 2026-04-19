@@ -2,11 +2,23 @@
  * stateTransitions.ts — Gate automatici per la transizione tra stati commerciali.
  *
  * TASSONOMIA STATI (canonica, allineata al DB partners.lead_status):
- *   new | contacted | in_progress | negotiation | converted | lost
+ *   new | first_touch_sent | holding | engaged | qualified | negotiation | converted | archived | blacklisted
+ *
+ * Gate canonici (Costituzione Commerciale §2):
+ *   new → first_touch_sent (auto: primo messaggio inviato)
+ *   first_touch_sent → holding (auto: 3gg senza risposta)
+ *   first_touch_sent → engaged (auto: risposta ricevuta)
+ *   holding → engaged (auto: risposta ricevuta)
+ *   holding → archived (manuale: 3+ tentativi, 90+gg, ragione valida)
+ *   engaged → qualified (manuale: bisogno esplicito)
+ *   qualified → negotiation (manuale: proposta inviata)
+ *   negotiation → converted (manuale: evidenza contratto/ordine)
+ *   * → archived (manuale: con exit_reason valido)
+ *   * → blacklisted (manuale: GDPR/frode/abuso)
  *
  * NOTA: il trigger DB sync_bca_lead_status_to_partner consente solo escalation
- * monotona (new<contacted<in_progress<negotiation<converted). Le transizioni
- * verso "lost" sono permesse solo via update diretto su partners (qui).
+ * monotona (new<first_touch_sent<holding<engaged<qualified<negotiation<converted).
+ * archived/blacklisted sono terminali e si applicano solo manualmente.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -19,15 +31,38 @@ export interface TransitionGate {
   autoApply: boolean;
 }
 
-// ── Gate di transizione (allineati alla tassonomia reale) ──
+// ── Gate di transizione canonici (9 stati) ──
 export const TRANSITION_GATES: TransitionGate[] = [
-  { from: "new", to: "contacted", trigger: "Primo messaggio inviato (email o LinkedIn)", autoApply: true },
-  { from: "contacted", to: "in_progress", trigger: "Il contatto ha risposto al messaggio", autoApply: true },
-  { from: "contacted", to: "lost", trigger: "30+ giorni senza risposta dopo il primo contatto", autoApply: false },
-  { from: "in_progress", to: "negotiation", trigger: "3+ scambi bidirezionali OPPURE proposta inviata", autoApply: false },
-  { from: "negotiation", to: "converted", trigger: "Deal confermato, primo ordine ricevuto", autoApply: false },
-  { from: "*", to: "lost", trigger: "60+ giorni senza alcuna interazione", autoApply: false },
+  { from: "new", to: "first_touch_sent", trigger: "Primo messaggio inviato", autoApply: true },
+  { from: "first_touch_sent", to: "holding", trigger: "3gg senza risposta", autoApply: true },
+  { from: "first_touch_sent", to: "engaged", trigger: "Risposta ricevuta", autoApply: true },
+  { from: "holding", to: "engaged", trigger: "Risposta ricevuta", autoApply: true },
+  { from: "holding", to: "archived", trigger: "3+ tentativi, 90+gg, ragione valida", autoApply: false },
+  { from: "engaged", to: "qualified", trigger: "Bisogno esplicito identificato", autoApply: false },
+  { from: "qualified", to: "negotiation", trigger: "Proposta inviata", autoApply: false },
+  { from: "negotiation", to: "converted", trigger: "Contratto/ordine confermato", autoApply: false },
+  { from: "*", to: "archived", trigger: "Exit reason valido", autoApply: false },
+  { from: "*", to: "blacklisted", trigger: "GDPR/frode/abuso", autoApply: false },
 ];
+
+const STATE_ORDER: Record<string, number> = {
+  new: 0,
+  first_touch_sent: 1,
+  holding: 2,
+  engaged: 3,
+  qualified: 4,
+  negotiation: 5,
+  converted: 6,
+};
+
+export function isValidTransition(from: string, to: string): boolean {
+  if (to === "archived" || to === "blacklisted") return true; // sempre consentiti (manuali)
+  if (from === to) return false;
+  const oFrom = STATE_ORDER[from] ?? -1;
+  const oTo = STATE_ORDER[to] ?? -1;
+  if (oFrom < 0 || oTo < 0) return false;
+  return oTo > oFrom; // solo escalation monotona
+}
 
 export interface TransitionResult {
   shouldTransition: boolean;
@@ -71,14 +106,7 @@ export async function evaluateTransitions(
 
   const hasRecentInbound = !!(recentInbound && recentInbound.length > 0);
 
-  // Conteggi scambi bidirezionali
-  const { count: inboundCount } = await supabase
-    .from("channel_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("partner_id", partnerId)
-    .eq("direction", "inbound");
-
+  // Outbound count (azioni completate)
   const { count: outboundCount } = await supabase
     .from("activities")
     .select("id", { count: "exact", head: true })
@@ -86,56 +114,54 @@ export async function evaluateTransitions(
     .eq("source_id", partnerId)
     .eq("status", "completed");
 
-  const bidirectionalExchanges = Math.min(inboundCount || 0, outboundCount || 0);
-
   // ── Gate ──
 
-  // new → contacted (auto): primo messaggio inviato
+  // new → first_touch_sent (auto): primo messaggio inviato
   if (currentState === "new" && (outboundCount || 0) > 0) {
     results.push({
       shouldTransition: true,
-      from: "new", to: "contacted",
+      from: "new", to: "first_touch_sent",
       trigger: "Primo messaggio inviato",
       autoApply: true,
     });
   }
 
-  // contacted → in_progress (auto): il contatto ha risposto
-  if (currentState === "contacted" && hasRecentInbound) {
+  // first_touch_sent → engaged (auto): risposta ricevuta
+  if (currentState === "first_touch_sent" && hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "contacted", to: "in_progress",
-      trigger: "Il contatto ha risposto",
+      from: "first_touch_sent", to: "engaged",
+      trigger: "Risposta ricevuta",
       autoApply: true,
     });
   }
 
-  // contacted → lost (proposto): 30+ giorni senza risposta
-  if (currentState === "contacted" && daysSinceLastInteraction >= 30 && !hasRecentInbound) {
+  // first_touch_sent → holding (auto): 3+ giorni senza risposta
+  if (currentState === "first_touch_sent" && daysSinceLastInteraction >= 3 && !hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "contacted", to: "lost",
-      trigger: `${daysSinceLastInteraction} giorni senza risposta dopo primo contatto`,
-      autoApply: false,
+      from: "first_touch_sent", to: "holding",
+      trigger: `${daysSinceLastInteraction}gg senza risposta`,
+      autoApply: true,
     });
   }
 
-  // in_progress → negotiation (proposto): 3+ scambi bidirezionali
-  if (currentState === "in_progress" && bidirectionalExchanges >= 3) {
+  // holding → engaged (auto): risposta ricevuta
+  if (currentState === "holding" && hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "in_progress", to: "negotiation",
-      trigger: `${bidirectionalExchanges} scambi bidirezionali`,
-      autoApply: false,
+      from: "holding", to: "engaged",
+      trigger: "Risposta ricevuta dopo holding",
+      autoApply: true,
     });
   }
 
-  // Stale: in_progress/negotiation → lost se 60+ giorni senza interazione (proposto, non auto)
-  if (["in_progress", "negotiation"].includes(currentState) && daysSinceLastInteraction >= 60) {
+  // holding → archived (proposto): 90+ giorni + 3+ tentativi
+  if (currentState === "holding" && daysSinceLastInteraction >= 90 && (outboundCount || 0) >= 3) {
     results.push({
       shouldTransition: true,
-      from: currentState, to: "lost",
-      trigger: `${daysSinceLastInteraction} giorni senza interazione`,
+      from: "holding", to: "archived",
+      trigger: `${daysSinceLastInteraction}gg, ${outboundCount} tentativi — richiede approvazione Director`,
       autoApply: false,
     });
   }
@@ -150,6 +176,11 @@ export async function applyTransition(
   userId: string,
   transition: TransitionResult,
 ): Promise<boolean> {
+  if (!isValidTransition(transition.from, transition.to)) {
+    console.warn("[StateTransition] BLOCKED invalid transition:", JSON.stringify(transition));
+    return false;
+  }
+
   const { error } = await supabase
     .from("partners")
     .update({ lead_status: transition.to })
@@ -163,20 +194,18 @@ export async function applyTransition(
     return false;
   }
 
-  // Log transizione come activity (usa activity_type valido: "other")
+  // Log transizione come activity
   const { error: logError } = await supabase.from("activities").insert({
     user_id: userId,
     source_id: partnerId,
     source_type: "partner",
     activity_type: "other",
     title: `Stato: ${transition.from} → ${transition.to}`,
-    description: `Transizione automatica. Trigger: ${transition.trigger}. ${transition.autoApply ? "Applicato automaticamente." : "Proposto per approvazione."}`,
+    description: `Transizione. Trigger: ${transition.trigger}. ${transition.autoApply ? "Auto-applicata." : "Approvata manualmente."}`,
     status: "completed",
   });
 
-  if (logError) {
-    console.warn("[StateTransition] Log activity failed:", logError.message);
-  }
+  if (logError) console.warn("[StateTransition] Log activity failed:", logError.message);
 
   console.log("[StateTransition] APPLIED", JSON.stringify({
     partner_id: partnerId, from: transition.from, to: transition.to, trigger: transition.trigger,
