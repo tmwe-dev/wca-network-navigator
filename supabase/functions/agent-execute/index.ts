@@ -103,40 +103,64 @@ serve(async (req) => {
         for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
       }
 
-      // === COMMERCIAL DOCTRINE INJECTION ===
+      // === COMMERCIAL DOCTRINE INJECTION (Costituzione 9 stati) ===
       const commercialDoctrineBlock = `
 ## DOTTRINA COMMERCIALE — REGOLE AGENTE
 
-1. NON archiviare MAI un contatto autonomamente. Solo l'admin può farlo.
-2. Ogni contatto in "holding" DEVE ricevere follow-up secondo cadenza configurata.
-3. Il tono del messaggio DEVE corrispondere alla fase relazionale del contatto.
-4. MAI usare WhatsApp come primo canale di contatto.
-5. MAI ripetere la presentazione aziendale dopo il primo contatto.
-6. Alternare i canali: se l'ultimo era email, il prossimo sia LinkedIn o WhatsApp.
-7. Prima di proporre un servizio, verificare che il contatto sia almeno in fase "engaged".
-8. Se il contatto non risponde da >30 giorni, escalare la priorità del follow-up, NON archiviare.
+Tassonomia 9 stati: new | first_touch_sent | holding | engaged | qualified | negotiation | converted | archived | blacklisted
+
+1. NON archiviare MAI un contatto autonomamente. Solo Director (Luca) può farlo, con ragione valida.
+2. Ogni contatto in "holding" DEVE avere next_action pianificata. Nessun contatto "dimenticato".
+3. Il tono evolve con la fase: freddo → cordiale → amichevole → da partner. Mai saltare fasi.
+4. Stato può solo AVANZARE (mai retrocedere senza approvazione esplicita).
+5. MAI ripetere la presentazione aziendale dopo first_touch_sent.
+6. Prima di proporre un servizio, verificare stato >= engaged.
+7. Holding >90gg + 3+ tentativi → proposta archiviazione a Director (mai auto).
+8. Personalizzazione obbligatoria: consulta contact_conversation_context + email_address_rules per il destinatario.
 `;
       contextBlock += `\n\n${commercialDoctrineBlock}`;
 
-      // === CADENZA CONTATTO — REGOLE ASSOLUTE ===
+      // === GATE WHATSAPP — REGOLE ASSOLUTE ===
+      const whatsappGateBlock = `
+## GATE WHATSAPP — Costituzione §4
+
+WhatsApp: VIETATO come primo contatto. Consentito SOLO SE:
+(a) stato >= engaged, OPPURE (b) contatto ha iniziato su WhatsApp, OPPURE (c) numero dato esplicitamente.
+E: orario 9:00-18:00 locale, NO weekend, max 2-3 righe.
+Se condizioni non soddisfatte → blocca azione, notifica Director.
+`;
+      contextBlock += `\n${whatsappGateBlock}`;
+
+      // === CADENZA PRIMO CONTATTO — Sequenza 23 giorni ===
       const cadenceBlock = `
-## CADENZA CONTATTO — REGOLE ASSOLUTE
+## SEQUENZA PRIMO CONTATTO (23 giorni — Costituzione §3)
 
-Tassonomia stati: new | contacted | in_progress | negotiation | converted | lost
+G0:  Email primo contatto
+G3:  LinkedIn connection request (no pitch)
+G7:  LinkedIn messaggio (se connesso)
+G8:  Email follow-up (insight/case study)
+G12: LinkedIn interazione light
+G16: Email follow-up (domanda calibrata)
+G23: Email breakup
 
-- NEW (mai contattato): SOLO email come primo canale. MAI WhatsApp o LinkedIn.
-- Dopo primo invio: attendi 3 giorni. Se nessuna risposta → follow-up email.
-- Giorno 5 senza risposta: LinkedIn connection request.
-- Giorno 7: secondo follow-up email con valore aggiunto.
-- Giorno 10: messaggio LinkedIn (se connesso).
-- Giorno 14: breakup email.
-- CONTACTED (primo touch fatto, in attesa risposta): max 2 contatti/settimana, alternare email/LinkedIn, intervallo minimo 3 giorni.
-- IN_PROGRESS (dialogo attivo): fino a 3 contatti/settimana, tutti i canali (WA solo con consenso).
-- NEGOTIATION (trattativa): risposte rapide (1-2 giorni), WA per follow-up veloci.
-- CONVERTED (cliente): contatto di mantenimento ogni 7+ giorni.
-- LOST (perso/archiviato): nessun contatto automatico, solo riattivazione manuale.
-- WhatsApp MAI come primo contatto. Solo dopo consenso esplicito O risposta inbound WA.
-- ALTERNARE i canali: non inviare 2 email consecutive se LinkedIn è disponibile.
+Dopo G23 senza risposta → holding, ritmo 1/14gg alternando canali.
+Se risposta a qualsiasi step → stato engaged, sequenza interrotta.
+BLOCCO: se follow-up stesso canale <7gg → rifiuta + notifica Director.
+
+POST-INVIO OBBLIGATORIO (per ogni send_email/send_linkedin_message):
+1. Aggiorna stato se applicabile (new → first_touch_sent)
+2. Crea reminder follow-up (next step della sequenza G0→G3→G7→G8→G12→G16→G23)
+3. Registra: canale, lingua, tipo messaggio, timestamp
+4. Verifica next_action esista — se vuota, creala
+
+Cadence per stato:
+- NEW: SOLO email come primo canale.
+- FIRST_TOUCH_SENT (in attesa risposta): max 1 follow-up entro G3, poi sequenza standard.
+- HOLDING (post-G3 senza risposta): 1 touch/14gg alternando canali, max 3 tentativi.
+- ENGAGED (dialogo attivo): rispondi rapido, scegli canale che il contatto preferisce.
+- QUALIFIED → NEGOTIATION: gestione Sales agent. Mai pressing.
+- CONVERTED: maintenance ogni 30gg.
+- ARCHIVED/BLACKLISTED: nessun contatto, solo riattivazione manuale.
 `;
       contextBlock += `\n${cadenceBlock}`;
 
