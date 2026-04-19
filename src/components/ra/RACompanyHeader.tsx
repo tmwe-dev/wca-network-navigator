@@ -6,11 +6,14 @@ import type { RALeadStatus } from "@/types/ra";
 
 const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }> = {
   new: { label: "Nuovo", color: "bg-muted text-muted-foreground border-border" },
-  contacted: { label: "Contattato", color: "bg-primary/20 text-primary border-primary/30" },
+  first_touch_sent: { label: "Primo contatto", color: "bg-primary/20 text-primary border-primary/30" },
+  holding: { label: "In attesa", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  engaged: { label: "Agganciato", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
   qualified: { label: "Qualificato", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
   negotiation: { label: "Negoziazione", color: "bg-primary/20 text-primary border-primary/30" },
   converted: { label: "Convertito", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  lost: { label: "Perso", color: "bg-destructive/20 text-destructive border-destructive/30" },
+  archived: { label: "Archiviato", color: "bg-destructive/20 text-destructive border-destructive/30" },
+  blacklisted: { label: "Blacklist", color: "bg-destructive/40 text-destructive border-destructive/50" },
 };
 
 interface RACompanyHeaderProps {
