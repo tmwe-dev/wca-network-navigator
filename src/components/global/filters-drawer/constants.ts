@@ -59,7 +59,7 @@ export const FLAG: Record<string, string> = {
 export const ATTIVITA_STATUS = [
   { value: "all", label: "Tutte", icon: ListTodo },
   { value: "pending", label: "In attesa", icon: Clock },
-  { value: "in_progress", label: "In corso", icon: AlertTriangle },
+  { value: "holding", label: "In attesa", icon: AlertTriangle },
   { value: "completed", label: "Completate", icon: CheckCircle2 },
 ];
 

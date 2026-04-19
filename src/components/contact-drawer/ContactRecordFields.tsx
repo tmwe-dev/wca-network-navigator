@@ -10,11 +10,14 @@ import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "in_progress", label: "In corso" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Coinvolto" },
+  { value: "qualified", label: "Qualificato" },
   { value: "negotiation", label: "Trattativa" },
-  { value: "converted", label: "Cliente" },
-  { value: "lost", label: "Perso" },
+  { value: "converted", label: "Convertito" },
+  { value: "archived", label: "Archiviato" },
+  { value: "blacklisted", label: "Blacklist" },
 ];
 
 interface Props {

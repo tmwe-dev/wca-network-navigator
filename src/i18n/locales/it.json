@@ -215,12 +215,17 @@
     "emails": "Email",
     "notes": "Note",
     "lead_score": "Punteggio Lead",
-    "new": "Nuovo",
-    "contacted": "Contattato",
-    "in_progress": "In Corso",
-    "negotiation": "Negoziazione",
-    "won": "Vinto",
-    "lost": "Perso"
+    "lead_status": {
+      "new": "Nuovo",
+      "first_touch_sent": "Primo contatto inviato",
+      "holding": "In attesa",
+      "engaged": "Coinvolto",
+      "qualified": "Qualificato",
+      "negotiation": "In trattativa",
+      "converted": "Convertito",
+      "archived": "Archiviato",
+      "blacklisted": "Blacklist"
+    }
   },
   "status": {
     "loading": "Caricamento...",

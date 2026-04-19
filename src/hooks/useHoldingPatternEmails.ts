@@ -1,6 +1,6 @@
 /**
  * Hook that checks which partner/contact IDs are in the holding pattern
- * (lead_status in contacted, in_progress, negotiation).
+ * (lead_status in first_touch_sent, holding, negotiation).
  * Returns a Set of "p:<partnerId>" or "c:<contactId>" strings.
  */
 import { useQuery } from "@tanstack/react-query";
@@ -8,7 +8,7 @@ import { getPartnersByIdsFiltered } from "@/data/partners";
 import { getContactsByIds } from "@/data/contacts";
 import { queryKeys } from "@/lib/queryKeys";
 
-const ACTIVE_STATUSES = ["contacted", "in_progress", "negotiation"];
+const ACTIVE_STATUSES = ["first_touch_sent", "holding", "negotiation"];
 
 interface SourceRef {
   partnerId?: string;
