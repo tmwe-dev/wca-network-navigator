@@ -41,6 +41,11 @@ export interface GlobalFilterState {
   crmActiveTab: string;
   crmGroupTab: string;
   crmWcaMatch: string;
+  campaignsSearch: string;
+  campaignsSortField: "name" | "city" | "contacts";
+  campaignsSortAsc: boolean;
+  campaignsTypeFilter: string;
+  campaignsAiQuery: string;
 }
 
 // --- Reducer ---
@@ -84,6 +89,11 @@ const defaults: GlobalFilterState = {
   crmActiveTab: "contatti",
   crmGroupTab: "",
   crmWcaMatch: "all",
+  campaignsSearch: "",
+  campaignsSortField: "name",
+  campaignsSortAsc: true,
+  campaignsTypeFilter: "all",
+  campaignsAiQuery: "",
 };
 
 function cloneDefaults(): GlobalFilterState {
