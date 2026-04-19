@@ -167,7 +167,16 @@ const CommandPage = () => {
         <CommandCanvas
           canvas={s.canvas}
           liveResult={s.liveResult}
-          onClose={() => { s.setCanvas(null); s.setLiveResult(null); }}
+          onClose={() => { s.setCanvas(null); s.setLiveResult(null); s.clearSelection(); }}
+          selectedIds={s.selectedIds}
+          toggleSelected={s.toggleSelected}
+          selectAll={s.selectAll}
+          clearSelection={s.clearSelection}
+          onBulkAction={(action, ids) => {
+            const filled = action.promptTemplate.replace("{ids}", ids.join(","));
+            s.clearSelection();
+            submit.sendMessage(filled);
+          }}
         />
       </div>
 

@@ -30,12 +30,21 @@ export const contactSearchTool: Tool = {
         { key: "lead_status", label: "Stato" },
       ],
       rows: contacts.map(c => ({
+        id: c.id,
         name: c.name ?? "—",
         company: c.companyName ?? "—",
         email: c.email ?? "—",
         country: c.country ?? "—",
         lead_status: c.leadStatus ?? "new",
       })),
+      selectable: true,
+      idField: "id",
+      liveSource: "imported_contacts",
+      bulkActions: [
+        { id: "outreach", label: "Programma outreach", promptTemplate: "Programma outreach per i contatti con id: {ids}" },
+        { id: "compose", label: "Componi email", promptTemplate: "Componi email per i contatti con id: {ids}" },
+        { id: "enrich", label: "Arricchisci", promptTemplate: "Arricchisci i contatti con id: {ids}" },
+      ],
     };
   },
 };
