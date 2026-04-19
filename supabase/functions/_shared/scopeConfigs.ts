@@ -179,7 +179,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
   switch (scope) {
     case "cockpit":
       return {
-        systemPrompt: COCKPIT_PROMPT,
+        // systemPrompt: provided by composeSystemPrompt({ scope: "cockpit" })
         tools: PLATFORM_TOOLS,
         temperature: 0.1,
         creditLabel: "Cockpit Assistant",
@@ -203,7 +203,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
 
     case "contacts":
       return {
-        systemPrompt: CONTACTS_PROMPT,
+        // systemPrompt: provided by composeSystemPrompt({ scope: "contacts" })
         tools: [...PLATFORM_TOOLS, ...CONTACTS_EXTRA_TOOLS],
         creditLabel: "Contacts Assistant",
         localToolHandler: contactsToolHandler,
@@ -211,7 +211,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
 
     case "import":
       return {
-        systemPrompt: IMPORT_PROMPT,
+        // systemPrompt: provided by composeSystemPrompt({ scope: "import" })
         tools: [...PLATFORM_TOOLS, ...IMPORT_EXTRA_TOOLS],
         creditLabel: "Import Assistant",
         localToolHandler: importToolHandler,
@@ -219,14 +219,14 @@ export function getScopeConfig(scope: string): ScopeConfig {
 
     case "extension":
       return {
-        systemPrompt: EXTENSION_PROMPT,
+        // systemPrompt: provided by composeSystemPrompt({ scope: "extension" })
         tools: PLATFORM_TOOLS,
         creditLabel: "", // No credits for extension
       };
 
     case "strategic":
       return {
-        systemPrompt: STRATEGIC_OPERATIVE_PROMPT,
+        // systemPrompt: provided by composeSystemPrompt({ scope: "strategic" })
         tools: [], // Strategic advisor has no tools
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
