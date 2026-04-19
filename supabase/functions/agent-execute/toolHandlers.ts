@@ -1,4 +1,5 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
+import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
 
 // ── Local interfaces for typed row shapes ──
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
