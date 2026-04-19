@@ -112,13 +112,15 @@ serve(async (req) => {
       return rateLimitResponse(rl, dynCors);
     }
 
-    // ── AI Provider + credit gate ──
+    // ── AI Provider ──
+    // Credit gate disattivato: il sistema è ad uso interno aziendale.
+    // Per riattivare in scenario commerciale: settare AI_USAGE_LIMITS_ENABLED=true
+    // sia su questa edge function che sulle utilities (rateLimiter, costGuardrail, consume-credits).
     const provider = await resolveAiProvider(supabase, userId);
-    if (!provider.isUserKey) {
+    const limitsEnabled = Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
+    if (limitsEnabled && !provider.isUserKey) {
       const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
       if (credits && credits.balance <= 0) {
-        // Status 200 con ok:false per garantire che il client riceva il body
-        // (alcuni SDK scartano il body su 4xx/5xx → "Failed to send a request").
         return new Response(
           JSON.stringify({
             ok: false,
