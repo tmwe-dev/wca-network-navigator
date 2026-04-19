@@ -1,130 +1,78 @@
 
 
-# Riscrittura Costituzione Unica — Piano operativo
+## Piano — Bonifica residua tassonomia 9 stati
 
-Questo è un intervento **trasversale critico**: cambia la tassonomia degli stati lead in tutto il sistema (DB, edge functions, UI, AI prompts). Procedo nell'ordine fornito perché le dipendenze sono reali.
+I file core sono già aggiornati nei messaggi precedenti (`LeadStatus` in `contacts.ts`, `RALeadStatus` in `ra.ts`, `stateTransitions.ts`, `leadEscalation.ts`, `COCKPIT_STATUS`). Resta da chiudere il giro su:
 
-## Pre-flight: verifiche di mappatura legacy → nuova tassonomia
+### A. Costanti UI rimaste indietro (1 file)
 
-**Mappa migrazione stati esistenti → nuovi:**
+**`src/components/global/filters-drawer/constants.ts`** — `CRM_LEAD_STATUS` ha ancora `"contacted"`. Lo aggiorno a 7 stati: `all, new, first_touch_sent, holding, engaged, qualified, converted, archived`.
 
-| Vecchio | Nuovo | Note |
-|---|---|---|
-| `new` | `new` | invariato |
-| `contacted` | `first_touch_sent` | semantica equivalente |
-| `in_progress` | `holding` | semantica equivalente (era già "in attesa risposta") |
-| `qualified` | `engaged` o `qualified` | DA DECIDERE per record esistenti — uso `engaged` come default conservativo |
-| `negotiation` | `negotiation` | invariato |
-| `converted` | `converted` | invariato |
-| `lost` | `archived` | semantica equivalente |
-| n/a | `blacklisted` | nuovo, solo manuale |
+### B. Cadence engine (riscrittura semantica) (1 file)
 
-**Migration DB necessaria** (non era nel prompt utente ma è obbligatoria, altrimenti UI esplode):
-- `UPDATE partners SET lead_status = CASE ... END`
-- `UPDATE imported_contacts SET lead_status = CASE ... END`
-- `UPDATE business_cards SET lead_status = CASE ... END`
-- `UPDATE ra_prospects SET lead_status = CASE ... END`
-- Aggiornare `sync_bca_lead_status_to_partner()` (la funzione DB ha hardcoded l'ordine `new < contacted < in_progress < negotiation < converted` — va riscritta con i 9 nuovi stati).
+**`supabase/functions/_shared/cadenceEngine.ts`** — `CADENCE_BY_STATE` indicizzato su 6 stati vecchi. Riscrivo con i nuovi 9 stati:
+- `new` (solo email primo touch)
+- `first_touch_sent` (follow-up email + LinkedIn dopo 3-7gg)
+- `holding` (cadenza diradata, 1/14gg)
+- `engaged` (tutti i canali, dialogo attivo)
+- `qualified` (proposta/discovery)
+- `negotiation` (rapida, email+WA)
+- `converted` (mantenimento)
+- `archived` (zero contatti)
+- `blacklisted` (zero contatti, GDPR)
 
-## Sequenza esecuzione (11 prompt + migration + side-effects)
+Aggiorno anche header docstring e fallback `CADENCE_BY_STATE.contacted` → `CADENCE_BY_STATE.first_touch_sent`. Rimuovo alias `lost`/retro-compat.
 
-### FASE A — Foundation (Prompts 1-2 + Migration DB)
+### C. Tool definitions AI (1 file)
 
-**Step 1: Migration DB**
-- Mappare i lead_status esistenti sui nuovi nomi (4 tabelle: `partners`, `imported_contacts`, `business_cards`, `ra_prospects`).
-- Riscrivere `sync_bca_lead_status_to_partner()` con il nuovo ordering: `new(0) < first_touch_sent(1) < holding(2) < engaged(3) < qualified(4) < negotiation(5) < converted(6)`. `archived` e `blacklisted` sono terminali, no auto-escalation.
+**`supabase/functions/ai-assistant/toolDefinitions.ts`** — 6 enum `lead_status` con vecchia tassonomia. Sostituisco tutti con i 9 stati nuovi (mantengo solo enum su `status` di `activities` che usa `pending/in_progress/completed` — semantica diversa, NON tocco).
 
-**Step 2: Tassonomia TS (Prompt 1)**
-- `src/data/contacts.ts` → `LeadStatus` con 9 valori
-- `src/types/ra.ts` → `RALeadStatus` con 9 valori
-- `src/constants/holdingPattern.ts` → aggiornare `HOLDING_STATUSES` = `["first_touch_sent", "holding", "engaged"]`, `ALL_LEAD_STATUSES` = nuovi 9
-- `src/components/global/filters-drawer/constants.ts` → `COCKPIT_STATUS` e `CRM_LEAD_STATUS` aggiornati
-- `src/lib/leadEscalation.ts` → nuove costanti + statusMap
-- **Side-effects da aggiornare**: tutti i posti dove sono hardcoded `"contacted"`, `"in_progress"`, `"lost"`. Faccio grep e sistemo (badge, color helpers, transition arrays, RPC params).
+### D. Logica produzione (4 file)
 
-**Step 3: Luca Director (Prompt 2)**
-- UPDATE riga `agents` WHERE `name='Luca'`: `system_prompt`, `assigned_tools`, `knowledge_base.tags`.
+| File | Cosa |
+|---|---|
+| `supabase/functions/_shared/logEmailSideEffects.ts` | `lead_status: "contacted"` → `"first_touch_sent"` |
+| `supabase/functions/check-inbox/dbOperations.ts` | 2 update `"contacted"` → `"first_touch_sent"` |
+| `supabase/functions/smart-scheduler/index.ts` | filtro `["contacted","in_progress"]` → `["first_touch_sent","holding","engaged"]` |
+| `supabase/functions/agent-autonomous-cycle/index.ts` | filtri `["new","contacted","in_progress","negotiation"]` + filtro `"contacted"` → nuovi stati |
+| `supabase/functions/_shared/platformTools.ts` | `activeStatuses = ["contacted","in_progress","negotiation"]` → `["first_touch_sent","holding","engaged","qualified","negotiation"]` |
+| `supabase/functions/agent-execute/toolHandlers.ts` | idem `activeStatuses` + count `"contacted"` → `"first_touch_sent"` |
 
-### FASE B — AI Prompts (Prompts 3-4-10)
+### E. Hook UI (3 file)
 
-**Step 4-6: Modifica `supabase/functions/_shared/scopeConfigs.ts`**
-- Aggiunge VINCOLI COMMERCIALI a `COCKPIT_PROMPT`
-- Sostituisce `CONTACTS_PROMPT`
-- Sostituisce `STRATEGIC_OPERATIVE_PROMPT`
+| File | Cosa |
+|---|---|
+| `src/hooks/useTrackActivity.ts` | 3× `lead_status: "contacted"` → `"first_touch_sent"` (inclusa funzione `canEscalateToContacted` → rinomino concettualmente o solo aggiorno target) |
+| `src/hooks/useUnreadCounts.ts` | filtro `["contacted","in_progress","negotiation"]` → nuovi stati |
+| `src/hooks/useHoldingMessages.ts` | default `leadStatus || "contacted"` → `"first_touch_sent"` |
 
-### FASE C — Cadence & Gate (Prompts 5-6-7)
+### F. Componenti UI (1 file)
 
-**Step 7: agent-execute (Prompts 5+6+7)**
-- Identifico la sezione "cadence rules" e la sostituisco con la sequenza 23gg G0/G3/G7/G8/G12/G16/G23.
-- WhatsApp gate: blocco se `state < engaged` AND non whitelist.
-- Post-invio hook: dopo ogni `send_email`/`send_linkedin_message` → update status `new → first_touch_sent`, `INSERT activities` con `status='pending'` per next step.
-- Crea `supabase/functions/_shared/stateTransitions.ts` (file non esiste ancora, lo creo da zero) con le transition gates approvate.
+**`src/components/agenda/AgendaCardView.tsx`** — badge `lead_status === "contacted"` → `"first_touch_sent"` (mantengo il colore blue).
 
-### FASE D — Templates (Prompts 8-9)
+### G. File da NON toccare
 
-**Step 8: `src/data/agentTemplates/templates.ts`**
-- Sostituisco `systemPrompt` template Outreach + tools ridotti
-- Sostituisco `systemPrompt` template Sales/Vendite
+- **Test legacy**: `src/test/bug-registry-confirmation.test.ts`, `src/test/state-enum-integrity.test.ts`, `src/test/workflow-coherence-scorecard.test.ts`, `src/__tests__/holding-statuses.test.ts`, `src/components/contact-drawer/ContactRecordFields.test.tsx`. Questi documentano il comportamento storico — l'utente ha detto "non toccare commenti legacy", li tratto come tali. Aggiungerò invece **nuovi test** se necessario (o aggiorno minimamente i fixture in 1-2 file più visibili: `holding-statuses.test.ts` e `ContactRecordFields.test.tsx`).
+- **Falsi positivi** semantici (NON toccare):
+  - `ActivityStatus = "pending" | "in_progress" | "completed" | "cancelled"` in `entities.ts`
+  - `CampaignJobStatus` in `campaign-schema.ts`
+  - `validAgentTaskStatuses` (workflow agente, semantica diversa)
+  - `ATTIVITA_STATUS` filtri attività in `constants.ts`
+  - Commenti JSDoc che spiegano storicamente la migrazione
 
-### FASE E — Oracolo unificato (Prompt 11) ⚠️ BREAKING
+### H. Verifica finale
 
-**Step 9: Riarchitetto `composeSystemPrompt()`**
-- Aggiungo `CONTEXT_ENGAGEMENT_RULES` dopo `COMMERCIAL_DOCTRINE` in `supabase/functions/ai-assistant/systemPrompt.ts`.
-- Aggiungo parametro `scope` a `ComposeSystemPromptOptions` (così il blocco regole per scope viene iniettato).
-- **Rimuovo** i prompt scope-specific da `scopeConfigs.ts`: ogni scope ora espone solo `{ tools, temperature, model }`. Il prompt è uno solo.
-- Aggiorno tutti i caller di `scopeConfigs` (probabilmente `ai-assistant/index.ts` e altri orchestratori) per:
-  - non leggere più `config.systemPrompt`
-  - chiamare `composeSystemPrompt({ scope, operatorBriefing, activeWorkflow })`
+Eseguo grep mirato finale: `lead_status.*"(contacted|in_progress|lost)"` e `leadStatus:\s*"(contacted|in_progress|lost)"` su tutto il progetto escludendo `migrations/` e `__tests__/` legacy → zero risultati attivi.
 
-Questo è il punto più delicato: se sbaglio, l'AI risponde senza contesto. Faccio prima un'analisi di tutti i caller di `getScopeConfig()` per trovare ogni punto da aggiornare.
+## File toccati: ~13 modifiche
 
-## File toccati (~25)
+**TS/TSX (8):** `constants.ts`, `useTrackActivity.ts`, `useUnreadCounts.ts`, `useHoldingMessages.ts`, `AgendaCardView.tsx`, + eventuale aggiornamento fixture test (`ContactRecordFields.test.tsx`, `holding-statuses.test.ts`).
 
-**Migration DB (1)**
-- Nuova migration con UPDATE su 4 tabelle + riscrittura `sync_bca_lead_status_to_partner()`.
+**Edge Functions (6):** `cadenceEngine.ts`, `toolDefinitions.ts`, `logEmailSideEffects.ts`, `check-inbox/dbOperations.ts`, `smart-scheduler/index.ts`, `agent-autonomous-cycle/index.ts`, `platformTools.ts`, `agent-execute/toolHandlers.ts`.
 
-**Tassonomia (5)**
-- `src/data/contacts.ts`
-- `src/types/ra.ts`
-- `src/constants/holdingPattern.ts`
-- `src/components/global/filters-drawer/constants.ts`
-- `src/lib/leadEscalation.ts`
+## Note operative
 
-**AI Prompts (3)**
-- `supabase/functions/_shared/scopeConfigs.ts`
-- `supabase/functions/ai-assistant/systemPrompt.ts`
-- (eventuali caller di `getScopeConfig` da aggiornare — censimento durante esecuzione)
-
-**Edge functions logica (2)**
-- `supabase/functions/agent-execute/index.ts`
-- `supabase/functions/_shared/stateTransitions.ts` (NUOVO)
-
-**Templates (1)**
-- `src/data/agentTemplates/templates.ts`
-
-**Side-effects (~10)**
-- File con hardcoded `"contacted"`, `"in_progress"`, `"lost"`: badge color helpers, status helpers, transition guards, dashboard queries, holding pattern hooks. Censimento via grep durante esecuzione.
-
-**DB diretto (1 query)**
-- `UPDATE agents SET system_prompt=..., assigned_tools=... WHERE name='Luca'`
-
-## Rischi noti & mitigazione
-
-1. **Stati legacy in DB non migrati** → la migration UPDATE corregge tutto in un colpo solo, idempotente.
-2. **`sync_bca_lead_status_to_partner()` con ordering hardcoded** → riscrittura della funzione nella stessa migration.
-3. **Caller di `getScopeConfig` che si aspettano `systemPrompt`** → li trovo via grep prima di rimuovere il campo, e li aggiorno tutti nello stesso commit.
-4. **UI status badges con switch su `"contacted"/"in_progress"/"lost"`** → grep + replace mirato. Ogni occorrenza viene sistemata.
-5. **Filtri salvati in localStorage con vecchi valori** → fallback nel reducer: se `filters.cockpitStatus === "contacted"` lo mappiamo a `"first_touch_sent"` lato UI per non rompere sessioni esistenti.
-
-## Verifica finale (eseguita al termine)
-
-- `grep -rn '"contacted"\|"in_progress"\|"lost"' src/ supabase/functions/_shared supabase/functions/agent-execute supabase/functions/ai-assistant` → solo commenti legacy/migration headers.
-- Query DB: `SELECT DISTINCT lead_status FROM partners` → solo i 9 nuovi stati.
-- Query DB: `SELECT name, length(system_prompt), jsonb_array_length(assigned_tools) FROM agents WHERE name='Luca'` → prompt > 200 char, tools > 0.
-- `scopeConfigs.ts` non contiene più export `*_PROMPT`.
-- `composeSystemPrompt({scope:'cockpit'})` produce un prompt che contiene "9 stati" e "scope=cockpit".
-
-## Nota operativa
-
-Procedo end-to-end senza ulteriori conferme intermedie come da preferenza utente. Userò il task tracker per monitorare le 5 fasi (A-E). Ogni fase chiusa = task `done`. Al termine consegno un riepilogo verifica con i risultati di tutti gli check.
+- Procedo end-to-end senza ulteriori conferme come da preferenza.
+- Nessuna migration DB necessaria (già fatta in fase precedente).
+- I commenti JSDoc che citano `"contacted"`/`"in_progress"` come **esempi di valori legacy** li lascio (rispetto vincolo utente "non toccare commenti legacy"), salvo dove descrivono il comportamento attuale del codice (lì li aggiorno per coerenza).
 
