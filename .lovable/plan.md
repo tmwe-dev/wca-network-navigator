@@ -1,95 +1,86 @@
 
 
-L'utente vuole aggiungere nella stessa sezione "Backup & Export" la capacità di **importare documenti** (PDF, DOCX, TXT, MD) che vengano:
-1. Analizzati / estratti
-2. Spezzettati (chunking)
-3. Embeddati
-4. Inseriti in `kb_entries` (con embedding) in modo da essere richiamabili via `match_kb_entries` (RAG).
+# Piano interventi — Sidebar Filters & Mission
 
-E vuole sapere **dove sta** e **come si chiama** il sistema che oggi processa i dati per la KB e i prompt dinamici.
+Procedo in **3 fasi** seguendo le priorità dell'audit. Fase 1 sblocca l'usabilità, Fase 2 migliora UX, Fase 3 è opzionale.
 
-## Cosa esiste già nel sistema (mappa)
+## FASE 1 — Bloccanti (3 fix)
 
-Dalla ricognizione che ho fatto in precedenza e dai file in contesto:
+### 1.1 Bug Campaigns: filtri inline → FiltersDrawer
 
-**Pipeline RAG già esistente:**
-- `supabase/functions/_shared/embeddings.ts` — wrapper embeddings via Lovable AI Gateway (`text-embedding-3-small`, 1536 dim) + `ragSearchKb()` che chiama la RPC `match_kb_entries`.
-- Tabella `kb_entries` con colonna `embedding vector(1536)` e RPC `match_kb_entries` (filtro per categoria, soglia, priorità).
-- DAL `src/data/kbEntries.ts` per CRUD KB.
-- Tabella `workspace_documents` (con `extracted_text`) + DAL `src/data/workspaceDocs.ts` — esiste già una pipeline di upload documenti separata, ma NON alimenta automaticamente `kb_entries`.
-- Edge function `ai-backup` (export tecnico) e nuovo `AIExportPanel` (export ZIP leggibile) appena creati.
+- **Crea** `src/components/global/filters-drawer/CampaignsFiltersSection.tsx` — replica i 4 controlli (Search, Sort name/city/contacts, Type, AI Query) usando `GlobalFiltersContext`.
+- **Estendi** `GlobalFiltersContext` con stato campaigns: `campaignsSearch`, `campaignsSort {field, asc}`, `campaignsTypeFilter`, `campaignsAiQuery`.
+- **Modifica** `useFiltersDrawerState.ts` → aggiungi `isCampaigns` (path `/v2/campaigns` o `/campaigns`) + `sectionTitle` "Filtri Campagne".
+- **Modifica** `FiltersDrawer.tsx` → renderizza `<CampaignsFiltersSection>` quando `isCampaigns`.
+- **Modifica** `CompanyListFilters.tsx` → leggi i valori dal context invece che da props locali; mantieni solo il rendering minimale o rimuovi (la pagina Campaigns userà i filtri globali).
 
-**Manca:** un'edge function che faccia il ciclo completo *Upload → Estrazione testo → Chunking → Embedding → INSERT in `kb_entries`*.
+### 1.2 Collegare i 9 event listener mancanti del MissionDrawer
 
-Il "sistema che processa i dati per i prompt dinamici" che l'utente cerca è quindi composto da due pezzi:
-- **`_shared/embeddings.ts`** (generazione vettori + retrieval RAG)
-- **RPC `match_kb_entries`** (recupero rilevanti) usata dagli agenti per assemblare il contesto nei prompt dinamici (vedi `ai-gateway-and-budgeting` in memoria)
+Aggiungo i listener nelle pagine target. Pattern: `useEffect` con `window.addEventListener` + cleanup, dispatch su pagina giusta.
 
-Oggi però non c'è un **ingester** end-to-end per documenti caricati dall'utente. Lo costruiamo.
+| Evento | File destinazione | Handler |
+|---|---|---|
+| `deep-search-country` | `NetworkPage` (V2) o `CountryGridV2` | apre dialog deep search paese corrente |
+| `generate-aliases` | `NetworkPage` | invoca `useAliasBatch` esistente o edge `generate-aliases` |
+| `export-partners` | `NetworkPage` | trigger CSV export tramite hook esistente |
+| `crm-deep-search` | `CRMPage` | apre LinkedIn/web lookup sui contatti selezionati |
+| `crm-linkedin-lookup` | `CRMPage` | invoca `linkedin-enrich` edge |
+| `crm-send-cockpit` | `CRMPage` | seleziona contatti → naviga a `/v2/outreach?tab=cockpit` con prefill |
+| `crm-export` | `CRMPage` | export CSV |
+| `enrichment-batch-start` | `Settings` (Strumenti) | invoca `enrichment-batch` edge |
+| `enrichment-export` | `Settings` | export risultati enrichment |
 
-## Piano implementazione
+Per ogni handler che richiede infrastruttura non esistente, lascio `toast.info("Funzione in arrivo")` esplicito invece di fingere che funzioni — niente più toast falsi positivi.
 
-### 1. Edge function `kb-ingest-document`
+### 1.3 Mission Control nel MobileBottomNav
 
-Nuovo file `supabase/functions/kb-ingest-document/index.ts`:
-- Input: `{ fileName, mimeType, content (base64 o testo), category?, chapter?, priority?, tags? }`
-- Estrazione testo:
-  - `text/plain`, `text/markdown` → uso diretto
-  - `application/pdf` → `pdf-parse` via npm: `npm:pdf-parse`
-  - `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (DOCX) → `npm:mammoth`
-- Chunking: ~1000 caratteri con overlap 150 (split per paragrafi/frasi)
-- Embedding batch via `_shared/embeddings.ts` (`embedBatch`)
-- INSERT multipla in `kb_entries` con: stesso `category` (default `imported_documents`), `chapter` = nome file, `title` = `nomefile — chunk N/Tot`, `content` = chunk, `embedding`, `tags` = `[...userTags, 'auto-imported']`, `priority` (default 5), `user_id`, `source_path` = nome file.
-- Ritorna `{ chunks_created, total_chars, kb_ids }`.
-- CORS, JWT validation, `securityHeaders.ts`.
+- **Modifica** `MobileBottomNav.tsx`: sostituisco una delle 5 voci con un bottone centrale `Target` "Mission" che dispatcha `window.dispatchEvent(new CustomEvent('open-drawer', {detail: {drawer: 'mission'}}))`. Candidato da rimuovere: `email-intelligence` (accessibile da Outreach). Layout: 2 + Mission centrale + 2.
 
-### 2. Componente UI `KBIngestPanel.tsx`
+## FASE 2 — UX (4 fix)
 
-Nuovo `src/components/settings/KBIngestPanel.tsx`:
-- Drop zone / file input (multi-file: PDF, DOCX, TXT, MD; max 10MB ciascuno)
-- Form per ogni file: categoria (dropdown con quelle esistenti + free text), capitolo, priorità (1-10), tags
-- Bottone "Analizza e indicizza" → per ogni file:
-  1. Legge come base64
-  2. Chiama edge function `kb-ingest-document`
-  3. Mostra progress + n. chunks creati
-- Toast finale + invalidazione `queryKeys.v2.kbEntries()` per ricaricare l'elenco KB.
+### 2.1 ActiveMissionsPanel sempre visibile quando ci sono missioni attive
 
-### 3. Mount in `BackupExportTab.tsx`
+- **Modifica** `MissionDrawer.tsx`: rimuovo il gate `isOutreach || isEmailComposer`, mostro il pannello su tutte le pagine **se** `activeMissions.length > 0`.
 
-Aggiungo il `KBIngestPanel` come terza card sopra a `AIExportPanel` e `AIBackupPanel`, in sezione dedicata "Importa Knowledge Base".
+### 2.2 Keyboard shortcut Cmd/Ctrl+M
 
-### 4. Risposta alla domanda dell'utente (in chat)
+- **Modifica** `AuthenticatedLayout.tsx`: aggiungo `useEffect` con `keydown` listener globale → dispatch `open-drawer` mission. Cmd+Shift+F per filters drawer (bonus).
 
-Spiego che il sistema che processa i dati è:
-- **`supabase/functions/_shared/embeddings.ts`** (genera vettori, fa retrieval RAG)
-- **RPC `match_kb_entries`** (recupera schede rilevanti per la query)
-- **`kb_entries.embedding`** (colonna `vector(1536)` su cui viene calcolata la similarità)
-- Gli agenti pescano da qui via `ragSearchKb()` quando assemblano il contesto del prompt dinamico.
+### 2.3 Tooltip/help sui 5 box configurazione
 
-## Struttura risultante
+- **Modifica** `ConfigurationWidget` (o dove sono i 5 box): wrap ogni box in `<Tooltip>` shadcn con descrizione breve di cosa metterci.
 
-```text
-Settings → Backup & Export
-  ├─ [NUOVO] Importa Knowledge Base (KBIngestPanel)
-  │     • Carica PDF/DOCX/TXT/MD
-  │     • Estrae → chunk → embedda → salva in kb_entries
-  ├─ Esporta tutto leggibile (AIExportPanel) — già fatto
-  └─ Backup tecnico JSON (AIBackupPanel) — già fatto
-```
+### 2.4 Sottotitolo drawer più informativo
 
-## File toccati / creati
+- **Modifica** `MissionDrawer.tsx`: porta il sottotitolo da `text-[11px]` a `text-xs` con descrizione contestuale ("Configura goal, allega documenti e seleziona destinatari per la missione").
 
-- **CREA** `supabase/functions/kb-ingest-document/index.ts` (~180 LOC, sotto budget)
-- **CREA** `src/components/settings/KBIngestPanel.tsx` (~200 LOC)
-- **MODIFICA** `src/components/settings/BackupExportTab.tsx` (aggiungo card KBIngestPanel in cima)
+## FASE 3 — Skip per ora
 
-Nessuna migration DB necessaria: `kb_entries.embedding` esiste già, RPC `match_kb_entries` esiste già.
+Onboarding tour, RecipientsSection ovunque, filtri CRM Pipeline/Duplicati: lascio fuori dallo scope, da valutare dopo che le Fasi 1+2 sono in produzione.
 
-## Dipendenze
+## File toccati
 
-Solo lato edge function (Deno, via `npm:` specifier):
-- `npm:pdf-parse@1.1.1`
-- `npm:mammoth@1.7.0`
+**Creati (1)**
+- `src/components/global/filters-drawer/CampaignsFiltersSection.tsx`
 
-Nessuna dipendenza nuova lato client.
+**Modificati (~10)**
+- `src/contexts/GlobalFiltersContext.tsx` (+ reducer types)
+- `src/components/global/filters-drawer/useFiltersDrawerState.ts`
+- `src/components/global/filters-drawer/FiltersDrawer.tsx`
+- `src/components/campaigns/CompanyListFilters.tsx`
+- `src/pages/Campaigns.tsx` (rimuove props filtro locali)
+- `src/components/MissionDrawer.tsx` (o equivalente) — gate ActiveMissions + sottotitolo
+- `src/v2/ui/pages/NetworkPage.tsx` + listener events
+- `src/v2/ui/pages/CRMPage.tsx` + listener events
+- `src/pages/Settings.tsx` + 2 listener
+- `src/components/mobile/MobileBottomNav.tsx`
+- `src/components/AuthenticatedLayout.tsx` (keyboard shortcuts)
+- `ConfigurationWidget` (tooltip)
+
+## Note
+
+- Nessuna migration DB necessaria.
+- Nessuna nuova edge function.
+- I `toast.info("In arrivo")` per handler senza infrastruttura sono **intenzionali**: meglio onestà che falsi successi. L'utente saprà esattamente cosa funziona davvero.
+- Procedo end-to-end senza ulteriori conferme intermedie come da preferenza utente.
 
