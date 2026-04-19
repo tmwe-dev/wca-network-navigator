@@ -30,7 +30,7 @@ interface HighStakesCriteria {
 }
 
 const DEFAULT_HIGH_STAKES: HighStakesCriteria = {
-  statuses: ["in_progress", "negotiation"],
+  statuses: ["engaged", "qualified", "negotiation"],
   sources: ["ex_client"],
   min_rating: 4,
 };
@@ -268,12 +268,12 @@ serve(async (req) => {
       let transitionsApplied = 0;
       let sequenceActions = 0;
 
-      // 2.5a: Evaluate state transitions for active partners (tassonomia canonica)
+      // 2.5a: Evaluate state transitions for active partners (tassonomia 9 stati canonica)
       const { data: activePartners } = await supabase
         .from("partners")
         .select("id, lead_status, last_interaction_at")
         .eq("user_id", userId)
-        .in("lead_status", ["new", "contacted", "in_progress", "negotiation"])
+        .in("lead_status", ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation"])
         .not("lead_status", "is", null)
         .limit(50);
 
@@ -310,13 +310,13 @@ serve(async (req) => {
         }
       }
 
-      // 2.5b: Next-action sequencing per partner in stato "contacted"
+      // 2.5b: Next-action sequencing per partner in stato "first_touch_sent"
       // (= primo touch inviato, ancora dentro la finestra di engagement 14gg)
       const { data: firstTouchPartners } = await supabase
         .from("partners")
         .select("id, last_interaction_at")
         .eq("user_id", userId)
-        .eq("lead_status", "contacted")
+        .eq("lead_status", "first_touch_sent")
         .limit(20);
 
       for (const partner of (firstTouchPartners || [])) {

@@ -11,7 +11,7 @@ import { queryKeys } from "@/lib/queryKeys";
 
 export type HoldingChannel = "email" | "whatsapp" | "linkedin";
 
-const HOLDING_STATUSES = ["contacted", "in_progress", "negotiation"];
+const HOLDING_STATUSES = ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"];
 
 export interface HoldingMessageGroup {
   partnerId: string;
@@ -141,7 +141,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
               partnerId: contact.id,
               companyName: contact.name || contact.company_name || addr,
               email: contact.email,
-              leadStatus: contact.lead_status || "contacted",
+              leadStatus: contact.lead_status || "first_touch_sent",
               messages: [],
               unreadCount: 0,
               latestDate: msg.email_date || msg.created_at,

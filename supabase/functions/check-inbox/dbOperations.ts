@@ -186,11 +186,11 @@ export async function saveMessageToDb(
     .update({ last_uid: params.uid, last_sync_at: new Date().toISOString() })
     .eq("user_id", params.userId);
 
-  // Auto-escalation
+  // Auto-escalation (tassonomia 9 stati: new → first_touch_sent al primo inbound match)
   if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {
     await supabase.rpc("increment_contact_interaction", { p_contact_id: params.match.source_id });
     await supabase.from("imported_contacts")
-      .update({ lead_status: "contacted" })
+      .update({ lead_status: "first_touch_sent" })
       .eq("id", params.match.source_id)
       .eq("lead_status", "new");
   }
@@ -205,7 +205,7 @@ export async function saveMessageToDb(
         last_interaction_at: new Date().toISOString(),
       };
       if (partnerData.lead_status === "new") {
-        updates.lead_status = "contacted";
+        updates.lead_status = "first_touch_sent";
       }
       await supabase.from("partners")
         .update(updates)

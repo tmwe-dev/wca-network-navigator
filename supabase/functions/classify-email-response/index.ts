@@ -524,21 +524,21 @@ serve(async (req) => {
       }
     }
 
-    // ═══ GAP 2: AUTO-DOWNGRADE per not_interested ═══
+    // ═══ GAP 2: AUTO-ARCHIVE per not_interested (tassonomia 9 stati) ═══
     if (classification.category === "not_interested" && classification.confidence >= 0.80) {
       if (input.partner_id) {
         await supabase
           .from("partners")
-          .update({ lead_status: "lost" })
+          .update({ lead_status: "archived" })
           .eq("id", input.partner_id)
-          .in("lead_status", ["contacted", "in_progress"]);
+          .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified"]);
       }
       if (input.contact_id) {
         await supabase
           .from("imported_contacts")
-          .update({ lead_status: "lost" })
+          .update({ lead_status: "archived" })
           .eq("id", input.contact_id)
-          .in("lead_status", ["contacted", "in_progress"]);
+          .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified"]);
       }
     }
 

@@ -100,9 +100,9 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
       // To contact (new)
       supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
-      // Contacted
-      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "contacted"),
-      supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "contacted"),
+      // Contacted (primo touch inviato — tassonomia 9 stati)
+      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent"),
+      supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent"),
       // Replied (activities with response)
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("response_received", true),
       // Outreach schedules (all active)

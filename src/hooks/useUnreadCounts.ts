@@ -33,11 +33,11 @@ async function fetchUnreadCounts(): Promise<UnreadCounts> {
       .eq("channel", "linkedin")
       .eq("direction", "inbound")
       .is("read_at", null),
-    // Holding pattern (circuito) — partners with contacted/in_progress status
+    // Holding pattern (circuito) — partner attivamente nel ciclo (post primo touch, pre conversione)
     supabase
       .from("partners")
       .select("id", { count: "planned", head: true })
-      .in("lead_status", ["contacted", "in_progress", "negotiation"]),
+      .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
     // Pending activities
     supabase
       .from("activities")
