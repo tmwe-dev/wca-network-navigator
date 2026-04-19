@@ -8,28 +8,31 @@ const ease = [0.2, 0.8, 0.2, 1] as const;
 interface TableRow { name: string; sector: string; revenue: string; days: string; churn: number }
 
 export const TableCanvas = ({
-  data, onClose, title = "ANALISI · PROPOSTA"
-}: { data: TableRow[]; onClose: () => void; title?: string }) => (
+  data, onClose, title = "ANALISI · PROPOSTA", kpis,
+}: {
+  data: TableRow[];
+  onClose: () => void;
+  title?: string;
+  kpis?: { label: string; value: string }[];
+}) => (
   <CanvasShell onClose={onClose} title={title}>
-    <div className="grid grid-cols-3 gap-3 mb-8">
-      {[
-        { label: "Account a rischio", value: "34" },
-        { label: "Fatturato esposto", value: "€4.2M" },
-        { label: "Score medio", value: "76" },
-      ].map((kpi, i) => (
-        <motion.div
-          key={kpi.label}
-          initial={{ opacity: 0, y: 14, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.4 + i * 0.1, duration: 0.5, ease }}
-          className="p-4 rounded-xl text-center"
-          style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
-        >
-          <div className="text-2xl font-extralight tracking-tight text-foreground/100">{kpi.value}</div>
-          <div className="text-[9px] text-muted-foreground/97 mt-1.5 tracking-wider uppercase">{kpi.label}</div>
-        </motion.div>
-      ))}
-    </div>
+    {kpis && kpis.length > 0 && (
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {kpis.map((kpi, i) => (
+          <motion.div
+            key={kpi.label}
+            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.4 + i * 0.1, duration: 0.5, ease }}
+            className="p-4 rounded-xl text-center"
+            style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+          >
+            <div className="text-2xl font-extralight tracking-tight text-foreground/100">{kpi.value}</div>
+            <div className="text-[9px] text-muted-foreground/97 mt-1.5 tracking-wider uppercase">{kpi.label}</div>
+          </motion.div>
+        ))}
+      </div>
+    )}
 
     {/* Source indicator */}
     <motion.div
@@ -39,7 +42,7 @@ export const TableCanvas = ({
       className="flex items-center gap-3 mb-4 px-1"
     >
       <span className="text-[8px] text-muted-foreground/100 tracking-[0.2em] uppercase font-mono">FONTE</span>
-      <span className="text-[9px] text-muted-foreground/100 font-light">Partner DB · Contact Import · Activity Engine · ML Scoring</span>
+      <span className="text-[9px] text-muted-foreground/100 font-light">Live data · Supabase</span>
     </motion.div>
 
     <table className="w-full">
