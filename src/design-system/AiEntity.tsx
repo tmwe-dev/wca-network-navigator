@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { CommandPhase } from "@/v2/ui/pages/command/useCommandFlow";
+export type CommandPhase = "idle" | "thinking" | "proposal" | "executing" | "done" | "error";
 
 interface AiEntityProps {
   size?: "sm" | "md" | "lg" | "hero";
