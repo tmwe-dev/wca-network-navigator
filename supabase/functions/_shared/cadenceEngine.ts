@@ -105,7 +105,7 @@ export const FIRST_ENGAGEMENT_SEQUENCE: TouchpointStep[] = [
   { day: 7, channel: "email", action: "follow_up_2_value_add", condition: "no_reply" },
   { day: 10, channel: "linkedin", action: "linkedin_message", condition: "no_reply AND linkedin_connected" },
   { day: 14, channel: "email", action: "breakup_email", condition: "no_reply" },
-  // Dopo 14 giorni nessuna risposta → stato resta "contacted" ma esce dalla sequenza attiva
+  // Dopo 14 giorni nessuna risposta → stato resta "holding" ma esce dalla sequenza attiva
 ];
 
 // ── Funzione di verifica cadenza ──
